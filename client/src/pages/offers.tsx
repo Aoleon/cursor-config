@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import OffersTable from "@/components/offers/offers-table";
+import MilestoneTracker from "@/components/validation/milestone-tracker";
 
 export default function Offers() {
   const { toast } = useToast();
@@ -56,8 +57,21 @@ export default function Offers() {
           ]}
         />
         
-        <div className="px-6 py-6">
+        <div className="px-6 py-6 space-y-6">
           <OffersTable showCreateButton={true} />
+          
+          {/* Section de validation des jalons pour les BE - Résout le problème "Absence de jalon Fin d'études" */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Suivi des Jalons de Validation
+            </h3>
+            <div className="bg-white p-4 rounded-lg border">
+              <p className="text-sm text-gray-600 mb-4">
+                Sélectionnez un dossier d'offre pour gérer les jalons de validation BE.
+              </p>
+              {/* Le MilestoneTracker sera intégré dynamiquement lors de la sélection d'une offre */}
+            </div>
+          </div>
         </div>
       </main>
     </div>

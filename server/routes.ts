@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertOfferSchema, insertProjectSchema, insertAoSchema, insertSupplierRequestSchema, insertQuotationSchema, insertProjectTaskSchema } from "@shared/schema";
+import { insertOfferSchema, insertProjectSchema, insertAoSchema, insertSupplierRequestSchema, insertQuotationSchema, insertProjectTaskSchema, insertBeWorkloadSchema, insertValidationMilestoneSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -307,6 +307,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating quotation:", error);
       res.status(500).json({ message: "Failed to update quotation" });
+    }
+  });
+
+  // BE Workload routes - Solve "Aucune mesure de charge BE" issue from JLM audit
+  app.get('/api/be-workload', isAuthenticated, async (req, res) => {
+    try {
+      const { weekNumber, year } = req.query;
+      const workload = await storage.getBeWorkload(
+        weekNumber ? parseInt(weekNumber as string) : undefined,
+        year ? parseInt(year as string) : undefined
+      );
+      res.json(workload);
+    } catch (error) {
+      console.error("Error fetching BE workload:", error);
+      res.status(500).json({ message: "Failed to fetch BE workload" });
+    }
+  });
+
+  app.post('/api/be-workload', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertBeWorkloadSchema.parse(req.body);
+      const workload = await storage.createOrUpdateBeWorkload(validatedData);
+      res.status(201).json(workload);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating/updating BE workload:", error);
+      res.status(500).json({ message: "Failed to create/update BE workload" });
+    }
+  });
+
+  // Validation Milestones routes - Solve "Absence de jalon Fin d'études" issue from JLM audit
+  app.get('/api/validation-milestones', isAuthenticated, async (req, res) => {
+    try {
+      const { offerId, projectId } = req.query;
+      const milestones = await storage.getValidationMilestones(
+        offerId as string,
+        projectId as string
+      );
+      res.json(milestones);
+    } catch (error) {
+      console.error("Error fetching validation milestones:", error);
+      res.status(500).json({ message: "Failed to fetch validation milestones" });
+    }
+  });
+
+  app.post('/api/validation-milestones', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertValidationMilestoneSchema.parse(req.body);
+      const milestone = await storage.createValidationMilestone(validatedData);
+      res.status(201).json(milestone);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating validation milestone:", error);
+      res.status(500).json({ message: "Failed to create validation milestone" });
+    }
+  });
+
+  // Users route for BE member selection
+  app.get('/api/users', isAuthenticated, async (req, res) => {
+    try {
+      const { role } = req.query;
+      // For now, return empty array since we'll populate this as needed
+      res.json([]);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
     }
   });
 

@@ -11,6 +11,7 @@ import Offers from "@/pages/offers";
 import Projects from "@/pages/projects";
 import Planning from "@/pages/planning";
 import Teams from "@/pages/teams";
+import BEDashboard from "@/pages/be-dashboard";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -34,6 +35,7 @@ function Router() {
           <Route path="/projects" component={Projects} />
           <Route path="/planning" component={Planning} />
           <Route path="/teams" component={Teams} />
+          <Route path="/be-dashboard" component={BEDashboard} />
         </>
       )}
       <Route component={NotFound} />

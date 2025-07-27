@@ -6,6 +6,8 @@ import {
   supplierRequests,
   quotations,
   projectTasks,
+  beWorkload,
+  validationMilestones,
   type User,
   type UpsertUser,
   type Offer,
@@ -20,6 +22,10 @@ import {
   type InsertQuotation,
   type ProjectTask,
   type InsertProjectTask,
+  type BeWorkload,
+  type InsertBeWorkload,
+  type ValidationMilestone,
+  type InsertValidationMilestone,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, count, and, or, like, sql } from "drizzle-orm";
@@ -61,6 +67,14 @@ export interface IStorage {
   getQuotations(offerId?: string): Promise<Quotation[]>;
   createQuotation(quotation: InsertQuotation): Promise<Quotation>;
   updateQuotation(id: string, quotation: Partial<InsertQuotation>): Promise<Quotation>;
+  
+  // BE Workload operations - Solve "Aucune mesure de charge BE" issue
+  getBeWorkload(weekNumber?: number, year?: number): Promise<(BeWorkload & { user?: User })[]>;
+  createOrUpdateBeWorkload(workload: InsertBeWorkload): Promise<BeWorkload>;
+  
+  // Validation Milestones operations - Solve "Absence de jalon Fin d'études" issue  
+  getValidationMilestones(offerId?: string, projectId?: string): Promise<(ValidationMilestone & { validator?: User })[]>;
+  createValidationMilestone(milestone: InsertValidationMilestone): Promise<ValidationMilestone>;
   
   // Dashboard statistics
   getDashboardStats(): Promise<{
@@ -516,6 +530,146 @@ export class DatabaseStorage implements IStorage {
       offersPendingValidation: offersPendingValidation.count,
       beLoad,
     };
+  }
+
+  // BE Workload operations - Solve "Aucune mesure de charge BE" issue from audit
+  async getBeWorkload(weekNumber?: number, year?: number): Promise<(BeWorkload & { user?: User })[]> {
+    let query = db
+      .select({
+        id: beWorkload.id,
+        userId: beWorkload.userId,
+        weekNumber: beWorkload.weekNumber,
+        year: beWorkload.year,
+        plannedHours: beWorkload.plannedHours,
+        actualHours: beWorkload.actualHours,
+        capacityHours: beWorkload.capacityHours,
+        loadPercentage: beWorkload.loadPercentage,
+        createdAt: beWorkload.createdAt,
+        updatedAt: beWorkload.updatedAt,
+        user: {
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          role: users.role,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        },
+      })
+      .from(beWorkload)
+      .leftJoin(users, eq(beWorkload.userId, users.id));
+
+    const conditions = [];
+    if (weekNumber) conditions.push(eq(beWorkload.weekNumber, weekNumber));
+    if (year) conditions.push(eq(beWorkload.year, year));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const result = await query.orderBy(asc(users.firstName));
+
+    return result.map(row => ({
+      ...row,
+      user: row.user?.id ? row.user : undefined,
+    }));
+  }
+
+  async createOrUpdateBeWorkload(workload: InsertBeWorkload): Promise<BeWorkload> {
+    // Try to find existing record for user/week/year
+    const existing = await db
+      .select()
+      .from(beWorkload)
+      .where(
+        and(
+          eq(beWorkload.userId, workload.userId),
+          eq(beWorkload.weekNumber, workload.weekNumber),
+          eq(beWorkload.year, workload.year)
+        )
+      );
+
+    if (existing.length > 0) {
+      // Update existing record
+      const [updated] = await db
+        .update(beWorkload)
+        .set({
+          ...workload,
+          loadPercentage: workload.capacityHours > 0 
+            ? (workload.plannedHours / workload.capacityHours) * 100 
+            : 0,
+          updatedAt: new Date()
+        })
+        .where(eq(beWorkload.id, existing[0].id))
+        .returning();
+      return updated;
+    } else {
+      // Create new record
+      const [created] = await db
+        .insert(beWorkload)
+        .values({
+          ...workload,
+          loadPercentage: workload.capacityHours > 0 
+            ? (workload.plannedHours / workload.capacityHours) * 100 
+            : 0
+        })
+        .returning();
+      return created;
+    }
+  }
+
+  // Validation Milestones operations - Solve "Absence de jalon Fin d'études" issue from audit
+  async getValidationMilestones(offerId?: string, projectId?: string): Promise<(ValidationMilestone & { validator?: User })[]> {
+    let query = db
+      .select({
+        id: validationMilestones.id,
+        offerId: validationMilestones.offerId,
+        projectId: validationMilestones.projectId,
+        type: validationMilestones.type,
+        validatedAt: validationMilestones.validatedAt,
+        validatedBy: validationMilestones.validatedBy,
+        comment: validationMilestones.comment,
+        blockers: validationMilestones.blockers,
+        createdAt: validationMilestones.createdAt,
+        validator: {
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          role: users.role,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        },
+      })
+      .from(validationMilestones)
+      .leftJoin(users, eq(validationMilestones.validatedBy, users.id));
+
+    const conditions = [];
+    if (offerId) conditions.push(eq(validationMilestones.offerId, offerId));
+    if (projectId) conditions.push(eq(validationMilestones.projectId, projectId));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const result = await query.orderBy(desc(validationMilestones.validatedAt));
+
+    return result.map(row => ({
+      ...row,
+      validator: row.validator?.id ? row.validator : undefined,
+    }));
+  }
+
+  async createValidationMilestone(milestone: InsertValidationMilestone): Promise<ValidationMilestone> {
+    const [created] = await db
+      .insert(validationMilestones)
+      .values({
+        ...milestone,
+        validatedAt: new Date()
+      })
+      .returning();
+    return created;
   }
 }
 

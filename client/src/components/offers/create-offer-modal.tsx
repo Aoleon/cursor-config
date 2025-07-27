@@ -42,7 +42,8 @@ const createOfferFormSchema = insertOfferSchema.extend({
     "fenetres_aluminium", 
     "mur_rideau",
     "portes_bois",
-    "portes_alu"
+    "portes_alu",
+    "bardage"
   ]),
   estimatedAmount: z.string().optional(),
   deadline: z.string().optional(),
@@ -88,7 +89,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
         aoId: selectedAoId || undefined,
         estimatedAmount: data.estimatedAmount ? data.estimatedAmount : undefined,
         deadline: data.deadline ? new Date(data.deadline).toISOString() : undefined,
-        status: "en_cours_chiffrage" as const,
+        status: "nouveau" as const,
         isPriority: false,
       };
       await apiRequest("POST", "/api/offers", offerData);
@@ -164,6 +165,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
     { value: "mur_rideau", label: "Mur-rideau" },
     { value: "portes_bois", label: "Portes Bois" },
     { value: "portes_alu", label: "Portes Alu" },
+    { value: "bardage", label: "Bardage" },
   ];
 
   return (

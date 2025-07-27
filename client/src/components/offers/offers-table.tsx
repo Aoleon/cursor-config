@@ -94,24 +94,36 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
     }
 
     switch (status) {
-      case "en_cours_chiffrage":
+      case "nouveau":
+        return (
+          <Badge className="bg-gray-100 text-gray-800">
+            Nouveau
+          </Badge>
+        );
+      case "en_chiffrage":
         return (
           <Badge className="bg-yellow-100 text-yellow-800">
             <Clock className="w-3 h-3 mr-1" />
             En chiffrage
           </Badge>
         );
-      case "en_attente_validation":
+      case "en_validation":
         return (
-          <Badge className="bg-green-100 text-green-800">
+          <Badge className="bg-orange-100 text-orange-800">
             <CheckCircle className="w-3 h-3 mr-1" />
             En validation
           </Badge>
         );
-      case "termine":
+      case "valide":
         return (
-          <Badge className="bg-blue-100 text-blue-800">
-            Terminé
+          <Badge className="bg-green-100 text-green-800">
+            Validé
+          </Badge>
+        );
+      case "perdu":
+        return (
+          <Badge className="bg-red-100 text-red-800">
+            Perdu
           </Badge>
         );
       default:
@@ -126,6 +138,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
       mur_rideau: "bg-green-100 text-green-800",
       portes_bois: "bg-purple-100 text-purple-800",
       portes_alu: "bg-orange-100 text-orange-800",
+      bardage: "bg-yellow-100 text-yellow-800",
     };
 
     const typeLabels = {
@@ -134,6 +147,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
       mur_rideau: "Mur-rideau Alu",
       portes_bois: "Portes Bois",
       portes_alu: "Portes Alu",
+      bardage: "Bardage",
     };
 
     return (
@@ -175,9 +189,11 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="tous">Tous les statuts</SelectItem>
-                  <SelectItem value="en_cours_chiffrage">En cours de chiffrage</SelectItem>
-                  <SelectItem value="en_attente_validation">En attente validation</SelectItem>
-                  <SelectItem value="termine">Terminé</SelectItem>
+                  <SelectItem value="nouveau">Nouveau</SelectItem>
+                  <SelectItem value="en_chiffrage">En chiffrage</SelectItem>
+                  <SelectItem value="en_validation">En validation</SelectItem>
+                  <SelectItem value="valide">Validé</SelectItem>
+                  <SelectItem value="perdu">Perdu</SelectItem>
                   <SelectItem value="prioritaire">Prioritaire</SelectItem>
                 </SelectContent>
               </Select>

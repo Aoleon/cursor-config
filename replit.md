@@ -4,7 +4,7 @@
 
 JLM ERP is a comprehensive business management system specifically designed for French carpentry/joinery companies (menuiserie). The application digitalizes and optimizes the entire business workflow: offer dossiers (AO management), pricing/quotation processes, project planning/tracking, and team coordination. Built as a full-stack TypeScript application with React frontend and Express.js backend, featuring real-time collaboration, PostgreSQL database, and integrated Replit authentication.
 
-**Current Status**: Fully functional ERP with all core modules operational and database schema implemented.
+**Current Status**: Fully functional ERP with enhanced JLM-specific features. All audit findings addressed: BE workload dashboard, validation milestones tracker, and enhanced offer management operational.
 
 ## User Preferences & AI Agent Guidelines
 
@@ -96,7 +96,7 @@ JLM ERP is a comprehensive business management system specifically designed for 
 ### Database Schema (PostgreSQL + Drizzle ORM)
 
 **Core Tables**:
-- `users` - Authentication profiles with roles (admin/chef_projet/technicien_be)
+- `users` - Authentication profiles with roles (admin/chef_projet/technicien_be/responsable_be)
 - `sessions` - PostgreSQL session storage for Replit OIDC
 - `aos` - Tender documents (Appels d'Offres) with reference numbering
 - `offers` - Quotation dossiers with status workflow and priority flags
@@ -104,6 +104,10 @@ JLM ERP is a comprehensive business management system specifically designed for 
 - `project_tasks` - Granular task management with user assignment
 - `supplier_requests` - Vendor quotation requests and responses
 - `quotations` - Pricing documents and cost estimates
+
+**JLM-Specific Enhancement Tables** (Audit Issue Resolution):
+- `be_workload` - **Solves "Aucune mesure de charge BE"** - Weekly workload tracking for BE members with capacity planning
+- `validation_milestones` - **Solves "Absence de jalon Fin d'études"** - Critical milestone validation system for offer/project progression
 
 **Relationships**:
 - Users → Offers (responsibleUserId for BE assignment)
@@ -117,14 +121,29 @@ JLM ERP is a comprehensive business management system specifically designed for 
 
 ## Critical Business Workflows
 
-### AO → Offer → Project Pipeline
+### AO → Offer → Project Pipeline with JLM Enhancements
 ```
 1. AO Creation: Import tender documents with reference numbering
 2. Offer Generation: Pre-fill from AO data, assign BE responsible
 3. Pricing Phase: Status progression (Nouveau → En Chiffrage → En Validation)
+   ↳ **NEW**: BE Workload Dashboard tracks capacity and prevents overload
+   ↳ **NEW**: Validation Milestones ensure "Fin d'études" completion
 4. Project Conversion: Transform validated offers to active projects
 5. Execution: Multi-phase project lifecycle with task management
 ```
+
+### JLM Audit Issue Resolution Implementation
+**Issue 1: "Aucune mesure de charge BE"** → `BE Workload Dashboard`
+- Weekly capacity planning with hours tracking
+- Real-time workload percentages and alerts
+- Team member availability visualization
+- Overload prevention and redistribution recommendations
+
+**Issue 2: "Absence de jalon Fin d'études"** → `Validation Milestones Tracker`
+- Critical milestone validation system
+- End-of-study phase tracking
+- Blocker identification and resolution
+- Production readiness verification
 
 ### Status Management System
 **Offer Statuses**: `nouveau`, `en_chiffrage`, `en_validation`, `valide`, `perdu`

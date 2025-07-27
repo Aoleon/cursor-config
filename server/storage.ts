@@ -7,7 +7,8 @@ import {
   quotations,
   projectTasks,
   beWorkload,
-  poseWorkload,
+  avWorkload,
+  productionWorkload,
   validationMilestones,
   type User,
   type UpsertUser,
@@ -25,8 +26,10 @@ import {
   type InsertProjectTask,
   type BeWorkload,
   type InsertBeWorkload,
-  type PoseWorkload,
-  type InsertPoseWorkload,
+  type AvWorkload,
+  type InsertAvWorkload,
+  type ProductionWorkload,
+  type InsertProductionWorkload,
   type ValidationMilestone,
   type InsertValidationMilestone,
 } from "@shared/schema";
@@ -742,20 +745,20 @@ export class DatabaseStorage implements IStorage {
     .orderBy(asc(projectTasks.startDate));
   }
 
-  // Pose workload operations
-  async getAllPoseWorkload(): Promise<any[]> {
+  // Avant-Vente workload operations
+  async getAllAvWorkload(): Promise<any[]> {
     return await db.select({
-      id: poseWorkload.id,
-      userId: poseWorkload.userId,
-      weekNumber: poseWorkload.weekNumber,
-      year: poseWorkload.year,
-      capacityHours: poseWorkload.capacityHours,
-      plannedHours: poseWorkload.plannedHours,
-      actualHours: poseWorkload.actualHours,
-      loadPercentage: poseWorkload.loadPercentage,
-      availability: poseWorkload.availability,
-      createdAt: poseWorkload.createdAt,
-      updatedAt: poseWorkload.updatedAt,
+      id: avWorkload.id,
+      userId: avWorkload.userId,
+      weekNumber: avWorkload.weekNumber,
+      year: avWorkload.year,
+      capacityHours: avWorkload.capacityHours,
+      plannedHours: avWorkload.plannedHours,
+      actualHours: avWorkload.actualHours,
+      loadPercentage: avWorkload.loadPercentage,
+      availability: avWorkload.availability,
+      createdAt: avWorkload.createdAt,
+      updatedAt: avWorkload.updatedAt,
       user: {
         id: users.id,
         firstName: users.firstName,
@@ -764,9 +767,36 @@ export class DatabaseStorage implements IStorage {
         role: users.role
       }
     })
-    .from(poseWorkload)
-    .leftJoin(users, eq(poseWorkload.userId, users.id))
-    .orderBy(desc(poseWorkload.year), desc(poseWorkload.weekNumber));
+    .from(avWorkload)
+    .leftJoin(users, eq(avWorkload.userId, users.id))
+    .orderBy(desc(avWorkload.year), desc(avWorkload.weekNumber));
+  }
+
+  // Production workload operations
+  async getAllProductionWorkload(): Promise<any[]> {
+    return await db.select({
+      id: productionWorkload.id,
+      userId: productionWorkload.userId,
+      weekNumber: productionWorkload.weekNumber,
+      year: productionWorkload.year,
+      capacityHours: productionWorkload.capacityHours,
+      plannedHours: productionWorkload.plannedHours,
+      actualHours: productionWorkload.actualHours,
+      loadPercentage: productionWorkload.loadPercentage,
+      availability: productionWorkload.availability,
+      createdAt: productionWorkload.createdAt,
+      updatedAt: productionWorkload.updatedAt,
+      user: {
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        role: users.role
+      }
+    })
+    .from(productionWorkload)
+    .leftJoin(users, eq(productionWorkload.userId, users.id))
+    .orderBy(desc(productionWorkload.year), desc(productionWorkload.weekNumber));
   }
 }
 

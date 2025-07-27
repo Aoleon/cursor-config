@@ -32,6 +32,8 @@ export const userRoleEnum = pgEnum("user_role", [
   "chef_projet", 
   "technicien_be",
   "responsable_be",
+  "avant_vente",
+  "production",
   "chef_travaux"
 ]);
 
@@ -179,11 +181,13 @@ export const projectTasks = pgTable("project_tasks", {
   status: varchar("status").default("not_started"),
   progress: integer("progress").default(0),
   
-  // Planification des charges BE et Pose
+  // Planification des charges par équipe
   bePersonsNeeded: integer("be_persons_needed").default(0), // Nombre de personnes BE nécessaires
-  posePersonsNeeded: integer("pose_persons_needed").default(0), // Nombre de personnes pose nécessaires
+  avPersonsNeeded: integer("av_persons_needed").default(0), // Nombre de personnes Avant-Vente nécessaires
+  productionPersonsNeeded: integer("production_persons_needed").default(0), // Nombre de personnes Production nécessaires
   beHoursEstimated: decimal("be_hours_estimated", { precision: 8, scale: 2 }).default("0"), // Heures BE estimées
-  poseHoursEstimated: decimal("pose_hours_estimated", { precision: 8, scale: 2 }).default("0"), // Heures pose estimées
+  avHoursEstimated: decimal("av_hours_estimated", { precision: 8, scale: 2 }).default("0"), // Heures AV estimées
+  productionHoursEstimated: decimal("production_hours_estimated", { precision: 8, scale: 2 }).default("0"), // Heures Production estimées
   priority: varchar("priority").default("normale"), // basse, normale, haute, critique
   skills: text("skills").array().default(sql`'{}'::text[]`), // compétences requises
   
@@ -232,8 +236,23 @@ export const beWorkload = pgTable("be_workload", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Table pour traquer la charge des équipes de pose (nouveau besoin identifié)
-export const poseWorkload = pgTable("pose_workload", {
+// Table pour traquer la charge Avant-Vente
+export const avWorkload = pgTable("av_workload", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  weekNumber: integer("week_number").notNull(),
+  year: integer("year").notNull(),
+  capacityHours: decimal("capacity_hours", { precision: 8, scale: 2 }).default("35"), // 35h/semaine
+  plannedHours: decimal("planned_hours", { precision: 8, scale: 2 }).default("0"),
+  actualHours: decimal("actual_hours", { precision: 8, scale: 2 }).default("0"),
+  loadPercentage: decimal("load_percentage", { precision: 5, scale: 2 }).default("0"), // %
+  availability: varchar("availability").default("disponible"), // disponible, partiellement_disponible, indisponible
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Table pour traquer la charge des équipes de production (nouveau besoin identifié)
+export const productionWorkload = pgTable("production_workload", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
   weekNumber: integer("week_number").notNull(),
@@ -290,7 +309,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects),
   tasks: many(projectTasks),
   beWorkload: many(beWorkload),
-  poseWorkload: many(poseWorkload),
+  avWorkload: many(avWorkload),
+  productionWorkload: many(productionWorkload),
   validationMilestones: many(validationMilestones),
   interventions: many(interventions),
 }));
@@ -368,9 +388,16 @@ export const beWorkloadRelations = relations(beWorkload, ({ one }) => ({
   }),
 }));
 
-export const poseWorkloadRelations = relations(poseWorkload, ({ one }) => ({
+export const avWorkloadRelations = relations(avWorkload, ({ one }) => ({
   user: one(users, {
-    fields: [poseWorkload.userId],
+    fields: [avWorkload.userId],
+    references: [users.id],
+  }),
+}));
+
+export const productionWorkloadRelations = relations(productionWorkload, ({ one }) => ({
+  user: one(users, {
+    fields: [productionWorkload.userId],
     references: [users.id],
   }),
 }));
@@ -428,8 +455,11 @@ export type Quotation = typeof quotations.$inferSelect;
 export type InsertBeWorkload = typeof beWorkload.$inferInsert;
 export type BeWorkload = typeof beWorkload.$inferSelect;
 
-export type InsertPoseWorkload = typeof poseWorkload.$inferInsert;
-export type PoseWorkload = typeof poseWorkload.$inferSelect;
+export type InsertAvWorkload = typeof avWorkload.$inferInsert;
+export type AvWorkload = typeof avWorkload.$inferSelect;
+
+export type InsertProductionWorkload = typeof productionWorkload.$inferInsert;
+export type ProductionWorkload = typeof productionWorkload.$inferSelect;
 
 export type InsertValidationMilestone = typeof validationMilestones.$inferInsert;
 export type ValidationMilestone = typeof validationMilestones.$inferSelect;
@@ -480,7 +510,13 @@ export const insertBeWorkloadSchema = createInsertSchema(beWorkload).omit({
   updatedAt: true,
 });
 
-export const insertPoseWorkloadSchema = createInsertSchema(poseWorkload).omit({
+export const insertAvWorkloadSchema = createInsertSchema(avWorkload).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductionWorkloadSchema = createInsertSchema(productionWorkload).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

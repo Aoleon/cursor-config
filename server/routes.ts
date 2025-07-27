@@ -973,14 +973,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Pose workload routes
-  app.get("/api/pose-workload/", async (req, res) => {
+  // Avant-Vente workload routes
+  app.get("/api/av-workload/", async (req, res) => {
     try {
-      const workload = await storage.getAllPoseWorkload();
+      const workload = await storage.getAllAvWorkload();
       res.json(workload);
     } catch (error) {
-      console.error("Error fetching pose workload:", error);
-      res.status(500).json({ message: "Failed to fetch pose workload" });
+      console.error("Error fetching AV workload:", error);
+      res.status(500).json({ message: "Failed to fetch AV workload" });
+    }
+  });
+
+  // Production workload routes
+  app.get("/api/production-workload/", async (req, res) => {
+    try {
+      const workload = await storage.getAllProductionWorkload();
+      res.json(workload);
+    } catch (error) {
+      console.error("Error fetching production workload:", error);
+      res.status(500).json({ message: "Failed to fetch production workload" });
     }
   });
 

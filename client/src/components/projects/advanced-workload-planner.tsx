@@ -11,7 +11,7 @@ import { fr } from "date-fns/locale";
 
 type ViewPeriod = "1" | "3" | "6" | "12";
 type ViewType = "week" | "month";
-type TeamType = "be" | "pose" | "all";
+type TeamType = "be" | "av" | "production" | "all";
 
 interface TaskWorkload {
   id: string;
@@ -21,7 +21,8 @@ interface TaskWorkload {
   startDate: Date;
   endDate: Date;
   bePersonsNeeded: number;
-  posePersonsNeeded: number;
+  avPersonsNeeded: number;
+  productionPersonsNeeded: number;
   status: "planifie" | "en_cours" | "termine" | "reporte";
   priority: "basse" | "normale" | "haute" | "critique";
 }
@@ -30,12 +31,14 @@ interface WeeklyWorkload {
   weekStart: Date;
   weekEnd: Date;
   beTotal: number;
-  poseTotal: number;
+  avTotal: number;
+  productionTotal: number;
   projects: {
     projectId: string;
     projectName: string;
     bePeople: number;
-    posePeople: number;
+    avPeople: number;
+    productionPeople: number;
     tasks: TaskWorkload[];
   }[];
 }
@@ -44,13 +47,15 @@ interface MonthlyWorkload {
   monthStart: Date;
   monthEnd: Date;
   beTotal: number;
-  poseTotal: number;
+  avTotal: number;
+  productionTotal: number;
   weeksCount: number;
   projects: {
     projectId: string;
     projectName: string;
     bePeople: number;
-    posePeople: number;
+    avPeople: number;
+    productionPeople: number;
   }[];
 }
 
@@ -81,7 +86,8 @@ export default function AdvancedWorkloadPlanner() {
           startDate: task.startDate ? new Date(task.startDate) : new Date(),
           endDate: task.endDate ? new Date(task.endDate) : addWeeks(new Date(), 1),
           bePersonsNeeded: parseInt(task.bePersonsNeeded) || 0,
-          posePersonsNeeded: parseInt(task.posePersonsNeeded) || 0,
+          avPersonsNeeded: parseInt(task.avPersonsNeeded) || 0,
+          productionPersonsNeeded: parseInt(task.productionPersonsNeeded) || 0,
           status: task.status === "en_cours" ? "en_cours" : 
                   task.status === "termine" ? "termine" : 
                   task.status === "not_started" ? "planifie" : "planifie",
@@ -97,7 +103,8 @@ export default function AdvancedWorkloadPlanner() {
           startDate: new Date(),
           endDate: addWeeks(new Date(), 1),
           bePersonsNeeded: 0,
-          posePersonsNeeded: 0,
+          avPersonsNeeded: 0,
+          productionPersonsNeeded: 0,
           status: "planifie" as const,
           priority: "normale" as const
         };
@@ -138,7 +145,8 @@ export default function AdvancedWorkloadPlanner() {
 
       const projectsMap = new Map();
       let beTotal = 0;
-      let poseTotal = 0;
+      let avTotal = 0;
+      let productionTotal = 0;
 
       weekTasks.forEach(task => {
         if (!projectsMap.has(task.projectId)) {
@@ -146,25 +154,29 @@ export default function AdvancedWorkloadPlanner() {
             projectId: task.projectId,
             projectName: task.projectName,
             bePeople: 0,
-            posePeople: 0,
+            avPeople: 0,
+            productionPeople: 0,
             tasks: []
           });
         }
         
         const project = projectsMap.get(task.projectId);
         project.bePeople += task.bePersonsNeeded;
-        project.posePeople += task.posePersonsNeeded;
+        project.avPeople += task.avPersonsNeeded;
+        project.productionPeople += task.productionPersonsNeeded;
         project.tasks.push(task);
         
         beTotal += task.bePersonsNeeded;
-        poseTotal += task.posePersonsNeeded;
+        avTotal += task.avPersonsNeeded;
+        productionTotal += task.productionPersonsNeeded;
       });
 
       weeks.push({
         weekStart,
         weekEnd,
         beTotal,
-        poseTotal,
+        avTotal,
+        productionTotal,
         projects: Array.from(projectsMap.values())
       });
     }
@@ -186,7 +198,8 @@ export default function AdvancedWorkloadPlanner() {
 
       const projectsMap = new Map();
       let beTotal = 0;
-      let poseTotal = 0;
+      let avTotal = 0;
+      let productionTotal = 0;
 
       monthTasks.forEach(task => {
         if (!projectsMap.has(task.projectId)) {
@@ -194,23 +207,27 @@ export default function AdvancedWorkloadPlanner() {
             projectId: task.projectId,
             projectName: task.projectName,
             bePeople: 0,
-            posePeople: 0
+            avPeople: 0,
+            productionPeople: 0
           });
         }
         
         const project = projectsMap.get(task.projectId);
         project.bePeople += task.bePersonsNeeded;
-        project.posePeople += task.posePersonsNeeded;
+        project.avPeople += task.avPersonsNeeded;
+        project.productionPeople += task.productionPersonsNeeded;
         
         beTotal += task.bePersonsNeeded;
-        poseTotal += task.posePersonsNeeded;
+        avTotal += task.avPersonsNeeded;
+        productionTotal += task.productionPersonsNeeded;
       });
 
       months.push({
         monthStart,
         monthEnd,
         beTotal,
-        poseTotal,
+        avTotal,
+        productionTotal,
         weeksCount: differenceInWeeks(monthEnd, monthStart),
         projects: Array.from(projectsMap.values())
       });
@@ -222,8 +239,13 @@ export default function AdvancedWorkloadPlanner() {
   const weeklyData = calculateWeeklyWorkload();
   const monthlyData = calculateMonthlyWorkload();
 
-  const getTeamBadgeColor = (type: "be" | "pose") => {
-    return type === "be" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800";
+  const getTeamBadgeColor = (type: "be" | "av" | "production") => {
+    switch (type) {
+      case "be": return "bg-blue-100 text-blue-800";
+      case "av": return "bg-purple-100 text-purple-800";
+      case "production": return "bg-green-100 text-green-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
   };
 
   const getStatusColor = (status: TaskWorkload["status"]) => {
@@ -250,7 +272,7 @@ export default function AdvancedWorkloadPlanner() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Plan de Charges Avancé</h2>
-          <p className="text-gray-600">Planification BE et Équipes de pose</p>
+          <p className="text-gray-600">Planification BE, Avant-Vente et Production</p>
         </div>
         
         <div className="flex flex-wrap gap-2">
@@ -283,14 +305,15 @@ export default function AdvancedWorkloadPlanner() {
             <SelectContent>
               <SelectItem value="all">Toutes équipes</SelectItem>
               <SelectItem value="be">Bureau d'Études</SelectItem>
-              <SelectItem value="pose">Équipe Pose</SelectItem>
+              <SelectItem value="av">Avant-Vente</SelectItem>
+              <SelectItem value="production">Production</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       {/* Statistiques globales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -312,11 +335,28 @@ export default function AdvancedWorkloadPlanner() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Charge Pose Totale</p>
+                <p className="text-sm font-medium text-gray-600">Charge AV Totale</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {viewType === "week" 
+                    ? weeklyData.reduce((sum, week) => sum + week.avTotal, 0)
+                    : monthlyData.reduce((sum, month) => sum + month.avTotal, 0)
+                  } pers.
+                </p>
+              </div>
+              <Users className="w-8 h-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Charge Production Totale</p>
                 <p className="text-2xl font-bold text-green-600">
                   {viewType === "week" 
-                    ? weeklyData.reduce((sum, week) => sum + week.poseTotal, 0)
-                    : monthlyData.reduce((sum, month) => sum + month.poseTotal, 0)
+                    ? weeklyData.reduce((sum, week) => sum + week.productionTotal, 0)
+                    : monthlyData.reduce((sum, month) => sum + month.productionTotal, 0)
                   } pers.
                 </p>
               </div>
@@ -381,9 +421,14 @@ export default function AdvancedWorkloadPlanner() {
                           BE: {week.beTotal} pers.
                         </Badge>
                       )}
-                      {(teamType === "all" || teamType === "pose") && (
-                        <Badge className={getTeamBadgeColor("pose")}>
-                          Pose: {week.poseTotal} pers.
+                      {(teamType === "all" || teamType === "av") && (
+                        <Badge className={getTeamBadgeColor("av")}>
+                          AV: {week.avTotal} pers.
+                        </Badge>
+                      )}
+                      {(teamType === "all" || teamType === "production") && (
+                        <Badge className={getTeamBadgeColor("production")}>
+                          Production: {week.productionTotal} pers.
                         </Badge>
                       )}
                     </div>
@@ -401,9 +446,14 @@ export default function AdvancedWorkloadPlanner() {
                                 BE: {project.bePeople}
                               </Badge>
                             )}
-                            {(teamType === "all" || teamType === "pose") && project.posePeople > 0 && (
+                            {(teamType === "all" || teamType === "av") && project.avPeople > 0 && (
                               <Badge variant="outline" className="text-xs">
-                                Pose: {project.posePeople}
+                                AV: {project.avPeople}
+                              </Badge>
+                            )}
+                            {(teamType === "all" || teamType === "production") && project.productionPeople > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                Production: {project.productionPeople}
                               </Badge>
                             )}
                           </div>
@@ -450,9 +500,14 @@ export default function AdvancedWorkloadPlanner() {
                           BE: {Math.round(month.beTotal / month.weeksCount)} pers./sem
                         </Badge>
                       )}
-                      {(teamType === "all" || teamType === "pose") && (
-                        <Badge className={getTeamBadgeColor("pose")}>
-                          Pose: {Math.round(month.poseTotal / month.weeksCount)} pers./sem
+                      {(teamType === "all" || teamType === "av") && (
+                        <Badge className={getTeamBadgeColor("av")}>
+                          AV: {Math.round(month.avTotal / month.weeksCount)} pers./sem
+                        </Badge>
+                      )}
+                      {(teamType === "all" || teamType === "production") && (
+                        <Badge className={getTeamBadgeColor("production")}>
+                          Production: {Math.round(month.productionTotal / month.weeksCount)} pers./sem
                         </Badge>
                       )}
                     </div>

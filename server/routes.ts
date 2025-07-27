@@ -2,7 +2,26 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertOfferSchema, insertProjectSchema, insertAoSchema, insertSupplierRequestSchema, insertQuotationSchema, insertProjectTaskSchema, insertBeWorkloadSchema, insertValidationMilestoneSchema } from "@shared/schema";
+import { 
+  insertOfferSchema, 
+  insertProjectSchema, 
+  insertAoSchema, 
+  insertSupplierRequestSchema, 
+  insertQuotationSchema, 
+  insertProjectTaskSchema, 
+  insertBeWorkloadSchema, 
+  insertValidationMilestoneSchema,
+  aos,
+  offers,
+  projects,
+  projectTasks,
+  quotations,
+  supplierRequests,
+  validationMilestones,
+  beWorkload,
+  interventions
+} from "@shared/schema";
+import { db } from "./db";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -424,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       // Filter by role if specified
-      if (role && role !== 'all') {
+      if (role && role !== 'all' && typeof role === 'string') {
         const roleFilter = role.split(',');
         const filteredUsers = mockUsers.filter(user => roleFilter.includes(user.role));
         res.json(filteredUsers);
@@ -437,44 +456,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clean existing data route
+  app.post('/api/clear-sample-data', async (req, res) => {
+    try {
+      // Delete in correct order to respect foreign key constraints
+      await db.delete(interventions);
+      await db.delete(projectTasks);
+      await db.delete(projects);
+      await db.delete(validationMilestones);
+      await db.delete(quotations);
+      await db.delete(supplierRequests);
+      await db.delete(offers);
+      await db.delete(beWorkload);
+      await db.delete(aos);
+      
+      res.json({ message: "Sample data cleared successfully" });
+    } catch (error) {
+      console.error("Error clearing sample data:", error);
+      res.status(500).json({ message: "Failed to clear sample data" });
+    }
+  });
+
   // Mock data initialization route for testing - Create sample offers and workload data
   app.post('/api/init-sample-data', async (req, res) => {
     try {
-      // Check if sample data already exists
-      const existingAos = await storage.getAos();
-      if (existingAos.length > 0) {
-        return res.json({ 
-          message: "Sample data already exists",
-          data: {
-            aos: existingAos.length,
-            message: "Use existing data or clear database first"
-          }
-        });
+      // Check if force reload is requested
+      if (req.body.force) {
+        // Clear existing data first
+        await db.delete(interventions);
+        await db.delete(projectTasks);
+        await db.delete(projects);
+        await db.delete(validationMilestones);
+        await db.delete(quotations);
+        await db.delete(supplierRequests);
+        await db.delete(offers);
+        await db.delete(beWorkload);
+        await db.delete(aos);
+      } else {
+        // Check if sample data already exists
+        const existingAos = await storage.getAos();
+        if (existingAos.length > 0) {
+          return res.json({ 
+            message: "Sample data already exists",
+            data: {
+              aos: existingAos.length,
+              message: "Use POST with {\"force\": true} to recreate data"
+            }
+          });
+        }
       }
 
-      // Create sample AOs
+      // Create comprehensive sample AOs - JLM Menuiserie realistic projects
       const sampleAos = [
         {
           reference: "AO-2024-001",
-          client: "Mairie de Calais",
-          location: "Calais (62)",
-          departement: "62" as const,
-          description: "Menuiseries extérieures - Mairie",
-          menuiserieType: "bardage" as const,
-          estimatedAmount: "45000",
-          maitreOeuvre: "Cabinet Architecture Nord",
-          source: "BOMP" as const
+          client: "Mairie de Caen",
+          location: "Caen, Calvados (14)",
+          departement: "14" as const,
+          maitreOeuvre: "Cabinet Architecture Moderne",
+          estimatedAmount: "185000",
+          menuiserieType: "fenetres" as const,
+          source: "BOMP" as const,
+          submissionDeadline: new Date("2024-03-15"),
+          description: "Rénovation complète des menuiseries de la mairie - 45 fenêtres PVC double vitrage RT2020, 12 portes d'entrée sécurisées avec contrôle d'accès, isolation thermique renforcée"
         },
         {
-          reference: "AO-2024-002", 
-          client: "SCI Immobilier Pas-de-Calais",
-          location: "Boulogne-sur-Mer (62)",
-          departement: "62" as const,
-          description: "Fenêtres PVC logements sociaux",
-          menuiserieType: "fenetres" as const,
-          estimatedAmount: "78000",
-          maitreOeuvre: "BET Structure Plus",
-          source: "Marche_Online" as const
+          reference: "AO-2024-002",
+          client: "SCI Les Jardins de Bayeux",
+          location: "Bayeux, Calvados (14)",
+          departement: "14" as const,
+          maitreOeuvre: "BET Construction Durable",
+          estimatedAmount: "320000",
+          menuiserieType: "portes" as const,
+          source: "Marche_Online" as const,
+          submissionDeadline: new Date("2024-04-01"),
+          description: "Construction résidence 24 logements - Menuiseries complètes aluminium avec volets roulants intégrés, portes-fenêtres coulissantes, conformité RE2020"
+        },
+        {
+          reference: "AO-2024-003",
+          client: "Lycée Victor Hugo",
+          location: "Lisieux, Calvados (14)",
+          departement: "14" as const,
+          maitreOeuvre: "Conseil Départemental du Calvados",
+          estimatedAmount: "275000",
+          menuiserieType: "bardage" as const,
+          source: "BOMP" as const,
+          submissionDeadline: new Date("2024-03-30"),
+          description: "Rénovation énergétique - Remplacement de 120 fenêtres dans 3 bâtiments, portes coupe-feu EI30 conformes ERP, amélioration performances thermiques"
+        },
+        {
+          reference: "AO-2024-004",
+          client: "Résidence Seniors Le Clos Fleuri",
+          location: "Honfleur, Calvados (14)",
+          departement: "14" as const,
+          maitreOeuvre: "SARL Architecture & Bien-Être",
+          estimatedAmount: "145000",
+          menuiserieType: "mur_rideau" as const,
+          source: "Contact_Direct" as const,
+          submissionDeadline: new Date("2024-04-20"),
+          description: "Menuiseries pour 18 appartements seniors - Accessibilité PMR, fenêtres oscillo-battantes avec poignées ergonomiques, portes d'entrée sécurisées à serrure 3 points"
+        },
+        {
+          reference: "AO-2024-005",
+          client: "Centre Commercial Neptune",
+          location: "Hérouville-Saint-Clair, Calvados (14)",
+          departement: "14" as const,
+          maitreOeuvre: "Groupe Immobilier Neptune",
+          estimatedAmount: "89000",
+          menuiserieType: "autre" as const,
+          source: "Fournisseur" as const,
+          submissionDeadline: new Date("2024-04-10"),
+          description: "Rénovation façade commerciale - 8 vitrines aluminium avec double vitrage feuilleté, 4 portes d'entrée automatiques coulissantes, signalétique intégrée LED"
         }
       ];
 
@@ -482,51 +574,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createAo(aoData);
       }
 
-      // Create sample offers
-      const sampleOffers = [
+      // Create realistic sample offers - covering all workflow stages
+      const sampleOfferData = [
         {
           reference: "OFF-2024-001",
           aoId: null,
-          client: "Mairie de Calais", 
-          location: "Calais (62)",
-          menuiserieType: "bardage" as const,
-          estimatedAmount: "45000",
+          client: "Mairie de Caen", 
+          location: "Caen, Calvados (14)",
+          menuiserieType: "fenetres" as const,
+          estimatedAmount: "185000",
           status: "en_chiffrage" as const,
           responsibleUserId: "user-sylvie",
-          deadline: new Date("2024-02-15"),
+          deadline: new Date("2024-03-15"),
           isPriority: true
         },
         {
           reference: "OFF-2024-002",
           aoId: null,
-          client: "SCI Immobilier",
-          location: "Boulogne-sur-Mer (62)", 
-          menuiserieType: "fenetres" as const,
-          estimatedAmount: "78000",
+          client: "SCI Les Jardins de Bayeux",
+          location: "Bayeux, Calvados (14)", 
+          menuiserieType: "portes" as const,
+          estimatedAmount: "320000",
           status: "nouveau" as const,
           responsibleUserId: "user-nicolas",
-          deadline: new Date("2024-02-20"),
+          deadline: new Date("2024-04-01"),
           isPriority: false
         },
         {
           reference: "OFF-2024-003",
           aoId: null,
-          client: "Entreprise Nordique",
-          location: "Dunkerque (59)",
+          client: "Lycée Victor Hugo",
+          location: "Lisieux, Calvados (14)",
           menuiserieType: "bardage" as const,
-          estimatedAmount: "120000",
+          estimatedAmount: "275000",
           status: "en_validation" as const,
           responsibleUserId: "user-sylvie", 
-          deadline: new Date("2024-01-30"),
+          deadline: new Date("2024-03-30"),
+          isPriority: true
+        },
+        {
+          reference: "OFF-2024-004",
+          aoId: null,
+          client: "Résidence Seniors Le Clos Fleuri",
+          location: "Honfleur, Calvados (14)",
+          menuiserieType: "mur_rideau" as const,
+          estimatedAmount: "145000",
+          status: "valide" as const,
+          responsibleUserId: "user-nicolas",
+          deadline: new Date("2024-04-20"),
+          isPriority: false
+        },
+        {
+          reference: "OFF-2024-005",
+          aoId: null,
+          client: "Centre Commercial Neptune",
+          location: "Hérouville-Saint-Clair, Calvados (14)",
+          menuiserieType: "autre" as const,
+          estimatedAmount: "89000",
+          status: "perdu" as const,
+          responsibleUserId: "user-sylvie",
+          deadline: new Date("2024-04-10"),
+          isPriority: false
+        },
+        {
+          reference: "OFF-2024-006",
+          aoId: null,
+          client: "Collège Jean Monnet",
+          location: "Ouistreham, Calvados (14)",
+          menuiserieType: "bardage" as const,
+          estimatedAmount: "98000",
+          status: "en_chiffrage" as const,
+          responsibleUserId: "user-nicolas",
+          deadline: new Date("2024-02-28"),
           isPriority: true
         }
       ];
 
-      for (const offerData of sampleOffers) {
+      for (const offerData of sampleOfferData) {
         await storage.createOffer(offerData);
       }
 
-      // Create sample BE workload data
+      // Create realistic BE workload data
       const currentWeek = Math.ceil(((new Date()).getDate() - 1) / 7) + 1;
       const currentYear = new Date().getFullYear();
 
@@ -546,6 +674,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           plannedHours: "45",
           actualHours: "40",
           capacityHours: "40"
+        },
+        {
+          userId: "user-julien",
+          weekNumber: currentWeek, 
+          year: currentYear,
+          plannedHours: "20",
+          actualHours: "18",
+          capacityHours: "25"
         }
       ];
 
@@ -553,40 +689,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createOrUpdateBeWorkload(workloadData);
       }
 
-      // Create sample projects
+      // Create realistic projects covering all stages
       const sampleProjects = [
         {
           name: "Rénovation Mairie Caen",
           client: "Mairie de Caen",
-          location: "Caen (14)",
+          location: "Caen, Calvados (14)",
           status: "etude" as const,
           budget: "125000",
           startDate: new Date("2024-02-01"),
           endDate: new Date("2024-05-15"),
           responsibleUserId: "user-sylvie",
-          offerId: null
+          offerId: null,
+          progress: 25
         },
         {
-          name: "Résidence Les Jardins",
-          client: "SCI Les Jardins", 
-          location: "Lille (59)",
+          name: "Résidence Les Jardins de Bayeux",
+          client: "SCI Les Jardins de Bayeux", 
+          location: "Bayeux, Calvados (14)",
           status: "planification" as const,
-          budget: "89000",
+          budget: "320000",
           startDate: new Date("2024-03-01"),
-          endDate: new Date("2024-06-30"),
+          endDate: new Date("2024-08-30"),
           responsibleUserId: "user-nicolas",
-          offerId: null
+          offerId: null,
+          progress: 45
         },
         {
-          name: "Immeuble Boulevard Gambetta",
-          client: "Syndic Boulogne",
-          location: "Boulogne-sur-Mer (62)",
+          name: "Lycée Victor Hugo - Rénovation énergétique",
+          client: "Conseil Départemental du Calvados",
+          location: "Lisieux, Calvados (14)",
+          status: "approvisionnement" as const,
+          budget: "275000",
+          startDate: new Date("2024-01-15"),
+          endDate: new Date("2024-06-30"),
+          responsibleUserId: "user-sylvie",
+          offerId: null,
+          progress: 65
+        },
+        {
+          name: "Centre Commercial Neptune - Vitrines",
+          client: "Groupe Immobilier Neptune",
+          location: "Hérouville-Saint-Clair, Calvados (14)",
+          status: "sav" as const,
+          budget: "89000",
+          startDate: new Date("2023-11-01"),
+          endDate: new Date("2024-01-31"),
+          responsibleUserId: "user-france",
+          offerId: null,
+          progress: 100
+        },
+        {
+          name: "École Primaire Pierre Corneille",
+          client: "Mairie de Rouen",
+          location: "Rouen, Seine-Maritime (76)",
           status: "realisation" as const,
           budget: "156000",
           startDate: new Date("2024-01-15"),
           endDate: new Date("2024-04-30"),
-          responsibleUserId: "user-sylvie",
-          offerId: null
+          responsibleUserId: "user-nicolas",
+          offerId: null,
+          progress: 75
         }
       ];
 
@@ -598,7 +761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Sample data created successfully",
         data: {
           aos: sampleAos.length,
-          offers: sampleOffers.length, 
+          offers: sampleOfferData.length, 
           workload: sampleWorkload.length,
           projects: sampleProjects.length,
           interventions: "Ready for creation via UI"
@@ -610,13 +773,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Created ${projectsResult.length} projects successfully`);
 
       // Test validation milestones for first offer if exists
-      const offers = await storage.getOffers();
-      if (offers.length > 0) {
+      const createdOffers = await storage.getOffers();
+      if (createdOffers.length > 0) {
         try {
           await fetch(`http://localhost:5000/api/validation-milestones/init`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ offerId: offers[0].id })
+            body: JSON.stringify({ offerId: createdOffers[0].id })
           });
           console.log('Validation milestones initialized successfully');
         } catch (error) {

@@ -14,6 +14,7 @@ import Planning from "@/pages/planning";
 import Teams from "@/pages/teams";
 import Suppliers from "@/pages/suppliers";
 import BEDashboard from "@/pages/be-dashboard";
+import MilestonesTimeline from "@/pages/milestones-timeline";
 
 function Router() {
   // Temporarily disable authentication for development
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/be-dashboard" component={BEDashboard} />
       <Route path="/be-indicators" component={BEDashboard} />
       <Route path="/priorities" component={BEDashboard} />
+      <Route path="/milestones-timeline" component={MilestonesTimeline} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -229,8 +229,15 @@ export const validationMilestones = pgTable("validation_milestones", {
   offerId: varchar("offer_id").references(() => offers.id),
   projectId: varchar("project_id").references(() => projects.id),
   type: varchar("type").notNull(), // "fin_etudes", "validation_technique", "validation_commerciale"
-  validatedBy: varchar("validated_by").references(() => users.id).notNull(),
-  validatedAt: timestamp("validated_at").defaultNow(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  expectedCompletionDate: timestamp("expected_completion_date").notNull(),
+  assignedUserId: varchar("assigned_user_id").references(() => users.id),
+  status: varchar("status").notNull().default("en_attente"), // "en_attente", "en_cours", "valide", "rejete"
+  milestoneType: varchar("milestone_type").notNull(),
+  validatedAt: timestamp("validated_at"),
+  validatedBy: varchar("validated_by").references(() => users.id),
+  completedAt: timestamp("completed_at"),
   comment: text("comment"),
   blockers: text("blockers"), // problèmes identifiés
   createdAt: timestamp("created_at").defaultNow(),

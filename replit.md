@@ -8,7 +8,7 @@ JLM ERP is a comprehensive business management system specifically designed for 
 
 **Development Status**: Authentication temporarily disabled to facilitate testing and development access. All API endpoints accessible without login credentials. Complete sample data implemented for testing POC features including AOs, offers, BE workload, and validation milestones.
 
-**Latest Enhancement**: Comprehensive Jalons BE (Milestone Tracking) system fully developed and operational, addressing the critical "Absence de jalon Fin d'études" audit finding with complete workflow management interface.
+**Latest Enhancement**: Vue Timeline complète implémentée pour offres, projets et jalons de validation. Interface de planification hebdomadaire avec filtrage par utilisateur et statut, navigation temporelle, et statistiques en temps réel. Système de jalons BE entièrement opérationnel avec données de test.
 
 ## User Preferences & AI Agent Guidelines
 

@@ -8,15 +8,18 @@ import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, MapPin, User, Euro } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, MapPin, User, Euro, Kanban, Users } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import KanbanBoard from "@/components/projects/kanban-board";
+import WorkloadPlanner from "@/components/projects/workload-planner";
 
 export default function Projects() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
 
-  const { data: projects = [], isLoading: projectsLoading, error } = useQuery({
+  const { data: projects = [], isLoading: projectsLoading, error } = useQuery<any[]>({
     queryKey: ["/api/projects"],
     enabled: isAuthenticated,
   });
@@ -99,17 +102,34 @@ export default function Projects() {
         />
         
         <div className="px-6 py-6">
-          {projectsLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : projects.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-gray-500">Aucun projet trouvé.</p>
-              </CardContent>
-            </Card>
-          ) : (
+          <Tabs defaultValue="list" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="list" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Liste des Projets
+              </TabsTrigger>
+              <TabsTrigger value="kanban" className="flex items-center gap-2">
+                <Kanban className="h-4 w-4" />
+                Vue Kanban
+              </TabsTrigger>
+              <TabsTrigger value="workload" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Plan de Charge
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="list" className="space-y-6">
+              {projectsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : projects.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <p className="text-gray-500">Aucun projet trouvé.</p>
+                  </CardContent>
+                </Card>
+              ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {projects.map((project: any) => (
                 <Card key={project.id} className="hover:shadow-card-hover transition-shadow cursor-pointer">
@@ -181,7 +201,17 @@ export default function Projects() {
                 </Card>
               ))}
             </div>
-          )}
+              )}
+            </TabsContent>
+
+            <TabsContent value="kanban" className="space-y-6">
+              <KanbanBoard />
+            </TabsContent>
+
+            <TabsContent value="workload" className="space-y-6">
+              <WorkloadPlanner />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

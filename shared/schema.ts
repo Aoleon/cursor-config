@@ -237,6 +237,22 @@ export const validationMilestones = pgTable("validation_milestones", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Interventions table pour le plan de charge chantier
+export const interventions = pgTable("interventions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  assignedUserId: varchar("assigned_user_id").references(() => users.id),
+  plannedStartDate: timestamp("planned_start_date").notNull(),
+  plannedEndDate: timestamp("planned_end_date").notNull(),
+  estimatedHours: decimal("estimated_hours", { precision: 8, scale: 2 }).notNull(),
+  status: varchar("status").default("planifie"), // planifie, en_cours, termine, reporte
+  priority: varchar("priority").default("normale"), // basse, normale, haute, critique
+  description: text("description"),
+  skills: text("skills").array().default(sql`'{}'::text[]`), // compétences requises
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   offers: many(offers),
@@ -244,6 +260,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   tasks: many(projectTasks),
   beWorkload: many(beWorkload),
   validationMilestones: many(validationMilestones),
+  interventions: many(interventions),
 }));
 
 export const aosRelations = relations(aos, ({ many }) => ({
@@ -284,6 +301,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   }),
   tasks: many(projectTasks),
   validationMilestones: many(validationMilestones),
+  interventions: many(interventions),
 }));
 
 export const projectTasksRelations = relations(projectTasks, ({ one }) => ({
@@ -333,6 +351,17 @@ export const validationMilestonesRelations = relations(validationMilestones, ({ 
   }),
 }));
 
+export const interventionsRelations = relations(interventions, ({ one }) => ({
+  project: one(projects, {
+    fields: [interventions.projectId],
+    references: [projects.id],
+  }),
+  assignedUser: one(users, {
+    fields: [interventions.assignedUserId],
+    references: [users.id],
+  }),
+}));
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -362,6 +391,9 @@ export type BeWorkload = typeof beWorkload.$inferSelect;
 
 export type InsertValidationMilestone = typeof validationMilestones.$inferInsert;
 export type ValidationMilestone = typeof validationMilestones.$inferSelect;
+
+export type InsertIntervention = typeof interventions.$inferInsert;
+export type Intervention = typeof interventions.$inferSelect;
 
 // Insert schemas
 export const insertAoSchema = createInsertSchema(aos).omit({
@@ -407,6 +439,12 @@ export const insertBeWorkloadSchema = createInsertSchema(beWorkload).omit({
 });
 
 export const insertValidationMilestoneSchema = createInsertSchema(validationMilestones).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInterventionSchema = createInsertSchema(interventions).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

@@ -576,6 +576,20 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  // Add missing methods for validation milestones
+  async updateValidationMilestone(id: string, updates: Partial<InsertValidationMilestone>): Promise<ValidationMilestone> {
+    const [updated] = await db
+      .update(validationMilestones)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(validationMilestones.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteValidationMilestone(id: string): Promise<void> {
+    await db.delete(validationMilestones).where(eq(validationMilestones.id, id));
+  }
+
   async createOrUpdateBeWorkload(workload: InsertBeWorkload): Promise<BeWorkload> {
     // Try to find existing record for user/week/year
     const existing = await db

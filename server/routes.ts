@@ -440,6 +440,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mock data initialization route for testing - Create sample offers and workload data
   app.post('/api/init-sample-data', async (req, res) => {
     try {
+      // Check if sample data already exists
+      const existingAos = await storage.getAos();
+      if (existingAos.length > 0) {
+        return res.json({ 
+          message: "Sample data already exists",
+          data: {
+            aos: existingAos.length,
+            message: "Use existing data or clear database first"
+          }
+        });
+      }
+
       // Create sample AOs
       const sampleAos = [
         {
@@ -541,14 +553,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createOrUpdateBeWorkload(workloadData);
       }
 
+      // Create sample projects
+      const sampleProjects = [
+        {
+          name: "Rénovation Mairie Caen",
+          client: "Mairie de Caen",
+          location: "Caen (14)",
+          status: "etude" as const,
+          budget: "125000",
+          startDate: new Date("2024-02-01"),
+          endDate: new Date("2024-05-15"),
+          responsibleUserId: "user-sylvie",
+          offerId: null
+        },
+        {
+          name: "Résidence Les Jardins",
+          client: "SCI Les Jardins", 
+          location: "Lille (59)",
+          status: "planification" as const,
+          budget: "89000",
+          startDate: new Date("2024-03-01"),
+          endDate: new Date("2024-06-30"),
+          responsibleUserId: "user-nicolas",
+          offerId: null
+        },
+        {
+          name: "Immeuble Boulevard Gambetta",
+          client: "Syndic Boulogne",
+          location: "Boulogne-sur-Mer (62)",
+          status: "realisation" as const,
+          budget: "156000",
+          startDate: new Date("2024-01-15"),
+          endDate: new Date("2024-04-30"),
+          responsibleUserId: "user-sylvie",
+          offerId: null
+        }
+      ];
+
+      for (const projectData of sampleProjects) {
+        await storage.createProject(projectData);
+      }
+
       res.json({ 
         message: "Sample data created successfully",
         data: {
           aos: sampleAos.length,
           offers: sampleOffers.length, 
-          workload: sampleWorkload.length
+          workload: sampleWorkload.length,
+          projects: sampleProjects.length,
+          interventions: "Ready for creation via UI"
         }
       });
+
+      // Test API endpoints for projects
+      const projectsResult = await storage.getProjects();
+      console.log(`Created ${projectsResult.length} projects successfully`);
+
+      // Test validation milestones for first offer if exists
+      const offers = await storage.getOffers();
+      if (offers.length > 0) {
+        try {
+          await fetch(`http://localhost:5000/api/validation-milestones/init`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ offerId: offers[0].id })
+          });
+          console.log('Validation milestones initialized successfully');
+        } catch (error) {
+          console.log('Validation milestones already exist or error occurred');
+        }
+      }
     } catch (error) {
       console.error("Error creating sample data:", error);
       res.status(500).json({ message: "Failed to create sample data" });
@@ -588,8 +662,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const milestoneType of milestoneTypes) {
         const milestone = await storage.createValidationMilestone({
           offerId,
-          milestoneType,
-          isCompleted: false
+          type: milestoneType,
+          validatedBy: "user-nicolas"
         })
         createdMilestones.push(milestone)
       }
@@ -609,14 +683,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validation des données
       const validatedData = insertValidationMilestoneSchema.partial().parse(updateData)
 
-      // Si on complète le jalon, ajouter la date et l'utilisateur
-      if (validatedData.isCompleted) {
-        validatedData.completedAt = new Date()
-        validatedData.completedBy = 'test-user-1' // En mode développement
-      } else {
-        // Si on décomplète, effacer les données de complétion
-        validatedData.completedAt = undefined
-        validatedData.completedBy = undefined
+      // Validation des données - utiliser les propriétés correctes du schéma
+      if (validatedData.validatedAt && !validatedData.validatedBy) {
+        validatedData.validatedBy = 'user-nicolas' // En mode développement
       }
 
       const updatedMilestone = await storage.updateValidationMilestone(milestoneId, validatedData)

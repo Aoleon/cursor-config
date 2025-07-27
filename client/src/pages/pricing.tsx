@@ -1,419 +1,808 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Calculator, Plus, Euro, Clock, User, Building } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  Calculator,
+  Euro,
+  Plus,
+  Trash2,
+  FileText,
+  Clock,
+  Users,
+  Package,
+  Truck,
+  Save,
+  Download,
+  Eye,
+} from "lucide-react";
 
-interface Quotation {
-  id: string;
-  offerId: string;
-  supplierName: string;
-  productCategory: string;
-  unitPrice: string;
-  quantity: number;
-  totalPrice: string;
-  deliveryTime: number;
-  validityDate: string;
-  status: 'en_attente' | 'recu' | 'accepte' | 'refuse';
-  createdAt: string;
-  notes?: string;
-}
+// Schéma Zod pour les composants de prix
+const pricingComponentSchema = z.object({
+  category: z.enum(["menuiserie", "pose", "fourniture", "transport"]),
+  subCategory: z.string().optional(),
+  description: z.string().min(1, "Description requise"),
+  quantity: z.coerce.number().min(0.01, "Quantité doit être positive"),
+  unit: z.string().min(1, "Unité requise"),
+  unitPrice: z.coerce.number().min(0, "Prix unitaire doit être positif"),
+  supplierPrice: z.coerce.number().optional(),
+  margin: z.coerce.number().min(0).max(100).optional(),
+  notes: z.string().optional(),
+});
 
-interface Offer {
-  id: string;
-  reference: string;
-  client: string;
-  location: string;
-  menuiserieType: string;
-  estimatedAmount: string;
-  status: string;
-  responsibleUser?: {
-    firstName: string;
-    lastName: string;
-  };
-}
+const supplierQuotationSchema = z.object({
+  supplierName: z.string().min(1, "Nom du fournisseur requis"),
+  reference: z.string().optional(),
+  quotationDate: z.string().optional(),
+  validityDays: z.coerce.number().min(1).max(365).default(30),
+  totalAmount: z.coerce.number().min(0, "Montant total requis"),
+  status: z.enum(["en_attente", "recu", "valide", "refuse"]).default("en_attente"),
+  notes: z.string().optional(),
+});
+
+type PricingComponentForm = z.infer<typeof pricingComponentSchema>;
+type SupplierQuotationForm = z.infer<typeof supplierQuotationSchema>;
 
 export default function Pricing() {
-  const [selectedOfferId, setSelectedOfferId] = useState<string>("");
-  const [showQuotationDialog, setShowQuotationDialog] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedOfferId, setSelectedOfferId] = useState<string>("");
+  const [activeTab, setActiveTab] = useState("components");
 
-  // Fetch offers for pricing
-  const { data: offers = [], isLoading: offersLoading } = useQuery<Offer[]>({
-    queryKey: ['/api/offers/'],
-    select: (data) => data.filter(offer => 
-      ['nouveau', 'en_chiffrage'].includes(offer.status)
+  // Récupération des offres en cours de chiffrage
+  const { data: offers, isLoading: offersLoading } = useQuery({
+    queryKey: ["/api/offers"],
+    select: (data: any[]) => data.filter(offer => 
+      ["nouveau", "en_chiffrage", "en_validation"].includes(offer.status)
     ),
   });
 
-  // Fetch quotations for selected offer
-  const { data: quotations = [], isLoading: quotationsLoading } = useQuery<Quotation[]>({
-    queryKey: ['/api/quotations/', selectedOfferId],
+  // Récupération des composants de prix pour une offre
+  const { data: pricingComponents, isLoading: componentsLoading } = useQuery({
+    queryKey: ["/api/pricing-components", selectedOfferId],
     enabled: !!selectedOfferId,
   });
 
-  // Create quotation mutation
-  const createQuotationMutation = useMutation({
-    mutationFn: async (quotationData: any) => {
-      const response = await fetch('/api/quotations/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+  // Récupération des devis fournisseurs pour une offre
+  const { data: supplierQuotations, isLoading: quotationsLoading } = useQuery({
+    queryKey: ["/api/supplier-quotations", selectedOfferId],
+    enabled: !!selectedOfferId,
+  });
+
+  // Form pour les composants de prix
+  const componentForm = useForm<PricingComponentForm>({
+    resolver: zodResolver(pricingComponentSchema),
+    defaultValues: {
+      category: "menuiserie",
+      unit: "u",
+      quantity: 1,
+      unitPrice: 0,
+      margin: 30,
+    },
+  });
+
+  // Form pour les devis fournisseurs
+  const quotationForm = useForm<SupplierQuotationForm>({
+    resolver: zodResolver(supplierQuotationSchema),
+    defaultValues: {
+      validityDays: 30,
+      status: "en_attente",
+    },
+  });
+
+  // Mutation pour créer un composant de prix
+  const createComponentMutation = useMutation({
+    mutationFn: async (data: PricingComponentForm) => {
+      const totalPrice = data.quantity * data.unitPrice;
+      return apiRequest(`/api/pricing-components`, {
+        method: "POST",
+        body: {
+          ...data,
+          offerId: selectedOfferId,
+          totalPrice,
         },
-        body: JSON.stringify(quotationData),
       });
-      if (!response.ok) throw new Error('Failed to create quotation');
-      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/quotations/'] });
-      setShowQuotationDialog(false);
       toast({
-        title: "Devis créé",
-        description: "Le devis fournisseur a été ajouté avec succès.",
+        title: "Composant ajouté",
+        description: "Le composant de prix a été ajouté avec succès",
       });
+      componentForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/pricing-components"] });
     },
     onError: (error) => {
       toast({
         title: "Erreur",
-        description: "Impossible de créer le devis.",
+        description: "Impossible d'ajouter le composant",
         variant: "destructive",
       });
     },
   });
 
-  const handleCreateQuotation = (formData: FormData) => {
-    const quotationData = {
-      offerId: selectedOfferId,
-      supplierName: formData.get('supplierName'),
-      productCategory: formData.get('productCategory'),
-      unitPrice: formData.get('unitPrice'),
-      quantity: parseInt(formData.get('quantity') as string),
-      totalPrice: formData.get('totalPrice'),
-      deliveryTime: parseInt(formData.get('deliveryTime') as string),
-      validityDate: formData.get('validityDate'),
-      status: 'en_attente',
-      notes: formData.get('notes'),
-    };
+  // Mutation pour créer un devis fournisseur
+  const createQuotationMutation = useMutation({
+    mutationFn: async (data: SupplierQuotationForm) => {
+      return apiRequest(`/api/supplier-quotations`, {
+        method: "POST",
+        body: {
+          ...data,
+          offerId: selectedOfferId,
+          quotationDate: data.quotationDate ? new Date(data.quotationDate) : null,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Devis fournisseur ajouté",
+        description: "Le devis fournisseur a été ajouté avec succès",
+      });
+      quotationForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/supplier-quotations"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter le devis fournisseur",
+        variant: "destructive",
+      });
+    },
+  });
 
-    createQuotationMutation.mutate(quotationData);
+  const onSubmitComponent = (data: PricingComponentForm) => {
+    if (!selectedOfferId) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner une offre",
+        variant: "destructive",
+      });
+      return;
+    }
+    createComponentMutation.mutate(data);
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      'en_attente': { label: 'En Attente', variant: 'secondary' as const },
-      'recu': { label: 'Reçu', variant: 'default' as const },
-      'accepte': { label: 'Accepté', variant: 'default' as const },
-      'refuse': { label: 'Refusé', variant: 'destructive' as const },
-    };
-    
-    const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.en_attente;
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+  const onSubmitQuotation = (data: SupplierQuotationForm) => {
+    if (!selectedOfferId) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner une offre",
+        variant: "destructive",
+      });
+      return;
+    }
+    createQuotationMutation.mutate(data);
   };
 
-  const selectedOffer = offers.find(offer => offer.id === selectedOfferId);
-  const totalQuotations = quotations.reduce((sum, q) => sum + parseFloat(q.totalPrice), 0);
+  // Calcul du total du chiffrage
+  const totalPricing = pricingComponents?.reduce((sum: number, comp: any) => 
+    sum + parseFloat(comp.totalPrice || 0), 0
+  ) || 0;
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "menuiserie": return <Package className="w-4 h-4" />;
+      case "pose": return <Users className="w-4 h-4" />;
+      case "fourniture": return <Package className="w-4 h-4" />;
+      case "transport": return <Truck className="w-4 h-4" />;
+      default: return <Calculator className="w-4 h-4" />;
+    }
+  };
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case "menuiserie": return "Menuiserie";
+      case "pose": return "Pose";
+      case "fourniture": return "Fourniture";
+      case "transport": return "Transport";
+      default: return category;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "en_attente": return "bg-yellow-100 text-yellow-800";
+      case "recu": return "bg-blue-100 text-blue-800";
+      case "valide": return "bg-green-100 text-green-800";
+      case "refuse": return "bg-red-100 text-red-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "en_attente": return "En attente";
+      case "recu": return "Reçu";
+      case "valide": return "Validé";
+      case "refuse": return "Refusé";
+      default: return status;
+    }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Chiffrage</h1>
-          <p className="text-gray-600">Gestion des devis fournisseurs et calculs de prix</p>
+          <h1 className="text-3xl font-bold text-gray-900">Chiffrage</h1>
+          <p className="text-gray-600">Gestion des prix et devis fournisseurs</p>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm">
+            <Eye className="w-4 h-4 mr-2" />
+            Aperçu DPGF
+          </Button>
+          <Button variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" />
+            Exporter
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sélection d'offre */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building className="w-5 h-5" />
-              Offres à Chiffrer
-            </CardTitle>
-            <CardDescription>
-              Sélectionnez une offre pour gérer ses devis
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {offersLoading ? (
-                <div className="text-center py-4 text-gray-500">Chargement...</div>
-              ) : offers.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
-                  Aucune offre en cours de chiffrage
-                </div>
-              ) : (
-                offers.map((offer) => (
-                  <Card 
-                    key={offer.id}
-                    className={`cursor-pointer transition-colors ${
-                      selectedOfferId === offer.id 
-                        ? 'ring-2 ring-primary bg-primary/5' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => setSelectedOfferId(offer.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="font-medium">{offer.reference}</div>
-                        <div className="text-sm text-gray-600">{offer.client}</div>
-                        <div className="text-sm text-gray-500">{offer.location}</div>
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline">
-                            {offer.menuiserieType}
-                          </Badge>
-                          <span className="text-sm font-medium">
-                            {parseFloat(offer.estimatedAmount).toLocaleString()} €
-                          </span>
-                        </div>
-                        {offer.responsibleUser && (
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <User className="w-3 h-3" />
-                            {offer.responsibleUser.firstName} {offer.responsibleUser.lastName}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+      {/* Sélection de l'offre */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Sélection de l'offre
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Offre à chiffrer
+              </label>
+              <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une offre" />
+                </SelectTrigger>
+                <SelectContent>
+                  {offers?.map((offer: any) => (
+                    <SelectItem key={offer.id} value={offer.id}>
+                      {offer.reference} - {offer.client}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
+            
+            {selectedOfferId && (
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-medium text-blue-900 mb-2">Résumé du chiffrage</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Composants:</span>
+                    <span className="font-medium">
+                      {pricingComponents?.length || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total:</span>
+                    <span className="font-bold text-blue-700">
+                      {totalPricing.toLocaleString()} €
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Devis fournisseurs */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
+      {selectedOfferId && (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="components">Composants de prix</TabsTrigger>
+            <TabsTrigger value="quotations">Devis fournisseurs</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="components" className="space-y-6">
+            {/* Formulaire d'ajout de composant */}
+            <Card>
+              <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calculator className="w-5 h-5" />
-                  Devis Fournisseurs
+                  Ajouter un composant
                 </CardTitle>
                 <CardDescription>
-                  {selectedOffer ? `${selectedOffer.reference} - ${selectedOffer.client}` : 'Sélectionnez une offre'}
+                  Ajoutez les différents éléments du chiffrage
                 </CardDescription>
-              </div>
-              {selectedOfferId && (
-                <Dialog open={showQuotationDialog} onOpenChange={setShowQuotationDialog}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Nouveau Devis
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <form onSubmit={(e) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.target as HTMLFormElement);
-                      handleCreateQuotation(formData);
-                    }}>
-                      <DialogHeader>
-                        <DialogTitle>Nouveau Devis Fournisseur</DialogTitle>
-                        <DialogDescription>
-                          Ajouter un devis pour {selectedOffer?.reference}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid grid-cols-2 gap-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="supplierName">Fournisseur</Label>
-                          <Input
-                            id="supplierName"
-                            name="supplierName"
-                            placeholder="Nom du fournisseur"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="productCategory">Catégorie</Label>
-                          <Select name="productCategory" required>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="menuiserie_ext">Menuiserie Extérieure</SelectItem>
-                              <SelectItem value="menuiserie_int">Menuiserie Intérieure</SelectItem>
-                              <SelectItem value="vitrage">Vitrage</SelectItem>
-                              <SelectItem value="quincaillerie">Quincaillerie</SelectItem>
-                              <SelectItem value="isolation">Isolation</SelectItem>
-                              <SelectItem value="autre">Autre</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="unitPrice">Prix Unitaire (€)</Label>
-                          <Input
-                            id="unitPrice"
-                            name="unitPrice"
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="quantity">Quantité</Label>
-                          <Input
-                            id="quantity"
-                            name="quantity"
-                            type="number"
-                            min="1"
-                            placeholder="1"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="totalPrice">Prix Total (€)</Label>
-                          <Input
-                            id="totalPrice"
-                            name="totalPrice"
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="deliveryTime">Délai (jours)</Label>
-                          <Input
-                            id="deliveryTime"
-                            name="deliveryTime"
-                            type="number"
-                            min="1"
-                            placeholder="30"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="validityDate">Validité du devis</Label>
-                          <Input
-                            id="validityDate"
-                            name="validityDate"
-                            type="date"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2 col-span-2">
-                          <Label htmlFor="notes">Notes</Label>
-                          <Textarea
-                            id="notes"
-                            name="notes"
-                            placeholder="Informations complémentaires..."
-                            rows={3}
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="submit" disabled={createQuotationMutation.isPending}>
-                          {createQuotationMutation.isPending ? 'Création...' : 'Créer le Devis'}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {!selectedOfferId ? (
-              <div className="text-center py-8 text-gray-500">
-                Sélectionnez une offre pour voir ses devis
-              </div>
-            ) : quotationsLoading ? (
-              <div className="text-center py-8 text-gray-500">Chargement...</div>
-            ) : quotations.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                Aucun devis pour cette offre
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Résumé financier */}
-                <Card className="bg-blue-50">
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-2xl font-bold text-blue-600">
-                          {quotations.length}
-                        </div>
-                        <div className="text-sm text-gray-600">Devis</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-green-600">
-                          {totalQuotations.toLocaleString()} €
-                        </div>
-                        <div className="text-sm text-gray-600">Total</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-orange-600">
-                          {selectedOffer ? (
-                            Math.round((totalQuotations / parseFloat(selectedOffer.estimatedAmount)) * 100)
-                          ) : 0}%
-                        </div>
-                        <div className="text-sm text-gray-600">du Budget</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              </CardHeader>
+              <CardContent>
+                <Form {...componentForm}>
+                  <form onSubmit={componentForm.handleSubmit(onSubmitComponent)} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormField
+                        control={componentForm.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Catégorie</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="menuiserie">Menuiserie</SelectItem>
+                                <SelectItem value="pose">Pose</SelectItem>
+                                <SelectItem value="fourniture">Fourniture</SelectItem>
+                                <SelectItem value="transport">Transport</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                {/* Liste des devis */}
-                <div className="space-y-3">
-                  {quotations.map((quotation) => (
-                    <Card key={quotation.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-1">
-                            <div className="font-medium">{quotation.supplierName}</div>
-                            <div className="text-sm text-gray-600">{quotation.productCategory}</div>
-                            <div className="flex items-center gap-4 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Euro className="w-3 h-3" />
-                                {parseFloat(quotation.unitPrice).toLocaleString()} € × {quotation.quantity}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {quotation.deliveryTime} jours
-                              </span>
+                      <FormField
+                        control={componentForm.control}
+                        name="subCategory"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sous-catégorie</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Fenêtre, porte..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={componentForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Description détaillée" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <FormField
+                        control={componentForm.control}
+                        name="quantity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Quantité</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.01" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={componentForm.control}
+                        name="unit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Unité</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="u">Unité</SelectItem>
+                                <SelectItem value="m2">m²</SelectItem>
+                                <SelectItem value="ml">ml</SelectItem>
+                                <SelectItem value="kg">kg</SelectItem>
+                                <SelectItem value="h">heure</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={componentForm.control}
+                        name="unitPrice"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prix unitaire (€)</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.01" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={componentForm.control}
+                        name="margin"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Marge (%)</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.1" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={componentForm.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notes</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Notes supplémentaires..." 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex justify-end">
+                      <Button 
+                        type="submit" 
+                        disabled={createComponentMutation.isPending}
+                        className="flex items-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        {createComponentMutation.isPending ? "Ajout..." : "Ajouter"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+
+            {/* Liste des composants */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Composants du chiffrage</CardTitle>
+                <CardDescription>
+                  Total: <span className="font-bold text-green-600">
+                    {totalPricing.toLocaleString()} €
+                  </span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {componentsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-2 text-gray-600">Chargement...</p>
+                  </div>
+                ) : pricingComponents?.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Calculator className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p>Aucun composant ajouté</p>
+                    <p className="text-sm">Commencez par ajouter des éléments au chiffrage</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Catégorie</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Quantité</TableHead>
+                        <TableHead>Prix unit.</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Marge</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pricingComponents?.map((component: any) => (
+                        <TableRow key={component.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getCategoryIcon(component.category)}
+                              <Badge variant="outline">
+                                {getCategoryLabel(component.category)}
+                              </Badge>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{component.description}</p>
+                              {component.subCategory && (
+                                <p className="text-sm text-gray-500">
+                                  {component.subCategory}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {component.quantity} {component.unit}
+                          </TableCell>
+                          <TableCell>
+                            {parseFloat(component.unitPrice).toLocaleString()} €
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {parseFloat(component.totalPrice).toLocaleString()} €
+                          </TableCell>
+                          <TableCell>
+                            {component.margin ? `${component.margin}%` : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="quotations" className="space-y-6">
+            {/* Formulaire d'ajout de devis fournisseur */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Ajouter un devis fournisseur
+                </CardTitle>
+                <CardDescription>
+                  Enregistrez les devis reçus des fournisseurs
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...quotationForm}>
+                  <form onSubmit={quotationForm.handleSubmit(onSubmitQuotation)} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={quotationForm.control}
+                        name="supplierName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fournisseur</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Nom du fournisseur" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={quotationForm.control}
+                        name="reference"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Référence</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Référence devis" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormField
+                        control={quotationForm.control}
+                        name="quotationDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Date du devis</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={quotationForm.control}
+                        name="validityDays"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Validité (jours)</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={quotationForm.control}
+                        name="totalAmount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Montant total (€)</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.01" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={quotationForm.control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Statut</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="en_attente">En attente</SelectItem>
+                                <SelectItem value="recu">Reçu</SelectItem>
+                                <SelectItem value="valide">Validé</SelectItem>
+                                <SelectItem value="refuse">Refusé</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={quotationForm.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Notes</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Notes sur le devis..." 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button 
+                        type="submit" 
+                        disabled={createQuotationMutation.isPending}
+                        className="flex items-center gap-2"
+                      >
+                        <Save className="w-4 h-4" />
+                        {createQuotationMutation.isPending ? "Enregistrement..." : "Enregistrer"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+
+            {/* Liste des devis fournisseurs */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Devis fournisseurs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {quotationsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-2 text-gray-600">Chargement...</p>
+                  </div>
+                ) : supplierQuotations?.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p>Aucun devis fournisseur</p>
+                    <p className="text-sm">Ajoutez des devis reçus des fournisseurs</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {supplierQuotations?.map((quotation: any) => (
+                      <div key={quotation.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h3 className="font-medium text-lg">{quotation.supplierName}</h3>
+                            {quotation.reference && (
+                              <p className="text-sm text-gray-600">
+                                Réf: {quotation.reference}
+                              </p>
+                            )}
                           </div>
-                          <div className="text-right space-y-2">
-                            <div className="text-xl font-bold">
-                              {parseFloat(quotation.totalPrice).toLocaleString()} €
+                          <Badge className={getStatusColor(quotation.status)}>
+                            {getStatusLabel(quotation.status)}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium">Montant:</span>
+                            <span className="ml-2 text-green-600 font-bold">
+                              {parseFloat(quotation.totalAmount).toLocaleString()} €
+                            </span>
+                          </div>
+                          {quotation.quotationDate && (
+                            <div>
+                              <span className="font-medium">Date:</span>
+                              <span className="ml-2">
+                                {new Date(quotation.quotationDate).toLocaleDateString()}
+                              </span>
                             </div>
-                            {getStatusBadge(quotation.status)}
+                          )}
+                          <div>
+                            <span className="font-medium">Validité:</span>
+                            <span className="ml-2">{quotation.validityDays} jours</span>
                           </div>
                         </div>
+                        
                         {quotation.notes && (
                           <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
                             {quotation.notes}
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

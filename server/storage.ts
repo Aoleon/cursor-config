@@ -10,6 +10,13 @@ import {
   avWorkload,
   productionWorkload,
   validationMilestones,
+  suppliers,
+  interventions,
+  pricingComponents,
+  supplierQuotations,
+  quotationItems,
+  costTemplates,
+  laborRates,
   type User,
   type UpsertUser,
   type Offer,
@@ -32,6 +39,20 @@ import {
   type InsertProductionWorkload,
   type ValidationMilestone,
   type InsertValidationMilestone,
+  type Supplier,
+  type InsertSupplier,
+  type Intervention,
+  type InsertIntervention,
+  type PricingComponent,
+  type InsertPricingComponent,
+  type SupplierQuotation,
+  type InsertSupplierQuotation,
+  type QuotationItem,
+  type InsertQuotationItem,
+  type CostTemplate,
+  type InsertCostTemplate,
+  type LaborRate,
+  type InsertLaborRate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, count, and, or, like, sql } from "drizzle-orm";
@@ -93,6 +114,18 @@ export interface IStorage {
     offersPendingValidation: number;
     beLoad: number;
   }>;
+  
+  // Pricing operations
+  getPricingComponents(offerId: string): Promise<PricingComponent[]>;
+  createPricingComponent(component: InsertPricingComponent): Promise<PricingComponent>;
+  updatePricingComponent(id: string, component: Partial<InsertPricingComponent>): Promise<PricingComponent>;
+  deletePricingComponent(id: string): Promise<void>;
+  
+  // Supplier quotation operations
+  getSupplierQuotations(offerId: string): Promise<SupplierQuotation[]>;
+  createSupplierQuotation(quotation: InsertSupplierQuotation): Promise<SupplierQuotation>;
+  updateSupplierQuotation(id: string, quotation: Partial<InsertSupplierQuotation>): Promise<SupplierQuotation>;
+  deleteSupplierQuotation(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -797,6 +830,54 @@ export class DatabaseStorage implements IStorage {
     .from(productionWorkload)
     .leftJoin(users, eq(productionWorkload.userId, users.id))
     .orderBy(desc(productionWorkload.year), desc(productionWorkload.weekNumber));
+  }
+
+  // Pricing operations
+  async getPricingComponents(offerId: string): Promise<PricingComponent[]> {
+    return await db.select().from(pricingComponents)
+      .where(eq(pricingComponents.offerId, offerId))
+      .orderBy(asc(pricingComponents.createdAt));
+  }
+
+  async createPricingComponent(component: InsertPricingComponent): Promise<PricingComponent> {
+    const [created] = await db.insert(pricingComponents).values(component).returning();
+    return created;
+  }
+
+  async updatePricingComponent(id: string, component: Partial<InsertPricingComponent>): Promise<PricingComponent> {
+    const [updated] = await db.update(pricingComponents)
+      .set({ ...component, updatedAt: new Date() })
+      .where(eq(pricingComponents.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePricingComponent(id: string): Promise<void> {
+    await db.delete(pricingComponents).where(eq(pricingComponents.id, id));
+  }
+
+  // Supplier quotation operations
+  async getSupplierQuotations(offerId: string): Promise<SupplierQuotation[]> {
+    return await db.select().from(supplierQuotations)
+      .where(eq(supplierQuotations.offerId, offerId))
+      .orderBy(desc(supplierQuotations.createdAt));
+  }
+
+  async createSupplierQuotation(quotation: InsertSupplierQuotation): Promise<SupplierQuotation> {
+    const [created] = await db.insert(supplierQuotations).values(quotation).returning();
+    return created;
+  }
+
+  async updateSupplierQuotation(id: string, quotation: Partial<InsertSupplierQuotation>): Promise<SupplierQuotation> {
+    const [updated] = await db.update(supplierQuotations)
+      .set({ ...quotation, updatedAt: new Date() })
+      .where(eq(supplierQuotations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSupplierQuotation(id: string): Promise<void> {
+    await db.delete(supplierQuotations).where(eq(supplierQuotations.id, id));
   }
 }
 

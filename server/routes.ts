@@ -10,7 +10,8 @@ import {
   insertQuotationSchema, 
   insertProjectTaskSchema, 
   insertBeWorkloadSchema, 
-  insertValidationMilestoneSchema,
+  insertPricingComponentSchema,
+  insertSupplierQuotationSchema,
   aos,
   offers,
   projects,
@@ -992,6 +993,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching production workload:", error);
       res.status(500).json({ message: "Failed to fetch production workload" });
+    }
+  });
+
+  // Pricing components routes
+  app.get('/api/pricing-components/:offerId', async (req, res) => {
+    try {
+      const components = await storage.getPricingComponents(req.params.offerId);
+      res.json(components);
+    } catch (error) {
+      console.error("Error fetching pricing components:", error);
+      res.status(500).json({ message: "Failed to fetch pricing components" });
+    }
+  });
+
+  app.post('/api/pricing-components', async (req, res) => {
+    try {
+      const validatedData = insertPricingComponentSchema.parse(req.body);
+      const component = await storage.createPricingComponent(validatedData);
+      res.status(201).json(component);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating pricing component:", error);
+      res.status(500).json({ message: "Failed to create pricing component" });
+    }
+  });
+
+  app.patch('/api/pricing-components/:id', async (req, res) => {
+    try {
+      const updateData = insertPricingComponentSchema.partial().parse(req.body);
+      const component = await storage.updatePricingComponent(req.params.id, updateData);
+      res.json(component);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating pricing component:", error);
+      res.status(500).json({ message: "Failed to update pricing component" });
+    }
+  });
+
+  app.delete('/api/pricing-components/:id', async (req, res) => {
+    try {
+      await storage.deletePricingComponent(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting pricing component:", error);
+      res.status(500).json({ message: "Failed to delete pricing component" });
+    }
+  });
+
+  // Supplier quotations routes
+  app.get('/api/supplier-quotations/:offerId', async (req, res) => {
+    try {
+      const quotations = await storage.getSupplierQuotations(req.params.offerId);
+      res.json(quotations);
+    } catch (error) {
+      console.error("Error fetching supplier quotations:", error);
+      res.status(500).json({ message: "Failed to fetch supplier quotations" });
+    }
+  });
+
+  app.post('/api/supplier-quotations', async (req, res) => {
+    try {
+      const validatedData = insertSupplierQuotationSchema.parse(req.body);
+      const quotation = await storage.createSupplierQuotation(validatedData);
+      res.status(201).json(quotation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating supplier quotation:", error);
+      res.status(500).json({ message: "Failed to create supplier quotation" });
+    }
+  });
+
+  app.patch('/api/supplier-quotations/:id', async (req, res) => {
+    try {
+      const updateData = insertSupplierQuotationSchema.partial().parse(req.body);
+      const quotation = await storage.updateSupplierQuotation(req.params.id, updateData);
+      res.json(quotation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating supplier quotation:", error);
+      res.status(500).json({ message: "Failed to update supplier quotation" });
+    }
+  });
+
+  app.delete('/api/supplier-quotations/:id', async (req, res) => {
+    try {
+      await storage.deleteSupplierQuotation(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting supplier quotation:", error);
+      res.status(500).json({ message: "Failed to delete supplier quotation" });
     }
   });
 

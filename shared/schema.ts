@@ -467,6 +467,117 @@ export type ValidationMilestone = typeof validationMilestones.$inferSelect;
 export type InsertIntervention = typeof interventions.$inferInsert;
 export type Intervention = typeof interventions.$inferSelect;
 
+// Tables de chiffrage et costing
+export const pricingComponents = pgTable("pricing_components", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  offerId: varchar("offer_id").references(() => offers.id).notNull(),
+  category: varchar("category").notNull(), // "menuiserie", "pose", "fourniture", "transport"
+  subCategory: varchar("sub_category"), // "fenetre", "porte", "cloison", etc.
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  unit: varchar("unit").notNull().default("u"), // "u", "m2", "ml", "kg"
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  supplierPrice: decimal("supplier_price", { precision: 10, scale: 2 }),
+  margin: decimal("margin", { precision: 5, scale: 2 }), // Pourcentage de marge
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supplierQuotations = pgTable("supplier_quotations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  offerId: varchar("offer_id").references(() => offers.id).notNull(),
+  supplierName: varchar("supplier_name").notNull(),
+  reference: varchar("reference"), // Référence fournisseur
+  quotationDate: timestamp("quotation_date"),
+  validityDays: integer("validity_days").default(30),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  status: varchar("status").notNull().default("en_attente"), // "en_attente", "recu", "valide", "refuse"
+  documentPath: text("document_path"), // Chemin vers le devis PDF
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const quotationItems = pgTable("quotation_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  quotationId: varchar("quotation_id").references(() => supplierQuotations.id).notNull(),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  unit: varchar("unit").notNull(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  deliveryTime: varchar("delivery_time"), // Délai de livraison
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const costTemplates = pgTable("cost_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  category: varchar("category").notNull(), // "menuiserie_int", "menuiserie_ext", "bardage"
+  description: text("description"),
+  components: jsonb("components").notNull(), // Structure des composants par défaut
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const laborRates = pgTable("labor_rates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  category: varchar("category").notNull(), // "be", "pose", "transport"
+  skillLevel: varchar("skill_level").notNull(), // "junior", "senior", "expert"
+  hourlyRate: decimal("hourly_rate", { precision: 8, scale: 2 }).notNull(),
+  socialCharges: decimal("social_charges", { precision: 5, scale: 2 }).default(sql`50.0`), // Pourcentage
+  isActive: boolean("is_active").default(true),
+  validFrom: timestamp("valid_from").defaultNow(),
+  validTo: timestamp("valid_to"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations pour les tables de chiffrage
+export const pricingComponentsRelations = relations(pricingComponents, ({ one }) => ({
+  offer: one(offers, {
+    fields: [pricingComponents.offerId],
+    references: [offers.id],
+  }),
+}));
+
+export const supplierQuotationsRelations = relations(supplierQuotations, ({ one, many }) => ({
+  offer: one(offers, {
+    fields: [supplierQuotations.offerId],
+    references: [offers.id],
+  }),
+  items: many(quotationItems),
+}));
+
+export const quotationItemsRelations = relations(quotationItems, ({ one }) => ({
+  quotation: one(supplierQuotations, {
+    fields: [quotationItems.quotationId],
+    references: [supplierQuotations.id],
+  }),
+}));
+
+export const costTemplatesRelations = relations(costTemplates, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [costTemplates.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// Types pour le chiffrage
+export type PricingComponent = typeof pricingComponents.$inferSelect;
+export type InsertPricingComponent = typeof pricingComponents.$inferInsert;
+export type SupplierQuotation = typeof supplierQuotations.$inferSelect;
+export type InsertSupplierQuotation = typeof supplierQuotations.$inferInsert;
+export type QuotationItem = typeof quotationItems.$inferSelect;
+export type InsertQuotationItem = typeof quotationItems.$inferInsert;
+export type CostTemplate = typeof costTemplates.$inferSelect;
+export type InsertCostTemplate = typeof costTemplates.$inferInsert;
+export type LaborRate = typeof laborRates.$inferSelect;
+export type InsertLaborRate = typeof laborRates.$inferInsert;
+
 // Insert schemas
 export const insertAoSchema = createInsertSchema(aos).omit({
   id: true,
@@ -522,10 +633,33 @@ export const insertProductionWorkloadSchema = createInsertSchema(productionWorkl
   updatedAt: true,
 });
 
-export const insertValidationMilestoneSchema = createInsertSchema(validationMilestones).omit({
+// Schémas Zod pour le chiffrage
+export const insertPricingComponentSchema = createInsertSchema(pricingComponents).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const insertSupplierQuotationSchema = createInsertSchema(supplierQuotations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuotationItemSchema = createInsertSchema(quotationItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCostTemplateSchema = createInsertSchema(costTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLaborRateSchema = createInsertSchema(laborRates).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertInterventionSchema = createInsertSchema(interventions).omit({

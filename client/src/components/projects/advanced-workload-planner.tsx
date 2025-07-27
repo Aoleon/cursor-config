@@ -66,23 +66,63 @@ export default function AdvancedWorkloadPlanner() {
   });
 
   const convertToTaskWorkload = (dbTasks: any[]): TaskWorkload[] => {
-    return dbTasks.map(task => ({
-      id: task.id,
-      projectId: task.projectId,
-      projectName: task.project?.name || 'Projet inconnu',
-      taskName: task.name,
-      startDate: new Date(task.startDate || new Date()),
-      endDate: new Date(task.endDate || addWeeks(new Date(), 1)),
-      bePersonsNeeded: task.bePersonsNeeded || 0,
-      posePersonsNeeded: task.posePersonsNeeded || 0,
-      status: task.status === "en_cours" ? "en_cours" : 
-              task.status === "termine" ? "termine" : 
-              task.status === "not_started" ? "planifie" : "planifie",
-      priority: task.priority || "normale"
-    }));
+    if (!Array.isArray(dbTasks)) {
+      console.warn('Expected array for dbTasks, got:', typeof dbTasks);
+      return [];
+    }
+    
+    return dbTasks.map(task => {
+      try {
+        return {
+          id: task.id || `task-${Math.random()}`,
+          projectId: task.projectId || 'unknown',
+          projectName: task.project?.name || task.projectName || 'Projet inconnu',
+          taskName: task.name || 'Tâche sans nom',
+          startDate: task.startDate ? new Date(task.startDate) : new Date(),
+          endDate: task.endDate ? new Date(task.endDate) : addWeeks(new Date(), 1),
+          bePersonsNeeded: parseInt(task.bePersonsNeeded) || 0,
+          posePersonsNeeded: parseInt(task.posePersonsNeeded) || 0,
+          status: task.status === "en_cours" ? "en_cours" : 
+                  task.status === "termine" ? "termine" : 
+                  task.status === "not_started" ? "planifie" : "planifie",
+          priority: task.priority || "normale"
+        };
+      } catch (error) {
+        console.error('Error converting task:', task, error);
+        return {
+          id: `error-task-${Math.random()}`,
+          projectId: 'error',
+          projectName: 'Erreur',
+          taskName: 'Tâche en erreur',
+          startDate: new Date(),
+          endDate: addWeeks(new Date(), 1),
+          bePersonsNeeded: 0,
+          posePersonsNeeded: 0,
+          status: "planifie" as const,
+          priority: "normale" as const
+        };
+      }
+    });
   };
 
   const tasks = convertToTaskWorkload(projectTasks);
+
+  // État de chargement
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Plan de Charges Avancé</h2>
+            <p className="text-gray-600">Chargement des données...</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
 
   const calculateWeeklyWorkload = (): WeeklyWorkload[] => {
     const weeks: WeeklyWorkload[] = [];
@@ -291,7 +331,7 @@ export default function AdvancedWorkloadPlanner() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Projets Actifs</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {new Set(tasks.map(t => t.projectId)).size}
+                  {tasks.length > 0 ? new Set(tasks.map(t => t.projectId)).size : 0}
                 </p>
               </div>
               <Calendar className="w-8 h-8 text-gray-500" />
@@ -318,8 +358,17 @@ export default function AdvancedWorkloadPlanner() {
       {viewType === "week" && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Planification Hebdomadaire</h3>
-          <div className="grid gap-4">
-            {weeklyData.map((week, index) => (
+          {weeklyData.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Aucune tâche planifiée pour cette période</p>
+                <p className="text-sm text-gray-500 mt-2">Les tâches apparaîtront ici une fois créées</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {weeklyData.map((week, index) => (
               <Card key={index}>
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-center">
@@ -379,6 +428,7 @@ export default function AdvancedWorkloadPlanner() {
               </Card>
             ))}
           </div>
+          )}
         </div>
       )}
 

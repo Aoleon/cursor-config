@@ -1,10 +1,11 @@
+import { useState } from "react";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import OffersTable from "@/components/offers/offers-table";
-import MilestoneTracker from "@/components/validation/milestone-tracker";
+import CreateOfferModal from "@/components/offers/create-offer-modal";
 
 export default function Offers() {
-  // Authentication temporarily disabled for development
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -26,7 +27,7 @@ export default function Offers() {
               label: "Nouveau Dossier",
               variant: "default",
               icon: "plus",
-              action: "create-offer"
+              onClick: () => setIsCreateModalOpen(true)
             }
           ]}
         />
@@ -48,6 +49,11 @@ export default function Offers() {
           </div>
         </div>
       </main>
+      
+      <CreateOfferModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+      />
     </div>
   );
 }

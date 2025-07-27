@@ -25,13 +25,19 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: offers = [], isLoading, error } = useQuery({
+  const { data: offers = [], isLoading, error } = useQuery<any[]>({
     queryKey: ["/api/offers", search, statusFilter === "tous" ? "" : statusFilter],
   });
 
   const prioritizeMutation = useMutation({
     mutationFn: async ({ id, isPriority }: { id: string; isPriority: boolean }) => {
-      await apiRequest("PATCH", `/api/offers/${id}`, { isPriority });
+      const response = await fetch(`/api/offers/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPriority }),
+      });
+      if (!response.ok) throw new Error('Failed to update priority');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/offers"] });

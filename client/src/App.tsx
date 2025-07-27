@@ -27,6 +27,8 @@ function Router() {
       <Route path="/teams" component={Teams} />
       <Route path="/suppliers" component={Suppliers} />
       <Route path="/be-dashboard" component={BEDashboard} />
+      <Route path="/be-indicators" component={BEDashboard} />
+      <Route path="/priorities" component={BEDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,56 +1,21 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertOfferSchema } from "@shared/schema";
-import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { X } from "lucide-react";
-
-const createOfferFormSchema = insertOfferSchema.extend({
-  reference: z.string().min(1, "La référence est requise"),
-  client: z.string().min(1, "Le nom du client est requis"),
-  location: z.string().min(1, "La localisation est requise"),
-  menuiserieType: z.enum([
-    "fenetres_pvc",
-    "fenetres_aluminium", 
-    "mur_rideau",
-    "portes_bois",
-    "portes_alu",
-    "bardage"
-  ]),
-  estimatedAmount: z.string().optional(),
-  deadline: z.string().optional(),
-  responsibleUserId: z.string().min(1, "Un responsable BE doit être sélectionné"),
-});
-
-type CreateOfferFormData = z.infer<typeof createOfferFormSchema>;
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 interface CreateOfferModalProps {
   isOpen: boolean;
@@ -58,307 +23,229 @@ interface CreateOfferModalProps {
 }
 
 export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalProps) {
-  const [selectedAoId, setSelectedAoId] = useState<string>("");
+  const [formData, setFormData] = useState({
+    aoId: '',
+    client: '',
+    location: '',
+    menuiserieType: '',
+    estimatedAmount: '',
+    responsibleUserId: '',
+    deadline: '',
+    isPriority: false,
+    description: '',
+  });
+
   const { toast } = useToast();
-  const { user } = useAuth();
 
-  const form = useForm<CreateOfferFormData>({
-    resolver: zodResolver(createOfferFormSchema),
-    defaultValues: {
-      reference: "",
-      client: "",
-      location: "",
-      menuiserieType: "fenetres_pvc",
-      estimatedAmount: "",
-      deadline: "",
-      responsibleUserId: (user as any)?.id || "",
-    },
-  });
-
-  // Fetch available AOs for pre-filling data
+  // Fetch AOs for dropdown
   const { data: aos = [] } = useQuery({
-    queryKey: ["/api/aos"],
-    enabled: isOpen,
+    queryKey: ['/api/aos/'],
   });
 
-  // Create offer mutation
+  // Fetch users for responsible assignment
+  const { data: users = [] } = useQuery({
+    queryKey: ['/api/users/'],
+  });
+
   const createOfferMutation = useMutation({
-    mutationFn: async (data: CreateOfferFormData) => {
-      const offerData = {
-        ...data,
-        aoId: selectedAoId || undefined,
-        estimatedAmount: data.estimatedAmount ? data.estimatedAmount : undefined,
-        deadline: data.deadline ? new Date(data.deadline).toISOString() : undefined,
-        status: "nouveau" as const,
-        isPriority: false,
-      };
-      await apiRequest("POST", "/api/offers", offerData);
+    mutationFn: async (offerData: any) => {
+      const response = await fetch('/api/offers/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(offerData),
+      });
+      if (!response.ok) throw new Error('Failed to create offer');
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/offers'] });
       toast({
-        title: "Succès",
-        description: "Dossier d'offre créé avec succès",
+        title: "Offre créée",
+        description: "La nouvelle offre a été créée avec succès.",
       });
-      handleClose();
+      onClose();
+      resetForm();
     },
     onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Erreur",
-        description: "Impossible de créer le dossier d'offre",
+        description: "Impossible de créer l'offre.",
         variant: "destructive",
       });
     },
   });
 
-  // Handle AO selection and auto-fill data
-  const handleAoSelection = (aoId: string) => {
-    setSelectedAoId(aoId);
-    const selectedAo = aos.find((ao: any) => ao.id === aoId);
+  const resetForm = () => {
+    setFormData({
+      aoId: '',
+      client: '',
+      location: '',
+      menuiserieType: '',
+      estimatedAmount: '',
+      responsibleUserId: '',
+      deadline: '',
+      isPriority: false,
+      description: '',
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (selectedAo) {
-      form.setValue("client", selectedAo.client);
-      form.setValue("location", selectedAo.location);
-      form.setValue("menuiserieType", selectedAo.menuiserieType);
-      if (selectedAo.estimatedAmount) {
-        form.setValue("estimatedAmount", selectedAo.estimatedAmount);
-      }
-      
-      // Generate reference based on AO reference
-      const newReference = selectedAo.reference.replace("AO-", "OFF-");
-      form.setValue("reference", newReference);
-    }
+    // Auto-generate reference
+    const now = new Date();
+    const year = now.getFullYear();
+    const reference = `OFF-${year}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+
+    createOfferMutation.mutate({
+      ...formData,
+      reference,
+      status: 'nouveau',
+      estimatedAmount: formData.estimatedAmount ? parseFloat(formData.estimatedAmount) : 0,
+      aoId: formData.aoId === 'none' ? null : formData.aoId,
+    });
   };
 
-  const handleClose = () => {
-    form.reset();
-    setSelectedAoId("");
-    onClose();
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
-
-  const onSubmit = (data: CreateOfferFormData) => {
-    createOfferMutation.mutate(data);
-  };
-
-  // Set user as default responsible when dialog opens
-  useEffect(() => {
-    if (isOpen && (user as any)?.id) {
-      form.setValue("responsibleUserId", (user as any).id);
-    }
-  }, [isOpen, (user as any)?.id, form]);
-
-  const menuiserieTypeOptions = [
-    { value: "fenetres_pvc", label: "Fenêtres PVC" },
-    { value: "fenetres_aluminium", label: "Fenêtres Aluminium" },
-    { value: "mur_rideau", label: "Mur-rideau" },
-    { value: "portes_bois", label: "Portes Bois" },
-    { value: "portes_alu", label: "Portes Alu" },
-    { value: "bardage", label: "Bardage" },
-  ];
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-medium text-gray-900">
-              Créer un Nouveau Dossier d'Offre
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-5 h-5" />
-            </Button>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Créer une Nouvelle Offre</DialogTitle>
+            <DialogDescription>
+              Créer un nouveau dossier d'offre pour le chiffrage
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="aoId">AO Source (optionnel)</Label>
+              <Select value={formData.aoId} onValueChange={(value) => handleInputChange('aoId', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un AO" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucun AO source</SelectItem>
+                  {aos.map((ao: any) => (
+                    <SelectItem key={ao.id} value={ao.id}>
+                      {ao.reference} - {ao.client}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="client">Client *</Label>
+              <Input
+                id="client"
+                value={formData.client}
+                onChange={(e) => handleInputChange('client', e.target.value)}
+                placeholder="Nom du client"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Localisation *</Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                placeholder="Ville, Département"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="menuiserieType">Type de Menuiserie *</Label>
+              <Select value={formData.menuiserieType} onValueChange={(value) => handleInputChange('menuiserieType', value)} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner le type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fenetres">Fenêtres</SelectItem>
+                  <SelectItem value="portes">Portes</SelectItem>
+                  <SelectItem value="bardage">Bardage</SelectItem>
+                  <SelectItem value="mur_rideau">Mur rideau</SelectItem>
+                  <SelectItem value="autre">Autre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="estimatedAmount">Montant Estimé (€) *</Label>
+              <Input
+                id="estimatedAmount"
+                type="number"
+                step="0.01"
+                value={formData.estimatedAmount}
+                onChange={(e) => handleInputChange('estimatedAmount', e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="responsibleUserId">Responsable BE</Label>
+              <Select value={formData.responsibleUserId} onValueChange={(value) => handleInputChange('responsibleUserId', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Assigner un responsable" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.filter((user: any) => ['responsable_be', 'technicien_be'].includes(user.role)).map((user: any) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.firstName} {user.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="deadline">Date Limite</Label>
+              <Input
+                id="deadline"
+                type="date"
+                value={formData.deadline}
+                onChange={(e) => handleInputChange('deadline', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Description détaillée du projet..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2 col-span-2">
+              <Switch
+                id="isPriority"
+                checked={formData.isPriority}
+                onCheckedChange={(checked) => handleInputChange('isPriority', checked)}
+              />
+              <Label htmlFor="isPriority">Marquer comme prioritaire</Label>
+            </div>
           </div>
-        </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* AO Selection for pre-filling */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Référence AO Existante
-                </label>
-                <Select value={selectedAoId} onValueChange={handleAoSelection}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un AO existant..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {aos.map((ao: any) => (
-                      <SelectItem key={ao.id} value={ao.id}>
-                        {ao.reference} - {ao.client}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="mt-1 text-xs text-gray-500">
-                  Les données seront automatiquement pré-remplies
-                </p>
-              </div>
-
-              {/* Reference */}
-              <FormField
-                control={form.control}
-                name="reference"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Référence du Dossier</FormLabel>
-                    <FormControl>
-                      <Input placeholder="OFF-2024-001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Responsible User */}
-              <FormField
-                control={form.control}
-                name="responsibleUserId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Responsable BE</FormLabel>
-                    <FormControl>
-                      <Input
-                        value={user ? `${(user as any).firstName || ''} ${(user as any).lastName || ''}` : ""}
-                        disabled
-                        className="bg-gray-50"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Client */}
-              <FormField
-                control={form.control}
-                name="client"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Client / Projet</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nom du client ou projet" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Location */}
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Localisation</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ville, adresse" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Menuiserie Type */}
-              <FormField
-                control={form.control}
-                name="menuiserieType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type de Menuiserie</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner le type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {menuiserieTypeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Estimated Amount */}
-              <FormField
-                control={form.control}
-                name="estimatedAmount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Montant Estimé (€)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="150000"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Deadline */}
-              <FormField
-                control={form.control}
-                name="deadline"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Date d'échéance</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={createOfferMutation.isPending}
-              >
-                Annuler
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={createOfferMutation.isPending}
-                className="bg-primary hover:bg-primary-dark"
-              >
-                {createOfferMutation.isPending ? "Création..." : "Créer le Dossier"}
-              </Button>
-            </div>
-          </form>
-        </Form>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={createOfferMutation.isPending}>
+              {createOfferMutation.isPending ? 'Création...' : 'Créer l\'Offre'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

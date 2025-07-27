@@ -13,48 +13,10 @@ import { fr } from "date-fns/locale";
 
 export default function Planning() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
-
-  const { data: projects = [], isLoading: projectsLoading, error } = useQuery({
+  // Authentication temporarily disabled for development
+  const { data: projects = [], isLoading: projectsLoading, error } = useQuery<any[]>({
     queryKey: ["/api/projects"],
-    enabled: isAuthenticated,
   });
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
-
-  useEffect(() => {
-    if (error && isUnauthorizedError(error as Error)) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [error, toast]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });

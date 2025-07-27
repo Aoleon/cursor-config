@@ -187,7 +187,7 @@ export default function Suppliers() {
                       <SelectValue placeholder="Sélectionner une offre" />
                     </SelectTrigger>
                     <SelectContent>
-                      {offers.map((offer: any) => (
+                      {offers.filter((offer: any) => offer.id).map((offer: any) => (
                         <SelectItem key={offer.id} value={offer.id}>
                           {offer.reference} - {offer.client}
                         </SelectItem>

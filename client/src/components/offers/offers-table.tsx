@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Eye, Edit, Star, Search } from "lucide-react";
+import { Eye, Edit, Star, Search, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import CreateOfferModal from "./create-offer-modal";
@@ -25,7 +25,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: offers, isLoading, error } = useQuery({
+  const { data: offers = [], isLoading, error } = useQuery({
     queryKey: ["/api/offers", search, statusFilter === "tous" ? "" : statusFilter],
   });
 
@@ -196,7 +196,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            ) : !offers || offers.length === 0 ? (
+            ) : offers.length === 0 ? (
               <div className="py-12 text-center">
                 <p className="text-gray-500">Aucun dossier d'offre trouvé.</p>
               </div>
@@ -303,7 +303,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
             )}
           </div>
 
-          {offers && offers.length > 0 && (
+          {offers.length > 0 && (
             <div className="px-6 py-4 border-t border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-500">

@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { FolderOpen, Calculator, Clock, TrendingUp } from "lucide-react";
 
 export default function StatsCards() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats = {}, isLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
   });
 
@@ -25,7 +25,7 @@ export default function StatsCards() {
   const cardsData = [
     {
       title: "Dossiers Actifs",
-      value: stats?.totalOffers || 0,
+      value: (stats as any)?.totalOffers || 0,
       icon: FolderOpen,
       iconBg: "bg-primary-light",
       iconColor: "text-primary",
@@ -34,7 +34,7 @@ export default function StatsCards() {
     },
     {
       title: "En Chiffrage",
-      value: stats?.offersInPricing || 0,
+      value: (stats as any)?.offersInPricing || 0,
       icon: Calculator,
       iconBg: "bg-accent-light",
       iconColor: "text-accent",
@@ -43,7 +43,7 @@ export default function StatsCards() {
     },
     {
       title: "En Attente Validation",
-      value: stats?.offersPendingValidation || 0,
+      value: (stats as any)?.offersPendingValidation || 0,
       icon: Clock,
       iconBg: "bg-yellow-100",
       iconColor: "text-yellow-600",
@@ -52,12 +52,12 @@ export default function StatsCards() {
     },
     {
       title: "Charge BE",
-      value: `${stats?.beLoad || 0}%`,
+      value: `${(stats as any)?.beLoad || 0}%`,
       icon: TrendingUp,
       iconBg: "bg-green-100",
       iconColor: "text-green-600",
       showProgress: true,
-      progressValue: stats?.beLoad || 0
+      progressValue: (stats as any)?.beLoad || 0
     }
   ];
 

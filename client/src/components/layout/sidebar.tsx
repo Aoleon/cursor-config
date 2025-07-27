@@ -114,14 +114,14 @@ export default function Sidebar() {
         <div className="bg-gray-100 rounded-lg p-3">
           <div className="flex items-center space-x-3">
             <Avatar className="w-8 h-8">
-              <AvatarImage src={user?.profileImageUrl} alt={`${user?.firstName} ${user?.lastName}`} />
+              <AvatarImage src={user?.profileImageUrl || ''} alt={`${user?.firstName || ''} ${user?.lastName || ''}`} />
               <AvatarFallback>
                 {`${user?.firstName?.[0] || ''}${user?.lastName?.[0] || 'U'}`}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.firstName} {user?.lastName}
+                {user?.firstName || ''} {user?.lastName || ''}
               </p>
               <p className="text-xs text-gray-600 truncate">
                 {user?.role === 'admin' ? 'Administrateur' : 'Chef de projet'}

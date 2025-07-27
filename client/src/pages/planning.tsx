@@ -15,7 +15,7 @@ export default function Planning() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
 
-  const { data: projects, isLoading: projectsLoading, error } = useQuery({
+  const { data: projects = [], isLoading: projectsLoading, error } = useQuery({
     queryKey: ["/api/projects"],
     enabled: isAuthenticated,
   });
@@ -156,7 +156,7 @@ export default function Planning() {
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-              ) : !projects || projects.length === 0 ? (
+              ) : projects.length === 0 ? (
                 <div className="py-12 text-center">
                   <p className="text-gray-500">Aucun projet planifié.</p>
                 </div>

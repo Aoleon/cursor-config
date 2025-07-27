@@ -176,8 +176,8 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(row => ({
       ...row,
-      responsibleUser: row.responsibleUser.id ? row.responsibleUser : undefined,
-      ao: row.ao.id ? row.ao : undefined,
+      responsibleUser: row.responsibleUser?.id ? row.responsibleUser : undefined,
+      ao: row.ao?.id ? row.ao : undefined,
     }));
   }
 
@@ -229,8 +229,8 @@ export class DatabaseStorage implements IStorage {
 
     return {
       ...result,
-      responsibleUser: result.responsibleUser.id ? result.responsibleUser : undefined,
-      ao: result.ao.id ? result.ao : undefined,
+      responsibleUser: result.responsibleUser?.id ? result.responsibleUser : undefined,
+      ao: result.ao?.id ? result.ao : undefined,
     };
   }
 
@@ -301,8 +301,8 @@ export class DatabaseStorage implements IStorage {
 
     return result.map(row => ({
       ...row,
-      responsibleUser: row.responsibleUser.id ? row.responsibleUser : undefined,
-      offer: row.offer.id ? row.offer : undefined,
+      responsibleUser: row.responsibleUser?.id ? row.responsibleUser : undefined,
+      offer: row.offer?.id ? row.offer : undefined,
     }));
   }
 
@@ -356,8 +356,8 @@ export class DatabaseStorage implements IStorage {
 
     return {
       ...result,
-      responsibleUser: result.responsibleUser.id ? result.responsibleUser : undefined,
-      offer: result.offer.id ? result.offer : undefined,
+      responsibleUser: result.responsibleUser?.id ? result.responsibleUser : undefined,
+      offer: result.offer?.id ? result.offer : undefined,
     };
   }
 
@@ -408,7 +408,7 @@ export class DatabaseStorage implements IStorage {
 
     return result.map(row => ({
       ...row,
-      assignedUser: row.assignedUser.id ? row.assignedUser : undefined,
+      assignedUser: row.assignedUser?.id ? row.assignedUser : undefined,
     }));
   }
 
@@ -428,13 +428,18 @@ export class DatabaseStorage implements IStorage {
 
   // Supplier request operations
   async getSupplierRequests(offerId?: string): Promise<SupplierRequest[]> {
-    let query = db.select().from(supplierRequests);
-    
     if (offerId) {
-      query = query.where(eq(supplierRequests.offerId, offerId));
+      return await db
+        .select()
+        .from(supplierRequests)
+        .where(eq(supplierRequests.offerId, offerId))
+        .orderBy(desc(supplierRequests.createdAt));
     }
     
-    return await query.orderBy(desc(supplierRequests.createdAt));
+    return await db
+      .select()
+      .from(supplierRequests)
+      .orderBy(desc(supplierRequests.createdAt));
   }
 
   async createSupplierRequest(request: InsertSupplierRequest): Promise<SupplierRequest> {
@@ -453,13 +458,18 @@ export class DatabaseStorage implements IStorage {
 
   // Quotation operations
   async getQuotations(offerId?: string): Promise<Quotation[]> {
-    let query = db.select().from(quotations);
-    
     if (offerId) {
-      query = query.where(eq(quotations.offerId, offerId));
+      return await db
+        .select()
+        .from(quotations)
+        .where(eq(quotations.offerId, offerId))
+        .orderBy(desc(quotations.createdAt));
     }
     
-    return await query.orderBy(desc(quotations.createdAt));
+    return await db
+      .select()
+      .from(quotations)
+      .orderBy(desc(quotations.createdAt));
   }
 
   async createQuotation(quotation: InsertQuotation): Promise<Quotation> {

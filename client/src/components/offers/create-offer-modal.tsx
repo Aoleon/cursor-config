@@ -70,12 +70,12 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
       menuiserieType: "fenetres_pvc",
       estimatedAmount: "",
       deadline: "",
-      responsibleUserId: user?.id || "",
+      responsibleUserId: (user as any)?.id || "",
     },
   });
 
   // Fetch available AOs for pre-filling data
-  const { data: aos } = useQuery({
+  const { data: aos = [] } = useQuery({
     queryKey: ["/api/aos"],
     enabled: isOpen,
   });
@@ -125,7 +125,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
   // Handle AO selection and auto-fill data
   const handleAoSelection = (aoId: string) => {
     setSelectedAoId(aoId);
-    const selectedAo = aos?.find((ao: any) => ao.id === aoId);
+    const selectedAo = aos.find((ao: any) => ao.id === aoId);
     
     if (selectedAo) {
       form.setValue("client", selectedAo.client);
@@ -153,10 +153,10 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
 
   // Set user as default responsible when dialog opens
   useEffect(() => {
-    if (isOpen && user?.id) {
-      form.setValue("responsibleUserId", user.id);
+    if (isOpen && (user as any)?.id) {
+      form.setValue("responsibleUserId", (user as any).id);
     }
-  }, [isOpen, user?.id, form]);
+  }, [isOpen, (user as any)?.id, form]);
 
   const menuiserieTypeOptions = [
     { value: "fenetres_pvc", label: "Fenêtres PVC" },
@@ -198,7 +198,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
                     <SelectValue placeholder="Sélectionner un AO existant..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {aos?.map((ao: any) => (
+                    {aos.map((ao: any) => (
                       <SelectItem key={ao.id} value={ao.id}>
                         {ao.reference} - {ao.client}
                       </SelectItem>
@@ -234,7 +234,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
                     <FormLabel>Responsable BE</FormLabel>
                     <FormControl>
                       <Input
-                        value={user ? `${user.firstName} ${user.lastName}` : ""}
+                        value={user ? `${(user as any).firstName || ''} ${(user as any).lastName || ''}` : ""}
                         disabled
                         className="bg-gray-50"
                       />

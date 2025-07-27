@@ -15,7 +15,7 @@ export default function Teams() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
 
-  const { data: projects, isLoading: projectsLoading, error } = useQuery({
+  const { data: projects = [], isLoading: projectsLoading, error } = useQuery({
     queryKey: ["/api/projects"],
     enabled: isAuthenticated,
   });
@@ -57,9 +57,9 @@ export default function Teams() {
   }
 
   // Extract unique team members from projects
-  const teamMembers = projects ? projects.reduce((acc: any[], project: any) => {
+  const teamMembers = projects.reduce((acc: any[], project: any) => {
     if (project.responsibleUser) {
-      const existingMember = acc.find(member => member.id === project.responsibleUser.id);
+      const existingMember = acc.find((member: any) => member.id === project.responsibleUser.id);
       if (existingMember) {
         existingMember.projects.push(project);
       } else {
@@ -70,7 +70,7 @@ export default function Teams() {
       }
     }
     return acc;
-  }, []) : [];
+  }, []);
 
   const getWorkloadLevel = (projectCount: number) => {
     if (projectCount === 0) return { level: "Disponible", color: "bg-green-100 text-green-800", percentage: 0 };
@@ -119,7 +119,7 @@ export default function Teams() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Disponibles</p>
                     <p className="text-3xl font-bold text-green-600">
-                      {teamMembers.filter(member => member.projects.length <= 2).length}
+                      {teamMembers.filter((member: any) => member.projects.length <= 2).length}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -135,7 +135,7 @@ export default function Teams() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Occupés</p>
                     <p className="text-3xl font-bold text-yellow-600">
-                      {teamMembers.filter(member => member.projects.length > 2 && member.projects.length <= 4).length}
+                      {teamMembers.filter((member: any) => member.projects.length > 2 && member.projects.length <= 4).length}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
@@ -151,7 +151,7 @@ export default function Teams() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Surchargés</p>
                     <p className="text-3xl font-bold text-red-600">
-                      {teamMembers.filter(member => member.projects.length > 4).length}
+                      {teamMembers.filter((member: any) => member.projects.length > 4).length}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">

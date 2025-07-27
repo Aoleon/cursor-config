@@ -1,0 +1,62 @@
+Cahier des charges App JLM - POC
+
+1. Objectifs de l'Application (POC)
+
+L'application a pour objectif de digitaliser et d'optimiser la gestion des dossiers d'offre, le chiffrage et le suivi de projet/planning, en se basant sur les éléments identifiés comme "POC" dans le cahier des charges ERP JLM. Elle vise à fluidifier la circulation de l'information, réduire la double saisie et améliorer la visibilité et la traçabilité des processus clés. JLM Menuiserie est une entreprise de pose de mensuiseries.
+
+JLM Menuiserie est une entreprise avec une forte expertise métier et des équipes dédiées, mais son organisation actuelle est freinée par des processus manuels, une déconnexion des outils et un manque de vision consolidée de la performance. Les points de friction majeurs résident dans la double saisie, la mauvaise circulation de l'information (surtout entre le BE et le terrain), l'absence de jalons de validation formels (notamment en fin d'études), et le manque d'indicateurs pour piloter l'activité.
+
+
+
+2. Périmètre Fonctionnel (POC)
+
+2.1. Dossiers d’Offre & Chiffrage
+Création de dossier d'offre :
+Récupération assistée des données d'Appel d'Offres (AO) depuis une fiche AO existante (pour éviter la double saisie).
+Affichage des informations essentielles de l'AO (localisation, client, maître d'œuvre, type de menuiserie, montant estimé).
+Module de chiffrage :
+Intégration d'un module de chiffrage simple (pour le POC) ou connexion simulée avec Batigest (ou équivalent).
+Édition simplifiée d'un "Devis / DPGF" (Document Provisoire de Gestion Financière) basé sur les éléments chiffrés.
+Gestion des demandes de prix fournisseurs :
+Possibilité de créer une demande de prix fournisseur rattachée au dossier projet (pour le POC, pas de gestion complète des fournisseurs).
+Accès à des modèles de consultation simplifiés (lecture seule pour le POC).
+Suivi du Bureau d'Étude (BE) :
+Visualisation d'un indicateur de charge simplifié du BE (nombre de dossiers en cours par utilisateur ou statut).
+Possibilité de marquer un dossier comme "à prioriser".
+Suivi du statut de chaque dossier d'offre (ex: "En cours de chiffrage", "En attente validation", "Terminé").
+2.2. Gestion de Projets & Planning
+Interface de gestion de projet (simplifiée) :
+Visualisation des étapes clés d'un projet : Étude, Planification, Approvisionnement (simple), Chantier, SAV (simple).
+Planning projet partagé (simplifié) :
+Affichage d'un planning sous forme de liste ou de diagramme de Gantt simplifié pour un projet donné.
+Visualisation des jalons clés avec des alertes visuelles (ex: jalon dépassé).
+Ajustement du planning par glisser-déposer pour les tâches affectées à l'utilisateur (POC).
+Gestion des équipes (simplifiée) :
+Visualisation des ressources internes et sous-traitants affectés à un projet.
+Indicateurs de charge simplifiés (ex: "occupé", "disponible").
+3. Flux d'Information Concerné (POC)
+Flux des Appels d'Offres vers le Chiffrage :
+Lors de la création d'un dossier d'offre dans l'application, les données de la fiche AO sont automatiquement pré-remplies.
+Quand le chiffrage est terminé, un jalon "Fin d'études" est validé numériquement dans l'application.
+Flux du Chiffrage vers le Planning :
+Une fois le chiffrage validé, le dossier d'offre peut être transformé en "Projet" dans l'application, initialisant un planning projet simplifié.
+Flux du Planning vers les Équipes :
+Les membres de l'équipe peuvent consulter le planning du projet auquel ils sont affectés et leurs propres tâches.
+4. Principes à Respecter (POC)
+Zéro double saisie : L'application doit minimiser la ressaisie d'informations en réutilisant les données existantes (ex: données AO).
+Workflow visible et auditable : Le statut des dossiers d'offre et des projets doit être clairement visible. Pour le POC, la traçabilité se limitera à l'affichage des changements de statut.
+Interface intuitive : L'application doit être simple à utiliser, même pour des utilisateurs moins habitués aux outils numériques.
+Priorité au flux d’information : L'accent est mis sur la circulation fluide des données entre les différentes étapes du processus concerné par le POC.
+
+5. Aspects Appréciatifs (POC)
+Ergonomie :
+Navigation claire et simple.
+Design épuré et moderne.
+Facilité de lecture des informations clés.
+Performance :
+Temps de chargement rapides pour les listes de dossiers et projets.
+Réactivité de l'interface lors des actions (ex: changement de statut, modification de planning).
+Fiabilité :
+Stabilité de l'application.
+Cohérence des données affichées.
+

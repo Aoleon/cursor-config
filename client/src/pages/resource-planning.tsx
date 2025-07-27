@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Sidebar from "@/components/layout/sidebar";
+import { PhaseNavigation } from "@/components/navigation/phase-navigation";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -170,7 +170,7 @@ export default function ResourcePlanning() {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      <Sidebar />
+      <PhaseNavigation />
       <main className="flex-1 overflow-auto">
         <Header 
           title="Plan de Charges"

@@ -1,5 +1,5 @@
 // Authentication temporarily disabled for development
-import Sidebar from "@/components/layout/sidebar";
+import { PhaseNavigation } from "@/components/navigation/phase-navigation";
 import Header from "@/components/layout/header";
 import StatsCards from "@/components/dashboard/stats-cards";
 import OffersTable from "@/components/offers/offers-table";
@@ -9,7 +9,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      <Sidebar />
+      <PhaseNavigation />
       <main className="flex-1 overflow-auto">
         <Header 
           title="Tableau de Bord"

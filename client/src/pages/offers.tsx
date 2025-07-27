@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Sidebar from "@/components/layout/sidebar";
+import { PhaseNavigation } from "@/components/navigation/phase-navigation";
 import Header from "@/components/layout/header";
 import OffersTable from "@/components/offers/offers-table";
 import CreateOfferModal from "@/components/offers/create-offer-modal";
@@ -12,7 +12,7 @@ export default function Offers() {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      <Sidebar />
+      <PhaseNavigation />
       <main className="flex-1 overflow-auto">
         <Header 
           title="Dossiers d'Offre"

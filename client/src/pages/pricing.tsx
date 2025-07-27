@@ -87,6 +87,35 @@ export default function Pricing() {
   const [selectedOfferId, setSelectedOfferId] = useState<string>("");
   const [activeTab, setActiveTab] = useState("components");
 
+  return (
+    <div className="min-h-screen flex bg-gray-50">
+      <PhaseNavigation />
+      <main className="flex-1 overflow-auto">
+        <Header 
+          title="Chiffrage"
+          breadcrumbs={[
+            { label: "Accueil", href: "/" },
+            { label: "Chiffrage" }
+          ]}
+        />
+        
+        <div className="px-6 py-6">
+          <PricingContent 
+            selectedOfferId={selectedOfferId}
+            setSelectedOfferId={setSelectedOfferId}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            toast={toast}
+            queryClient={queryClient}
+          />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function PricingContent({ selectedOfferId, setSelectedOfferId, activeTab, setActiveTab, toast, queryClient }: any) {
+
   // Récupération des offres en cours de chiffrage
   const { data: offers, isLoading: offersLoading } = useQuery({
     queryKey: ["/api/offers"],

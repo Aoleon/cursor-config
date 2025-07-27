@@ -56,9 +56,9 @@ export default function Sidebar() {
               const isActive = location === item.href;
               return (
                 <Link key={item.name} href={item.href}>
-                  <a
+                  <div
                     className={cn(
-                      "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                      "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer",
                       isActive
                         ? "bg-primary-light text-primary"
                         : "text-gray-700 hover:bg-gray-100"
@@ -71,7 +71,7 @@ export default function Sidebar() {
                       )}
                     />
                     {item.name}
-                  </a>
+                  </div>
                 </Link>
               );
             })}
@@ -87,9 +87,9 @@ export default function Sidebar() {
               const isActive = location === item.href;
               return (
                 <Link key={item.name} href={item.href}>
-                  <a
+                  <div
                     className={cn(
-                      "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                      "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer",
                       isActive
                         ? "bg-primary-light text-primary"
                         : "text-gray-700 hover:bg-gray-100"
@@ -102,7 +102,7 @@ export default function Sidebar() {
                       )}
                     />
                     {item.name}
-                  </a>
+                  </div>
                 </Link>
               );
             })}
@@ -114,17 +114,17 @@ export default function Sidebar() {
         <div className="bg-gray-100 rounded-lg p-3">
           <div className="flex items-center space-x-3">
             <Avatar className="w-8 h-8">
-              <AvatarImage src={user?.profileImageUrl || ''} alt={`${user?.firstName || ''} ${user?.lastName || ''}`} />
+              <AvatarImage src={(user as any)?.profileImageUrl || ''} alt={`${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`} />
               <AvatarFallback>
-                {`${user?.firstName?.[0] || ''}${user?.lastName?.[0] || 'U'}`}
+                {`${(user as any)?.firstName?.[0] || ''}${(user as any)?.lastName?.[0] || 'U'}`}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.firstName || ''} {user?.lastName || ''}
+                {(user as any)?.firstName || ''} {(user as any)?.lastName || ''}
               </p>
               <p className="text-xs text-gray-600 truncate">
-                {user?.role === 'admin' ? 'Administrateur' : 'Chef de projet'}
+                {(user as any)?.role === 'admin' ? 'Administrateur' : 'Chef de projet'}
               </p>
             </div>
             <Button

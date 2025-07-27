@@ -1,0 +1,635 @@
+﻿Audit JLM Menuiserie 
+
+
+Synthèse du Constat :
+
+
+JLM Menuiserie est une entreprise avec une forte expertise métier et des équipes dédiées, mais son organisation actuelle est freinée par des processus manuels, une déconnexion des outils et un manque de vision consolidée de la performance. Les points de friction majeurs résident dans la double saisie, la mauvaise circulation de l'information (surtout entre le BE et le terrain), l'absence de jalons de validation formels (notamment en fin d'études), et le manque d'indicateurs pour piloter l'activité.
+
+
+Ces éléments créent des goulots d'étranglement (BE, France en tant que "single point of failure"), des pertes de temps considérables (recherches d'informations, ressaisies, attentes de livraison) et des risques financiers (retard de facturation, reprises coûteuses, érosion de la marge). La perception d'une organisation structurée est réelle, mais la réalité de terrain révèle une dépendance à des efforts individuels pour compenser les lacunes systémiques, ce qui n'est pas scalable avec la croissance visée.
+
+
+Dates de réalisation : 30 Juin et 1 Juillet 2025
+Auditeurs : Thibault Fritsch, Benoit Goyheneche 
+Table des Matières
+Synthèse du Constat :
+Table des Matières
+Introduction et Synthèses
+2. Processus des Appels d'Offres (AO)
+2.1. Réception et Sélection des AO
+2.2. Préparation du Dossier d'Offre
+2.3. Rédaction Administrative de l'Offre
+2.4. Décision et Traitement post-AO
+3. Processus de Production / Chantier
+3.1. Planification
+3.2. Suivi des Chantiers
+3.3. Logistique et Approvisionnement
+3.4. Gestion des Temps
+3.5. Fin de Chantier et Réception
+1. Gestion des Appels d'Offres / Devis :
+● Processus :
+● Impact sur l'organisation globale :
+2. Production :
+3. PV Réception :
+4. Facturation Fournisseurs :
+5. SAV :
+6. RH :
+7. Processus SAV et Garantie
+7.1. Gestion des Demandes
+7.2. Traitement
+7.3. Suivi des Réserves
+7.4. Expertise
+8. Processus Administratif et RH
+8.1. Gestion des Factures Fournisseurs
+8.2. Gestion des Factures Clients
+8.3. RH et Formation
+8.4. Qualibat et Divers Administratif
+9. Outils et Systèmes Utilisés
+9. Défis et Points à Améliorer
+10. Conclusion
+1. Entretien « Julien »
+2. Entretien « France »
+3. Entretien « BE - Nicolas »
+4. Entretien « Ludivine »
+5. Entretien « Sylvie »
+1. Stratégie et Vision Globale
+2. Processus Opérationnels
+3. Outils et Systèmes d'Information
+4. Mesure de la Performance et Indicateurs (KPI)
+
+
+
+
+Introduction et Synthèses
+
+
+JLM Menuiserie est une entreprise spécialisée dans la menuiserie intérieure et extérieure, ainsi que le bardage. Elle opère sur un marché réparti entre 60% de projets privés et 40% de projets publics, générant un chiffre d'affaires d'environ 5 millions d'euros. L'entreprise se distingue par la réalisation de produits spécifiques et sur mesure, avec un stock tournant limité. L'équipe est composée de membres jeunes et expérimentés, certains ayant une longue ancienneté comme Sylvie (15 ans). Les fournisseurs sont principalement locaux, bien que certains sous-traitent, comme K-Line.
+
+
+2. Processus des Appels d'Offres (AO)
+
+
+Le processus des appels d'offres est une étape cruciale qui commence par la réception des opportunités et se termine par la décision de participer ou non, suivie du traitement post-décision.
+
+
+2.1. Réception et Sélection des AO
+* Sources de réception : Les AO sont reçus via des plateformes officielles (BOMP, Marché Online, France Marché), des alertes quotidiennes (y compris le week-end), des appels directs de Julien via ses contacts clients, et des sollicitations de fournisseurs (ex: K-Line).
+* Sélection : Une sélection initiale est réalisée basée sur des critères tels que la localisation (préférence pour les départements 50 et 62), la distance, le client, le maître d'œuvre, la taille du projet (les projets trop petits ou éloignés sont évités), et le type de menuiserie.
+* Point d'offre : Une réunion hebdomadaire (mardi matin) impliquant Sylvie et Julien permet de prendre la décision finale de participer à un AO.
+2.2. Préparation du Dossier d'Offre
+
+
+Cette phase est principalement gérée par Sylvie et le Bureau d'Études (BE).
+* Téléchargement et Analyse : Les dossiers d'AO (souvent au format zip) sont téléchargés depuis les plateformes et stockés sur OneDrive dans le dossier "étude AO" > "en cours". Le BE et Sylvie procèdent ensuite à la lecture et à l'analyse des pièces techniques (CCTP, études thermiques/acoustiques, plans, DPGF, DCE). Certains documents, comme le CCTP, sont imprimés pour un support papier (Sylvie).
+* Quantitatif et Consultation Fournisseurs : Un quantitatif des éléments (portes, fenêtres, etc.) est réalisé. Les fournisseurs (K-Line, autres) sont consultés via des tableaux Excel types (Sylvie) pour obtenir les prix.
+* Établissement du Devis : Un devis détaillé est établi sur Batigest.
+* Retranscription et Double Saisie : Les prix du devis sont ensuite retranscrits sur le DPGF (un fichier Excel souvent demandé par le client), ce qui constitue un point de friction majeur en raison de la double saisie.
+2.3. Rédaction Administrative de l'Offre
+
+
+Ludivine s'occupe de la partie administrative de l'offre.
+* Documents Administratifs : Elle complète les documents tels que le DC1, DC2, références travaux, KBIS, assurances, et quitus légal.
+* Classement : Les courriers de refus sont classés en GED (sur OneDrive).
+2.4. Décision et Traitement post-AO
+
+
+Le traitement varie en fonction de l'issue de l'AO.
+* AO Refusé : Batigest et Monday sont mis à jour, et le dossier est classé en archives sur OneDrive.
+* AO Accepté :
+   * Batigest est mis à jour avec le statut "accepté".
+   * Le dossier passe en "chantier en cours" sur GED avec la création d d'une arborescence type.
+   * Monday est mis à jour avec le numéro de chantier, les informations pertinentes, et le basculement en "chantier administratif" et "chantier".
+   * La formalisation du PPSPS est réalisée sur Monday.
+   * Défis : Il existe des difficultés à trouver certaines informations (date OS, délai contractuel, date de fin) car elles sont souvent non précisées ou variables.
+3. Processus de Production / Chantier
+
+
+Ce processus couvre la planification, le suivi, la logistique, la gestion des temps, et la fin du chantier.
+
+
+3.1. Planification
+
+
+France joue un rôle clé dans la planification.
+* Support Technique et Planning Prévisionnel : France fournit un support technique en phase AO et crée le planning prévisionnel dans JLM Planning après l'attribution de l'AO et la réception de l'OS. Ce planning est basé sur les heures vendues (Batigest) et répartit les heures.
+* Défis : Le plan de charge n'est pas entièrement intégré, ce qui rend difficile la simulation de la charge de travail basée sur les commandes. Les plannings DCE sont souvent non fiables.
+3.2. Suivi des Chantiers
+
+
+France est également responsable du suivi des chantiers.
+* Réunions et Suivi d'Avancement : Des réunions de chantier (après VISA) sont organisées pour la coordination inter-corps d'état. Le suivi d'avancement est réalisé sur tablette via Notability (en Cloud après import GED).
+* Communication et Revue : WhatsApp/SMS sont utilisés pour le support aux équipes. Un point équipe régulier (téléphone/visu) est effectué, et une revue hebdomadaire des plannings a lieu.
+3.3. Logistique et Approvisionnement
+
+
+France et Ludivine interviennent dans la logistique et l'approvisionnement.
+* Commandes Fournisseurs : France gère les commandes fournisseurs pour les consommables et la pose. Ludivine gère les commandes si besoin de matériel SAV (avec France).
+* Réception des Livraisons : La réception des livraisons nécessite de prévoir une équipe et le déchargement, ce qui constitue un point de friction en raison de la perte de temps (jusqu'à une demi-journée).
+* Réception Magasin : La réception magasin implique le scan du BL, la mise à jour du stock, et une alerte Visual Planning. Le rôle de magasinier (0,5 ETP ou France) reste à définir.
+3.4. Gestion des Temps
+
+
+Visual Planning est utilisé pour la gestion des temps.
+* Temps Passés en Production : Les temps passés en production sont mis à jour en temps réel.
+* Défis : Les temps back-office (BE, administratif) ne sont pas comptabilisés dans la rentabilité projet et sont gérés "au jugé".
+3.5. Fin de Chantier et Réception
+
+
+France et Ludivine participent à la fin de chantier et à la réception.
+
+
+Compte rendu détaillé de l'entretien avec Ludivine et son impact sur l'organisation globale de JLM Menuiserie :
+
+
+L'entretien avec Ludivine met en lumière plusieurs processus clés au sein de JLM Menuiserie, soulignant l'interaction entre différents départements et les outils utilisés.
+Contrôle Qualité et Préparation : France effectue un contrôle qualité visuel lors des réunions ou de passage sur le chantier. L'équipe est envoyée pour "finir la déco" environ 2 jours avant la réception (estimation "au feeling").
+Réception :
+   * France défend techniquement l'entreprise en cas de problème.
+   * Ludivine signe le PV de réception s'il n'y a pas de réserves et le classe en GED.
+   * En cas de réserves, Ludivine consulte France avant de signer.
+   * La préparation du DGD (après contrôle avec Julien si des travaux complémentaires sont nécessaires) est effectuée.
+
+
+1. Gestion des Appels d'Offres / Devis :
+* Processus :
+   * Rédaction documentaire : Distinction entre AO (nécessitant des documents spécifiques comme DC1, DC2, références travaux, Kbis, assurance, quitus, etc.) et devis (gérés par le Bureau d'étude, Julien ou Sylvie).
+   * Réponses :
+      * Devis refusé : Mis à jour sur Batigest.
+      * Devis ou AO accepté : Accepté sur Batigest, classement GED (passage de AO à "Chantiers en cours" avec création d'arborescence), mise à jour sur Monday (numéro de chantier, infos, bascule en administratif et chantier).
+      * AO refusé : Mis à jour sur BatiGest et Monday, classement du courrier de refus en GED, dossier archivé.
+* Impact sur l'organisation globale :
+   * Centralisation des informations : Utilisation de Batigest, Monday et GED pour le suivi et le classement des dossiers, ce qui est crucial pour la traçabilité des projets.
+   * Difficultés identifiées : Ludivine mentionne la difficulté à trouver des informations comme les dates d'OS, dates contractuelles ou périodes d'intervention, ce qui suggère un besoin d'améliorer l'accessibilité ou la saisie de ces données dès le début du processus.
+   * Rôle des différents acteurs : Julien et Sylvie pour les devis, Ludivine pour le suivi administratif et la documentation des AO.
+2. Production :
+* Processus :
+   * Comptes rendus réunion de chantier : Reçus par mail. Si convocation, création d'événement dans l'agenda de France et classement GED. Sinon, classement GED direct. Problème de doublons d'envoi.
+   * PPSPS (Plan Particulier de Sécurité et de Protection de la Santé) : Création automatisée sur Monday une fois le projet accepté, puis envoi au SPS, Maître d'ouvrage et Maître d'œuvre.
+   * Situations de travaux : Ludivine est en copie des factures envoyées, s'occupe de l'envoi de cautions, de la saisie bancaire, du classement GED et de la vérification Batigest. Elle gère les modifications et relances selon un "tableau perso" et Batigest.
+   * Sous-traitance : Détermination du sous-traitant en échangeant avec Julien (si production chargée ou manque de compétence). Montage du dossier (DC4, contrat), envoi au MO. Suivi via facture dans Monday et ajout à la situation de travaux.
+   * Avenants : Reçus par courrier ou mail. Retrouver et valider le devis sur Batigest, accepter sur Monday, renvoyer l'avenant signé au MOuvrage et classer en GED.
+* Impact sur l'organisation globale :
+   * Coordination des tâches : Forte dépendance de Ludivine vis-à-vis de France (agenda, RDV SAV) et de Julien (validation, identification des sous-traitants, interlocuteurs comptables).
+   * Systèmes multiples : Utilisation de Kaliti, Monday, Batigest, GED, Excel (tableau perso) pour le suivi des projets, ce qui peut complexifier la vue d'ensemble et la recherche d'informations.
+   * Communication interservices : Le problème des doublons d'envoi de CR de chantier et la difficulté à identifier l'interlocuteur comptable via Julien indiquent des points d'amélioration dans la communication interne.
+   * Automatisation : L'automatisation du PPSPS sur Monday est un point positif pour l'efficacité.
+3. PV Réception :
+* Processus :
+   * En cas de réserves : signature refusée et discussion avec France.
+   * Sans réserves : Ludivine signe et classe en GED, contrôle avec Julien Laborot pour les travaux supplémentaires, puis préparation du DGD.
+* Impact sur l'organisation globale :
+   * Contrôle qualité et suivi : Implication de Ludivine et France dans la gestion des réserves et de Julien pour les travaux supplémentaires.
+   * Clôture de projet : Le PV de réception est une étape finale cruciale pour la clôture des projets et la préparation du DGD.
+4. Facturation Fournisseurs :
+* Processus :
+   * Réception des factures sur "compta@".
+   * Retrouver l'ARC sur le Drive (si absent, voir France puis Julien).
+   * Tampon "approuvée".
+   * Envoi sur le logiciel de compta Isuite Ekza (difficultés d'utilisation et de visibilité).
+   * Validation par Julien, impression grand livre, vérification du montant pour le paiement. Relance Julien si montant absent.
+   * Virement validé par Julien.
+   * Annotation de la facture avec la date de paiement.
+   * Création de tâches TODO sur Monday si manque avoir ou erreur.
+* Impact sur l'organisation globale :
+   * Problèmes de processus : L'utilisation d'Isuite Ekza est source de complication ("compliqué on ne sait pas où arrive la facture ni l'utiliser"). Les relances fournisseurs fréquentes et la perte de temps suggèrent une inefficacité dans le processus de validation et de paiement.
+   * Rôle central de Julien : Julien est le valideur clé pour les paiements, ce qui peut créer un goulot d'étranglement.
+   * Traçabilité : Le grand livre et l'annotation des factures assurent une certaine traçabilité.
+5. SAV :
+* Processus :
+   * Demande reçue sur "sav@" ou via Kaliti (pratique pour le suivi et les levées).
+   * Étude et arbitrage via export Kaliti sur Excel perso.
+   * Si pas de matériel nécessaire : voir avec France pour date, puis client, puis France si client indisponible. Placement du RDV SAV.
+   * Si matériel nécessaire : voir France. Demande de photo au client si nécessaire. France ou Ludivine commande (via référence dans les plans techniques pour garantie ou devis si non garantie). Validation du devis par Ludivine ou France. Date de livraison saisie dans tableau Monday. Livraison chez JLM.
+   * À réception du matériel : voir France pour RDV.
+   * Réception du quitus du poseur : Si remarques, nouveau RDV + matériel (revu avec France). Si OK, classement GED, envoi au MOuvrage pour levée de réserves.
+   * Réserves gérées sur Kaliti (promoteurs), Monday (SAV et autres), ou Excel.
+   * Demande de levées de réserves imprimée et donnée à France pour l'équipe concernée.
+* Impact sur l'organisation globale :
+   * Complexité du processus : Le SAV est un processus détaillé avec de nombreuses étapes, impliquant Ludivine, France et les poseurs.
+   * Multiplicité des outils : Kaliti, Excel, Monday, GED sont utilisés, ce qui peut fragmenter le suivi.
+   * Coordination : La coordination des RDV, commandes de matériel et levées de réserves est essentielle et repose fortement sur Ludivine et France.
+6. RH :
+* Processus :
+   * Entrée du salarié : Dossier du personnel en GED, fiche de renseignement, contrat papier, Monday pour le pointage et la centralisation. Établissement du contrat, déclaration Mutuelle, médecine du travail.
+   * EPI (Équipements de Protection Individuelle) : Commande des EPI d'embauche, été, fin d'année (avec tableau été des EPI à Noël).
+   * Congés : Suivi et gestion du planning des congés, courriers de suivi.
+   * Pointage : Fiches papiers hebdomadaires, relances mensuelles, saisie dans tableau Excel (long). Vérification des zones, contrôle des heures sup via GPS, MAJ congés. Validation par France, puis Julien.
+   * Envoi à la gestionnaire de paie, contrôle, coffre-fort numérique.
+* Impact sur l'organisation globale :
+   * Processus RH structuré mais lourd : L'entrée des salariés et le suivi des EPI sont bien définis. Cependant, le processus de pointage est décrit comme "long" et implique des relances, suggérant un besoin d'optimisation (digitalisation du pointage).
+   * Validation hiérarchique : Le pointage est validé par France
+   * 7. Processus SAV et Garantie
+
+
+Ce processus gère les demandes de service après-vente et les garanties.
+
+
+7.1. Gestion des Demandes
+* Réception : Les demandes de SAV sont reçues via l'adresse email `sav@jlmmenuiserie.fr` ou via Kaliti. Kaliti est considéré comme "pratique pour le suivi".
+* Suivi : Ludivine utilise un fichier Excel personnel pour le suivi initial des demandes, en complément des autres outils.
+7.2. Traitement
+* Analyse et Arbitrage : Les demandes sont analysées et un arbitrage est réalisé.
+* Intervention sans Matériel : Si aucun matériel n'est nécessaire, Ludivine coordonne la date d'intervention avec France, puis avec le client.
+* Intervention avec Matériel : Si du matériel est requis :
+   * Des photos sont demandées au client.
+   * La référence est recherchée dans le dossier technique.
+   * La commande est passée par France ou Ludivine (selon si c'est sous garantie ou nécessite un devis).
+   * La date de livraison est saisie dans le tableau SAV sur Monday.
+   * Le matériel est réceptionné chez JLM.
+   * Un rendez-vous est organisé avec France.
+* Quitus et Réserves : Ludivine reçoit le quitus du poseur. En cas de remarques, un nouveau rendez-vous ou matériel est prévu. Si le quitus est jugé "OK", il est classé en GED et envoyé au Maître d'Ouvrage pour la levée des réserves.
+7.3. Suivi des Réserves
+
+
+Le suivi des réserves est effectué via différents outils selon les interlocuteurs : Kaliti (pour certains promoteurs), Monday, et Excel (pour d'autres).
+
+
+7.4. Expertise
+
+
+France réalise l'expertise avec les assureurs pour défendre le dossier en cas de besoin.
+
+
+8. Processus Administratif et RH
+
+
+Ce processus couvre les aspects administratifs, financiers et de ressources humaines de l'entreprise, gérés principalement par Ludivine.
+
+
+8.1. Gestion des Factures Fournisseurs
+* Réception : Les factures fournisseurs sont reçues sur l'adresse email `compta@jlmmenuiserie.fr`.
+* Traitement : L'ARC (Accusé de Réception de Commande) est recherché sur le Drive (si introuvable, France puis Julien sont consultés). Après avoir été tamponnée "approuvée", la facture est envoyée à ISuite Ekza (logiciel de comptabilité).
+* Défis : Ce processus est jugé complexe, manque de visibilité sur l'arrivée des factures, et génère des relances fréquentes.
+8.2. Gestion des Factures Clients
+
+
+Ludivine s'occupe également de la gestion des factures clients, incluant les situations de travaux et les avenants.
+
+
+8.3. RH et Formation
+
+
+Ludivine est responsable des aspects RH, tels que les contrats, les EPI (Équipements de Protection Individuelle), le suivi des congés, le pointage (qui se fait manuellement à partir de fiches papier), et la gestion des formations (suivies sur Excel).
+
+
+8.4. Qualibat et Divers Administratif
+
+
+Ludivine gère le dossier Qualibat et d'autres tâches administratives diverses.
+
+
+9. Outils et Systèmes Utilisés
+
+
+JLM Menuiserie utilise une variété d'outils et de systèmes pour gérer ses processus :
+* Monday : Utilisé pour le pilotage de projets, la gestion des appels d'offres, les finances, le SAV, les budgets, et la formalisation du PPSPS.
+* Batigest : Employé pour le chiffrage, l'établissement des devis détaillés, et la mise à jour des statuts d'AO ("accepté", "refusé").
+* Visual Planning : Sert pour le planning général, le plan de charge, la mise à jour en temps réel des temps passés en production.
+* OneDrive : Utilisé pour le stockage des dossiers d'AO, les archives, les dossiers d'études, et le classement GED.
+* Excel : Employé pour les demandes de prix, les tableaux DPGF (générant de la double saisie), les tableaux types de consultation fournisseurs, le pointage manuel, les tableaux de suivi SAV personnels, et le suivi des formations.
+* GED (Gestion Électronique de Documents) : Utilisé pour le classement des courriers de refus, la création d'arborescence type pour les chantiers en cours, et le classement des quitus poseur et PV de réception.
+* Sage / Ekza (ISuite Ekza) : Logiciel de comptabilité utilisé pour la gestion des factures fournisseurs et clients.
+* Kaliti : Jugé "pratique pour le suivi" des demandes de SAV et utilisé pour le suivi des réserves avec certains promoteurs.
+* SharePoint : Mentionné pour la réception magasin.
+* Power BI : Prévu pour le suivi des KPI, mais les KPI manquants sont un défi.
+* Plateformes d'Appels d'Offres : BOMP, Marché Online, France Marché sont utilisées pour la réception des AO.
+* Notability : Utilisé sur tablette pour le suivi d'avancement des chantiers.
+* WhatsApp / SMS / Téléphone : Employés pour le support aux équipes et la communication.
+* Diagrammes de Flux : Des diagrammes visuels (Flux de l'information projet.HEIC, Flux problème.HEIC) illustrent les processus.
+9. Défis et Points à Améliorer
+
+
+L'audit a mis en évidence plusieurs défis et points à améliorer dans les processus actuels de JLM Menuiserie :
+* Double Saisie : La retranscription manuelle des prix sur les DPGF (Excel) et la saisie d'informations dans différents systèmes (Batigest, Monday, GED) génèrent une double saisie fastidieuse et source d'erreurs.
+* Manque de Fluidité de l'Information : Difficulté à trouver des informations clés (date OS, délais contractuels, date de fin, date de réception) et présence de doublons d'envoi.
+* Processus SAV Informels : L'utilisation de fichiers personnels (Excel) pour le suivi SAV entraîne un manque de traçabilité et une perte de temps.
+* Inefficacité dans la Logistique : La réception des livraisons est source de perte de temps significative en raison d'un manque d'organisation et de l'absence d'un magasinier dédié. Le rôle de magasinier reste à définir.
+* Problèmes en Amont (BE) : Des projets "mal finis au BE" (oublis, approximations, plans trop légers) génèrent des problèmes et des retards en production.
+* Surcharge Informationnelle : "Trop de mails en attente" car partagés entre collaborateurs nuit à l'efficacité.
+* Manque de Définition Claire des Rôles : Le rôle de magasinier est à définir.
+* Manque de Formalisation des Validations : Le jalon de "fin d'études" n'est pas systématiquement appliqué.
+* Gestion de la Priorisation des Chantiers : Actuellement "au jugé" ou "à la loi des grandes masses", ce qui pourrait devenir un problème avec une augmentation significative de l'activité.
+* Visibilité sur le Plan de Charge : La simulation de la charge de travail basée sur les commandes n'est pas pleinement intégrée
+* Visibilité sur le Plan de Charge : La simulation de la charge de travail basée sur les commandes n'est pas pleinement intégrée, ce qui limite la projection et l'anticipation.
+* Comptabilisation des Charges Amont : Les temps passés sur le back-office (BE, administratif) ne sont pas intégrés dans le calcul de la rentabilité par projet.
+* Besoin d'Outils Adaptés : Recherche de solutions plus unifiées pour éviter le "pataugeage entre différents outils" (Monday, Batigest, Visual Planning).
+* Manque d'Intuitivité des Outils : Batigest est perçu comme non "intuitif".
+* KPI Manquants : Les indicateurs de performance clés nécessaires pour une analyse approfondie via Power BI font défaut.
+* Plannings DCE Non Exploitables : Les plannings fournis dans les Dossiers de Consultation d'Entreprise ne sont souvent pas fiables ou exploitables pour la planification interne.
+* Complexité de la Gestion des Factures Fournisseurs : Le processus avec ISuite Ekza est complexe, manque de visibilité et génère des relances fréquentes.
+* Surcharge Administrative : De nombreuses tâches répétitives et chronophages (pointage manuel, suivi formations sur Excel) alourdissent la charge de travail administrative.
+* Dépendance à Autrui : La nécessité de solliciter d'autres collaborateurs pour retrouver des informations ou valider des actions crée des points de dépendance.
+* Tri des Alertes AO Fastidieux : Le volume et la faible pertinence de certaines alertes rendent le tri chronophage pour le BE.
+* Charge de Travail BE Inégale : Manque de temps pour les petits projets en raison du temps consacré aux dossiers plus importants.
+10. Conclusion
+
+
+L'audit des processus et de la gestion de projet chez JLM Menuiserie révèle une entreprise dynamique avec une équipe engagée, utilisant une variété d'outils pour gérer ses opérations. Cependant, plusieurs points de friction et défis ont été identifiés, notamment la double saisie, le manque de fluidité de l'information, les processus SAV informels, l'inefficacité logistique, les problèmes issus du bureau d'études en amont, et la surcharge administrative. L'optimisation de ces aspects, la formalisation de certaines étapes (comme les validations d'études), une meilleure intégration des outils et une définition plus claire des rôles (comme celui de magasinier) sont essentielles pour améliorer l'efficacité, la traçabilité et la rentabilité des projets. La mise en place de KPI pertinents et l'exploitation plus efficace des données permettront également un meilleur pilotage de l'activité.
+
+
+
+
+Comptes rendus des entretiens individuels
+
+
+La phase d'Appel d'Offres (AO) débute par la réception des AO via des plateformes officielles, des alertes quotidiennes, des appels directs ou des sollicitations de fournisseurs. La sélection des AO se fait sur des critères tels que la localisation, la distance, le client, le maître d'œuvre, la taille du projet et le type de menuiserie, avec une décision prise lors d'un point hebdomadaire. 
+
+
+La préparation du dossier d'offre implique le téléchargement des dossiers sur OneDrive, l'analyse des pièces, le quantitatif des éléments, la consultation des fournisseurs, l'établissement du devis sur Batigest et la retranscription des prix sur le DPGF (point de friction : double saisie). La rédaction administrative est gérée par Ludivine. Les AO refusés sont mis à jour sur Batigest et Monday et archivés, tandis que les AO acceptés entraînent une mise à jour sur Batigest et Monday, la création d'une arborescence sur la GED, et la formalisation du PPSPS.
+
+
+La phase Production / Chantier inclut la planification (France), avec la création du planning prévisionnel dans JLM Planning basé sur les heures vendues (défis : plan de charge non intégré, difficulté à simuler la charge de travail). Le suivi des chantiers (France) se fait via des réunions, des suivis d'avancement sur tablette, des communications WhatsApp/SMS et des revues hebdomadaires des plannings. La logistique et l'approvisionnement (France & Ludivine) concernent les commandes fournisseurs et la réception des livraisons (point de friction : perte de temps). La gestion des temps (Visual Planning) enregistre les temps passés en production, mais les temps de back-office ne sont pas comptabilisés dans la rentabilité projet. La fin de chantier et la réception (France & Ludivine) comprennent un contrôle qualité visuel, la préparation pour la réception, la signature du PV de réception (avec gestion des réserves) et la préparation du DGD.
+
+
+La phase SAV et Garantie gère les demandes reçues par email ou via Kaliti (jugé pratique pour le suivi), avec un fichier Excel personnel pour le suivi. Le traitement des demandes implique une analyse, et si du matériel est nécessaire, la demande de photos, la recherche de référence, la commande du matériel, la saisie de la date de livraison, la réception du matériel, la coordination d'un RDV et la réception du quitus du poseur. Le suivi des réserves se fait via Kaliti, Monday ou Excel. France gère également l'expertise avec les assureurs.
+
+
+La phase Administrative et RH (Ludivine) inclut la gestion des factures fournisseurs, avec leur réception par email, la recherche de l'ARC, l'approbation et l'envoi à ISuite Ekza (point de friction : complexité, manque de visibilité, relances fréquentes).
+
+
+
+
+
+
+1. Entretien « Julien »
+
+
+Rôles et responsabilités :
+* Gestion des chantiers, installation.
+* Direction, arbitrage des priorités.
+* Validation des études.
+* Développement ou mise en place de solutions/outils.
+Enjeux organisationnels :
+* Manque de jalons de validation formalisés : Absence de points de validation précis, notamment pour les études.
+* Gestion des temps back-office : Temps comptabilisés "au jugé", sans intégration complète dans la rentabilité projet.
+* Difficulté à obtenir la date de réception : Manque de précision sur les dates clés.
+* Difficulté à impliquer tout le monde : Les outils et solutions mis en place ne répondent pas toujours aux besoins réels de chaque équipe, entraînant une faible adoption.
+* Absence de gouvernance : Aucun RACI (Responsable, Approuveur, Consulté, Informé) ni jalons formels.
+* Flux multi-projets : Une vingtaine de chantiers en parallèle, avec une priorisation "au feeling".
+* Données temps réel hétérogènes : Visual Planning (live) pour la pose, back-office "au jugé", Monday regroupe budget et fournisseurs mais sans lier les temps ni les risques.
+* Indicateurs manquants : Aucune comparaison "prévu vs réel", ni marge chantier consolidée.
+* Validation d'études peu appliquée : Nécessité d'un point "Fin d'études" systématique.
+* Risques qualité : Contrôle couleur/produit arrive trop tard, génère des reprises coûteuses.
+* Volonté d'une base de données unique : Objectif à terme, mais accord pour commencer par l'optimisation des processus.
+2. Entretien « France »
+
+
+Fonction : Chef de travaux / Conducteur de chantier
+
+
+Rôles et responsabilités :
+* Pilote 15 à 25 chantiers en parallèle, de l'exécution à la réception.
+* Référent technique terrain : planification, coordination poseurs, relation MOE/MOA.
+* Gestion des litiges, SAV ponctuel.
+* Support technique en phase AO (conseil, contacts).
+* Création et suivi du planning prévisionnel dans JLM Planning.
+* Logistique et approvisionnement (commandes fournisseurs pour consommables et pose).
+* Contrôle qualité visuel et organisation de la réception.
+* Expertise avec les assureurs.
+* Gestion des absences.
+* Recherche d'ARC (Accusé de Réception de Commande).
+Activités clés (cycle hebdomadaire) :
+* Lecture VISA / réunion chantier → mise à jour planning Visual Planning et Monday.
+* Préparation commandes fournisseurs ; confirmation créneau de livraison (souvent communiqué le vendredi après-midi pour la semaine suivante).
+* Brief quotidien aux chefs d’équipe (7h au téléphone ou WhatsApp) + support technique à distance (photos / Notability).
+* Visite de chantier 1 fois par semaine ; relevé avancement sur tablette → upload GED.
+* Suivi litiges / compléments : devis supplémentaires, re-planning, défense technique en réception.
+* Réunions internes : revue planning globale le vendredi, point téléphonique si surcharge.
+Processus gérés :
+* Planning opérationnel : Transforme le planning "macro" Monday en charges réelles par équipe.
+* Logistique matériaux : Valide les délais fabricants, prévoit moyens de déchargement (½ journée perdue en moyenne quand le créneau change).
+* Qualité & Réception : Contrôle visuel final, organisation des 2 jours "finition" avant OPR (Opérations Préalables à la Réception), participation aux OPR et gestion des réserves.
+* SAV : Ordonnancement des interventions (Kaliti ou tableau Excel selon client) quand France est directement sollicité.
+Outils et supports :
+* Visual Planning (planning pose) – version non connectée aux autres systèmes.
+* Monday.com (vue macro + budgets).
+* Notability (tablette iPad) pour plans annotés et suivi quotidien.
+* WhatsApp / SMS pour support aux équipes.
+* GED OneDrive (plans, comptes-rendus).
+* Sage (consultation situations de travaux via comptabilité).
+Forces & bonnes pratiques :
+* Vision terrain réaliste ; sait "débloquer" rapidement les petits imprévus.
+* Utilise un minimum de digital (tablette, photos) pour tracer l'avancement.
+* Relation MOE/MOA perçue comme fiable ; gère les litiges techniques sans escalade systématique.
+* Gère une partie importante des litiges de façon isolée, sans réelle mutualisation avec le bureau d’études.
+Irritants et goulots identifiés :
+* Priorisation floue : Arbitrage "au feeling" quand plusieurs chantiers se chevauchent ; pas de règle claire (pénalités, marge).
+* Livraison imprécise : Horaire communiqué tardivement ⇒ équipes en attente ; absence de magasinier ou de tampon sur dépôt.
+* Boucle BE ↔ terrain quasi nulle : Erreurs plan/nuancier découvertes trop tard ; France "absorbe" les problèmes seul.
+* Sur-sollicitation mails & téléphone : Peu de capitalisation, pas de tableau unique des litiges.
+* KPI absents : Pas de suivi "livraison → pose → facturation", ni mesure du temps perdu.
+* Single Point of Failure : Si France s’absente, l’organisation se fragilise fortement.
+* Difficulté à trouver les informations : Date OS, dates contractuelles.
+* Doublons d'envois.
+* Gestion SAV via fichiers personnels.
+* Perte de temps sur des petits détails.
+* Projets mal finis au BE.
+* Trop de mails en attente.
+* Difficulté à simuler la charge de travail basée sur les commandes.
+* Plan de charge non intégré pour tout.
+* Perte de temps lors de la réception des livraisons.
+* Rôle de magasinier à définir.
+Indicateurs recommandés (à mettre en place) :
+* Écart prévu/réel (jours) entre livraison fournisseur et début pose.
+* Heures d’attente équipes / semaine (objectif : -50 %).
+* % chantiers "ouverts > 30 jours après pose" (réserves non levées).
+* Nb de litiges ouverts / fermés par semaine (tableau Kanban).
+* Charge hebdomadaire par conducteur vs capacité (heures).
+Quick wins TOC ciblés :
+* Exploiter le goulot "information livraison" : Slot-booking transport (créneau fixé 48h avant) ; refus automatique des fenêtres "flottantes".
+* Subordonner le reste : Lancer équipes uniquement après créneau validé ; visualisation tampon (buffer) de 1 jour dans Visual Planning.
+* Élever la contrainte : Tableau "Litiges et petits détails" partagé BE-Travaux ; stand-up 15 min lundi matin. Création poste magasinier volant (0,5 ETP) + scan BL pour fiabiliser stocks. Connecteur Monday ↔ Visual Planning pour refléter en temps réel % avancement et alertes retard.
+Risques si inaction :
+* Fatigue / turnover de France ; perte de compétences tacites.
+* Dérives BFR (Besoin en Fonds de Roulement) (facturation retardée) à mesure que le volume de chantiers augmente.
+* Insatisfaction client (réserves qui traînent) et pénalités potentielles non budgétées.
+Synthèse :
+France assure aujourd’hui la fluidité du chantier "à la force du poignet". La contrainte principale se situe dans la synchronisation informationnelle (dates, litiges, retours terrain). En clarifiant les règles de priorisation, en fiabilisant la logistique fournisseurs et en partageant un tableau des litiges, JLM peut libérer 10-15 % de temps opératoire, sécuriser sa marge et réduire la dépendance à un seul profil clé.
+
+
+3. Entretien « BE - Nicolas »
+
+
+Fonction : Projeteur / Métreur (Bureau d'Études)
+
+
+Rôles et responsabilités :
+* Cont
+pagnie les contraintes chantier (épaisseur doublage, reprises de charge).
+
+
+Irritants et goulots :
+* Double/triple saisie : Données saisies par Sylvie puis re-saisies par Julien D. puis par Ludivine (ARC), source d'erreurs.
+* Absence de jalon « Fin d’études » : France découvre en chantier des oublis (nuancier, grilles) → retouches coûteuses.
+* Aucune mesure de charge : Le BE ignore son propre WIP vs capacité ; pics AO provoquent goulot.
+* Versioning flou : Plusieurs plans coexistent dans OneDrive sans nomenclature claire.
+* Faible boucle terrain : Les études ne s’enrichissent pas des écarts posés / commandés.
+KPI recommandés :
+* WIP dossiers BE / capacité (h) par semaine (objectif ≤ 90 %).
+* Lead-time « Passation → Fin d’études validée ».
+* Taux de modifications après commande (%) – viser < 5 %.
+* Nb de ressaisies données projet (objectif = 1).
+Quick wins (Théorie des Contraintes) :
+* Drum = « Information technique fiable et gelée »
+   * Exploiter : Créer jalon obligatoire « Fin d’études / VISA interne » cosigné BE & France ; bloque le lancement commandes.
+   * Subordonner : Commandes fournisseurs ne partent qu’après jalon signé ; Monday déclencheur automatique (rope).
+   * Élever : Script RPA : import automatique fichier Excel Sylvie → Batigest, génération immédiate DPGF client (supprime double saisie).
+   * Activer versioning SharePoint + nomenclature « vMajor_Minor-date » pour plans.
+   * Stand-up hebdo BE ↔ Travaux 15 min : retour d’expérience, mise à jour bibliothèque prix.
+Risques si statu quo :
+* Goulot BE sature à +40 % CA visé ; délais d’études pousseront commandes & chantier, impactant BFR.
+* Retouches post-commande continueront d’éroder la marge et de mobiliser France sur les litiges.
+* Dépendance forte à Nicolas : son absence déplacerait la contrainte sur le terrain.
+Synthèse :
+Le Bureau d’Études est le premier goulet matériel du flux : sans gel technique formel ni données partagées, il génère débordements sur chantier et retards de facturation. En instaurant un jalon « Fin d’études », en automatisant la reprise de données et en mesurant la charge BE, JLM peut réduire de 20 % le lead-time études, diviser par deux les retouches post-commande et sécuriser sa marge projet.
+
+
+
+
+4. Entretien « Ludivine »
+
+
+Fonction : Assistante de direction / Responsable administrative et RH
+
+
+Rôles et responsabilités :
+* Gestion administrative des AO (DC1, DC2, références travaux, KBIS, assurances, quitus légal).
+* Formalisation du PPSPS.
+* Signature des PV de réception (si pas de réserves) et classement GED.
+* Gestion des factures fournisseurs (réception, recherche ARC, approbation, envoi à ISuite Ekza).
+* Gestion administrative du SAV (suivi des demandes, coordination RDV si pas de matériel, commande matériel si nécessaire, saisie date de livraison, réception quitus poseur).
+* Fonctions RH (pointage, contrats de travail, suivi des commandes, etc.).
+* Gestion des situations de travaux (lien avec Sage).
+* Responsable formation et Qualibat.
+Enjeux organisationnels :
+* Difficulté à trouver les informations : Date OS, délai contractuel, date de fin.
+* Impossibilité de se baser sur les plannings DCE : Souvent non fiables.
+* Manque de traçabilité des factures fournisseurs : Complexité avec ISuite Ekza, manque de visibilité sur l'arrivée des factures, relances fréquentes.
+* Gestion SAV via fichiers personnels : Suivi via un fichier Excel personnel.
+* Perte de temps à chercher des informations.
+* Charge de travail RH et administrative importante : Multiples saisies et peu d'automatisation.
+Irritants et goulots :
+* Double saisie : Par exemple, informations des AO sur Batigest puis Monday.
+* Processus de validation et de transmission des factures fournisseurs complexe : Rend la visibilité et la gestion des paiements difficiles.
+* Manque de centralisation et de fluidité des informations : Les données ne circulent pas efficacement entre les services.
+* Dépendance à des fichiers Excel personnels pour des suivis clés (SAV).
+Synthèse :
+Ludivine est un pivot administratif et RH, mais son efficacité est freinée par des processus manuels, des outils peu connectés et une charge informationnelle élevée. L'optimisation de la gestion des factures fournisseurs, la centralisation du SAV et l'automatisation des saisies seraient des gains majeurs pour libérer son temps et améliorer la fluidité globale.
+
+
+
+
+5. Entretien « Sylvie »
+
+
+Fonction : Responsable Bureau d'Études / Chiffrage
+
+
+Rôles et responsabilités :
+* Réception et sélection des appels d'offres (avec Julien).
+* Téléchargement et analyse des dossiers AO.
+* Impression de documents (CCTP) pour analyse.
+* Quantification des éléments.
+* Consultation des fournisseurs (via tableaux Excel types).
+* Établissement des devis sur Batigest.
+* Retranscription des prix sur le DPGF (Excel client).
+Enjeux organisationnels :
+* Processus de devis fastidieux : Forte composante manuelle (impression, copier-coller, re-saisie sur Excel pour DPGF) – double saisie.
+* Tri des alertes fastidieux : Réception quotidienne de nombreuses alertes AO.
+* Manque de temps pour les petits projets/éloignés.
+* Absence de boucle « prévision ↔ réel » : Ne compare pas les délais ni les coûts estimés aux données chantier.
+* Aucune règle claire pour prioriser les appels d’offres : Charge BE dépend du "carnet papier" et de Monday, sans score d’opportunité ou date butoir.
+* Plannings contractuels souvent absents : Les dates réelles d’intervention restent floues.
+* Gestion documentaire éclatée : DCE, fiches techniques, plans se doublonnent entre OneDrive, Monday et Batigest ; pas de référentiel unique ni de versioning formel.
+Irritants et goulots :
+* Double (voire triple) saisie : Création du dossier AO sur OneDrive, puis recopie de l’arborescence "chantier en cours", puis ressaisie des infos dans Batigest.
+* Données administratives (OS, caution, réception) renseignées a posteriori : Risque de retard de facturation.
+* Sous-traitance : Fichiers DC4 montés par Sylvie, mais suivi des factures dans Monday par une autre personne → rupture de chaîne.
+KPI actuellement absents :
+* Taux de réussite appels d’offres (gagnés / déposés).
+* Lead-time "DCE reçu ➜ devis envoyé".
+* Écart devis initial / commande finale (€ et délai).
+* Charge BE par projet vs capacité (heures planifiées / dispo).
+Points durs pour l’implantation TOC :
+* Drum (goulot potentiel) = Capacité BE / fiabilité du chiffrage.
+   * Processus largement manuel (lecture DCE, montage devis) → risque de saturation lors des pics AO.
+   * Absence de "freeze" technique (plans + nuancier) avant lancement fabrication ; engendre retouches coûteuses plus tard.
+   * Non-connexion au terrain : pas de feedback sur métrés réels, donc la base prix ne s’enrichit pas.
+* Buffers actuels (métiers) : Stocks administratifs (Sylvie multiplie les dossiers), tampon calendrier (anticipe large).
+* Rope (signal de lancement) : Réception OS ou signature marché → création dossier "chantier en cours", sans validation formelle "Fin d’études".
+Opportunités et quick wins :
+* Instaurer un jalon "Fin d’études / VISA" obligatoire (RACI : Sylvie = owner, Chef de travaux = cosignataire).
+* Tableau Kanban AO dans Monday : colonne « Scoring opportunité », date butoir automatique, priorité dynamique.
+* Connecteur Batigest → Monday : dès qu’un devis passe « Accepté », création auto d’une carte chantier
+pré-remplie (montant, marge cible, dates).
+5. Macro-KPI TOC :
+* BE : WIP AO actif / capacité hebdo (heures).
+* Buffer "plans gelés" = jours entre validation nuancier et commande fournisseur (objectif < 5 j).
+1. Automatisation documentaire simple :
+   * Script PowerAutomate pour copier l'arborescence type et déposer les PDF dans le même dossier (suppression du copier-coller manuel).
+   * Versioning SharePoint activé pour plans & fiches techniques.
+Impact attendu :
+* Réduction lead-time devis – commande de 20-30 %.
+* Moins de reprises post-commande (-10 % coût SAV).
+* Visibilité charge BE → meilleure sélection AO (hausse taux de réussite).
+
+
+
+
+Perception vs. Réalité 
+1. Stratégie et Vision Globale
+* Perception de la Société : Volonté d'améliorer la gestion, de rationaliser les outils, d'optimiser les processus et de réduire les saisies multiples. Recherche d'une base de données unique à terme. La spécialisation (menuiserie intérieure, extérieure, bardage) et la répartition des marchés (60% privé, 40% public) sont claires.
+* Réalité de Terrain : Bien que les objectifs soient clairs, la mise en œuvre se heurte à des difficultés d'intégration des outils et à une absence de gouvernance claire (RACI, jalons formels). La volonté d'une base de données unique est présente, mais l'accord est de commencer par l'optimisation des processus, ce qui montre une conscience de l'ampleur de la tâche. La priorisation des projets (AO, chantiers) se fait encore beaucoup "au feeling" plutôt que sur des critères objectifs et partagés, ce qui peut nuire à l'atteinte des objectifs stratégiques.
+2. Processus Opérationnels
+* Appels d'Offres (AO)
+   * Perception de la Société : Un processus structuré de réception, sélection, préparation et gestion des offres est en place.
+   * Réalité de Terrain : La double saisie des prix sur Batigest et le DPGF est un point de friction majeur, générant des pertes de temps et des risques d'erreurs. La sélection des AO repose sur des critères clairs, mais la charge de travail du BE n'est pas mesurée, ce qui peut entraîner une saturation lors des pics d'activité et un manque de temps pour les petits projets. La gestion administrative par Ludivine semble efficace mais dépendante de saisies manuelles.
+
+
+* Bureau d'Études (BE)
+   * Perception de la Société : Le BE est responsable de l'analyse technique et du chiffrage.
+   * Réalité de Terrain : Le BE est un goulet d'étranglement critique. Il n'y a pas de jalon formel de "Fin d'études", ce qui entraîne la découverte tardive d'oublis ou d'erreurs sur chantier, générant des retouches coûteuses et du stress pour France. Le versioning des plans est flou, et il y a une faible boucle de retour d'informations du terrain, empêchant le BE d'enrichir sa base de prix et de s'améliorer. La double/triple saisie des données entre Sylvie, Julien D. et Ludivine est une source constante d'erreurs et de perte de temps. La capacité de charge du BE n'est pas mesurée, ce qui rend difficile la planification et la priorisation.
+
+
+* Production / Chantier
+   * Perception de la Société : La planification est centralisée par France, le suivi des chantiers est digitalisé (tablette, WhatsApp), et la gestion des temps est faite via Visual Planning.
+   * Réalité de Terrain : France, le chef de travaux, est un "single point of failure" qui assure la fluidité des chantiers "à la force du poignet".
+      * Planification : Le planning prévisionnel dans JLM Planning ne s'intègre pas au plan de charge global, rendant difficile la simulation de la charge de travail. La priorisation des chantiers est floue et se fait "au feeling".
+      * Logistique et Approvisionnement : La réception des livraisons est une source de perte de temps due aux horaires imprécis des fournisseurs et à l'absence d'un magasinier dédié.
+      * Suivi des chantiers : Bien que des outils digitaux soient utilisés, la boucle d'information entre le BE et le terrain est "quasi nulle", ce qui fait que France "absorbe" seul les problèmes et erreurs de conception.
+      * Gestion des temps : Les temps de back-office ne sont pas comptabilisés dans la rentabilité projet, faussant l'analyse.
+      * Qualité et Réception : Le contrôle qualité visuel est effectué, mais des erreurs de couleur/produit sont découvertes trop tard, entraînant des reprises coûteuses.
+* * SAV et Garantie
+   * Perception de la Société : Le SAV est géré via Kaliti et des fichiers Excel personnels.
+   * Réalité de Terrain : La dépendance à des fichiers Excel personnels pour le suivi du SAV limite la capitalisation des données, la mutualisation des informations et rend le suivi moins transparent. Bien que Kaliti soit jugé pratique, la gestion reste fragmentée.
+
+
+* Administratif et RH
+   * Perception de la Société : Ludivine gère efficacement les aspects administratifs et RH, y compris les factures fournisseurs et les aspects liés aux AO.
+   * Réalité de Terrain : La gestion des factures fournisseurs est complexe avec ISuite Ekza, manquant de visibilité sur l'arrivée des factures et générant des relances fréquentes. La recherche d'ARC est un irritant. La multitude de saisies et le manque d'automatisation augmentent la charge de travail de Ludivine et le risque d'erreurs. La difficulté à trouver des informations clés (dates OS, dates contractuelles) est un frein majeur à l'efficacité.
+3. Outils et Systèmes d'Information
+* Perception de la Société : Utilisation de Batigest, Monday, Visual Planning, Kaliti, OneDrive, ISuite Ekza, Sage.
+
+
+* Réalité de Terrain : Les outils sont nombreux mais ne sont pas connectés entre eux, ce qui crée des silos d'information et de multiples saisies.
+   * Disconnexion : Visual Planning n'est pas connecté aux autres systèmes, Monday regroupe budgets et fournisseurs mais sans lier les temps ni les risques.
+   * GED : Bien qu'OneDrive soit utilisé, la gestion documentaire est éclatée avec des doublons et un manque de versioning formel pour les plans et fiches techniques.
+   * Absence de "single source of truth" : Les données sont hétérogènes et ne sont pas consolidées, ce qui rend difficile l'obtention d'une vision d'ensemble précise des projets (marge chantier consolidée, comparaison prévu vs réel).
+4. Mesure de la Performance et Indicateurs (KPI)
+* Perception de la Société : Volonté d'améliorer la gestion et d'optimiser les processus.
+* Réalité de Terrain : Il y a un manque criant d'indicateurs clés de performance (KPI) pour mesurer l'efficacité des processus et la rentabilité des projets.
+   * Aucune comparaison "prévu vs réel" (délais, coûts, heures).
+   * Pas de suivi précis du temps perdu (attente de livraison, recherche d'informations).
+   * Manque de mesure de la charge de travail (BE, chantier).
+   * Les taux de réussite des AO ne sont pas suivis, ni les lead-times des études.
+   * Les modifications post-commande ne sont pas quantifiées.
+
+
+
+
+® Robinswood - Cabinet de Conseil et d’Implantation de Solutions d’Automatisation
+Une maque de YOUCOM, SAS au capital de 20 000€ et inscrit au RCS d’Amiens sous le numéro 825 259 476
+
+
+ / 25

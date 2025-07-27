@@ -159,6 +159,141 @@ JLM ERP is a comprehensive business management system specifically designed for 
 - **Real-time Sync**: WebSocket connections for multi-user coordination
 - **Error Recovery**: Automatic rollback on server errors with user notification
 
+## Architecture de Tests & Qualité Logicielle
+
+### Infrastructure de Tests Complète
+
+**Framework de Test Principal**: Vitest (plus rapide que Jest avec Vite)
+- Configuration séparée pour frontend/backend
+- Tests unitaires, intégration et E2E
+- Couverture de code automatique
+- Mode watch pour développement continu
+
+**Tests End-to-End**: Playwright
+- Multi-navigateurs (Chrome, Firefox, Safari)
+- Tests mobile et desktop
+- Screenshots et vidéos automatiques en cas d'échec
+- Parallélisation des tests
+
+**Tests Composants React**: Testing Library
+- Tests d'interaction utilisateur réalistes
+- Accessibilité et bonnes pratiques
+- Mocks robustes des hooks et APIs
+
+**Tests API Backend**: Supertest
+- Tests d'intégration des routes Express
+- Validation des réponses JSON
+- Tests de sécurité et gestion d'erreurs
+
+### Configuration des Tests
+
+**Scripts de Test Disponibles**:
+```bash
+# Tests complets avec couverture
+npm run test
+npm run test:coverage
+
+# Tests frontend uniquement
+npm run test:frontend
+
+# Tests backend uniquement  
+npm run test:backend
+
+# Tests E2E avec interface
+npm run test:e2e
+npm run test:e2e:ui
+
+# Mode watch pour développement
+npm run test:watch
+```
+
+**Fichiers de Configuration**:
+- `vitest.config.ts` - Configuration globale Vitest
+- `vitest.frontend.config.ts` - Tests composants React
+- `vitest.backend.config.ts` - Tests API et logique métier
+- `playwright.config.ts` - Tests E2E multi-navigateurs
+
+### Stratégies Anti-Boucles de Bugs
+
+**1. Détection de Boucles Infinies**:
+- Compteurs de limites dans les tests (max 100 appels)
+- Timeouts automatiques pour les opérations async
+- Détection de conditions de course
+
+**2. Isolation des Tests**:
+- Cleanup automatique après chaque test
+- Mocks indépendants entre tests
+- Reset des états globaux
+
+**3. Patterns de Test Robustes**:
+- Factory functions pour données de test consistantes
+- Helpers utilitaires réutilisables (`tests/utils/test-helpers.ts`)
+- Attente conditionnelle pour éviter les flaky tests
+
+**4. Gestion d'Erreurs Proactive**:
+- Mocks avec gestion d'erreur intégrée
+- Tests de cas limites (network failure, timeout)
+- Validation des types TypeScript stricte
+
+### Couverture de Code & Métriques
+
+**Objectifs de Couverture**:
+- Backend (server/): 85% minimum
+- Frontend (client/src/): 80% minimum
+- Composants critiques: 95% minimum
+
+**Métriques Surveillées**:
+- Couverture des lignes, branches, fonctions
+- Performance des requêtes (< 100ms pour API)
+- Temps de rendu composants (< 16ms)
+- Bundle size frontend (< 500kb gzipped)
+
+### Organisation des Tests
+
+```
+tests/
+├── setup.ts                    # Configuration globale
+├── utils/test-helpers.ts        # Helpers réutilisables
+├── backend/
+│   ├── setup.ts                # Config spécifique backend
+│   ├── storage.test.ts         # Tests logique métier
+│   └── routes.test.ts          # Tests API endpoints
+├── frontend/
+│   ├── setup.ts                # Config spécifique frontend
+│   ├── components/             # Tests composants React
+│   └── hooks/                  # Tests hooks personnalisés
+└── e2e/
+    ├── dashboard.spec.ts       # Tests workflows utilisateur
+    └── offers.spec.ts          # Tests gestion offres
+```
+
+### Optimisations Performance Tests
+
+**1. Parallélisation Intelligente**:
+- Tests backend en parallèle (isolation DB)
+- Tests frontend groupés par composant
+- Tests E2E séquentiels pour éviter conflicts
+
+**2. Cache & Réutilisation**:
+- Snapshot des composants stables
+- Mocks partagés entre tests similaires
+- Setup/teardown optimisés
+
+**3. Monitoring Temps d'Exécution**:
+- Alert si tests > 30 secondes
+- Métriques de performance par suite
+- Détection de régression de vitesse
+
+### Intégration Continue (CI/CD)
+
+**Pipeline de Qualité**:
+1. Vérification TypeScript (tsc --noEmit)
+2. Tests unitaires backend
+3. Tests unitaires frontend
+4. Tests E2E sur navigateurs principaux
+5. Validation couverture de code
+6. Build et déploiement si tous tests verts
+
 ## Dependencies & Toolchain
 
 ### Production Dependencies
@@ -176,6 +311,17 @@ JLM ERP is a comprehensive business management system specifically designed for 
 **Authentication & Security**:
 - `passport` + `openid-client` - OIDC authentication flow
 - `express-session` + `connect-pg-simple` - PostgreSQL session storage
+
+**Testing & Quality Tools**:
+- `vitest` - Fast unit testing framework (replaces Jest)
+- `@testing-library/react` - React component testing utilities
+- `@testing-library/jest-dom` - DOM testing matchers
+- `@testing-library/user-event` - User interaction simulation
+- `@playwright/test` - End-to-end testing framework
+- `supertest` - HTTP assertion library for API testing
+- `msw` - Mock Service Worker for API mocking
+- `jsdom` - DOM environment for Node.js testing
+- `happy-dom` - Faster DOM implementation for tests
 
 **Development Tools**:
 - `vite` - Fast build tool with HMR
@@ -226,20 +372,34 @@ npm run dev
 
 **Error Resolution Priority**:
 1. Fix TypeScript compilation errors immediately (use `get_latest_lsp_diagnostics`)
-2. Ensure database schema changes are migrated (`npm run db:push`)
-3. Test authentication flow before implementing business logic
+2. Run comprehensive test suite before code changes (`npm run test`)
+3. Ensure database schema changes are migrated (`npm run db:push`)
 4. Validate form schemas match database models
+5. Check test coverage maintenance (85%+ backend, 80%+ frontend)
 
 **Code Quality Standards**:
-- All API endpoints must use `isAuthenticated` middleware
-- Frontend components must handle loading/error states
-- Database queries must include proper TypeScript types
+- All new features must include corresponding tests
+- Frontend components must handle loading/error states with tests
+- Database queries must include proper TypeScript types and test coverage
 - Use shared schemas for validation across frontend/backend
+- API endpoints must have integration tests with Supertest
+- Critical user workflows must have E2E tests with Playwright
 
-**Testing Strategy**:
-- Run LSP diagnostics after every code change
-- Verify database migration success before deployment
-- Test authentication flow with Replit OIDC
-- Validate form submissions with real data
+**Testing Strategy Anti-Bugs**:
+- Run `npm run test` after every significant code change
+- Use LSP diagnostics for immediate TypeScript error detection
+- Execute E2E tests before major feature releases
+- Verify test isolation (no shared state between tests)
+- Monitor test execution time (flag tests > 5 seconds)
+- Validate mock consistency with real implementations
+- Check for flaky tests (random failures) and fix immediately
+
+**Development Workflow with Tests**:
+1. Write test first (TDD approach for complex features)
+2. Implement feature with TypeScript strict mode
+3. Run focused test suite (`npm run test:backend` or `npm run test:frontend`)
+4. Check code coverage report
+5. Run full test suite before commit
+6. Execute E2E tests for user-facing features
 
 The application is optimized for Replit deployment with automatic database provisioning, session management, and authentication integration.

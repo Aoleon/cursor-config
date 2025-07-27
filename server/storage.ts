@@ -514,12 +514,12 @@ export class DatabaseStorage implements IStorage {
     const [offersInPricing] = await db
       .select({ count: count() })
       .from(offers)
-      .where(eq(offers.status, "en_cours_chiffrage"));
+      .where(eq(offers.status, "en_chiffrage"));
 
     const [offersPendingValidation] = await db
       .select({ count: count() })
       .from(offers)
-      .where(eq(offers.status, "en_attente_validation"));
+      .where(eq(offers.status, "en_validation"));
 
     // Simple BE load calculation based on active offers
     const beLoad = Math.min(100, Math.round((totalOffers.count / 30) * 100));

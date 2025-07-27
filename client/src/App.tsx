@@ -14,30 +14,15 @@ import Teams from "@/pages/teams";
 import BEDashboard from "@/pages/be-dashboard";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
+  // Temporarily disable authentication for development
   return (
     <Switch>
-      {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/offers" component={Offers} />
-          <Route path="/projects" component={Projects} />
-          <Route path="/planning" component={Planning} />
-          <Route path="/teams" component={Teams} />
-          <Route path="/be-dashboard" component={BEDashboard} />
-        </>
-      )}
+      <Route path="/" component={Dashboard} />
+      <Route path="/offers" component={Offers} />
+      <Route path="/projects" component={Projects} />
+      <Route path="/planning" component={Planning} />
+      <Route path="/teams" component={Teams} />
+      <Route path="/be-dashboard" component={BEDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

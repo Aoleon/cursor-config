@@ -6,6 +6,8 @@ JLM ERP is a comprehensive business management system specifically designed for 
 
 **Current Status**: Fully functional ERP with enhanced JLM-specific features. All audit findings addressed: BE workload dashboard, validation milestones tracker, and enhanced offer management operational.
 
+**Development Status**: Authentication temporarily disabled to facilitate testing and development access. All API endpoints accessible without login credentials. Mock user data and sample business records available for testing.
+
 ## User Preferences & AI Agent Guidelines
 
 **Communication Style**: Simple, everyday language avoiding technical jargon
@@ -13,6 +15,7 @@ JLM ERP is a comprehensive business management system specifically designed for 
 **Iteration Approach**: Autonomous work sessions with comprehensive solutions, minimal user interruptions
 **Error Handling**: Proactive TypeScript error resolution, robust data validation
 **Testing Strategy**: Immediate LSP diagnostics checking after code changes to prevent compilation issues
+**Development Mode**: Authentication disabled temporarily for easier testing and development access
 
 ## System Architecture
 

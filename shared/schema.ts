@@ -63,12 +63,11 @@ export const projectStatusEnum = pgEnum("project_status", [
 ]);
 
 export const menuiserieTypeEnum = pgEnum("menuiserie_type", [
-  "fenetres_pvc",
-  "fenetres_aluminium",
+  "fenetres",
+  "portes", 
+  "bardage",
   "mur_rideau",
-  "portes_bois",
-  "portes_alu",
-  "bardage"
+  "autre"
 ]);
 
 export const aoSourceEnum = pgEnum("ao_source", [

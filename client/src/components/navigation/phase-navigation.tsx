@@ -20,7 +20,8 @@ import {
   FileText,
   Target,
   Gauge,
-  BookOpen
+  BookOpen,
+  PlayCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -125,12 +126,22 @@ const phaseNavigation: PhaseSection[] = [
       { title: "Retours Client", href: "/feedback", icon: Users, isImplemented: false, description: "Feedbacks et réclamations" },
       { title: "Maintenance", href: "/maintenance", icon: Settings, isImplemented: false, description: "Maintenance préventive" }
     ]
+  },
+  {
+    phase: "demo",
+    title: "Démonstration",
+    description: "Workflow complet de bout en bout",
+    color: "bg-purple-100 text-purple-900 dark:bg-purple-900 dark:text-purple-100",
+    items: [
+      { title: "Workflow Complet", href: "/workflow-demo", icon: PlayCircle, isImplemented: true, description: "Démonstration du processus AO → Projet" },
+      { title: "Jalons Validation", href: "/milestones-timeline", icon: BookOpen, isImplemented: true, description: "Timeline des jalons de validation" }
+    ]
   }
 ];
 
 export function PhaseNavigation() {
   const [location] = useLocation();
-  const [expandedPhases, setExpandedPhases] = useState<string[]>(["dashboard", "commercial", "etude", "planification"]);
+  const [expandedPhases, setExpandedPhases] = useState<string[]>(["dashboard", "commercial", "etude", "planification", "demo"]);
 
   const togglePhase = (phase: string) => {
     setExpandedPhases(prev => 

@@ -1105,6 +1105,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Project phases routes
+  app.get('/api/project-phases', async (req, res) => {
+    try {
+      const phases = await storage.getProjectPhases();
+      res.json(phases);
+    } catch (error) {
+      console.error("Error fetching project phases:", error);
+      res.status(500).json({ message: "Failed to fetch project phases" });
+    }
+  });
+
+  app.get('/api/project-phases/:projectId', async (req, res) => {
+    try {
+      const phases = await storage.getProjectPhasesByProjectId(req.params.projectId);
+      res.json(phases);
+    } catch (error) {
+      console.error("Error fetching project phases:", error);
+      res.status(500).json({ message: "Failed to fetch project phases" });
+    }
+  });
+
+  app.post('/api/project-phases', async (req, res) => {
+    try {
+      const phase = await storage.createProjectPhase(req.body);
+      res.status(201).json(phase);
+    } catch (error) {
+      console.error("Error creating project phase:", error);
+      res.status(500).json({ message: "Failed to create project phase" });
+    }
+  });
+
+  app.put('/api/project-phases/:id', async (req, res) => {
+    try {
+      const phase = await storage.updateProjectPhase(req.params.id, req.body);
+      res.json(phase);
+    } catch (error) {
+      console.error("Error updating project phase:", error);
+      res.status(500).json({ message: "Failed to update project phase" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

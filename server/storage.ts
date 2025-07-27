@@ -6,6 +6,7 @@ import {
   supplierRequests,
   quotations,
   projectTasks,
+  projectPhases,
   beWorkload,
   avWorkload,
   productionWorkload,
@@ -31,6 +32,8 @@ import {
   type InsertQuotation,
   type ProjectTask,
   type InsertProjectTask,
+  type ProjectPhase,
+  type InsertProjectPhase,
   type BeWorkload,
   type InsertBeWorkload,
   type AvWorkload,
@@ -736,6 +739,36 @@ export class DatabaseStorage implements IStorage {
 
   async deleteValidationMilestone(id: string): Promise<void> {
     await db.delete(validationMilestones).where(eq(validationMilestones.id, id));
+  }
+
+  // Project phases operations
+  async createProjectPhase(phaseData: InsertProjectPhase): Promise<ProjectPhase> {
+    const [phase] = await db
+      .insert(projectPhases)
+      .values(phaseData)
+      .returning();
+    return phase;
+  }
+
+  async getProjectPhases(): Promise<ProjectPhase[]> {
+    return await db.select().from(projectPhases).orderBy(projectPhases.startDate);
+  }
+
+  async getProjectPhasesByProjectId(projectId: string): Promise<ProjectPhase[]> {
+    return await db
+      .select()
+      .from(projectPhases)
+      .where(eq(projectPhases.projectId, projectId))
+      .orderBy(projectPhases.startDate);
+  }
+
+  async updateProjectPhase(id: string, updates: Partial<InsertProjectPhase>): Promise<ProjectPhase> {
+    const [phase] = await db
+      .update(projectPhases)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(projectPhases.id, id))
+      .returning();
+    return phase;
   }
 
   // Project tasks operations with workload data

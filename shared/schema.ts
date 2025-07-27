@@ -191,6 +191,33 @@ export const projectTasks = pgTable("project_tasks", {
   priority: varchar("priority").default("normale"), // basse, normale, haute, critique
   skills: text("skills").array().default(sql`'{}'::text[]`), // compétences requises
   
+  // Gestion des handoffs et buffers pour timeline
+  phase: varchar("phase").default("etude"), // etude, planification, approvisionnement, chantier, sav
+  nextPhase: varchar("next_phase"), // phase suivante planifiée
+  handoffDate: timestamp("handoff_date"), // date de transmission à la phase suivante
+  bufferDays: integer("buffer_days").default(0), // jours de buffer avant handoff
+  dependencies: text("dependencies").array().default(sql`'{}'::text[]`), // IDs des tâches précédentes
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Table pour gérer les phases de projet et leurs handoffs
+export const projectPhases = pgTable("project_phases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  phase: varchar("phase").notNull(), // etude, planification, approvisionnement, chantier, sav
+  responsibleTeam: varchar("responsible_team").notNull(), // be, av, production
+  responsibleUserId: varchar("responsible_user_id").references(() => users.id),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  actualStartDate: timestamp("actual_start_date"),
+  actualEndDate: timestamp("actual_end_date"),
+  status: varchar("status").default("planned"), // planned, in_progress, completed, delayed
+  bufferDays: integer("buffer_days").default(0),
+  nextPhase: varchar("next_phase"),
+  handoffCompleted: boolean("handoff_completed").default(false),
+  handoffNotes: text("handoff_notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -445,6 +472,9 @@ export type Project = typeof projects.$inferSelect;
 
 export type InsertProjectTask = typeof projectTasks.$inferInsert;
 export type ProjectTask = typeof projectTasks.$inferSelect;
+
+export type InsertProjectPhase = typeof projectPhases.$inferInsert;
+export type ProjectPhase = typeof projectPhases.$inferSelect;
 
 export type InsertSupplierRequest = typeof supplierRequests.$inferInsert;
 export type SupplierRequest = typeof supplierRequests.$inferSelect;

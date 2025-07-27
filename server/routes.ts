@@ -19,7 +19,8 @@ import {
   supplierRequests,
   validationMilestones,
   beWorkload,
-  interventions
+  interventions,
+  users
 } from "@shared/schema";
 import { db } from "./db";
 import { z } from "zod";
@@ -504,6 +505,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
         }
+      }
+
+      // First, create users in database (not just mock data)
+      const sampleUsers = [
+        {
+          id: "user-sylvie", 
+          email: "sylvie.martin@jlm-menuiserie.fr", 
+          firstName: "Sylvie",
+          lastName: "Martin",
+          role: "responsable_be" as const,
+          profileImageUrl: null
+        },
+        {
+          id: "user-nicolas", 
+          email: "nicolas.projeteur@jlm-menuiserie.fr",
+          firstName: "Nicolas", 
+          lastName: "Dupont",
+          role: "technicien_be" as const,
+          profileImageUrl: null
+        },
+        {
+          id: "user-julien",
+          email: "julien.ceo@jlm-menuiserie.fr", 
+          firstName: "Julien",
+          lastName: "Moreau", 
+          role: "admin" as const,
+          profileImageUrl: null
+        },
+        {
+          id: "user-france",
+          email: "france.chef@jlm-menuiserie.fr", 
+          firstName: "France",
+          lastName: "Leclerc", 
+          role: "chef_travaux" as const,
+          profileImageUrl: null
+        }
+      ];
+      
+      // Create users in database using direct insertion to ensure they exist
+      try {
+        for (const userData of sampleUsers) {
+          // Try to create user, if exists it will be updated by upsert
+          const user = await storage.upsertUser(userData);
+          console.log(`Created/updated user: ${user.email}`);
+        }
+        
+        // Verify users were created
+        const createdUsersQuery = await storage.getUsers();
+        console.log(`Total users in database: ${createdUsersQuery.length}`);
+      } catch (userError) {
+        console.error("Error creating users:", userError);
+        throw userError;
       }
 
       // Create comprehensive sample AOs - JLM Menuiserie realistic projects

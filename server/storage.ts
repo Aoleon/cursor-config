@@ -31,7 +31,8 @@ import { db } from "./db";
 import { eq, desc, asc, count, and, or, like, sql } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations
+  // User operations  
+  getUsers(): Promise<User[]>;
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   
@@ -87,6 +88,10 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // User operations
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -113,8 +118,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAo(id: string): Promise<Ao | undefined> {
-    const [ao] = await db.select().from(aos).where(eq(aos.id, id));
-    return ao;
+    const result = await db.select({
+      id: aos.id,
+      reference: aos.reference,
+      client: aos.client,
+      location: aos.location,
+      departement: aos.departement,
+      description: aos.description,
+      menuiserieType: aos.menuiserieType,
+      estimatedAmount: aos.estimatedAmount,
+      maitreOeuvre: aos.maitreOeuvre,
+      source: aos.source,
+      dateOS: aos.dateOS,
+      delaiContractuel: aos.delaiContractuel,
+      cctp: aos.cctp,
+      dpgf: aos.dpgf,
+      isSelected: aos.isSelected,
+      selectionComment: aos.selectionComment,
+      createdAt: aos.createdAt,
+      updatedAt: aos.updatedAt,
+      submissionDeadline: aos.submissionDeadline
+    }).from(aos).where(eq(aos.id, id));
+    return result[0];
   }
 
   async createAo(ao: InsertAo): Promise<Ao> {
@@ -123,77 +148,46 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Offer operations
-  async getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]> {
-    let query = db
-      .select({
-        id: offers.id,
-        reference: offers.reference,
-        aoId: offers.aoId,
-        client: offers.client,
-        location: offers.location,
-        menuiserieType: offers.menuiserieType,
-        estimatedAmount: offers.estimatedAmount,
-        status: offers.status,
-        responsibleUserId: offers.responsibleUserId,
-        deadline: offers.deadline,
-        isPriority: offers.isPriority,
-        createdAt: offers.createdAt,
-        updatedAt: offers.updatedAt,
-        responsibleUser: {
-          id: users.id,
-          email: users.email,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          profileImageUrl: users.profileImageUrl,
-          role: users.role,
-          createdAt: users.createdAt,
-          updatedAt: users.updatedAt,
-        },
-        ao: {
-          id: aos.id,
-          reference: aos.reference,
-          client: aos.client,
-          location: aos.location,
-          description: aos.description,
-          menuiserieType: aos.menuiserieType,
-          estimatedAmount: aos.estimatedAmount,
-          maitreOeuvre: aos.maitreOeuvre,
-          createdAt: aos.createdAt,
-          updatedAt: aos.updatedAt,
-        },
+  async getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]> {    
+    // Simplified query to avoid TypeScript errors
+    const result = await db.select().from(offers).orderBy(desc(offers.createdAt));
+    
+    // Add related data separately to avoid complex join issues
+    const enrichedOffers = await Promise.all(
+      result.map(async (offer) => {
+        const responsibleUser = offer.responsibleUserId 
+          ? await this.getUser(offer.responsibleUserId)
+          : undefined;
+        const ao = offer.aoId 
+          ? await this.getAo(offer.aoId) 
+          : undefined;
+        
+        return {
+          ...offer,
+          responsibleUser,
+          ao,
+        };
       })
-      .from(offers)
-      .leftJoin(users, eq(offers.responsibleUserId, users.id))
-      .leftJoin(aos, eq(offers.aoId, aos.id));
+    );
 
-    const conditions = [];
+    // Apply filtering
+    let filteredOffers = enrichedOffers;
     
     if (search) {
-      conditions.push(
-        or(
-          like(offers.reference, `%${search}%`),
-          like(offers.client, `%${search}%`),
-          like(offers.location, `%${search}%`)
-        )
+      filteredOffers = filteredOffers.filter(offer =>
+        offer.reference.toLowerCase().includes(search.toLowerCase()) ||
+        offer.client.toLowerCase().includes(search.toLowerCase()) ||
+        offer.location.toLowerCase().includes(search.toLowerCase())
       );
     }
     
     if (status && status !== "tous") {
-      conditions.push(eq(offers.status, status as any));
+      filteredOffers = filteredOffers.filter(offer => offer.status === status);
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    const result = await query.orderBy(desc(offers.createdAt));
-    
-    return result.map(row => ({
-      ...row,
-      responsibleUser: row.responsibleUser?.id ? row.responsibleUser : undefined,
-      ao: row.ao?.id ? row.ao : undefined,
-    }));
+    return filteredOffers;
   }
+
 
   async getOffer(id: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao }) | undefined> {
     const [result] = await db
@@ -268,56 +262,28 @@ export class DatabaseStorage implements IStorage {
 
   // Project operations
   async getProjects(): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]> {
-    const result = await db
-      .select({
-        id: projects.id,
-        offerId: projects.offerId,
-        name: projects.name,
-        client: projects.client,
-        location: projects.location,
-        status: projects.status,
-        startDate: projects.startDate,
-        endDate: projects.endDate,
-        budget: projects.budget,
-        responsibleUserId: projects.responsibleUserId,
-        createdAt: projects.createdAt,
-        updatedAt: projects.updatedAt,
-        responsibleUser: {
-          id: users.id,
-          email: users.email,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          profileImageUrl: users.profileImageUrl,
-          role: users.role,
-          createdAt: users.createdAt,
-          updatedAt: users.updatedAt,
-        },
-        offer: {
-          id: offers.id,
-          reference: offers.reference,
-          aoId: offers.aoId,
-          client: offers.client,
-          location: offers.location,
-          menuiserieType: offers.menuiserieType,
-          estimatedAmount: offers.estimatedAmount,
-          status: offers.status,
-          responsibleUserId: offers.responsibleUserId,
-          deadline: offers.deadline,
-          isPriority: offers.isPriority,
-          createdAt: offers.createdAt,
-          updatedAt: offers.updatedAt,
-        },
+    // Simplified query to avoid TypeScript errors
+    const result = await db.select().from(projects).orderBy(desc(projects.createdAt));
+    
+    // Add related data separately 
+    const enrichedProjects = await Promise.all(
+      result.map(async (project) => {
+        const responsibleUser = project.responsibleUserId 
+          ? await this.getUser(project.responsibleUserId) 
+          : undefined;
+        const offer = project.offerId 
+          ? await this.getOffer(project.offerId) 
+          : undefined;
+        
+        return {
+          ...project,
+          responsibleUser,
+          offer,
+        };
       })
-      .from(projects)
-      .leftJoin(users, eq(projects.responsibleUserId, users.id))
-      .leftJoin(offers, eq(projects.offerId, offers.id))
-      .orderBy(desc(projects.createdAt));
-
-    return result.map(row => ({
-      ...row,
-      responsibleUser: row.responsibleUser?.id ? row.responsibleUser : undefined,
-      offer: row.offer?.id ? row.offer : undefined,
-    }));
+    );
+    
+    return enrichedProjects;
   }
 
   async getProject(id: string): Promise<(Project & { responsibleUser?: User; offer?: Offer }) | undefined> {

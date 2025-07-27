@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
-// Mock de useQuery - doit être défini avant les imports
-const mockUseQuery = vi.fn()
+// Mock factory pattern conforme pour Vitest
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: mockUseQuery
+  useQuery: vi.fn()
 }))
 
 import { useAuth } from '../../../client/src/hooks/useAuth'
+import { useQuery } from '@tanstack/react-query'
 
 describe('useAuth Hook', () => {
   it('should return user data when authenticated', () => {
@@ -18,10 +18,10 @@ describe('useAuth Hook', () => {
       role: 'responsable_be'
     }
 
-    mockUseQuery.mockReturnValue({
+    vi.mocked(useQuery).mockReturnValue({
       data: mockUser,
       isLoading: false
-    })
+    } as any)
 
     const { result } = renderHook(() => useAuth())
 
@@ -31,10 +31,10 @@ describe('useAuth Hook', () => {
   })
 
   it('should return loading state correctly', () => {
-    mockUseQuery.mockReturnValue({
+    vi.mocked(useQuery).mockReturnValue({
       data: undefined,
       isLoading: true
-    })
+    } as any)
 
     const { result } = renderHook(() => useAuth())
 
@@ -44,10 +44,10 @@ describe('useAuth Hook', () => {
   })
 
   it('should return unauthenticated state when no user', () => {
-    mockUseQuery.mockReturnValue({
+    vi.mocked(useQuery).mockReturnValue({
       data: null,
       isLoading: false
-    })
+    } as any)
 
     const { result } = renderHook(() => useAuth())
 
@@ -59,7 +59,7 @@ describe('useAuth Hook', () => {
   it('should use correct query configuration', () => {
     renderHook(() => useAuth())
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
+    expect(useQuery).toHaveBeenCalledWith({
       queryKey: ['/api/auth/user'],
       retry: false,
     })

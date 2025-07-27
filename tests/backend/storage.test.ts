@@ -1,24 +1,34 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-// Mock de la base de données - doit être défini avant les imports
-const mockDb = {
-  select: vi.fn(() => ({
+// Mock database avec vi.hoisted
+const mocks = vi.hoisted(() => {
+  const mockSelect = vi.fn(() => ({
     from: vi.fn(() => ({
       where: vi.fn(() => ({
         orderBy: vi.fn(() => Promise.resolve([]))
       })),
       orderBy: vi.fn(() => Promise.resolve([]))
     }))
-  })),
-  insert: vi.fn(() => ({
+  }))
+
+  const mockInsert = vi.fn(() => ({
     values: vi.fn(() => ({
       returning: vi.fn(() => Promise.resolve([{}]))
     }))
   }))
-}
+
+  return {
+    mockDb: {
+      select: mockSelect,
+      insert: mockInsert
+    },
+    mockSelect,
+    mockInsert
+  }
+})
 
 vi.mock('../../server/db', () => ({
-  db: mockDb
+  db: mocks.mockDb
 }))
 
 import { DatabaseStorage } from '../../server/storage'
@@ -44,11 +54,11 @@ describe('DatabaseStorage', () => {
       }
 
       const expectedOffer = { id: '1', ...mockOffer }
-      mockDb.insert().values().returning.mockResolvedValue([expectedOffer])
+      mocks.mockInsert().values().returning.mockResolvedValue([expectedOffer])
 
       const result = await storage.createOffer(mockOffer)
 
-      expect(mockDb.insert).toHaveBeenCalled()
+      expect(mocks.mockInsert).toHaveBeenCalled()
       expect(result).toEqual(expectedOffer)
     })
 
@@ -58,11 +68,11 @@ describe('DatabaseStorage', () => {
         { id: '2', reference: 'OFF-002', status: 'en_chiffrage' }
       ]
 
-      mockDb.select().from().where().orderBy.mockResolvedValue(mockOffers as any)
+      mocks.mockSelect().from().where().orderBy.mockResolvedValue(mockOffers as any)
 
       const result = await storage.getOffers('test', 'nouveau')
 
-      expect(mockDb.select).toHaveBeenCalled()
+      expect(mocks.mockSelect).toHaveBeenCalled()
       expect(result).toEqual(mockOffers)
     })
   })
@@ -71,19 +81,19 @@ describe('DatabaseStorage', () => {
     it('should create BE workload entry', async () => {
       const mockWorkload: InsertBeWorkload = {
         userId: 'user-1',
-        weekNumber: '10',
-        year: '2024',
+        weekNumber: 10,
+        year: 2024,
         plannedHours: '40',
         actualHours: '38',
         capacityHours: '40'
       }
 
       const expectedWorkload = { id: '1', ...mockWorkload }
-      mockDb.insert().values().returning.mockResolvedValue([expectedWorkload])
+      mocks.mockInsert().values().returning.mockResolvedValue([expectedWorkload])
 
       const result = await storage.createOrUpdateBeWorkload(mockWorkload)
 
-      expect(mockDb.insert).toHaveBeenCalled()
+      expect(mocks.mockInsert).toHaveBeenCalled()
       expect(result).toEqual(expectedWorkload)
     })
   })
@@ -91,7 +101,7 @@ describe('DatabaseStorage', () => {
   describe('Dashboard Statistics', () => {
     it('should calculate dashboard stats correctly', async () => {
       // Mock different counts for different offer statuses
-      mockDb.select().from().where.mockImplementation(() => ({
+      mocks.mockSelect().from().where.mockImplementation(() => ({
         orderBy: vi.fn(() => Promise.resolve([{ count: 5 }]))
       }))
 

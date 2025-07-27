@@ -449,7 +449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           departement: "62" as const,
           description: "Menuiseries extérieures - Mairie",
           menuiserieType: "bardage" as const,
-          estimatedAmount: 45000,
+          estimatedAmount: "45000",
           maitreOeuvre: "Cabinet Architecture Nord",
           source: "BOMP" as const
         },
@@ -460,7 +460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           departement: "62" as const,
           description: "Fenêtres PVC logements sociaux",
           menuiserieType: "fenetres" as const,
-          estimatedAmount: 78000,
+          estimatedAmount: "78000",
           maitreOeuvre: "BET Structure Plus",
           source: "Marche_Online" as const
         }
@@ -478,7 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           client: "Mairie de Calais", 
           location: "Calais (62)",
           menuiserieType: "bardage" as const,
-          estimatedAmount: 45000,
+          estimatedAmount: "45000",
           status: "en_chiffrage" as const,
           responsibleUserId: "user-sylvie",
           deadline: new Date("2024-02-15"),
@@ -490,7 +490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           client: "SCI Immobilier",
           location: "Boulogne-sur-Mer (62)", 
           menuiserieType: "fenetres" as const,
-          estimatedAmount: 78000,
+          estimatedAmount: "78000",
           status: "nouveau" as const,
           responsibleUserId: "user-nicolas",
           deadline: new Date("2024-02-20"),
@@ -502,7 +502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           client: "Entreprise Nordique",
           location: "Dunkerque (59)",
           menuiserieType: "bardage" as const,
-          estimatedAmount: 120000,
+          estimatedAmount: "120000",
           status: "en_validation" as const,
           responsibleUserId: "user-sylvie", 
           deadline: new Date("2024-01-30"),
@@ -523,17 +523,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: "user-sylvie",
           weekNumber: currentWeek,
           year: currentYear,
-          plannedHours: 42,
-          actualHours: 38,
-          capacityHours: 40
+          plannedHours: "42",
+          actualHours: "38",
+          capacityHours: "40"
         },
         {
           userId: "user-nicolas",
           weekNumber: currentWeek, 
           year: currentYear,
-          plannedHours: 45,
-          actualHours: 40,
-          capacityHours: 40
+          plannedHours: "45",
+          actualHours: "40",
+          capacityHours: "40"
         }
       ];
 
@@ -554,6 +554,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to create sample data" });
     }
   });
+
+  // Validation milestones routes
+  app.get('/api/validation-milestones/:offerId', async (req, res) => {
+    try {
+      const { offerId } = req.params
+      const milestones = await storage.getValidationMilestones(offerId)
+      res.json(milestones)
+    } catch (error) {
+      console.error('Error fetching validation milestones:', error)
+      res.status(500).json({ message: 'Failed to fetch validation milestones' })
+    }
+  })
+
+  app.post('/api/validation-milestones/init', async (req, res) => {
+    try {
+      const { offerId } = req.body
+      
+      if (!offerId) {
+        return res.status(400).json({ message: 'offerId is required' })
+      }
+
+      // Vérifier si les jalons existent déjà
+      const existing = await storage.getValidationMilestones(offerId)
+      if (existing.length > 0) {
+        return res.status(400).json({ message: 'Milestones already exist for this offer' })
+      }
+
+      // Créer les jalons par défaut
+      const milestoneTypes = ['fin_etudes', 'validation_technique', 'validation_commercial', 'preparation_production']
+      const createdMilestones = []
+
+      for (const milestoneType of milestoneTypes) {
+        const milestone = await storage.createValidationMilestone({
+          offerId,
+          milestoneType,
+          isCompleted: false
+        })
+        createdMilestones.push(milestone)
+      }
+
+      res.status(201).json(createdMilestones)
+    } catch (error) {
+      console.error('Error creating validation milestones:', error)
+      res.status(500).json({ message: 'Failed to create validation milestones' })
+    }
+  })
+
+  app.patch('/api/validation-milestones/:milestoneId', async (req, res) => {
+    try {
+      const { milestoneId } = req.params
+      const updateData = req.body
+
+      // Validation des données
+      const validatedData = insertValidationMilestoneSchema.partial().parse(updateData)
+
+      // Si on complète le jalon, ajouter la date et l'utilisateur
+      if (validatedData.isCompleted) {
+        validatedData.completedAt = new Date()
+        validatedData.completedBy = 'test-user-1' // En mode développement
+      } else {
+        // Si on décomplète, effacer les données de complétion
+        validatedData.completedAt = undefined
+        validatedData.completedBy = undefined
+      }
+
+      const updatedMilestone = await storage.updateValidationMilestone(milestoneId, validatedData)
+      res.json(updatedMilestone)
+    } catch (error) {
+      console.error('Error updating validation milestone:', error)
+      res.status(500).json({ message: 'Failed to update validation milestone' })
+    }
+  })
+
+  app.delete('/api/validation-milestones/:milestoneId', async (req, res) => {
+    try {
+      const { milestoneId } = req.params
+      await storage.deleteValidationMilestone(milestoneId)
+      res.status(204).send()
+    } catch (error) {
+      console.error('Error deleting validation milestone:', error)
+      res.status(500).json({ message: 'Failed to delete validation milestone' })
+    }
+  })
 
   const httpServer = createServer(app);
   return httpServer;

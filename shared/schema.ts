@@ -337,6 +337,8 @@ export const validationMilestonesRelations = relations(validationMilestones, ({ 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
+
+
 export type InsertAo = typeof aos.$inferInsert;
 export type Ao = typeof aos.$inferSelect;
 

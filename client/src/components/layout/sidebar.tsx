@@ -22,6 +22,7 @@ const navigation = [
   { name: "Chiffrage", href: "/pricing", icon: Calculator },
   { name: "Projets", href: "/projects", icon: Projector },
   { name: "Planning", href: "/planning", icon: Calendar },
+  { name: "Plan de Charges", href: "/resource-planning", icon: Users },
   { name: "Équipes", href: "/teams", icon: Users },
   { name: "Fournisseurs", href: "/suppliers", icon: Truck },
 ];

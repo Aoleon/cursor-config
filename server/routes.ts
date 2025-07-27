@@ -1094,6 +1094,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // All tasks route for resource planning
+  app.get('/api/tasks/all', async (req, res) => {
+    try {
+      const tasks = await storage.getAllProjectTasks();
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching all tasks:", error);
+      res.status(500).json({ message: "Failed to fetch all tasks" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

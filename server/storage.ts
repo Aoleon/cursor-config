@@ -7,6 +7,7 @@ import {
   quotations,
   projectTasks,
   beWorkload,
+  poseWorkload,
   validationMilestones,
   type User,
   type UpsertUser,
@@ -24,6 +25,8 @@ import {
   type InsertProjectTask,
   type BeWorkload,
   type InsertBeWorkload,
+  type PoseWorkload,
+  type InsertPoseWorkload,
   type ValidationMilestone,
   type InsertValidationMilestone,
 } from "@shared/schema";
@@ -684,6 +687,86 @@ export class DatabaseStorage implements IStorage {
       ...row.milestone,
       assignedUser: row.assignedUser || undefined
     }));
+  }
+
+  async updateValidationMilestone(id: string, updates: Partial<InsertValidationMilestone>): Promise<ValidationMilestone> {
+    const [updated] = await db
+      .update(validationMilestones)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(validationMilestones.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteValidationMilestone(id: string): Promise<void> {
+    await db.delete(validationMilestones).where(eq(validationMilestones.id, id));
+  }
+
+  // Project tasks operations with workload data
+  async getAllProjectTasks(): Promise<any[]> {
+    return await db.select({
+      id: projectTasks.id,
+      projectId: projectTasks.projectId,
+      name: projectTasks.name,
+      description: projectTasks.description,
+      startDate: projectTasks.startDate,
+      endDate: projectTasks.endDate,
+      assignedUserId: projectTasks.assignedUserId,
+      status: projectTasks.status,
+      progress: projectTasks.progress,
+      bePersonsNeeded: projectTasks.bePersonsNeeded,
+      posePersonsNeeded: projectTasks.posePersonsNeeded,
+      beHoursEstimated: projectTasks.beHoursEstimated,
+      poseHoursEstimated: projectTasks.poseHoursEstimated,
+      priority: projectTasks.priority,
+      skills: projectTasks.skills,
+      createdAt: projectTasks.createdAt,
+      updatedAt: projectTasks.updatedAt,
+      project: {
+        id: projects.id,
+        name: projects.name,
+        client: projects.client,
+        location: projects.location,
+        status: projects.status
+      },
+      assignedUser: {
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email
+      }
+    })
+    .from(projectTasks)
+    .leftJoin(projects, eq(projectTasks.projectId, projects.id))
+    .leftJoin(users, eq(projectTasks.assignedUserId, users.id))
+    .orderBy(asc(projectTasks.startDate));
+  }
+
+  // Pose workload operations
+  async getAllPoseWorkload(): Promise<any[]> {
+    return await db.select({
+      id: poseWorkload.id,
+      userId: poseWorkload.userId,
+      weekNumber: poseWorkload.weekNumber,
+      year: poseWorkload.year,
+      capacityHours: poseWorkload.capacityHours,
+      plannedHours: poseWorkload.plannedHours,
+      actualHours: poseWorkload.actualHours,
+      loadPercentage: poseWorkload.loadPercentage,
+      availability: poseWorkload.availability,
+      createdAt: poseWorkload.createdAt,
+      updatedAt: poseWorkload.updatedAt,
+      user: {
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        role: users.role
+      }
+    })
+    .from(poseWorkload)
+    .leftJoin(users, eq(poseWorkload.userId, users.id))
+    .orderBy(desc(poseWorkload.year), desc(poseWorkload.weekNumber));
   }
 }
 

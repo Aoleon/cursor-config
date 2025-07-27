@@ -167,7 +167,7 @@ export const projects = pgTable("projects", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Project tasks table
+// Project tasks table - Enhanced with BE and Pose workload planning
 export const projectTasks = pgTable("project_tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").references(() => projects.id).notNull(),
@@ -178,6 +178,15 @@ export const projectTasks = pgTable("project_tasks", {
   assignedUserId: varchar("assigned_user_id").references(() => users.id),
   status: varchar("status").default("not_started"),
   progress: integer("progress").default(0),
+  
+  // Planification des charges BE et Pose
+  bePersonsNeeded: integer("be_persons_needed").default(0), // Nombre de personnes BE nécessaires
+  posePersonsNeeded: integer("pose_persons_needed").default(0), // Nombre de personnes pose nécessaires
+  beHoursEstimated: decimal("be_hours_estimated", { precision: 8, scale: 2 }).default("0"), // Heures BE estimées
+  poseHoursEstimated: decimal("pose_hours_estimated", { precision: 8, scale: 2 }).default("0"), // Heures pose estimées
+  priority: varchar("priority").default("normale"), // basse, normale, haute, critique
+  skills: text("skills").array().default(sql`'{}'::text[]`), // compétences requises
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -219,6 +228,21 @@ export const beWorkload = pgTable("be_workload", {
   plannedHours: decimal("planned_hours", { precision: 8, scale: 2 }).default("0"),
   actualHours: decimal("actual_hours", { precision: 8, scale: 2 }).default("0"),
   loadPercentage: decimal("load_percentage", { precision: 5, scale: 2 }).default("0"), // %
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Table pour traquer la charge des équipes de pose (nouveau besoin identifié)
+export const poseWorkload = pgTable("pose_workload", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  weekNumber: integer("week_number").notNull(),
+  year: integer("year").notNull(),
+  capacityHours: decimal("capacity_hours", { precision: 8, scale: 2 }).default("35"), // 35h/semaine
+  plannedHours: decimal("planned_hours", { precision: 8, scale: 2 }).default("0"),
+  actualHours: decimal("actual_hours", { precision: 8, scale: 2 }).default("0"),
+  loadPercentage: decimal("load_percentage", { precision: 5, scale: 2 }).default("0"), // %
+  availability: varchar("availability").default("disponible"), // disponible, partiellement_disponible, indisponible
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -266,6 +290,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects),
   tasks: many(projectTasks),
   beWorkload: many(beWorkload),
+  poseWorkload: many(poseWorkload),
   validationMilestones: many(validationMilestones),
   interventions: many(interventions),
 }));
@@ -343,6 +368,13 @@ export const beWorkloadRelations = relations(beWorkload, ({ one }) => ({
   }),
 }));
 
+export const poseWorkloadRelations = relations(poseWorkload, ({ one }) => ({
+  user: one(users, {
+    fields: [poseWorkload.userId],
+    references: [users.id],
+  }),
+}));
+
 export const validationMilestonesRelations = relations(validationMilestones, ({ one }) => ({
   offer: one(offers, {
     fields: [validationMilestones.offerId],
@@ -396,6 +428,9 @@ export type Quotation = typeof quotations.$inferSelect;
 export type InsertBeWorkload = typeof beWorkload.$inferInsert;
 export type BeWorkload = typeof beWorkload.$inferSelect;
 
+export type InsertPoseWorkload = typeof poseWorkload.$inferInsert;
+export type PoseWorkload = typeof poseWorkload.$inferSelect;
+
 export type InsertValidationMilestone = typeof validationMilestones.$inferInsert;
 export type ValidationMilestone = typeof validationMilestones.$inferSelect;
 
@@ -440,6 +475,12 @@ export const insertQuotationSchema = createInsertSchema(quotations).omit({
 });
 
 export const insertBeWorkloadSchema = createInsertSchema(beWorkload).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPoseWorkloadSchema = createInsertSchema(poseWorkload).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

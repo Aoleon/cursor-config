@@ -962,6 +962,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   })
 
+  // All project tasks routes with workload data
+  app.get("/api/all-project-tasks/", async (req, res) => {
+    try {
+      const tasks = await storage.getAllProjectTasks();
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching all project tasks:", error);
+      res.status(500).json({ message: "Failed to fetch all project tasks" });
+    }
+  });
+
+  // Pose workload routes
+  app.get("/api/pose-workload/", async (req, res) => {
+    try {
+      const workload = await storage.getAllPoseWorkload();
+      res.json(workload);
+    } catch (error) {
+      console.error("Error fetching pose workload:", error);
+      res.status(500).json({ message: "Failed to fetch pose workload" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

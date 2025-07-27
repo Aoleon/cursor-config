@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import KanbanBoard from "@/components/projects/kanban-board";
 import WorkloadPlanner from "@/components/projects/workload-planner";
+import AdvancedWorkloadPlanner from "@/components/projects/advanced-workload-planner";
 import TimelineView from "@/components/projects/timeline-view";
 
 export default function Projects() {
@@ -180,7 +181,7 @@ export default function Projects() {
             </TabsContent>
 
             <TabsContent value="workload" className="space-y-6">
-              <WorkloadPlanner />
+              <AdvancedWorkloadPlanner />
             </TabsContent>
           </Tabs>
         </div>

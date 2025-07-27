@@ -59,6 +59,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Validation Milestones routes
+  app.get('/api/validation-milestones/:offerId?', async (req, res) => {
+    try {
+      const { offerId } = req.params;
+      let milestones;
+      
+      if (offerId && offerId !== 'undefined') {
+        milestones = await storage.getValidationMilestonesByOffer(offerId);
+      } else {
+        milestones = await storage.getAllValidationMilestones();
+      }
+      
+      res.json(milestones);
+    } catch (error) {
+      console.error("Error fetching validation milestones:", error);
+      res.status(500).json({ message: "Failed to fetch validation milestones" });
+    }
+  });
+
+  app.post('/api/validation-milestones/', async (req, res) => {
+    try {
+      const milestone = await storage.createValidationMilestone(req.body);
+      res.status(201).json(milestone);
+    } catch (error) {
+      console.error("Error creating validation milestone:", error);
+      res.status(500).json({ message: "Failed to create validation milestone" });
+    }
+  });
+
+  app.patch('/api/validation-milestones/:id', async (req, res) => {
+    try {
+      const milestone = await storage.updateValidationMilestone(req.params.id, req.body);
+      res.json(milestone);
+    } catch (error) {
+      console.error("Error updating validation milestone:", error);
+      res.status(500).json({ message: "Failed to update validation milestone" });
+    }
+  });
+
   // AO routes
   app.get('/api/aos', async (req, res) => {
     try {

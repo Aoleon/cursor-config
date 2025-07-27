@@ -76,6 +76,9 @@ export interface IStorage {
   // Validation Milestones operations - Solve "Absence de jalon Fin d'études" issue  
   getValidationMilestones(offerId?: string, projectId?: string): Promise<(ValidationMilestone & { validator?: User })[]>;
   createValidationMilestone(milestone: InsertValidationMilestone): Promise<ValidationMilestone>;
+  getAllValidationMilestones(): Promise<(ValidationMilestone & { assignedUser?: User; offer?: Offer })[]>;
+  getValidationMilestonesByOffer(offerId: string): Promise<(ValidationMilestone & { assignedUser?: User })[]>;
+  updateValidationMilestone(id: string, milestone: any): Promise<ValidationMilestone>;
   
   // Dashboard statistics
   getDashboardStats(): Promise<{
@@ -644,12 +647,43 @@ export class DatabaseStorage implements IStorage {
   async createValidationMilestone(milestone: InsertValidationMilestone): Promise<ValidationMilestone> {
     const [created] = await db
       .insert(validationMilestones)
-      .values({
-        ...milestone,
-        validatedAt: new Date()
-      })
+      .values(milestone)
       .returning();
     return created;
+  }
+
+  async getAllValidationMilestones(): Promise<(ValidationMilestone & { assignedUser?: User; offer?: Offer })[]> {
+    const results = await db.select({
+      milestone: validationMilestones,
+      assignedUser: users,
+      offer: offers
+    })
+    .from(validationMilestones)
+    .leftJoin(users, eq(validationMilestones.assignedUserId, users.id))
+    .leftJoin(offers, eq(validationMilestones.offerId, offers.id))
+    .orderBy(desc(validationMilestones.createdAt));
+
+    return results.map(row => ({
+      ...row.milestone,
+      assignedUser: row.assignedUser || undefined,
+      offer: row.offer || undefined
+    }));
+  }
+
+  async getValidationMilestonesByOffer(offerId: string): Promise<(ValidationMilestone & { assignedUser?: User })[]> {
+    const results = await db.select({
+      milestone: validationMilestones,
+      assignedUser: users
+    })
+    .from(validationMilestones)
+    .leftJoin(users, eq(validationMilestones.assignedUserId, users.id))
+    .where(eq(validationMilestones.offerId, offerId))
+    .orderBy(desc(validationMilestones.createdAt));
+
+    return results.map(row => ({
+      ...row.milestone,
+      assignedUser: row.assignedUser || undefined
+    }));
   }
 }
 

@@ -1,348 +1,475 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle, AlertCircle, Clock, FileCheck, AlertTriangle } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-
-// Composant pour résoudre le problème identifié dans l'audit JLM :
-// "Absence de jalon « Fin d'études » : France découvre en chantier des oublis → retouches coûteuses"
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  CheckCircle2, 
+  Clock, 
+  AlertTriangle, 
+  User, 
+  Calendar,
+  FileText,
+  Award,
+  Target,
+  Zap
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface MilestoneTrackerProps {
   offerId?: string;
-  projectId?: string;
 }
 
-export default function MilestoneTracker({ offerId, projectId }: MilestoneTrackerProps) {
-  const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
-  const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
-  const [validationComment, setValidationComment] = useState("");
-  const [blockers, setBlockers] = useState("");
+export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
+  const [selectedOfferId, setSelectedOfferId] = useState<string>(offerId || '');
+  const [isValidationDialogOpen, setIsValidationDialogOpen] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
 
-  const { data: milestones = [], isLoading } = useQuery({
-    queryKey: ["/api/validation-milestones", { offerId, projectId }],
-    enabled: !!(offerId || projectId),
+  // Fetch offers for selection
+  const { data: offers = [] } = useQuery<any[]>({
+    queryKey: ['/api/offers/'],
   });
 
-  // Type the milestones data
-  const typedMilestones = (milestones as any[]) || [];
-
-  const { data: offer } = useQuery({
-    queryKey: ["/api/offers", offerId],
-    enabled: !!offerId,
+  // Fetch validation milestones
+  const { data: milestones = [] } = useQuery<any[]>({
+    queryKey: ['/api/validation-milestones/', selectedOfferId],
+    enabled: !!selectedOfferId,
   });
 
-  const validateMilestoneMutation = useMutation({
-    mutationFn: async (data: { type: string; comment: string; blockers?: string }) => {
-      await apiRequest("POST", "/api/validation-milestones", {
-        offerId,
-        projectId,
-        type: data.type,
-        comment: data.comment,
-        blockers: data.blockers,
-        validatedBy: (user as any)?.id,
+  // Fetch users for validation assignment
+  const { data: users = [] } = useQuery<any[]>({
+    queryKey: ['/api/users/'],
+  });
+
+  // Get selected offer details
+  const selectedOffer = offers.find((offer: any) => offer.id === selectedOfferId);
+
+  // Create validation milestone mutation
+  const createMilestoneMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest(`/api/validation-milestones/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/validation-milestones"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/validation-milestones/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/offers/'] });
+      setIsValidationDialogOpen(false);
       toast({
-        title: "Succès",
-        description: "Jalon validé avec succès",
+        title: "Jalon validé",
+        description: "Le jalon de validation a été enregistré avec succès.",
       });
-      setIsValidationModalOpen(false);
-      setValidationComment("");
-      setBlockers("");
     },
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
+    onError: (error: any) => {
       toast({
         title: "Erreur",
-        description: "Impossible de valider le jalon",
+        description: "Impossible de valider le jalon. Veuillez réessayer.",
         variant: "destructive",
       });
     },
   });
 
-  const milestoneTypes = [
-    {
-      key: "fin_etudes",
-      label: "Fin d'Études",
-      description: "Validation technique complète avant commande",
-      required: true,
-      roles: ["responsable_be", "chef_travaux"],
-      icon: FileCheck,
-      priority: "critical"
-    },
-    {
-      key: "validation_technique",
-      label: "Validation Technique",
-      description: "Plans, nuanciers et spécifications validés",
-      required: true,
-      roles: ["responsable_be"],
-      icon: CheckCircle,
-      priority: "high"
-    },
-    {
-      key: "validation_commerciale",
-      label: "Validation Commerciale",
-      description: "Conditions et prix validés",
-      required: false,
-      roles: ["chef_projet"],
-      icon: CheckCircle,
-      priority: "medium"
-    }
-  ];
-
-  const getMilestoneStatus = (milestoneType: string) => {
-    const milestone = typedMilestones.find((m: any) => m.type === milestoneType);
-    if (milestone) {
-      return {
-        status: "validated",
-        date: milestone.validatedAt,
-        validator: milestone.validator,
-        comment: milestone.comment,
-        blockers: milestone.blockers
-      };
-    }
-    return { status: "pending" };
-  };
-
-  const canValidateMilestone = (milestoneType: any) => {
-    const userRole = (user as any)?.role;
-    return milestoneType.roles.includes(userRole);
-  };
-
-  const handleValidate = (milestoneType: any) => {
-    if (!canValidateMilestone(milestoneType)) {
-      toast({
-        title: "Accès refusé",
-        description: "Vous n'avez pas les droits pour valider ce jalon",
-        variant: "destructive",
+  // Validate milestone mutation
+  const validateMilestoneMutation = useMutation({
+    mutationFn: async ({ milestoneId, status, comment }: any) => {
+      return apiRequest(`/api/validation-milestones/${milestoneId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, validationComment: comment }),
       });
-      return;
-    }
-
-    setSelectedMilestone(milestoneType);
-    setIsValidationModalOpen(true);
-  };
-
-  const handleSubmitValidation = () => {
-    if (!selectedMilestone || !validationComment.trim()) {
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/validation-milestones/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/offers/'] });
       toast({
-        title: "Erreur",
-        description: "Le commentaire de validation est requis",
-        variant: "destructive",
+        title: "Statut mis à jour",
+        description: "Le statut du jalon a été mis à jour.",
       });
-      return;
-    }
+    },
+  });
 
-    validateMilestoneMutation.mutate({
-      type: selectedMilestone.key,
-      comment: validationComment,
-      blockers: blockers.trim() || undefined,
-    });
+  const handleCreateMilestone = (formData: FormData) => {
+    const data = {
+      offerId: selectedOfferId,
+      milestoneType: formData.get('milestoneType') as string,
+      title: formData.get('title') as string,
+      description: formData.get('description') as string,
+      expectedCompletionDate: formData.get('expectedCompletionDate') as string,
+      assignedUserId: formData.get('assignedUserId') as string,
+      status: 'en_attente',
+    };
+
+    createMilestoneMutation.mutate(data);
   };
 
-  const getStatusIcon = (status: string, priority: string) => {
-    if (status === "validated") {
-      return <CheckCircle className="w-5 h-5 text-green-600" />;
+  const getMilestoneTypeIcon = (type: string) => {
+    switch (type) {
+      case 'fin_etudes':
+        return <Award className="h-5 w-5 text-green-600" />;
+      case 'validation_technique':
+        return <Target className="h-5 w-5 text-blue-600" />;
+      case 'validation_commerciale':
+        return <FileText className="h-5 w-5 text-purple-600" />;
+      case 'validation_production':
+        return <Zap className="h-5 w-5 text-orange-600" />;
+      default:
+        return <CheckCircle2 className="h-5 w-5 text-gray-600" />;
     }
-    if (priority === "critical") {
-      return <AlertTriangle className="w-5 h-5 text-red-600" />;
-    }
-    return <Clock className="w-5 h-5 text-yellow-600" />;
   };
 
-  const getStatusBadge = (status: string, priority: string) => {
-    if (status === "validated") {
-      return <Badge className="bg-green-100 text-green-800">Validé</Badge>;
+  const getMilestoneTypeLabel = (type: string) => {
+    switch (type) {
+      case 'fin_etudes':
+        return 'Fin d\'Études';
+      case 'validation_technique':
+        return 'Validation Technique';
+      case 'validation_commerciale':
+        return 'Validation Commerciale';
+      case 'validation_production':
+        return 'Validation Production';
+      default:
+        return type;
     }
-    if (priority === "critical") {
-      return <Badge className="bg-red-100 text-red-800">Critique</Badge>;
-    }
-    return <Badge className="bg-yellow-100 text-yellow-800">En attente</Badge>;
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'en_attente':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'en_cours':
+        return 'bg-blue-100 text-blue-800';
+      case 'valide':
+        return 'bg-green-100 text-green-800';
+      case 'rejete':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'en_attente':
+        return 'En Attente';
+      case 'en_cours':
+        return 'En Cours';
+      case 'valide':
+        return 'Validé';
+      case 'rejete':
+        return 'Rejeté';
+      default:
+        return status;
+    }
+  };
+
+  const calculateProgress = () => {
+    if (milestones.length === 0) return 0;
+    const completed = milestones.filter((m: any) => m.status === 'valide').length;
+    return Math.round((completed / milestones.length) * 100);
+  };
 
   return (
-    <>
+    <div className="space-y-6">
+      {/* Offer Selection */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <FileCheck className="w-5 h-5 mr-2" />
-            Jalons de Validation
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Sélection de l'Offre
           </CardTitle>
-          {offer?.status === "en_chiffrage" && (
-            <p className="text-sm text-gray-600">
-              Validez tous les jalons critiques avant passage en production
-            </p>
-          )}
         </CardHeader>
-
         <CardContent>
-          <div className="space-y-4">
-            {milestoneTypes.map((milestoneType) => {
-              const milestoneStatus = getMilestoneStatus(milestoneType.key);
-              const canValidate = canValidateMilestone(milestoneType);
-
-              return (
-                <div key={milestoneType.key} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-3">
-                      {getStatusIcon(milestoneStatus.status, milestoneType.priority)}
-                      <div>
-                        <h4 className="font-medium flex items-center space-x-2">
-                          <span>{milestoneType.label}</span>
-                          {milestoneType.required && (
-                            <span className="text-red-500 text-sm">*</span>
-                          )}
-                        </h4>
-                        <p className="text-sm text-gray-600">{milestoneType.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {getStatusBadge(milestoneStatus.status, milestoneType.priority)}
-                      {milestoneStatus.status === "pending" && canValidate && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleValidate(milestoneType)}
-                          className="bg-primary hover:bg-primary-dark"
-                        >
-                          Valider
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {milestoneStatus.status === "validated" && (
-                    <div className="mt-3 p-3 bg-green-50 rounded border border-green-200">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-green-800">
-                          Validé par {milestoneStatus.validator?.firstName} {milestoneStatus.validator?.lastName}
-                        </span>
-                        <span className="text-green-600">
-                          {format(new Date(milestoneStatus.date), 'dd/MM/yyyy HH:mm', { locale: fr })}
-                        </span>
-                      </div>
-                      {milestoneStatus.comment && (
-                        <p className="mt-2 text-sm text-green-700">
-                          <strong>Commentaire:</strong> {milestoneStatus.comment}
-                        </p>
-                      )}
-                      {milestoneStatus.blockers && (
-                        <p className="mt-1 text-sm text-red-700">
-                          <strong>Points bloquants:</strong> {milestoneStatus.blockers}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {milestoneStatus.status === "pending" && !canValidate && (
-                    <div className="mt-2 text-xs text-gray-500">
-                      Validation requise par: {milestoneType.roles.join(", ")}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Résumé des validations */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h5 className="font-medium text-gray-900 mb-2">Résumé des Validations</h5>
-            <div className="text-sm text-gray-600">
-              {typedMilestones.length} / {milestoneTypes.filter(m => m.required).length} jalons critiques validés
-              <div className="mt-1">
-                Statut global: {
-                  typedMilestones.length >= milestoneTypes.filter(m => m.required).length
-                    ? <span className="text-green-600 font-medium">✓ Prêt pour production</span>
-                    : <span className="text-red-600 font-medium">⚠ Validations manquantes</span>
-                }
-              </div>
+          <div className="flex gap-4 items-end">
+            <div className="flex-1">
+              <Label htmlFor="offer-select">Offre à suivre</Label>
+              <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une offre" />
+                </SelectTrigger>
+                <SelectContent>
+                  {offers.map((offer: any) => (
+                    <SelectItem key={offer.id} value={offer.id}>
+                      {offer.reference} - {offer.client}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            {selectedOffer && (
+              <Dialog open={isValidationDialogOpen} onOpenChange={setIsValidationDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Nouveau Jalon
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    handleCreateMilestone(formData);
+                  }}>
+                    <DialogHeader>
+                      <DialogTitle>Créer un Jalon de Validation</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="milestoneType">Type de Jalon</Label>
+                        <Select name="milestoneType" required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner le type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fin_etudes">Fin d'Études</SelectItem>
+                            <SelectItem value="validation_technique">Validation Technique</SelectItem>
+                            <SelectItem value="validation_commerciale">Validation Commerciale</SelectItem>
+                            <SelectItem value="validation_production">Validation Production</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="assignedUserId">Responsable</Label>
+                        <Select name="assignedUserId" required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Assigner à" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {users.filter((user: any) => ['responsable_be', 'technicien_be', 'admin'].includes(user.role)).map((user: any) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.firstName} {user.lastName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2 space-y-2">
+                        <Label htmlFor="title">Titre du Jalon</Label>
+                        <Input
+                          id="title"
+                          name="title"
+                          placeholder="ex: Validation finale des plans d'exécution"
+                          required
+                        />
+                      </div>
+                      <div className="col-span-2 space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          name="description"
+                          placeholder="Détails des éléments à valider..."
+                          rows={3}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="expectedCompletionDate">Date d'Échéance</Label>
+                        <Input
+                          id="expectedCompletionDate"
+                          name="expectedCompletionDate"
+                          type="date"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setIsValidationDialogOpen(false)}>
+                        Annuler
+                      </Button>
+                      <Button type="submit" disabled={createMilestoneMutation.isPending}>
+                        {createMilestoneMutation.isPending ? 'Création...' : 'Créer le Jalon'}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Modal de validation */}
-      <Dialog open={isValidationModalOpen} onOpenChange={setIsValidationModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              Valider : {selectedMilestone?.label}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Commentaire de validation *
-              </label>
-              <Textarea
-                value={validationComment}
-                onChange={(e) => setValidationComment(e.target.value)}
-                placeholder="Décrivez les éléments validés, conditions respectées..."
-                rows={3}
-              />
+      {/* Offer Overview */}
+      {selectedOffer && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Suivi des Jalons - {selectedOffer.reference}
+              </div>
+              <Badge className={getStatusColor(selectedOffer.status)}>
+                {getStatusLabel(selectedOffer.status)}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div>
+                <span className="text-sm text-gray-600">Client:</span>
+                <p className="font-medium">{selectedOffer.client}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-600">Montant:</span>
+                <p className="font-medium">€{Number(selectedOffer.estimatedAmount).toLocaleString('fr-FR')}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-600">Responsable BE:</span>
+                <p className="font-medium">
+                  {selectedOffer.responsibleUser?.firstName} {selectedOffer.responsibleUser?.lastName}
+                </p>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Points bloquants ou remarques (optionnel)
-              </label>
-              <Textarea
-                value={blockers}
-                onChange={(e) => setBlockers(e.target.value)}
-                placeholder="Signalez d'éventuels problèmes ou points d'attention..."
-                rows={2}
-              />
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Progression des Jalons</span>
+                <span>{calculateProgress()}%</span>
+              </div>
+              <Progress value={calculateProgress()} className="h-2" />
+              <p className="text-sm text-gray-600">
+                {milestones.filter((m: any) => m.status === 'valide').length} sur {milestones.length} jalons validés
+              </p>
             </div>
+          </CardContent>
+        </Card>
+      )}
 
-            <div className="flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setIsValidationModalOpen(false)}
-              >
-                Annuler
-              </Button>
-              <Button
-                onClick={handleSubmitValidation}
-                disabled={validateMilestoneMutation.isPending || !validationComment.trim()}
-              >
-                {validateMilestoneMutation.isPending ? "Validation..." : "Valider"}
-              </Button>
+      {/* Milestones List */}
+      {selectedOfferId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" />
+              Jalons de Validation
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {milestones.map((milestone: any) => (
+                <div key={milestone.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {getMilestoneTypeIcon(milestone.milestoneType)}
+                      <div>
+                        <h4 className="font-medium">{milestone.title}</h4>
+                        <p className="text-sm text-gray-600">
+                          {getMilestoneTypeLabel(milestone.milestoneType)}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className={getStatusColor(milestone.status)}>
+                      {getStatusLabel(milestone.status)}
+                    </Badge>
+                  </div>
+
+                  {milestone.description && (
+                    <p className="text-sm text-gray-700 mb-3">{milestone.description}</p>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Assigné à:</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Avatar className="w-6 h-6">
+                          <AvatarImage src={milestone.assignedUser?.profileImageUrl} />
+                          <AvatarFallback className="text-xs">
+                            {milestone.assignedUser?.firstName?.[0]}{milestone.assignedUser?.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">
+                          {milestone.assignedUser?.firstName} {milestone.assignedUser?.lastName}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Échéance:</span>
+                      <p className="font-medium">
+                        {format(new Date(milestone.expectedCompletionDate), 'dd/MM/yyyy', { locale: fr })}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Créé le:</span>
+                      <p className="font-medium">
+                        {format(new Date(milestone.createdAt), 'dd/MM/yyyy', { locale: fr })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {milestone.status !== 'valide' && (
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-600 border-green-300 hover:bg-green-50"
+                        onClick={() => validateMilestoneMutation.mutate({
+                          milestoneId: milestone.id,
+                          status: 'valide',
+                          comment: 'Jalon validé'
+                        })}
+                        disabled={validateMilestoneMutation.isPending}
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        Valider
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                        onClick={() => validateMilestoneMutation.mutate({
+                          milestoneId: milestone.id,
+                          status: 'rejete',
+                          comment: 'Jalon rejeté - révision nécessaire'
+                        })}
+                        disabled={validateMilestoneMutation.isPending}
+                      >
+                        <AlertTriangle className="w-4 h-4 mr-1" />
+                        Rejeter
+                      </Button>
+                    </div>
+                  )}
+
+                  {milestone.validationComment && (
+                    <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
+                      <strong>Commentaire:</strong> {milestone.validationComment}
+                    </div>
+                  )}
+
+                  {milestone.completedAt && (
+                    <div className="mt-2 text-sm text-green-600">
+                      ✓ Validé le {format(new Date(milestone.completedAt), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {milestones.length === 0 && selectedOfferId && (
+                <div className="text-center py-8 text-gray-500">
+                  <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Aucun jalon de validation créé</p>
+                  <p className="text-sm">Créez le premier jalon pour commencer le suivi</p>
+                </div>
+              )}
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+          </CardContent>
+        </Card>
+      )}
+
+      {!selectedOfferId && (
+        <Card>
+          <CardContent className="text-center py-8">
+            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
+            <p className="text-gray-500">Sélectionnez une offre pour gérer ses jalons de validation</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

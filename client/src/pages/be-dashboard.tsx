@@ -17,6 +17,7 @@ import {
   Activity
 } from "lucide-react";
 import WorkloadPlanner from "@/components/projects/workload-planner";
+import MilestoneTracker from "@/components/validation/milestone-tracker";
 
 export default function BEDashboard() {
   // Fetch BE workload data for overview
@@ -187,44 +188,7 @@ export default function BEDashboard() {
             </TabsContent>
 
             <TabsContent value="milestones" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    Jalons de Validation BE
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <h4 className="font-medium text-green-800 mb-2">Solution implémentée - Audit JLM</h4>
-                      <p className="text-sm text-green-700">
-                        ✓ Système de validation des jalons "Fin d'études" opérationnel<br/>
-                        ✓ Mesure de charge BE avec indicateurs de surcharge<br/>
-                        ✓ Tableau de bord dédié pour le suivi BE
-                      </p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="border rounded-lg p-4">
-                        <h5 className="font-medium mb-2">Jalons Validés</h5>
-                        <div className="text-2xl font-bold text-green-600 mb-1">
-                          {offers.filter((o: any) => o.finEtudesValidatedAt).length}
-                        </div>
-                        <p className="text-sm text-gray-600">Cette semaine</p>
-                      </div>
-                      
-                      <div className="border rounded-lg p-4">
-                        <h5 className="font-medium mb-2">En Attente Validation</h5>
-                        <div className="text-2xl font-bold text-orange-600 mb-1">
-                          {offers.filter((o: any) => o.status === 'en_validation').length}
-                        </div>
-                        <p className="text-sm text-gray-600">À traiter</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <MilestoneTracker />
             </TabsContent>
           </Tabs>
         </div>

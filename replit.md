@@ -47,6 +47,49 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
 **Project Context**: JLM ERP addresses specific audit findings around "Absence de jalon Fin d'études" and "Aucune mesure de charge BE" with comprehensive milestone tracking and workload management systems.
 </background_context>
 
+<audit_compliance>
+### Audit JLM Menuiserie - Éléments Critiques à Adresser
+
+**Problèmes Identifiés lors de l'Audit (30 Juin - 1 Juillet 2025)**
+<friction_points>
+- Double saisie systémique entre outils (AO → Chiffrage → Planning)
+- Mauvaise circulation information BE ↔ Terrain
+- Absence jalons validation formels (notamment "Fin d'études")
+- Manque indicateurs pilotage activité
+- Goulots d'étranglement : BE et France comme "single point of failure"
+- Pertes temps : recherches info, ressaisies, attentes livraison
+- Risques financiers : retards facturation, reprises coûteuses, érosion marge
+</friction_points>
+
+**Objectifs POC Prioritaires**
+<poc_objectives>
+- Digitaliser gestion dossiers d'offre et chiffrage
+- Optimiser suivi projet/planning avec workflow visible
+- Fluidifier circulation information inter-services
+- Réduire double saisie par réutilisation données
+- Améliorer visibilité et traçabilité processus clés
+- Implémenter jalon "Fin d'études" validé numériquement
+</poc_objectives>
+
+**Flux Critiques à Optimiser**
+<critical_workflows>
+1. AO → Dossier Offre (pré-remplissage automatique données)
+2. Chiffrage → Validation BE (jalon "Fin d'études" obligatoire)
+3. Offre Validée → Projet (transformation workflow)
+4. Planning → Équipes (affectation ressources et tâches)
+5. BE → Terrain (circulation informations techniques)
+</critical_workflows>
+
+**Principes de Développement Non-Négociables**
+<development_principles>
+- Zéro double saisie : Réutilisation maximale données existantes
+- Workflow auditable : Traçabilité complète changements statut
+- Interface intuitive : Utilisabilité pour profils non-techniques
+- Flux d'information prioritaire : Circulation fluide inter-étapes
+- Indicateurs temps réel : Charge BE, avancement projets, jalons
+</development_principles>
+</audit_compliance>
+
 ## Agent IA Optimizations Avancées (Claude 3.7+ Compliance)
 
 <claude_configuration>
@@ -238,6 +281,35 @@ Implémente validation jalon "Fin d'études" pour offre menuiserie
 
 Cette configuration Claude-optimisée permet productivité maximale avec qualité code et efficacité coûts pour développement JLM ERP.
 
+<audit_development_guidelines>
+### Directives de Développement Alignées sur l'Audit
+
+**Chaque fonctionnalité doit résoudre un point de friction identifié**
+<audit_alignment>
+- Feature Request → Audit Finding: Toujours lier développement aux problèmes spécifiques identifiés
+- ROI Measurement: Quantifier réduction double saisie, gain temps, amélioration circulation info
+- User Impact: Valider que chaque feature résout un goulot d'étranglement documenté
+- Performance Target: Respecter les métriques < 100ms API, < 16ms renders pour éviter pertes temps
+</audit_alignment>
+
+**Validation Workflow Obligatoire**
+<workflow_validation>
+- Jalon "Fin d'études" : Aucun dossier ne peut passer en production sans validation BE formelle
+- Workflow Auditable : Chaque changement statut doit être tracé avec utilisateur, timestamp, commentaire
+- Indicateurs Temps Réel : Dashboard charge BE, avancement projets, alertes goulots
+- Zero Double Entry : Validation automatique réutilisation données entre étapes workflow
+</workflow_validation>
+
+**Tests de Conformité Audit**
+<audit_testing>
+- Test Scenario: "AO → Offre without double entry" (data auto-population)
+- Test Scenario: "BE Workload prevents overload" (capacity alerts)
+- Test Scenario: "Fin d'études mandatory before production" (workflow blocking)
+- Test Scenario: "Real-time info flow BE ↔ Terrain" (bi-directional sync)
+- Performance Test: API responses < 100ms pour éviter "pertes de temps considérables"
+</audit_testing>
+</audit_development_guidelines>
+
 ## System Architecture
 
 ### Frontend Architecture (Client-Side)
@@ -356,14 +428,21 @@ Cette configuration Claude-optimisée permet productivité maximale avec qualit�
 5. Execution: Multi-phase project lifecycle with task management
 ```
 
+<audit_issue_resolution>
 ### JLM Audit Issue Resolution Implementation
+
 **Issue 1: "Aucune mesure de charge BE"** → `BE Workload Dashboard`
+<implementation_requirements>
 - Weekly capacity planning with hours tracking
-- Real-time workload percentages and alerts
+- Real-time workload percentages and alerts  
 - Team member availability visualization
 - Overload prevention and redistribution recommendations
+- Integration with offer assignment workflow
+- Performance metrics: < 100ms API responses for workload queries
+</implementation_requirements>
 
 **Issue 2: "Absence de jalon Fin d'études"** → `Validation Milestones Tracker`
+<implementation_requirements>
 - Complete milestone validation system with full CRUD operations
 - Multiple milestone types: Fin d'Études, Validation Technique, Validation Commerciale, Validation Production
 - Visual milestone tracking with progress indicators and status management
@@ -371,6 +450,18 @@ Cette configuration Claude-optimisée permet productivité maximale avec qualit�
 - Validation workflow with approval/rejection and commenting system
 - Integration with offer management for complete traceability
 - Dashboard integration for real-time monitoring and reporting
+- Blocage automatique : Aucun passage en production sans validation "Fin d'études"
+</implementation_requirements>
+
+**Issue 3: "Double saisie et circulation info"** → `Workflow Integration Engine`
+<implementation_requirements>
+- Auto-population AO data dans création offres
+- Synchronisation bidirectionnelle BE ↔ Planning
+- Notifications temps réel changements statut
+- API endpoints unifiées pour éviter ressaisie
+- Cache intelligent pour performance < 16ms renders
+</implementation_requirements>
+</audit_issue_resolution>
 
 ### Status Management System
 **Offer Statuses**: `nouveau`, `en_chiffrage`, `en_validation`, `valide`, `perdu`

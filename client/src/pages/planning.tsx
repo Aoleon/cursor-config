@@ -358,7 +358,7 @@ export default function Planning() {
   if (projectsLoading || phasesLoading || tasksLoading || usersLoading) {
     return (
       <div className="min-h-screen flex bg-gray-50">
-        <Sidebar />
+        <PhaseNavigation />
         <main className="flex-1 overflow-auto">
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

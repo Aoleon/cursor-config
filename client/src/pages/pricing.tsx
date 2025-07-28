@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { PhaseNavigation } from "@/components/navigation/phase-navigation";
+import Header from "@/components/layout/header";
 import {
   Calculator,
   Euro,

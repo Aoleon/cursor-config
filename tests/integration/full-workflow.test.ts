@@ -4,11 +4,11 @@ import express from 'express'
 import { registerRoutes } from '../../server/routes'
 
 /**
- * Tests d'intégration workflow complet JLM ERP
+ * Tests d'intégration workflow complet JLM
  * Simulation des parcours utilisateur réels avec anti-régression
  */
 
-describe('JLM ERP - Workflow Integration Tests', () => {
+describe('JLM - Workflow Integration Tests', () => {
   let app: express.Express
   let server: any
 

@@ -1,14 +1,14 @@
-# JLM ERP - Menuiserie Management System
+# JLM - Menuiserie Management System
 
 ## Overview
 
-JLM ERP is a comprehensive business management system specifically designed for French carpentry/joinery companies (menuiserie). The application digitalizes and optimizes the entire business workflow: offer dossiers (AO management), pricing/quotation processes, project planning/tracking, and team coordination. Built as a full-stack TypeScript application with React frontend and Express.js backend, featuring real-time collaboration, PostgreSQL database, and integrated Replit authentication.
+JLM is a comprehensive business management system specifically designed for French carpentry/joinery companies (menuiserie). The application digitalizes and optimizes the entire business workflow: offer dossiers (AO management), pricing/quotation processes, project planning/tracking, and team coordination. Built as a full-stack TypeScript application with React frontend and Express.js backend, featuring real-time collaboration, PostgreSQL database, and integrated Replit authentication.
 
 **Current Status**: Fully functional ERP with enhanced JLM-specific features. All audit findings addressed: BE workload dashboard, validation milestones tracker, and enhanced offer management operational. POC validation complete with comprehensive test data and functional workflow demonstrations.
 
 **Development Status**: Authentication temporarily disabled to facilitate testing and development access. All API endpoints accessible without login credentials. Complete sample data implemented for testing POC features including AOs, offers, BE workload, and validation milestones.
 
-**Latest Enhancement**: Vue Timeline complète implémentée pour offres, projets et jalons de validation. Interface de planification hebdomadaire avec filtrage par utilisateur et statut, navigation temporelle, et statistiques en temps réel. Système de jalons BE entièrement opérationnel avec données de test.
+**Latest Enhancement**: Application renommée de "JLM ERP - Navigation par Phases" à "JLM" pour simplifier l'identité de marque. Vue Timeline complète implémentée pour offres, projets et jalons de validation. Interface de planification hebdomadaire avec filtrage par utilisateur et statut, navigation temporelle, et statistiques en temps réel. Système de jalons BE entièrement opérationnel avec données de test.
 
 ## User Preferences & AI Agent Guidelines
 

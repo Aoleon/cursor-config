@@ -44,7 +44,7 @@ export default function Sidebar() {
             <Wrench className="text-white text-lg" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">JLM ERP</h1>
+            <h1 className="text-xl font-bold text-gray-900">JLM</h1>
             <p className="text-sm text-gray-600">Menuiserie</p>
           </div>
         </div>

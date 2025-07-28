@@ -47,7 +47,7 @@ export default function Header() {
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">JLM</span>
                 </div>
-                <span className="font-semibold text-gray-900">Menuiserie</span>
+                <span className="font-semibold text-gray-900">ERP Menuiserie</span>
               </div>
             </Link>
           </div>

@@ -22,7 +22,6 @@ const navigation = [
   { name: "Chiffrage", href: "/pricing", icon: Calculator },
   { name: "Projets", href: "/projects", icon: Projector },
   { name: "Planning", href: "/planning", icon: Calendar },
-  { name: "Plan de Charges", href: "/resource-planning", icon: Users },
   { name: "Équipes", href: "/teams", icon: Users },
   { name: "Fournisseurs", href: "/suppliers", icon: Truck },
 ];
@@ -44,7 +43,7 @@ export default function Sidebar() {
             <Wrench className="text-white text-lg" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">JLM</h1>
+            <h1 className="text-xl font-bold text-gray-900">JLM ERP</h1>
             <p className="text-sm text-gray-600">Menuiserie</p>
           </div>
         </div>

@@ -6,7 +6,7 @@ test.describe('Offers Management E2E Tests', () => {
   })
 
   test('should display offers page correctly', async ({ page }) => {
-    await expect(page).toHaveTitle(/JLM/)
+    await expect(page).toHaveTitle(/JLM ERP/)
     await expect(page.locator('h1')).toContainText('Dossiers d\'Offre')
     
     // Vérifier la présence du tableau des offres

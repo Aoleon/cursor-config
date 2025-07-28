@@ -10,8 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Truck, Plus, Phone, Mail, MapPin, Clock, Star } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { PhaseNavigation } from "@/components/navigation/phase-navigation";
-import Header from "@/components/layout/header";
 import {
   Dialog,
   DialogContent,
@@ -156,18 +154,7 @@ export default function Suppliers() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      <PhaseNavigation />
-      <main className="flex-1 overflow-auto">
-        <Header 
-          title="Fournisseurs"
-          breadcrumbs={[
-            { label: "Accueil", href: "/" },
-            { label: "Fournisseurs" }
-          ]}
-        />
-        
-        <div className="px-6 py-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Fournisseurs</h1>
@@ -446,8 +433,6 @@ export default function Suppliers() {
           )}
         </CardContent>
       </Card>
-        </div>
-      </main>
     </div>
   );
 }

@@ -6,18 +6,8 @@ import {
   supplierRequests,
   quotations,
   projectTasks,
-  projectPhases,
   beWorkload,
-  avWorkload,
-  productionWorkload,
   validationMilestones,
-  suppliers,
-  interventions,
-  pricingComponents,
-  supplierQuotations,
-  quotationItems,
-  costTemplates,
-  laborRates,
   type User,
   type UpsertUser,
   type Offer,
@@ -32,30 +22,10 @@ import {
   type InsertQuotation,
   type ProjectTask,
   type InsertProjectTask,
-  type ProjectPhase,
-  type InsertProjectPhase,
   type BeWorkload,
   type InsertBeWorkload,
-  type AvWorkload,
-  type InsertAvWorkload,
-  type ProductionWorkload,
-  type InsertProductionWorkload,
   type ValidationMilestone,
   type InsertValidationMilestone,
-  type Supplier,
-  type InsertSupplier,
-  type Intervention,
-  type InsertIntervention,
-  type PricingComponent,
-  type InsertPricingComponent,
-  type SupplierQuotation,
-  type InsertSupplierQuotation,
-  type QuotationItem,
-  type InsertQuotationItem,
-  type CostTemplate,
-  type InsertCostTemplate,
-  type LaborRate,
-  type InsertLaborRate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, count, and, or, like, sql } from "drizzle-orm";
@@ -117,18 +87,6 @@ export interface IStorage {
     offersPendingValidation: number;
     beLoad: number;
   }>;
-  
-  // Pricing operations
-  getPricingComponents(offerId: string): Promise<PricingComponent[]>;
-  createPricingComponent(component: InsertPricingComponent): Promise<PricingComponent>;
-  updatePricingComponent(id: string, component: Partial<InsertPricingComponent>): Promise<PricingComponent>;
-  deletePricingComponent(id: string): Promise<void>;
-  
-  // Supplier quotation operations
-  getSupplierQuotations(offerId: string): Promise<SupplierQuotation[]>;
-  createSupplierQuotation(quotation: InsertSupplierQuotation): Promise<SupplierQuotation>;
-  updateSupplierQuotation(id: string, quotation: Partial<InsertSupplierQuotation>): Promise<SupplierQuotation>;
-  deleteSupplierQuotation(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -726,191 +684,6 @@ export class DatabaseStorage implements IStorage {
       ...row.milestone,
       assignedUser: row.assignedUser || undefined
     }));
-  }
-
-  async updateValidationMilestone(id: string, updates: Partial<InsertValidationMilestone>): Promise<ValidationMilestone> {
-    const [updated] = await db
-      .update(validationMilestones)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(validationMilestones.id, id))
-      .returning();
-    return updated;
-  }
-
-  async deleteValidationMilestone(id: string): Promise<void> {
-    await db.delete(validationMilestones).where(eq(validationMilestones.id, id));
-  }
-
-  // Project phases operations
-  async createProjectPhase(phaseData: InsertProjectPhase): Promise<ProjectPhase> {
-    const [phase] = await db
-      .insert(projectPhases)
-      .values(phaseData)
-      .returning();
-    return phase;
-  }
-
-  async getProjectPhases(): Promise<ProjectPhase[]> {
-    return await db.select().from(projectPhases).orderBy(projectPhases.startDate);
-  }
-
-  async getProjectPhasesByProjectId(projectId: string): Promise<ProjectPhase[]> {
-    return await db
-      .select()
-      .from(projectPhases)
-      .where(eq(projectPhases.projectId, projectId))
-      .orderBy(projectPhases.startDate);
-  }
-
-  async updateProjectPhase(id: string, updates: Partial<InsertProjectPhase>): Promise<ProjectPhase> {
-    const [phase] = await db
-      .update(projectPhases)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(projectPhases.id, id))
-      .returning();
-    return phase;
-  }
-
-  // Project tasks operations with workload data
-  async getAllProjectTasks(): Promise<any[]> {
-    return await db.select({
-      id: projectTasks.id,
-      projectId: projectTasks.projectId,
-      name: projectTasks.name,
-      description: projectTasks.description,
-      startDate: projectTasks.startDate,
-      endDate: projectTasks.endDate,
-      assignedUserId: projectTasks.assignedUserId,
-      status: projectTasks.status,
-      progress: projectTasks.progress,
-      bePersonsNeeded: projectTasks.bePersonsNeeded,
-      posePersonsNeeded: projectTasks.posePersonsNeeded,
-      beHoursEstimated: projectTasks.beHoursEstimated,
-      poseHoursEstimated: projectTasks.poseHoursEstimated,
-      priority: projectTasks.priority,
-      skills: projectTasks.skills,
-      createdAt: projectTasks.createdAt,
-      updatedAt: projectTasks.updatedAt,
-      project: {
-        id: projects.id,
-        name: projects.name,
-        client: projects.client,
-        location: projects.location,
-        status: projects.status
-      },
-      assignedUser: {
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email
-      }
-    })
-    .from(projectTasks)
-    .leftJoin(projects, eq(projectTasks.projectId, projects.id))
-    .leftJoin(users, eq(projectTasks.assignedUserId, users.id))
-    .orderBy(asc(projectTasks.startDate));
-  }
-
-  // Avant-Vente workload operations
-  async getAllAvWorkload(): Promise<any[]> {
-    return await db.select({
-      id: avWorkload.id,
-      userId: avWorkload.userId,
-      weekNumber: avWorkload.weekNumber,
-      year: avWorkload.year,
-      capacityHours: avWorkload.capacityHours,
-      plannedHours: avWorkload.plannedHours,
-      actualHours: avWorkload.actualHours,
-      loadPercentage: avWorkload.loadPercentage,
-      availability: avWorkload.availability,
-      createdAt: avWorkload.createdAt,
-      updatedAt: avWorkload.updatedAt,
-      user: {
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email,
-        role: users.role
-      }
-    })
-    .from(avWorkload)
-    .leftJoin(users, eq(avWorkload.userId, users.id))
-    .orderBy(desc(avWorkload.year), desc(avWorkload.weekNumber));
-  }
-
-  // Production workload operations
-  async getAllProductionWorkload(): Promise<any[]> {
-    return await db.select({
-      id: productionWorkload.id,
-      userId: productionWorkload.userId,
-      weekNumber: productionWorkload.weekNumber,
-      year: productionWorkload.year,
-      capacityHours: productionWorkload.capacityHours,
-      plannedHours: productionWorkload.plannedHours,
-      actualHours: productionWorkload.actualHours,
-      loadPercentage: productionWorkload.loadPercentage,
-      availability: productionWorkload.availability,
-      createdAt: productionWorkload.createdAt,
-      updatedAt: productionWorkload.updatedAt,
-      user: {
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email,
-        role: users.role
-      }
-    })
-    .from(productionWorkload)
-    .leftJoin(users, eq(productionWorkload.userId, users.id))
-    .orderBy(desc(productionWorkload.year), desc(productionWorkload.weekNumber));
-  }
-
-  // Pricing operations
-  async getPricingComponents(offerId: string): Promise<PricingComponent[]> {
-    return await db.select().from(pricingComponents)
-      .where(eq(pricingComponents.offerId, offerId))
-      .orderBy(asc(pricingComponents.createdAt));
-  }
-
-  async createPricingComponent(component: InsertPricingComponent): Promise<PricingComponent> {
-    const [created] = await db.insert(pricingComponents).values(component).returning();
-    return created;
-  }
-
-  async updatePricingComponent(id: string, component: Partial<InsertPricingComponent>): Promise<PricingComponent> {
-    const [updated] = await db.update(pricingComponents)
-      .set({ ...component, updatedAt: new Date() })
-      .where(eq(pricingComponents.id, id))
-      .returning();
-    return updated;
-  }
-
-  async deletePricingComponent(id: string): Promise<void> {
-    await db.delete(pricingComponents).where(eq(pricingComponents.id, id));
-  }
-
-  // Supplier quotation operations
-  async getSupplierQuotations(offerId: string): Promise<SupplierQuotation[]> {
-    return await db.select().from(supplierQuotations)
-      .where(eq(supplierQuotations.offerId, offerId))
-      .orderBy(desc(supplierQuotations.createdAt));
-  }
-
-  async createSupplierQuotation(quotation: InsertSupplierQuotation): Promise<SupplierQuotation> {
-    const [created] = await db.insert(supplierQuotations).values(quotation).returning();
-    return created;
-  }
-
-  async updateSupplierQuotation(id: string, quotation: Partial<InsertSupplierQuotation>): Promise<SupplierQuotation> {
-    const [updated] = await db.update(supplierQuotations)
-      .set({ ...quotation, updatedAt: new Date() })
-      .where(eq(supplierQuotations.id, id))
-      .returning();
-    return updated;
-  }
-
-  async deleteSupplierQuotation(id: string): Promise<void> {
-    await db.delete(supplierQuotations).where(eq(supplierQuotations.id, id));
   }
 }
 

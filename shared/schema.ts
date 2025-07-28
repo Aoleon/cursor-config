@@ -32,8 +32,6 @@ export const userRoleEnum = pgEnum("user_role", [
   "chef_projet", 
   "technicien_be",
   "responsable_be",
-  "avant_vente",
-  "production",
   "chef_travaux"
 ]);
 
@@ -169,7 +167,7 @@ export const projects = pgTable("projects", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Project tasks table - Enhanced with BE and Pose workload planning
+// Project tasks table
 export const projectTasks = pgTable("project_tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").references(() => projects.id).notNull(),
@@ -180,44 +178,6 @@ export const projectTasks = pgTable("project_tasks", {
   assignedUserId: varchar("assigned_user_id").references(() => users.id),
   status: varchar("status").default("not_started"),
   progress: integer("progress").default(0),
-  
-  // Planification des charges par équipe
-  bePersonsNeeded: integer("be_persons_needed").default(0), // Nombre de personnes BE nécessaires
-  avPersonsNeeded: integer("av_persons_needed").default(0), // Nombre de personnes Avant-Vente nécessaires
-  productionPersonsNeeded: integer("production_persons_needed").default(0), // Nombre de personnes Production nécessaires
-  beHoursEstimated: decimal("be_hours_estimated", { precision: 8, scale: 2 }).default("0"), // Heures BE estimées
-  avHoursEstimated: decimal("av_hours_estimated", { precision: 8, scale: 2 }).default("0"), // Heures AV estimées
-  productionHoursEstimated: decimal("production_hours_estimated", { precision: 8, scale: 2 }).default("0"), // Heures Production estimées
-  priority: varchar("priority").default("normale"), // basse, normale, haute, critique
-  skills: text("skills").array().default(sql`'{}'::text[]`), // compétences requises
-  
-  // Gestion des handoffs et buffers pour timeline
-  phase: varchar("phase").default("etude"), // etude, planification, approvisionnement, chantier, sav
-  nextPhase: varchar("next_phase"), // phase suivante planifiée
-  handoffDate: timestamp("handoff_date"), // date de transmission à la phase suivante
-  bufferDays: integer("buffer_days").default(0), // jours de buffer avant handoff
-  dependencies: text("dependencies").array().default(sql`'{}'::text[]`), // IDs des tâches précédentes
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Table pour gérer les phases de projet et leurs handoffs
-export const projectPhases = pgTable("project_phases", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").references(() => projects.id).notNull(),
-  phase: varchar("phase").notNull(), // etude, planification, approvisionnement, chantier, sav
-  responsibleTeam: varchar("responsible_team").notNull(), // be, av, production
-  responsibleUserId: varchar("responsible_user_id").references(() => users.id),
-  startDate: timestamp("start_date"),
-  endDate: timestamp("end_date"),
-  actualStartDate: timestamp("actual_start_date"),
-  actualEndDate: timestamp("actual_end_date"),
-  status: varchar("status").default("planned"), // planned, in_progress, completed, delayed
-  bufferDays: integer("buffer_days").default(0),
-  nextPhase: varchar("next_phase"),
-  handoffCompleted: boolean("handoff_completed").default(false),
-  handoffNotes: text("handoff_notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -263,51 +223,14 @@ export const beWorkload = pgTable("be_workload", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Table pour traquer la charge Avant-Vente
-export const avWorkload = pgTable("av_workload", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
-  weekNumber: integer("week_number").notNull(),
-  year: integer("year").notNull(),
-  capacityHours: decimal("capacity_hours", { precision: 8, scale: 2 }).default("35"), // 35h/semaine
-  plannedHours: decimal("planned_hours", { precision: 8, scale: 2 }).default("0"),
-  actualHours: decimal("actual_hours", { precision: 8, scale: 2 }).default("0"),
-  loadPercentage: decimal("load_percentage", { precision: 5, scale: 2 }).default("0"), // %
-  availability: varchar("availability").default("disponible"), // disponible, partiellement_disponible, indisponible
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Table pour traquer la charge des équipes de production (nouveau besoin identifié)
-export const productionWorkload = pgTable("production_workload", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
-  weekNumber: integer("week_number").notNull(),
-  year: integer("year").notNull(),
-  capacityHours: decimal("capacity_hours", { precision: 8, scale: 2 }).default("35"), // 35h/semaine
-  plannedHours: decimal("planned_hours", { precision: 8, scale: 2 }).default("0"),
-  actualHours: decimal("actual_hours", { precision: 8, scale: 2 }).default("0"),
-  loadPercentage: decimal("load_percentage", { precision: 5, scale: 2 }).default("0"), // %
-  availability: varchar("availability").default("disponible"), // disponible, partiellement_disponible, indisponible
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 // Table pour les jalons de validation (manquants selon audit)
 export const validationMilestones = pgTable("validation_milestones", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   offerId: varchar("offer_id").references(() => offers.id),
   projectId: varchar("project_id").references(() => projects.id),
   type: varchar("type").notNull(), // "fin_etudes", "validation_technique", "validation_commerciale"
-  title: varchar("title").notNull(),
-  description: text("description"),
-  expectedCompletionDate: timestamp("expected_completion_date").notNull(),
-  assignedUserId: varchar("assigned_user_id").references(() => users.id),
-  status: varchar("status").notNull().default("en_attente"), // "en_attente", "en_cours", "valide", "rejete"
-  milestoneType: varchar("milestone_type").notNull(),
-  validatedAt: timestamp("validated_at"),
-  validatedBy: varchar("validated_by").references(() => users.id),
-  completedAt: timestamp("completed_at"),
+  validatedBy: varchar("validated_by").references(() => users.id).notNull(),
+  validatedAt: timestamp("validated_at").defaultNow(),
   comment: text("comment"),
   blockers: text("blockers"), // problèmes identifiés
   createdAt: timestamp("created_at").defaultNow(),
@@ -336,8 +259,6 @@ export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects),
   tasks: many(projectTasks),
   beWorkload: many(beWorkload),
-  avWorkload: many(avWorkload),
-  productionWorkload: many(productionWorkload),
   validationMilestones: many(validationMilestones),
   interventions: many(interventions),
 }));
@@ -415,20 +336,6 @@ export const beWorkloadRelations = relations(beWorkload, ({ one }) => ({
   }),
 }));
 
-export const avWorkloadRelations = relations(avWorkload, ({ one }) => ({
-  user: one(users, {
-    fields: [avWorkload.userId],
-    references: [users.id],
-  }),
-}));
-
-export const productionWorkloadRelations = relations(productionWorkload, ({ one }) => ({
-  user: one(users, {
-    fields: [productionWorkload.userId],
-    references: [users.id],
-  }),
-}));
-
 export const validationMilestonesRelations = relations(validationMilestones, ({ one }) => ({
   offer: one(offers, {
     fields: [validationMilestones.offerId],
@@ -473,9 +380,6 @@ export type Project = typeof projects.$inferSelect;
 export type InsertProjectTask = typeof projectTasks.$inferInsert;
 export type ProjectTask = typeof projectTasks.$inferSelect;
 
-export type InsertProjectPhase = typeof projectPhases.$inferInsert;
-export type ProjectPhase = typeof projectPhases.$inferSelect;
-
 export type InsertSupplierRequest = typeof supplierRequests.$inferInsert;
 export type SupplierRequest = typeof supplierRequests.$inferSelect;
 
@@ -485,128 +389,11 @@ export type Quotation = typeof quotations.$inferSelect;
 export type InsertBeWorkload = typeof beWorkload.$inferInsert;
 export type BeWorkload = typeof beWorkload.$inferSelect;
 
-export type InsertAvWorkload = typeof avWorkload.$inferInsert;
-export type AvWorkload = typeof avWorkload.$inferSelect;
-
-export type InsertProductionWorkload = typeof productionWorkload.$inferInsert;
-export type ProductionWorkload = typeof productionWorkload.$inferSelect;
-
 export type InsertValidationMilestone = typeof validationMilestones.$inferInsert;
 export type ValidationMilestone = typeof validationMilestones.$inferSelect;
 
 export type InsertIntervention = typeof interventions.$inferInsert;
 export type Intervention = typeof interventions.$inferSelect;
-
-// Tables de chiffrage et costing
-export const pricingComponents = pgTable("pricing_components", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  offerId: varchar("offer_id").references(() => offers.id).notNull(),
-  category: varchar("category").notNull(), // "menuiserie", "pose", "fourniture", "transport"
-  subCategory: varchar("sub_category"), // "fenetre", "porte", "cloison", etc.
-  description: text("description").notNull(),
-  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
-  unit: varchar("unit").notNull().default("u"), // "u", "m2", "ml", "kg"
-  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
-  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
-  supplierPrice: decimal("supplier_price", { precision: 10, scale: 2 }),
-  margin: decimal("margin", { precision: 5, scale: 2 }), // Pourcentage de marge
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const supplierQuotations = pgTable("supplier_quotations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  offerId: varchar("offer_id").references(() => offers.id).notNull(),
-  supplierName: varchar("supplier_name").notNull(),
-  reference: varchar("reference"), // Référence fournisseur
-  quotationDate: timestamp("quotation_date"),
-  validityDays: integer("validity_days").default(30),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: varchar("status").notNull().default("en_attente"), // "en_attente", "recu", "valide", "refuse"
-  documentPath: text("document_path"), // Chemin vers le devis PDF
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const quotationItems = pgTable("quotation_items", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  quotationId: varchar("quotation_id").references(() => supplierQuotations.id).notNull(),
-  description: text("description").notNull(),
-  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
-  unit: varchar("unit").notNull(),
-  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
-  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
-  deliveryTime: varchar("delivery_time"), // Délai de livraison
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const costTemplates = pgTable("cost_templates", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull(),
-  category: varchar("category").notNull(), // "menuiserie_int", "menuiserie_ext", "bardage"
-  description: text("description"),
-  components: jsonb("components").notNull(), // Structure des composants par défaut
-  isActive: boolean("is_active").default(true),
-  createdBy: varchar("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const laborRates = pgTable("labor_rates", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  category: varchar("category").notNull(), // "be", "pose", "transport"
-  skillLevel: varchar("skill_level").notNull(), // "junior", "senior", "expert"
-  hourlyRate: decimal("hourly_rate", { precision: 8, scale: 2 }).notNull(),
-  socialCharges: decimal("social_charges", { precision: 5, scale: 2 }).default(sql`50.0`), // Pourcentage
-  isActive: boolean("is_active").default(true),
-  validFrom: timestamp("valid_from").defaultNow(),
-  validTo: timestamp("valid_to"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Relations pour les tables de chiffrage
-export const pricingComponentsRelations = relations(pricingComponents, ({ one }) => ({
-  offer: one(offers, {
-    fields: [pricingComponents.offerId],
-    references: [offers.id],
-  }),
-}));
-
-export const supplierQuotationsRelations = relations(supplierQuotations, ({ one, many }) => ({
-  offer: one(offers, {
-    fields: [supplierQuotations.offerId],
-    references: [offers.id],
-  }),
-  items: many(quotationItems),
-}));
-
-export const quotationItemsRelations = relations(quotationItems, ({ one }) => ({
-  quotation: one(supplierQuotations, {
-    fields: [quotationItems.quotationId],
-    references: [supplierQuotations.id],
-  }),
-}));
-
-export const costTemplatesRelations = relations(costTemplates, ({ one }) => ({
-  createdBy: one(users, {
-    fields: [costTemplates.createdBy],
-    references: [users.id],
-  }),
-}));
-
-// Types pour le chiffrage
-export type PricingComponent = typeof pricingComponents.$inferSelect;
-export type InsertPricingComponent = typeof pricingComponents.$inferInsert;
-export type SupplierQuotation = typeof supplierQuotations.$inferSelect;
-export type InsertSupplierQuotation = typeof supplierQuotations.$inferInsert;
-export type QuotationItem = typeof quotationItems.$inferSelect;
-export type InsertQuotationItem = typeof quotationItems.$inferInsert;
-export type CostTemplate = typeof costTemplates.$inferSelect;
-export type InsertCostTemplate = typeof costTemplates.$inferInsert;
-export type LaborRate = typeof laborRates.$inferSelect;
-export type InsertLaborRate = typeof laborRates.$inferInsert;
 
 // Insert schemas
 export const insertAoSchema = createInsertSchema(aos).omit({
@@ -651,45 +438,10 @@ export const insertBeWorkloadSchema = createInsertSchema(beWorkload).omit({
   updatedAt: true,
 });
 
-export const insertAvWorkloadSchema = createInsertSchema(avWorkload).omit({
+export const insertValidationMilestoneSchema = createInsertSchema(validationMilestones).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
-
-export const insertProductionWorkloadSchema = createInsertSchema(productionWorkload).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-// Schémas Zod pour le chiffrage
-export const insertPricingComponentSchema = createInsertSchema(pricingComponents).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertSupplierQuotationSchema = createInsertSchema(supplierQuotations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertQuotationItemSchema = createInsertSchema(quotationItems).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCostTemplateSchema = createInsertSchema(costTemplates).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertLaborRateSchema = createInsertSchema(laborRates).omit({
-  id: true,
-  createdAt: true,
 });
 
 export const insertInterventionSchema = createInsertSchema(interventions).omit({

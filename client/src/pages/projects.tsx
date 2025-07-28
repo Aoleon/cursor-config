@@ -3,19 +3,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { PhaseNavigation } from "@/components/navigation/phase-navigation";
+import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, User, Euro, Kanban, Users, Clock } from "lucide-react";
+import { Calendar, MapPin, User, Euro, Kanban, Users } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import KanbanBoard from "@/components/projects/kanban-board";
 import WorkloadPlanner from "@/components/projects/workload-planner";
-import AdvancedWorkloadPlanner from "@/components/projects/advanced-workload-planner";
-import TimelineView from "@/components/projects/timeline-view";
 
 export default function Projects() {
   const { toast } = useToast();
@@ -48,7 +46,7 @@ export default function Projects() {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      <PhaseNavigation />
+      <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
           title="Gestion de Projets"
@@ -67,7 +65,7 @@ export default function Projects() {
         
         <div className="px-6 py-6">
           <Tabs defaultValue="list" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="list" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Liste des Projets
@@ -75,10 +73,6 @@ export default function Projects() {
               <TabsTrigger value="kanban" className="flex items-center gap-2">
                 <Kanban className="h-4 w-4" />
                 Vue Kanban
-              </TabsTrigger>
-              <TabsTrigger value="timeline" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Vue Timeline
               </TabsTrigger>
               <TabsTrigger value="workload" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
@@ -176,12 +170,8 @@ export default function Projects() {
               <KanbanBoard />
             </TabsContent>
 
-            <TabsContent value="timeline" className="space-y-6">
-              <TimelineView viewType="projects" />
-            </TabsContent>
-
             <TabsContent value="workload" className="space-y-6">
-              <AdvancedWorkloadPlanner />
+              <WorkloadPlanner />
             </TabsContent>
           </Tabs>
         </div>

@@ -13,13 +13,13 @@ export default function Landing() {
               <Wrench className="text-white text-2xl" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">JLM</h1>
+              <h1 className="text-4xl font-bold text-gray-900">JLM ERP</h1>
               <p className="text-xl text-gray-600">Solution de gestion pour menuiserie</p>
             </div>
           </div>
           <p className="text-lg text-gray-700 max-w-2xl mx-auto">
             Digitalisez et optimisez la gestion de vos dossiers d'offre, 
-            le chiffrage et le suivi de projet avec notre solution 
+            le chiffrage et le suivi de projet avec notre solution ERP 
             spécialement conçue pour les entreprises de menuiserie.
           </p>
         </div>

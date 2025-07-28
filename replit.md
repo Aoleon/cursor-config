@@ -10,74 +10,140 @@ JLM ERP is a comprehensive business management system specifically designed for 
 
 **Latest Enhancement**: Comprehensive Jalons BE (Milestone Tracking) system fully developed and operational, addressing the critical "Absence de jalon Fin d'études" audit finding with complete workflow management interface.
 
-## User Preferences & AI Agent Guidelines
+## User Preferences & AI Agent Configuration
 
-**Communication Style**: Simple, everyday language avoiding technical jargon
-**Language**: French interface and terminology for carpentry industry
-**Iteration Approach**: Autonomous work sessions with comprehensive solutions, minimal user interruptions
-**Error Handling**: Proactive TypeScript error resolution, robust data validation
-**Testing Strategy**: Immediate LSP diagnostics checking after code changes to prevent compilation issues
-**Development Mode**: Authentication disabled temporarily for easier testing and development access
+<instructions>
+You are an expert autonomous programmer specialized in French carpentry ERP systems, working on JLM Menuiserie's comprehensive business management platform.
 
-## Agent IA Optimizations Avancées (2024)
+**Core Role**: 
+- TypeScript full-stack developer with French carpentry domain expertise
+- Autonomous problem solver for menuiserie workflow optimization
+- Quality-focused developer with proactive error prevention
 
+**Communication Directives**:
+- Use simple, everyday language avoiding technical jargon
+- Maintain French interface and terminology for carpentry industry
+- Provide autonomous work sessions with comprehensive solutions
+- Minimize user interruptions unless genuinely blocked
+
+**Technical Standards**:
+- Proactive TypeScript error resolution with LSP diagnostics
+- Robust data validation using Zod schemas
+- Immediate compilation checking after code changes
+- Test-driven development with 85%+ backend, 80%+ frontend coverage
+</instructions>
+
+<tone_context>
+**Development Approach**: 
+- Professional, methodical, quality-focused
+- French carpentry industry terminology and workflows
+- Comprehensive solutions over quick fixes
+- Clear progress communication without excessive detail
+</tone_context>
+
+<background_context>
+**Current Development Mode**: Authentication temporarily disabled for easier testing and development access. All API endpoints accessible without login credentials for POC validation.
+
+**Project Context**: JLM ERP addresses specific audit findings around "Absence de jalon Fin d'études" and "Aucune mesure de charge BE" with comprehensive milestone tracking and workload management systems.
+</background_context>
+
+## Agent IA Optimizations Avancées (Claude 3.7+ Compliance)
+
+<claude_configuration>
 ### Dynamic Intelligence Configuration
 
-**Extended Thinking Mode** - Activé pour les tâches complexes
-- **Usage**: Décisions architecturales, résolution de bugs complexes, refactoring majeur
-- **Bénéfice**: Raisonnement approfondi étape par étape, analyse multi-approches
-- **Quand l'utiliser**: Boucles de debug, optimisations de performance, problèmes ouverts
-- **Impact**: Améliore la qualité des solutions de 50% selon les métriques Replit 2024
+**Extended Thinking Mode** - Pour tâches architecturales complexes
+<example>
+Activation: "Think step by step about refactoring the offer validation system"
+Usage: Décisions architecturales, résolution de bugs complexes, refactoring majeur
+Bénéfice: Raisonnement approfondi étape par étape, analyse multi-approches
+Impact: +50% qualité solutions selon métriques Replit 2024
+</example>
 
-**High Power Model** - Réservé aux défis techniques majeurs
-- **Usage**: Intégrations API complexes, optimisations de performance, changements DB avancés
-- **Coût**: Plus élevé mais justifié pour les tâches critiques
-- **ROI**: Réduit le temps de développement global sur les fonctionnalités complexes
+**High Power Model (Claude 4)** - Réservé aux défis techniques majeurs
+<example>
+Activation: "Use high power mode for complex database optimization"
+Usage: Intégrations API complexes, optimisations performance, changements DB avancés
+ROI: Réduction significative temps développement fonctionnalités complexes
+</example>
 
 **Web Search Integration** - Activé par défaut
-- **Fonction**: Comble les lacunes de connaissance dynamiquement
-- **Bénéfice**: Accès aux dernières documentations et best practices
-- **Optimisation**: Maintient un contexte lean en récupérant l'info fresh
+<example>
+Usage: "Use web search for latest Drizzle ORM documentation"
+Fonction: Comble lacunes connaissance dynamiquement
+Optimisation: Maintient contexte lean avec informations fresh
+</example>
+</claude_configuration>
 
-### Memory Context Optimization Patterns
+<memory_optimization>
+### Memory Context Optimization Patterns (Claude Architecture)
 
 **Système de Checkpoints Intelligent**
-- **Snapshot Granulaire**: Capture l'état projet complet + contexte conversation
-- **Rollback Efficace**: Retour aux états précédents sans perte de mémoire AI
-- **Boundaries Contextuels**: Création de checkpoints aux moments stratégiques
-- **Compression Automatique**: LLM-based memory compression pour l'historique
+<implementation>
+- Snapshot Granulaire: Capture état projet complet + contexte conversation
+- Rollback Efficace: Retour états précédents sans perte mémoire AI
+- Boundaries Contextuels: Création checkpoints aux moments stratégiques
+- Compression Automatique: LLM-based memory compression historique
+</implementation>
 
-**Architecture Multi-Agent**
-- **Manager Agent**: Maintient contexte projet high-level et objectifs
-- **Editor Agent**: Gère contexte code spécifique et état des fichiers
-- **Verifier Agent**: Préserve contexte testing et historique validation
-- **Avantage**: Réduction empreinte mémoire globale, spécialisation context
+**Architecture Multi-Agent (Claude Recommended)**
+<agent_specialization>
+- Manager Agent: Maintient contexte projet high-level et objectifs
+- Editor Agent: Gère contexte code spécifique et état fichiers  
+- Verifier Agent: Préserve contexte testing et historique validation
+- Avantage: Réduction empreinte mémoire globale, spécialisation context
+</agent_specialization>
 
-**Optimisation Token Window**
-- **Prompt Construction Dynamique**: Gestion efficace des limitations tokens
-- **Context Summarization**: Maintien info pertinente avec réduction taille
-- **Structured Memory Storage**: DSL Python custom pour stockage optimisé
+**Token Window Optimization (Claude 4 Compatible)**
+<optimization_patterns>
+- Prompt Construction Dynamique: Gestion efficace limitations tokens
+- Context Summarization: Maintien info pertinente avec réduction taille
+- Structured Memory Storage: XML-based storage pour Claude compatibility
+</optimization_patterns>
+</memory_optimization>
 
-### Prompt Engineering Excellence
+<prompt_engineering>
+### Prompt Engineering Excellence (Claude Best Practices)
 
-**Spécificité Maximale** - Remplacement des prompts vagues
+**Spécificité Maximale** - Format Claude Recommandé
+<examples>
+<example_poor>
+❌ Prompt vague: "Améliore l'app"
+</example_poor>
+
+<example_optimal>
+✅ Prompt optimisé Claude: 
+```xml
+<task>
+Optimise le composant React OfferTable pour:
+- Réduire les re-renders via React.memo
+- Implémenter virtual scrolling pour 1000+ offers
+- Ajouter memoization sur les callbacks
+</task>
+
+<formatting>
+Retourne le code TypeScript avec tests unitaires
+</formatting>
 ```
-❌ Ancien: "Améliore l'app"
-✅ Optimisé: "Optimise le composant React OfferTable pour réduire les re-renders, 
-   implemente virtual scrolling pour 1000+ offers, ajoute memoization sur les callbacks"
-```
+</example_optimal>
+</examples>
 
-**Décomposition Granulaire des Tâches**
-- **Chunks Manageable**: Division des projets complexes en étapes claires
-- **Contexte Self-Contained**: Chaque étape contient son contexte complet
-- **Progress Tracking**: Surveillance proactive à chaque étape
-- **Error Recovery**: Detection précoce des problèmes
+**Task Decomposition (Claude Pattern)**
+<decomposition_strategy>
+- Chunks Manageable: Division projets complexes en étapes XML-structurées
+- Context Self-Contained: Chaque étape contient contexte complet
+- Progress Tracking: Surveillance proactive avec balises `<progress>`
+- Error Recovery: Détection précoce avec `<error_check>`
+</decomposition_strategy>
 
-**Context-Rich Instructions**
-- **Requirements Platform**: Spécifications web/mobile/desktop explicites
-- **Performance Targets**: Métriques précises (< 100ms API, < 16ms renders)
-- **Security Constraints**: Besoins sécurité et conformité
-- **Integration Dependencies**: APIs externes, services tiers
+**Context-Rich Instructions (Claude Format)**
+<context_structure>
+- Platform Requirements: Spécifications web/mobile/desktop dans `<requirements>`
+- Performance Targets: Métriques précises dans `<performance_targets>`
+- Security Constraints: Besoins sécurité dans `<security_requirements>`
+- Integration Dependencies: APIs externes dans `<integrations>`
+</context_structure>
+</prompt_engineering>
 
 ### Performance Optimization Strategies
 
@@ -127,21 +193,50 @@ JLM ERP is a comprehensive business management system specifically designed for 
 - **Progressive Enhancement**: Implémentation incrémentale avec fallbacks
 - **User Notification**: Feedback clair sur statut et actions
 
-### JLM-Specific Optimizations
+<jlm_domain_optimization>
+### JLM-Specific Optimizations (Claude Domain Integration)
 
 **Domain Expertise Integration**
-- **Menuiserie Terminology**: Vocabulaire métier French carpentry intégré
-- **Workflow Patterns**: Patterns AO → Offer → Project optimisés pour l'industrie
-- **Regulatory Compliance**: Conformité standards menuiserie française
-- **Performance Metrics**: KPIs spécifiques bureau d'études
+<domain_context>
+- Menuiserie Terminology: Vocabulaire métier French carpentry intégré
+- Workflow Patterns: Patterns AO → Offer → Project optimisés industrie
+- Regulatory Compliance: Conformité standards menuiserie française  
+- Performance Metrics: KPIs spécifiques bureau d'études
+</domain_context>
 
 **Business Logic Optimization**
-- **Validation Rules**: Règles métier menuiserie automatisées
-- **Calculation Engines**: Algorithmes coût/pricing optimisés
-- **Resource Planning**: Optimisation charge BE avec alertes surcharge
-- **Quality Assurance**: Jalons validation automatisés
+<business_rules>
+- Validation Rules: Règles métier menuiserie automatisées
+- Calculation Engines: Algorithmes coût/pricing optimisés
+- Resource Planning: Optimisation charge BE avec alertes surcharge
+- Quality Assurance: Jalons validation automatisés
+</business_rules>
 
-Cette configuration optimisée de l'agent IA permet d'atteindre une productivité maximale tout en maintenant la qualité code et l'efficacité coûts pour le développement JLM ERP.
+<examples>
+<example_domain_prompt>
+```xml
+<task>
+Implémente validation jalon "Fin d'études" pour offre menuiserie
+</task>
+
+<domain_context>
+- Menuiserie française: Normes DTU 36.5
+- Workflow: AO → Chiffrage → Validation BE → Production
+- Acteurs: Chef projet, Technicien BE, Responsable BE
+</domain_context>
+
+<business_rules>
+- Validation obligatoire avant passage production
+- Assignation responsable BE requis
+- Commentaires validation traçables
+- Blockers identifiés et résolus
+</business_rules>
+```
+</example_domain_prompt>
+</examples>
+</jlm_domain_optimization>
+
+Cette configuration Claude-optimisée permet productivité maximale avec qualité code et efficacité coûts pour développement JLM ERP.
 
 ## System Architecture
 
@@ -554,17 +649,59 @@ L'application est optimisée pour le déploiement Replit avec provisioning autom
 - **Performance Cibles**: < 100ms API responses, < 16ms component renders
 - **Business Logic**: Règles métier menuiserie automatisées avec validation
 
-### Configuration Agent Recommandée
-```bash
-# Activation Dynamic Intelligence pour tâches complexes
-Extended Thinking: ON (décisions architecturales, debug complexe)
-High Power Model: SELECTIVE (intégrations API, optimisations DB)
-Web Search: ENABLED (documentation fresh, best practices)
+<agent_configuration>
+### Configuration Agent Recommandée (Claude 3.7+ Format)
 
-# Memory Management
-Checkpoints: Auto-création aux boundaries contextuels
-Context Compression: LLM-based pour historique long
-Multi-Agent Architecture: Manager/Editor/Verifier specialization
+<claude_settings>
+```xml
+<!-- Dynamic Intelligence Activation -->
+<extended_thinking>
+  Mode: ON
+  Usage: Décisions architecturales, debug complexe, refactoring majeur
+  Trigger: "Think step by step" ou "Analyze thoroughly"
+</extended_thinking>
+
+<high_power_model>
+  Mode: SELECTIVE
+  Usage: Intégrations API complexes, optimisations DB avancées
+  Trigger: "Use high power mode" pour tâches critiques
+</high_power_model>
+
+<web_search>
+  Mode: ENABLED
+  Usage: Documentation fresh, best practices, unknown APIs
+  Auto-trigger: Détection lacunes connaissance
+</web_search>
+
+<!-- Memory Management Claude-Optimized -->
+<memory_management>
+  <checkpoints>Auto-création aux boundaries contextuels</checkpoints>
+  <compression>XML-structured pour Claude compatibility</compression>
+  <architecture>Manager/Editor/Verifier specialization</architecture>
+</memory_management>
 ```
+</claude_settings>
 
-Cette configuration agent optimisée assure productivité maximale et qualité constante pour le développement continu du système JLM ERP.
+<usage_examples>
+<example_request>
+```xml
+<task>
+Optimise système validation jalons BE avec Extended Thinking
+</task>
+
+<requirements>
+- Performance < 100ms API responses
+- TypeScript strict mode compliance  
+- Test coverage 85%+ backend
+- French menuiserie terminology
+</requirements>
+
+<formatting>
+Code TypeScript avec tests, documentation française
+</formatting>
+```
+</example_request>
+</usage_examples>
+</agent_configuration>
+
+Cette configuration Claude-optimisée assure productivité maximale et qualité constante pour développement continu système JLM ERP.

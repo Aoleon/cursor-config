@@ -66,9 +66,72 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
     - **"Double saisie et circulation info"**: Mitigated through a `Workflow Integration Engine` for auto-population, bi-directional sync, and real-time notifications.
 
 ### Architecture de Tests & Qualité Logicielle
-- **Test Infrastructure**: Vitest for unit/integration tests, Playwright for E2E, Testing Library for React components, Supertest for API backend.
-- **Test Strategy**: Focus on proactive error prevention, test isolation, robust patterns, and comprehensive coverage (85% backend, 80% frontend minimum).
-- **CI/CD Pipeline**: Includes TypeScript verification, unit tests, E2E tests, code coverage validation, and deployment.
+
+#### Test Infrastructure
+- **Backend Testing**: Vitest + Supertest pour les tests unitaires et d'intégration API
+- **Frontend Testing**: Testing Library React + Vitest pour les composants et hooks
+- **E2E Testing**: Playwright pour les tests end-to-end complets
+- **API Mocking**: MSW (Mock Service Worker) pour les tests isolés
+
+#### Politique de Tests Complète par Fonctionnalité
+**RÈGLE FONDAMENTALE**: Chaque fonctionnalité implémentée ou modifiée doit être testée sur ses 4 composantes :
+
+1. **Backend Layer** (Couche Serveur)
+   - Tests unitaires des opérations CRUD dans `server/storage.ts`
+   - Tests d'intégration des routes API avec Supertest
+   - Validation des schémas Zod et types TypeScript
+   - Tests des relations de base de données
+
+2. **Routes Layer** (Couche API)
+   - Tests des endpoints REST avec différents codes de statut
+   - Validation des paramètres d'entrée et réponses
+   - Tests d'authentification et autorisation
+   - Gestion des erreurs et cas limites
+
+3. **Frontend Layer** (Couche Logique)
+   - Tests unitaires des hooks personnalisés
+   - Tests des services et fonctions utilitaires
+   - Tests des mutations et queries TanStack Query
+   - Validation du state management
+
+4. **UI Layer** (Couche Interface)
+   - Tests des composants avec interactions utilisateur
+   - Tests d'accessibilité et responsive design
+   - Tests des formulaires et validations
+   - Tests E2E des workflows complets
+
+#### Standards de Couverture
+- **Backend**: 85% minimum de couverture de code
+- **Frontend**: 80% minimum de couverture de code
+- **Critical Paths**: 100% de couverture pour les workflows d'audit JLM
+- **E2E Tests**: Couverture des parcours utilisateur principaux
+
+#### Structure des Tests par Module
+```
+tests/
+├── backend/
+│   ├── storage/
+│   │   ├── suppliers.test.ts
+│   │   ├── purchases.test.ts
+│   │   └── invoices.test.ts
+│   └── routes/
+│       ├── api-suppliers.test.ts
+│       └── api-purchases.test.ts
+├── frontend/
+│   ├── components/
+│   │   ├── supplier-form.test.tsx
+│   │   └── purchase-list.test.tsx
+│   └── hooks/
+│       └── use-suppliers.test.ts
+└── e2e/
+    ├── supplier-management.spec.ts
+    └── purchase-workflow.spec.ts
+```
+
+#### Processus de Validation
+- **Pre-commit**: Linting TypeScript + tests unitaires
+- **CI Pipeline**: Tests complets + couverture + E2E
+- **Deployment**: Validation complète des 4 couches avant production
 
 ## External Dependencies
 

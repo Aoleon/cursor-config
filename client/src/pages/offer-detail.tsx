@@ -254,8 +254,7 @@ export default function OfferDetail() {
               label: "Sauvegarder",
               variant: "default" as const,
               icon: "save" as const,
-              onClick: handleSave,
-              disabled: updateMutation.isPending
+              onClick: handleSave
             }] : [])
           ]}
         />

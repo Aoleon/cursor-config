@@ -164,7 +164,7 @@ app.patch("/api/offers/:id/validate-studies", async (req, res) => {
     const { finEtudesValidatedAt, status } = req.body;
     const offer = await storage.updateOffer(req.params.id, {
       finEtudesValidatedAt: finEtudesValidatedAt ? new Date(finEtudesValidatedAt) : new Date(),
-      finEtudesValidatedBy: req.user?.id || 'system', // TODO: Use real auth when available
+      finEtudesValidatedBy: 'user-be-1', // TODO: Use real auth when available
       status: status || 'fin_etudes_validee'
     });
     res.json(offer);

@@ -61,7 +61,7 @@ export default function Pricing() {
   const { data: offers = [], isLoading: offersLoading } = useQuery<Offer[]>({
     queryKey: ['/api/offers/'],
     select: (data) => data.filter(offer => 
-      ['nouveau', 'en_chiffrage'].includes(offer.status)
+      ['brouillon', 'en_cours_chiffrage', 'en_attente_validation'].includes(offer.status)
     ),
   });
 

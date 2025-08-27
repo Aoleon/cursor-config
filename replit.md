@@ -1,7 +1,7 @@
 # JLM ERP - Menuiserie Management System
 
 ## Overview
-JLM ERP is a comprehensive business management system for French carpentry/joinery companies (menuiserie). It digitalizes and optimizes the entire business workflow, including offer dossiers (AO management), pricing/quotation, project planning/tracking, and team coordination. The system addresses critical audit findings such as the "Absence de jalon Fin d'études" and "Aucune mesure de charge BE" by implementing comprehensive milestone tracking and workload management. The project aims to reduce double data entry, improve information flow between departments, enhance process visibility and traceability, and provide real-time indicators for activity monitoring.
+JLM ERP POC est une application de digitalisation spécialisée pour JLM Menuiserie, entreprise de POSE de menuiseries. L'application POC a pour objectif de digitaliser et d'optimiser la gestion des dossiers d'offre, le chiffrage et le suivi de projet/planning. Elle vise à fluidifier la circulation de l'information, réduire la double saisie et améliorer la visibilité et la traçabilité des processus clés. Le périmètre est volontairement limité au POC pour valider les flux d'information critiques entre le Bureau d'Études et le terrain, avec un focus sur l'élimination de la double saisie et la mise en place de jalons de validation formels.
 
 ## User Preferences
 <instructions>
@@ -50,20 +50,30 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
 - **Session-Based Authentication**: Secure, scalable user management.
 - **Optimistic UI Updates**: TanStack Query provides immediate UI feedback.
 
-### Core Business Modules
-- **Authentication & User Management**: Role-based access and session persistence.
-- **AO Management (Appels d'Offres)**: Digitalizes tender processing, eliminates manual re-entry.
-- **Offer Management (Dossiers d'Offre)**: Manages pricing dossiers with a defined status workflow.
-- **Project Execution**: Manages active construction projects through multi-phase lifecycles.
-- **Planning & Scheduling**: Visual project timeline management, task assignment, and resource capacity visualization.
-- **Team Coordination**: Manages human resources, workload, and team availability.
+### Périmètre POC Strict (Cahier des Charges)
+- **Gestion Utilisateurs**: Authentification simple BE/terrain avec indicateurs charge.
+- **Fiches AO**: Base pour récupération assistée et éviter la double saisie.
+- **Dossiers d'Offre & Chiffrage**: 
+  - Récupération assistée données AO (pré-remplissage automatique)
+  - Module chiffrage simple ou connexion simulée Batigest
+  - Édition DPGF basé sur éléments chiffrés
+  - Suivi statuts BE avec marquage priorité
+- **Demandes Prix Fournisseurs**: Demandes rattachées aux projets (simplifiées, lecture seule POC).
+- **Gestion Projets**: 5 étapes clés - Étude, Planification, Approvisionnement (simple), Chantier, SAV (simple).
+- **Planning Partagé**: Gantt simplifié, jalons avec alertes visuelles, glisser-déposer tâches utilisateur.
+- **Gestion Équipes**: Visualisation ressources internes/sous-traitants, charge simplifiée.
 
-### Critical Business Workflows
-- **AO → Offer → Project Pipeline**: Seamless data flow from tender to project execution, enhanced with BE workload tracking and validation milestones ("Fin d'études").
-- **JLM Audit Issue Resolution**:
-    - **"Aucune mesure de charge BE"**: Implemented via a `BE Workload Dashboard` for capacity planning and overload prevention.
-    - **"Absence de jalon Fin d'études"**: Addressed by a `Validation Milestones Tracker` with full CRUD operations and automatic blocking before production.
-    - **"Double saisie et circulation info"**: Mitigated through a `Workflow Integration Engine` for auto-population, bi-directional sync, and real-time notifications.
+### Flux d'Information POC
+- **AO → Chiffrage**: Récupération assistée des données AO lors de création dossier d'offre (pré-remplissage automatique).
+- **Validation Fin d'Études**: Jalon "Fin d'études" validé numériquement dans l'application (plus de validation manuelle).
+- **Chiffrage → Planning**: Transformation automatique dossier d'offre validé en "Projet" avec planning initialisé.
+- **Planning → Équipes**: Consultation planning projet et tâches personnelles par les membres d'équipe.
+
+### Principes POC Fondamentaux
+- **Zéro Double Saisie**: Réutilisation systématique des données existantes (AO → Offre).
+- **Workflow Visible et Auditable**: Statuts dossiers/projets clairement visibles avec traçabilité changements.
+- **Interface Intuitive**: Simplicité d'usage pour utilisateurs moins habitués aux outils numériques.
+- **Priorité Flux Information**: Circulation fluide des données entre étapes du processus POC.
 
 ### Architecture de Tests & Qualité Logicielle
 

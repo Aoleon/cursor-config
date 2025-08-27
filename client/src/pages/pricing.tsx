@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Calculator, Plus, Euro, Clock, User, Building } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import Sidebar from "@/components/layout/sidebar";
+import Header from "@/components/layout/header";
 import {
   Dialog,
   DialogContent,
@@ -132,15 +134,20 @@ export default function Pricing() {
   const totalQuotations = quotations.reduce((sum, q) => sum + parseFloat(q.totalPrice), 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Chiffrage</h1>
-          <p className="text-gray-600">Gestion des devis fournisseurs et calculs de prix</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="min-h-screen flex bg-gray-50">
+      <Sidebar />
+      <main className="flex-1 overflow-auto">
+        <Header 
+          title="Chiffrage"
+          description="Gestion des devis fournisseurs et calculs de prix"
+          breadcrumbs={[
+            { label: "Accueil", href: "/" },
+            { label: "Chiffrage" }
+          ]}
+        />
+        
+        <div className="px-6 py-6 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sélection d'offre */}
         <Card>
           <CardHeader>
@@ -413,7 +420,9 @@ export default function Pricing() {
             )}
           </CardContent>
         </Card>
-      </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

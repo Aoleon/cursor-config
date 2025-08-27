@@ -139,7 +139,6 @@ export default function Pricing() {
       <main className="flex-1 overflow-auto">
         <Header 
           title="Chiffrage"
-          description="Gestion des devis fournisseurs et calculs de prix"
           breadcrumbs={[
             { label: "Accueil", href: "/" },
             { label: "Chiffrage" }

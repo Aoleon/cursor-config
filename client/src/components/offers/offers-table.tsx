@@ -27,7 +27,14 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
   const { toast } = useToast();
 
   const { data: offers = [], isLoading, error } = useQuery<any[]>({
-    queryKey: ["/api/offers", search, statusFilter === "tous" ? "" : statusFilter],
+    queryKey: ["/api/offers"],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (statusFilter !== "tous") params.append('status', statusFilter);
+      const queryString = params.toString();
+      return fetch(`/api/offers${queryString ? `?${queryString}` : ''}`).then(res => res.json());
+    },
   });
 
   const prioritizeMutation = useMutation({
@@ -101,24 +108,24 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
     }
 
     switch (status) {
-      case "nouveau":
+      case "brouillon":
         return (
           <Badge className="bg-gray-100 text-gray-800">
-            Nouveau
+            Brouillon
           </Badge>
         );
-      case "en_chiffrage":
+      case "en_cours_chiffrage":
         return (
           <Badge className="bg-yellow-100 text-yellow-800">
             <Clock className="w-3 h-3 mr-1" />
-            En chiffrage
+            En Cours Chiffrage
           </Badge>
         );
-      case "en_validation":
+      case "en_attente_validation":
         return (
           <Badge className="bg-orange-100 text-orange-800">
             <CheckCircle className="w-3 h-3 mr-1" />
-            En validation
+            En Attente Validation
           </Badge>
         );
       case "valide":
@@ -196,12 +203,11 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="tous">Tous les statuts</SelectItem>
-                  <SelectItem value="nouveau">Nouveau</SelectItem>
-                  <SelectItem value="en_chiffrage">En chiffrage</SelectItem>
-                  <SelectItem value="en_validation">En validation</SelectItem>
+                  <SelectItem value="brouillon">Brouillon</SelectItem>
+                  <SelectItem value="en_cours_chiffrage">En cours chiffrage</SelectItem>
+                  <SelectItem value="en_attente_validation">En attente validation</SelectItem>
                   <SelectItem value="valide">Validé</SelectItem>
                   <SelectItem value="perdu">Perdu</SelectItem>
-                  <SelectItem value="prioritaire">Prioritaire</SelectItem>
                 </SelectContent>
               </Select>
               {showCreateButton && (

@@ -130,7 +130,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Aucun AO source</SelectItem>
-                  {aos.map((ao: any) => (
+                  {(aos as any[]).map((ao: any) => (
                     <SelectItem key={ao.id} value={ao.id}>
                       {ao.reference} - {ao.client}
                     </SelectItem>
@@ -197,7 +197,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
                   <SelectValue placeholder="Assigner un responsable" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.filter((user: any) => ['responsable_be', 'technicien_be'].includes(user.role)).map((user: any) => (
+                  {(users as any[]).filter((user: any) => ['responsable_be', 'technicien_be'].includes(user.role)).map((user: any) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.firstName} {user.lastName}
                     </SelectItem>

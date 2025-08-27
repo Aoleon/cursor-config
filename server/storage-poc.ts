@@ -115,14 +115,13 @@ export class DatabaseStorage implements IStorage {
 
   // Offer operations (cœur du POC)
   async getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]> {
-    let baseQuery = db.select().from(offers).orderBy(desc(offers.createdAt));
-
     // Apply filters if provided
+    let baseOffers;
     if (status) {
-      baseQuery = baseQuery.where(eq(offers.status, status as any));
+      baseOffers = await db.select().from(offers).where(eq(offers.status, status as any)).orderBy(desc(offers.createdAt));
+    } else {
+      baseOffers = await db.select().from(offers).orderBy(desc(offers.createdAt));
     }
-
-    const baseOffers = await baseQuery;
 
     // Fetch related data separately to avoid complex joins
     const result = [];
@@ -269,13 +268,13 @@ export class DatabaseStorage implements IStorage {
 
   // Supplier request operations (demandes prix simplifiées)
   async getSupplierRequests(offerId?: string): Promise<SupplierRequest[]> {
-    let query = db.select().from(supplierRequests).orderBy(desc(supplierRequests.createdAt));
-    
     if (offerId) {
-      query = query.where(eq(supplierRequests.offerId, offerId));
+      return await db.select().from(supplierRequests)
+        .where(eq(supplierRequests.offerId, offerId))
+        .orderBy(desc(supplierRequests.createdAt));
     }
     
-    return await query;
+    return await db.select().from(supplierRequests).orderBy(desc(supplierRequests.createdAt));
   }
 
   async createSupplierRequest(request: InsertSupplierRequest): Promise<SupplierRequest> {
@@ -294,13 +293,14 @@ export class DatabaseStorage implements IStorage {
 
   // Team resource operations (gestion équipes simplifiée)
   async getTeamResources(projectId?: string): Promise<(TeamResource & { user?: User })[]> {
-    let query = db.select().from(teamResources).orderBy(desc(teamResources.createdAt));
-
+    let baseResources;
     if (projectId) {
-      query = query.where(eq(teamResources.projectId, projectId));
+      baseResources = await db.select().from(teamResources)
+        .where(eq(teamResources.projectId, projectId))
+        .orderBy(desc(teamResources.createdAt));
+    } else {
+      baseResources = await db.select().from(teamResources).orderBy(desc(teamResources.createdAt));
     }
-
-    const baseResources = await query;
 
     const result = [];
     for (const resource of baseResources) {
@@ -332,16 +332,17 @@ export class DatabaseStorage implements IStorage {
 
   // BE Workload operations (indicateurs charge BE)
   async getBeWorkload(weekNumber?: number, year?: number): Promise<(BeWorkload & { user?: User })[]> {
-    let query = db.select().from(beWorkload).orderBy(beWorkload.year, beWorkload.weekNumber);
-
+    let baseWorkload;
     if (weekNumber && year) {
-      query = query.where(and(
-        eq(beWorkload.weekNumber, weekNumber),
-        eq(beWorkload.year, year)
-      ));
+      baseWorkload = await db.select().from(beWorkload)
+        .where(and(
+          eq(beWorkload.weekNumber, weekNumber),
+          eq(beWorkload.year, year)
+        ))
+        .orderBy(beWorkload.year, beWorkload.weekNumber);
+    } else {
+      baseWorkload = await db.select().from(beWorkload).orderBy(beWorkload.year, beWorkload.weekNumber);
     }
-
-    const baseWorkload = await query;
 
     const result = [];
     for (const workload of baseWorkload) {

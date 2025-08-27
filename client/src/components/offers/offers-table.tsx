@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Eye, Edit, Star, Search, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Link } from "wouter";
 import CreateOfferModal from "./create-offer-modal";
 
 interface OffersTableProps {
@@ -301,9 +302,11 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm" className="text-primary hover:text-primary-dark">
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                          <Link href={`/offers/${offer.id}`}>
+                            <Button variant="ghost" size="sm" className="text-primary hover:text-primary-dark" data-testid={`button-view-${offer.id}`}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </Link>
                           <Button variant="ghost" size="sm" className="text-accent hover:text-orange-700">
                             <Edit className="w-4 h-4" />
                           </Button>

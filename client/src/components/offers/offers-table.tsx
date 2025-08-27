@@ -177,7 +177,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-medium text-gray-900">
-              Liste des Dossiers d'Offre
+              Liste des Appels d'Offre
             </CardTitle>
             <div className="flex items-center space-x-4">
               <div className="relative">
@@ -206,7 +206,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
               </Select>
               {showCreateButton && (
                 <Button onClick={() => setIsCreateModalOpen(true)}>
-                  Nouveau Dossier
+                  Nouvelle Offre
                 </Button>
               )}
             </div>
@@ -221,7 +221,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
               </div>
             ) : offers.length === 0 ? (
               <div className="py-12 text-center">
-                <p className="text-gray-500">Aucun dossier d'offre trouvé.</p>
+                <p className="text-gray-500">Aucun appel d'offre trouvé.</p>
               </div>
             ) : (
               <Table>

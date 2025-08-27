@@ -61,7 +61,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
       queryClient.invalidateQueries({ queryKey: ['/api/offers'] });
       toast({
         title: "Offre créée",
-        description: "La nouvelle offre a été créée avec succès.",
+        description: "Le nouvel appel d'offre a été créé avec succès.",
       });
       onClose();
       resetForm();
@@ -69,7 +69,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
     onError: (error) => {
       toast({
         title: "Erreur",
-        description: "Impossible de créer l'offre.",
+        description: "Impossible de créer l'appel d'offre.",
         variant: "destructive",
       });
     },
@@ -115,9 +115,9 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
       <DialogContent className="max-w-2xl">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Créer une Nouvelle Offre</DialogTitle>
+            <DialogTitle>Créer un Nouvel Appel d'Offre</DialogTitle>
             <DialogDescription>
-              Créer un nouveau dossier d'offre pour le chiffrage
+              Créer un nouvel appel d'offre pour le chiffrage
             </DialogDescription>
           </DialogHeader>
           

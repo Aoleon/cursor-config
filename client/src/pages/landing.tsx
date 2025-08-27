@@ -33,7 +33,7 @@ export default function Landing() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                Créez et gérez vos dossiers d'offre avec récupération assistée des données AO. 
+                Créez et gérez vos appels d'offre avec récupération assistée des données AO. 
                 Éliminez la double saisie et fluidifiez votre workflow.
               </p>
             </CardContent>

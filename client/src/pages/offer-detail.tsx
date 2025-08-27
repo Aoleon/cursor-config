@@ -105,13 +105,13 @@ export default function OfferDetail() {
       setIsEditing(false);
       toast({
         title: "Succès",
-        description: "Dossier d'offre mis à jour avec succès",
+        description: "Appel d'offre mis à jour avec succès",
       });
     },
     onError: (error) => {
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour le dossier d'offre",
+        description: "Impossible de mettre à jour l'appel d'offre",
         variant: "destructive",
       });
     },
@@ -155,7 +155,7 @@ export default function OfferDetail() {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p>Chargement du dossier d'offre...</p>
+              <p>Chargement de l'appel d'offre...</p>
             </div>
           </div>
         </main>
@@ -171,7 +171,7 @@ export default function OfferDetail() {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-              <p>Erreur lors du chargement du dossier d'offre</p>
+              <p>Erreur lors du chargement de l'appel d'offre</p>
               <Button 
                 variant="outline" 
                 onClick={() => setLocation("/offers")}
@@ -226,10 +226,10 @@ export default function OfferDetail() {
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
-          title={`Dossier d'Offre ${offer.reference}`}
+          title={`Appel d'Offre ${offer.reference}`}
           breadcrumbs={[
             { label: "Accueil", href: "/" },
-            { label: "Dossiers d'Offre", href: "/offers" },
+            { label: "Appels d'Offre", href: "/offers" },
             { label: offer.reference }
           ]}
           actions={[

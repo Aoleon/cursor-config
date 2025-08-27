@@ -12,10 +12,10 @@ export default function Offers() {
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
-          title="Dossiers d'Offre"
+          title="Appels d'Offre"
           breadcrumbs={[
             { label: "Accueil", href: "/" },
-            { label: "Dossiers d'Offre" }
+            { label: "Appels d'Offre" }
           ]}
           actions={[
             {
@@ -24,7 +24,7 @@ export default function Offers() {
               icon: "download"
             },
             {
-              label: "Nouveau Dossier",
+              label: "Nouvelle Offre",
               variant: "default",
               icon: "plus",
               onClick: () => setIsCreateModalOpen(true)
@@ -42,7 +42,7 @@ export default function Offers() {
             </h3>
             <div className="bg-white p-4 rounded-lg border">
               <p className="text-sm text-gray-600 mb-4">
-                Sélectionnez un dossier d'offre pour gérer les jalons de validation BE.
+                Sélectionnez un appel d'offre pour gérer les jalons de validation BE.
               </p>
               {/* Le MilestoneTracker sera intégré dynamiquement lors de la sélection d'une offre */}
             </div>

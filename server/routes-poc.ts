@@ -148,6 +148,102 @@ app.patch("/api/offers/:id", async (req, res) => {
   }
 });
 
+// Transformer une offre signée en projet
+app.post("/api/offers/:id/convert-to-project", async (req, res) => {
+  try {
+    const offer = await storage.getOffer(req.params.id);
+    if (!offer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
+
+    if (offer.status !== "signe") {
+      return res.status(400).json({ message: "Only signed offers can be converted to projects" });
+    }
+
+    // Créer le projet basé sur l'offre
+    const projectData = {
+      offerId: offer.id,
+      name: `Projet ${offer.client} - ${offer.location}`,
+      client: offer.client,
+      location: offer.location,
+      status: "etude" as const,
+      budget: offer.montantFinal || offer.montantEstime,
+      responsibleUserId: offer.responsibleUserId,
+      startDate: new Date(),
+      endDate: null,
+      description: `Projet créé automatiquement à partir de l'offre ${offer.reference}`,
+    };
+
+    const project = await storage.createProject(projectData);
+
+    // Mettre à jour le statut de l'offre
+    await storage.updateOffer(offer.id, { status: "transforme_en_projet" });
+
+    // Créer les tâches de base du projet (5 étapes)
+    const baseTasks = [
+      {
+        projectId: project.id,
+        name: "Phase d'Étude",
+        description: "Finalisation des études techniques",
+        status: "en_cours" as const,
+        priority: "haute" as const,
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 jours
+        assignedUserId: offer.responsibleUserId,
+      },
+      {
+        projectId: project.id,
+        name: "Planification",
+        description: "Planification des ressources et du planning",
+        status: "a_faire" as const,
+        priority: "moyenne" as const,
+        startDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // +8 jours
+        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // +14 jours
+      },
+      {
+        projectId: project.id,
+        name: "Approvisionnement",
+        description: "Commande et réception des matériaux",
+        status: "a_faire" as const,
+        priority: "moyenne" as const,
+        startDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // +15 jours
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 jours
+      },
+      {
+        projectId: project.id,
+        name: "Chantier",
+        description: "Pose et installation sur site",
+        status: "a_faire" as const,
+        priority: "haute" as const,
+        startDate: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000), // +31 jours
+        endDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000), // +45 jours
+      },
+      {
+        projectId: project.id,
+        name: "SAV et Finalisation",
+        description: "Service après-vente et finalisation",
+        status: "a_faire" as const,
+        priority: "faible" as const,
+        startDate: new Date(Date.now() + 46 * 24 * 60 * 60 * 1000), // +46 jours
+        endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // +60 jours
+      },
+    ];
+
+    // Créer toutes les tâches
+    for (const taskData of baseTasks) {
+      await storage.createProjectTask(taskData);
+    }
+
+    res.status(201).json({ 
+      project, 
+      message: "Offer successfully converted to project with base tasks created" 
+    });
+  } catch (error) {
+    console.error("Error converting offer to project:", error);
+    res.status(500).json({ message: "Failed to convert offer to project" });
+  }
+});
+
 app.delete("/api/offers/:id", async (req, res) => {
   try {
     await storage.deleteOffer(req.params.id);
@@ -259,6 +355,24 @@ app.patch("/api/tasks/:id", async (req, res) => {
   } catch (error) {
     console.error("Error updating project task:", error);
     res.status(500).json({ message: "Failed to update project task" });
+  }
+});
+
+// Récupérer toutes les tâches pour la timeline
+app.get("/api/tasks/all", async (req, res) => {
+  try {
+    const allTasks = [];
+    const projects = await storage.getProjects();
+    
+    for (const project of projects) {
+      const tasks = await storage.getProjectTasks(project.id);
+      allTasks.push(...tasks);
+    }
+    
+    res.json(allTasks);
+  } catch (error) {
+    console.error("Error fetching all tasks:", error);
+    res.status(500).json({ message: "Failed to fetch all tasks" });
   }
 });
 

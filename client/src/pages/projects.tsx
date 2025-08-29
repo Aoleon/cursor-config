@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import KanbanBoard from "@/components/projects/kanban-board";
 import WorkloadPlanner from "@/components/projects/workload-planner";
+import TimelineView from "@/components/projects/timeline-view";
 
 export default function Projects() {
   const { toast } = useToast();
@@ -64,8 +65,12 @@ export default function Projects() {
         />
         
         <div className="px-6 py-6">
-          <Tabs defaultValue="list" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs defaultValue="timeline" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="timeline" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Timeline
+              </TabsTrigger>
               <TabsTrigger value="list" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Liste des Projets
@@ -79,6 +84,10 @@ export default function Projects() {
                 Plan de Charge
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="timeline">
+              <TimelineView />
+            </TabsContent>
 
             <TabsContent value="list" className="space-y-6">
               {projectsLoading ? (

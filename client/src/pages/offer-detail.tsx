@@ -141,6 +141,67 @@ export default function OfferDetail() {
     },
   });
 
+  // Mutation pour marquer une offre comme signée
+  const markSignedMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/offers/${offerId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'signe' }),
+      });
+      if (!response.ok) throw new Error('Failed to mark offer as signed');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/offers/${offerId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      toast({
+        title: "Succès",
+        description: "Offre marquée comme signée",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de marquer l'offre comme signée",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation pour convertir une offre signée en projet
+  const convertToProjectMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/offers/${offerId}/convert-to-project`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to convert offer to project');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/offers/${offerId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({
+        title: "Succès",
+        description: `Projet "${data.project.name}" créé avec succès`,
+      });
+      // Rediriger vers la page projets
+      setLocation("/projects");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de créer le projet",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (offer && !isEditing) {
       setFormData(offer);
@@ -195,12 +256,23 @@ export default function OfferDetail() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleMarkSigned = () => {
+    markSignedMutation.mutate();
+  };
+
+  const handleConvertToProject = () => {
+    convertToProjectMutation.mutate();
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       'brouillon': { label: 'Brouillon', variant: 'secondary' as const },
       'en_cours_chiffrage': { label: 'En cours de chiffrage', variant: 'default' as const },
       'en_attente_validation': { label: 'En attente validation', variant: 'destructive' as const },
       'fin_etudes_validee': { label: 'Fin études validée', variant: 'default' as const },
+      'valide': { label: 'Validé', variant: 'default' as const },
+      'signe': { label: 'Signé', variant: 'default' as const },
+      'transforme_en_projet': { label: 'Transformé en projet', variant: 'default' as const },
       'termine': { label: 'Terminé', variant: 'default' as const },
       'archive': { label: 'Archivé', variant: 'secondary' as const },
     };
@@ -255,6 +327,18 @@ export default function OfferDetail() {
               variant: "default" as const,
               icon: "save" as const,
               onClick: handleSave
+            }] : []),
+            ...(!isEditing && offer.status === "valide" ? [{
+              label: "Marquer Signé",
+              variant: "default" as const,
+              icon: "check" as const,
+              onClick: handleMarkSigned
+            }] : []),
+            ...(!isEditing && offer.status === "signe" ? [{
+              label: "Créer Projet",
+              variant: "default" as const,
+              icon: "plus" as const,
+              onClick: handleConvertToProject
             }] : [])
           ]}
         />

@@ -37,6 +37,9 @@ export const offerStatusEnum = pgEnum("offer_status", [
   "en_cours_chiffrage",  // Chiffrage en cours
   "en_attente_validation", // Validation BE
   "fin_etudes_validee",  // Jalon "Fin d'études" validé
+  "valide",              // Offre validée
+  "signe",               // Offre signée par le client
+  "transforme_en_projet", // Transformée en projet
   "termine",             // Dossier terminé
   "archive"              // Archivé
 ]);

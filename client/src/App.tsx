@@ -10,6 +10,7 @@ import Dashboard from "@/pages/dashboard";
 import Offers from "@/pages/offers";
 import Pricing from "@/pages/pricing";
 import Projects from "@/pages/projects";
+import ProjectDetail from "@/pages/project-detail";
 import Planning from "@/pages/planning";
 import Teams from "@/pages/teams";
 import Suppliers from "@/pages/suppliers";
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/offers/:id" component={OfferDetail} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/projects" component={Projects} />
+      <Route path="/projects/:id" component={ProjectDetail} />
       <Route path="/planning" component={Planning} />
       <Route path="/teams" component={Teams} />
       <Route path="/suppliers" component={Suppliers} />

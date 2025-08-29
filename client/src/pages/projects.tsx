@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -18,6 +19,7 @@ import TimelineView from "@/components/projects/timeline-view";
 
 export default function Projects() {
   const { toast } = useToast();
+  const [_, setLocation] = useLocation();
   // Authentication temporarily disabled for development
   const { data: projects = [], isLoading: projectsLoading, error } = useQuery<any[]>({
     queryKey: ["/api/projects"],
@@ -103,7 +105,11 @@ export default function Projects() {
               ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {projects.map((project: any) => (
-                <Card key={project.id} className="hover:shadow-card-hover transition-shadow cursor-pointer">
+                <Card 
+                  key={project.id} 
+                  className="hover:shadow-card-hover transition-shadow cursor-pointer"
+                  onClick={() => setLocation(`/projects/${project.id}`)}
+                >
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{project.name}</CardTitle>

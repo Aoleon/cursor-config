@@ -335,10 +335,16 @@ app.get("/api/projects/:projectId/tasks", async (req, res) => {
 
 app.post("/api/projects/:projectId/tasks", async (req, res) => {
   try {
-    const validatedData = insertProjectTaskSchema.parse({
+    // Convertir les dates string en objets Date
+    const taskData = {
       ...req.body,
-      projectId: req.params.projectId
-    });
+      projectId: req.params.projectId,
+      startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
+      endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
+      progress: req.body.progress || 0
+    };
+    
+    const validatedData = insertProjectTaskSchema.parse(taskData);
     const task = await storage.createProjectTask(validatedData);
     res.status(201).json(task);
   } catch (error) {
@@ -373,6 +379,100 @@ app.get("/api/tasks/all", async (req, res) => {
   } catch (error) {
     console.error("Error fetching all tasks:", error);
     res.status(500).json({ message: "Failed to fetch all tasks" });
+  }
+});
+
+// Route pour créer des tâches de test pour le projet École Versailles
+app.post("/api/test-data/tasks", async (req, res) => {
+  try {
+    // Utiliser le projet "École Versailles" existant (project-2)
+    const projectId = "project-2";
+
+    // Créer des tâches directement dans la base de données
+    const tasks = [
+      {
+        projectId: projectId,
+        name: "Phase d'Étude",
+        description: "Diagnostic des menuiseries existantes et conception des nouvelles installations",
+        status: "termine" as const,
+        priority: "haute" as const,
+        startDate: new Date(2025, 0, 15), // 15 janvier 2025
+        endDate: new Date(2025, 0, 25), // 25 janvier 2025
+        assignedUserId: "user-be-1",
+        progress: 100,
+      },
+      {
+        projectId: projectId,
+        name: "Planification Détaillée",
+        description: "Organisation des travaux pendant les vacances scolaires",
+        status: "termine" as const,
+        priority: "haute" as const,
+        startDate: new Date(2025, 0, 26), // 26 janvier 2025
+        endDate: new Date(2025, 1, 5), // 5 février 2025
+        assignedUserId: "user-be-2",
+        progress: 100,
+      },
+      {
+        projectId: projectId,
+        name: "Approvisionnement",
+        description: "Commande et livraison des menuiseries sur mesure",
+        status: "en_cours" as const,
+        priority: "moyenne" as const,
+        startDate: new Date(2025, 1, 6), // 6 février 2025
+        endDate: new Date(2025, 2, 1), // 1 mars 2025
+        assignedUserId: "user-be-1",
+        progress: 60,
+      },
+      {
+        projectId: projectId,
+        name: "Travaux Bâtiment Principal",
+        description: "Remplacement des fenêtres des salles de classe",
+        status: "a_faire" as const,
+        priority: "haute" as const,
+        startDate: new Date(2025, 2, 2), // 2 mars 2025
+        endDate: new Date(2025, 3, 15), // 15 avril 2025
+        assignedUserId: "user-be-2",
+        progress: 0,
+      },
+      {
+        projectId: projectId,
+        name: "Travaux Préau",
+        description: "Installation des portes coulissantes du préau",
+        status: "a_faire" as const,
+        priority: "moyenne" as const,
+        startDate: new Date(2025, 3, 16), // 16 avril 2025
+        endDate: new Date(2025, 4, 5), // 5 mai 2025
+        assignedUserId: "user-be-1",
+        progress: 0,
+      },
+      {
+        projectId: projectId,
+        name: "Finitions et Réception",
+        description: "Contrôles qualité et réception des travaux",
+        status: "a_faire" as const,
+        priority: "faible" as const,
+        startDate: new Date(2025, 4, 6), // 6 mai 2025
+        endDate: new Date(2025, 4, 20), // 20 mai 2025
+        assignedUserId: "user-be-2",
+        progress: 0,
+      },
+    ];
+
+    // Créer toutes les tâches directement
+    const createdTasks = [];
+    for (const taskData of tasks) {
+      const task = await storage.createProjectTask(taskData);
+      createdTasks.push(task);
+    }
+
+    res.json({
+      projectId: projectId,
+      tasks: createdTasks,
+      message: "Tâches de test créées avec succès pour École Versailles"
+    });
+  } catch (error) {
+    console.error("Error creating test tasks:", error);
+    res.status(500).json({ message: "Failed to create test tasks" });
   }
 });
 

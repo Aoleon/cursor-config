@@ -128,12 +128,32 @@ app.get("/api/offers/:id", async (req, res) => {
 
 app.post("/api/offers", async (req, res) => {
   try {
-    const validatedData = insertOfferSchema.parse(req.body);
+    // Convertir les dates string en objets Date si elles sont présentes
+    const processedData = {
+      ...req.body,
+      dateRenduAO: req.body.dateRenduAO ? new Date(req.body.dateRenduAO) : undefined,
+      dateAcceptationAO: req.body.dateAcceptationAO ? new Date(req.body.dateAcceptationAO) : undefined,
+      demarragePrevu: req.body.demarragePrevu ? new Date(req.body.demarragePrevu) : undefined,
+      deadline: req.body.deadline ? new Date(req.body.deadline) : undefined,
+      // Convertir les chaînes numériques en decimals
+      montantEstime: req.body.montantEstime ? req.body.montantEstime.toString() : undefined,
+      prorataEventuel: req.body.prorataEventuel ? req.body.prorataEventuel.toString() : undefined,
+      beHoursEstimated: req.body.beHoursEstimated ? req.body.beHoursEstimated.toString() : undefined,
+    };
+
+    const validatedData = insertOfferSchema.parse(processedData);
     const offer = await storage.createOffer(validatedData);
     res.status(201).json(offer);
   } catch (error) {
     console.error("Error creating offer:", error);
-    res.status(500).json({ message: "Failed to create offer" });
+    if (error.name === 'ZodError') {
+      res.status(400).json({ 
+        message: "Validation error", 
+        errors: error.errors 
+      });
+    } else {
+      res.status(500).json({ message: "Failed to create offer" });
+    }
   }
 });
 

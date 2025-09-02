@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useLocation } from "wouter";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import OffersTable from "@/components/offers/offers-table";
-import CreateOfferModal from "@/components/offers/create-offer-modal";
 
 export default function Offers() {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [_, setLocation] = useLocation();
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -27,7 +26,7 @@ export default function Offers() {
               label: "Nouvelle Offre",
               variant: "default",
               icon: "plus",
-              onClick: () => setIsCreateModalOpen(true)
+              onClick: () => setLocation("/create-offer")
             }
           ]}
         />
@@ -49,11 +48,6 @@ export default function Offers() {
           </div>
         </div>
       </main>
-      
-      <CreateOfferModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
-      />
     </div>
   );
 }

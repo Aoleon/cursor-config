@@ -31,6 +31,11 @@ export const aoSourceEnum = pgEnum("ao_source", [
   "mail", "phone", "website", "partner", "other"
 ]);
 
+// Types de marché pour AO
+export const marcheTypeEnum = pgEnum("marche_type", [
+  "public", "prive", "ao_restreint", "ao_ouvert", "marche_negocie", "procedure_adaptee"
+]);
+
 // Statuts des dossiers d'offre (workflow POC)
 export const offerStatusEnum = pgEnum("offer_status", [
   "brouillon",           // Création en cours
@@ -88,16 +93,47 @@ export const aos = pgTable("aos", {
   client: varchar("client").notNull(),
   location: varchar("location").notNull(),
   departement: departementEnum("departement").notNull(),
+  
+  // Informations générales étendues
+  intituleOperation: text("intitule_operation"),
+  dateRenduAO: timestamp("date_rendu_ao"),
+  dateAcceptationAO: timestamp("date_acceptation_ao"),
+  
+  // Maître d'ouvrage complet
+  maitreOuvrageNom: varchar("maitre_ouvrage_nom"),
+  maitreOuvrageAdresse: text("maitre_ouvrage_adresse"),
+  maitreOuvrageContact: varchar("maitre_ouvrage_contact"),
+  maitreOuvrageEmail: varchar("maitre_ouvrage_email"),
+  maitreOuvragePhone: varchar("maitre_ouvrage_phone"),
+  
+  // Maître d'œuvre
   maitreOeuvre: varchar("maitre_oeuvre"),
+  maitreOeuvreContact: varchar("maitre_oeuvre_contact"),
+  
+  // Informations techniques
+  lotConcerne: varchar("lot_concerne"),
   menuiserieType: menuiserieTypeEnum("menuiserie_type").notNull(),
   montantEstime: decimal("montant_estime", { precision: 12, scale: 2 }),
+  typeMarche: marcheTypeEnum("type_marche"),
+  prorataEventuel: decimal("prorata_eventuel", { precision: 5, scale: 2 }),
+  demarragePrevu: timestamp("demarrage_prevu"),
+  
+  // Éléments techniques et administratifs
+  bureauEtudes: varchar("bureau_etudes"),
+  bureauControle: varchar("bureau_controle"),
+  sps: varchar("sps"), // Service Prévention Sécurité
+  
+  // Source et dates
   source: aoSourceEnum("source").notNull(),
   dateOS: timestamp("date_os"),
   description: text("description"),
   cctp: text("cctp"), // Cahier des Clauses Techniques Particulières
   delaiContractuel: integer("delai_contractuel"), // en jours
+  
+  // Sélection
   isSelected: boolean("is_selected").default(false),
   selectionComment: text("selection_comment"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
@@ -111,14 +147,52 @@ export const offers = pgTable("offers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   reference: varchar("reference").notNull().unique(),
   aoId: varchar("ao_id").references(() => aos.id), // Récupération assistée des données AO
+  
+  // Informations héritées et complétées depuis AO
   client: varchar("client").notNull(),
   location: varchar("location").notNull(),
   menuiserieType: menuiserieTypeEnum("menuiserie_type").notNull(),
   montantEstime: decimal("montant_estime", { precision: 12, scale: 2 }),
   montantFinal: decimal("montant_final", { precision: 12, scale: 2 }),
+  
+  // Informations étendues pour dossier d'offre
+  intituleOperation: text("intitule_operation"),
+  maitreOuvrageNom: varchar("maitre_ouvrage_nom"),
+  maitreOuvrageAdresse: text("maitre_ouvrage_adresse"),
+  maitreOuvrageContact: varchar("maitre_ouvrage_contact"),
+  maitreOeuvre: varchar("maitre_oeuvre"),
+  lotConcerne: varchar("lot_concerne"),
+  typeMarche: marcheTypeEnum("type_marche"),
+  prorataEventuel: decimal("prorata_eventuel", { precision: 5, scale: 2 }),
+  demarragePrevu: timestamp("demarrage_prevu"),
+  
+  // Éléments techniques et administratifs
+  bureauEtudes: varchar("bureau_etudes"),
+  bureauControle: varchar("bureau_controle"),
+  sps: varchar("sps"),
+  
+  // Fournisseurs et documents
+  fournisseursRetenus: jsonb("fournisseurs_retenus"), // Liste des fournisseurs avec n° devis
+  fichesTechniquesTransmises: boolean("fiches_techniques_transmises").default(false),
+  
+  // Pièces obligatoires (checklist)
+  urssafValide: boolean("urssaf_valide").default(false),
+  assuranceDecennaleValide: boolean("assurance_decennale_valide").default(false),
+  ribValide: boolean("rib_valide").default(false),
+  qualificationsValides: boolean("qualifications_valides").default(false),
+  planAssuranceQualiteValide: boolean("plan_assurance_qualite_valide").default(false),
+  
+  // Gestion documentaire
+  documentPassationGenere: boolean("document_passation_genere").default(false),
+  pageGardeAOGeneree: boolean("page_garde_ao_generee").default(false),
+  sousDocsiersGeneres: boolean("sous_dossiers_generes").default(false),
+  
+  // Workflow et statuts
   status: offerStatusEnum("status").default("brouillon"),
   responsibleUserId: varchar("responsible_user_id").references(() => users.id),
   isPriority: boolean("is_priority").default(false), // Marquage priorité
+  
+  // Chiffrage et suivi BE
   dpgfData: jsonb("dpgf_data"), // Document Provisoire de Gestion Financière
   batigestRef: varchar("batigest_ref"), // Connexion simulée Batigest
   finEtudesValidatedAt: timestamp("fin_etudes_validated_at"), // Jalon POC
@@ -126,6 +200,7 @@ export const offers = pgTable("offers", {
   beHoursEstimated: decimal("be_hours_estimated", { precision: 8, scale: 2 }),
   beHoursActual: decimal("be_hours_actual", { precision: 8, scale: 2 }),
   deadline: timestamp("deadline"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {

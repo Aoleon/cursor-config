@@ -79,7 +79,51 @@ const createOfferSchema = z.object({
   typeMarche: z.enum(["public", "prive", "ao_restreint", "ao_ouvert", "marche_negocie", "procedure_adaptee"]).optional(),
   prorataEventuel: z.string().optional(),
   
-
+  // Source et réception (audit JLM : plateformes, contacts directs)
+  source: z.enum(["mail", "phone", "website", "partner", "other"]).default("website"),
+  plateformeSource: z.string().optional(), // BOMP, Marché Online, France Marché
+  contactDirect: z.string().optional(), // Contact Julien
+  
+  // Critères sélection (audit JLM : départements 50/62, distance)
+  departement: z.string().optional(), // Focus départements 50 et 62
+  distanceKm: z.string().optional(), // Critère de sélection
+  
+  // Dates manquantes (audit JLM : problèmes date OS, délai contractuel)
+  dateOS: z.string().optional(), // Date Ordre de Service (souvent manquante)
+  delaiContractuel: z.string().optional(), // En jours (souvent non précisé)
+  
+  // Documents techniques (audit JLM : CCTP, études, plans, DPGF, DCE)
+  cctpDisponible: z.boolean().default(false),
+  cctpImprime: z.boolean().default(false), // Sylvie imprime CCTP
+  etudesThermiquesDisponibles: z.boolean().default(false),
+  etudesAcoustiquesDisponibles: z.boolean().default(false),
+  plansDisponibles: z.boolean().default(false),
+  dpgfClientDisponible: z.boolean().default(false),
+  dceDisponible: z.boolean().default(false),
+  
+  // Quantitatifs (audit JLM : portes, fenêtres, éléments)
+  quantitatifRealise: z.boolean().default(false),
+  portesPrevues: z.string().optional(),
+  fenetresPrevues: z.string().optional(),
+  autresElementsPrevus: z.string().optional(),
+  
+  // Consultation fournisseurs (audit JLM : K-Line, tableaux Excel)
+  fournisseursConsultes: z.string().optional(), // K-Line et autres
+  tableauxExcelGeneres: z.boolean().default(false),
+  devisDetailleEtabli: z.boolean().default(false), // Sur Batigest
+  
+  // Documents administratifs (audit JLM : DC1, DC2, références, KBIS, assurances, quitus)
+  dc1Complete: z.boolean().default(false),
+  dc2Complete: z.boolean().default(false),
+  referencesTravauxFournies: z.boolean().default(false),
+  kbisValide: z.boolean().default(false),
+  assurancesValides: z.boolean().default(false),
+  quitusLegalFourni: z.boolean().default(false),
+  
+  // Workflow et suivi (audit JLM : réunion mardi matin, arborescence)
+  pointOffrePrevu: z.string().optional(), // Réunion mardi matin Sylvie/Julien
+  dossierEtudeAOCree: z.boolean().default(false),
+  arborescenceGeneree: z.boolean().default(false),
   
   // Éléments techniques
   bureauEtudes: z.string().optional(),
@@ -138,6 +182,38 @@ export default function CreateOffer() {
       lotConcerne: "",
       bureauEtudes: "",
       isPriority: false,
+      // Nouveaux champs basés sur audit JLM
+      source: "website",
+      plateformeSource: "",
+      contactDirect: "",
+      departement: "",
+      distanceKm: "",
+      dateOS: "",
+      delaiContractuel: "",
+      cctpDisponible: false,
+      cctpImprime: false,
+      etudesThermiquesDisponibles: false,
+      etudesAcoustiquesDisponibles: false,
+      plansDisponibles: false,
+      dpgfClientDisponible: false,
+      dceDisponible: false,
+      quantitatifRealise: false,
+      portesPrevues: "",
+      fenetresPrevues: "",
+      autresElementsPrevus: "",
+      fournisseursConsultes: "",
+      tableauxExcelGeneres: false,
+      devisDetailleEtabli: false,
+      dc1Complete: false,
+      dc2Complete: false,
+      referencesTravauxFournies: false,
+      kbisValide: false,
+      assurancesValides: false,
+      quitusLegalFourni: false,
+      pointOffrePrevu: "",
+      dossierEtudeAOCree: false,
+      arborescenceGeneree: false,
+      // Champs existants
       urssafValide: false,
       assuranceDecennaleValide: false,
       ribValide: false,

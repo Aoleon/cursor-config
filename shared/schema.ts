@@ -160,20 +160,64 @@ export const offers = pgTable("offers", {
   maitreOuvrageNom: varchar("maitre_ouvrage_nom"),
   maitreOuvrageAdresse: text("maitre_ouvrage_adresse"),
   maitreOuvrageContact: varchar("maitre_ouvrage_contact"),
+  maitreOuvrageEmail: varchar("maitre_ouvrage_email"),
+  maitreOuvragePhone: varchar("maitre_ouvrage_phone"),
   maitreOeuvre: varchar("maitre_oeuvre"),
+  maitreOeuvreContact: varchar("maitre_oeuvre_contact"),
   lotConcerne: varchar("lot_concerne"),
   typeMarche: marcheTypeEnum("type_marche"),
   prorataEventuel: decimal("prorata_eventuel", { precision: 5, scale: 2 }),
   demarragePrevu: timestamp("demarrage_prevu"),
+  
+  // Source et réception (audit JLM : plateformes, contacts directs)
+  source: aoSourceEnum("source").default("website"),
+  plateformeSource: varchar("plateforme_source"), // BOMP, Marché Online, France Marché
+  contactDirect: varchar("contact_direct"), // Contact Julien
+  
+  // Critères de sélection (audit JLM : départements 50/62, distance)  
+  departement: varchar("departement"),
+  distanceKm: varchar("distance_km"),
+  
+  // Dates souvent manquantes (audit JLM : problèmes date OS, délai contractuel)
+  dateOS: timestamp("date_os"),
+  delaiContractuel: varchar("delai_contractuel"), // En jours (souvent non précisé)
+  dateRenduAO: timestamp("date_rendu_ao"),
+  dateAcceptationAO: timestamp("date_acceptation_ao"),
   
   // Éléments techniques et administratifs
   bureauEtudes: varchar("bureau_etudes"),
   bureauControle: varchar("bureau_controle"),
   sps: varchar("sps"),
   
-  // Fournisseurs et documents
+  // Documents techniques (audit JLM : CCTP, études, plans, DPGF, DCE)
+  cctpDisponible: boolean("cctp_disponible").default(false),
+  cctpImprime: boolean("cctp_imprime").default(false), // Sylvie imprime CCTP
+  etudesThermiquesDisponibles: boolean("etudes_thermiques_disponibles").default(false),
+  etudesAcoustiquesDisponibles: boolean("etudes_acoustiques_disponibles").default(false),
+  plansDisponibles: boolean("plans_disponibles").default(false),
+  dpgfClientDisponible: boolean("dpgf_client_disponible").default(false),
+  dceDisponible: boolean("dce_disponible").default(false),
+  
+  // Quantitatifs (audit JLM : portes, fenêtres, éléments)
+  quantitatifRealise: boolean("quantitatif_realise").default(false),
+  portesPrevues: varchar("portes_prevues"),
+  fenetresPrevues: varchar("fenetres_prevues"),
+  autresElementsPrevus: varchar("autres_elements_prevus"),
+  
+  // Consultation fournisseurs (audit JLM : K-Line, tableaux Excel)
+  fournisseursConsultes: varchar("fournisseurs_consultes"), // K-Line et autres
   fournisseursRetenus: jsonb("fournisseurs_retenus"), // Liste des fournisseurs avec n° devis
+  tableauxExcelGeneres: boolean("tableaux_excel_generes").default(false),
+  devisDetailleEtabli: boolean("devis_detaille_etabli").default(false), // Sur Batigest
   fichesTechniquesTransmises: boolean("fiches_techniques_transmises").default(false),
+  
+  // Documents administratifs (audit JLM : DC1, DC2, références, KBIS, assurances, quitus)
+  dc1Complete: boolean("dc1_complete").default(false),
+  dc2Complete: boolean("dc2_complete").default(false),
+  referencesTravauxFournies: boolean("references_travaux_fournies").default(false),
+  kbisValide: boolean("kbis_valide").default(false),
+  assurancesValides: boolean("assurances_valides").default(false),
+  quitusLegalFourni: boolean("quitus_legal_fourni").default(false),
   
   // Pièces obligatoires (checklist)
   urssafValide: boolean("urssaf_valide").default(false),
@@ -186,6 +230,11 @@ export const offers = pgTable("offers", {
   documentPassationGenere: boolean("document_passation_genere").default(false),
   pageGardeAOGeneree: boolean("page_garde_ao_generee").default(false),
   sousDocsiersGeneres: boolean("sous_dossiers_generes").default(false),
+  
+  // Workflow et suivi (audit JLM : réunion mardi matin, arborescence)
+  pointOffrePrevu: varchar("point_offre_prevu"), // Réunion mardi matin Sylvie/Julien
+  dossierEtudeAOCree: boolean("dossier_etude_ao_cree").default(false),
+  arborescenceGeneree: boolean("arborescence_generee").default(false),
   
   // Workflow et statuts
   status: offerStatusEnum("status").default("brouillon"),

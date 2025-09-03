@@ -1,0 +1,813 @@
+import { useState } from "react";
+import { useParams, Link } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  ArrowLeft,
+  Plus,
+  Calculator,
+  FileText,
+  Save,
+  CheckCircle,
+  Trash2,
+  Edit,
+  Copy,
+  Settings,
+  Download
+} from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+
+// Schéma pour un élément de chiffrage
+const chiffrageElementSchema = z.object({
+  category: z.string().min(1, "Catégorie requise"),
+  subcategory: z.string().optional(),
+  designation: z.string().min(1, "Désignation requise"),
+  unit: z.string().min(1, "Unité requise"),
+  quantity: z.string().min(1, "Quantité requise"),
+  unitPrice: z.string().min(1, "Prix unitaire requis"),
+  coefficient: z.string().default("1.00"),
+  marginPercentage: z.string().default("20.00"),
+  supplier: z.string().optional(),
+  supplierRef: z.string().optional(),
+  isOptional: z.boolean().default(false),
+  notes: z.string().optional(),
+});
+
+type ChiffrageElementFormData = z.infer<typeof chiffrageElementSchema>;
+
+const categories = [
+  { value: "menuiseries_exterieures", label: "Menuiseries extérieures" },
+  { value: "menuiseries_interieures", label: "Menuiseries intérieures" },
+  { value: "main_oeuvre", label: "Main d'œuvre" },
+  { value: "fournitures", label: "Fournitures" },
+  { value: "transport", label: "Transport" },
+  { value: "autres", label: "Autres" },
+];
+
+const units = [
+  { value: "m²", label: "m² (mètre carré)" },
+  { value: "ml", label: "ml (mètre linéaire)" },
+  { value: "u", label: "u (unité)" },
+  { value: "h", label: "h (heure)" },
+  { value: "j", label: "j (jour)" },
+  { value: "kg", label: "kg (kilogramme)" },
+  { value: "forfait", label: "forfait" },
+];
+
+export default function Chiffrage() {
+  const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showElementDialog, setShowElementDialog] = useState(false);
+  const [editingElement, setEditingElement] = useState<any>(null);
+  const [showDpgfDialog, setShowDpgfDialog] = useState(false);
+
+  // Récupérer l'offre
+  const { data: offer, isLoading: offerLoading } = useQuery<any>({
+    queryKey: [`/api/offers/${id}`],
+    enabled: !!id,
+  });
+
+  // Récupérer les éléments de chiffrage
+  const { data: chiffrageElements = [], isLoading: elementsLoading } = useQuery<any[]>({
+    queryKey: [`/api/offers/${id}/chiffrage-elements`],
+    enabled: !!id,
+  });
+
+  // Récupérer le DPGF actuel
+  const { data: dpgfDocument, isLoading: dpgfLoading } = useQuery<any>({
+    queryKey: [`/api/offers/${id}/dpgf`],
+    enabled: !!id,
+  });
+
+  // Form pour nouvel élément
+  const elementForm = useForm<ChiffrageElementFormData>({
+    resolver: zodResolver(chiffrageElementSchema),
+    defaultValues: {
+      category: "",
+      designation: "",
+      unit: "u",
+      quantity: "1",
+      unitPrice: "0",
+      coefficient: "1.00",
+      marginPercentage: "20.00",
+      isOptional: false,
+    },
+  });
+
+  // Mutation pour créer/modifier un élément
+  const createElementMutation = useMutation({
+    mutationFn: async (data: ChiffrageElementFormData & { id?: string }) => {
+      const url = data.id 
+        ? `/api/offers/${id}/chiffrage-elements/${data.id}`
+        : `/api/offers/${id}/chiffrage-elements`;
+      
+      const response = await fetch(url, {
+        method: data.id ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          offerId: id,
+          quantity: parseFloat(data.quantity),
+          unitPrice: parseFloat(data.unitPrice),
+          coefficient: parseFloat(data.coefficient),
+          marginPercentage: parseFloat(data.marginPercentage),
+          totalPrice: parseFloat(data.quantity) * parseFloat(data.unitPrice) * parseFloat(data.coefficient),
+        }),
+      });
+
+      if (!response.ok) throw new Error("Erreur lors de la sauvegarde");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/offers/${id}/chiffrage-elements`] });
+      setShowElementDialog(false);
+      setEditingElement(null);
+      elementForm.reset();
+      toast({
+        title: "Élément sauvegardé",
+        description: "L'élément de chiffrage a été enregistré avec succès.",
+      });
+    },
+  });
+
+  // Mutation pour supprimer un élément
+  const deleteElementMutation = useMutation({
+    mutationFn: async (elementId: string) => {
+      const response = await fetch(`/api/offers/${id}/chiffrage-elements/${elementId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Erreur lors de la suppression");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/offers/${id}/chiffrage-elements`] });
+      toast({
+        title: "Élément supprimé",
+        description: "L'élément a été supprimé avec succès.",
+      });
+    },
+  });
+
+  // Mutation pour générer le DPGF
+  const generateDpgfMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/offers/${id}/dpgf/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Erreur lors de la génération du DPGF");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/offers/${id}/dpgf`] });
+      toast({
+        title: "DPGF généré",
+        description: "Le Document Provisoire de Gestion Financière a été généré.",
+      });
+    },
+  });
+
+  // Mutation pour valider la fin d'études
+  const validateStudiesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/offers/${id}/validate-studies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Erreur lors de la validation");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/offers/${id}`] });
+      toast({
+        title: "Fin d'études validée",
+        description: "Le jalon 'Fin d'études' a été validé. Le dossier peut maintenant être transformé en projet.",
+      });
+    },
+  });
+
+  const handleEditElement = (element: any) => {
+    setEditingElement(element);
+    elementForm.reset({
+      category: element.category,
+      subcategory: element.subcategory || "",
+      designation: element.designation,
+      unit: element.unit,
+      quantity: element.quantity.toString(),
+      unitPrice: element.unitPrice.toString(),
+      coefficient: element.coefficient?.toString() || "1.00",
+      marginPercentage: element.marginPercentage?.toString() || "20.00",
+      supplier: element.supplier || "",
+      supplierRef: element.supplierRef || "",
+      isOptional: element.isOptional || false,
+      notes: element.notes || "",
+    });
+    setShowElementDialog(true);
+  };
+
+  const handleSubmitElement = (data: ChiffrageElementFormData) => {
+    createElementMutation.mutate({
+      ...data,
+      id: editingElement?.id,
+    });
+  };
+
+  // Calcul des totaux
+  const calculateTotals = () => {
+    const totalHT = chiffrageElements.reduce((sum, el) => sum + parseFloat(el.totalPrice || 0), 0);
+    const totalTVA = totalHT * 0.20; // 20% TVA
+    const totalTTC = totalHT + totalTVA;
+    
+    return {
+      totalHT: totalHT.toFixed(2),
+      totalTVA: totalTVA.toFixed(2),
+      totalTTC: totalTTC.toFixed(2),
+    };
+  };
+
+  const totals = calculateTotals();
+
+  if (offerLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Chargement...</div>;
+  }
+
+  if (!offer) {
+    return <div className="flex items-center justify-center min-h-screen">Offre non trouvée</div>;
+  }
+
+  return (
+    <div className="container mx-auto p-6">
+      {/* En-tête */}
+      <div className="flex items-center gap-4 mb-6">
+        <Link href="/offers">
+          <Button variant="ghost" size="sm" data-testid="button-back">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour aux offres
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold">Module de Chiffrage</h1>
+          <p className="text-muted-foreground">
+            Offre {offer.reference} - {offer.client}
+          </p>
+        </div>
+        <div className="ml-auto flex gap-2">
+          <Badge variant={offer.status === "en_chiffrage" ? "default" : "secondary"}>
+            {offer.status}
+          </Badge>
+          {offer.finEtudesValidatedAt && (
+            <Badge variant="secondary" className="bg-green-100 text-green-800">
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Fin d'études validée
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <Tabs defaultValue="elements" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="elements" data-testid="tab-elements">
+            <Calculator className="h-4 w-4 mr-2" />
+            Éléments de chiffrage
+          </TabsTrigger>
+          <TabsTrigger value="dpgf" data-testid="tab-dpgf">
+            <FileText className="h-4 w-4 mr-2" />
+            DPGF
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Onglet Éléments de chiffrage */}
+        <TabsContent value="elements" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Éléments de chiffrage</h2>
+            <Button onClick={() => setShowElementDialog(true)} data-testid="button-add-element">
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter un élément
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Catégorie</TableHead>
+                    <TableHead>Désignation</TableHead>
+                    <TableHead>Quantité</TableHead>
+                    <TableHead>Prix U.</TableHead>
+                    <TableHead>Total HT</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {chiffrageElements.map((element) => (
+                    <TableRow key={element.id}>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {categories.find(c => c.value === element.category)?.label || element.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{element.designation}</TableCell>
+                      <TableCell>{element.quantity} {element.unit}</TableCell>
+                      <TableCell>{parseFloat(element.unitPrice).toFixed(2)} €</TableCell>
+                      <TableCell className="font-medium">
+                        {parseFloat(element.totalPrice).toFixed(2)} €
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditElement(element)}
+                            data-testid={`button-edit-${element.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteElementMutation.mutate(element.id)}
+                            data-testid={`button-delete-${element.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {chiffrageElements.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        Aucun élément de chiffrage. Commencez par ajouter un élément.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Résumé des totaux */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Résumé du chiffrage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{totals.totalHT} €</div>
+                  <div className="text-sm text-muted-foreground">Total HT</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{totals.totalTVA} €</div>
+                  <div className="text-sm text-muted-foreground">TVA (20%)</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">{totals.totalTTC} €</div>
+                  <div className="text-sm text-muted-foreground">Total TTC</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2">
+            <Button
+              onClick={() => generateDpgfMutation.mutate()}
+              disabled={chiffrageElements.length === 0 || generateDpgfMutation.isPending}
+              data-testid="button-generate-dpgf"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Générer le DPGF
+            </Button>
+            {!offer.finEtudesValidatedAt && (
+              <Button
+                onClick={() => validateStudiesMutation.mutate()}
+                disabled={!dpgfDocument || validateStudiesMutation.isPending}
+                data-testid="button-validate-studies"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Valider fin d'études
+              </Button>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Onglet DPGF */}
+        <TabsContent value="dpgf" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Document Provisoire de Gestion Financière</h2>
+            {dpgfDocument && (
+              <Button variant="outline" data-testid="button-download-dpgf">
+                <Download className="h-4 w-4 mr-2" />
+                Télécharger PDF
+              </Button>
+            )}
+          </div>
+
+          {dpgfDocument ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>DPGF - Version {dpgfDocument.version}</CardTitle>
+                <CardDescription>
+                  Généré le {format(new Date(dpgfDocument.createdAt), "dd MMMM yyyy à HH:mm", { locale: fr })}
+                  {dpgfDocument.validatedAt && (
+                    <span className="text-green-600 ml-2">
+                      • Validé le {format(new Date(dpgfDocument.validatedAt), "dd MMMM yyyy", { locale: fr })}
+                    </span>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* En-tête du DPGF */}
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h3 className="font-semibold mb-2">Informations du projet</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>Client: {offer.client}</div>
+                      <div>Référence: {offer.reference}</div>
+                      <div>Localisation: {offer.location}</div>
+                      <div>Type: {offer.menuiserieType}</div>
+                    </div>
+                  </div>
+
+                  {/* Détail des éléments */}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Catégorie</TableHead>
+                        <TableHead>Désignation</TableHead>
+                        <TableHead>Qté</TableHead>
+                        <TableHead>Prix U.</TableHead>
+                        <TableHead>Total HT</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {chiffrageElements.map((element) => (
+                        <TableRow key={element.id}>
+                          <TableCell>
+                            {categories.find(c => c.value === element.category)?.label || element.category}
+                          </TableCell>
+                          <TableCell>{element.designation}</TableCell>
+                          <TableCell>{element.quantity} {element.unit}</TableCell>
+                          <TableCell>{parseFloat(element.unitPrice).toFixed(2)} €</TableCell>
+                          <TableCell>{parseFloat(element.totalPrice).toFixed(2)} €</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <Separator />
+
+                  {/* Totaux */}
+                  <div className="flex justify-end">
+                    <div className="w-80 space-y-2">
+                      <div className="flex justify-between">
+                        <span>Total HT:</span>
+                        <span className="font-medium">{parseFloat(dpgfDocument.totalHT).toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>TVA (20%):</span>
+                        <span className="font-medium">{parseFloat(dpgfDocument.totalTVA).toFixed(2)} €</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between text-lg font-bold">
+                        <span>Total TTC:</span>
+                        <span className="text-primary">{parseFloat(dpgfDocument.totalTTC).toFixed(2)} €</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="text-center py-12">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Aucun DPGF généré</h3>
+                <p className="text-muted-foreground mb-4">
+                  Ajoutez des éléments de chiffrage puis générez le DPGF pour voir le document.
+                </p>
+                <Button
+                  onClick={() => generateDpgfMutation.mutate()}
+                  disabled={chiffrageElements.length === 0}
+                  data-testid="button-generate-dpgf-empty"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Générer le DPGF
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog pour ajouter/modifier un élément */}
+      <Dialog open={showElementDialog} onOpenChange={setShowElementDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingElement ? "Modifier l'élément" : "Nouvel élément de chiffrage"}
+            </DialogTitle>
+            <DialogDescription>
+              Renseignez les informations de l'élément de chiffrage.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...elementForm}>
+            <form onSubmit={elementForm.handleSubmit(handleSubmitElement)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={elementForm.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Catégorie *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-category">
+                            <SelectValue placeholder="Sélectionnez une catégorie" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category.value} value={category.value}>
+                              {category.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={elementForm.control}
+                  name="subcategory"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sous-catégorie</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="ex: Fenêtres, Portes..."
+                          data-testid="input-subcategory"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={elementForm.control}
+                name="designation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Désignation *</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Description détaillée de l'élément..."
+                        data-testid="textarea-designation"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={elementForm.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantité *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number"
+                          step="0.001"
+                          placeholder="1"
+                          data-testid="input-quantity"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={elementForm.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unité *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-unit">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {units.map((unit) => (
+                            <SelectItem key={unit.value} value={unit.value}>
+                              {unit.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={elementForm.control}
+                  name="unitPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prix unitaire *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          data-testid="input-unit-price"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={elementForm.control}
+                  name="coefficient"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Coefficient</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          placeholder="1.00"
+                          data-testid="input-coefficient"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={elementForm.control}
+                  name="marginPercentage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marge (%)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          placeholder="20.00"
+                          data-testid="input-margin"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={elementForm.control}
+                  name="supplier"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fournisseur</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Nom du fournisseur"
+                          data-testid="input-supplier"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={elementForm.control}
+                  name="supplierRef"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Référence fournisseur</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Référence produit"
+                          data-testid="input-supplier-ref"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={elementForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Notes additionnelles..."
+                        data-testid="textarea-notes"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowElementDialog(false);
+                    setEditingElement(null);
+                    elementForm.reset();
+                  }}
+                  data-testid="button-cancel-element"
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createElementMutation.isPending}
+                  data-testid="button-save-element"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {editingElement ? "Modifier" : "Ajouter"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

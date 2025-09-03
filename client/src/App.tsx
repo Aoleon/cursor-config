@@ -17,6 +17,7 @@ import Suppliers from "@/pages/suppliers";
 import BEDashboard from "@/pages/be-dashboard";
 import OfferDetail from "@/pages/offer-detail";
 import CreateOffer from "@/pages/create-offer";
+import Chiffrage from "@/pages/chiffrage";
 
 function Router() {
   // Temporarily disable authentication for development
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/offers" component={Offers} />
       <Route path="/create-offer" component={CreateOffer} />
       <Route path="/offers/:id" component={OfferDetail} />
+      <Route path="/offers/:id/chiffrage" component={Chiffrage} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/projects" component={Projects} />
       <Route path="/projects/:id" component={ProjectDetail} />

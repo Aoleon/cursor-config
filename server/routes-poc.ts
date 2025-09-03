@@ -4,10 +4,12 @@ import { storage } from "./storage";
 import { setupAuth } from "./replitAuth";
 import { 
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
-  insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema
+  insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
+  insertChiffrageElementSchema, insertDpgfDocumentSchema
 } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
 import { documentProcessor, type ExtractedAOData } from "./documentProcessor";
+import { registerChiffrageRoutes } from "./routes/chiffrage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -823,6 +825,13 @@ app.get("/api/dashboard/stats", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch dashboard stats" });
   }
 });
+
+// ========================================
+// CHIFFRAGE ROUTES - Module de chiffrage et DPGF POC
+// ========================================
+
+// Enregistrer les routes de chiffrage
+registerChiffrageRoutes(app, storage);
 
   const httpServer = createServer(app);
   return httpServer;

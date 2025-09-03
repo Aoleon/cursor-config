@@ -1,6 +1,7 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { 
   users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
+  chiffrageElements, dpgfDocuments,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -8,7 +9,9 @@ import {
   type ProjectTask, type InsertProjectTask,
   type SupplierRequest, type InsertSupplierRequest,
   type TeamResource, type InsertTeamResource,
-  type BeWorkload, type InsertBeWorkload
+  type BeWorkload, type InsertBeWorkload,
+  type ChiffrageElement, type InsertChiffrageElement,
+  type DpgfDocument, type InsertDpgfDocument
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -66,6 +69,22 @@ export interface IStorage {
     offersPendingValidation: number;
     beLoad: number;
   }>;
+  
+  // Chiffrage Elements operations - Module de chiffrage POC
+  getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]>;
+  createChiffrageElement(element: InsertChiffrageElement): Promise<ChiffrageElement>;
+  updateChiffrageElement(id: string, element: Partial<InsertChiffrageElement>): Promise<ChiffrageElement>;
+  deleteChiffrageElement(id: string): Promise<void>;
+  
+  // DPGF Documents operations - Document Provisoire de Gestion Financière POC
+  getDpgfDocumentByOffer(offerId: string): Promise<DpgfDocument | null>;
+  createDpgfDocument(dpgf: InsertDpgfDocument): Promise<DpgfDocument>;
+  updateDpgfDocument(id: string, dpgf: Partial<InsertDpgfDocument>): Promise<DpgfDocument>;
+  deleteDpgfDocument(id: string): Promise<void>;
+  
+  // Additional helper methods for conversion workflow
+  getOfferById(id: string): Promise<Offer | undefined>;
+  getProjectsByOffer(offerId: string): Promise<Project[]>;
 }
 
 // ========================================
@@ -410,6 +429,67 @@ export class DatabaseStorage implements IStorage {
       offersPendingValidation: offersPendingValidation.count,
       beLoad: beLoadResult.avgLoad || 25,
     };
+  }
+
+  // Chiffrage Elements operations - Module de chiffrage POC
+  async getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]> {
+    return await db.select().from(chiffrageElements)
+      .where(eq(chiffrageElements.offerId, offerId))
+      .orderBy(chiffrageElements.position, chiffrageElements.createdAt);
+  }
+
+  async createChiffrageElement(element: InsertChiffrageElement): Promise<ChiffrageElement> {
+    const [newElement] = await db.insert(chiffrageElements).values(element).returning();
+    return newElement;
+  }
+
+  async updateChiffrageElement(id: string, element: Partial<InsertChiffrageElement>): Promise<ChiffrageElement> {
+    const [updatedElement] = await db
+      .update(chiffrageElements)
+      .set({ ...element, updatedAt: new Date() })
+      .where(eq(chiffrageElements.id, id))
+      .returning();
+    return updatedElement;
+  }
+
+  async deleteChiffrageElement(id: string): Promise<void> {
+    await db.delete(chiffrageElements).where(eq(chiffrageElements.id, id));
+  }
+
+  // DPGF Documents operations - Document Provisoire de Gestion Financière POC
+  async getDpgfDocumentByOffer(offerId: string): Promise<DpgfDocument | null> {
+    const [dpgf] = await db.select().from(dpgfDocuments)
+      .where(eq(dpgfDocuments.offerId, offerId))
+      .orderBy(desc(dpgfDocuments.createdAt));
+    return dpgf || null;
+  }
+
+  async createDpgfDocument(dpgf: InsertDpgfDocument): Promise<DpgfDocument> {
+    const [newDpgf] = await db.insert(dpgfDocuments).values(dpgf).returning();
+    return newDpgf;
+  }
+
+  async updateDpgfDocument(id: string, dpgf: Partial<InsertDpgfDocument>): Promise<DpgfDocument> {
+    const [updatedDpgf] = await db
+      .update(dpgfDocuments)
+      .set({ ...dpgf, updatedAt: new Date() })
+      .where(eq(dpgfDocuments.id, id))
+      .returning();
+    return updatedDpgf;
+  }
+
+  async deleteDpgfDocument(id: string): Promise<void> {
+    await db.delete(dpgfDocuments).where(eq(dpgfDocuments.id, id));
+  }
+
+  // Additional helper methods for conversion workflow
+  async getOfferById(id: string): Promise<Offer | undefined> {
+    const [offer] = await db.select().from(offers).where(eq(offers.id, id));
+    return offer;
+  }
+
+  async getProjectsByOffer(offerId: string): Promise<Project[]> {
+    return await db.select().from(projects).where(eq(projects.offerId, offerId));
   }
 }
 

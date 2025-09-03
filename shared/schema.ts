@@ -247,6 +247,75 @@ export const projectTasks = pgTable("project_tasks", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Éléments de chiffrage pour le module de chiffrage et DPGF
+export const chiffrageElements = pgTable("chiffrage_elements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  offerId: varchar("offer_id").notNull().references(() => offers.id),
+  
+  // Classification de l'élément
+  category: varchar("category").notNull(), // ex: "menuiseries_exterieures", "menuiseries_interieures", "main_oeuvre"
+  subcategory: varchar("subcategory"), // ex: "fenetres", "portes", "pose"
+  
+  // Description de l'élément
+  designation: text("designation").notNull(), // Description détaillée
+  unit: varchar("unit").notNull(), // Unité (m², ml, u, etc.)
+  quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
+  
+  // Prix et coûts
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 12, scale: 2 }).notNull(),
+  
+  // Coefficients et marges
+  coefficient: decimal("coefficient", { precision: 5, scale: 2 }).default("1.00"),
+  marginPercentage: decimal("margin_percentage", { precision: 5, scale: 2 }).default("20.00"),
+  
+  // Fournisseur (optionnel)
+  supplier: varchar("supplier"),
+  supplierRef: varchar("supplier_ref"),
+  
+  // Métadonnées
+  position: integer("position").default(0), // Ordre d'affichage
+  isOptional: boolean("is_optional").default(false),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// DPGF (Document Provisoire de Gestion Financière) généré
+export const dpgfDocuments = pgTable("dpgf_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  offerId: varchar("offer_id").notNull().references(() => offers.id),
+  
+  // Informations générales
+  version: varchar("version").default("1.0"),
+  status: varchar("status").default("brouillon"), // brouillon, finalise, valide
+  
+  // Totaux calculés
+  totalHT: decimal("total_ht", { precision: 12, scale: 2 }).notNull(),
+  totalTVA: decimal("total_tva", { precision: 12, scale: 2 }).notNull(),
+  totalTTC: decimal("total_ttc", { precision: 12, scale: 2 }).notNull(),
+  
+  // Données structurées pour l'affichage
+  dpgfData: jsonb("dpgf_data"), // Structure complète du DPGF
+  
+  // Validation et suivi
+  generatedBy: varchar("generated_by").references(() => users.id),
+  validatedBy: varchar("validated_by").references(() => users.id),
+  validatedAt: timestamp("validated_at"),
+  
+  // Intégration Batigest simulée
+  batigestRef: varchar("batigest_ref"),
+  batigestSyncedAt: timestamp("batigest_synced_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    offerVersionIdx: index("dpgf_offer_version_idx").on(table.offerId, table.version),
+  };
+});
+
 // Demandes de prix fournisseurs (simplifiées POC)
 export const supplierRequests = pgTable("supplier_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -314,6 +383,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   assignedTasks: many(projectTasks),
   teamResources: many(teamResources),
   beWorkload: many(beWorkload),
+  generatedDpgf: many(dpgfDocuments, { relationName: "dpgf_generator" }),
+  validatedDpgf: many(dpgfDocuments, { relationName: "dpgf_validator" }),
 }));
 
 export const aosRelations = relations(aos, ({ many }) => ({
@@ -337,6 +408,32 @@ export const offersRelations = relations(offers, ({ one, many }) => ({
   }),
   projects: many(projects),
   supplierRequests: many(supplierRequests),
+  chiffrageElements: many(chiffrageElements),
+  dpgfDocuments: many(dpgfDocuments),
+}));
+
+export const chiffrageElementsRelations = relations(chiffrageElements, ({ one }) => ({
+  offer: one(offers, {
+    fields: [chiffrageElements.offerId],
+    references: [offers.id],
+  }),
+}));
+
+export const dpgfDocumentsRelations = relations(dpgfDocuments, ({ one }) => ({
+  offer: one(offers, {
+    fields: [dpgfDocuments.offerId],
+    references: [offers.id],
+  }),
+  generatedByUser: one(users, {
+    fields: [dpgfDocuments.generatedBy],
+    references: [users.id],
+    relationName: "dpgf_generator",
+  }),
+  validatedByUser: one(users, {
+    fields: [dpgfDocuments.validatedBy],
+    references: [users.id],
+    relationName: "dpgf_validator",
+  }),
 }));
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
@@ -433,6 +530,12 @@ export type InsertTeamResource = typeof teamResources.$inferInsert;
 export type BeWorkload = typeof beWorkload.$inferSelect;
 export type InsertBeWorkload = typeof beWorkload.$inferInsert;
 
+export type ChiffrageElement = typeof chiffrageElements.$inferSelect;
+export type InsertChiffrageElement = typeof chiffrageElements.$inferInsert;
+
+export type DpgfDocument = typeof dpgfDocuments.$inferSelect;
+export type InsertDpgfDocument = typeof dpgfDocuments.$inferInsert;
+
 // ========================================
 // SCHÉMAS ZOD POUR VALIDATION POC
 // ========================================
@@ -480,6 +583,18 @@ export const insertTeamResourceSchema = createInsertSchema(teamResources).omit({
 });
 
 export const insertBeWorkloadSchema = createInsertSchema(beWorkload).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertChiffrageElementSchema = createInsertSchema(chiffrageElements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDpgfDocumentSchema = createInsertSchema(dpgfDocuments).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

@@ -282,7 +282,7 @@ export default function AoDetail() {
           title={`AO ${ao.reference}`}
           breadcrumbs={[
             { label: "Accueil", href: "/" },
-            { label: "AO", href: "/aos" },
+            { label: "Appels d'Offres", href: "/offers" },
             { label: ao.reference }
           ]}
           actions={[
@@ -290,7 +290,7 @@ export default function AoDetail() {
               label: "Retour",
               variant: "outline",
               icon: "arrow-left",
-              onClick: () => setLocation("/aos")
+              onClick: () => setLocation("/offers")
             }
           ]}
         />
@@ -305,7 +305,7 @@ export default function AoDetail() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setLocation("/aos")}
+                onClick={() => setLocation("/offers")}
                 data-testid="button-cancel"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />

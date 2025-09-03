@@ -18,7 +18,6 @@ import BEDashboard from "@/pages/be-dashboard";
 import OfferDetail from "@/pages/offer-detail";
 import CreateOffer from "@/pages/create-offer";
 import CreateAO from "@/pages/create-ao";
-import AosPage from "@/pages/aos";
 import AoDetail from "@/pages/ao-detail";
 import Chiffrage from "@/pages/chiffrage";
 
@@ -29,10 +28,9 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/offers" component={Offers} />
       <Route path="/create-offer" component={CreateOffer} />
-      <Route path="/aos" component={AosPage} />
       <Route path="/create-ao" component={CreateAO} />
-      <Route path="/aos/:id/edit" component={AoDetail} />
       <Route path="/offers/:id" component={OfferDetail} />
+      <Route path="/offers/:id/edit" component={AoDetail} />
       <Route path="/offers/:id/chiffrage" component={Chiffrage} />
       <Route path="/projects" component={Projects} />
       <Route path="/projects/:id" component={ProjectDetail} />

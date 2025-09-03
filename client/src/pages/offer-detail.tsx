@@ -328,6 +328,12 @@ export default function OfferDetail() {
               icon: "save" as const,
               onClick: handleSave
             }] : []),
+            ...(!isEditing && (offer.status === "en_cours_chiffrage" || offer.status === "en_attente_validation") ? [{
+              label: "Chiffrage",
+              variant: "default" as const,
+              icon: "calculator" as const,
+              onClick: () => setLocation(`/offers/${offer.id}/chiffrage`)
+            }] : []),
             ...(!isEditing && offer.status === "valide" ? [{
               label: "Marquer Signé",
               variant: "default" as const,

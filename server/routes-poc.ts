@@ -827,6 +827,96 @@ app.get("/api/dashboard/stats", async (req, res) => {
 });
 
 // ========================================
+// QUOTATIONS ROUTES - Compatibilité avec page pricing (mapping vers chiffrage)
+// ========================================
+
+// Route pour récupérer les quotations d'une offre (mapping vers chiffrage-elements)
+app.get("/api/quotations/:offerId", async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    
+    // Récupérer les éléments de chiffrage et les transformer en format quotations
+    const elements = await storage.getChiffrageElementsByOffer(offerId);
+    
+    // Transformer les chiffrage-elements en format quotations pour compatibilité
+    const quotations = elements.map(element => ({
+      id: element.id,
+      offerId: element.offerId,
+      supplierName: element.supplier || "Non spécifié",
+      productCategory: element.category,
+      unitPrice: element.unitPrice,
+      quantity: parseFloat(element.quantity),
+      totalPrice: element.totalPrice,
+      deliveryTime: 15, // Délai par défaut
+      validityDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 jours
+      status: "accepte" as const,
+      createdAt: element.createdAt,
+      notes: element.notes || "",
+    }));
+    
+    res.json(quotations);
+  } catch (error) {
+    console.error("Error fetching quotations:", error);
+    res.status(500).json({ message: "Failed to fetch quotations" });
+  }
+});
+
+// Route legacy pour compatibilité avec le format ancien
+app.get("/api/quotations/", async (req, res) => {
+  try {
+    // Retourner une liste vide ou rediriger vers la nouvelle implémentation
+    res.json([]);
+  } catch (error) {
+    console.error("Error fetching quotations:", error);
+    res.status(500).json({ message: "Failed to fetch quotations" });
+  }
+});
+
+// Route pour créer une quotation (mapping vers chiffrage-element)
+app.post("/api/quotations", async (req, res) => {
+  try {
+    const quotationData = req.body;
+    
+    // Transformer les données quotation vers chiffrage-element
+    const elementData = {
+      offerId: quotationData.offerId,
+      category: quotationData.productCategory || "fournitures",
+      designation: `${quotationData.productCategory} - ${quotationData.supplierName}`,
+      unit: "u",
+      quantity: quotationData.quantity.toString(),
+      unitPrice: quotationData.unitPrice.toString(),
+      totalPrice: quotationData.totalPrice.toString(),
+      supplier: quotationData.supplierName,
+      notes: quotationData.notes,
+      position: 0,
+    };
+    
+    const element = await storage.createChiffrageElement(elementData);
+    
+    // Retourner en format quotation
+    const quotation = {
+      id: element.id,
+      offerId: element.offerId,
+      supplierName: element.supplier,
+      productCategory: element.category,
+      unitPrice: element.unitPrice,
+      quantity: parseFloat(element.quantity),
+      totalPrice: element.totalPrice,
+      deliveryTime: 15,
+      validityDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      status: "accepte",
+      createdAt: element.createdAt,
+      notes: element.notes,
+    };
+    
+    res.status(201).json(quotation);
+  } catch (error) {
+    console.error("Error creating quotation:", error);
+    res.status(500).json({ message: "Failed to create quotation" });
+  }
+});
+
+// ========================================
 // CHIFFRAGE ROUTES - Module de chiffrage et DPGF POC
 // ========================================
 

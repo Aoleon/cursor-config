@@ -52,6 +52,9 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
 - **ARCHITECTURAL RULE - Single Form Evolution**: The original AO form is the ONLY form that evolves through all workflow stages. No data re-entry, no form duplication. Progressive field addition with validation locking prevents modification of previously validated data.
 
 ### Périmètre POC Strict (Cahier des Charges)
+**RÈGLE FONDAMENTALE**: Le développement doit STRICTEMENT respecter le périmètre défini dans `Cahier des charges POC.txt`. Ne pas s'en éloigner. Le document `Audit process et fonctionnement JLM.txt` sert UNIQUEMENT pour récupérer des éléments de contexte et d'organisation, pas pour étendre le périmètre.
+
+**Fonctionnalités POC autorisées uniquement :**
 - **Gestion Utilisateurs**: Authentification simple BE/terrain avec indicateurs charge.
 - **Fiches AO**: Base pour récupération assistée et éviter la double saisie.
 - **Dossiers d'Offre & Chiffrage**: 
@@ -63,6 +66,16 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
 - **Gestion Projets**: 5 étapes clés - Étude, Planification, Approvisionnement (simple), Chantier, SAV (simple).
 - **Planning Partagé**: Gantt simplifié, jalons avec alertes visuelles, glisser-déposer tâches utilisateur.
 - **Gestion Équipes**: Visualisation ressources internes/sous-traitants, charge simplifiée.
+
+**Documents de référence :**
+- `Cahier des charges POC.txt` : PÉRIMÈTRE FONCTIONNEL (obligatoire, ne pas s'en éloigner)
+- `Audit process et fonctionnement JLM.txt` : CONTEXTE ORGANISATIONNEL (référence seulement)
+
+**Instructions développement :**
+- Toute nouvelle fonctionnalité doit être validée contre le Cahier des charges POC.txt
+- L'audit JLM sert uniquement à comprendre le contexte métier et les points de friction actuels
+- Ne pas développer de fonctionnalités qui ne sont pas explicitement mentionnées dans le POC
+- Respecter la simplicité volontaire du périmètre POC pour validation des flux critiques
 
 ### Flux d'Information POC (Formulaire Unique Évolutif)
 - **AO → Chiffrage**: Le même dossier AO évolue vers l'étape chiffrage. Données AO pré-remplies et verrouillées, nouveaux champs de chiffrage ajoutés.

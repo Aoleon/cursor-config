@@ -316,11 +316,13 @@ app.post("/api/offers/:id/transform-to-project", async (req, res) => {
     const projectData = {
       offerId: offer.id,
       name: `Projet ${offer.reference}`,
-      description: offer.description || `Projet issu de l'offre ${offer.reference} - ${offer.client}`,
+      client: offer.client,
+      location: offer.location,
+      description: offer.intituleOperation || `Projet issu de l'offre ${offer.reference} - ${offer.client}`,
       status: "etude" as const,
       startDate: new Date(),
-      estimatedEndDate: offer.estimatedDuration 
-        ? new Date(Date.now() + offer.estimatedDuration * 24 * 60 * 60 * 1000)
+      estimatedEndDate: offer.deadline 
+        ? new Date(offer.deadline.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 jours après deadline
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours par défaut
       responsibleUserId: offer.responsibleUserId,
       chefTravaux: offer.responsibleUserId, // Responsable devient chef de travaux par défaut
@@ -373,7 +375,7 @@ app.post("/api/offers/:id/transform-to-project", async (req, res) => {
         status: "a_faire" as const,
         startDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
         endDate: projectData.estimatedEndDate,
-        estimatedHours: offer.estimatedHours || "80.00",
+        estimatedHours: offer.montantEstime ? (parseFloat(offer.montantEstime) / 50).toFixed(2) : "80.00", // Estimation heures basée sur montant/taux horaire
         position: 4,
         isJalon: true
       },

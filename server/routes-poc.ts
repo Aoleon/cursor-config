@@ -7,6 +7,7 @@ import {
   insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema
 } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
+import { documentProcessor, type ExtractedAOData } from "./documentProcessor";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -108,7 +109,7 @@ app.get("/api/offers", async (req, res) => {
       status as string
     );
     res.json(offers);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching offers:", error);
     res.status(500).json({ message: "Failed to fetch offers" });
   }
@@ -145,7 +146,7 @@ app.post("/api/offers", async (req, res) => {
     const validatedData = insertOfferSchema.parse(processedData);
     const offer = await storage.createOffer(validatedData);
     res.status(201).json(offer);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating offer:", error);
     if (error.name === 'ZodError') {
       res.status(400).json({ 
@@ -619,6 +620,45 @@ app.post("/api/objects/upload", async (req, res) => {
   }
 });
 
+// Route pour analyser un fichier uploadé et extraire les données AO
+app.post("/api/documents/analyze", async (req, res) => {
+  try {
+    const { fileUrl, filename } = req.body;
+    
+    if (!fileUrl || !filename) {
+      return res.status(400).json({ 
+        message: "fileUrl and filename are required" 
+      });
+    }
+
+    console.log(`[DocumentAnalysis] Starting analysis of ${filename}`);
+    
+    // 1. Extraire le contenu textuel du fichier
+    const textContent = await documentProcessor.extractTextFromFile(fileUrl, filename);
+    console.log(`[DocumentAnalysis] Extracted ${textContent.length} characters from ${filename}`);
+    
+    // 2. Analyser le contenu avec l'IA pour extraire les données structurées
+    const extractedData = await documentProcessor.extractAOInformation(textContent, filename);
+    console.log(`[DocumentAnalysis] Analysis completed for ${filename}:`, extractedData);
+
+    res.json({
+      success: true,
+      filename,
+      extractedData,
+      textLength: textContent.length,
+      message: "Document analysé avec succès"
+    });
+
+  } catch (error: any) {
+    console.error("Error analyzing document:", error);
+    res.status(500).json({ 
+      message: "Failed to analyze document",
+      error: error?.message,
+      stack: error?.stack
+    });
+  }
+});
+
 // ========================================
 // ENHANCED OFFER ROUTES - Création avec arborescence
 // ========================================
@@ -648,7 +688,7 @@ app.post("/api/offers/create-with-structure", async (req, res) => {
 
     // 1. GÉNÉRATION AUTOMATIQUE D'ARBORESCENCE DOCUMENTAIRE
     const objectStorageService = new ObjectStorageService();
-    let documentStructure;
+    let documentStructure: { basePath: string; folders: string[] } | null = null;
     
     try {
       documentStructure = await objectStorageService.createOfferDocumentStructure(
@@ -695,8 +735,8 @@ app.post("/api/offers/create-with-structure", async (req, res) => {
           selectionComment: `Dossier d'offre ${offer.reference} créé le ${new Date().toLocaleDateString('fr-FR')}`
         };
         
-        await storage.updateAo(offer.aoId, aoUpdate);
-        console.log(`Updated AO ${offer.aoId} status to "En chiffrage" for offer ${offer.reference}`);
+        // Note: La méthode updateAo n'existe pas encore dans storage, on va la simuler pour le POC
+        console.log(`Would update AO ${offer.aoId} status to "En chiffrage" for offer ${offer.reference}`);
       } catch (aoUpdateError: any) {
         console.warn("Warning: Could not update AO status:", aoUpdateError?.message);
       }

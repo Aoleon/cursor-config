@@ -261,7 +261,7 @@ export default function CreateOffer() {
     };
   };
 
-  const handleUploadComplete = (result: any) => {
+  const handleUploadComplete = async (result: any) => {
     if (result.successful && result.successful.length > 0) {
       const newFiles = result.successful.map((file: any) => ({
         name: file.name,
@@ -272,16 +272,86 @@ export default function CreateOffer() {
       
       toast({
         title: "Fichier importé",
-        description: `${newFiles.length} fichier(s) importé(s) avec succès.`,
+        description: `${newFiles.length} fichier(s) importé(s) avec succès. Analyse en cours...`,
       });
       
-      // Si c'est un import de fichier, essayer d'extraire des infos
+      // Si c'est un import de fichier, analyser automatiquement pour extraire les infos
       if (creationMethod === "import" && newFiles.length > 0) {
-        // Pour le POC, on va pré-remplir des champs basiques
-        if (!form.getValues("reference")) {
-          const currentYear = new Date().getFullYear();
-          const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-          form.setValue("reference", `OFF-${currentYear}-${randomNum}`);
+        for (const file of newFiles) {
+          try {
+            // Analyser le fichier avec l'IA pour extraire les données
+            const response = await fetch("/api/documents/analyze", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                fileUrl: file.uploadURL,
+                filename: file.name,
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to analyze document');
+            }
+
+            const analysis = await response.json();
+            console.log('Document analysis result:', analysis);
+
+            if (analysis.success && analysis.extractedData) {
+              const data = analysis.extractedData;
+              
+              // Pré-remplir automatiquement les champs du formulaire (zéro double saisie)
+              if (data.reference && !form.getValues("reference")) {
+                form.setValue("reference", data.reference);
+              }
+              
+              if (data.client && !form.getValues("client")) {
+                form.setValue("client", data.client);
+              }
+              
+              if (data.location && !form.getValues("location")) {
+                form.setValue("location", data.location);
+              }
+              
+              if (data.deadlineDate && !form.getValues("deadline")) {
+                form.setValue("deadline", data.deadlineDate);
+              }
+              
+              if (data.startDate && !form.getValues("demarragePrevu")) {
+                form.setValue("demarragePrevu", data.startDate);
+              }
+              
+              if (data.estimatedAmount && !form.getValues("montantEstime")) {
+                form.setValue("montantEstime", data.estimatedAmount.toString());
+              }
+              
+              if (data.description && !form.getValues("intituleOperation")) {
+                form.setValue("intituleOperation", data.description);
+              }
+              
+              if (data.technicalRequirements && !form.getValues("elementsImportants")) {
+                form.setValue("elementsImportants", data.technicalRequirements);
+              }
+              
+              if (data.contactPerson && !form.getValues("maitreOuvrageContact")) {
+                form.setValue("maitreOuvrageContact", data.contactPerson);
+              }
+
+              toast({
+                title: "Analyse terminée",
+                description: `Informations extraites de ${file.name} et pré-remplies automatiquement.`,
+              });
+            }
+
+          } catch (error) {
+            console.error('Error analyzing document:', error);
+            toast({
+              title: "Erreur d'analyse",
+              description: `Impossible d'analyser ${file.name}. Vous pouvez remplir manuellement.`,
+              variant: "destructive",
+            });
+          }
         }
       }
     }

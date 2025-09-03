@@ -918,6 +918,181 @@ app.delete("/api/aos/:aoId/lots/:lotId", async (req, res) => {
 });
 
 // ========================================
+// MAITRES D'OUVRAGE ROUTES - Gestion contacts réutilisables
+// ========================================
+
+// GET /api/maitres-ouvrage - Récupérer tous les maîtres d'ouvrage
+app.get("/api/maitres-ouvrage", async (req, res) => {
+  try {
+    const maitresOuvrage = await storage.getMaitresOuvrage();
+    res.json(maitresOuvrage);
+  } catch (error) {
+    console.error("Error fetching maîtres d'ouvrage:", error);
+    res.status(500).json({ message: "Failed to fetch maîtres d'ouvrage" });
+  }
+});
+
+// GET /api/maitres-ouvrage/:id - Récupérer un maître d'ouvrage
+app.get("/api/maitres-ouvrage/:id", async (req, res) => {
+  try {
+    const maitreOuvrage = await storage.getMaitreOuvrage(req.params.id);
+    if (!maitreOuvrage) {
+      return res.status(404).json({ message: "Maître d'ouvrage not found" });
+    }
+    res.json(maitreOuvrage);
+  } catch (error) {
+    console.error("Error fetching maître d'ouvrage:", error);
+    res.status(500).json({ message: "Failed to fetch maître d'ouvrage" });
+  }
+});
+
+// POST /api/maitres-ouvrage - Créer un maître d'ouvrage
+app.post("/api/maitres-ouvrage", async (req, res) => {
+  try {
+    const maitreOuvrage = await storage.createMaitreOuvrage(req.body);
+    res.status(201).json(maitreOuvrage);
+  } catch (error) {
+    console.error("Error creating maître d'ouvrage:", error);
+    res.status(500).json({ message: "Failed to create maître d'ouvrage" });
+  }
+});
+
+// PUT /api/maitres-ouvrage/:id - Mettre à jour un maître d'ouvrage
+app.put("/api/maitres-ouvrage/:id", async (req, res) => {
+  try {
+    const maitreOuvrage = await storage.updateMaitreOuvrage(req.params.id, req.body);
+    res.json(maitreOuvrage);
+  } catch (error) {
+    console.error("Error updating maître d'ouvrage:", error);
+    res.status(500).json({ message: "Failed to update maître d'ouvrage" });
+  }
+});
+
+// DELETE /api/maitres-ouvrage/:id - Supprimer un maître d'ouvrage (soft delete)
+app.delete("/api/maitres-ouvrage/:id", async (req, res) => {
+  try {
+    await storage.deleteMaitreOuvrage(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting maître d'ouvrage:", error);
+    res.status(500).json({ message: "Failed to delete maître d'ouvrage" });
+  }
+});
+
+// ========================================
+// MAITRES D'OEUVRE ROUTES - Gestion contacts avec multi-contacts
+// ========================================
+
+// GET /api/maitres-oeuvre - Récupérer tous les maîtres d'œuvre avec leurs contacts
+app.get("/api/maitres-oeuvre", async (req, res) => {
+  try {
+    const maitresOeuvre = await storage.getMaitresOeuvre();
+    res.json(maitresOeuvre);
+  } catch (error) {
+    console.error("Error fetching maîtres d'œuvre:", error);
+    res.status(500).json({ message: "Failed to fetch maîtres d'œuvre" });
+  }
+});
+
+// GET /api/maitres-oeuvre/:id - Récupérer un maître d'œuvre avec ses contacts
+app.get("/api/maitres-oeuvre/:id", async (req, res) => {
+  try {
+    const maitreOeuvre = await storage.getMaitreOeuvre(req.params.id);
+    if (!maitreOeuvre) {
+      return res.status(404).json({ message: "Maître d'œuvre not found" });
+    }
+    res.json(maitreOeuvre);
+  } catch (error) {
+    console.error("Error fetching maître d'œuvre:", error);
+    res.status(500).json({ message: "Failed to fetch maître d'œuvre" });
+  }
+});
+
+// POST /api/maitres-oeuvre - Créer un maître d'œuvre
+app.post("/api/maitres-oeuvre", async (req, res) => {
+  try {
+    const maitreOeuvre = await storage.createMaitreOeuvre(req.body);
+    res.status(201).json(maitreOeuvre);
+  } catch (error) {
+    console.error("Error creating maître d'œuvre:", error);
+    res.status(500).json({ message: "Failed to create maître d'œuvre" });
+  }
+});
+
+// PUT /api/maitres-oeuvre/:id - Mettre à jour un maître d'œuvre
+app.put("/api/maitres-oeuvre/:id", async (req, res) => {
+  try {
+    const maitreOeuvre = await storage.updateMaitreOeuvre(req.params.id, req.body);
+    res.json(maitreOeuvre);
+  } catch (error) {
+    console.error("Error updating maître d'œuvre:", error);
+    res.status(500).json({ message: "Failed to update maître d'œuvre" });
+  }
+});
+
+// DELETE /api/maitres-oeuvre/:id - Supprimer un maître d'œuvre (soft delete)
+app.delete("/api/maitres-oeuvre/:id", async (req, res) => {
+  try {
+    await storage.deleteMaitreOeuvre(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting maître d'œuvre:", error);
+    res.status(500).json({ message: "Failed to delete maître d'œuvre" });
+  }
+});
+
+// ========================================
+// CONTACTS MAITRE OEUVRE ROUTES - Gestion multi-contacts
+// ========================================
+
+// GET /api/maitres-oeuvre/:maitreOeuvreId/contacts - Récupérer les contacts d'un maître d'œuvre
+app.get("/api/maitres-oeuvre/:maitreOeuvreId/contacts", async (req, res) => {
+  try {
+    const contacts = await storage.getContactsMaitreOeuvre(req.params.maitreOeuvreId);
+    res.json(contacts);
+  } catch (error) {
+    console.error("Error fetching contacts maître d'œuvre:", error);
+    res.status(500).json({ message: "Failed to fetch contacts" });
+  }
+});
+
+// POST /api/maitres-oeuvre/:maitreOeuvreId/contacts - Créer un contact pour un maître d'œuvre
+app.post("/api/maitres-oeuvre/:maitreOeuvreId/contacts", async (req, res) => {
+  try {
+    const contact = await storage.createContactMaitreOeuvre({
+      ...req.body,
+      maitreOeuvreId: req.params.maitreOeuvreId,
+    });
+    res.status(201).json(contact);
+  } catch (error) {
+    console.error("Error creating contact maître d'œuvre:", error);
+    res.status(500).json({ message: "Failed to create contact" });
+  }
+});
+
+// PUT /api/contacts-maitre-oeuvre/:contactId - Mettre à jour un contact
+app.put("/api/contacts-maitre-oeuvre/:contactId", async (req, res) => {
+  try {
+    const contact = await storage.updateContactMaitreOeuvre(req.params.contactId, req.body);
+    res.json(contact);
+  } catch (error) {
+    console.error("Error updating contact maître d'œuvre:", error);
+    res.status(500).json({ message: "Failed to update contact" });
+  }
+});
+
+// DELETE /api/contacts-maitre-oeuvre/:contactId - Supprimer un contact (soft delete)
+app.delete("/api/contacts-maitre-oeuvre/:contactId", async (req, res) => {
+  try {
+    await storage.deleteContactMaitreOeuvre(req.params.contactId);
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting contact maître d'œuvre:", error);
+    res.status(500).json({ message: "Failed to delete contact" });
+  }
+});
+
+// ========================================
 // SUPPLIER REQUEST ROUTES - Demandes prix simplifiées
 // ========================================
 

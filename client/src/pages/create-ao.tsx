@@ -15,6 +15,9 @@ import { apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { LotsManager } from "@/components/ao/LotsManager";
+import { ContactSelector } from "@/components/contacts/ContactSelector";
+import { MaitreOuvrageForm } from "@/components/contacts/MaitreOuvrageForm";
+import { MaitreOeuvreForm } from "@/components/contacts/MaitreOeuvreForm";
 import { FileText, Calendar, MapPin, User, Building } from "lucide-react";
 
 // Schéma de validation pour la création d'AO
@@ -31,16 +34,15 @@ const createAoSchema = z.object({
   dateAcceptationAO: z.string().optional(),
   demarragePrevu: z.string().optional(),
   
-  // Maître d'ouvrage
-  maitreOuvrageNom: z.string().optional(),
-  maitreOuvrageAdresse: z.string().optional(),
-  maitreOuvrageContact: z.string().optional(),
-  maitreOuvrageEmail: z.string().email("Email invalide").optional().or(z.literal("")),
-  maitreOuvragePhone: z.string().optional(),
+  // Relations vers les contacts réutilisables
+  maitreOuvrageId: z.string().optional(),
+  maitreOeuvreId: z.string().optional(),
   
-  // Maître d'œuvre
-  maitreOeuvre: z.string().optional(),
-  maitreOeuvreContact: z.string().optional(),
+  // Contacts spécifiques à cet AO (si différents de la fiche principale)
+  contactAONom: z.string().optional(),
+  contactAOPoste: z.string().optional(),
+  contactAOTelephone: z.string().optional(),
+  contactAOEmail: z.string().email("Email invalide").optional().or(z.literal("")),
   
   // Informations techniques
   menuiserieType: z.enum(["fenetre", "porte", "portail", "volet", "cloison", "verriere", "autre"]),
@@ -75,6 +77,12 @@ export default function CreateAO() {
   const queryClient = useQueryClient();
   const [lots, setLots] = useState<Lot[]>([]);
 
+  // États pour la gestion des contacts
+  const [selectedMaitreOuvrage, setSelectedMaitreOuvrage] = useState<any>(null);
+  const [selectedMaitreOeuvre, setSelectedMaitreOeuvre] = useState<any>(null);
+  const [showMaitreOuvrageForm, setShowMaitreOuvrageForm] = useState(false);
+  const [showMaitreOeuvreForm, setShowMaitreOeuvreForm] = useState(false);
+
   const form = useForm<CreateAoFormData>({
     resolver: zodResolver(createAoSchema),
     defaultValues: {
@@ -107,6 +115,8 @@ export default function CreateAO() {
         ...data,
         dateRenduAO,
         montantEstime: data.montantEstime ? parseFloat(data.montantEstime) : undefined,
+        maitreOuvrageId: selectedMaitreOuvrage?.id,
+        maitreOeuvreId: selectedMaitreOeuvre?.id,
       };
       
       const response = await fetch("/api/aos", {
@@ -410,7 +420,7 @@ export default function CreateAO() {
               </CardContent>
             </Card>
 
-            {/* 5. Contacts */}
+            {/* 5. Contacts réutilisables */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -418,58 +428,85 @@ export default function CreateAO() {
                   <span>Contacts</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <h4 className="font-medium">Maître d'ouvrage</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="maitreOuvrageNom">Nom</Label>
-                        <Input
-                          id="maitreOuvrageNom"
-                          {...form.register("maitreOuvrageNom")}
-                          placeholder="Nom du maître d'ouvrage"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="maitreOuvrageContact">Contact</Label>
-                        <Input
-                          id="maitreOuvrageContact"
-                          {...form.register("maitreOuvrageContact")}
-                          placeholder="Nom du contact"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="maitreOuvrageEmail">Email</Label>
-                        <Input
-                          id="maitreOuvrageEmail"
-                          type="email"
-                          {...form.register("maitreOuvrageEmail")}
-                          placeholder="email@exemple.fr"
-                        />
-                      </div>
-                    </div>
+                    <Label>Maître d'ouvrage</Label>
+                    <ContactSelector
+                      type="maitre-ouvrage"
+                      selectedContactId={selectedMaitreOuvrage?.id}
+                      onContactSelect={(contactId, contact) => {
+                        setSelectedMaitreOuvrage(contact);
+                        form.setValue("maitreOuvrageId", contactId);
+                      }}
+                      onCreateNew={() => setShowMaitreOuvrageForm(true)}
+                      placeholder="Sélectionner un maître d'ouvrage..."
+                    />
                   </div>
                   
                   <div className="space-y-3">
-                    <h4 className="font-medium">Maître d'œuvre</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="maitreOeuvre">Nom</Label>
-                        <Input
-                          id="maitreOeuvre"
-                          {...form.register("maitreOeuvre")}
-                          placeholder="Nom du maître d'œuvre"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="maitreOeuvreContact">Contact</Label>
-                        <Input
-                          id="maitreOeuvreContact"
-                          {...form.register("maitreOeuvreContact")}
-                          placeholder="Nom du contact"
-                        />
-                      </div>
+                    <Label>Maître d'œuvre</Label>
+                    <ContactSelector
+                      type="maitre-oeuvre"
+                      selectedContactId={selectedMaitreOeuvre?.id}
+                      onContactSelect={(contactId, contact) => {
+                        setSelectedMaitreOeuvre(contact);
+                        form.setValue("maitreOeuvreId", contactId);
+                      }}
+                      onCreateNew={() => setShowMaitreOeuvreForm(true)}
+                      placeholder="Sélectionner un maître d'œuvre..."
+                    />
+                  </div>
+                </div>
+
+                {/* Contact spécifique à cet AO (optionnel) */}
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-3">Contact spécifique pour cet AO (optionnel)</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Si le contact pour cet AO diffère des fiches principales, vous pouvez le préciser ici.
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="contactAONom">Nom du contact</Label>
+                      <Input
+                        id="contactAONom"
+                        {...form.register("contactAONom")}
+                        placeholder="Nom du contact spécifique"
+                        data-testid="input-contact-ao-nom"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="contactAOPoste">Poste / Fonction</Label>
+                      <Input
+                        id="contactAOPoste"
+                        {...form.register("contactAOPoste")}
+                        placeholder="Poste ou fonction"
+                        data-testid="input-contact-ao-poste"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <Label htmlFor="contactAOTelephone">Téléphone</Label>
+                      <Input
+                        id="contactAOTelephone"
+                        {...form.register("contactAOTelephone")}
+                        placeholder="01 23 45 67 89"
+                        data-testid="input-contact-ao-telephone"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="contactAOEmail">Email</Label>
+                      <Input
+                        id="contactAOEmail"
+                        type="email"
+                        {...form.register("contactAOEmail")}
+                        placeholder="email@exemple.fr"
+                        data-testid="input-contact-ao-email"
+                      />
                     </div>
                   </div>
                 </div>
@@ -497,6 +534,25 @@ export default function CreateAO() {
           </form>
         </div>
       </main>
+
+      {/* Formulaires de création de contacts */}
+      <MaitreOuvrageForm
+        isOpen={showMaitreOuvrageForm}
+        onClose={() => setShowMaitreOuvrageForm(false)}
+        onSuccess={(newMaitreOuvrage) => {
+          setSelectedMaitreOuvrage(newMaitreOuvrage);
+          form.setValue("maitreOuvrageId", newMaitreOuvrage.id);
+        }}
+      />
+
+      <MaitreOeuvreForm
+        isOpen={showMaitreOeuvreForm}
+        onClose={() => setShowMaitreOeuvreForm(false)}
+        onSuccess={(newMaitreOeuvre) => {
+          setSelectedMaitreOeuvre(newMaitreOeuvre);
+          form.setValue("maitreOeuvreId", newMaitreOeuvre.id);
+        }}
+      />
     </div>
   );
 }

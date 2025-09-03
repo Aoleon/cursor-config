@@ -68,6 +68,11 @@ export const taskStatusEnum = pgEnum("task_status", [
   "a_faire", "en_cours", "termine", "en_retard"
 ]);
 
+// Types de postes pour les contacts
+export const posteTypeEnum = pgEnum("poste_type", [
+  "directeur", "responsable", "technicien", "assistant", "architecte", "ingenieur", "coordinateur", "autre"
+]);
+
 // ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
@@ -103,16 +108,15 @@ export const aos = pgTable("aos", {
   dateRenduAO: timestamp("date_rendu_ao"), // Calculée automatiquement
   dateAcceptationAO: timestamp("date_acceptation_ao"), // Gardée
   
-  // Maître d'ouvrage complet
-  maitreOuvrageNom: varchar("maitre_ouvrage_nom"),
-  maitreOuvrageAdresse: text("maitre_ouvrage_adresse"),
-  maitreOuvrageContact: varchar("maitre_ouvrage_contact"),
-  maitreOuvrageEmail: varchar("maitre_ouvrage_email"),
-  maitreOuvragePhone: varchar("maitre_ouvrage_phone"),
+  // Relations vers les maîtres d'ouvrage et d'œuvre
+  maitreOuvrageId: varchar("maitre_ouvrage_id").references(() => maitresOuvrage.id),
+  maitreOeuvreId: varchar("maitre_oeuvre_id").references(() => maitresOeuvre.id),
   
-  // Maître d'œuvre
-  maitreOeuvre: varchar("maitre_oeuvre"),
-  maitreOeuvreContact: varchar("maitre_oeuvre_contact"),
+  // Contacts spécifiques à cet AO (si différents de la fiche principale)
+  contactAONom: varchar("contact_ao_nom"), // Contact spécifique pour cet AO
+  contactAOPoste: varchar("contact_ao_poste"),
+  contactAOTelephone: varchar("contact_ao_telephone"),
+  contactAOEmail: varchar("contact_ao_email"),
   
   // Informations techniques (lots gérés dans table séparée)
   menuiserieType: menuiserieTypeEnum("menuiserie_type").notNull(),
@@ -142,6 +146,97 @@ export const aos = pgTable("aos", {
 }, (table) => {
   return {
     referenceIdx: index("aos_reference_idx").on(table.reference),
+  };
+});
+
+// Maîtres d'ouvrage - Base de données réutilisable
+export const maitresOuvrage = pgTable("maitres_ouvrage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nom: varchar("nom").notNull(),
+  typeOrganisation: varchar("type_organisation"), // Commune, Entreprise, Particulier, etc.
+  adresse: text("adresse"),
+  codePostal: varchar("code_postal"),
+  ville: varchar("ville"),
+  departement: departementEnum("departement"),
+  telephone: varchar("telephone"),
+  email: varchar("email"),
+  siteWeb: varchar("site_web"),
+  siret: varchar("siret"),
+  
+  // Contact principal
+  contactPrincipalNom: varchar("contact_principal_nom"),
+  contactPrincipalPoste: varchar("contact_principal_poste"),
+  contactPrincipalTelephone: varchar("contact_principal_telephone"),
+  contactPrincipalEmail: varchar("contact_principal_email"),
+  
+  // Informations complémentaires
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    nomIdx: index("maitres_ouvrage_nom_idx").on(table.nom),
+    departementIdx: index("maitres_ouvrage_departement_idx").on(table.departement),
+  };
+});
+
+// Maîtres d'œuvre - Base de données réutilisable avec multi-contacts
+export const maitresOeuvre = pgTable("maitres_oeuvre", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nom: varchar("nom").notNull(), // Nom de la société
+  typeOrganisation: varchar("type_organisation"), // Cabinet d'architecture, Bureau d'études, etc.
+  adresse: text("adresse"),
+  codePostal: varchar("code_postal"),
+  ville: varchar("ville"),
+  departement: departementEnum("departement"),
+  telephone: varchar("telephone"),
+  email: varchar("email"),
+  siteWeb: varchar("site_web"),
+  siret: varchar("siret"),
+  
+  // Spécialités
+  specialites: text("specialites"), // Logement, Tertiaire, Industriel, etc.
+  
+  // Informations complémentaires
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    nomIdx: index("maitres_oeuvre_nom_idx").on(table.nom),
+    departementIdx: index("maitres_oeuvre_departement_idx").on(table.departement),
+  };
+});
+
+// Contacts des maîtres d'œuvre (relation 1-N)
+export const contactsMaitreOeuvre = pgTable("contacts_maitre_oeuvre", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  maitreOeuvreId: varchar("maitre_oeuvre_id").notNull().references(() => maitresOeuvre.id, { onDelete: "cascade" }),
+  
+  nom: varchar("nom").notNull(),
+  prenom: varchar("prenom"),
+  poste: posteTypeEnum("poste").notNull(),
+  posteLibre: varchar("poste_libre"), // Si poste = "autre"
+  
+  // Coordonnées
+  telephone: varchar("telephone"),
+  mobile: varchar("mobile"),
+  email: varchar("email").notNull(),
+  
+  // Statut
+  isContactPrincipal: boolean("is_contact_principal").default(false),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    maitreOeuvreIdx: index("contacts_maitre_oeuvre_id_idx").on(table.maitreOeuvreId),
+    emailIdx: index("contacts_maitre_oeuvre_email_idx").on(table.email),
   };
 });
 
@@ -178,13 +273,16 @@ export const offers = pgTable("offers", {
   
   // Informations étendues pour dossier d'offre
   intituleOperation: text("intitule_operation"),
-  maitreOuvrageNom: varchar("maitre_ouvrage_nom"),
-  maitreOuvrageAdresse: text("maitre_ouvrage_adresse"),
-  maitreOuvrageContact: varchar("maitre_ouvrage_contact"),
-  maitreOuvrageEmail: varchar("maitre_ouvrage_email"),
-  maitreOuvragePhone: varchar("maitre_ouvrage_phone"),
-  maitreOeuvre: varchar("maitre_oeuvre"),
-  maitreOeuvreContact: varchar("maitre_oeuvre_contact"),
+  
+  // Relations vers les contacts (héritées de l'AO ou spécifiques à l'offre)
+  maitreOuvrageId: varchar("maitre_ouvrage_id").references(() => maitresOuvrage.id),
+  maitreOeuvreId: varchar("maitre_oeuvre_id").references(() => maitresOeuvre.id),
+  
+  // Contacts spécifiques à cette offre (si différents de l'AO)
+  contactOffreNom: varchar("contact_offre_nom"),
+  contactOffrePoste: varchar("contact_offre_poste"),
+  contactOffreTelephone: varchar("contact_offre_telephone"),
+  contactOffreEmail: varchar("contact_offre_email"),
   typeMarche: marcheTypeEnum("type_marche"),
   prorataEventuel: decimal("prorata_eventuel", { precision: 5, scale: 2 }),
   demarragePrevu: timestamp("demarrage_prevu"),
@@ -458,9 +556,35 @@ export const usersRelations = relations(users, ({ many }) => ({
   validatedDpgf: many(dpgfDocuments, { relationName: "dpgf_validator" }),
 }));
 
-export const aosRelations = relations(aos, ({ many }) => ({
+export const aosRelations = relations(aos, ({ one, many }) => ({
   offers: many(offers),
   lots: many(aoLots),
+  maitreOuvrage: one(maitresOuvrage, {
+    fields: [aos.maitreOuvrageId],
+    references: [maitresOuvrage.id],
+  }),
+  maitreOeuvre: one(maitresOeuvre, {
+    fields: [aos.maitreOeuvreId],
+    references: [maitresOeuvre.id],
+  }),
+}));
+
+export const maitresOuvrageRelations = relations(maitresOuvrage, ({ many }) => ({
+  aos: many(aos),
+  offers: many(offers),
+}));
+
+export const maitresOeuvreRelations = relations(maitresOeuvre, ({ many }) => ({
+  aos: many(aos),
+  offers: many(offers),
+  contacts: many(contactsMaitreOeuvre),
+}));
+
+export const contactsMaitreOeuvreRelations = relations(contactsMaitreOeuvre, ({ one }) => ({
+  maitreOeuvre: one(maitresOeuvre, {
+    fields: [contactsMaitreOeuvre.maitreOeuvreId],
+    references: [maitresOeuvre.id],
+  }),
 }));
 
 export const aoLotsRelations = relations(aoLots, ({ one }) => ({
@@ -474,6 +598,14 @@ export const offersRelations = relations(offers, ({ one, many }) => ({
   ao: one(aos, {
     fields: [offers.aoId],
     references: [aos.id],
+  }),
+  maitreOuvrage: one(maitresOuvrage, {
+    fields: [offers.maitreOuvrageId],
+    references: [maitresOuvrage.id],
+  }),
+  maitreOeuvre: one(maitresOeuvre, {
+    fields: [offers.maitreOeuvreId],
+    references: [maitresOeuvre.id],
   }),
   responsibleUser: one(users, {
     fields: [offers.responsibleUserId],
@@ -594,6 +726,15 @@ export type InsertAo = typeof aos.$inferInsert;
 export type AoLot = typeof aoLots.$inferSelect;
 export type InsertAoLot = typeof aoLots.$inferInsert;
 
+export type MaitreOuvrage = typeof maitresOuvrage.$inferSelect;
+export type InsertMaitreOuvrage = typeof maitresOuvrage.$inferInsert;
+
+export type MaitreOeuvre = typeof maitresOeuvre.$inferSelect;
+export type InsertMaitreOeuvre = typeof maitresOeuvre.$inferInsert;
+
+export type ContactMaitreOeuvre = typeof contactsMaitreOeuvre.$inferSelect;
+export type InsertContactMaitreOeuvre = typeof contactsMaitreOeuvre.$inferInsert;
+
 export type Offer = typeof offers.$inferSelect;
 export type InsertOffer = typeof offers.$inferInsert;
 
@@ -635,6 +776,24 @@ export const insertAoSchema = createInsertSchema(aos).omit({
 });
 
 export const insertAoLotSchema = createInsertSchema(aoLots).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMaitreOuvrageSchema = createInsertSchema(maitresOuvrage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMaitreOeuvreSchema = createInsertSchema(maitresOeuvre).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertContactMaitreOeuvreSchema = createInsertSchema(contactsMaitreOeuvre).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

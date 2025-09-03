@@ -1,7 +1,7 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { 
   users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
-  chiffrageElements, dpgfDocuments, aoLots,
+  chiffrageElements, dpgfDocuments, aoLots, maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -12,7 +12,10 @@ import {
   type BeWorkload, type InsertBeWorkload,
   type ChiffrageElement, type InsertChiffrageElement,
   type DpgfDocument, type InsertDpgfDocument,
-  type AoLot, type InsertAoLot
+  type AoLot, type InsertAoLot,
+  type MaitreOuvrage, type InsertMaitreOuvrage,
+  type MaitreOeuvre, type InsertMaitreOeuvre,
+  type ContactMaitreOeuvre, type InsertContactMaitreOeuvre
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -88,6 +91,26 @@ export interface IStorage {
   createAoLot(lot: InsertAoLot): Promise<AoLot>;
   updateAoLot(id: string, lot: Partial<InsertAoLot>): Promise<AoLot>;
   deleteAoLot(id: string): Promise<void>;
+  
+  // Maîtres d'ouvrage operations
+  getMaitresOuvrage(): Promise<MaitreOuvrage[]>;
+  getMaitreOuvrage(id: string): Promise<MaitreOuvrage | undefined>;
+  createMaitreOuvrage(maitreOuvrage: InsertMaitreOuvrage): Promise<MaitreOuvrage>;
+  updateMaitreOuvrage(id: string, maitreOuvrage: Partial<InsertMaitreOuvrage>): Promise<MaitreOuvrage>;
+  deleteMaitreOuvrage(id: string): Promise<void>;
+  
+  // Maîtres d'œuvre operations
+  getMaitresOeuvre(): Promise<(MaitreOeuvre & { contacts?: ContactMaitreOeuvre[] })[]>;
+  getMaitreOeuvre(id: string): Promise<(MaitreOeuvre & { contacts?: ContactMaitreOeuvre[] }) | undefined>;
+  createMaitreOeuvre(maitreOeuvre: InsertMaitreOeuvre): Promise<MaitreOeuvre>;
+  updateMaitreOeuvre(id: string, maitreOeuvre: Partial<InsertMaitreOeuvre>): Promise<MaitreOeuvre>;
+  deleteMaitreOeuvre(id: string): Promise<void>;
+  
+  // Contacts maître d'œuvre operations
+  getContactsMaitreOeuvre(maitreOeuvreId: string): Promise<ContactMaitreOeuvre[]>;
+  createContactMaitreOeuvre(contact: InsertContactMaitreOeuvre): Promise<ContactMaitreOeuvre>;
+  updateContactMaitreOeuvre(id: string, contact: Partial<InsertContactMaitreOeuvre>): Promise<ContactMaitreOeuvre>;
+  deleteContactMaitreOeuvre(id: string): Promise<void>;
   
   // Additional helper methods for conversion workflow
   getOfferById(id: string): Promise<Offer | undefined>;
@@ -511,6 +534,121 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAoLot(id: string): Promise<void> {
     await db.delete(aoLots).where(eq(aoLots.id, id));
+  }
+
+  // Maîtres d'ouvrage operations
+  async getMaitresOuvrage(): Promise<MaitreOuvrage[]> {
+    return await db.select().from(maitresOuvrage)
+      .where(eq(maitresOuvrage.isActive, true))
+      .orderBy(maitresOuvrage.nom);
+  }
+
+  async getMaitreOuvrage(id: string): Promise<MaitreOuvrage | undefined> {
+    const [maitreOuvrage] = await db.select().from(maitresOuvrage)
+      .where(eq(maitresOuvrage.id, id));
+    return maitreOuvrage;
+  }
+
+  async createMaitreOuvrage(maitreOuvrageData: InsertMaitreOuvrage): Promise<MaitreOuvrage> {
+    const [newMaitreOuvrage] = await db.insert(maitresOuvrage)
+      .values(maitreOuvrageData)
+      .returning();
+    return newMaitreOuvrage;
+  }
+
+  async updateMaitreOuvrage(id: string, maitreOuvrageData: Partial<InsertMaitreOuvrage>): Promise<MaitreOuvrage> {
+    const [updatedMaitreOuvrage] = await db.update(maitresOuvrage)
+      .set({ ...maitreOuvrageData, updatedAt: new Date() })
+      .where(eq(maitresOuvrage.id, id))
+      .returning();
+    return updatedMaitreOuvrage;
+  }
+
+  async deleteMaitreOuvrage(id: string): Promise<void> {
+    // Soft delete
+    await db.update(maitresOuvrage)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(maitresOuvrage.id, id));
+  }
+
+  // Maîtres d'œuvre operations
+  async getMaitresOeuvre(): Promise<(MaitreOeuvre & { contacts?: ContactMaitreOeuvre[] })[]> {
+    const maitresOeuvreList = await db.select().from(maitresOeuvre)
+      .where(eq(maitresOeuvre.isActive, true))
+      .orderBy(maitresOeuvre.nom);
+    
+    // Charger les contacts pour chaque maître d'œuvre
+    const result = [];
+    for (const maitreOeuvre of maitresOeuvreList) {
+      const contacts = await this.getContactsMaitreOeuvre(maitreOeuvre.id);
+      result.push({ ...maitreOeuvre, contacts });
+    }
+    
+    return result;
+  }
+
+  async getMaitreOeuvre(id: string): Promise<(MaitreOeuvre & { contacts?: ContactMaitreOeuvre[] }) | undefined> {
+    const [maitreOeuvre] = await db.select().from(maitresOeuvre)
+      .where(eq(maitresOeuvre.id, id));
+    
+    if (!maitreOeuvre) return undefined;
+    
+    const contacts = await this.getContactsMaitreOeuvre(id);
+    return { ...maitreOeuvre, contacts };
+  }
+
+  async createMaitreOeuvre(maitreOeuvreData: InsertMaitreOeuvre): Promise<MaitreOeuvre> {
+    const [newMaitreOeuvre] = await db.insert(maitresOeuvre)
+      .values(maitreOeuvreData)
+      .returning();
+    return newMaitreOeuvre;
+  }
+
+  async updateMaitreOeuvre(id: string, maitreOeuvreData: Partial<InsertMaitreOeuvre>): Promise<MaitreOeuvre> {
+    const [updatedMaitreOeuvre] = await db.update(maitresOeuvre)
+      .set({ ...maitreOeuvreData, updatedAt: new Date() })
+      .where(eq(maitresOeuvre.id, id))
+      .returning();
+    return updatedMaitreOeuvre;
+  }
+
+  async deleteMaitreOeuvre(id: string): Promise<void> {
+    // Soft delete
+    await db.update(maitresOeuvre)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(maitresOeuvre.id, id));
+  }
+
+  // Contacts maître d'œuvre operations
+  async getContactsMaitreOeuvre(maitreOeuvreId: string): Promise<ContactMaitreOeuvre[]> {
+    return await db.select().from(contactsMaitreOeuvre)
+      .where(and(
+        eq(contactsMaitreOeuvre.maitreOeuvreId, maitreOeuvreId),
+        eq(contactsMaitreOeuvre.isActive, true)
+      ))
+      .orderBy(contactsMaitreOeuvre.nom);
+  }
+
+  async createContactMaitreOeuvre(contactData: InsertContactMaitreOeuvre): Promise<ContactMaitreOeuvre> {
+    const [newContact] = await db.insert(contactsMaitreOeuvre)
+      .values(contactData)
+      .returning();
+    return newContact;
+  }
+
+  async updateContactMaitreOeuvre(id: string, contactData: Partial<InsertContactMaitreOeuvre>): Promise<ContactMaitreOeuvre> {
+    const [updatedContact] = await db.update(contactsMaitreOeuvre)
+      .set({ ...contactData, updatedAt: new Date() })
+      .where(eq(contactsMaitreOeuvre.id, id))
+      .returning();
+    return updatedContact;
+  }
+
+  async deleteContactMaitreOeuvre(id: string): Promise<void> {
+    // Soft delete
+    await db.update(contactsMaitreOeuvre)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(contactsMaitreOeuvre.id, id));
   }
 
   // Additional helper methods for conversion workflow

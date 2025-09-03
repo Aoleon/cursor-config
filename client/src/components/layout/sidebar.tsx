@@ -53,8 +53,7 @@ const navigation: NavigationItem[] = [
     href: "/offers", 
     icon: FolderOpen,
     subItems: [
-      { name: "Import / OCR", href: "/offers/import", icon: Upload, description: "Réception et analyse PDF" },
-      { name: "Création dossier", href: "/offers/create", icon: FileText, description: "Nouveau dossier d'offre" },
+      { name: "Création dossier", href: "/offers/create", icon: FileText, description: "Import PDF + OCR + Création" },
       { name: "Chiffrage", href: "/offers/chiffrage", icon: Calculator, description: "Module de chiffrage détaillé" },
       { name: "Demandes fournisseurs", href: "/offers/suppliers", icon: Send, description: "Consultation fournisseurs" },
       { name: "Validation BE", href: "/offers/validation", icon: CheckCircle, description: "Validation fin d'études" },

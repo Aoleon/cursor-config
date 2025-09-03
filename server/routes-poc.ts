@@ -168,6 +168,9 @@ app.post("/api/ocr/create-ao-from-pdf", uploadPDF.single('pdf'), async (req, res
       return res.status(400).json({ error: 'Aucun fichier PDF fourni' });
     }
 
+    // Initialiser le service OCR
+    await ocrService.initialize();
+    
     // Traitement OCR
     const ocrResult = await ocrService.processPDF(req.file.buffer);
     
@@ -199,13 +202,13 @@ app.post("/api/ocr/create-ao-from-pdf", uploadPDF.single('pdf'), async (req, res
       // Techniques
       lotConcerne: ocrResult.processedFields.lotConcerne || '',
       menuiserieType: ocrResult.processedFields.menuiserieType as any || 'autre',
-      montantEstime: ocrResult.processedFields.montantEstime || '',
+      montantEstime: ocrResult.processedFields.montantEstime || null,  // null au lieu de '' pour les champs numériques
       typeMarche: ocrResult.processedFields.typeMarche as any || undefined,
       
       // Source et réception
-      source: 'autre' as const,
+      source: 'other' as const,  // Corrigé de 'autre' à 'other' pour correspondre au schéma
       plateformeSource: ocrResult.processedFields.plateformeSource || '',
-      departement: ocrResult.processedFields.departement || '',
+      departement: ocrResult.processedFields.departement || '62',  // Défaut à 62 pour Pas-de-Calais
       
       // Éléments techniques
       bureauEtudes: ocrResult.processedFields.bureauEtudes || '',

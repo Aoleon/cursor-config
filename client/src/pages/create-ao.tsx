@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,9 @@ import { LotsManager } from "@/components/ao/LotsManager";
 import { ContactSelector } from "@/components/contacts/ContactSelector";
 import { MaitreOuvrageForm } from "@/components/contacts/MaitreOuvrageForm";
 import { MaitreOeuvreForm } from "@/components/contacts/MaitreOeuvreForm";
-import { FileText, Calendar, MapPin, User, Building } from "lucide-react";
+import { FileText, Calendar, MapPin, User, Building, Upload, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 
 // Schéma de validation pour la création d'AO
 const createAoSchema = z.object({
@@ -76,6 +78,14 @@ export default function CreateAO() {
   const [_, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [lots, setLots] = useState<Lot[]>([]);
+  const [activeTab, setActiveTab] = useState("import");
+  
+  // États pour l'import PDF et OCR
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrResult, setOcrResult] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // États pour la gestion des contacts
   const [selectedMaitreOuvrage, setSelectedMaitreOuvrage] = useState<any>(null);
@@ -181,6 +191,91 @@ export default function CreateAO() {
     createAoMutation.mutate(data);
   };
 
+  // Fonction pour gérer l'upload et l'OCR du PDF
+  const handlePdfUpload = async () => {
+    if (!pdfFile) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un fichier PDF",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProcessing(true);
+    setOcrProgress(20);
+
+    const formData = new FormData();
+    formData.append("pdf", pdfFile);
+
+    try {
+      setOcrProgress(50);
+      const response = await fetch("/api/ocr/create-ao-from-pdf", {
+        method: "POST",
+        body: formData,
+      });
+
+      setOcrProgress(80);
+
+      if (response.ok) {
+        const result = await response.json();
+        setOcrProgress(100);
+        
+        // Stocker le résultat OCR
+        setOcrResult(result);
+        
+        // Pré-remplir le formulaire avec les données extraites
+        if (result.ao) {
+          form.setValue("reference", result.ao.reference || "");
+          form.setValue("client", result.ao.client || "");
+          form.setValue("location", result.ao.location || "");
+          form.setValue("intituleOperation", result.ao.intituleOperation || "");
+          form.setValue("departement", result.ao.departement || "62");
+          
+          // Ajouter les lots extraits
+          if (result.ao.lots && result.ao.lots.length > 0) {
+            setLots(result.ao.lots.map((lot: any) => ({
+              numero: lot.numero,
+              designation: lot.designation,
+              menuiserieType: lot.type,
+              montantEstime: lot.montantEstime,
+              isSelected: lot.isJlmEligible,
+              comment: lot.notes,
+            })));
+          }
+        }
+        
+        toast({
+          title: "Import réussi",
+          description: `AO créé avec ${result.ao.lots?.length || 0} lots détectés`,
+        });
+        
+        // Passer automatiquement à l'onglet de formulaire
+        setActiveTab("manual");
+        
+      } else {
+        throw new Error("Erreur lors de l'import");
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du traitement OCR",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(false);
+      setOcrProgress(0);
+    }
+  };
+
+  // Fonction pour gérer le changement de fichier
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPdfFile(e.target.files[0]);
+      setOcrResult(null);
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-gray-50">
       <Sidebar />
@@ -203,7 +298,133 @@ export default function CreateAO() {
         />
         
         <div className="px-6 py-6">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="import">
+                <Upload className="mr-2 h-4 w-4" />
+                Import PDF avec OCR
+              </TabsTrigger>
+              <TabsTrigger value="manual">
+                <FileText className="mr-2 h-4 w-4" />
+                Création manuelle
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Onglet Import PDF */}
+            <TabsContent value="import" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Import et Analyse OCR</CardTitle>
+                  <CardDescription>
+                    Importez un PDF d'appel d'offres pour extraction automatique des données
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-600">
+                      Glissez-déposez un fichier PDF ou cliquez pour parcourir
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => fileInputRef.current?.click()}
+                      type="button"
+                    >
+                      Sélectionner un PDF
+                    </Button>
+                  </div>
+
+                  {pdfFile && (
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-8 w-8 text-blue-600" />
+                        <div>
+                          <p className="font-medium">{pdfFile.name}</p>
+                          <p className="text-sm text-gray-500">
+                            {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={handlePdfUpload} 
+                        disabled={processing}
+                        type="button"
+                      >
+                        {processing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Traitement...
+                          </>
+                        ) : (
+                          "Analyser avec OCR"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {processing && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Traitement OCR en cours...</span>
+                        <span>{ocrProgress}%</span>
+                      </div>
+                      <Progress value={ocrProgress} />
+                    </div>
+                  )}
+
+                  {ocrResult && (
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <div className="flex">
+                        <CheckCircle className="h-5 w-5 text-green-400 mr-3" />
+                        <div className="text-sm">
+                          <p className="font-medium text-green-900">
+                            AO créé avec succès
+                          </p>
+                          <ul className="mt-2 space-y-1 text-green-700">
+                            <li>• Référence: {ocrResult.ao?.reference}</li>
+                            <li>• Client: {ocrResult.ao?.client}</li>
+                            <li>• {ocrResult.ao?.lots?.length || 0} lots détectés</li>
+                            <li>• Confiance: {ocrResult.confidence}%</li>
+                          </ul>
+                          <p className="mt-2">
+                            Cliquez sur l'onglet "Création manuelle" pour vérifier et compléter les données.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="flex">
+                      <AlertCircle className="h-5 w-5 text-blue-400 mr-3" />
+                      <div className="text-sm">
+                        <p className="font-medium text-blue-900">
+                          Fonctionnalités OCR avancées
+                        </p>
+                        <ul className="mt-2 space-y-1 text-blue-700">
+                          <li>• Extraction automatique de 35+ champs</li>
+                          <li>• Détection et création des lots</li>
+                          <li>• Reconnaissance des contacts et dates</li>
+                          <li>• Identification des documents techniques</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Onglet Création manuelle */}
+            <TabsContent value="manual" className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* 1. Informations générales */}
             <Card>
               <CardHeader>
@@ -532,6 +753,8 @@ export default function CreateAO() {
               </Button>
             </div>
           </form>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 

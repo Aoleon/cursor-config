@@ -6,7 +6,7 @@ import { isAuthenticated } from "../replitAuth";
 
 export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   // Récupérer les éléments de chiffrage d'une offre
-  app.get("/api/offers/:offerId/chiffrage-elements", isAuthenticated, async (req, res) => {
+  app.get("/api/offers/:offerId/chiffrage-elements", async (req, res) => {
     try {
       const { offerId } = req.params;
       
@@ -19,7 +19,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Créer un nouvel élément de chiffrage
-  app.post("/api/offers/:offerId/chiffrage-elements", isAuthenticated, async (req, res) => {
+  app.post("/api/offers/:offerId/chiffrage-elements", async (req, res) => {
     try {
       const { offerId } = req.params;
       
@@ -41,7 +41,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Mettre à jour un élément de chiffrage
-  app.put("/api/offers/:offerId/chiffrage-elements/:elementId", isAuthenticated, async (req, res) => {
+  app.put("/api/offers/:offerId/chiffrage-elements/:elementId", async (req, res) => {
     try {
       const { elementId } = req.params;
       
@@ -60,7 +60,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Supprimer un élément de chiffrage
-  app.delete("/api/offers/:offerId/chiffrage-elements/:elementId", isAuthenticated, async (req, res) => {
+  app.delete("/api/offers/:offerId/chiffrage-elements/:elementId", async (req, res) => {
     try {
       const { elementId } = req.params;
       
@@ -73,7 +73,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Récupérer le DPGF d'une offre
-  app.get("/api/offers/:offerId/dpgf", isAuthenticated, async (req, res) => {
+  app.get("/api/offers/:offerId/dpgf", async (req, res) => {
     try {
       const { offerId } = req.params;
       
@@ -90,7 +90,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Générer un DPGF à partir des éléments de chiffrage
-  app.post("/api/offers/:offerId/dpgf/generate", isAuthenticated, async (req, res) => {
+  app.post("/api/offers/:offerId/dpgf/generate", async (req, res) => {
     try {
       const { offerId } = req.params;
       const userId = "test-user-1"; // TODO: Get from authenticated user
@@ -173,7 +173,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Valider la fin d'études d'une offre
-  app.post("/api/offers/:offerId/validate-studies", isAuthenticated, async (req, res) => {
+  app.post("/api/offers/:offerId/validate-studies", async (req, res) => {
     try {
       const { offerId } = req.params;
       const userId = "test-user-1"; // TODO: Get from authenticated user
@@ -211,7 +211,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Transformer une offre validée en projet
-  app.post("/api/offers/:offerId/convert-to-project", isAuthenticated, async (req, res) => {
+  app.post("/api/offers/:offerId/convert-to-project", async (req, res) => {
     try {
       const { offerId } = req.params;
       const userId = "test-user-1"; // TODO: Get from authenticated user

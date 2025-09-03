@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./replitAuth";
+import { ocrService } from "./ocrService";
+import multer from "multer";
 import { 
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
   insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
@@ -96,6 +98,178 @@ app.post("/api/aos", async (req, res) => {
   } catch (error) {
     console.error("Error creating AO:", error);
     res.status(500).json({ message: "Failed to create AO" });
+  }
+});
+
+// ========================================
+// OCR ROUTES - Traitement automatique PDF
+// ========================================
+
+// Configuration multer pour upload de PDF
+const uploadPDF = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Seuls les fichiers PDF sont autorisés'));
+    }
+  },
+});
+
+// Endpoint pour traiter un PDF avec OCR
+app.post("/api/ocr/process-pdf", uploadPDF.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier PDF fourni' });
+    }
+
+    console.log(`Processing PDF: ${req.file.originalname} (${req.file.size} bytes)`);
+    
+    // Traitement OCR du PDF
+    const result = await ocrService.processPDF(req.file.buffer);
+    
+    res.json({
+      success: true,
+      filename: req.file.originalname,
+      extractedText: result.extractedText,
+      confidence: result.confidence,
+      confidenceLevel: ocrService.getConfidenceLevel(result.confidence),
+      processedFields: result.processedFields,
+      processingMethod: result.rawData.method,
+      message: `PDF traité avec succès (${result.rawData.method})`
+    });
+
+  } catch (error: any) {
+    console.error('OCR processing error:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors du traitement OCR',
+      details: error.message 
+    });
+  }
+});
+
+// Endpoint pour créer un AO automatiquement depuis OCR
+app.post("/api/ocr/create-ao-from-pdf", uploadPDF.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier PDF fourni' });
+    }
+
+    // Traitement OCR
+    const ocrResult = await ocrService.processPDF(req.file.buffer);
+    
+    // Création automatique de l'AO avec données extraites
+    const aoData = {
+      // Informations extraites par OCR
+      reference: ocrResult.processedFields.reference || `AO-AUTO-${Date.now()}`,
+      client: ocrResult.processedFields.client || ocrResult.processedFields.maitreOuvrageNom || '',
+      location: ocrResult.processedFields.location || '',
+      intituleOperation: ocrResult.processedFields.intituleOperation || req.file.originalname.replace('.pdf', ''),
+      
+      // Dates
+      dateRenduAO: ocrResult.processedFields.deadline ? new Date(ocrResult.processedFields.deadline) : undefined,
+      dateAcceptationAO: ocrResult.processedFields.dateAcceptationAO ? new Date(ocrResult.processedFields.dateAcceptationAO) : undefined,
+      demarragePrevu: ocrResult.processedFields.demarragePrevu ? new Date(ocrResult.processedFields.demarragePrevu) : undefined,
+      dateOS: ocrResult.processedFields.dateOS ? new Date(ocrResult.processedFields.dateOS) : undefined,
+      
+      // Maître d'ouvrage
+      maitreOuvrageNom: ocrResult.processedFields.maitreOuvrageNom || '',
+      maitreOuvrageAdresse: ocrResult.processedFields.maitreOuvrageAdresse || '',
+      maitreOuvrageContact: ocrResult.processedFields.maitreOuvrageContact || '',
+      maitreOuvrageEmail: ocrResult.processedFields.maitreOuvrageEmail || '',
+      maitreOuvragePhone: ocrResult.processedFields.maitreOuvragePhone || '',
+      
+      // Maître d'œuvre
+      maitreOeuvre: ocrResult.processedFields.maitreOeuvre || '',
+      maitreOeuvreContact: ocrResult.processedFields.maitreOeuvreContact || '',
+      
+      // Techniques
+      lotConcerne: ocrResult.processedFields.lotConcerne || '',
+      menuiserieType: ocrResult.processedFields.menuiserieType as any || 'autre',
+      montantEstime: ocrResult.processedFields.montantEstime || '',
+      typeMarche: ocrResult.processedFields.typeMarche as any || undefined,
+      
+      // Source et réception
+      source: 'autre' as const,
+      plateformeSource: ocrResult.processedFields.plateformeSource || '',
+      departement: ocrResult.processedFields.departement || '',
+      
+      // Éléments techniques
+      bureauEtudes: ocrResult.processedFields.bureauEtudes || '',
+      bureauControle: ocrResult.processedFields.bureauControle || '',
+      sps: ocrResult.processedFields.sps || '',
+      delaiContractuel: parseInt(ocrResult.processedFields.delaiContractuel || '0') || undefined,
+      
+      // Documents détectés automatiquement
+      cctpDisponible: ocrResult.processedFields.cctpDisponible || false,
+      plansDisponibles: ocrResult.processedFields.plansDisponibles || false,
+      dpgfClientDisponible: ocrResult.processedFields.dpgfClientDisponible || false,
+      dceDisponible: ocrResult.processedFields.dceDisponible || false,
+      
+      // Métadonnées OCR
+      description: `AO créé automatiquement par OCR depuis ${req.file.originalname}`,
+      isSelected: false,
+    };
+
+    const validatedData = insertAoSchema.parse(aoData);
+    const ao = await storage.createAo(validatedData);
+
+    res.status(201).json({
+      success: true,
+      ao,
+      ocrResult: {
+        confidence: ocrResult.confidence,
+        confidenceLevel: ocrService.getConfidenceLevel(ocrResult.confidence),
+        processingMethod: ocrResult.rawData.method,
+        extractedFields: Object.keys(ocrResult.processedFields).filter(key => 
+          ocrResult.processedFields[key as keyof typeof ocrResult.processedFields]
+        ).length
+      },
+      message: `AO créé automatiquement avec ${Object.keys(ocrResult.processedFields).length} champs remplis`
+    });
+
+  } catch (error: any) {
+    console.error('Error creating AO from PDF:', error);
+    if (error.name === 'ZodError') {
+      res.status(400).json({ 
+        error: 'Erreur de validation des données extraites',
+        details: error.errors 
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Erreur lors de la création de l\'AO',
+        details: error.message 
+      });
+    }
+  }
+});
+
+// Endpoint pour ajouter des patterns personnalisés
+app.post("/api/ocr/add-pattern", async (req, res) => {
+  try {
+    const { field, pattern } = req.body;
+    
+    if (!field || !pattern) {
+      return res.status(400).json({ error: 'Champ et pattern requis' });
+    }
+    
+    const regex = new RegExp(pattern, 'i');
+    ocrService.addCustomPattern(field, regex);
+    
+    res.json({ 
+      success: true, 
+      message: `Pattern ajouté pour le champ "${field}"` 
+    });
+    
+  } catch (error: any) {
+    res.status(400).json({ 
+      error: 'Pattern invalide',
+      details: error.message 
+    });
   }
 });
 

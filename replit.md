@@ -42,6 +42,7 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
 - **Database**: PostgreSQL with Drizzle ORM
 - **Authentication**: Replit OpenID Connect (OIDC) with Passport.js
 - **Session Storage**: PostgreSQL-backed sessions with connect-pg-simple
+- **OCR Engine**: Tesseract.js + pdf-parse for intelligent PDF processing
 
 ### Critical Design Principles
 - **Full-Stack Type Safety**: Shared TypeScript schemas ensure type consistency.
@@ -78,6 +79,7 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
 - Respecter la simplicité volontaire du périmètre POC pour validation des flux critiques
 
 ### Flux d'Information POC (Formulaire Unique Évolutif)
+- **Import OCR Intelligent**: Nouveau point d'entrée avec analyse automatique des PDF d'appels d'offres françaises. Reconnaissance de 35+ champs avec pré-remplissage automatique.
 - **AO → Chiffrage**: Le même dossier AO évolue vers l'étape chiffrage. Données AO pré-remplies et verrouillées, nouveaux champs de chiffrage ajoutés.
 - **Validation Fin d'Études**: Jalon "Fin d'études" validé numériquement dans l'application (plus de validation manuelle). Verrouillage définitif des données de chiffrage.
 - **Chiffrage → Planning**: Le même dossier évolue vers "Projet" avec planning initialisé. Données AO+Chiffrage verrouillées, champs planning ajoutés.
@@ -86,7 +88,7 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
 
 ### Principes POC Fondamentaux
 - **PRINCIPE CENTRAL - Formulaire Unique Évolutif**: L'AO créé initialement est LE formulaire qui évolue à travers TOUTES les étapes (AO → Chiffrage → Planning → Équipes → Livraison). Jamais de re-création, jamais de duplication. Les champs s'ajoutent progressivement à chaque étape mais les données validées des étapes précédentes se verrouillent pour empêcher toute modification.
-- **Zéro Double Saisie**: Réutilisation systématique des données existantes. Une donnée saisie une seule fois, utilisée partout.
+- **Zéro Double Saisie Automatisé**: Réutilisation systématique des données existantes et reconnaissance OCR pour import automatique. Une donnée saisie une seule fois, utilisée partout.
 - **Verrouillage Progressif**: 
   - Étape AO : Données de base modifiables
   - Étape Chiffrage : Données AO verrouillées, données chiffrage modifiables

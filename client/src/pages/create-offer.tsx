@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { OCRUploader } from "@/components/OCRUploader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,7 +152,7 @@ export default function CreateOffer() {
   const [_, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [selectedAoId, setSelectedAoId] = useState<string>("");
-  const [creationMethod, setCreationMethod] = useState<"ao" | "import">("ao");
+  const [creationMethod, setCreationMethod] = useState<"ao" | "import" | "ocr">("ao");
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; size: number; uploadURL: string }>>([]);
 
   // Récupérer les AO pour le sélecteur
@@ -488,6 +489,71 @@ export default function CreateOffer() {
     }
   };
 
+  // Gestionnaire pour pré-remplir depuis OCR
+  const handleOCRFieldsExtracted = (fields: Record<string, any>) => {
+    // Générer une référence automatique si pas fournie
+    const currentYear = new Date().getFullYear();
+    const reference = fields.reference || `OFF-OCR-${currentYear}-${Date.now().toString().slice(-6)}`;
+    
+    // Pré-remplir le formulaire avec les données OCR
+    const updateData = {
+      ...form.getValues(),
+      reference,
+      client: fields.client || fields.maitreOuvrageNom || "",
+      location: fields.location || "",
+      intituleOperation: fields.intituleOperation || "",
+      menuiserieType: fields.menuiserieType || "fenetre",
+      montantEstime: fields.montantEstime || "",
+      maitreOuvrageNom: fields.maitreOuvrageNom || "",
+      maitreOuvrageAdresse: fields.maitreOuvrageAdresse || "",
+      maitreOuvrageContact: fields.maitreOuvrageContact || "",
+      maitreOuvrageEmail: fields.maitreOuvrageEmail || "",
+      maitreOuvragePhone: fields.maitreOuvragePhone || "",
+      maitreOeuvre: fields.maitreOeuvre || "",
+      maitreOeuvreContact: fields.maitreOeuvreContact || "",
+      lotConcerne: fields.lotConcerne || "",
+      typeMarche: fields.typeMarche || undefined,
+      bureauEtudes: fields.bureauEtudes || "",
+      bureauControle: fields.bureauControle || "",
+      sps: fields.sps || "",
+      // Nouveaux champs OCR
+      source: "other" as const,
+      plateformeSource: fields.plateformeSource || "",
+      departement: fields.departement || "",
+      dateOS: fields.dateOS || "",
+      delaiContractuel: fields.delaiContractuel || "",
+      deadline: fields.deadline || "",
+      dateRenduAO: fields.dateRenduAO || "",
+      dateAcceptationAO: fields.dateAcceptationAO || "",
+      demarragePrevu: fields.demarragePrevu || "",
+      // Documents détectés
+      cctpDisponible: fields.cctpDisponible || false,
+      plansDisponibles: fields.plansDisponibles || false,
+      dpgfClientDisponible: fields.dpgfClientDisponible || false,
+      dceDisponible: fields.dceDisponible || false,
+    };
+
+    form.reset(updateData);
+
+    toast({
+      title: "Formulaire pré-rempli par OCR",
+      description: `${Object.keys(fields).length} champs remplis automatiquement depuis le PDF`,
+    });
+  };
+
+  // Gestionnaire quand un AO est créé via OCR
+  const handleAOCreatedFromOCR = (aoData: any) => {
+    toast({
+      title: "AO créé automatiquement",
+      description: `L'AO ${aoData.reference} a été créé. Vous pouvez maintenant créer l'offre associée.`,
+    });
+    
+    // Recharger la liste des AO et sélectionner le nouveau
+    queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
+    setSelectedAoId(aoData.id);
+    setCreationMethod("ao");
+  };
+
   // Calculer le pourcentage de complétude du formulaire
   const getFormCompleteness = (): number => {
     const values = form.getValues();
@@ -543,10 +609,16 @@ export default function CreateOffer() {
                 </div>
                 
                 <Tabs value={creationMethod} onValueChange={(value: any) => setCreationMethod(value)} className="mt-4">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="ao" className="flex items-center space-x-2">
                       <FileText className="h-4 w-4" />
                       <span>Depuis AO existant</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="ocr" className="flex items-center space-x-2">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      <span>OCR Intelligent</span>
                     </TabsTrigger>
                     <TabsTrigger value="import" className="flex items-center space-x-2">
                       <Upload className="h-4 w-4" />
@@ -576,6 +648,14 @@ export default function CreateOffer() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="ocr" className="mt-4 space-y-4">
+                    <OCRUploader
+                      onFieldsExtracted={handleOCRFieldsExtracted}
+                      onAOCreated={handleAOCreatedFromOCR}
+                      className="w-full"
+                    />
                   </TabsContent>
                   
                   <TabsContent value="import" className="mt-4 space-y-4">

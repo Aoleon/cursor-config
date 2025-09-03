@@ -23,7 +23,7 @@ export default function Offers() {
               icon: "download"
             },
             {
-              label: "Nouvelle Offre",
+              label: "Nouvelle Offre (Import AO/DCE)",
               variant: "default",
               icon: "plus",
               onClick: () => setLocation("/create-offer")

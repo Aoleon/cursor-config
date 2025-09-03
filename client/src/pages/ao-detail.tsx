@@ -368,77 +368,116 @@ export default function AoDetail() {
                 <span>Informations de base</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="reference">Référence AO *</Label>
-                <Input
-                  id="reference"
-                  value={formData.reference}
-                  onChange={(e) => handleFieldChange("reference", e.target.value)}
-                  placeholder="Référence de l'appel d'offres"
-                  disabled={!isEditing}
-                  data-testid="input-reference"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="client">Client *</Label>
-                <Input
-                  id="client"
-                  value={formData.client}
-                  onChange={(e) => handleFieldChange("client", e.target.value)}
-                  placeholder="Nom du client"
-                  disabled={!isEditing}
-                  data-testid="input-client"
-                />
-              </div>
+            <CardContent>
+              {isEditing ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="reference">Référence AO *</Label>
+                    <Input
+                      id="reference"
+                      value={formData.reference}
+                      onChange={(e) => handleFieldChange("reference", e.target.value)}
+                      placeholder="Référence de l'appel d'offres"
+                      data-testid="input-reference"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="client">Client *</Label>
+                    <Input
+                      id="client"
+                      value={formData.client}
+                      onChange={(e) => handleFieldChange("client", e.target.value)}
+                      placeholder="Nom du client"
+                      data-testid="input-client"
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="intitule">Intitulé de l'opération</Label>
-                <Input
-                  id="intitule"
-                  value={formData.intituleOperation}
-                  onChange={(e) => handleFieldChange("intituleOperation", e.target.value)}
-                  placeholder="Intitulé de l'opération"
-                  disabled={!isEditing}
-                  data-testid="input-intitule"
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="intitule">Intitulé de l'opération</Label>
+                    <Input
+                      id="intitule"
+                      value={formData.intituleOperation}
+                      onChange={(e) => handleFieldChange("intituleOperation", e.target.value)}
+                      placeholder="Intitulé de l'opération"
+                      data-testid="input-intitule"
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="type">Type de menuiserie *</Label>
-                <Select 
-                  value={formData.menuiserieType} 
-                  onValueChange={(value) => handleFieldChange("menuiserieType", value)}
-                  disabled={!isEditing}
-                >
-                  <SelectTrigger id="type" data-testid="select-menuiserie-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fenetre">Fenêtre</SelectItem>
-                    <SelectItem value="porte">Porte</SelectItem>
-                    <SelectItem value="portail">Portail</SelectItem>
-                    <SelectItem value="volet">Volet</SelectItem>
-                    <SelectItem value="cloison">Cloison</SelectItem>
-                    <SelectItem value="verriere">Verrière</SelectItem>
-                    <SelectItem value="autre">Autre</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div>
+                    <Label htmlFor="type">Type de menuiserie *</Label>
+                    <Select 
+                      value={formData.menuiserieType} 
+                      onValueChange={(value) => handleFieldChange("menuiserieType", value)}
+                    >
+                      <SelectTrigger id="type" data-testid="select-menuiserie-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fenetre">Fenêtre</SelectItem>
+                        <SelectItem value="porte">Porte</SelectItem>
+                        <SelectItem value="portail">Portail</SelectItem>
+                        <SelectItem value="volet">Volet</SelectItem>
+                        <SelectItem value="cloison">Cloison</SelectItem>
+                        <SelectItem value="verriere">Verrière</SelectItem>
+                        <SelectItem value="autre">Autre</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="md:col-span-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => handleFieldChange("description", e.target.value)}
-                  placeholder="Description détaillée de l'appel d'offres"
-                  rows={3}
-                  disabled={!isEditing}
-                  data-testid="textarea-description"
-                />
-              </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => handleFieldChange("description", e.target.value)}
+                      placeholder="Description détaillée de l'appel d'offres"
+                      rows={3}
+                      data-testid="textarea-description"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <Label className="text-sm text-gray-600">Référence</Label>
+                      <p className="font-medium">{formData.reference || "Non définie"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-gray-600">Client</Label>
+                      <p className="font-medium">{formData.client || "Non défini"}</p>
+                    </div>
+                  </div>
+                  
+                  {formData.intituleOperation && (
+                    <div>
+                      <Label className="text-sm text-gray-600">Intitulé de l'opération</Label>
+                      <p className="font-medium">{formData.intituleOperation}</p>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <Label className="text-sm text-gray-600">Type de menuiserie</Label>
+                    <p className="font-medium">
+                      {formData.menuiserieType === "fenetre" && "Fenêtre"}
+                      {formData.menuiserieType === "porte" && "Porte"}
+                      {formData.menuiserieType === "portail" && "Portail"}
+                      {formData.menuiserieType === "volet" && "Volet"}
+                      {formData.menuiserieType === "cloison" && "Cloison"}
+                      {formData.menuiserieType === "verriere" && "Verrière"}
+                      {formData.menuiserieType === "autre" && "Autre"}
+                    </p>
+                  </div>
+                  
+                  {formData.description && (
+                    <div>
+                      <Label className="text-sm text-gray-600">Description</Label>
+                      <p className="text-sm">{formData.description}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -450,30 +489,46 @@ export default function AoDetail() {
                 <span>Localisation</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <Label htmlFor="location">Adresse du chantier *</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => handleFieldChange("location", e.target.value)}
-                  placeholder="Adresse complète du chantier"
-                  disabled={!isEditing}
-                  data-testid="input-location"
-                />
-              </div>
+            <CardContent>
+              {isEditing ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <Label htmlFor="location">Adresse du chantier *</Label>
+                    <Input
+                      id="location"
+                      value={formData.location}
+                      onChange={(e) => handleFieldChange("location", e.target.value)}
+                      placeholder="Adresse complète du chantier"
+                      data-testid="input-location"
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="departement">Département *</Label>
-                <Input
-                  id="departement"
-                  value={formData.departement}
-                  onChange={(e) => handleFieldChange("departement", e.target.value)}
-                  placeholder="Ex: 59"
-                  disabled={!isEditing}
-                  data-testid="input-departement"
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="departement">Département *</Label>
+                    <Input
+                      id="departement"
+                      value={formData.departement}
+                      onChange={(e) => handleFieldChange("departement", e.target.value)}
+                      placeholder="Ex: 59"
+                      data-testid="input-departement"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm text-gray-600">Adresse du chantier</Label>
+                    <p className="font-medium">{formData.location || "Non définie"}</p>
+                  </div>
+                  
+                  {formData.departement && (
+                    <div>
+                      <Label className="text-sm text-gray-600">Département</Label>
+                      <p className="font-medium">{formData.departement}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -485,51 +540,88 @@ export default function AoDetail() {
                 <span>Dates importantes</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="dateLimite">Date limite de remise</Label>
-                <Input
-                  id="dateLimite"
-                  type="date"
-                  value={formData.dateLimiteRemise}
-                  onChange={(e) => handleFieldChange("dateLimiteRemise", e.target.value)}
-                  disabled={!isEditing}
-                  data-testid="input-date-limite"
-                />
-              </div>
+            <CardContent>
+              {isEditing ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="dateLimite">Date limite de remise</Label>
+                    <Input
+                      id="dateLimite"
+                      type="date"
+                      value={formData.dateLimiteRemise}
+                      onChange={(e) => handleFieldChange("dateLimiteRemise", e.target.value)}
+                      data-testid="input-date-limite"
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="dateSortie">Date sortie AO</Label>
-                <Input
-                  id="dateSortie"
-                  type="date"
-                  value={formData.dateSortieAO}
-                  onChange={(e) => handleFieldChange("dateSortieAO", e.target.value)}
-                  data-testid="input-date-sortie"
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="dateSortie">Date sortie AO</Label>
+                    <Input
+                      id="dateSortie"
+                      type="date"
+                      value={formData.dateSortieAO}
+                      onChange={(e) => handleFieldChange("dateSortieAO", e.target.value)}
+                      data-testid="input-date-sortie"
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="dateAcceptation">Date acceptation</Label>
-                <Input
-                  id="dateAcceptation"
-                  type="date"
-                  value={formData.dateAcceptationAO}
-                  onChange={(e) => handleFieldChange("dateAcceptationAO", e.target.value)}
-                  data-testid="input-date-acceptation"
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="dateAcceptation">Date acceptation</Label>
+                    <Input
+                      id="dateAcceptation"
+                      type="date"
+                      value={formData.dateAcceptationAO}
+                      onChange={(e) => handleFieldChange("dateAcceptationAO", e.target.value)}
+                      data-testid="input-date-acceptation"
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="demarrage">Démarrage prévu</Label>
-                <Input
-                  id="demarrage"
-                  type="date"
-                  value={formData.demarragePrevu}
-                  onChange={(e) => handleFieldChange("demarragePrevu", e.target.value)}
-                  data-testid="input-demarrage"
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="demarrage">Démarrage prévu</Label>
+                    <Input
+                      id="demarrage"
+                      type="date"
+                      value={formData.demarragePrevu}
+                      onChange={(e) => handleFieldChange("demarragePrevu", e.target.value)}
+                      data-testid="input-demarrage"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {formData.dateLimiteRemise && (
+                    <div>
+                      <Label className="text-sm text-gray-600">Date limite de remise</Label>
+                      <p className="font-medium">{new Date(formData.dateLimiteRemise).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  )}
+                  
+                  {formData.dateSortieAO && (
+                    <div>
+                      <Label className="text-sm text-gray-600">Date sortie AO</Label>
+                      <p className="font-medium">{new Date(formData.dateSortieAO).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  )}
+                  
+                  {formData.dateAcceptationAO && (
+                    <div>
+                      <Label className="text-sm text-gray-600">Date acceptation</Label>
+                      <p className="font-medium">{new Date(formData.dateAcceptationAO).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  )}
+                  
+                  {formData.demarragePrevu && (
+                    <div>
+                      <Label className="text-sm text-gray-600">Démarrage prévu</Label>
+                      <p className="font-medium">{new Date(formData.demarragePrevu).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  )}
+                  
+                  {!formData.dateLimiteRemise && !formData.dateSortieAO && !formData.dateAcceptationAO && !formData.demarragePrevu && (
+                    <p className="text-gray-500 text-sm">Aucune date définie</p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -541,196 +633,343 @@ export default function AoDetail() {
                 <span>Contacts</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Sélection du maître d'ouvrage */}
-              <div>
-                <Label>Maître d'ouvrage</Label>
-                <ContactSelector
-                  type="maitre-ouvrage"
-                  selectedContactId={selectedMaitreOuvrage?.id}
-                  onContactSelect={(contactId: string, contact: any) => {
-                    setSelectedMaitreOuvrage(contact);
-                    handleFieldChange("maitreOuvrageId", contactId);
-                  }}
-                  onCreateNew={() => setShowMaitreOuvrageForm(true)}
-                />
-              </div>
+            <CardContent>
+              {isEditing ? (
+                <div className="space-y-4">
+                  {/* Sélection du maître d'ouvrage */}
+                  <div>
+                    <Label>Maître d'ouvrage</Label>
+                    <ContactSelector
+                      type="maitre-ouvrage"
+                      selectedContactId={selectedMaitreOuvrage?.id}
+                      onContactSelect={(contactId: string, contact: any) => {
+                        setSelectedMaitreOuvrage(contact);
+                        handleFieldChange("maitreOuvrageId", contactId);
+                      }}
+                      onCreateNew={() => setShowMaitreOuvrageForm(true)}
+                    />
+                  </div>
 
-              {/* Sélection du maître d'œuvre */}
-              <div>
-                <Label>Maître d'œuvre</Label>
-                <ContactSelector
-                  type="maitre-oeuvre"
-                  selectedContactId={selectedMaitreOeuvre?.id}
-                  onContactSelect={(contactId: string, contact: any) => {
-                    setSelectedMaitreOeuvre(contact);
-                    handleFieldChange("maitreOeuvreId", contactId);
-                  }}
-                  onCreateNew={() => setShowMaitreOeuvreForm(true)}
-                />
-              </div>
+                  {/* Sélection du maître d'œuvre */}
+                  <div>
+                    <Label>Maître d'œuvre</Label>
+                    <ContactSelector
+                      type="maitre-oeuvre"
+                      selectedContactId={selectedMaitreOeuvre?.id}
+                      onContactSelect={(contactId: string, contact: any) => {
+                        setSelectedMaitreOeuvre(contact);
+                        handleFieldChange("maitreOeuvreId", contactId);
+                      }}
+                      onCreateNew={() => setShowMaitreOeuvreForm(true)}
+                    />
+                  </div>
 
-              {/* Contact spécifique AO */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="contactNom">Contact AO - Nom</Label>
-                  <Input
-                    id="contactNom"
-                    value={formData.contactAONom}
-                    onChange={(e) => handleFieldChange("contactAONom", e.target.value)}
-                    placeholder="Nom du contact pour cet AO"
-                    data-testid="input-contact-nom"
-                  />
+                  {/* Contact spécifique AO */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="contactNom">Contact AO - Nom</Label>
+                      <Input
+                        id="contactNom"
+                        value={formData.contactAONom}
+                        onChange={(e) => handleFieldChange("contactAONom", e.target.value)}
+                        placeholder="Nom du contact pour cet AO"
+                        data-testid="input-contact-nom"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="contactPoste">Contact AO - Poste</Label>
+                      <Input
+                        id="contactPoste"
+                        value={formData.contactAOPoste}
+                        onChange={(e) => handleFieldChange("contactAOPoste", e.target.value)}
+                        placeholder="Poste du contact"
+                        data-testid="input-contact-poste"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="contactTel">Contact AO - Téléphone</Label>
+                      <Input
+                        id="contactTel"
+                        value={formData.contactAOTelephone}
+                        onChange={(e) => handleFieldChange("contactAOTelephone", e.target.value)}
+                        placeholder="Téléphone du contact"
+                        data-testid="input-contact-tel"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="contactEmail">Contact AO - Email</Label>
+                      <Input
+                        id="contactEmail"
+                        type="email"
+                        value={formData.contactAOEmail}
+                        onChange={(e) => handleFieldChange("contactAOEmail", e.target.value)}
+                        placeholder="Email du contact"
+                        data-testid="input-contact-email"
+                      />
+                    </div>
+                  </div>
                 </div>
-
-                <div>
-                  <Label htmlFor="contactPoste">Contact AO - Poste</Label>
-                  <Input
-                    id="contactPoste"
-                    value={formData.contactAOPoste}
-                    onChange={(e) => handleFieldChange("contactAOPoste", e.target.value)}
-                    placeholder="Poste du contact"
-                    data-testid="input-contact-poste"
-                  />
+              ) : (
+                <div className="space-y-3">
+                  {selectedMaitreOuvrage && (
+                    <div>
+                      <Label className="text-sm text-gray-600">Maître d'ouvrage</Label>
+                      <p className="font-medium">{selectedMaitreOuvrage.nom}</p>
+                      {selectedMaitreOuvrage.ville && (
+                        <p className="text-sm text-gray-500">{selectedMaitreOuvrage.ville}</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {selectedMaitreOeuvre && (
+                    <div>
+                      <Label className="text-sm text-gray-600">Maître d'œuvre</Label>
+                      <p className="font-medium">{selectedMaitreOeuvre.nom}</p>
+                      {selectedMaitreOeuvre.typeOrganisation && (
+                        <p className="text-sm text-gray-500">{selectedMaitreOeuvre.typeOrganisation}</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {(formData.contactAONom || formData.contactAOEmail || formData.contactAOTelephone) && (
+                    <div>
+                      <Label className="text-sm text-gray-600">Contact AO</Label>
+                      {formData.contactAONom && (
+                        <p className="font-medium">{formData.contactAONom}</p>
+                      )}
+                      {formData.contactAOPoste && (
+                        <p className="text-sm text-gray-500">{formData.contactAOPoste}</p>
+                      )}
+                      <div className="flex flex-col text-sm text-gray-600">
+                        {formData.contactAOEmail && <span>{formData.contactAOEmail}</span>}
+                        {formData.contactAOTelephone && <span>{formData.contactAOTelephone}</span>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!selectedMaitreOuvrage && !selectedMaitreOeuvre && !formData.contactAONom && !formData.contactAOEmail && (
+                    <p className="text-gray-500 text-sm">Aucun contact défini</p>
+                  )}
                 </div>
-
-                <div>
-                  <Label htmlFor="contactTel">Contact AO - Téléphone</Label>
-                  <Input
-                    id="contactTel"
-                    value={formData.contactAOTelephone}
-                    onChange={(e) => handleFieldChange("contactAOTelephone", e.target.value)}
-                    placeholder="Téléphone du contact"
-                    data-testid="input-contact-tel"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="contactEmail">Contact AO - Email</Label>
-                  <Input
-                    id="contactEmail"
-                    type="email"
-                    value={formData.contactAOEmail}
-                    onChange={(e) => handleFieldChange("contactAOEmail", e.target.value)}
-                    placeholder="Email du contact"
-                    data-testid="input-contact-email"
-                  />
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Informations techniques et financières */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Building className="h-5 w-5" />
-                <span>Informations techniques et financières</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="montant">Montant estimé (€)</Label>
-                <Input
-                  id="montant"
-                  type="number"
-                  value={formData.montantEstime}
-                  onChange={(e) => handleFieldChange("montantEstime", e.target.value)}
-                  placeholder="Montant estimé en euros"
-                  data-testid="input-montant"
-                />
-              </div>
+          {(isEditing || formData.montantEstime || formData.bureauEtudes || formData.bureauControle || formData.sps || formData.typeMarche) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Building className="h-5 w-5" />
+                  <span>Informations techniques et financières</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isEditing ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="montant">Montant estimé (€)</Label>
+                      <Input
+                        id="montant"
+                        type="number"
+                        value={formData.montantEstime}
+                        onChange={(e) => handleFieldChange("montantEstime", e.target.value)}
+                        placeholder="Montant estimé en euros"
+                        data-testid="input-montant"
+                      />
+                    </div>
 
-              <div>
-                <Label htmlFor="typeMarche">Type de marché</Label>
-                <Select 
-                  value={formData.typeMarche} 
-                  onValueChange={(value) => handleFieldChange("typeMarche", value)}
-                >
-                  <SelectTrigger id="typeMarche" data-testid="select-type-marche">
-                    <SelectValue placeholder="Sélectionner le type de marché" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="public">Public</SelectItem>
-                    <SelectItem value="prive">Privé</SelectItem>
-                    <SelectItem value="ao_restreint">AO Restreint</SelectItem>
-                    <SelectItem value="ao_ouvert">AO Ouvert</SelectItem>
-                    <SelectItem value="marche_negocie">Marché Négocié</SelectItem>
-                    <SelectItem value="procedure_adaptee">Procédure Adaptée</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                    <div>
+                      <Label htmlFor="typeMarche">Type de marché</Label>
+                      <Select 
+                        value={formData.typeMarche} 
+                        onValueChange={(value) => handleFieldChange("typeMarche", value)}
+                      >
+                        <SelectTrigger id="typeMarche" data-testid="select-type-marche">
+                          <SelectValue placeholder="Sélectionner le type de marché" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="public">Public</SelectItem>
+                          <SelectItem value="prive">Privé</SelectItem>
+                          <SelectItem value="ao_restreint">AO Restreint</SelectItem>
+                          <SelectItem value="ao_ouvert">AO Ouvert</SelectItem>
+                          <SelectItem value="marche_negocie">Marché Négocié</SelectItem>
+                          <SelectItem value="procedure_adaptee">Procédure Adaptée</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-              <div>
-                <Label htmlFor="bureauEtudes">Bureau d'études</Label>
-                <Input
-                  id="bureauEtudes"
-                  value={formData.bureauEtudes}
-                  onChange={(e) => handleFieldChange("bureauEtudes", e.target.value)}
-                  placeholder="Nom du bureau d'études"
-                  data-testid="input-bureau-etudes"
-                />
-              </div>
+                    <div>
+                      <Label htmlFor="bureauEtudes">Bureau d'études</Label>
+                      <Input
+                        id="bureauEtudes"
+                        value={formData.bureauEtudes}
+                        onChange={(e) => handleFieldChange("bureauEtudes", e.target.value)}
+                        placeholder="Nom du bureau d'études"
+                        data-testid="input-bureau-etudes"
+                      />
+                    </div>
 
-              <div>
-                <Label htmlFor="bureauControle">Bureau de contrôle</Label>
-                <Input
-                  id="bureauControle"
-                  value={formData.bureauControle}
-                  onChange={(e) => handleFieldChange("bureauControle", e.target.value)}
-                  placeholder="Nom du bureau de contrôle"
-                  data-testid="input-bureau-controle"
-                />
-              </div>
+                    <div>
+                      <Label htmlFor="bureauControle">Bureau de contrôle</Label>
+                      <Input
+                        id="bureauControle"
+                        value={formData.bureauControle}
+                        onChange={(e) => handleFieldChange("bureauControle", e.target.value)}
+                        placeholder="Nom du bureau de contrôle"
+                        data-testid="input-bureau-controle"
+                      />
+                    </div>
 
-              <div>
-                <Label htmlFor="sps">SPS</Label>
-                <Input
-                  id="sps"
-                  value={formData.sps}
-                  onChange={(e) => handleFieldChange("sps", e.target.value)}
-                  placeholder="Nom du coordinateur SPS"
-                  data-testid="input-sps"
-                />
-              </div>
+                    <div>
+                      <Label htmlFor="sps">SPS</Label>
+                      <Input
+                        id="sps"
+                        value={formData.sps}
+                        onChange={(e) => handleFieldChange("sps", e.target.value)}
+                        placeholder="Nom du coordinateur SPS"
+                        data-testid="input-sps"
+                      />
+                    </div>
 
-              <div>
-                <Label htmlFor="source">Source de l'AO *</Label>
-                <Select 
-                  value={formData.source} 
-                  onValueChange={(value) => handleFieldChange("source", value)}
-                >
-                  <SelectTrigger id="source" data-testid="select-source">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mail">Email</SelectItem>
-                    <SelectItem value="phone">Téléphone</SelectItem>
-                    <SelectItem value="website">Site Web</SelectItem>
-                    <SelectItem value="partner">Partenaire</SelectItem>
-                    <SelectItem value="other">Autre</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+                    <div>
+                      <Label htmlFor="source">Source de l'AO *</Label>
+                      <Select 
+                        value={formData.source} 
+                        onValueChange={(value) => handleFieldChange("source", value)}
+                      >
+                        <SelectTrigger id="source" data-testid="select-source">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="mail">Email</SelectItem>
+                          <SelectItem value="phone">Téléphone</SelectItem>
+                          <SelectItem value="website">Site Web</SelectItem>
+                          <SelectItem value="partner">Partenaire</SelectItem>
+                          <SelectItem value="other">Autre</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {formData.montantEstime && (
+                      <div>
+                        <Label className="text-sm text-gray-600">Montant estimé</Label>
+                        <p className="font-medium">{parseFloat(formData.montantEstime).toLocaleString('fr-FR')} €</p>
+                      </div>
+                    )}
+                    
+                    {formData.typeMarche && (
+                      <div>
+                        <Label className="text-sm text-gray-600">Type de marché</Label>
+                        <p className="font-medium">
+                          {formData.typeMarche === "public" && "Public"}
+                          {formData.typeMarche === "prive" && "Privé"}
+                          {formData.typeMarche === "ao_restreint" && "AO Restreint"}
+                          {formData.typeMarche === "ao_ouvert" && "AO Ouvert"}
+                          {formData.typeMarche === "marche_negocie" && "Marché Négocié"}
+                          {formData.typeMarche === "procedure_adaptee" && "Procédure Adaptée"}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {formData.bureauEtudes && (
+                      <div>
+                        <Label className="text-sm text-gray-600">Bureau d'études</Label>
+                        <p className="font-medium">{formData.bureauEtudes}</p>
+                      </div>
+                    )}
+                    
+                    {formData.bureauControle && (
+                      <div>
+                        <Label className="text-sm text-gray-600">Bureau de contrôle</Label>
+                        <p className="font-medium">{formData.bureauControle}</p>
+                      </div>
+                    )}
+                    
+                    {formData.sps && (
+                      <div>
+                        <Label className="text-sm text-gray-600">SPS</Label>
+                        <p className="font-medium">{formData.sps}</p>
+                      </div>
+                    )}
+                    
+                    {formData.source && (
+                      <div>
+                        <Label className="text-sm text-gray-600">Source AO</Label>
+                        <p className="font-medium">
+                          {formData.source === "mail" && "Email"}
+                          {formData.source === "phone" && "Téléphone"}
+                          {formData.source === "website" && "Site Web"}
+                          {formData.source === "partner" && "Partenaire"}
+                          {formData.source === "other" && "Autre"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Gestion des lots */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Lots menuiserie</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <LotsManager
-                lots={lots}
-                onLotsChange={(updatedLots: Lot[]) => {
-                  setLots(updatedLots);
-                  // Sauvegarder les lots automatiquement
-                  // TODO: Implémenter la sauvegarde des lots
-                }}
-              />
-            </CardContent>
-          </Card>
+          {(isEditing || lots.length > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Lots menuiserie</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isEditing ? (
+                  <LotsManager
+                    lots={lots}
+                    onLotsChange={(updatedLots: Lot[]) => {
+                      setLots(updatedLots);
+                      // Sauvegarder les lots automatiquement
+                      // TODO: Implémenter la sauvegarde des lots
+                    }}
+                  />
+                ) : lots.length > 0 ? (
+                  <div className="space-y-3">
+                    {lots.map((lot, index) => (
+                      <div key={lot.id || index} className="border rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="font-medium">{lot.numero}</Label>
+                            <span className="text-sm text-gray-500 ml-2">-</span>
+                            <span className="text-sm ml-2">{lot.designation}</span>
+                          </div>
+                          {lot.montantEstime && (
+                            <span className="font-medium text-green-600">
+                              {parseFloat(lot.montantEstime).toLocaleString('fr-FR')} €
+                            </span>
+                          )}
+                        </div>
+                        {lot.menuiserieType && (
+                          <div className="mt-2">
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                              {lot.menuiserieType === "fenetre" && "Fenêtre"}
+                              {lot.menuiserieType === "porte" && "Porte"}
+                              {lot.menuiserieType === "portail" && "Portail"}
+                              {lot.menuiserieType === "volet" && "Volet"}
+                              {lot.menuiserieType === "cloison" && "Cloison"}
+                              {lot.menuiserieType === "verriere" && "Verrière"}
+                              {lot.menuiserieType === "autre" && "Autre"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">Aucun lot défini</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
 

@@ -79,6 +79,14 @@ const createOfferSchema = z.object({
   typeMarche: z.enum(["public", "prive", "ao_restreint", "ao_ouvert", "marche_negocie", "procedure_adaptee"]).optional(),
   prorataEventuel: z.string().optional(),
   
+  // Dates importantes
+  deadline: z.string().optional(),
+  demarragePrevu: z.string().optional(),
+  
+  // Contact maître d'ouvrage étendu
+  maitreOuvrageEmail: z.string().optional(),
+  maitreOuvragePhone: z.string().optional(),
+  
   // Éléments techniques
   bureauEtudes: z.string().optional(),
   bureauControle: z.string().optional(),
@@ -128,6 +136,11 @@ export default function CreateOffer() {
       client: "",
       location: "",
       menuiserieType: "fenetre",
+      deadline: "",
+      demarragePrevu: "",
+      maitreOuvrageEmail: "",
+      maitreOuvragePhone: "",
+      bureauEtudes: "",
       isPriority: false,
       urssafValide: false,
       assuranceDecennaleValide: false,
@@ -300,43 +313,79 @@ export default function CreateOffer() {
 
             if (analysis.success && analysis.extractedData) {
               const data = analysis.extractedData;
+              console.log('Pré-remplissage des champs avec:', data);
+              
+              // Créer une nouvelle référence si extraite du document
+              let newReference = data.reference;
+              if (!newReference && !form.getValues("reference")) {
+                // Générer une référence basée sur l'année courante si aucune extraite
+                const currentYear = new Date().getFullYear();
+                const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                newReference = `OFF-${currentYear}-${randomNum}`;
+              }
               
               // Pré-remplir automatiquement les champs du formulaire (zéro double saisie)
-              if (data.reference && !form.getValues("reference")) {
-                form.setValue("reference", data.reference);
+              // Utiliser setValue sans condition pour forcer la mise à jour
+              if (newReference) {
+                form.setValue("reference", newReference, { shouldValidate: true, shouldDirty: true });
+                console.log('Référence mise à jour:', newReference);
               }
               
-              if (data.client && !form.getValues("client")) {
-                form.setValue("client", data.client);
+              if (data.client) {
+                form.setValue("client", data.client, { shouldValidate: true, shouldDirty: true });
+                console.log('Client mis à jour:', data.client);
               }
               
-              if (data.location && !form.getValues("location")) {
-                form.setValue("location", data.location);
+              if (data.location) {
+                form.setValue("location", data.location, { shouldValidate: true, shouldDirty: true });
+                console.log('Location mise à jour:', data.location);
               }
               
-              if (data.deadlineDate && !form.getValues("deadline")) {
-                form.setValue("deadline", data.deadlineDate);
+              if (data.deadlineDate) {
+                // Convertir la date en format requis pour l'input date
+                const dateOnly = new Date(data.deadlineDate).toISOString().split('T')[0];
+                form.setValue("deadline", dateOnly, { shouldValidate: true, shouldDirty: true });
+                console.log('Deadline mise à jour:', dateOnly);
               }
               
-              if (data.startDate && !form.getValues("demarragePrevu")) {
-                form.setValue("demarragePrevu", data.startDate);
+              if (data.startDate) {
+                const dateOnly = new Date(data.startDate).toISOString().split('T')[0];
+                form.setValue("demarragePrevu", dateOnly, { shouldValidate: true, shouldDirty: true });
+                console.log('Démarrage prévu mis à jour:', dateOnly);
               }
               
-              if (data.estimatedAmount && !form.getValues("montantEstime")) {
-                form.setValue("montantEstime", data.estimatedAmount.toString());
+              if (data.estimatedAmount) {
+                form.setValue("montantEstime", data.estimatedAmount.toString(), { shouldValidate: true, shouldDirty: true });
+                console.log('Montant estimé mis à jour:', data.estimatedAmount);
               }
               
-              if (data.description && !form.getValues("intituleOperation")) {
-                form.setValue("intituleOperation", data.description);
+              if (data.description) {
+                form.setValue("intituleOperation", data.description, { shouldValidate: true, shouldDirty: true });
+                console.log('Intitulé opération mis à jour:', data.description);
               }
               
-              if (data.technicalRequirements && !form.getValues("elementsImportants")) {
-                form.setValue("elementsImportants", data.technicalRequirements);
+              if (data.technicalRequirements) {
+                form.setValue("bureauEtudes", data.technicalRequirements, { shouldValidate: true, shouldDirty: true });
+                console.log('Bureau d\'études mis à jour:', data.technicalRequirements);
               }
               
-              if (data.contactPerson && !form.getValues("maitreOuvrageContact")) {
-                form.setValue("maitreOuvrageContact", data.contactPerson);
+              if (data.contactPerson) {
+                form.setValue("maitreOuvrageContact", data.contactPerson, { shouldValidate: true, shouldDirty: true });
+                console.log('Contact maître d\'ouvrage mis à jour:', data.contactPerson);
               }
+              
+              if (data.contactEmail) {
+                form.setValue("maitreOuvrageEmail", data.contactEmail, { shouldValidate: true, shouldDirty: true });
+                console.log('Email maître d\'ouvrage mis à jour:', data.contactEmail);
+              }
+              
+              if (data.contactPhone) {
+                form.setValue("maitreOuvragePhone", data.contactPhone, { shouldValidate: true, shouldDirty: true });
+                console.log('Téléphone maître d\'ouvrage mis à jour:', data.contactPhone);
+              }
+
+              // Forcer la mise à jour de l'interface
+              form.trigger();
 
               toast({
                 title: "Analyse terminée",

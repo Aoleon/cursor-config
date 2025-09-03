@@ -10,6 +10,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Save, 
   FileText, 
@@ -32,7 +34,10 @@ import {
   Settings, 
   CheckCircle,
   AlertCircle,
-  ArrowLeft
+  ArrowLeft,
+  Upload,
+  Archive,
+  FileCheck
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -100,6 +105,8 @@ export default function CreateOffer() {
   const [_, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [selectedAoId, setSelectedAoId] = useState<string>("");
+  const [creationMethod, setCreationMethod] = useState<"ao" | "import">("ao");
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; size: number; uploadURL: string }>>([]);
 
   // Récupérer les AO pour le sélecteur
   const { data: aos = [], isLoading: aosLoading } = useQuery<any[]>({
@@ -131,23 +138,34 @@ export default function CreateOffer() {
     },
   });
 
-  // Mutation pour créer l'offre
+  // Mutation pour créer l'offre avec arborescence documentaire
   const createOfferMutation = useMutation({
-    mutationFn: async (data: CreateOfferFormData) => {
-      return await apiRequest("/api/offers", {
+    mutationFn: async (data: CreateOfferFormData & { uploadedFiles?: Array<{name: string; size: number; uploadURL: string}> }) => {
+      const response = await fetch("/api/offers/create-with-structure", {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          uploadedFiles,
+          creationMethod,
+        }),
         headers: {
           "Content-Type": "application/json",
         },
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create offer');
+      }
+      
+      return response.json();
     },
     onSuccess: (newOffer: any) => {
       toast({
         title: "Dossier d'offre créé",
-        description: `Le dossier ${newOffer.reference} a été créé avec succès.`,
+        description: `Le dossier ${newOffer.reference} a été créé avec succès. Arborescence documentaire générée automatiquement.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       setLocation("/offers");
     },
     onError: (error: any) => {
@@ -207,7 +225,66 @@ export default function CreateOffer() {
   }, [selectedAoId, aos, form, toast]);
 
   const onSubmit = (data: CreateOfferFormData) => {
-    createOfferMutation.mutate(data);
+    // Validation spéciale pour la date limite obligatoire
+    if (!data.deadline || data.deadline.trim() === '') {
+      toast({
+        title: "Date limite requise",
+        description: "La date limite de remise AO est obligatoire pour créer le jalon planning.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createOfferMutation.mutate({
+      ...data,
+      uploadedFiles: uploadedFiles.length > 0 ? uploadedFiles : undefined,
+    });
+  };
+
+  // Gestionnaire pour l'upload de fichiers
+  const handleGetUploadParameters = async () => {
+    const response = await fetch("/api/objects/upload", { 
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to get upload parameters');
+    }
+    
+    const data = await response.json();
+    return {
+      method: "PUT" as const,
+      url: data.uploadURL,
+    };
+  };
+
+  const handleUploadComplete = (result: any) => {
+    if (result.successful && result.successful.length > 0) {
+      const newFiles = result.successful.map((file: any) => ({
+        name: file.name,
+        size: file.size,
+        uploadURL: file.uploadURL,
+      }));
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+      
+      toast({
+        title: "Fichier importé",
+        description: `${newFiles.length} fichier(s) importé(s) avec succès.`,
+      });
+      
+      // Si c'est un import de fichier, essayer d'extraire des infos
+      if (creationMethod === "import" && newFiles.length > 0) {
+        // Pour le POC, on va pré-remplir des champs basiques
+        if (!form.getValues("reference")) {
+          const currentYear = new Date().getFullYear();
+          const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+          form.setValue("reference", `OFF-${currentYear}-${randomNum}`);
+        }
+      }
+    }
   };
 
   // Calculer le pourcentage de complétude du formulaire
@@ -247,15 +324,15 @@ export default function CreateOffer() {
         />
         
         <div className="px-6 py-6">
-          {/* Barre de progression et sélection AO */}
+          {/* Points d'entrée : AO existant ou import fichier */}
           <div className="mb-6 space-y-4">
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg">Récupération assistée depuis AO</CardTitle>
+                    <CardTitle className="text-lg">Création de dossier d'offre</CardTitle>
                     <p className="text-sm text-gray-500 mt-1">
-                      Sélectionnez un appel d'offres pour pré-remplir automatiquement le formulaire (zéro double saisie)
+                      Choisissez votre méthode de création (zéro double saisie garantie)
                     </p>
                   </div>
                   <div className="text-right">
@@ -264,27 +341,91 @@ export default function CreateOffer() {
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-4 mt-4">
-                  <Label htmlFor="ao-select" className="whitespace-nowrap">Appel d'offres :</Label>
-                  <Select value={selectedAoId} onValueChange={setSelectedAoId}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Sélectionner un AO existant pour pré-remplir..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {aos.map((ao) => (
-                        <SelectItem key={ao.id} value={ao.id}>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium">{ao.reference}</span>
-                            <span>-</span>
-                            <span>{ao.client}</span>
-                            <span>-</span>
-                            <span className="text-gray-500">{ao.location}</span>
+                <Tabs value={creationMethod} onValueChange={(value: any) => setCreationMethod(value)} className="mt-4">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="ao" className="flex items-center space-x-2">
+                      <FileText className="h-4 w-4" />
+                      <span>Depuis AO existant</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="import" className="flex items-center space-x-2">
+                      <Upload className="h-4 w-4" />
+                      <span>Import ZIP/PDF</span>
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="ao" className="mt-4 space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <Label htmlFor="ao-select" className="whitespace-nowrap">Appel d'offres :</Label>
+                      <Select value={selectedAoId} onValueChange={setSelectedAoId}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sélectionner un AO existant pour pré-remplir..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {aos.map((ao) => (
+                            <SelectItem key={ao.id} value={ao.id}>
+                              <div className="flex items-center space-x-2">
+                                <span className="font-medium">{ao.reference}</span>
+                                <span>-</span>
+                                <span>{ao.client}</span>
+                                <span>-</span>
+                                <span className="text-gray-500">{ao.location}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="import" className="mt-4 space-y-4">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                      <div className="text-center space-y-4">
+                        <div className="flex justify-center">
+                          <Archive className="h-12 w-12 text-gray-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-medium">Import DCE</h3>
+                          <p className="text-sm text-gray-500 mt-1">
+                            Téléchargez un fichier ZIP ou PDF contenant le DCE (Dossier de Consultation des Entreprises)
+                          </p>
+                        </div>
+                        
+                        <ObjectUploader
+                          maxNumberOfFiles={5}
+                          maxFileSize={50 * 1024 * 1024} // 50MB
+                          acceptedFileTypes={['.zip', '.pdf', '.doc', '.docx']}
+                          onGetUploadParameters={handleGetUploadParameters}
+                          onComplete={handleUploadComplete}
+                          buttonClassName="w-full"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Sélectionner des fichiers
+                        </ObjectUploader>
+                        
+                        {uploadedFiles.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            <h4 className="font-medium text-sm">Fichiers importés :</h4>
+                            {uploadedFiles.map((file, index) => (
+                              <div key={index} className="flex items-center justify-between bg-green-50 p-2 rounded border">
+                                <div className="flex items-center space-x-2">
+                                  <FileCheck className="h-4 w-4 text-green-600" />
+                                  <span className="text-sm font-medium">{file.name}</span>
+                                  <span className="text-xs text-gray-500">
+                                    ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                        )}
+                        
+                        <p className="text-xs text-gray-400">
+                          Types acceptés : ZIP, PDF, DOC, DOCX • Taille max : 50MB par fichier
+                        </p>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
                 
                 <Progress value={completeness} className="h-2 mt-4" />
               </CardHeader>
@@ -397,13 +538,20 @@ export default function CreateOffer() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="deadline">Échéance BE</Label>
+                    <Label htmlFor="deadline">Date limite remise AO *</Label>
                     <Input
                       id="deadline"
                       data-testid="input-deadline"
                       type="date"
                       {...form.register("deadline")}
+                      className="border-orange-200 focus:border-orange-500"
                     />
+                    <p className="text-xs text-orange-600 mt-1">
+                      Obligatoire - Alimente automatiquement le planning avec le jalon "Rendu AO"
+                    </p>
+                    {form.formState.errors.deadline && (
+                      <p className="text-sm text-red-600 mt-1">Date limite requise</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -784,13 +932,20 @@ export default function CreateOffer() {
               </Button>
               
               <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-500">
-                  Formulaire complété à {completeness}%
+                <div className="text-sm text-gray-500 space-y-1">
+                  <div>Formulaire complété à {completeness}%</div>
+                  {creationMethod === "import" && uploadedFiles.length > 0 && (
+                    <div className="flex items-center space-x-1 text-green-600">
+                      <FileCheck className="h-3 w-3" />
+                      <span className="text-xs">{uploadedFiles.length} fichier(s) importé(s)</span>
+                    </div>
+                  )}
                 </div>
                 <Button
                   type="submit"
                   disabled={createOfferMutation.isPending}
                   data-testid="button-submit"
+                  className="min-w-[200px]"
                 >
                   {createOfferMutation.isPending ? (
                     <>

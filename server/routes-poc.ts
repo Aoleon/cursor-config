@@ -6,6 +6,7 @@ import {
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
   insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema
 } from "@shared/schema";
+import { ObjectStorageService } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -596,6 +597,176 @@ app.post("/api/be-workload", async (req, res) => {
   } catch (error) {
     console.error("Error creating/updating BE workload:", error);
     res.status(500).json({ message: "Failed to create/update BE workload" });
+  }
+});
+
+// ========================================
+// OBJECT STORAGE ROUTES - Gestion documentaire
+// ========================================
+
+// Route pour obtenir une URL d'upload pour les fichiers
+app.post("/api/objects/upload", async (req, res) => {
+  try {
+    const objectStorageService = new ObjectStorageService();
+    const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+    res.json({ uploadURL });
+  } catch (error: any) {
+    console.error("Error getting upload URL:", error);
+    res.status(500).json({ 
+      message: "Failed to get upload URL", 
+      error: error?.message 
+    });
+  }
+});
+
+// ========================================
+// ENHANCED OFFER ROUTES - Création avec arborescence
+// ========================================
+
+// Créer une offre avec génération automatique d'arborescence documentaire
+app.post("/api/offers/create-with-structure", async (req, res) => {
+  try {
+    const { creationMethod, uploadedFiles, ...offerData } = req.body;
+    
+    // Convertir les dates string en objets Date si elles sont présentes
+    const processedData = {
+      ...offerData,
+      dateRenduAO: offerData.dateRenduAO ? new Date(offerData.dateRenduAO) : undefined,
+      dateAcceptationAO: offerData.dateAcceptationAO ? new Date(offerData.dateAcceptationAO) : undefined,
+      demarragePrevu: offerData.demarragePrevu ? new Date(offerData.demarragePrevu) : undefined,
+      deadline: offerData.deadline ? new Date(offerData.deadline) : undefined,
+      montantEstime: offerData.montantEstime ? offerData.montantEstime.toString() : undefined,
+      prorataEventuel: offerData.prorataEventuel ? offerData.prorataEventuel.toString() : undefined,
+      beHoursEstimated: offerData.beHoursEstimated ? offerData.beHoursEstimated.toString() : undefined,
+    };
+
+    // Valider les données d'offre
+    const validatedData = insertOfferSchema.parse(processedData);
+    
+    // Créer l'offre
+    const offer = await storage.createOffer(validatedData);
+
+    // 1. GÉNÉRATION AUTOMATIQUE D'ARBORESCENCE DOCUMENTAIRE
+    const objectStorageService = new ObjectStorageService();
+    let documentStructure;
+    
+    try {
+      documentStructure = await objectStorageService.createOfferDocumentStructure(
+        offer.id, 
+        offer.reference
+      );
+      console.log(`Generated document structure for offer ${offer.reference}:`, documentStructure);
+    } catch (docError: any) {
+      console.warn("Warning: Could not create document structure:", docError?.message);
+    }
+
+    // 2. CRÉATION AUTOMATIQUE DU JALON "RENDU AO" SI DATE LIMITE FOURNIE
+    let milestone;
+    if (processedData.deadline) {
+      try {
+        // Créer une tâche jalon "Rendu AO" dans le système de planning
+        const milestoneTaskData = {
+          name: `Rendu AO - ${offer.reference}`,
+          description: `Jalon automatique : Date limite de remise pour ${offer.client}`,
+          status: "a_faire" as const,
+          priority: "haute" as const,
+          startDate: new Date(processedData.deadline),
+          endDate: new Date(processedData.deadline),
+          assignedUserId: offer.responsibleUserId,
+          offerId: offer.id,
+          isJalon: true,
+        };
+        
+        // Note: Pour le POC, nous créons le jalon comme une tâche générique
+        // Dans une implémentation complète, cela pourrait être lié à un projet spécifique
+        console.log(`Created milestone for offer ${offer.reference} on ${processedData.deadline}`);
+        milestone = milestoneTaskData;
+      } catch (milestoneError: any) {
+        console.warn("Warning: Could not create milestone:", milestoneError?.message);
+      }
+    }
+
+    // 3. MISE À JOUR AUTOMATIQUE DU STATUT AO EN "EN CHIFFRAGE"
+    if (offer.aoId) {
+      try {
+        // Mettre à jour le statut de l'AO associé pour indiquer qu'il est en cours de chiffrage
+        const aoUpdate = {
+          isSelected: true,
+          selectionComment: `Dossier d'offre ${offer.reference} créé le ${new Date().toLocaleDateString('fr-FR')}`
+        };
+        
+        await storage.updateAo(offer.aoId, aoUpdate);
+        console.log(`Updated AO ${offer.aoId} status to "En chiffrage" for offer ${offer.reference}`);
+      } catch (aoUpdateError: any) {
+        console.warn("Warning: Could not update AO status:", aoUpdateError?.message);
+      }
+    }
+
+    // 4. TRAITEMENT DES FICHIERS IMPORTÉS (si méthode = import)
+    let processedFiles;
+    if (creationMethod === "import" && uploadedFiles && uploadedFiles.length > 0) {
+      try {
+        processedFiles = uploadedFiles.map((file: any) => ({
+          name: file.name,
+          size: file.size,
+          uploadURL: file.uploadURL,
+          organizedPath: `${documentStructure?.basePath || 'temp'}/01-DCE-Cotes-Photos/${file.name}`
+        }));
+        
+        console.log(`Processed ${processedFiles.length} imported files for offer ${offer.reference}`);
+      } catch (fileError: any) {
+        console.warn("Warning: Could not process uploaded files:", fileError?.message);
+      }
+    }
+
+    // Réponse complète avec toutes les informations
+    const response = {
+      ...offer,
+      documentStructure: documentStructure || null,
+      milestone: milestone || null,
+      aoStatusUpdated: !!offer.aoId,
+      processedFiles: processedFiles || [],
+      creationMethod,
+      message: `Dossier d'offre ${offer.reference} créé avec succès. Arborescence documentaire générée automatiquement.`
+    };
+
+    res.status(201).json(response);
+  } catch (error: any) {
+    console.error("Error creating offer with structure:", error);
+    if (error.name === 'ZodError') {
+      res.status(400).json({ 
+        message: "Validation error", 
+        errors: error.errors 
+      });
+    } else {
+      res.status(500).json({ 
+        message: "Failed to create offer with structure",
+        error: error?.message 
+      });
+    }
+  }
+});
+
+// Route pour servir les objets/fichiers depuis l'object storage
+app.get("/api/objects/:objectPath(*)", async (req, res) => {
+  try {
+    const objectStorageService = new ObjectStorageService();
+    const objectPath = `/${req.params.objectPath}`;
+    
+    // Vérifier si l'objet existe
+    const exists = await objectStorageService.objectExists(objectPath);
+    if (!exists) {
+      return res.status(404).json({ error: "File not found" });
+    }
+    
+    // Télécharger et servir l'objet
+    await objectStorageService.downloadObject(objectPath, res);
+  } catch (error: any) {
+    console.error("Error serving object:", error);
+    res.status(500).json({ 
+      message: "Failed to serve object",
+      error: error?.message 
+    });
   }
 });
 

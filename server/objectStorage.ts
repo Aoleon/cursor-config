@@ -1,0 +1,277 @@
+import { Response } from "express";
+import { randomUUID } from "crypto";
+
+const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+
+export class ObjectNotFoundError extends Error {
+  constructor() {
+    super("Object not found");
+    this.name = "ObjectNotFoundError";
+    Object.setPrototypeOf(this, ObjectNotFoundError.prototype);
+  }
+}
+
+// The object storage service is used to interact with the object storage service.
+export class ObjectStorageService {
+  constructor() {}
+
+  // Gets the public object search paths.
+  getPublicObjectSearchPaths(): Array<string> {
+    const pathsStr = process.env.PUBLIC_OBJECT_SEARCH_PATHS || "";
+    const paths = Array.from(
+      new Set(
+        pathsStr
+          .split(",")
+          .map((path) => path.trim())
+          .filter((path) => path.length > 0)
+      )
+    );
+    if (paths.length === 0) {
+      throw new Error(
+        "PUBLIC_OBJECT_SEARCH_PATHS not set. Create a bucket in 'Object Storage' " +
+          "tool and set PUBLIC_OBJECT_SEARCH_PATHS env var (comma-separated paths)."
+      );
+    }
+    return paths;
+  }
+
+  // Gets the private object directory.
+  getPrivateObjectDir(): string {
+    const dir = process.env.PRIVATE_OBJECT_DIR || "";
+    if (!dir) {
+      throw new Error(
+        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
+          "tool and set PRIVATE_OBJECT_DIR env var."
+      );
+    }
+    return dir;
+  }
+
+  // Downloads an object from storage via Replit sidecar
+  async downloadObject(objectPath: string, res: Response) {
+    try {
+      // Use Replit's sidecar to get the file
+      const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/get-object`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ object_path: objectPath }),
+      });
+
+      if (!response.ok) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      // Stream the response to client
+      const contentType = response.headers.get('content-type') || 'application/octet-stream';
+      const contentLength = response.headers.get('content-length');
+
+      res.set({
+        "Content-Type": contentType,
+        ...(contentLength && { "Content-Length": contentLength }),
+        "Cache-Control": "private, max-age=3600",
+      });
+
+      if (response.body) {
+        const reader = response.body.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(value);
+        }
+      }
+      
+      res.end();
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Error downloading file" });
+      }
+    }
+  }
+
+  // Gets the upload URL for an object entity.
+  async getObjectEntityUploadURL(): Promise<string> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    if (!privateObjectDir) {
+      throw new Error(
+        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
+          "tool and set PRIVATE_OBJECT_DIR env var."
+      );
+    }
+
+    const objectId = randomUUID();
+    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
+
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+
+    // Sign URL for PUT method with TTL
+    return signObjectURL({
+      bucketName,
+      objectName,
+      method: "PUT",
+      ttlSec: 900,
+    });
+  }
+
+  // Checks if an object exists in storage
+  async objectExists(objectPath: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/object-exists`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ object_path: objectPath }),
+      });
+      
+      if (!response.ok) return false;
+      const data = await response.json();
+      return data.exists === true;
+    } catch (error) {
+      console.error("Error checking object existence:", error);
+      return false;
+    }
+  }
+
+  normalizeObjectEntityPath(rawPath: string): string {
+    if (!rawPath.startsWith("https://storage.googleapis.com/")) {
+      return rawPath;
+    }
+  
+    const url = new URL(rawPath);
+    const rawObjectPath = url.pathname;
+  
+    let objectEntityDir = this.getPrivateObjectDir();
+    if (!objectEntityDir.endsWith("/")) {
+      objectEntityDir = `${objectEntityDir}/`;
+    }
+  
+    if (!rawObjectPath.startsWith(objectEntityDir)) {
+      return rawObjectPath;
+    }
+
+    const entityId = rawObjectPath.slice(objectEntityDir.length);
+    return `/objects/${entityId}`;
+  }
+
+  // Create offer document structure with organized folders
+  async createOfferDocumentStructure(offerId: string, offerReference: string): Promise<{ basePath: string; folders: string[] }> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const basePath = `${privateObjectDir}/offers/${offerId}`;
+    
+    // Standard folder structure for offers per POC spec
+    const folders = [
+      '01-DCE-Cotes-Photos',
+      '02-Etudes-fournisseurs', 
+      '03-Devis-pieces-administratives'
+    ];
+    
+    // Create folder structure by uploading empty .gitkeep files via Replit sidecar
+    for (const folder of folders) {
+      const keepFilePath = `${basePath}/${folder}/.gitkeep`;
+      const { bucketName, objectName } = parseObjectPath(keepFilePath);
+      
+      try {
+        // Upload empty file to create folder structure
+        const uploadUrl = await signObjectURL({
+          bucketName,
+          objectName,
+          method: "PUT",
+          ttlSec: 300,
+        });
+
+        await fetch(uploadUrl, {
+          method: "PUT",
+          body: '',
+          headers: {
+            'Content-Type': 'text/plain',
+            'x-goog-meta-offer-id': offerId,
+            'x-goog-meta-offer-reference': offerReference,
+            'x-goog-meta-folder-type': folder,
+            'x-goog-meta-auto-generated': 'true'
+          }
+        });
+      } catch (error) {
+        console.error(`Error creating folder ${folder}:`, error);
+      }
+    }
+    
+    return { basePath, folders };
+  }
+
+  // Get upload URL for specific offer folder
+  async getOfferFileUploadURL(offerId: string, folderName: string, fileName: string): Promise<string> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const filePath = `${privateObjectDir}/offers/${offerId}/${folderName}/${fileName}`;
+    
+    const { bucketName, objectName } = parseObjectPath(filePath);
+
+    return signObjectURL({
+      bucketName,
+      objectName,
+      method: "PUT",
+      ttlSec: 900,
+    });
+  }
+}
+
+function parseObjectPath(path: string): {
+  bucketName: string;
+  objectName: string;
+} {
+  if (!path.startsWith("/")) {
+    path = `/${path}`;
+  }
+  const pathParts = path.split("/");
+  if (pathParts.length < 3) {
+    throw new Error("Invalid path: must contain at least a bucket name");
+  }
+
+  const bucketName = pathParts[1];
+  const objectName = pathParts.slice(2).join("/");
+
+  return {
+    bucketName,
+    objectName,
+  };
+}
+
+async function signObjectURL({
+  bucketName,
+  objectName,
+  method,
+  ttlSec,
+}: {
+  bucketName: string;
+  objectName: string;
+  method: "GET" | "PUT" | "DELETE" | "HEAD";
+  ttlSec: number;
+}): Promise<string> {
+  const request = {
+    bucket_name: bucketName,
+    object_name: objectName,
+    method,
+    expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
+  };
+  const response = await fetch(
+    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    }
+  );
+  if (!response.ok) {
+    throw new Error(
+      `Failed to sign object URL, errorcode: ${response.status}, ` +
+        `make sure you're running on Replit`
+    );
+  }
+
+  const { signed_url: signedURL } = await response.json();
+  return signedURL;
+}

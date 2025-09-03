@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import { 
   Wrench, 
   FolderOpen, 
@@ -13,13 +15,64 @@ import {
   Truck, 
   TrendingUp, 
   AlertTriangle,
-  LogOut 
+  LogOut,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Upload,
+  ClipboardList,
+  DollarSign,
+  Send,
+  CheckCircle,
+  ArrowRight,
+  Search,
+  Building,
+  Package,
+  HardHat,
+  Headphones
 } from "lucide-react";
 
-const navigation = [
+interface SubMenuItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  description: string;
+}
+
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  subItems?: SubMenuItem[];
+}
+
+const navigation: NavigationItem[] = [
   { name: "Tableau de Bord", href: "/", icon: TrendingUp },
-  { name: "Appels d'Offre", href: "/offers", icon: FolderOpen },
-  { name: "Projets", href: "/projects", icon: Projector },
+  { 
+    name: "Appels d'Offre", 
+    href: "/offers", 
+    icon: FolderOpen,
+    subItems: [
+      { name: "Import / OCR", href: "/offers/import", icon: Upload, description: "Réception et analyse PDF" },
+      { name: "Création dossier", href: "/offers/create", icon: FileText, description: "Nouveau dossier d'offre" },
+      { name: "Chiffrage", href: "/offers/chiffrage", icon: Calculator, description: "Module de chiffrage détaillé" },
+      { name: "Demandes fournisseurs", href: "/offers/suppliers", icon: Send, description: "Consultation fournisseurs" },
+      { name: "Validation BE", href: "/offers/validation", icon: CheckCircle, description: "Validation fin d'études" },
+      { name: "Transformation", href: "/offers/transform", icon: ArrowRight, description: "Passage en projet" },
+    ]
+  },
+  { 
+    name: "Projets", 
+    href: "/projects", 
+    icon: Projector,
+    subItems: [
+      { name: "Étude", href: "/projects/study", icon: Search, description: "Phase d'étude technique" },
+      { name: "Planification", href: "/projects/planning", icon: Calendar, description: "Planning et jalons" },
+      { name: "Approvisionnement", href: "/projects/supply", icon: Package, description: "Commandes et logistique" },
+      { name: "Chantier", href: "/projects/worksite", icon: HardHat, description: "Suivi chantier" },
+      { name: "SAV", href: "/projects/support", icon: Headphones, description: "Service après-vente" },
+    ]
+  },
   { name: "Équipes", href: "/teams", icon: Users },
   { name: "Fournisseurs", href: "/suppliers", icon: Truck },
 ];
@@ -32,6 +85,15 @@ const beNavigation = [
 export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
+  const toggleExpanded = (itemName: string) => {
+    setExpandedItems(prev => 
+      prev.includes(itemName)
+        ? prev.filter(name => name !== itemName)
+        : [...prev, itemName]
+    );
+  };
 
   return (
     <aside className="w-64 bg-white shadow-card flex flex-col">
@@ -47,30 +109,91 @@ export default function Sidebar() {
         </div>
       </div>
       
-      <nav className="flex-1 mt-6">
+      <nav className="flex-1 mt-6 overflow-y-auto">
         <div className="px-3">
           <div className="space-y-1">
             {navigation.map((item) => {
-              const isActive = location === item.href;
+              const isActive = location === item.href || location.startsWith(item.href + "/");
+              const isExpanded = expandedItems.includes(item.name);
+              const hasSubItems = item.subItems && item.subItems.length > 0;
+
               return (
-                <Link key={item.name} href={item.href}>
+                <div key={item.name}>
                   <div
                     className={cn(
-                      "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                      "group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer",
                       isActive
                         ? "bg-primary-light text-primary"
                         : "text-gray-700 hover:bg-gray-100"
                     )}
+                    onClick={() => {
+                      if (hasSubItems) {
+                        toggleExpanded(item.name);
+                      }
+                    }}
                   >
-                    <item.icon
-                      className={cn(
-                        "mr-3 text-base",
-                        isActive ? "text-primary" : "text-gray-400"
-                      )}
-                    />
-                    {item.name}
+                    <Link href={item.href} className="flex items-center flex-1">
+                      <div className="flex items-center">
+                        <item.icon
+                          className={cn(
+                            "mr-3 text-base",
+                            isActive ? "text-primary" : "text-gray-400"
+                          )}
+                        />
+                        {item.name}
+                      </div>
+                    </Link>
+                    {hasSubItems && (
+                      <button
+                        className="ml-auto p-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpanded(item.name);
+                        }}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
                   </div>
-                </Link>
+                  
+                  {hasSubItems && isExpanded && (
+                    <div className="mt-1 ml-4 space-y-1">
+                      {item.subItems?.map((subItem) => {
+                        const isSubActive = location === subItem.href;
+                        return (
+                          <Link key={subItem.name} href={subItem.href}>
+                            <div
+                              className={cn(
+                                "group flex items-center px-3 py-2 text-xs rounded-md transition-colors cursor-pointer",
+                                isSubActive
+                                  ? "bg-primary-light/50 text-primary"
+                                  : "text-gray-600 hover:bg-gray-50"
+                              )}
+                              title={subItem.description}
+                            >
+                              <subItem.icon
+                                className={cn(
+                                  "mr-2 text-sm",
+                                  isSubActive ? "text-primary" : "text-gray-400"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{subItem.name}</span>
+                                <span className="text-xs text-gray-500 mt-0.5">
+                                  {subItem.description}
+                                </span>
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

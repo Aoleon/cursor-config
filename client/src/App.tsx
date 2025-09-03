@@ -20,6 +20,9 @@ import CreateOffer from "@/pages/create-offer";
 import CreateAO from "@/pages/create-ao";
 import AoDetail from "@/pages/ao-detail";
 import Chiffrage from "@/pages/chiffrage";
+// Import des nouvelles pages pour les sous-étapes
+import ImportOCR from "@/pages/offers/import";
+import ProjectPlanning from "@/pages/projects/planning";
 
 function Router() {
   // Temporarily disable authentication for development
@@ -32,9 +35,22 @@ function Router() {
       <Route path="/offers/:id" component={OfferDetail} />
       <Route path="/offers/:id/edit" component={AoDetail} />
       <Route path="/offers/:id/chiffrage" component={Chiffrage} />
+      {/* Sous-étapes des Appels d'Offres */}
+      <Route path="/offers/import" component={ImportOCR} />
+      <Route path="/offers/create" component={CreateAO} />
+      <Route path="/offers/chiffrage" component={Chiffrage} />
+      <Route path="/offers/suppliers" component={Suppliers} />
+      <Route path="/offers/validation" component={BEDashboard} />
+      <Route path="/offers/transform" component={CreateOffer} />
       <Route path="/projects" component={Projects} />
       <Route path="/projects/:id" component={ProjectDetail} />
       <Route path="/projects/:id/planning" component={Planning} />
+      {/* Sous-étapes des Projets */}
+      <Route path="/projects/study" component={Projects} />
+      <Route path="/projects/planning" component={ProjectPlanning} />
+      <Route path="/projects/supply" component={Suppliers} />
+      <Route path="/projects/worksite" component={Projects} />
+      <Route path="/projects/support" component={Projects} />
       <Route path="/teams" component={Teams} />
       <Route path="/suppliers" component={Suppliers} />
       <Route path="/be-dashboard" component={BEDashboard} />

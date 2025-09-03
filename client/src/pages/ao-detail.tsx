@@ -14,7 +14,8 @@ import { LotsManager } from "@/components/ao/LotsManager";
 import { ContactSelector } from "@/components/contacts/ContactSelector";
 import { MaitreOuvrageForm } from "@/components/contacts/MaitreOuvrageForm";
 import { MaitreOeuvreForm } from "@/components/contacts/MaitreOeuvreForm";
-import { FileText, Calendar, MapPin, User, Building, Save, ArrowLeft, Calculator, Edit, X } from "lucide-react";
+import { FileText, Calendar, MapPin, User, Building, Save, ArrowLeft, Calculator, Edit, X, CheckCircle, Euro } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Lot {
   id?: string;
@@ -34,6 +35,7 @@ export default function AoDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lots, setLots] = useState<Lot[]>([]);
+  const [activeTab, setActiveTab] = useState("informations");
   
   // État local pour le formulaire
   const [formData, setFormData] = useState({
@@ -290,7 +292,24 @@ export default function AoDetail() {
           ]}
         />
         
-        <div className="px-6 py-6 space-y-6">
+        <div className="px-6 py-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="informations" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Informations
+              </TabsTrigger>
+              <TabsTrigger value="chiffrage" className="flex items-center gap-2">
+                <Euro className="h-4 w-4" />
+                Chiffrage
+              </TabsTrigger>
+              <TabsTrigger value="validation" className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Validation BE
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="informations" className="space-y-6 mt-6">
           {/* Barre d'actions en mode édition */}
           {isEditing && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
@@ -970,6 +989,106 @@ export default function AoDetail() {
               </CardContent>
             </Card>
           )}
+            </TabsContent>
+
+            <TabsContent value="chiffrage" className="space-y-6 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Euro className="h-5 w-5" />
+                    <span>Module de chiffrage</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <Euro className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Module de chiffrage</h3>
+                    <p className="text-gray-500 mb-6">
+                      Transformez cet AO en dossier d'offre pour commencer le chiffrage détaillé.
+                    </p>
+                    <Button 
+                      onClick={() => setLocation(`/create-offer?aoId=${id}`)}
+                      className="flex items-center gap-2"
+                    >
+                      <Calculator className="h-4 w-4" />
+                      Créer l'offre de chiffrage
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="validation" className="space-y-6 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <CheckCircle className="h-5 w-5" />
+                    <span>Validation Bureau d'Études</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* Statut de validation */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-3 w-3 bg-amber-400 rounded-full"></div>
+                        <div>
+                          <p className="font-medium text-amber-800">En attente de validation</p>
+                          <p className="text-sm text-amber-600">L'AO nécessite une validation du Bureau d'Études avant de passer en chiffrage</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Critères de validation */}
+                    <div>
+                      <h4 className="font-medium mb-3">Critères de validation</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 w-2 bg-gray-300 rounded-full"></div>
+                          <span className="text-sm">Analyse du CCTP et des plans</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 w-2 bg-gray-300 rounded-full"></div>
+                          <span className="text-sm">Vérification de la faisabilité technique</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 w-2 bg-gray-300 rounded-full"></div>
+                          <span className="text-sm">Validation des lots menuiserie</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 w-2 bg-gray-300 rounded-full"></div>
+                          <span className="text-sm">Estimation préliminaire des coûts</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions de validation */}
+                    <div className="flex gap-3 pt-4">
+                      <Button variant="outline" className="flex-1">
+                        <X className="h-4 w-4 mr-2" />
+                        Rejeter l'AO
+                      </Button>
+                      <Button className="flex-1">
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Valider pour chiffrage
+                      </Button>
+                    </div>
+
+                    {/* Commentaires BE */}
+                    <div>
+                      <Label htmlFor="commentairesBE">Commentaires du Bureau d'Études</Label>
+                      <Textarea
+                        id="commentairesBE"
+                        placeholder="Ajoutez vos observations et recommandations..."
+                        rows={4}
+                        className="mt-2"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 

@@ -1,0 +1,359 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import Sidebar from "@/components/layout/sidebar";
+import Header from "@/components/layout/header";
+import { 
+  Calendar,
+  Users,
+  Truck,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Target,
+  BarChart,
+  Edit,
+  Play
+} from "lucide-react";
+
+export default function Planification() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Récupérer les projets en planification
+  const { data: projects, isLoading } = useQuery({
+    queryKey: ["/api/projects/planification"],
+    queryFn: async () => {
+      const response = await fetch("/api/projects?status=planification");
+      return response.json();
+    }
+  });
+
+  // Mutation pour valider la planification
+  const validatePlanningMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await fetch(`/api/projects/${projectId}/validate-planning`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          status: "approvisionnement",
+          planningValidated: true
+        })
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({
+        title: "Planning validé",
+        description: "Le projet passe en phase d'approvisionnement",
+      });
+    }
+  });
+
+  // Mutation pour démarrer le chantier directement
+  const startChantierMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await fetch(`/api/projects/${projectId}/start-chantier`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          status: "chantier",
+          startedAt: new Date()
+        })
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({
+        title: "Chantier démarré",
+        description: "Le projet est maintenant en phase chantier",
+      });
+    }
+  });
+
+  const getActionButtons = (project: any) => {
+    const actions = [];
+
+    // Modifier le planning
+    actions.push(
+      <Button 
+        key="edit-planning"
+        variant="outline" 
+        size="sm"
+        onClick={() => handleEditPlanning(project.id)}
+      >
+        <Calendar className="h-4 w-4 mr-2" />
+        Modifier planning
+      </Button>
+    );
+
+    // Affecter des équipes
+    actions.push(
+      <Button 
+        key="teams"
+        variant="outline" 
+        size="sm"
+        onClick={() => handleManageTeams(project.id)}
+      >
+        <Users className="h-4 w-4 mr-2" />
+        Gérer équipes
+      </Button>
+    );
+
+    const canProceed = 
+      project.tasksCreated && 
+      project.teamsAssigned &&
+      project.datesValidated;
+
+    if (canProceed) {
+      // Passer en approvisionnement
+      actions.push(
+        <Button 
+          key="approve"
+          variant="outline"
+          size="sm"
+          onClick={() => validatePlanningMutation.mutate(project.id)}
+        >
+          <Truck className="h-4 w-4 mr-2" />
+          Valider approvisionnement
+        </Button>
+      );
+
+      // Ou démarrer directement le chantier
+      actions.push(
+        <Button 
+          key="start"
+          size="sm"
+          className="bg-green-600 hover:bg-green-700"
+          onClick={() => startChantierMutation.mutate(project.id)}
+        >
+          <Play className="h-4 w-4 mr-2" />
+          Démarrer chantier
+        </Button>
+      );
+    } else {
+      actions.push(
+        <Button 
+          key="incomplete"
+          variant="secondary" 
+          size="sm"
+          disabled
+        >
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          Planning incomplet
+        </Button>
+      );
+    }
+
+    return actions;
+  };
+
+  const handleEditPlanning = (projectId: string) => {
+    window.location.href = `/projects/${projectId}/planning`;
+  };
+
+  const handleManageTeams = (projectId: string) => {
+    window.location.href = `/projects/${projectId}/teams`;
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch(priority) {
+      case 'urgent': return 'text-red-600';
+      case 'high': return 'text-orange-600';
+      case 'normal': return 'text-blue-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
+      
+      <main className="flex-1">
+        <Header 
+          title="Planification"
+          breadcrumbs={[
+            { label: "Tableau de bord", href: "/dashboard" },
+            { label: "Planification", href: "/workflow/planification" }
+          ]}
+        />
+        
+        <div className="px-6 py-6">
+          {/* Statistiques */}
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">En planification</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{projects?.length || 0}</div>
+                <p className="text-xs text-muted-foreground">Projets actifs</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Équipes à affecter</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">
+                  {projects?.filter((p: any) => !p.teamsAssigned).length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">Ressources manquantes</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Prêts à démarrer</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {projects?.filter((p: any) => p.readyToStart).length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">Planning complet</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Charge équipes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">82%</div>
+                <p className="text-xs text-muted-foreground">Taux d'occupation</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Liste des projets */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Projets en phase de planification</span>
+                <Badge variant="secondary">{projects?.length || 0} projets</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-8">Chargement...</div>
+              ) : projects?.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Aucun projet en planification actuellement
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {projects?.map((project: any) => (
+                    <div 
+                      key={project.id} 
+                      className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold text-lg">{project.reference}</h3>
+                          <p className="text-sm text-gray-600">{project.client}</p>
+                          <p className="text-sm text-gray-500">{project.location}</p>
+                        </div>
+                        <div className="text-right">
+                          <Badge className={getPriorityColor(project.priority)}>
+                            {project.priority === 'urgent' ? 'Urgent' : 
+                             project.priority === 'high' ? 'Prioritaire' : 'Normal'}
+                          </Badge>
+                          <p className="text-sm font-semibold mt-1">
+                            {project.montantTotal?.toLocaleString('fr-FR')} € HT
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Planning overview */}
+                      <div className="grid grid-cols-4 gap-4 mb-3 bg-gray-50 p-3 rounded">
+                        <div>
+                          <p className="text-xs text-gray-500">Date début prévue</p>
+                          <p className="font-semibold">
+                            {project.dateDebutPrevue ? 
+                              new Date(project.dateDebutPrevue).toLocaleDateString('fr-FR') : 
+                              'À définir'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Date fin prévue</p>
+                          <p className="font-semibold">
+                            {project.dateFinPrevue ? 
+                              new Date(project.dateFinPrevue).toLocaleDateString('fr-FR') : 
+                              'À définir'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Durée</p>
+                          <p className="font-semibold">
+                            {project.dureeJours || '-'} jours
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Équipes</p>
+                          <p className="font-semibold">
+                            {project.teamCount || 0}/{project.teamRequired || 0}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Indicateurs */}
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className="flex items-center">
+                          <Target className={`h-4 w-4 mr-1 ${project.tasksCreated ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className="text-sm">Tâches créées</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Users className={`h-4 w-4 mr-1 ${project.teamsAssigned ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className="text-sm">Équipes affectées</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Calendar className={`h-4 w-4 mr-1 ${project.datesValidated ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className="text-sm">Dates validées</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Truck className={`h-4 w-4 mr-1 ${project.suppliesOrdered ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className="text-sm">Approvisionnement</span>
+                        </div>
+                      </div>
+
+                      {/* Jalons principaux */}
+                      {project.milestones && project.milestones.length > 0 && (
+                        <div className="mb-3 p-2 bg-blue-50 rounded">
+                          <p className="text-sm font-medium mb-1">Jalons principaux:</p>
+                          <div className="flex gap-4 text-xs">
+                            {project.milestones.map((milestone: any, idx: number) => (
+                              <div key={idx} className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                <span>{milestone.name}: {new Date(milestone.date).toLocaleDateString('fr-FR')}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Actions contextuelles */}
+                      <div className="flex gap-2 justify-end">
+                        {getActionButtons(project)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    </div>
+  );
+}

@@ -23,6 +23,12 @@ import Chiffrage from "@/pages/chiffrage";
 // Import des nouvelles pages pour les sous-étapes
 import ImportOCR from "@/pages/offers/import";
 import ProjectPlanning from "@/pages/projects/planning";
+// Import des pages workflow
+import EtudeTechnique from "@/pages/workflow/etude-technique";
+import ChiffrageWorkflow from "@/pages/workflow/chiffrage";
+import EnvoiDevis from "@/pages/workflow/envoi-devis";
+import PlanificationWorkflow from "@/pages/workflow/planification";
+import ChantierWorkflow from "@/pages/workflow/chantier";
 
 function Router() {
   // Temporarily disable authentication for development
@@ -51,6 +57,12 @@ function Router() {
       <Route path="/projects/supply" component={Suppliers} />
       <Route path="/projects/worksite" component={Projects} />
       <Route path="/projects/support" component={Projects} />
+      {/* Routes du workflow */}
+      <Route path="/workflow/etude-technique" component={EtudeTechnique} />
+      <Route path="/workflow/chiffrage" component={ChiffrageWorkflow} />
+      <Route path="/workflow/envoi-devis" component={EnvoiDevis} />
+      <Route path="/workflow/planification" component={PlanificationWorkflow} />
+      <Route path="/workflow/chantier" component={ChantierWorkflow} />
       <Route path="/teams" component={Teams} />
       <Route path="/suppliers" component={Suppliers} />
       <Route path="/be-dashboard" component={BEDashboard} />

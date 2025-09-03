@@ -98,6 +98,43 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
 - **Interface Intuitive**: Simplicité d'usage pour utilisateurs moins habitués aux outils numériques.
 - **Priorité Flux Information**: Circulation fluide des données entre étapes du processus POC.
 
+### Gestion du Workflow et Actions Contextuelles
+
+#### Structure des Vues Contextuelles
+Chaque étape du workflow dispose désormais d'une vue dédiée avec des actions spécifiques selon l'état d'avancement:
+
+1. **Étude Technique** (`/workflow/etude-technique`)
+   - Actions: Modifier détails techniques, Analyser CCTP/Plans
+   - Transition: Validation vers Chiffrage
+   - Conditions: CCTP analysé, détails techniques complets, lots validés
+
+2. **Chiffrage** (`/workflow/chiffrage`)
+   - Actions: Module chiffrage, Génération DPGF, Voir/Télécharger DPGF
+   - Transition: Envoi du devis
+   - Conditions: Montants calculés, DPGF généré, marge validée
+
+3. **Envoi Devis** (`/workflow/envoi-devis`)
+   - Actions: Envoi devis (email/plateforme), Relances clients, Suivi réponses
+   - Transition: Transformation en projet si accepté
+   - Indicateurs: Taux conversion, délais réponse
+
+4. **Planification** (`/workflow/planification`)
+   - Actions: Éditer planning, Affecter équipes, Valider approvisionnement
+   - Transition: Démarrage chantier
+   - Conditions: Tâches créées, équipes affectées, dates validées
+
+5. **Chantier** (`/workflow/chantier`)
+   - Actions: Suivi photo, Rapport avancement, Gestion problèmes
+   - Transition: Passage en SAV
+   - Indicateurs: Progression, respect délais, problèmes en cours
+
+#### Import OCR Intégré
+- L'import PDF avec OCR est maintenant intégré directement dans "Création dossier"
+- Interface à deux onglets: Import PDF et Création manuelle
+- Extraction automatique de 35+ champs avec pré-remplissage automatique
+- Détection et création automatique des lots menuiserie
+- Mode POC avec simulation OCR pour les PDFs scannés
+
 ### Architecture de Tests & Qualité Logicielle
 
 #### Test Infrastructure

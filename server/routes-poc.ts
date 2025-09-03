@@ -12,6 +12,7 @@ import {
 import { ObjectStorageService } from "./objectStorage";
 import { documentProcessor, type ExtractedAOData } from "./documentProcessor";
 import { registerChiffrageRoutes } from "./routes/chiffrage";
+import { registerWorkflowRoutes } from "./routes-workflow";
 
 // Configuration de multer pour l'upload de fichiers
 const uploadMiddleware = multer({ 
@@ -1670,6 +1671,9 @@ app.post("/api/ocr/create-ao-from-pdf", uploadMiddleware.single("pdf"), async (r
 
 // Enregistrer les routes de chiffrage
 registerChiffrageRoutes(app, storage);
+
+// Enregistrer les routes du workflow
+registerWorkflowRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

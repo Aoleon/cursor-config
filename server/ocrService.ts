@@ -23,6 +23,13 @@ interface OCRResult {
   rawData: any;
 }
 
+interface AOLot {
+  numero: string;
+  designation: string;
+  type?: string;
+  montantEstime?: string;
+}
+
 interface AOFieldsExtracted {
   // Informations générales
   reference?: string;
@@ -37,8 +44,16 @@ interface AOFieldsExtracted {
   deadline?: string;
   dateOS?: string;
   delaiContractuel?: string;
+  dateLimiteRemise?: string;
   
   // Maître d'ouvrage
+  maitreOuvrage?: {
+    nom?: string;
+    adresse?: string;
+    contact?: string;
+    email?: string;
+    telephone?: string;
+  };
   maitreOuvrageNom?: string;
   maitreOuvrageAdresse?: string;
   maitreOuvrageContact?: string;
@@ -46,7 +61,11 @@ interface AOFieldsExtracted {
   maitreOuvragePhone?: string;
   
   // Maître d'œuvre
-  maitreOeuvre?: string;
+  maitreOeuvre?: {
+    nom?: string;
+    contact?: string;
+  };
+  maitreOeuvreNom?: string;
   maitreOeuvreContact?: string;
   
   // Techniques
@@ -54,6 +73,9 @@ interface AOFieldsExtracted {
   menuiserieType?: string;
   montantEstime?: string;
   typeMarche?: string;
+  
+  // Lots détaillés
+  lots?: AOLot[];
   
   // Source et contexte
   plateformeSource?: string;
@@ -138,6 +160,13 @@ const AO_PATTERNS: Record<string, RegExp[]> = {
   contact: [
     /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
     /(?:tél|téléphone|phone)\s*:?\s*([0-9\s\.\-\+]{10,})/i,
+  ],
+  
+  // Lots (détection des sections de lots)
+  lots: [
+    /(?:lots?\s+concernés?|lots?\s*:)/i,
+    /(?:lot\s+n?°?\s*\d+[\.\s:])/i,
+    /(?:\d{1,2}[a-z]?\s*[:\-])/i,
   ],
 };
 
@@ -284,6 +313,114 @@ export class OCRService {
   }
 
   // Parser intelligent pour extraire les champs spécifiques aux AO
+  // Extraction spécifique des lots depuis le texte
+  private extractLots(text: string): AOLot[] {
+    const lots: AOLot[] = [];
+    
+    // Patterns pour détecter différents formats de lots
+    const lotPatterns = [
+      // Format "Lot X: Description"
+      /(?:lot\s+)?(\d+[a-z]?)\s*[:\-]\s*([^\n,]+)/gi,
+      // Format "XX: Description" ou "XXa: Description"  
+      /^(\d{1,3}[a-z]?)\s*[:\-]\s*([^\n,]+)/gim,
+      // Format avec tirets ou points "07.1: Menuiseries extérieures"
+      /(\d{1,2}\.?\d?[a-z]?)\s*[:\-]\s*([^\n,]+)/gi,
+    ];
+    
+    // Trouver la section des lots
+    const lotSectionPatterns = [
+      /lots?\s+concernés?\s*:?\s*([\s\S]*?)(?=\n\n|maître|date|contact|délai|€)/i,
+      /lots?\s*:\s*([\s\S]*?)(?=\n\n|maître|date|contact|délai|€)/i,
+    ];
+    
+    let lotSection = text;
+    
+    // Essayer de trouver une section spécifique aux lots
+    for (const pattern of lotSectionPatterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        lotSection = match[1];
+        break;
+      }
+    }
+    
+    // Chercher les lots dans la section identifiée
+    const foundLots = new Map<string, string>();
+    
+    for (const pattern of lotPatterns) {
+      let match;
+      pattern.lastIndex = 0;
+      while ((match = pattern.exec(lotSection)) !== null) {
+        const numero = match[1].trim();
+        const designation = match[2].trim();
+        
+        // Filtrer les faux positifs (dates, montants, etc.)
+        if (designation.length > 3 && 
+            !designation.match(/^\d+/) && 
+            !designation.toLowerCase().includes('euros') &&
+            !designation.match(/^\d{2}\/\d{2}\/\d{4}/) &&
+            designation.length < 100) {
+          
+          // Éviter les doublons
+          if (!foundLots.has(numero)) {
+            foundLots.set(numero, designation);
+          }
+        }
+      }
+    }
+    
+    // Convertir en tableau avec détection du type de lot
+    foundLots.forEach((designation, numero) => {
+      const lot: AOLot = {
+        numero,
+        designation,
+      };
+      
+      // Déterminer le type de lot (menuiserie, gros œuvre, etc.)
+      if (designation.toLowerCase().includes('menuiserie')) {
+        lot.type = designation.toLowerCase().includes('extérieure') ? 'menuiserie_exterieure' : 'menuiserie_interieure';
+      } else if (designation.toLowerCase().includes('gros') && designation.toLowerCase().includes('œuvre')) {
+        lot.type = 'gros_oeuvre';
+      } else if (designation.toLowerCase().includes('plâtrerie') || designation.toLowerCase().includes('cloison')) {
+        lot.type = 'platrerie';
+      } else if (designation.toLowerCase().includes('carrelage') || designation.toLowerCase().includes('faïence')) {
+        lot.type = 'carrelage';
+      } else if (designation.toLowerCase().includes('peinture')) {
+        lot.type = 'peinture';
+      } else if (designation.toLowerCase().includes('serrurerie')) {
+        lot.type = 'serrurerie';
+      } else if (designation.toLowerCase().includes('étanchéité')) {
+        lot.type = 'etancheite';
+      } else if (designation.toLowerCase().includes('fondation')) {
+        lot.type = 'fondations';
+      }
+      
+      lots.push(lot);
+    });
+    
+    // Si aucun lot trouvé, chercher spécifiquement les menuiseries
+    if (lots.length === 0) {
+      const menuiseriePatterns = [
+        /menuiseries?\s+extérieures?/gi,
+        /menuiseries?\s+intérieures?/gi,
+        /fenêtres?/gi,
+        /portes?/gi,
+      ];
+      
+      menuiseriePatterns.forEach((pattern, index) => {
+        if (pattern.test(text)) {
+          lots.push({
+            numero: `AUTO-${index + 1}`,
+            designation: pattern.source.replace(/[\\?]/g, ''),
+            type: index < 2 ? 'menuiserie' : 'autre',
+          });
+        }
+      });
+    }
+    
+    return lots;
+  }
+
   private parseAOFields(text: string): AOFieldsExtracted {
     const fields: AOFieldsExtracted = {};
     const normalizedText = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -385,6 +522,21 @@ export class OCRService {
     fields.plansDisponibles = /plans?|dessins?/i.test(text);
     fields.dpgfClientDisponible = /dpgf|décomposition.*prix/i.test(text);
     fields.dceDisponible = /dce|dossier.*consultation/i.test(text);
+    
+    // Extraction des lots détaillés
+    fields.lots = this.extractLots(text);
+    
+    // Si des lots sont trouvés, créer une liste textuelle pour lotConcerne
+    if (fields.lots && fields.lots.length > 0) {
+      const lotNumbers = fields.lots.map(l => l.numero).join(', ');
+      const menuiserieLots = fields.lots.filter(l => l.type?.includes('menuiserie'));
+      
+      if (menuiserieLots.length > 0) {
+        fields.lotConcerne = menuiserieLots.map(l => `${l.numero}: ${l.designation}`).join(', ');
+      } else {
+        fields.lotConcerne = `Lots: ${lotNumbers}`;
+      }
+    }
     
     return fields;
   }

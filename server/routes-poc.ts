@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./replitAuth";
-import { ocrService } from "./ocrService";
+import { OCRService } from "./ocrService";
 import multer from "multer";
 import { 
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
@@ -12,6 +12,15 @@ import {
 import { ObjectStorageService } from "./objectStorage";
 import { documentProcessor, type ExtractedAOData } from "./documentProcessor";
 import { registerChiffrageRoutes } from "./routes/chiffrage";
+
+// Configuration de multer pour l'upload de fichiers
+const uploadMiddleware = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // Limite à 10MB
+});
+
+// Instance unique du service OCR
+const ocrService = new OCRService();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -1533,6 +1542,122 @@ app.post("/api/quotations", async (req, res) => {
   } catch (error) {
     console.error("Error creating quotation:", error);
     res.status(500).json({ message: "Failed to create quotation" });
+  }
+});
+
+// ========================================
+// OCR ROUTES - Traitement intelligent des PDF d'appels d'offres
+// ========================================
+
+// Route pour créer un AO à partir d'un PDF avec extraction OCR des lots
+app.post("/api/ocr/create-ao-from-pdf", uploadMiddleware.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "Aucun fichier PDF fourni" });
+    }
+
+    console.log(`[OCR] Processing PDF: ${req.file.originalname}`);
+    
+    // Initialiser le service OCR
+    await ocrService.initialize();
+    
+    try {
+      // Traiter le PDF avec OCR
+      const ocrResult = await ocrService.processPDF(req.file.buffer);
+      
+      console.log(`[OCR] Extracted fields:`, ocrResult.processedFields);
+      console.log(`[OCR] Found ${ocrResult.processedFields.lots?.length || 0} lots`);
+      
+      // Préparer les données pour l'AO
+      const aoData = {
+        reference: ocrResult.processedFields.reference || `AO-${Date.now()}`,
+        intituleOperation: ocrResult.processedFields.intituleOperation || req.file.originalname,
+        client: ocrResult.processedFields.maitreOuvrageNom || ocrResult.processedFields.client || "Client non spécifié",
+        location: ocrResult.processedFields.location || "À définir",
+        deadline: ocrResult.processedFields.dateLimiteRemise || ocrResult.processedFields.deadline,
+        typeMarche: ocrResult.processedFields.typeMarche || "prive",
+        menuiserieType: (ocrResult.processedFields.menuiserieType || "fenetre") as any,
+        source: "import_ocr",
+        departement: (ocrResult.processedFields.departement || "62") as any,
+        cctpDisponible: ocrResult.processedFields.cctpDisponible || false,
+        plansDisponibles: ocrResult.processedFields.plansDisponibles || false,
+        dpgfClientDisponible: ocrResult.processedFields.dpgfClientDisponible || false,
+        dceDisponible: ocrResult.processedFields.dceDisponible || false,
+        maitreOeuvre: ocrResult.processedFields.maitreOeuvreNom || ocrResult.processedFields.bureauEtudes,
+        montantEstime: ocrResult.processedFields.montantEstime,
+        delaiExecution: ocrResult.processedFields.delaiContractuel,
+        status: "nouveau" as const,
+        isSelected: false,
+        plateformeSource: "import_ocr",
+        priority: "normale" as const,
+      };
+      
+      // Créer l'AO dans la base de données
+      const ao = await storage.createAo(aoData);
+      
+      // Créer les lots détectés
+      let lotsCreated = [];
+      if (ocrResult.processedFields.lots && ocrResult.processedFields.lots.length > 0) {
+        for (const lot of ocrResult.processedFields.lots) {
+          try {
+            const lotData = {
+              aoId: ao.id,
+              numero: lot.numero,
+              designation: lot.designation,
+              status: "nouveau" as const,
+              isJlmEligible: lot.type?.includes('menuiserie') || false,
+              montantEstime: lot.montantEstime || "0",
+              notes: lot.type ? `Type détecté: ${lot.type}` : "",
+            };
+            
+            const createdLot = await storage.createAoLot(lotData);
+            lotsCreated.push(createdLot);
+          } catch (lotError) {
+            console.error(`[OCR] Error creating lot ${lot.numero}:`, lotError);
+          }
+        }
+      } else {
+        // Si aucun lot n'est trouvé, créer un lot générique pour menuiserie
+        if (ocrResult.processedFields.menuiserieType || 
+            ocrResult.processedFields.lotConcerne?.toLowerCase().includes('menuiserie')) {
+          const defaultLot = {
+            aoId: ao.id,
+            numero: "AUTO-1",
+            designation: "Menuiseries (lot détecté automatiquement)",
+            status: "nouveau" as const,
+            isJlmEligible: true,
+            montantEstime: ocrResult.processedFields.montantEstime || "0",
+            notes: "Lot créé automatiquement suite à la détection de termes menuiserie",
+          };
+          const createdLot = await storage.createAoLot(defaultLot);
+          lotsCreated.push(createdLot);
+        }
+      }
+      
+      console.log(`[OCR] Created AO ${ao.reference} with ${lotsCreated.length} lots`);
+      
+      // Retourner l'AO créé avec les lots
+      res.json({
+        success: true,
+        ao: {
+          ...ao,
+          lots: lotsCreated,
+        },
+        extractedData: ocrResult.processedFields,
+        confidence: ocrResult.confidence,
+        message: `AO créé avec succès. ${lotsCreated.length} lots détectés et créés.`,
+      });
+      
+    } finally {
+      await ocrService.cleanup();
+    }
+    
+  } catch (error) {
+    console.error("[OCR] Error creating AO from PDF:", error);
+    res.status(500).json({ 
+      error: "Erreur lors du traitement OCR du PDF",
+      details: error instanceof Error ? error.message : "Erreur inconnue",
+    });
   }
 });
 

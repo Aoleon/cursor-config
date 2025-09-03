@@ -28,10 +28,9 @@ function Router() {
       <Route path="/create-offer" component={CreateOffer} />
       <Route path="/offers/:id" component={OfferDetail} />
       <Route path="/offers/:id/chiffrage" component={Chiffrage} />
-      <Route path="/pricing" component={Pricing} />
       <Route path="/projects" component={Projects} />
       <Route path="/projects/:id" component={ProjectDetail} />
-      <Route path="/planning" component={Planning} />
+      <Route path="/projects/:id/planning" component={Planning} />
       <Route path="/teams" component={Teams} />
       <Route path="/suppliers" component={Suppliers} />
       <Route path="/be-dashboard" component={BEDashboard} />

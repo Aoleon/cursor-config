@@ -19,9 +19,7 @@ import {
 const navigation = [
   { name: "Tableau de Bord", href: "/", icon: TrendingUp },
   { name: "Appels d'Offre", href: "/offers", icon: FolderOpen },
-  { name: "Chiffrage", href: "/pricing", icon: Calculator },
   { name: "Projets", href: "/projects", icon: Projector },
-  { name: "Planning", href: "/planning", icon: Calendar },
   { name: "Équipes", href: "/teams", icon: Users },
   { name: "Fournisseurs", href: "/suppliers", icon: Truck },
 ];

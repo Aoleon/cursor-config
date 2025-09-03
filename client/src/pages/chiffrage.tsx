@@ -260,6 +260,36 @@ export default function Chiffrage() {
     },
   });
 
+  // Mutation pour transformer l'offre en projet
+  const transformToProjectMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/offers/${id}/transform-to-project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Erreur lors de la transformation");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/offers/${id}`] });
+      toast({
+        title: "Projet créé",
+        description: `Le dossier a été transformé en projet (${data.projectId}). Redirection vers le projet...`,
+      });
+      // Redirection vers le nouveau projet après 2 secondes
+      setTimeout(() => {
+        window.location.href = `/projects/${data.projectId}`;
+      }, 2000);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de transformer en projet",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEditElement = (element: any) => {
     setEditingElement(element);
     elementForm.reset({
@@ -463,6 +493,17 @@ export default function Chiffrage() {
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Valider fin d'études
+              </Button>
+            )}
+            {offer.finEtudesValidatedAt && offer.status !== "transforme_en_projet" && (
+              <Button
+                onClick={() => transformToProjectMutation.mutate()}
+                disabled={transformToProjectMutation.isPending}
+                data-testid="button-transform-to-project"
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Transformer en projet
               </Button>
             )}
           </div>

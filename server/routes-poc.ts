@@ -294,6 +294,122 @@ app.patch("/api/offers/:id/validate-studies", async (req, res) => {
   }
 });
 
+// Transformation AO → Projet (principe formulaire unique évolutif)
+app.post("/api/offers/:id/transform-to-project", async (req, res) => {
+  try {
+    const offerId = req.params.id;
+    const offer = await storage.getOffer(offerId);
+    
+    if (!offer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
+
+    if (!offer.finEtudesValidatedAt) {
+      return res.status(400).json({ message: "Studies must be validated before transformation" });
+    }
+
+    if (offer.status === "transforme_en_projet") {
+      return res.status(400).json({ message: "Offer already transformed to project" });
+    }
+
+    // Créer le projet avec les données de l'offre (principe formulaire unique évolutif)
+    const projectData = {
+      offerId: offer.id,
+      name: `Projet ${offer.reference}`,
+      description: offer.description || `Projet issu de l'offre ${offer.reference} - ${offer.client}`,
+      status: "etude" as const,
+      startDate: new Date(),
+      estimatedEndDate: offer.estimatedDuration 
+        ? new Date(Date.now() + offer.estimatedDuration * 24 * 60 * 60 * 1000)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours par défaut
+      responsibleUserId: offer.responsibleUserId,
+      chefTravaux: offer.responsibleUserId, // Responsable devient chef de travaux par défaut
+      progressPercentage: 0
+    };
+
+    const project = await storage.createProject(projectData);
+
+    // Créer les tâches de base pour les 5 étapes POC
+    const baseTasks = [
+      {
+        projectId: project.id,
+        name: "Étude technique",
+        description: "Validation technique du projet",
+        status: "en_cours" as const,
+        assignedUserId: offer.responsibleUserId,
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
+        estimatedHours: "40.00",
+        position: 1,
+        isJalon: true
+      },
+      {
+        projectId: project.id,
+        name: "Planification",
+        description: "Élaboration du planning détaillé",
+        status: "a_faire" as const,
+        assignedUserId: offer.responsibleUserId,
+        startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        estimatedHours: "16.00",
+        position: 2,
+        isJalon: true
+      },
+      {
+        projectId: project.id,
+        name: "Approvisionnement",
+        description: "Commandes et livraisons",
+        status: "a_faire" as const,
+        startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        endDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+        estimatedHours: "8.00",
+        position: 3,
+        isJalon: false
+      },
+      {
+        projectId: project.id,
+        name: "Chantier",
+        description: "Réalisation des travaux",
+        status: "a_faire" as const,
+        startDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+        endDate: projectData.estimatedEndDate,
+        estimatedHours: offer.estimatedHours || "80.00",
+        position: 4,
+        isJalon: true
+      },
+      {
+        projectId: project.id,
+        name: "SAV / Réception",
+        description: "Réception et service après-vente",
+        status: "a_faire" as const,
+        startDate: projectData.estimatedEndDate,
+        endDate: new Date(projectData.estimatedEndDate.getTime() + 7 * 24 * 60 * 60 * 1000),
+        estimatedHours: "8.00",
+        position: 5,
+        isJalon: true
+      }
+    ];
+
+    // Créer toutes les tâches
+    for (const taskData of baseTasks) {
+      await storage.createProjectTask(taskData);
+    }
+
+    // Mettre à jour le statut de l'offre
+    await storage.updateOffer(offerId, {
+      status: "transforme_en_projet"
+    });
+
+    res.status(201).json({ 
+      projectId: project.id,
+      message: "Offer successfully transformed to project with base tasks created" 
+    });
+  } catch (error) {
+    console.error("Error transforming offer to project:", error);
+    res.status(500).json({ message: "Failed to transform offer to project" });
+  }
+});
+
 // ========================================
 // PROJECT ROUTES - 5 étapes POC
 // ========================================

@@ -17,7 +17,7 @@ import { LotsManager } from "@/components/ao/LotsManager";
 import { ContactSelector } from "@/components/contacts/ContactSelector";
 import { MaitreOuvrageForm } from "@/components/contacts/MaitreOuvrageForm";
 import { MaitreOeuvreForm } from "@/components/contacts/MaitreOeuvreForm";
-import { FileText, Calendar, MapPin, User, Building, Save, ArrowLeft } from "lucide-react";
+import { FileText, Calendar, MapPin, User, Building, Save, ArrowLeft, Calculator } from "lucide-react";
 
 // Schéma de validation pour l'édition d'AO
 const editAoSchema = z.object({
@@ -291,6 +291,12 @@ export default function AoDetail() {
               variant: "outline",
               icon: "arrow-left",
               onClick: () => setLocation("/offers")
+            },
+            {
+              label: "Chiffrage",
+              variant: "default",
+              icon: "calculator",
+              onClick: () => setLocation(`/offers/${id}/chiffrage`)
             }
           ]}
         />

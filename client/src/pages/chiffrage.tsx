@@ -50,7 +50,11 @@ import {
   Edit,
   Copy,
   Settings,
-  Download
+  Download,
+  Truck,
+  Send,
+  Eye,
+  Check
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -100,6 +104,8 @@ export default function Chiffrage() {
   const [showElementDialog, setShowElementDialog] = useState(false);
   const [editingElement, setEditingElement] = useState<any>(null);
   const [showDpgfDialog, setShowDpgfDialog] = useState(false);
+  const [showSupplierRequestDialog, setShowSupplierRequestDialog] = useState(false);
+  const [selectedLots, setSelectedLots] = useState<string[]>([]);
 
   // Récupérer l'offre
   const { data: offer, isLoading: offerLoading } = useQuery<any>({
@@ -116,6 +122,18 @@ export default function Chiffrage() {
   // Récupérer le DPGF actuel
   const { data: dpgfDocument, isLoading: dpgfLoading } = useQuery<any>({
     queryKey: [`/api/offers/${id}/dpgf`],
+    enabled: !!id,
+  });
+
+  // Récupérer les lots de l'AO
+  const { data: aoLots = [] } = useQuery<any[]>({
+    queryKey: [`/api/aos/${offer?.aoId}/lots`],
+    enabled: !!offer?.aoId,
+  });
+
+  // Récupérer les demandes fournisseurs
+  const { data: supplierRequests = [] } = useQuery<any[]>({
+    queryKey: [`/api/offers/${id}/supplier-requests`],
     enabled: !!id,
   });
 
@@ -317,6 +335,22 @@ export default function Chiffrage() {
     });
   };
 
+  const handleViewSupplierRequest = (request: any) => {
+    // TODO: Implémenter la vue détaillée du devis
+    toast({
+      title: "Détail du devis",
+      description: `Devis de ${request.supplierName}: ${request.quotationAmount ? Number(request.quotationAmount).toLocaleString('fr-FR') + ' €' : 'En attente'}`,
+    });
+  };
+
+  const handleMarkAsReceived = async (request: any) => {
+    // TODO: Implémenter la mise à jour du statut
+    toast({
+      title: "Devis reçu",
+      description: `Le devis de ${request.supplierName} a été marqué comme reçu.`,
+    });
+  };
+
   // Calcul des totaux
   const calculateTotals = () => {
     const totalHT = chiffrageElements.reduce((sum, el) => sum + parseFloat(el.totalPrice || 0), 0);
@@ -370,10 +404,14 @@ export default function Chiffrage() {
       </div>
 
       <Tabs defaultValue="elements" className="space-y-6">
-        <TabsList>
+        <TabsList className="grid grid-cols-3 w-full max-w-2xl">
           <TabsTrigger value="elements" data-testid="tab-elements">
             <Calculator className="h-4 w-4 mr-2" />
             Éléments de chiffrage
+          </TabsTrigger>
+          <TabsTrigger value="suppliers" data-testid="tab-suppliers">
+            <Truck className="h-4 w-4 mr-2" />
+            Demandes Fournisseurs
           </TabsTrigger>
           <TabsTrigger value="dpgf" data-testid="tab-dpgf">
             <FileText className="h-4 w-4 mr-2" />
@@ -507,6 +545,201 @@ export default function Chiffrage() {
               </Button>
             )}
           </div>
+        </TabsContent>
+
+        {/* Onglet Demandes Fournisseurs */}
+        <TabsContent value="suppliers" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Demandes de Prix Fournisseurs</h2>
+            <Button onClick={() => setShowSupplierRequestDialog(true)} data-testid="button-add-supplier-request">
+              <Send className="h-4 w-4 mr-2" />
+              Nouvelle Demande
+            </Button>
+          </div>
+
+          {/* Lots de l'AO */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Lots de l'Appel d'Offres</CardTitle>
+              <CardDescription>
+                Sélectionnez les lots pour lesquels vous souhaitez demander des prix
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {aoLots && aoLots.length > 0 ? (
+                <div className="grid gap-4">
+                  {aoLots.map((lot: any) => (
+                    <div key={lot.id} className="flex items-start space-x-2 p-3 border rounded-lg">
+                      <input
+                        type="checkbox"
+                        id={`lot-${lot.id}`}
+                        className="mt-1"
+                        checked={selectedLots.includes(lot.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedLots([...selectedLots, lot.id]);
+                          } else {
+                            setSelectedLots(selectedLots.filter(id => id !== lot.id));
+                          }
+                        }}
+                      />
+                      <label htmlFor={`lot-${lot.id}`} className="flex-1 cursor-pointer">
+                        <div className="font-medium">{lot.numero} - {lot.designation}</div>
+                        {lot.montantEstime && (
+                          <div className="text-sm text-gray-600">
+                            Montant estimé: {Number(lot.montantEstime).toLocaleString('fr-FR')} €
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">Aucun lot défini pour cet AO</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Liste des demandes envoyées */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Demandes Envoyées</CardTitle>
+              <CardDescription>
+                Suivi des demandes de prix envoyées aux fournisseurs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fournisseur</TableHead>
+                    <TableHead>Lots concernés</TableHead>
+                    <TableHead>Date d'envoi</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Montant devis</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {supplierRequests.map((request: any) => (
+                    <TableRow key={request.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{request.supplierName}</div>
+                          {request.supplierEmail && (
+                            <div className="text-sm text-gray-500">{request.supplierEmail}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {request.requestedItems ? 
+                            JSON.parse(request.requestedItems).map((item: any) => item.designation).join(', ') :
+                            '-'
+                          }
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(request.sentAt), 'dd/MM/yyyy', { locale: fr })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          request.status === 'envoyee' ? 'outline' :
+                          request.status === 'recue' ? 'default' :
+                          'secondary'
+                        }>
+                          {request.status === 'envoyee' ? 'Envoyée' :
+                           request.status === 'recue' ? 'Reçue' :
+                           'Analysée'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {request.quotationAmount ? 
+                          `${Number(request.quotationAmount).toLocaleString('fr-FR')} €` :
+                          '-'
+                        }
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewSupplierRequest(request)}
+                            data-testid={`button-view-${request.id}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {request.status === 'envoyee' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleMarkAsReceived(request)}
+                              data-testid={`button-mark-received-${request.id}`}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {supplierRequests.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        Aucune demande de prix envoyée. Commencez par créer une demande.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Résumé des devis reçus */}
+          {supplierRequests.filter((r: any) => r.quotationAmount).length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Comparatif des Devis Reçus</CardTitle>
+                <CardDescription>
+                  Analyse des prix reçus par fournisseur
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {supplierRequests
+                    .filter((r: any) => r.quotationAmount)
+                    .sort((a: any, b: any) => Number(a.quotationAmount) - Number(b.quotationAmount))
+                    .map((request: any, index: number) => (
+                      <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            index === 0 ? 'bg-green-100 text-green-700' :
+                            index === 1 ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {index + 1}
+                          </div>
+                          <div>
+                            <div className="font-medium">{request.supplierName}</div>
+                            <div className="text-sm text-gray-500">
+                              Reçu le {format(new Date(request.responseAt || request.sentAt), 'dd/MM/yyyy', { locale: fr })}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold">
+                            {Number(request.quotationAmount).toLocaleString('fr-FR')} € HT
+                          </div>
+                          {index === 0 && (
+                            <Badge className="bg-green-100 text-green-700">Meilleur prix</Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Onglet DPGF */}

@@ -1129,6 +1129,18 @@ app.patch("/api/supplier-requests/:id", async (req, res) => {
   }
 });
 
+// Récupérer les demandes fournisseurs pour une offre spécifique
+app.get("/api/offers/:offerId/supplier-requests", async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    const requests = await storage.getSupplierRequests(offerId);
+    res.json(requests);
+  } catch (error) {
+    console.error("Error fetching offer supplier requests:", error);
+    res.status(500).json({ message: "Failed to fetch supplier requests for offer" });
+  }
+});
+
 // ========================================
 // TEAM RESOURCE ROUTES - Gestion équipes simplifiée
 // ========================================

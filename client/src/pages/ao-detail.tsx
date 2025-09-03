@@ -94,6 +94,18 @@ export default function AoDetail() {
     enabled: !!id,
   });
 
+  // Charger l'offre associée si elle existe
+  const { data: relatedOffer } = useQuery({
+    queryKey: ["/api/offers/by-ao", id],
+    queryFn: async () => {
+      const response = await fetch(`/api/offers?aoId=${id}`);
+      if (!response.ok) return null;
+      const offers = await response.json();
+      return offers && offers.length > 0 ? offers[0] : null;
+    },
+    enabled: !!id,
+  });
+
   // Charger les lots de l'AO
   const { data: aoLots = [] } = useQuery({
     queryKey: ["/api/aos", id, "lots"],
@@ -292,11 +304,20 @@ export default function AoDetail() {
               icon: "arrow-left",
               onClick: () => setLocation("/offers")
             },
-            {
-              label: "Chiffrage",
+            relatedOffer ? {
+              label: "Voir Chiffrage",
               variant: "default",
               icon: "calculator",
-              onClick: () => setLocation(`/offers/${id}/chiffrage`)
+              onClick: () => {
+                setLocation(`/offers/${relatedOffer.id}/chiffrage`)
+              }
+            } : {
+              label: "Créer Offre",
+              variant: "default",
+              icon: "calculator",
+              onClick: () => {
+                setLocation(`/create-offer?aoId=${id}`)
+              }
             }
           ]}
         />

@@ -1141,6 +1141,22 @@ app.get("/api/offers/:offerId/supplier-requests", async (req, res) => {
   }
 });
 
+// Créer une demande fournisseur pour une offre
+app.post("/api/offers/:offerId/supplier-requests", async (req, res) => {
+  try {
+    const requestData = {
+      ...req.body,
+      offerId: req.params.offerId,
+      requestedItems: JSON.stringify(req.body.requestedItems || []),
+    };
+    const request = await storage.createSupplierRequest(requestData);
+    res.status(201).json(request);
+  } catch (error) {
+    console.error("Error creating offer supplier request:", error);
+    res.status(500).json({ message: "Failed to create supplier request for offer" });
+  }
+});
+
 // ========================================
 // TEAM RESOURCE ROUTES - Gestion équipes simplifiée
 // ========================================

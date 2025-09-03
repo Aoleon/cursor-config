@@ -851,6 +851,136 @@ export default function Chiffrage() {
         </TabsContent>
       </Tabs>
 
+      {/* Dialog pour créer une demande fournisseur */}
+      <Dialog open={showSupplierRequestDialog} onOpenChange={setShowSupplierRequestDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nouvelle Demande de Prix Fournisseur</DialogTitle>
+            <DialogDescription>
+              Envoyez une demande de prix à un fournisseur pour les lots sélectionnés
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Fournisseur *</Label>
+              <Input 
+                placeholder="Nom du fournisseur"
+                id="supplier-name"
+                data-testid="input-supplier-name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Email</Label>
+                <Input 
+                  type="email"
+                  placeholder="email@fournisseur.fr"
+                  id="supplier-email"
+                  data-testid="input-supplier-email"
+                />
+              </div>
+              <div>
+                <Label>Téléphone</Label>
+                <Input 
+                  placeholder="02 33 XX XX XX"
+                  id="supplier-phone"
+                  data-testid="input-supplier-phone"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Description de la demande</Label>
+              <Textarea 
+                placeholder="Détails de la demande de prix..."
+                id="request-description"
+                rows={4}
+                data-testid="textarea-request-description"
+              />
+            </div>
+            <div>
+              <Label>Lots concernés</Label>
+              <div className="text-sm text-gray-600 mt-1">
+                {selectedLots.length > 0 ? (
+                  <div>
+                    {selectedLots.map(lotId => {
+                      const lot = aoLots.find((l: any) => l.id === lotId);
+                      return lot ? (
+                        <Badge key={lotId} variant="secondary" className="mr-2 mb-2">
+                          {lot.numero} - {lot.designation}
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-orange-600">Veuillez sélectionner au moins un lot</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSupplierRequestDialog(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={async () => {
+                const supplierName = (document.getElementById('supplier-name') as HTMLInputElement)?.value;
+                const supplierEmail = (document.getElementById('supplier-email') as HTMLInputElement)?.value;
+                const supplierPhone = (document.getElementById('supplier-phone') as HTMLInputElement)?.value;
+                const description = (document.getElementById('request-description') as HTMLTextAreaElement)?.value;
+                
+                if (!supplierName || selectedLots.length === 0) {
+                  toast({
+                    title: "Erreur",
+                    description: "Veuillez remplir le nom du fournisseur et sélectionner au moins un lot",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
+                try {
+                  const response = await fetch(`/api/offers/${id}/supplier-requests`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      offerId: id,
+                      supplierName,
+                      supplierEmail,
+                      supplierPhone,
+                      description,
+                      requestedItems: aoLots.filter((l: any) => selectedLots.includes(l.id)),
+                      status: 'envoyee',
+                    }),
+                  });
+                  
+                  if (response.ok) {
+                    queryClient.invalidateQueries({ queryKey: [`/api/offers/${id}/supplier-requests`] });
+                    toast({
+                      title: "Demande envoyée",
+                      description: `La demande a été envoyée à ${supplierName}`,
+                    });
+                    setShowSupplierRequestDialog(false);
+                    setSelectedLots([]);
+                  } else {
+                    throw new Error('Failed to create supplier request');
+                  }
+                } catch (error) {
+                  toast({
+                    title: "Erreur",
+                    description: "Impossible d'envoyer la demande",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              disabled={selectedLots.length === 0}
+              data-testid="button-send-supplier-request"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Envoyer la Demande
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog pour ajouter/modifier un élément */}
       <Dialog open={showElementDialog} onOpenChange={setShowElementDialog}>
         <DialogContent className="max-w-2xl">

@@ -96,8 +96,12 @@ export const aos = pgTable("aos", {
   
   // Informations générales étendues
   intituleOperation: text("intitule_operation"),
-  dateRenduAO: timestamp("date_rendu_ao"),
-  dateAcceptationAO: timestamp("date_acceptation_ao"),
+  
+  // Gestion des dates simplifiée
+  dateLimiteRemise: timestamp("date_limite_remise"), // Date limite de remise (saisie manuelle)
+  dateSortieAO: timestamp("date_sortie_ao"), // Date de sortie de l'AO (nouvelle)
+  dateRenduAO: timestamp("date_rendu_ao"), // Calculée automatiquement
+  dateAcceptationAO: timestamp("date_acceptation_ao"), // Gardée
   
   // Maître d'ouvrage complet
   maitreOuvrageNom: varchar("maitre_ouvrage_nom"),
@@ -110,8 +114,7 @@ export const aos = pgTable("aos", {
   maitreOeuvre: varchar("maitre_oeuvre"),
   maitreOeuvreContact: varchar("maitre_oeuvre_contact"),
   
-  // Informations techniques
-  lotConcerne: varchar("lot_concerne"),
+  // Informations techniques (lots gérés dans table séparée)
   menuiserieType: menuiserieTypeEnum("menuiserie_type").notNull(),
   montantEstime: decimal("montant_estime", { precision: 12, scale: 2 }),
   typeMarche: marcheTypeEnum("type_marche"),
@@ -142,6 +145,24 @@ export const aos = pgTable("aos", {
   };
 });
 
+// Lots d'Appels d'Offres (gestion multiple des lots)
+export const aoLots = pgTable("ao_lots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  aoId: varchar("ao_id").notNull().references(() => aos.id, { onDelete: "cascade" }),
+  numero: varchar("numero").notNull(), // Numéro du lot (ex: "Lot 01", "Lot A", etc.)
+  designation: text("designation").notNull(), // Description du lot
+  menuiserieType: menuiserieTypeEnum("menuiserie_type"), // Type spécifique au lot
+  montantEstime: decimal("montant_estime", { precision: 12, scale: 2 }), // Montant estimé du lot
+  isSelected: boolean("is_selected").default(false), // Lot sélectionné pour réponse
+  comment: text("comment"), // Commentaire spécifique au lot
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    aoLotIdx: index("ao_lots_ao_id_idx").on(table.aoId),
+  };
+});
+
 // Dossiers d'Offre & Chiffrage (cœur du POC)
 export const offers = pgTable("offers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -164,7 +185,6 @@ export const offers = pgTable("offers", {
   maitreOuvragePhone: varchar("maitre_ouvrage_phone"),
   maitreOeuvre: varchar("maitre_oeuvre"),
   maitreOeuvreContact: varchar("maitre_oeuvre_contact"),
-  lotConcerne: varchar("lot_concerne"),
   typeMarche: marcheTypeEnum("type_marche"),
   prorataEventuel: decimal("prorata_eventuel", { precision: 5, scale: 2 }),
   demarragePrevu: timestamp("demarrage_prevu"),
@@ -181,7 +201,9 @@ export const offers = pgTable("offers", {
   // Dates souvent manquantes (audit JLM : problèmes date OS, délai contractuel)
   dateOS: timestamp("date_os"),
   delaiContractuel: varchar("delai_contractuel"), // En jours (souvent non précisé)
-  dateRenduAO: timestamp("date_rendu_ao"),
+  dateLimiteRemise: timestamp("date_limite_remise"), // Date limite de remise (saisie manuelle)
+  dateSortieAO: timestamp("date_sortie_ao"), // Date de sortie de l'AO (nouvelle)
+  dateRenduAO: timestamp("date_rendu_ao"), // Calculée automatiquement
   dateAcceptationAO: timestamp("date_acceptation_ao"),
   
   // Éléments techniques et administratifs
@@ -438,6 +460,14 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 export const aosRelations = relations(aos, ({ many }) => ({
   offers: many(offers),
+  lots: many(aoLots),
+}));
+
+export const aoLotsRelations = relations(aoLots, ({ one }) => ({
+  ao: one(aos, {
+    fields: [aoLots.aoId],
+    references: [aos.id],
+  }),
 }));
 
 export const offersRelations = relations(offers, ({ one, many }) => ({
@@ -561,6 +591,9 @@ export type UpsertUser = typeof users.$inferInsert;
 export type Ao = typeof aos.$inferSelect;
 export type InsertAo = typeof aos.$inferInsert;
 
+export type AoLot = typeof aoLots.$inferSelect;
+export type InsertAoLot = typeof aoLots.$inferInsert;
+
 export type Offer = typeof offers.$inferSelect;
 export type InsertOffer = typeof offers.$inferInsert;
 
@@ -596,6 +629,12 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const insertAoSchema = createInsertSchema(aos).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAoLotSchema = createInsertSchema(aoLots).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

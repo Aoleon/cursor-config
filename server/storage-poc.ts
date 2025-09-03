@@ -1,7 +1,7 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { 
   users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
-  chiffrageElements, dpgfDocuments,
+  chiffrageElements, dpgfDocuments, aoLots,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -11,7 +11,8 @@ import {
   type TeamResource, type InsertTeamResource,
   type BeWorkload, type InsertBeWorkload,
   type ChiffrageElement, type InsertChiffrageElement,
-  type DpgfDocument, type InsertDpgfDocument
+  type DpgfDocument, type InsertDpgfDocument,
+  type AoLot, type InsertAoLot
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -81,6 +82,12 @@ export interface IStorage {
   createDpgfDocument(dpgf: InsertDpgfDocument): Promise<DpgfDocument>;
   updateDpgfDocument(id: string, dpgf: Partial<InsertDpgfDocument>): Promise<DpgfDocument>;
   deleteDpgfDocument(id: string): Promise<void>;
+  
+  // AO Lots operations - Gestion des lots d'AO
+  getAoLots(aoId: string): Promise<AoLot[]>;
+  createAoLot(lot: InsertAoLot): Promise<AoLot>;
+  updateAoLot(id: string, lot: Partial<InsertAoLot>): Promise<AoLot>;
+  deleteAoLot(id: string): Promise<void>;
   
   // Additional helper methods for conversion workflow
   getOfferById(id: string): Promise<Offer | undefined>;
@@ -480,6 +487,30 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDpgfDocument(id: string): Promise<void> {
     await db.delete(dpgfDocuments).where(eq(dpgfDocuments.id, id));
+  }
+
+  // AO Lots operations - Gestion des lots d'AO
+  async getAoLots(aoId: string): Promise<AoLot[]> {
+    return await db.select().from(aoLots)
+      .where(eq(aoLots.aoId, aoId))
+      .orderBy(aoLots.numero);
+  }
+
+  async createAoLot(lot: InsertAoLot): Promise<AoLot> {
+    const [newLot] = await db.insert(aoLots).values(lot).returning();
+    return newLot;
+  }
+
+  async updateAoLot(id: string, lot: Partial<InsertAoLot>): Promise<AoLot> {
+    const [updatedLot] = await db.update(aoLots)
+      .set({ ...lot, updatedAt: new Date() })
+      .where(eq(aoLots.id, id))
+      .returning();
+    return updatedLot;
+  }
+
+  async deleteAoLot(id: string): Promise<void> {
+    await db.delete(aoLots).where(eq(aoLots.id, id));
   }
 
   // Additional helper methods for conversion workflow

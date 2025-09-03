@@ -867,6 +867,57 @@ app.post("/api/test-data/tasks", async (req, res) => {
 });
 
 // ========================================
+// AO LOTS ROUTES - Gestion des lots d'AO
+// ========================================
+
+// GET /api/aos/:aoId/lots - Récupérer les lots d'un AO
+app.get("/api/aos/:aoId/lots", async (req, res) => {
+  try {
+    const lots = await storage.getAoLots(req.params.aoId);
+    res.json(lots);
+  } catch (error) {
+    console.error("Error fetching AO lots:", error);
+    res.status(500).json({ message: "Failed to fetch AO lots" });
+  }
+});
+
+// POST /api/aos/:aoId/lots - Créer un lot pour un AO
+app.post("/api/aos/:aoId/lots", async (req, res) => {
+  try {
+    const lot = await storage.createAoLot({
+      ...req.body,
+      aoId: req.params.aoId,
+    });
+    res.status(201).json(lot);
+  } catch (error) {
+    console.error("Error creating AO lot:", error);
+    res.status(500).json({ message: "Failed to create AO lot" });
+  }
+});
+
+// PUT /api/aos/:aoId/lots/:lotId - Mettre à jour un lot
+app.put("/api/aos/:aoId/lots/:lotId", async (req, res) => {
+  try {
+    const lot = await storage.updateAoLot(req.params.lotId, req.body);
+    res.json(lot);
+  } catch (error) {
+    console.error("Error updating AO lot:", error);
+    res.status(500).json({ message: "Failed to update AO lot" });
+  }
+});
+
+// DELETE /api/aos/:aoId/lots/:lotId - Supprimer un lot
+app.delete("/api/aos/:aoId/lots/:lotId", async (req, res) => {
+  try {
+    await storage.deleteAoLot(req.params.lotId);
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting AO lot:", error);
+    res.status(500).json({ message: "Failed to delete AO lot" });
+  }
+});
+
+// ========================================
 // SUPPLIER REQUEST ROUTES - Demandes prix simplifiées
 // ========================================
 

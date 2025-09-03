@@ -49,6 +49,7 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
 - **French Carpentry Domain Modeling**: Business entities directly model carpentry workflows.
 - **Session-Based Authentication**: Secure, scalable user management.
 - **Optimistic UI Updates**: TanStack Query provides immediate UI feedback.
+- **ARCHITECTURAL RULE - Single Form Evolution**: The original AO form is the ONLY form that evolves through all workflow stages. No data re-entry, no form duplication. Progressive field addition with validation locking prevents modification of previously validated data.
 
 ### Périmètre POC Strict (Cahier des Charges)
 - **Gestion Utilisateurs**: Authentification simple BE/terrain avec indicateurs charge.
@@ -63,14 +64,21 @@ You are an expert autonomous programmer specialized in French carpentry ERP syst
 - **Planning Partagé**: Gantt simplifié, jalons avec alertes visuelles, glisser-déposer tâches utilisateur.
 - **Gestion Équipes**: Visualisation ressources internes/sous-traitants, charge simplifiée.
 
-### Flux d'Information POC
-- **AO → Chiffrage**: Récupération assistée des données AO lors de création dossier d'offre (pré-remplissage automatique).
-- **Validation Fin d'Études**: Jalon "Fin d'études" validé numériquement dans l'application (plus de validation manuelle).
-- **Chiffrage → Planning**: Transformation automatique dossier d'offre validé en "Projet" avec planning initialisé.
-- **Planning → Équipes**: Consultation planning projet et tâches personnelles par les membres d'équipe.
+### Flux d'Information POC (Formulaire Unique Évolutif)
+- **AO → Chiffrage**: Le même dossier AO évolue vers l'étape chiffrage. Données AO pré-remplies et verrouillées, nouveaux champs de chiffrage ajoutés.
+- **Validation Fin d'Études**: Jalon "Fin d'études" validé numériquement dans l'application (plus de validation manuelle). Verrouillage définitif des données de chiffrage.
+- **Chiffrage → Planning**: Le même dossier évolue vers "Projet" avec planning initialisé. Données AO+Chiffrage verrouillées, champs planning ajoutés.
+- **Planning → Équipes**: Le même projet évolue avec affectation équipes. Données précédentes verrouillées, champs équipes ajoutés.
+- **Équipes → Livraison**: Finalisation sur le même dossier original avec données de livraison.
 
 ### Principes POC Fondamentaux
-- **Zéro Double Saisie**: Réutilisation systématique des données existantes (AO → Offre).
+- **PRINCIPE CENTRAL - Formulaire Unique Évolutif**: L'AO créé initialement est LE formulaire qui évolue à travers TOUTES les étapes (AO → Chiffrage → Planning → Équipes → Livraison). Jamais de re-création, jamais de duplication. Les champs s'ajoutent progressivement à chaque étape mais les données validées des étapes précédentes se verrouillent pour empêcher toute modification.
+- **Zéro Double Saisie**: Réutilisation systématique des données existantes. Une donnée saisie une seule fois, utilisée partout.
+- **Verrouillage Progressif**: 
+  - Étape AO : Données de base modifiables
+  - Étape Chiffrage : Données AO verrouillées, données chiffrage modifiables
+  - Étape Planning : Données AO + Chiffrage verrouillées, données planning modifiables
+  - Etc.
 - **Workflow Visible et Auditable**: Statuts dossiers/projets clairement visibles avec traçabilité changements.
 - **Interface Intuitive**: Simplicité d'usage pour utilisateurs moins habitués aux outils numériques.
 - **Priorité Flux Information**: Circulation fluide des données entre étapes du processus POC.

@@ -13,6 +13,8 @@ import { ObjectStorageService } from "./objectStorage";
 import { documentProcessor, type ExtractedAOData } from "./documentProcessor";
 import { registerChiffrageRoutes } from "./routes/chiffrage";
 import { registerWorkflowRoutes } from "./routes-workflow";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 // Configuration de multer pour l'upload de fichiers
 const uploadMiddleware = multer({ 
@@ -1594,9 +1596,9 @@ app.post("/api/ocr/create-ao-from-pdf", uploadMiddleware.single("pdf"), async (r
         client: ocrResult.processedFields.maitreOuvrageNom || ocrResult.processedFields.client || "Client non spécifié",
         location: ocrResult.processedFields.location || "À définir",
         deadline: ocrResult.processedFields.dateLimiteRemise || ocrResult.processedFields.deadline,
-        typeMarche: ocrResult.processedFields.typeMarche || "prive",
+        typeMarche: (ocrResult.processedFields.typeMarche || "prive") as "public" | "prive" | "ao_restreint" | "ao_ouvert" | "marche_negocie" | "procedure_adaptee",
         menuiserieType: (ocrResult.processedFields.menuiserieType || "fenetre") as any,
-        source: "import_ocr",
+        source: "other" as const,
         departement: (ocrResult.processedFields.departement || "62") as any,
         cctpDisponible: ocrResult.processedFields.cctpDisponible || false,
         plansDisponibles: ocrResult.processedFields.plansDisponibles || false,

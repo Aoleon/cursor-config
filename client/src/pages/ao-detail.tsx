@@ -36,6 +36,7 @@ export default function AoDetail() {
   const [isSaving, setIsSaving] = useState(false);
   const [lots, setLots] = useState<Lot[]>([]);
   const [activeTab, setActiveTab] = useState("informations");
+  const [isEditingChiffrage, setIsEditingChiffrage] = useState(false);
   
   // État local pour le formulaire
   const [formData, setFormData] = useState({
@@ -994,9 +995,46 @@ export default function AoDetail() {
             <TabsContent value="chiffrage" className="space-y-6 mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Euro className="h-5 w-5" />
-                    <span>Chiffrage automatisé par OCR</span>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Euro className="h-5 w-5" />
+                      <span>Chiffrage automatisé par OCR</span>
+                      <span className="text-sm font-normal text-orange-600 bg-orange-100 px-2 py-1 rounded">BROUILLON</span>
+                    </div>
+                    <div className="flex gap-2">
+                      {isEditingChiffrage ? (
+                        <>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setIsEditingChiffrage(false)}
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Annuler
+                          </Button>
+                          <Button 
+                            size="sm"
+                            onClick={() => {
+                              // Sauvegarder les modifications
+                              setIsEditingChiffrage(false);
+                              toast({ title: "Chiffrage sauvegardé", description: "Les modifications ont été enregistrées." });
+                            }}
+                          >
+                            <Save className="h-4 w-4 mr-2" />
+                            Sauvegarder
+                          </Button>
+                        </>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setIsEditingChiffrage(true)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Modifier le chiffrage
+                        </Button>
+                      )}
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1014,105 +1052,212 @@ export default function AoDetail() {
 
                     {/* Lots extraits par OCR */}
                     <div>
-                      <h4 className="font-medium mb-3 flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Lots menuiserie extraits
-                      </h4>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Lots menuiserie extraits ({lots.length})
+                        </h4>
+                        {lots.length > 0 && !isEditingChiffrage && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setIsEditingChiffrage(true)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Modifier
+                          </Button>
+                        )}
+                      </div>
                       
                       {lots.length > 0 ? (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           {lots.map((lot, index) => (
-                            <div key={lot.id || index} className="border rounded-lg p-4 bg-green-50 border-green-200">
-                              <div className="flex items-center justify-between mb-3">
+                            <div key={lot.id || index} className="border rounded-lg p-5 bg-white shadow-sm hover:shadow-md transition-shadow">
+                              <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
-                                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                                  <span className="font-medium">{lot.numero}</span>
-                                  <span className="text-sm text-gray-500">-</span>
-                                  <span className="text-sm">{lot.designation}</span>
+                                  <div className="h-3 w-3 bg-green-500 rounded-full"></div>
+                                  <div>
+                                    <span className="font-semibold text-lg">{lot.numero}</span>
+                                    <span className="text-gray-400 mx-2">•</span>
+                                    <span className="text-gray-700">{lot.designation}</span>
+                                  </div>
                                 </div>
                                 {lot.montantEstime && (
-                                  <span className="font-medium text-green-600">
-                                    {parseFloat(lot.montantEstime).toLocaleString('fr-FR')} € (estimé)
-                                  </span>
+                                  <div className="text-right">
+                                    <span className="text-lg font-bold text-green-600">
+                                      {parseFloat(lot.montantEstime).toLocaleString('fr-FR')} €
+                                    </span>
+                                    <p className="text-xs text-gray-500">Montant estimé</p>
+                                  </div>
                                 )}
                               </div>
                               
-                              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                              <div className="grid md:grid-cols-3 gap-4">
                                 <div>
-                                  <Label className="text-gray-600">Type de menuiserie</Label>
-                                  <p className="font-medium">
-                                    {lot.menuiserieType === "fenetre" && "Fenêtre"}
-                                    {lot.menuiserieType === "porte" && "Porte"}
-                                    {lot.menuiserieType === "portail" && "Portail"}
-                                    {lot.menuiserieType === "volet" && "Volet"}
-                                    {lot.menuiserieType === "cloison" && "Cloison"}
-                                    {lot.menuiserieType === "verriere" && "Verrière"}
-                                    {lot.menuiserieType === "autre" && "Autre"}
-                                  </p>
+                                  <Label className="text-sm text-gray-600 font-medium">Type de menuiserie</Label>
+                                  {isEditingChiffrage ? (
+                                    <Select 
+                                      value={lot.menuiserieType || ""} 
+                                      onValueChange={(value) => {
+                                        const updatedLots = lots.map((l, i) => 
+                                          i === index ? { ...l, menuiserieType: value } : l
+                                        );
+                                        setLots(updatedLots);
+                                      }}
+                                    >
+                                      <SelectTrigger className="mt-1">
+                                        <SelectValue placeholder="Sélectionner" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="fenetre">Fenêtre</SelectItem>
+                                        <SelectItem value="porte">Porte</SelectItem>
+                                        <SelectItem value="portail">Portail</SelectItem>
+                                        <SelectItem value="volet">Volet</SelectItem>
+                                        <SelectItem value="cloison">Cloison</SelectItem>
+                                        <SelectItem value="verriere">Verrière</SelectItem>
+                                        <SelectItem value="autre">Autre</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <p className="font-medium mt-1">
+                                      {lot.menuiserieType === "fenetre" && "Fenêtre"}
+                                      {lot.menuiserieType === "porte" && "Porte"}
+                                      {lot.menuiserieType === "portail" && "Portail"}
+                                      {lot.menuiserieType === "volet" && "Volet"}
+                                      {lot.menuiserieType === "cloison" && "Cloison"}
+                                      {lot.menuiserieType === "verriere" && "Verrière"}
+                                      {lot.menuiserieType === "autre" && "Autre"}
+                                      {!lot.menuiserieType && <span className="text-gray-400">Non défini</span>}
+                                    </p>
+                                  )}
                                 </div>
                                 
                                 <div>
-                                  <Label className="text-gray-600">Statut OCR</Label>
-                                  <p className="font-medium text-green-600">✓ Extrait automatiquement</p>
+                                  <Label className="text-sm text-gray-600 font-medium">Montant estimé (€)</Label>
+                                  {isEditingChiffrage ? (
+                                    <Input
+                                      type="number"
+                                      value={lot.montantEstime || ""}
+                                      onChange={(e) => {
+                                        const updatedLots = lots.map((l, i) => 
+                                          i === index ? { ...l, montantEstime: e.target.value } : l
+                                        );
+                                        setLots(updatedLots);
+                                      }}
+                                      placeholder="Montant en €"
+                                      className="mt-1"
+                                    />
+                                  ) : (
+                                    <p className="font-medium mt-1">
+                                      {lot.montantEstime ? `${parseFloat(lot.montantEstime).toLocaleString('fr-FR')} €` : <span className="text-gray-400">Non défini</span>}
+                                    </p>
+                                  )}
+                                </div>
+                                
+                                <div>
+                                  <Label className="text-sm text-gray-600 font-medium">Statut</Label>
+                                  <p className="font-medium text-green-600 mt-1 flex items-center gap-1">
+                                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                                    Extrait par OCR
+                                  </p>
                                 </div>
                               </div>
                               
                               {lot.comment && (
-                                <div className="mt-3">
-                                  <Label className="text-gray-600">Notes OCR</Label>
-                                  <p className="text-sm text-gray-700">{lot.comment}</p>
+                                <div className="mt-4 pt-3 border-t border-gray-100">
+                                  <Label className="text-sm text-gray-600 font-medium">Notes OCR</Label>
+                                  {isEditingChiffrage ? (
+                                    <Textarea
+                                      value={lot.comment || ""}
+                                      onChange={(e) => {
+                                        const updatedLots = lots.map((l, i) => 
+                                          i === index ? { ...l, comment: e.target.value } : l
+                                        );
+                                        setLots(updatedLots);
+                                      }}
+                                      placeholder="Notes et commentaires"
+                                      className="mt-1"
+                                      rows={2}
+                                    />
+                                  ) : (
+                                    <p className="text-sm text-gray-700 mt-1">{lot.comment}</p>
+                                  )}
                                 </div>
                               )}
                             </div>
                           ))}
                           
-                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4 mt-4">
                             <div className="flex items-center justify-between">
                               <div>
-                                <p className="font-medium">Total estimé (lots extraits)</p>
-                                <p className="text-sm text-gray-600">Basé sur l'analyse OCR des documents</p>
+                                <p className="font-semibold text-lg">Total estimé</p>
+                                <p className="text-sm text-gray-600">Basé sur l'analyse OCR des documents PDF</p>
                               </div>
-                              <span className="text-lg font-bold text-green-600">
-                                {lots.reduce((total, lot) => {
-                                  return total + (lot.montantEstime ? parseFloat(lot.montantEstime) : 0);
-                                }, 0).toLocaleString('fr-FR')} €
-                              </span>
+                              <div className="text-right">
+                                <span className="text-2xl font-bold text-green-600">
+                                  {lots.reduce((total, lot) => {
+                                    return total + (lot.montantEstime ? parseFloat(lot.montantEstime) : 0);
+                                  }, 0).toLocaleString('fr-FR')} €
+                                </span>
+                                <p className="text-xs text-gray-500">HT</p>
+                              </div>
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center py-6 border rounded-lg bg-gray-50">
-                          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                          <p className="text-gray-600">Aucun lot extrait des documents PDF</p>
-                          <p className="text-sm text-gray-500">Vérifiez que les documents contiennent des informations de lots</p>
+                        <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                          <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                          <p className="text-lg font-medium text-gray-600 mb-2">Aucun lot détecté par l'OCR</p>
+                          <p className="text-sm text-gray-500 mb-4">Les documents PDF n'ont pas révélé de lots menuiserie exploitables</p>
+                          <Button variant="outline" className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Re-analyser les documents
+                          </Button>
                         </div>
                       )}
                     </div>
 
                     {/* Actions de chiffrage */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h4 className="font-medium mb-3">Actions de chiffrage</h4>
-                      <div className="flex flex-col gap-3">
+                    <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-6">
+                      <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <Calculator className="h-5 w-5" />
+                        Actions de chiffrage
+                      </h4>
+                      <div className="grid md:grid-cols-2 gap-4">
                         <Button 
                           onClick={() => setLocation(`/create-offer?aoId=${id}`)}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 h-auto py-3"
                           disabled={lots.length === 0}
+                          size="lg"
                         >
-                          <Calculator className="h-4 w-4" />
-                          Créer l'offre pré-remplie par OCR
+                          <Calculator className="h-5 w-5" />
+                          <div className="text-left">
+                            <div className="font-medium">Créer l'offre complète</div>
+                            <div className="text-xs opacity-90">Pré-remplie avec les données OCR</div>
+                          </div>
                         </Button>
                         
-                        {lots.length === 0 && (
-                          <p className="text-sm text-amber-600">
-                            ⚠️ Ajoutez des lots dans l'onglet "Informations" pour activer le chiffrage automatisé
-                          </p>
-                        )}
-                        
-                        <Button variant="outline" className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          Re-analyser les documents PDF
+                        <Button 
+                          variant="outline" 
+                          className="flex items-center gap-2 h-auto py-3"
+                          size="lg"
+                        >
+                          <FileText className="h-5 w-5" />
+                          <div className="text-left">
+                            <div className="font-medium">Re-analyser les PDF</div>
+                            <div className="text-xs text-gray-600">Nouvelle extraction OCR</div>
+                          </div>
                         </Button>
                       </div>
+                      
+                      {lots.length === 0 && (
+                        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <p className="text-sm text-amber-700 flex items-center gap-2">
+                            <div className="h-2 w-2 bg-amber-500 rounded-full"></div>
+                            Aucun lot détecté : Vérifiez les documents PDF ou ajoutez manuellement des lots
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Informations complémentaires OCR */}

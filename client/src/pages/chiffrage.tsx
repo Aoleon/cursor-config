@@ -58,17 +58,18 @@ import { fr } from "date-fns/locale";
 // Schéma pour un élément de chiffrage
 const chiffrageElementSchema = z.object({
   category: z.string().min(1, "Catégorie requise"),
-  subcategory: z.string().optional(),
+  subcategory: z.string().optional().default(""),
   designation: z.string().min(1, "Désignation requise"),
   unit: z.string().min(1, "Unité requise"),
-  quantity: z.string().min(1, "Quantité requise"),
-  unitPrice: z.string().min(1, "Prix unitaire requis"),
-  coefficient: z.string().default("1.00"),
-  marginPercentage: z.string().default("20.00"),
-  supplier: z.string().optional(),
-  supplierRef: z.string().optional(),
+  quantity: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Quantité valide requise"),
+  unitPrice: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Prix unitaire valide requis"),
+  coefficient: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Coefficient valide requis").default("1.00"),
+  marginPercentage: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Marge valide requise").default("20.00"),
+  supplier: z.string().optional().default(""),
+  supplierRef: z.string().optional().default(""),
   isOptional: z.boolean().default(false),
-  notes: z.string().optional(),
+  notes: z.string().optional().default(""),
+  position: z.number().default(0),
 });
 
 type ChiffrageElementFormData = z.infer<typeof chiffrageElementSchema>;
@@ -123,13 +124,18 @@ export default function Chiffrage() {
     resolver: zodResolver(chiffrageElementSchema),
     defaultValues: {
       category: "",
+      subcategory: "",
       designation: "",
       unit: "u",
       quantity: "1",
       unitPrice: "0",
       coefficient: "1.00",
       marginPercentage: "20.00",
+      supplier: "",
+      supplierRef: "",
       isOptional: false,
+      notes: "",
+      position: 0,
     },
   });
 
@@ -140,21 +146,43 @@ export default function Chiffrage() {
         ? `/api/offers/${id}/chiffrage-elements/${data.id}`
         : `/api/offers/${id}/chiffrage-elements`;
       
+      // Calculer le prix total
+      const qty = parseFloat(data.quantity);
+      const price = parseFloat(data.unitPrice);
+      const coeff = parseFloat(data.coefficient);
+      const totalPrice = qty * price * coeff;
+
+      const payload = {
+        offerId: id,
+        category: data.category,
+        subcategory: data.subcategory || "",
+        designation: data.designation,
+        unit: data.unit,
+        quantity: data.quantity,
+        unitPrice: data.unitPrice,
+        totalPrice: totalPrice.toString(),
+        coefficient: data.coefficient,
+        marginPercentage: data.marginPercentage,
+        supplier: data.supplier || "",
+        supplierRef: data.supplierRef || "",
+        position: data.position || 0,
+        isOptional: data.isOptional || false,
+        notes: data.notes || "",
+      };
+
+      console.log("Sending payload:", payload);
+
       const response = await fetch(url, {
         method: data.id ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          offerId: id,
-          quantity: parseFloat(data.quantity),
-          unitPrice: parseFloat(data.unitPrice),
-          coefficient: parseFloat(data.coefficient),
-          marginPercentage: parseFloat(data.marginPercentage),
-          totalPrice: parseFloat(data.quantity) * parseFloat(data.unitPrice) * parseFloat(data.coefficient),
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error("Erreur lors de la sauvegarde");
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error("Error response:", errorData);
+        throw new Error(`Erreur lors de la sauvegarde: ${response.status} ${errorData}`);
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -165,6 +193,14 @@ export default function Chiffrage() {
       toast({
         title: "Élément sauvegardé",
         description: "L'élément de chiffrage a été enregistré avec succès.",
+      });
+    },
+    onError: (error) => {
+      console.error("Mutation error:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de sauvegarder l'élément",
+        variant: "destructive",
       });
     },
   });
@@ -231,14 +267,15 @@ export default function Chiffrage() {
       subcategory: element.subcategory || "",
       designation: element.designation,
       unit: element.unit,
-      quantity: element.quantity.toString(),
-      unitPrice: element.unitPrice.toString(),
+      quantity: element.quantity?.toString() || "1",
+      unitPrice: element.unitPrice?.toString() || "0",
       coefficient: element.coefficient?.toString() || "1.00",
       marginPercentage: element.marginPercentage?.toString() || "20.00",
       supplier: element.supplier || "",
       supplierRef: element.supplierRef || "",
       isOptional: element.isOptional || false,
       notes: element.notes || "",
+      position: element.position || 0,
     });
     setShowElementDialog(true);
   };

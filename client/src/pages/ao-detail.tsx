@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,7 @@ import { LotsManager } from "@/components/ao/LotsManager";
 import { ContactSelector } from "@/components/contacts/ContactSelector";
 import { MaitreOuvrageForm } from "@/components/contacts/MaitreOuvrageForm";
 import { MaitreOeuvreForm } from "@/components/contacts/MaitreOeuvreForm";
-import { FileText, Calendar, MapPin, User, Building, CheckCircle2, ArrowLeft, Calculator, Loader2 } from "lucide-react";
-import { debounce } from "lodash";
+import { FileText, Calendar, MapPin, User, Building, Save, ArrowLeft, Calculator, Edit, X } from "lucide-react";
 
 interface Lot {
   id?: string;
@@ -32,11 +31,11 @@ export default function AoDetail() {
   const [_, setLocation] = useLocation();
   const { id } = useParams();
   const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [lots, setLots] = useState<Lot[]>([]);
   
-  // État local pour le formulaire qui se sauvegarde automatiquement
+  // État local pour le formulaire
   const [formData, setFormData] = useState({
     reference: "",
     client: "",
@@ -174,63 +173,59 @@ export default function AoDetail() {
     return dateRendu.toISOString().split('T')[0];
   };
 
-  // Fonction de sauvegarde automatique avec debounce
-  const saveAO = useCallback(
-    debounce(async (data: any) => {
-      setIsSaving(true);
-      try {
-        const dateRenduAO = data.dateLimiteRemise ? calculateDateRendu(data.dateLimiteRemise) : undefined;
-        
-        const aoData = {
-          ...data,
-          dateRenduAO,
-          montantEstime: data.montantEstime ? parseFloat(data.montantEstime) : undefined,
-          maitreOuvrageId: selectedMaitreOuvrage?.id,
-          maitreOeuvreId: selectedMaitreOeuvre?.id,
-        };
-        
-        const response = await fetch(`/api/aos/${id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(aoData),
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to update AO');
-        }
-        
-        const result = await response.json();
-        setLastSaved(new Date());
-        
-        queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/aos", id] });
-        
-        toast({
-          title: "✓ Sauvegardé",
-          description: "Les modifications ont été enregistrées automatiquement",
-          duration: 2000,
-        });
-      } catch (error) {
-        console.error("Error saving AO:", error);
-        toast({
-          title: "Erreur de sauvegarde",
-          description: "Les modifications n'ont pas pu être sauvegardées",
-          variant: "destructive",
-        });
-      } finally {
-        setIsSaving(false);
+  // Fonction de sauvegarde manuelle
+  const saveAO = async () => {
+    setIsSaving(true);
+    try {
+      const dateRenduAO = formData.dateLimiteRemise ? calculateDateRendu(formData.dateLimiteRemise) : undefined;
+      
+      const aoData = {
+        ...formData,
+        dateRenduAO,
+        montantEstime: formData.montantEstime ? parseFloat(formData.montantEstime) : undefined,
+        maitreOuvrageId: selectedMaitreOuvrage?.id,
+        maitreOeuvreId: selectedMaitreOeuvre?.id,
+      };
+      
+      const response = await fetch(`/api/aos/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(aoData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update AO');
       }
-    }, 1500), // Délai de 1.5 secondes avant sauvegarde
-    [id, selectedMaitreOuvrage, selectedMaitreOeuvre]
-  );
+      
+      const result = await response.json();
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", id] });
+      
+      toast({
+        title: "✓ Sauvegardé",
+        description: "Les modifications ont été enregistrées avec succès",
+      });
+      
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error saving AO:", error);
+      toast({
+        title: "Erreur de sauvegarde",
+        description: "Les modifications n'ont pas pu être sauvegardées",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-  // Gérer les changements de champs avec sauvegarde automatique
+  // Gérer les changements de champs en mode édition
   const handleFieldChange = (field: string, value: any) => {
     const newData = { ...formData, [field]: value };
     setFormData(newData);
-    saveAO(newData);
   };
 
   if (isLoading) {
@@ -268,7 +263,7 @@ export default function AoDetail() {
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
-          title={`AO ${ao.reference}${isSaving ? ' - Sauvegarde...' : lastSaved ? ' ✓' : ''}`}
+          title={`AO ${ao.reference}`}
           breadcrumbs={[
             { label: "Accueil", href: "/" },
             { label: "Appels d'Offres", href: "/offers" },
@@ -296,6 +291,75 @@ export default function AoDetail() {
         />
         
         <div className="px-6 py-6 space-y-6">
+          {/* Barre d'actions en mode édition */}
+          {isEditing && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Edit className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-blue-800">Mode édition activé - Modifiez les champs puis enregistrez</span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsEditing(false);
+                    // Réinitialiser le formulaire avec les données originales
+                    if (ao) {
+                      setFormData({
+                        reference: ao.reference || "",
+                        client: ao.client || "",
+                        location: ao.location || "",
+                        departement: ao.departement || "",
+                        intituleOperation: ao.intituleOperation || "",
+                        dateLimiteRemise: ao.dateLimiteRemise ? ao.dateLimiteRemise.split('T')[0] : "",
+                        dateSortieAO: ao.dateSortieAO ? ao.dateSortieAO.split('T')[0] : "",
+                        dateAcceptationAO: ao.dateAcceptationAO ? ao.dateAcceptationAO.split('T')[0] : "",
+                        demarragePrevu: ao.demarragePrevu ? ao.demarragePrevu.split('T')[0] : "",
+                        maitreOuvrageId: ao.maitreOuvrageId || "",
+                        maitreOeuvreId: ao.maitreOeuvreId || "",
+                        contactAONom: ao.contactAONom || "",
+                        contactAOPoste: ao.contactAOPoste || "",
+                        contactAOTelephone: ao.contactAOTelephone || "",
+                        contactAOEmail: ao.contactAOEmail || "",
+                        menuiserieType: ao.menuiserieType || "fenetre",
+                        montantEstime: ao.montantEstime ? ao.montantEstime.toString() : "",
+                        typeMarche: ao.typeMarche || "",
+                        bureauEtudes: ao.bureauEtudes || "",
+                        bureauControle: ao.bureauControle || "",
+                        sps: ao.sps || "",
+                        source: ao.source || "website",
+                        description: ao.description || "",
+                      });
+                    }
+                  }}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Annuler
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={saveAO}
+                  disabled={isSaving}
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  {isSaving ? "Enregistrement..." : "Enregistrer"}
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {!isEditing && (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Modifier l'AO
+              </Button>
+            </div>
+          )}
           {/* Informations de base */}
           <Card>
             <CardHeader>
@@ -312,6 +376,7 @@ export default function AoDetail() {
                   value={formData.reference}
                   onChange={(e) => handleFieldChange("reference", e.target.value)}
                   placeholder="Référence de l'appel d'offres"
+                  disabled={!isEditing}
                   data-testid="input-reference"
                 />
               </div>
@@ -323,6 +388,7 @@ export default function AoDetail() {
                   value={formData.client}
                   onChange={(e) => handleFieldChange("client", e.target.value)}
                   placeholder="Nom du client"
+                  disabled={!isEditing}
                   data-testid="input-client"
                 />
               </div>
@@ -334,6 +400,7 @@ export default function AoDetail() {
                   value={formData.intituleOperation}
                   onChange={(e) => handleFieldChange("intituleOperation", e.target.value)}
                   placeholder="Intitulé de l'opération"
+                  disabled={!isEditing}
                   data-testid="input-intitule"
                 />
               </div>
@@ -343,6 +410,7 @@ export default function AoDetail() {
                 <Select 
                   value={formData.menuiserieType} 
                   onValueChange={(value) => handleFieldChange("menuiserieType", value)}
+                  disabled={!isEditing}
                 >
                   <SelectTrigger id="type" data-testid="select-menuiserie-type">
                     <SelectValue />
@@ -367,6 +435,7 @@ export default function AoDetail() {
                   onChange={(e) => handleFieldChange("description", e.target.value)}
                   placeholder="Description détaillée de l'appel d'offres"
                   rows={3}
+                  disabled={!isEditing}
                   data-testid="textarea-description"
                 />
               </div>
@@ -389,6 +458,7 @@ export default function AoDetail() {
                   value={formData.location}
                   onChange={(e) => handleFieldChange("location", e.target.value)}
                   placeholder="Adresse complète du chantier"
+                  disabled={!isEditing}
                   data-testid="input-location"
                 />
               </div>
@@ -400,6 +470,7 @@ export default function AoDetail() {
                   value={formData.departement}
                   onChange={(e) => handleFieldChange("departement", e.target.value)}
                   placeholder="Ex: 59"
+                  disabled={!isEditing}
                   data-testid="input-departement"
                 />
               </div>
@@ -422,6 +493,7 @@ export default function AoDetail() {
                   type="date"
                   value={formData.dateLimiteRemise}
                   onChange={(e) => handleFieldChange("dateLimiteRemise", e.target.value)}
+                  disabled={!isEditing}
                   data-testid="input-date-limite"
                 />
               </div>

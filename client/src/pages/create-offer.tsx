@@ -79,13 +79,7 @@ const createOfferSchema = z.object({
   typeMarche: z.enum(["public", "prive", "ao_restreint", "ao_ouvert", "marche_negocie", "procedure_adaptee"]).optional(),
   prorataEventuel: z.string().optional(),
   
-  // Dates importantes
-  deadline: z.string().optional(),
-  demarragePrevu: z.string().optional(),
-  
-  // Contact maître d'ouvrage étendu
-  maitreOuvrageEmail: z.string().optional(),
-  maitreOuvragePhone: z.string().optional(),
+
   
   // Éléments techniques
   bureauEtudes: z.string().optional(),
@@ -138,8 +132,10 @@ export default function CreateOffer() {
       menuiserieType: "fenetre",
       deadline: "",
       demarragePrevu: "",
+      maitreOuvrageNom: "",
       maitreOuvrageEmail: "",
       maitreOuvragePhone: "",
+      lotConcerne: "",
       bureauEtudes: "",
       isPriority: false,
       urssafValide: false,
@@ -336,6 +332,11 @@ export default function CreateOffer() {
                 console.log('Client mis à jour:', data.client);
               }
               
+              if (data.maitreOuvrage) {
+                form.setValue("maitreOuvrageNom", data.maitreOuvrage, { shouldValidate: true, shouldDirty: true });
+                console.log('Maître d\'ouvrage mis à jour:', data.maitreOuvrage);
+              }
+              
               if (data.location) {
                 form.setValue("location", data.location, { shouldValidate: true, shouldDirty: true });
                 console.log('Location mise à jour:', data.location);
@@ -362,6 +363,11 @@ export default function CreateOffer() {
               if (data.description) {
                 form.setValue("intituleOperation", data.description, { shouldValidate: true, shouldDirty: true });
                 console.log('Intitulé opération mis à jour:', data.description);
+              }
+              
+              if (data.lotsConcernes) {
+                form.setValue("lotConcerne", data.lotsConcernes, { shouldValidate: true, shouldDirty: true });
+                console.log('Lots concernés mis à jour:', data.lotsConcernes);
               }
               
               if (data.technicalRequirements) {

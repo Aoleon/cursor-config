@@ -19,11 +19,13 @@ const anthropic = new Anthropic({
 export interface ExtractedAOData {
   reference?: string;
   client?: string;
+  maitreOuvrage?: string;
   location?: string;
   deadlineDate?: string;
   startDate?: string;
   estimatedAmount?: number;
   description?: string;
+  lotsConcernes?: string;
   technicalRequirements?: string;
   administrativeElements?: string;
   contactPerson?: string;
@@ -60,12 +62,14 @@ Extrais et structure les informations suivantes au format JSON strict :
 
 {
   "reference": "référence de l'AO (ex: AO-2025-XXX, marché n°...)",
-  "client": "nom du maître d'ouvrage/client",
+  "client": "nom du client final/entreprise qui va réaliser",
+  "maitreOuvrage": "nom du maître d'ouvrage (celui qui commande les travaux)",
   "location": "adresse/localisation du projet",
   "deadlineDate": "date limite de remise (format YYYY-MM-DD si trouvée)",
   "startDate": "date de démarrage prévue (format YYYY-MM-DD si trouvée)",
   "estimatedAmount": "montant estimé en euros (nombre uniquement)",
   "description": "description succincte du projet",
+  "lotsConcernes": "lots concernés (ex: menuiseries extérieures, menuiserie intérieure...)",
   "technicalRequirements": "principales exigences techniques",
   "administrativeElements": "éléments administratifs importants",
   "contactPerson": "personne de contact",
@@ -116,11 +120,13 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       const cleanedData: ExtractedAOData = {
         reference: extractedData.reference || null,
         client: extractedData.client || null,
+        maitreOuvrage: extractedData.maitreOuvrage || null,
         location: extractedData.location || null,
         deadlineDate: this.validateDate(extractedData.deadlineDate),
         startDate: this.validateDate(extractedData.startDate),
         estimatedAmount: this.validateAmount(extractedData.estimatedAmount),
         description: extractedData.description || null,
+        lotsConcernes: extractedData.lotsConcernes || null,
         technicalRequirements: extractedData.technicalRequirements || null,
         administrativeElements: extractedData.administrativeElements || null,
         contactPerson: extractedData.contactPerson || null,
@@ -203,6 +209,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
    */
   private getBoulogneDocumentContent(): string {
     return `
+MAITRE D'OUVRAGE: SCICV BOULOGNE SANDETTIE
 RPAO SCICV BOULOGNE SANDETTIE
 
 PROJET: Construction de 98 logements collectifs
@@ -227,6 +234,8 @@ Caractéristiques:
 - NF HABITAT HQE
 - Marché en entreprises séparées
 - Variantes autorisées en plus de la solution de base
+
+Entreprise candidate: JLM Menuiserie (client qui va réaliser les travaux)
 `;
   }
 
@@ -245,7 +254,7 @@ Localisation: 62 - Boulogne-sur-Mer
 Mise en ligne: 21/01/2025
 Limite de réponse: 14/03/2025
 
-Maître d'ouvrage: Novalys - SCICV Boulogne Sandettie
+Maître d'ouvrage: SCICV Boulogne Sandettie
 Assistance à maîtrise d'ouvrage: Novalys
 41 boulevard Ambroise-Paré, 80000 Amiens
 Siret: 98206593000017
@@ -254,7 +263,26 @@ Mode de passation du marché: Appel d'offres ouvert
 
 Objet du marché: Construction de 98 logements collectifs, rue de Wissant, 62200 Boulogne-sur-Mer
 
-Lots: Fondations spéciales, Gros oeuvre, Etanchéité, Menuiseries extérieures, Menuiserie intérieure, Plâtrerie cloisons sèches, Serrurerie, Carrelage faïence, Peinture, Plomberie chauffage VMC, Electricité, Ravalement, VRD, Ascenseur, Espaces verts clôtures, Sols souples, Nettoyage
+Lots concernés:
+02a: Fondations spéciales
+03: Gros oeuvre
+06: Etanchéité
+07.1: Menuiseries extérieures
+08: Menuiserie intérieure
+09: Plâtrerie cloisons sèches
+10: Serrurerie
+11: Carrelage faïence
+12: Peinture
+13: Plomberie chauffage VMC
+14: Electricité
+15: Ravalement
+16: VRD
+18: Ascenseur
+20: Espaces verts clôtures
+27: Sols souples
+30: Nettoyage
+
+Entreprise candidate: JLM Menuiserie (spécialiste des lots 07.1 Menuiseries extérieures et 08 Menuiserie intérieure)
 
 Date limite de réception des offres: 14 mars 2025 à 18h00
 Démarrage prévisionnel des travaux: Juin 2025

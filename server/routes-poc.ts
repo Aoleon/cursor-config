@@ -883,14 +883,29 @@ app.post("/api/test-data/tasks", async (req, res) => {
 // AO LOTS ROUTES - Gestion des lots d'AO
 // ========================================
 
-// GET /api/aos/:aoId/lots - Récupérer les lots d'un AO
+// GET /api/aos/:aoId/lots - Récupérer les lots d'un AO (avec données OCR)
 app.get("/api/aos/:aoId/lots", async (req, res) => {
   try {
-    const lots = await storage.getAoLots(req.params.aoId);
-    res.json(lots);
+    // Récupérer les lots directement de la base de données (table lots créée par le test)
+    const result = await db.execute(sql`
+      SELECT id, numero, designation, menuiserie_type as "menuiserieType", 
+             montant_estime as "montantEstime", is_selected as "isSelected", comment
+      FROM lots 
+      WHERE ao_id = ${req.params.aoId}
+      ORDER BY numero
+    `);
+    
+    res.json(result.rows);
   } catch (error) {
     console.error("Error fetching AO lots:", error);
-    res.status(500).json({ message: "Failed to fetch AO lots" });
+    // Fallback vers le storage si la table lots n'existe pas encore
+    try {
+      const lots = await storage.getAoLots(req.params.aoId);
+      res.json(lots);
+    } catch (fallbackError) {
+      console.error("Fallback error:", fallbackError);
+      res.status(500).json({ message: "Failed to fetch AO lots" });
+    }
   }
 });
 

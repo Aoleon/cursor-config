@@ -996,23 +996,158 @@ export default function AoDetail() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Euro className="h-5 w-5" />
-                    <span>Module de chiffrage</span>
+                    <span>Chiffrage automatisé par OCR</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8">
-                    <Euro className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Module de chiffrage</h3>
-                    <p className="text-gray-500 mb-6">
-                      Transformez cet AO en dossier d'offre pour commencer le chiffrage détaillé.
-                    </p>
-                    <Button 
-                      onClick={() => setLocation(`/create-offer?aoId=${id}`)}
-                      className="flex items-center gap-2"
-                    >
-                      <Calculator className="h-4 w-4" />
-                      Créer l'offre de chiffrage
-                    </Button>
+                  <div className="space-y-6">
+                    {/* Statut d'extraction */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-3 w-3 bg-blue-400 rounded-full"></div>
+                        <div>
+                          <p className="font-medium text-blue-800">Données OCR disponibles</p>
+                          <p className="text-sm text-blue-600">Les informations ont été extraites automatiquement des documents PDF de l'AO</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Lots extraits par OCR */}
+                    <div>
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Lots menuiserie extraits
+                      </h4>
+                      
+                      {lots.length > 0 ? (
+                        <div className="space-y-3">
+                          {lots.map((lot, index) => (
+                            <div key={lot.id || index} className="border rounded-lg p-4 bg-green-50 border-green-200">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                                  <span className="font-medium">{lot.numero}</span>
+                                  <span className="text-sm text-gray-500">-</span>
+                                  <span className="text-sm">{lot.designation}</span>
+                                </div>
+                                {lot.montantEstime && (
+                                  <span className="font-medium text-green-600">
+                                    {parseFloat(lot.montantEstime).toLocaleString('fr-FR')} € (estimé)
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <Label className="text-gray-600">Type de menuiserie</Label>
+                                  <p className="font-medium">
+                                    {lot.menuiserieType === "fenetre" && "Fenêtre"}
+                                    {lot.menuiserieType === "porte" && "Porte"}
+                                    {lot.menuiserieType === "portail" && "Portail"}
+                                    {lot.menuiserieType === "volet" && "Volet"}
+                                    {lot.menuiserieType === "cloison" && "Cloison"}
+                                    {lot.menuiserieType === "verriere" && "Verrière"}
+                                    {lot.menuiserieType === "autre" && "Autre"}
+                                  </p>
+                                </div>
+                                
+                                <div>
+                                  <Label className="text-gray-600">Statut OCR</Label>
+                                  <p className="font-medium text-green-600">✓ Extrait automatiquement</p>
+                                </div>
+                              </div>
+                              
+                              {lot.comment && (
+                                <div className="mt-3">
+                                  <Label className="text-gray-600">Notes OCR</Label>
+                                  <p className="text-sm text-gray-700">{lot.comment}</p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">Total estimé (lots extraits)</p>
+                                <p className="text-sm text-gray-600">Basé sur l'analyse OCR des documents</p>
+                              </div>
+                              <span className="text-lg font-bold text-green-600">
+                                {lots.reduce((total, lot) => {
+                                  return total + (lot.montantEstime ? parseFloat(lot.montantEstime) : 0);
+                                }, 0).toLocaleString('fr-FR')} €
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 border rounded-lg bg-gray-50">
+                          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                          <p className="text-gray-600">Aucun lot extrait des documents PDF</p>
+                          <p className="text-sm text-gray-500">Vérifiez que les documents contiennent des informations de lots</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions de chiffrage */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-medium mb-3">Actions de chiffrage</h4>
+                      <div className="flex flex-col gap-3">
+                        <Button 
+                          onClick={() => setLocation(`/create-offer?aoId=${id}`)}
+                          className="flex items-center gap-2"
+                          disabled={lots.length === 0}
+                        >
+                          <Calculator className="h-4 w-4" />
+                          Créer l'offre pré-remplie par OCR
+                        </Button>
+                        
+                        {lots.length === 0 && (
+                          <p className="text-sm text-amber-600">
+                            ⚠️ Ajoutez des lots dans l'onglet "Informations" pour activer le chiffrage automatisé
+                          </p>
+                        )}
+                        
+                        <Button variant="outline" className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Re-analyser les documents PDF
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Informations complémentaires OCR */}
+                    <div>
+                      <h4 className="font-medium mb-3">Données extraites du CCTP</h4>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {formData.bureauEtudes && (
+                          <div>
+                            <Label className="text-sm text-gray-600">Bureau d'études</Label>
+                            <p className="font-medium">{formData.bureauEtudes}</p>
+                          </div>
+                        )}
+                        
+                        {formData.bureauControle && (
+                          <div>
+                            <Label className="text-sm text-gray-600">Bureau de contrôle</Label>
+                            <p className="font-medium">{formData.bureauControle}</p>
+                          </div>
+                        )}
+                        
+                        {formData.sps && (
+                          <div>
+                            <Label className="text-sm text-gray-600">Coordinateur SPS</Label>
+                            <p className="font-medium">{formData.sps}</p>
+                          </div>
+                        )}
+                        
+                        {formData.montantEstime && (
+                          <div>
+                            <Label className="text-sm text-gray-600">Budget estimé global</Label>
+                            <p className="font-medium">{parseFloat(formData.montantEstime).toLocaleString('fr-FR')} €</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

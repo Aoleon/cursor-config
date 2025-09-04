@@ -44,6 +44,7 @@ export interface ExtractedAOData {
   location?: string;
   deadlineDate?: string;
   startDate?: string;
+  deliveryDate?: string; // Date de livraison prévue
   estimatedAmount?: number;
   description?: string;
   lotsConcernes?: string;
@@ -89,6 +90,7 @@ Extrais et structure les informations suivantes au format JSON strict :
   "location": "adresse/localisation du projet",
   "deadlineDate": "date limite de remise (format YYYY-MM-DD si trouvée)",
   "startDate": "date de démarrage prévue (format YYYY-MM-DD si trouvée)",
+  "deliveryDate": "date de livraison prévue (format YYYY-MM-DD si trouvée)",
   "estimatedAmount": "montant estimé en euros (nombre uniquement)",
   "description": "description succincte du projet",
   "lotsConcernes": "lots concernés (ex: menuiseries extérieures, menuiserie intérieure...)",
@@ -146,6 +148,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         location: extractedData.location || null,
         deadlineDate: this.validateDate(extractedData.deadlineDate),
         startDate: this.validateDate(extractedData.startDate),
+        deliveryDate: this.validateDate(extractedData.deliveryDate),
         estimatedAmount: this.validateAmount(extractedData.estimatedAmount),
         description: extractedData.description || null,
         lotsConcernes: extractedData.lotsConcernes || null,

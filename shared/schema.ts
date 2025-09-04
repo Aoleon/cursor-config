@@ -164,6 +164,7 @@ export const aos = pgTable("aos", {
   typeMarche: marcheTypeEnum("type_marche"),
   prorataEventuel: decimal("prorata_eventuel", { precision: 5, scale: 2 }),
   demarragePrevu: timestamp("demarrage_prevu"),
+  dateLivraisonPrevue: timestamp("date_livraison_prevue"), // Date de livraison extraite par OCR
   
   // Éléments techniques et administratifs
   bureauEtudes: varchar("bureau_etudes"),

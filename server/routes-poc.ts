@@ -15,6 +15,7 @@ import { registerChiffrageRoutes } from "./routes/chiffrage";
 import { registerWorkflowRoutes } from "./routes-workflow";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import { calculerDatesImportantes, calculerDateRemiseJ15 } from "./dateUtils";
 
 // Configuration de multer pour l'upload de fichiers
 const uploadMiddleware = multer({ 
@@ -1381,12 +1382,25 @@ app.post("/api/documents/analyze", async (req, res) => {
     
     // 2. Analyser le contenu avec l'IA pour extraire les données structurées
     const extractedData = await documentProcessor.extractAOInformation(textContent, filename);
+    
+    // 3. Calculer automatiquement les dates importantes
+    const datesImportantes = calculerDatesImportantes(
+      extractedData.deadlineDate,
+      extractedData.startDate,
+      extractedData.deliveryDate
+    );
+    
     console.log(`[DocumentAnalysis] Analysis completed for ${filename}:`, extractedData);
+    console.log(`[DocumentAnalysis] Dates importantes calculées:`, datesImportantes);
 
     res.json({
       success: true,
       filename,
-      extractedData,
+      extractedData: {
+        ...extractedData,
+        // Ajouter les dates calculées dans la réponse
+        datesImportantes
+      },
       textLength: textContent.length,
       message: "Document analysé avec succès"
     });
@@ -1413,9 +1427,12 @@ app.post("/api/offers/create-with-structure", async (req, res) => {
     // Convertir les dates string en objets Date si elles sont présentes
     const processedData = {
       ...offerData,
-      dateRenduAO: offerData.dateRenduAO ? new Date(offerData.dateRenduAO) : undefined,
+      dateRenduAO: offerData.dateRenduAO ? new Date(offerData.dateRenduAO) : 
+        // Calculer automatiquement J-15 si date limite fournie
+        (offerData.dateLimiteRemise ? calculerDateRemiseJ15(new Date(offerData.dateLimiteRemise)) : undefined),
       dateAcceptationAO: offerData.dateAcceptationAO ? new Date(offerData.dateAcceptationAO) : undefined,
       demarragePrevu: offerData.demarragePrevu ? new Date(offerData.demarragePrevu) : undefined,
+      dateLivraisonPrevue: offerData.dateLivraisonPrevue ? new Date(offerData.dateLivraisonPrevue) : undefined,
       deadline: offerData.deadline ? new Date(offerData.deadline) : undefined,
       montantEstime: offerData.montantEstime ? offerData.montantEstime.toString() : undefined,
       prorataEventuel: offerData.prorataEventuel ? offerData.prorataEventuel.toString() : undefined,

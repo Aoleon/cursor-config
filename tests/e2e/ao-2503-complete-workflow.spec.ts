@@ -84,10 +84,14 @@ const AO_2503_LOTS = [
     numero: '08',
     designation: 'Menuiserie intérieure',
     materiau: 'bois_stratifie',
+    vitrage: '', // Non applicable pour menuiserie intérieure
     quantite: 330, // 196+98+24+12
     couleur: 'Chêne clair',
+    performanceThermique: '', // Non applicable
     performanceAcoustique: 'DnT,w ≥ 40 dB',
     normes: ['NF Intérieure', 'PEFC'],
+    dimensions: 'Variables selon ouvertures',
+    accessoires: 'Poignées, gonds, joints d\'étanchéité, serrurerie 3 points',
     delaiLivraison: '6 semaines',
     uniteOeuvre: 'À l\'unité',
     montantEstime: 95000,
@@ -179,13 +183,21 @@ test.describe('AO 2503 - Workflow Complet', () => {
     await page.getByTestId('input-lot-numero').fill(lot1.numero);
     await page.getByTestId('input-lot-designation').fill(lot1.designation);
     await page.getByTestId('select-lot-materiau').selectOption(lot1.materiau);
-    await page.getByTestId('select-lot-vitrage').selectOption(lot1.vitrage);
+    if (lot1.vitrage) {
+      await page.getByTestId('select-lot-vitrage').selectOption(lot1.vitrage);
+    }
     await page.getByTestId('input-lot-quantite').fill(lot1.quantite.toString());
     await page.getByTestId('input-lot-couleur').fill(lot1.couleur);
-    await page.getByTestId('input-lot-performance-thermique').fill(lot1.performanceThermique);
+    if (lot1.performanceThermique) {
+      await page.getByTestId('input-lot-performance-thermique').fill(lot1.performanceThermique);
+    }
     await page.getByTestId('input-lot-performance-acoustique').fill(lot1.performanceAcoustique);
-    await page.getByTestId('input-lot-dimensions').fill(lot1.dimensions);
-    await page.getByTestId('input-lot-accessoires').fill(lot1.accessoires);
+    if (lot1.dimensions) {
+      await page.getByTestId('input-lot-dimensions').fill(lot1.dimensions);
+    }
+    if (lot1.accessoires) {
+      await page.getByTestId('input-lot-accessoires').fill(lot1.accessoires);
+    }
     await page.getByTestId('input-lot-delai-livraison').fill(lot1.delaiLivraison);
     await page.getByTestId('input-lot-unite-oeuvre').fill(lot1.uniteOeuvre);
     await page.getByTestId('input-lot-montant-estime').fill(lot1.montantEstime.toString());
@@ -201,9 +213,21 @@ test.describe('AO 2503 - Workflow Complet', () => {
     await page.getByTestId('input-lot-numero').fill(lot2.numero);
     await page.getByTestId('input-lot-designation').fill(lot2.designation);
     await page.getByTestId('select-lot-materiau').selectOption(lot2.materiau);
+    if (lot2.vitrage) {
+      await page.getByTestId('select-lot-vitrage').selectOption(lot2.vitrage);
+    }
     await page.getByTestId('input-lot-quantite').fill(lot2.quantite.toString());
     await page.getByTestId('input-lot-couleur').fill(lot2.couleur);
+    if (lot2.performanceThermique) {
+      await page.getByTestId('input-lot-performance-thermique').fill(lot2.performanceThermique);
+    }
     await page.getByTestId('input-lot-performance-acoustique').fill(lot2.performanceAcoustique);
+    if (lot2.dimensions) {
+      await page.getByTestId('input-lot-dimensions').fill(lot2.dimensions);
+    }
+    if (lot2.accessoires) {
+      await page.getByTestId('input-lot-accessoires').fill(lot2.accessoires);
+    }
     await page.getByTestId('input-lot-delai-livraison').fill(lot2.delaiLivraison);
     await page.getByTestId('input-lot-unite-oeuvre').fill(lot2.uniteOeuvre);
     await page.getByTestId('input-lot-montant-estime').fill(lot2.montantEstime.toString());

@@ -17,6 +17,7 @@ import { MaitreOeuvreForm } from "@/components/contacts/MaitreOeuvreForm";
 import { FileText, Calendar, MapPin, User, Building, Save, ArrowLeft, Calculator, Edit, X, CheckCircle, Euro, Trash2, Plus, Settings, Upload, Download, FolderOpen, Eye } from "lucide-react";
 import { useAoDocuments } from "@/hooks/use-ao-documents";
 import { DocumentUploadZone } from "@/components/ao/DocumentUploadZone";
+import { EnhancedDocumentManager } from "@/components/documents/EnhancedDocumentManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Lot {

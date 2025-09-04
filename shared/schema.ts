@@ -79,6 +79,24 @@ export const posteTypeEnum = pgEnum("poste_type", [
   "directeur", "responsable", "technicien", "assistant", "architecte", "ingenieur", "coordinateur", "autre"
 ]);
 
+// Types d'espaces documentaires pour liaisons multiples
+export const documentSpaceEnum = pgEnum("document_space", [
+  "informations_generales", "chiffrage", "etude_technique", "planification", 
+  "chantier", "sav", "fournisseurs", "administratif", "cctp", "plans", "photos"
+]);
+
+// Catégories de documents optimisées pour JLM
+export const documentCategoryEnum = pgEnum("document_category", [
+  "ao_pdf", "cctp", "plans", "devis_client", "devis_fournisseur", "bon_commande", 
+  "facture", "photo_chantier", "rapport_avancement", "correspondance", 
+  "certification", "notice_technique", "autre"
+]);
+
+// Niveaux d'accès documentaire
+export const documentAccessEnum = pgEnum("document_access", [
+  "public", "equipe", "responsables", "prive"
+]);
+
 // ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
@@ -784,6 +802,19 @@ export type InsertChiffrageElement = typeof chiffrageElements.$inferInsert;
 export type DpgfDocument = typeof dpgfDocuments.$inferSelect;
 export type InsertDpgfDocument = typeof dpgfDocuments.$inferInsert;
 
+// Types pour le système documentaire
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = typeof documents.$inferInsert;
+
+export type DocumentLink = typeof documentLinks.$inferSelect;
+export type InsertDocumentLink = typeof documentLinks.$inferInsert;
+
+export type DocumentCollection = typeof documentCollections.$inferSelect;
+export type InsertDocumentCollection = typeof documentCollections.$inferInsert;
+
+export type DocumentCollectionLink = typeof documentCollectionLinks.$inferSelect;
+export type InsertDocumentCollectionLink = typeof documentCollectionLinks.$inferInsert;
+
 // ========================================
 // SCHÉMAS ZOD POUR VALIDATION POC
 // ========================================
@@ -867,6 +898,155 @@ export const insertChiffrageElementSchema = createInsertSchema(chiffrageElements
 });
 
 export const insertDpgfDocumentSchema = createInsertSchema(dpgfDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ========================================
+// SYSTÈME DOCUMENTAIRE OPTIMISÉ
+// ========================================
+
+// Table principale des documents avec métadonnées enrichies
+export const documents = pgTable("documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Informations de base
+  name: varchar("name").notNull(),
+  originalName: varchar("original_name").notNull(), // Nom original du fichier
+  description: text("description"),
+  category: documentCategoryEnum("category").notNull(),
+  
+  // Stockage et métadonnées
+  filePath: varchar("file_path").notNull(), // Chemin dans object storage
+  mimeType: varchar("mime_type"),
+  fileSize: integer("file_size"), // Taille en bytes
+  checksum: varchar("checksum"), // Hash MD5 pour détection doublons
+  
+  // Versions et accès
+  version: varchar("version").default("1.0"),
+  accessLevel: documentAccessEnum("access_level").default("equipe"),
+  
+  // Tags pour recherche et organisation
+  tags: jsonb("tags").$type<string[]>().default([]), // Tags libres
+  metadata: jsonb("metadata").$type<Record<string, any>>().default({}), // Métadonnées flexibles
+  
+  // Informations utilisateur
+  uploadedBy: varchar("uploaded_by").references(() => users.id).notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+  lastAccessedAt: timestamp("last_accessed_at"),
+  
+  // Archivage
+  isArchived: boolean("is_archived").default(false),
+  archivedAt: timestamp("archived_at"),
+  archivedBy: varchar("archived_by").references(() => users.id),
+  archiveReason: text("archive_reason"),
+  
+  // Statistiques d'utilisation
+  downloadCount: integer("download_count").default(0),
+  viewCount: integer("view_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    categoryIdx: index("documents_category_idx").on(table.category),
+    uploadedByIdx: index("documents_uploaded_by_idx").on(table.uploadedBy),
+    tagsIdx: index("documents_tags_idx").using('gin', table.tags),
+    checksumIdx: index("documents_checksum_idx").on(table.checksum),
+    archivedIdx: index("documents_archived_idx").on(table.isArchived),
+  };
+});
+
+// Table de liaisons multiples documents-entités pour références croisées
+export const documentLinks = pgTable("document_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").references(() => documents.id, { onDelete: "cascade" }).notNull(),
+  
+  // Espaces du dossier où le document apparaît
+  documentSpace: documentSpaceEnum("document_space").notNull(),
+  
+  // Liens vers différentes entités (un seul par lien)
+  aoId: varchar("ao_id").references(() => aos.id),
+  offerId: varchar("offer_id").references(() => offers.id),
+  projectId: varchar("project_id").references(() => projects.id),
+  lotId: varchar("lot_id").references(() => aoLots.id),
+  
+  // Métadonnées spécifiques au lien
+  linkMetadata: jsonb("link_metadata").$type<Record<string, any>>().default({}),
+  isPrimary: boolean("is_primary").default(false), // Lien principal pour cet espace
+  displayOrder: integer("display_order").default(0), // Ordre d'affichage
+  
+  // Qui a créé ce lien
+  linkedBy: varchar("linked_by").references(() => users.id).notNull(),
+  linkedAt: timestamp("linked_at").defaultNow(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    documentSpaceIdx: index("document_links_space_idx").on(table.documentSpace),
+    aoLinkIdx: index("document_links_ao_idx").on(table.aoId),
+    offerLinkIdx: index("document_links_offer_idx").on(table.offerId),
+    projectLinkIdx: index("document_links_project_idx").on(table.projectId),
+    lotLinkIdx: index("document_links_lot_idx").on(table.lotId),
+    primaryIdx: index("document_links_primary_idx").on(table.isPrimary),
+  };
+});
+
+// Table des collections de documents pour groupements logiques
+export const documentCollections = pgTable("document_collections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  color: varchar("color").default("blue"), // Couleur pour l'interface
+  icon: varchar("icon").default("folder"), // Icône pour l'interface
+  
+  // Lien vers l'entité parente
+  aoId: varchar("ao_id").references(() => aos.id),
+  offerId: varchar("offer_id").references(() => offers.id),
+  projectId: varchar("project_id").references(() => projects.id),
+  
+  // Paramètres de la collection
+  isSystemCollection: boolean("is_system_collection").default(false), // Collections créées automatiquement
+  settings: jsonb("settings").$type<Record<string, any>>().default({}),
+  
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Lien entre documents et collections (many-to-many)
+export const documentCollectionLinks = pgTable("document_collection_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").references(() => documents.id, { onDelete: "cascade" }).notNull(),
+  collectionId: varchar("collection_id").references(() => documentCollections.id, { onDelete: "cascade" }).notNull(),
+  
+  addedBy: varchar("added_by").references(() => users.id).notNull(),
+  addedAt: timestamp("added_at").defaultNow(),
+}, (table) => {
+  return {
+    documentCollectionIdx: index("doc_collection_links_idx").on(table.documentId, table.collectionId),
+  };
+});
+
+// Schémas d'insertion pour les nouvelles tables documentaires
+export const insertDocumentSchema = createInsertSchema(documents).omit({
+  id: true,
+  uploadedAt: true,
+  lastAccessedAt: true,
+  downloadCount: true,
+  viewCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDocumentLinkSchema = createInsertSchema(documentLinks).omit({
+  id: true,
+  linkedAt: true,
+  createdAt: true,
+});
+
+export const insertDocumentCollectionSchema = createInsertSchema(documentCollections).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

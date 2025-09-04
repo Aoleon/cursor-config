@@ -26,6 +26,12 @@ export const menuiserieTypeEnum = pgEnum("menuiserie_type", [
   "fenetre", "porte", "portail", "volet", "cloison", "verriere", "autre"
 ]);
 
+// Statuts des lots dans le workflow JLM
+export const lotStatusEnum = pgEnum("lot_status", [
+  "brouillon", "en_attente_fournisseur", "pre_devis_recu", "chiffrage_final_recu", 
+  "chiffrage_valide", "commande_en_cours", "en_attente_livraison", "livre", "sav"
+]);
+
 // Sources des Appels d'Offres
 export const aoSourceEnum = pgEnum("ao_source", [
   "mail", "phone", "website", "partner", "other"
@@ -249,6 +255,7 @@ export const aoLots = pgTable("ao_lots", {
   menuiserieType: menuiserieTypeEnum("menuiserie_type"), // Type spécifique au lot
   montantEstime: decimal("montant_estime", { precision: 12, scale: 2 }), // Montant estimé du lot
   isSelected: boolean("is_selected").default(false), // Lot sélectionné pour réponse
+  status: lotStatusEnum("status").default("brouillon"), // Statut du lot dans le workflow
   comment: text("comment"), // Commentaire spécifique au lot
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

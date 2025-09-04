@@ -1343,10 +1343,22 @@ export default function AoDetail() {
                                 <div className="flex items-center justify-between mb-4">
                                   <div className="flex items-center gap-3">
                                     <div className={`h-3 w-3 rounded-full ${statusInfo.value === 'brouillon' ? 'bg-gray-400' : statusInfo.value === 'livre' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                                    <div>
-                                      <span className="font-semibold text-lg">{lot.numero}</span>
-                                      <span className="text-gray-400 mx-2">•</span>
-                                      <span className="text-gray-700">{lot.designation}</span>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-3 mb-1">
+                                        <span className="font-semibold text-lg">{lot.numero}</span>
+                                        <span className="text-gray-400">•</span>
+                                        <span className="text-gray-700">{lot.designation}</span>
+                                        {/* Statut très visible dans l'en-tête */}
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border-2 ${statusInfo.color} ${statusInfo.color.includes('red') ? 'border-red-300' : statusInfo.color.includes('green') ? 'border-green-300' : statusInfo.color.includes('blue') ? 'border-blue-300' : statusInfo.color.includes('yellow') ? 'border-yellow-300' : statusInfo.color.includes('orange') ? 'border-orange-300' : statusInfo.color.includes('purple') ? 'border-purple-300' : 'border-gray-300'}`}>
+                                          <div className={`h-2 w-2 rounded-full mr-2 ${statusInfo.color.includes('red') ? 'bg-red-500' : statusInfo.color.includes('green') ? 'bg-green-500' : statusInfo.color.includes('blue') ? 'bg-blue-500' : statusInfo.color.includes('yellow') ? 'bg-yellow-500' : statusInfo.color.includes('orange') ? 'bg-orange-500' : statusInfo.color.includes('purple') ? 'bg-purple-500' : 'bg-gray-500'}`}></div>
+                                          {statusInfo.label}
+                                        </span>
+                                      </div>
+                                      {lot.quantite && (
+                                        <div className="text-sm text-gray-600">
+                                          {lot.quantite} élément{lot.quantite > 1 ? 's' : ''} • {lot.materiau || 'Matériau non spécifié'}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -1764,18 +1776,27 @@ export default function AoDetail() {
                             );
                           })}
                           
-                          {/* Résumé des lots */}
-                          <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4 mt-6">
-                            <div className="grid md:grid-cols-3 gap-4">
+                          {/* Résumé avancé des lots */}
+                          <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6 mt-6">
+                            <h4 className="font-semibold text-gray-800 mb-4">Résumé des lots</h4>
+                            
+                            {/* Statistiques principales */}
+                            <div className="grid md:grid-cols-4 gap-4 mb-6">
                               <div className="text-center">
                                 <p className="text-2xl font-bold text-blue-600">{lots.length}</p>
                                 <p className="text-sm text-gray-600">Lots totaux</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-orange-600">
-                                  {lots.filter(lot => lot.status === 'brouillon' || !lot.status).length}
+                                <p className="text-2xl font-bold text-green-600">
+                                  {lots.filter(lot => ['chiffrage_valide', 'commande_en_cours', 'livre'].includes(lot.status || '')).length}
                                 </p>
-                                <p className="text-sm text-gray-600">En brouillon</p>
+                                <p className="text-sm text-gray-600">Validés</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-orange-600">
+                                  {lots.filter(lot => ['brouillon', 'en_attente_fournisseur'].includes(lot.status || 'brouillon')).length}
+                                </p>
+                                <p className="text-sm text-gray-600">En attente</p>
                               </div>
                               <div className="text-center">
                                 <div>
@@ -1786,6 +1807,26 @@ export default function AoDetail() {
                                   </span>
                                   <p className="text-xs text-gray-500">Total estimé HT</p>
                                 </div>
+                              </div>
+                            </div>
+                            
+                            {/* Détail des statuts */}
+                            <div className="border-t border-gray-200 pt-4">
+                              <h5 className="font-medium text-gray-700 mb-3">Répartition par statut</h5>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {LOT_STATUS_OPTIONS.map(statusOption => {
+                                  const count = lots.filter(lot => lot.status === statusOption.value || (!lot.status && statusOption.value === 'brouillon')).length;
+                                  if (count === 0) return null;
+                                  return (
+                                    <div key={statusOption.value} className="flex items-center justify-between bg-white rounded-lg p-3 border">
+                                      <div className="flex items-center gap-2">
+                                        <div className={`h-3 w-3 rounded-full ${statusOption.color.includes('red') ? 'bg-red-500' : statusOption.color.includes('green') ? 'bg-green-500' : statusOption.color.includes('blue') ? 'bg-blue-500' : statusOption.color.includes('yellow') ? 'bg-yellow-500' : statusOption.color.includes('orange') ? 'bg-orange-500' : statusOption.color.includes('purple') ? 'bg-purple-500' : 'bg-gray-500'}`}></div>
+                                        <span className="text-sm font-medium">{statusOption.label}</span>
+                                      </div>
+                                      <span className="text-sm font-bold text-gray-600">{count}</span>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>

@@ -16,6 +16,27 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+export interface ExtractedLotData {
+  numero: string;
+  designation: string;
+  quantite?: number;
+  materiau?: string;
+  vitrage?: string;
+  localisation?: string;
+  couleur?: string;
+  dimensions?: string;
+  performanceThermique?: string;
+  performanceAcoustique?: string;
+  normes?: string[];
+  accessoires?: string;
+  specificites?: string;
+  delaiLivraison?: string;
+  uniteOeuvre?: string;
+  montantEstime?: number;
+  status?: string;
+  technicalDetails?: string;
+}
+
 export interface ExtractedAOData {
   reference?: string;
   client?: string;
@@ -31,6 +52,7 @@ export interface ExtractedAOData {
   contactPerson?: string;
   contactEmail?: string;
   contactPhone?: string;
+  lots?: ExtractedLotData[];
 }
 
 /**
@@ -202,6 +224,145 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       console.error(`[DocumentProcessor] Error extracting text from ${filename}:`, error);
       return this.generateDemoContent(filename);
     }
+  }
+
+  /**
+   * Extrait des informations détaillées sur les lots de menuiserie depuis le contenu d'un document.
+   * Cette méthode utilise l'IA pour identifier et structurer les lots avec leurs spécifications techniques.
+   * @param content - Le contenu textuel du document
+   * @param filename - Le nom du fichier pour le contexte
+   * @returns Liste des lots extraits avec leurs informations détaillées
+   */
+  async extractDetailedLots(content: string, filename: string): Promise<ExtractedLotData[]> {
+    try {
+      const prompt = `
+Tu es un expert en analyse de documents techniques de menuiserie et d'appels d'offres.
+
+Analyse le contenu suivant et extrais tous les lots de menuiserie avec leurs spécifications techniques détaillées.
+
+Document: ${filename}
+Contenu:
+---
+${content.substring(0, 15000)}
+---
+
+Extrais et structure TOUS les lots de menuiserie trouvés au format JSON strict.
+Pour chaque lot identifié, extrais le maximum d'informations techniques disponibles.
+
+Format de réponse attendu:
+{
+  "lots": [
+    {
+      "numero": "numéro/référence du lot (ex: 07.1, LOT-02, etc.)",
+      "designation": "désignation complète du lot",
+      "quantite": "nombre d'éléments (nombre uniquement)",
+      "materiau": "matériau principal (ex: Aluminium, PVC, Bois, etc.)",
+      "vitrage": "type de vitrage (ex: Double vitrage, Triple vitrage, etc.)",
+      "localisation": "localisation/orientation (ex: Façade Sud, Étage 1, etc.)",
+      "couleur": "couleur/finition (ex: RAL 7016, Gris anthracite, etc.)",
+      "dimensions": "dimensions types (ex: 135x120 cm, Variable selon plans, etc.)",
+      "performanceThermique": "performance thermique (ex: Uw ≤ 1,4 W/m².K, etc.)",
+      "performanceAcoustique": "performance acoustique (ex: Rw ≥ 35 dB, etc.)",
+      "normes": ["liste des normes applicables (ex: DTU 36.5, RE2020, NF Fenêtre, etc.)"],
+      "accessoires": "accessoires inclus (ex: Volets roulants, Grilles de ventilation, etc.)",
+      "specificites": "spécifications particulières (ex: Seuil PMR, Ouverture à la française, etc.)",
+      "delaiLivraison": "délai de livraison (ex: 8 semaines, 2 mois, etc.)",
+      "uniteOeuvre": "unité d'œuvre (ex: À l'unité, Au m², Au ml, etc.)",
+      "montantEstime": "montant estimé en euros (nombre uniquement)",
+      "status": "statut inféré selon le contexte (brouillon, en_attente_fournisseur, pre_devis_recu, etc.)",
+      "technicalDetails": "détails techniques supplémentaires extraits du document"
+    }
+  ]
+}
+
+Règles importantes:
+- Extrais TOUS les lots de menuiserie mentionnés dans le document
+- Si une information n'est pas trouvée, utilise null
+- Pour les quantités et montants, extrais uniquement les nombres
+- Inférer le statut le plus probable selon le contexte du document
+- Sois très précis sur les spécifications techniques
+- Inclure tous les détails trouvés dans technicalDetails
+- Les normes doivent être une liste de strings
+
+Réponds UNIQUEMENT avec le JSON, sans explication.
+`;
+
+      const response = await anthropic.messages.create({
+        model: DEFAULT_MODEL_STR,
+        max_tokens: 4000,
+        temperature: 0.1,
+        system: "Tu es un assistant spécialisé dans l'extraction de données techniques de menuiserie depuis des documents d'appels d'offres. Tu réponds uniquement en JSON valide.",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+      });
+
+      const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
+      console.log(`[DocumentProcessor] Detailed lots extraction for ${filename}:`, responseText);
+
+      // Parser la réponse JSON
+      let jsonText = responseText.trim();
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const extractedData = JSON.parse(jsonText);
+      
+      if (!extractedData.lots || !Array.isArray(extractedData.lots)) {
+        console.warn(`[DocumentProcessor] No lots found in ${filename}`);
+        return [];
+      }
+
+      // Validation et nettoyage des données des lots
+      const cleanedLots: ExtractedLotData[] = extractedData.lots.map((lot: any) => ({
+        numero: lot.numero || `LOT-${Date.now()}`,
+        designation: lot.designation || 'Lot sans désignation',
+        quantite: lot.quantite ? parseInt(lot.quantite.toString()) : null,
+        materiau: lot.materiau || null,
+        vitrage: lot.vitrage || null,
+        localisation: lot.localisation || null,
+        couleur: lot.couleur || null,
+        dimensions: lot.dimensions || null,
+        performanceThermique: lot.performanceThermique || null,
+        performanceAcoustique: lot.performanceAcoustique || null,
+        normes: Array.isArray(lot.normes) ? lot.normes : null,
+        accessoires: lot.accessoires || null,
+        specificites: lot.specificites || null,
+        delaiLivraison: lot.delaiLivraison || null,
+        uniteOeuvre: lot.uniteOeuvre || null,
+        montantEstime: lot.montantEstime ? parseFloat(lot.montantEstime.toString()) : null,
+        status: this.validateLotStatus(lot.status),
+        technicalDetails: lot.technicalDetails || null,
+      }));
+
+      console.log(`[DocumentProcessor] Extracted ${cleanedLots.length} lots from ${filename}`);
+      return cleanedLots;
+
+    } catch (error) {
+      console.error(`[DocumentProcessor] Error extracting detailed lots from ${filename}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Valide et normalise le statut d'un lot
+   */
+  private validateLotStatus(status: string): string {
+    const validStatuses = [
+      'brouillon', 'en_attente_fournisseur', 'pre_devis_recu',
+      'chiffrage_final_recu', 'chiffrage_valide', 'commande_en_cours',
+      'en_attente_livraison', 'livre', 'sav'
+    ];
+    
+    if (!status) return 'brouillon';
+    
+    const normalizedStatus = status.toLowerCase().replace(/\s+/g, '_');
+    return validStatuses.includes(normalizedStatus) ? normalizedStatus : 'brouillon';
   }
 
   /**

@@ -26,6 +26,19 @@ interface Lot {
   isSelected: boolean;
   status?: string;
   comment?: string;
+  // Nouvelles propriétés techniques extraites depuis les commentaires
+  quantite?: number;
+  materiau?: string;
+  vitrage?: string;
+  localisation?: string;
+  couleur?: string;
+  dimensions?: string;
+  performanceThermique?: string;
+  performanceAcoustique?: string;
+  normes?: string[];
+  accessoires?: string;
+  delaiLivraison?: string;
+  uniteOeuvre?: string;
 }
 
 const LOT_STATUS_OPTIONS = [
@@ -180,18 +193,78 @@ export default function AoDetail() {
     }
   }, [ao]);
 
-  // Initialiser les lots
+  // Fonction pour extraire les informations techniques depuis le commentaire
+  const parseCommentTechnicalInfo = (comment: string) => {
+    const info: any = {};
+    if (!comment) return info;
+    
+    // Extraction de la quantité
+    const quantiteMatch = comment.match(/Quantité[^:]*:\s*(\d+)/);
+    if (quantiteMatch) info.quantite = parseInt(quantiteMatch[1]);
+    
+    // Extraction du matériau
+    const materiauMatch = comment.match(/Matériau[^:]*:\s*([^\n]+)/);
+    if (materiauMatch) info.materiau = materiauMatch[1].trim();
+    
+    // Extraction du vitrage
+    const vitrageMatch = comment.match(/Vitrage[^:]*:\s*([^\n]+)/);
+    if (vitrageMatch) info.vitrage = vitrageMatch[1].trim();
+    
+    // Extraction de la localisation
+    const localisationMatch = comment.match(/Localisation[^:]*:\s*([^\n]+)/);
+    if (localisationMatch) info.localisation = localisationMatch[1].trim();
+    
+    // Extraction de la couleur
+    const couleurMatch = comment.match(/Couleur[^:]*:\s*([^\n]+)/);
+    if (couleurMatch) info.couleur = couleurMatch[1].trim();
+    
+    // Extraction des dimensions
+    const dimensionsMatch = comment.match(/Dimensions?[^:]*:\s*([^\n]+)/);
+    if (dimensionsMatch) info.dimensions = dimensionsMatch[1].trim();
+    
+    // Extraction des performances
+    const thermMatch = comment.match(/Thermique[^:]*:\s*([^\n]+)/);
+    if (thermMatch) info.performanceThermique = thermMatch[1].trim();
+    
+    const acoustMatch = comment.match(/Acoustique[^:]*:\s*([^\n]+)/);
+    if (acoustMatch) info.performanceAcoustique = acoustMatch[1].trim();
+    
+    // Extraction des normes
+    const normesMatch = comment.match(/Normes?[^:]*:\s*([^\n]+)/);
+    if (normesMatch) info.normes = normesMatch[1].split(',').map(n => n.trim());
+    
+    // Extraction des accessoires
+    const accessoiresMatch = comment.match(/Accessoires[^:]*:\s*([^\n]+)/);
+    if (accessoiresMatch) info.accessoires = accessoiresMatch[1].trim();
+    
+    // Extraction du délai
+    const delaiMatch = comment.match(/DÉLAI[^:]*:\s*([^\n]+)/);
+    if (delaiMatch) info.delaiLivraison = delaiMatch[1].trim();
+    
+    // Extraction de l'unité
+    const uniteMatch = comment.match(/UNITÉ[^:]*:\s*([^\n]+)/);
+    if (uniteMatch) info.uniteOeuvre = uniteMatch[1].trim();
+    
+    return info;
+  };
+  
+  // Initialiser les lots avec extraction des informations techniques
   useEffect(() => {
     if (aoLots.length > 0) {
-      const formattedLots = aoLots.map((lot: any) => ({
-        id: lot.id,
-        numero: lot.numero,
-        designation: lot.designation,
-        menuiserieType: lot.menuiserieType,
-        montantEstime: lot.montantEstime ? lot.montantEstime.toString() : "",
-        isSelected: true,
-        comment: lot.comment || "",
-      }));
+      const formattedLots = aoLots.map((lot: any) => {
+        const technicalInfo = parseCommentTechnicalInfo(lot.comment || "");
+        return {
+          id: lot.id,
+          numero: lot.numero,
+          designation: lot.designation,
+          menuiserieType: lot.menuiserieType,
+          montantEstime: lot.montantEstime ? lot.montantEstime.toString() : "",
+          isSelected: true,
+          comment: lot.comment || "",
+          status: "brouillon", // Par défaut
+          ...technicalInfo
+        };
+      });
       setLots(formattedLots);
     }
   }, [aoLots]);
@@ -1315,128 +1388,360 @@ export default function AoDetail() {
                                   </div>
                                 </div>
                                 
-                                <div className="grid md:grid-cols-4 gap-4">
+                                {/* Informations techniques détaillées */}
+                                <div className="space-y-6">
+                                  {/* Informations générales */}
                                   <div>
-                                    <Label className="text-sm text-gray-600 font-medium">Type de menuiserie</Label>
-                                    {isEditing ? (
-                                      <Select 
-                                        value={lot.menuiserieType || ""} 
-                                        onValueChange={(value) => {
-                                          const updatedLots = lots.map((l, i) => 
-                                            i === index ? { ...l, menuiserieType: value } : l
-                                          );
-                                          setLots(updatedLots);
-                                        }}
-                                      >
-                                        <SelectTrigger className="mt-1">
-                                          <SelectValue placeholder="Sélectionner" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="fenetre">Fenêtre</SelectItem>
-                                          <SelectItem value="porte">Porte</SelectItem>
-                                          <SelectItem value="portail">Portail</SelectItem>
-                                          <SelectItem value="volet">Volet</SelectItem>
-                                          <SelectItem value="cloison">Cloison</SelectItem>
-                                          <SelectItem value="verriere">Verrière</SelectItem>
-                                          <SelectItem value="autre">Autre</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    ) : (
-                                      <p className="font-medium mt-1">
-                                        {lot.menuiserieType === "fenetre" && "Fenêtre"}
-                                        {lot.menuiserieType === "porte" && "Porte"}
-                                        {lot.menuiserieType === "portail" && "Portail"}
-                                        {lot.menuiserieType === "volet" && "Volet"}
-                                        {lot.menuiserieType === "cloison" && "Cloison"}
-                                        {lot.menuiserieType === "verriere" && "Verrière"}
-                                        {lot.menuiserieType === "autre" && "Autre"}
-                                        {!lot.menuiserieType && <span className="text-gray-400">Non défini</span>}
-                                      </p>
-                                    )}
-                                  </div>
-                                  
-                                  <div>
-                                    <Label className="text-sm text-gray-600 font-medium">Montant estimé (€)</Label>
-                                    {isEditing ? (
-                                      <Input
-                                        type="number"
-                                        value={lot.montantEstime || ""}
-                                        onChange={(e) => {
-                                          const updatedLots = lots.map((l, i) => 
-                                            i === index ? { ...l, montantEstime: e.target.value } : l
-                                          );
-                                          setLots(updatedLots);
-                                        }}
-                                        placeholder="Montant en €"
-                                        className="mt-1"
-                                      />
-                                    ) : (
-                                      <p className="font-medium mt-1">
-                                        {lot.montantEstime ? `${parseFloat(lot.montantEstime).toLocaleString('fr-FR')} €` : <span className="text-gray-400">Non défini</span>}
-                                      </p>
-                                    )}
-                                  </div>
-                                  
-                                  <div>
-                                    <Label className="text-sm text-gray-600 font-medium">Statut du lot</Label>
-                                    {isEditing ? (
-                                      <Select 
-                                        value={lot.status || "brouillon"} 
-                                        onValueChange={(value) => {
-                                          const updatedLots = lots.map((l, i) => 
-                                            i === index ? { ...l, status: value } : l
-                                          );
-                                          setLots(updatedLots);
-                                        }}
-                                      >
-                                        <SelectTrigger className="mt-1">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {LOT_STATUS_OPTIONS.map(option => (
-                                            <SelectItem key={option.value} value={option.value}>
-                                              {option.label}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    ) : (
-                                      <div className="mt-1">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
-                                          {statusInfo.label}
-                                        </span>
+                                    <h6 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                                      <Settings className="h-4 w-4" />
+                                      Informations générales
+                                    </h6>
+                                    <div className="grid md:grid-cols-3 gap-4">
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Quantité</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            type="number"
+                                            value={lot.quantite || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, quantite: parseInt(e.target.value) || 0 } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Nombre d'éléments"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1">
+                                            {lot.quantite ? `${lot.quantite} éléments` : <span className="text-gray-400">Non spécifié</span>}
+                                          </p>
+                                        )}
                                       </div>
-                                    )}
+                                      
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Montant estimé (€)</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            type="number"
+                                            value={lot.montantEstime || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, montantEstime: e.target.value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Montant en €"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1 text-green-600">
+                                            {lot.montantEstime ? `${parseFloat(lot.montantEstime).toLocaleString('fr-FR')} €` : <span className="text-gray-400">Non défini</span>}
+                                          </p>
+                                        )}
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Statut du lot</Label>
+                                        {isEditing ? (
+                                          <Select 
+                                            value={lot.status || "brouillon"} 
+                                            onValueChange={(value) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, status: value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                          >
+                                            <SelectTrigger className="mt-1">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {LOT_STATUS_OPTIONS.map(option => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                  {option.label}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        ) : (
+                                          <div className="mt-1">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                                              {statusInfo.label}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                   
+                                  {/* Informations matériaux */}
                                   <div>
-                                    <Label className="text-sm text-gray-600 font-medium">Source</Label>
-                                    <p className="font-medium text-blue-600 mt-1 flex items-center gap-1">
-                                      <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                                      {lot.id?.includes('temp-') ? 'Manuel' : 'OCR'}
-                                    </p>
+                                    <h6 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                                      <Building className="h-4 w-4" />
+                                      Matériaux et finitions
+                                    </h6>
+                                    <div className="grid md:grid-cols-4 gap-4">
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Matériau</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={lot.materiau || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, materiau: e.target.value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Ex: Aluminium, PVC, Bois"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1">
+                                            {lot.materiau || <span className="text-gray-400">Non spécifié</span>}
+                                          </p>
+                                        )}
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Vitrage</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={lot.vitrage || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, vitrage: e.target.value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Ex: Double vitrage"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1">
+                                            {lot.vitrage || <span className="text-gray-400">N/A</span>}
+                                          </p>
+                                        )}
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Couleur</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={lot.couleur || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, couleur: e.target.value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Ex: RAL 7016"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1">
+                                            {lot.couleur || <span className="text-gray-400">Non spécifiée</span>}
+                                          </p>
+                                        )}
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Dimensions</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={lot.dimensions || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, dimensions: e.target.value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Ex: 135x120 cm"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1">
+                                            {lot.dimensions || <span className="text-gray-400">Non spécifiées</span>}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
+                                  
+                                  {/* Performances et localisation */}
+                                  <div>
+                                    <h6 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                                      <MapPin className="h-4 w-4" />
+                                      Performances et localisation
+                                    </h6>
+                                    <div className="grid md:grid-cols-3 gap-4">
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Localisation</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={lot.localisation || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, localisation: e.target.value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Ex: Façade Sud"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1">
+                                            {lot.localisation || <span className="text-gray-400">Non spécifiée</span>}
+                                          </p>
+                                        )}
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Performance thermique</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={lot.performanceThermique || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, performanceThermique: e.target.value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Ex: Uw ≤ 1,4 W/m².K"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1">
+                                            {lot.performanceThermique || <span className="text-gray-400">N/A</span>}
+                                          </p>
+                                        )}
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Performance acoustique</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={lot.performanceAcoustique || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, performanceAcoustique: e.target.value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Ex: Rw ≥ 35 dB"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1">
+                                            {lot.performanceAcoustique || <span className="text-gray-400">N/A</span>}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Informations contractuelles */}
+                                  <div>
+                                    <h6 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                                      <Calendar className="h-4 w-4" />
+                                      Informations contractuelles
+                                    </h6>
+                                    <div className="grid md:grid-cols-3 gap-4">
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Délai de livraison</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={lot.delaiLivraison || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, delaiLivraison: e.target.value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Ex: 8 semaines"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1">
+                                            {lot.delaiLivraison || <span className="text-gray-400">Non spécifié</span>}
+                                          </p>
+                                        )}
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Unité d'œuvre</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={lot.uniteOeuvre || ""}
+                                            onChange={(e) => {
+                                              const updatedLots = lots.map((l, i) => 
+                                                i === index ? { ...l, uniteOeuvre: e.target.value } : l
+                                              );
+                                              setLots(updatedLots);
+                                            }}
+                                            placeholder="Ex: À l'unité"
+                                            className="mt-1"
+                                          />
+                                        ) : (
+                                          <p className="font-medium mt-1">
+                                            {lot.uniteOeuvre || <span className="text-gray-400">Non spécifiée</span>}
+                                          </p>
+                                        )}
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm text-gray-600 font-medium">Source</Label>
+                                        <p className="font-medium text-blue-600 mt-1 flex items-center gap-1">
+                                          <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                                          {lot.id?.includes('temp-') ? 'Manuel' : 'OCR'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Accessoires et normes */}
+                                  {(lot.accessoires || lot.normes) && (
+                                    <div>
+                                      <h6 className="font-semibold text-gray-800 mb-3">Accessoires et normes</h6>
+                                      <div className="grid md:grid-cols-2 gap-4">
+                                        {lot.accessoires && (
+                                          <div>
+                                            <Label className="text-sm text-gray-600 font-medium">Accessoires</Label>
+                                            <p className="text-sm text-gray-700 mt-1">{lot.accessoires}</p>
+                                          </div>
+                                        )}
+                                        {lot.normes && lot.normes.length > 0 && (
+                                          <div>
+                                            <Label className="text-sm text-gray-600 font-medium">Normes</Label>
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {lot.normes.map((norme, idx) => (
+                                                <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                                  {norme}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                                 
-                                {(lot.comment || isEditing) && (
-                                  <div className="mt-4 pt-3 border-t border-gray-100">
-                                    <Label className="text-sm text-gray-600 font-medium">Notes et commentaires</Label>
-                                    {isEditing ? (
-                                      <Textarea
-                                        value={lot.comment || ""}
-                                        onChange={(e) => {
-                                          const updatedLots = lots.map((l, i) => 
-                                            i === index ? { ...l, comment: e.target.value } : l
-                                          );
-                                          setLots(updatedLots);
-                                        }}
-                                        placeholder="Notes et commentaires pour ce lot"
-                                        className="mt-1"
-                                        rows={2}
-                                      />
-                                    ) : (
-                                      lot.comment && <p className="text-sm text-gray-700 mt-1">{lot.comment}</p>
-                                    )}
+                                {/* Commentaires techniques (bruts depuis l'OCR) */}
+                                {lot.comment && (
+                                  <div className="mt-6 pt-4 border-t border-gray-200">
+                                    <details className="group">
+                                      <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                                        <FileText className="h-4 w-4" />
+                                        Données brutes OCR (cliquez pour voir)
+                                        <div className="ml-auto group-open:rotate-180 transition-transform">
+                                          ▼
+                                        </div>
+                                      </summary>
+                                      <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm font-mono text-gray-600 whitespace-pre-line border">
+                                        {lot.comment}
+                                      </div>
+                                    </details>
                                   </div>
                                 )}
                               </div>

@@ -246,16 +246,34 @@ export const contactsMaitreOeuvre = pgTable("contacts_maitre_oeuvre", {
   };
 });
 
-// Lots d'Appels d'Offres (gestion multiple des lots)
+// Lots d'Appels d'Offres (gestion multiple des lots avec informations techniques détaillées)
 export const aoLots = pgTable("ao_lots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   aoId: varchar("ao_id").notNull().references(() => aos.id, { onDelete: "cascade" }),
-  numero: varchar("numero").notNull(), // Numéro du lot (ex: "Lot 01", "Lot A", etc.)
+  numero: varchar("numero").notNull(), // Numéro du lot (ex: "Lot 01", "07.1", etc.)
   designation: text("designation").notNull(), // Description du lot
   menuiserieType: menuiserieTypeEnum("menuiserie_type"), // Type spécifique au lot
   montantEstime: decimal("montant_estime", { precision: 12, scale: 2 }), // Montant estimé du lot
   isSelected: boolean("is_selected").default(false), // Lot sélectionné pour réponse
   status: lotStatusEnum("status").default("brouillon"), // Statut du lot dans le workflow
+  
+  // Informations techniques détaillées extraites par OCR
+  quantite: integer("quantite"), // Nombre d'éléments (ex: 45 fenêtres)
+  materiau: varchar("materiau"), // Matériau principal (ex: "aluminium", "PVC", "bois")
+  vitrage: varchar("vitrage"), // Type de vitrage (ex: "double vitrage", "triple vitrage")
+  localisation: varchar("localisation"), // Localisation spécifique (ex: "Façade Sud", "Étage 1-3")
+  dimensions: varchar("dimensions"), // Dimensions si spécifiées
+  couleur: varchar("couleur"), // Couleur spécifiée
+  performanceThermique: varchar("performance_thermique"), // Performances (ex: "Uw ≤ 1,4 W/m²K")
+  performanceAcoustique: varchar("performance_acoustique"), // Isolation phonique
+  normesReglementaires: text("normes_reglementaires").array(), // Normes à respecter
+  accessoires: text("accessoires"), // Accessoires inclus
+  specificitesTechniques: text("specificites_techniques"), // Autres spécificités
+  
+  // Infos contractuelles
+  delaiLivraison: varchar("delai_livraison"), // Délai de livraison spécifique au lot
+  uniteOeuvre: varchar("unite_oeuvre"), // Unité d'œuvre (ex: "à l'unité", "au m²")
+  
   comment: text("comment"), // Commentaire spécifique au lot
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

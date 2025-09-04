@@ -267,8 +267,39 @@ Lots concernés:
 02a: Fondations spéciales
 03: Gros oeuvre
 06: Etanchéité
-07.1: Menuiseries extérieures
-08: Menuiserie intérieure
+
+Lot 07.1: Menuiseries extérieures
+Détails techniques:
+- 45 fenêtres aluminium double vitrage - Façade Sud
+- 32 fenêtres PVC double vitrage - Façade Nord
+- 18 portes-fenêtres aluminium double vitrage avec seuil PMR
+- 6 baies coulissantes aluminium triple vitrage - Séjours
+- Couleur: Gris anthracite RAL 7016
+- Performance thermique: Uw ≤ 1,4 W/m².K
+- Performance acoustique: Rw ≥ 35 dB
+- Certification: NF Fenêtre, Acotherm
+- Normes: DTU 36.5, RE2020
+- Dimensions standard: 135x120 cm (fenêtres), 240x215 cm (baies)
+- Accessoires: Volets roulants électriques, grilles de ventilation
+- Délai de livraison: 8 semaines
+- Unité d'œuvre: À l'unité
+- Montant estimé: 185 000 € HT
+
+Lot 08: Menuiserie intérieure
+Détails techniques:
+- 196 portes intérieures stratifiées finition chêne clair
+- 98 blocs-portes d'entrée logements sécurisées
+- 24 portes techniques locaux communs
+- 12 placards intégrés sur mesure
+- Épaisseur: 40 mm (portes logements), 50 mm (portes techniques)
+- Serrurerie: 3 points A2P* pour entrées logements
+- Performances acoustiques: DnT,w ≥ 40 dB
+- Certification: NF Intérieure, PEFC
+- Accessoires: Poignées, gonds, joints d'étanchéité
+- Délai de livraison: 6 semaines
+- Unité d'œuvre: À l'unité
+- Montant estimé: 95 000 € HT
+
 09: Plâtrerie cloisons sèches
 10: Serrurerie
 11: Carrelage faïence

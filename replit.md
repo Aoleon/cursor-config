@@ -3,6 +3,15 @@
 ## Overview
 JLM ERP POC est une application de digitalisation spécialisée pour JLM Menuiserie, entreprise de POSE de menuiseries. L'application POC a pour objectif de digitaliser et d'optimiser la gestion des dossiers d'offre, le chiffrage et le suivi de projet/planning. Elle vise à fluidifier la circulation de l'information, réduire la double saisie et améliorer la visibilité et la traçabilité des processus clés. Le périmètre est volontairement limité au POC pour valider les flux d'information critiques entre le Bureau d'Études et le terrain, avec un focus sur l'élimination de la double saisie et la mise en place de jalons de validation formels.
 
+## Terminologie Métier JLM
+
+**DOSSIER** : Terme central désignant :
+- Un nouvel AO (Appel d'Offres) créé dans l'application
+- Un AO qui évolue et se transforme en projet au fil du workflow
+- L'entité unique qui traverse toutes les étapes du processus métier (AO → Chiffrage → Planning → Équipes → Livraison)
+
+*Note importante* : Dans le contexte JLM, un "dossier" n'est pas un simple conteneur de fichiers, mais bien l'entité métier principale qui porte l'ensemble des informations commerciales et techniques tout au long du cycle de vie du projet.
+
 ## User Preferences
 <instructions>
 You are an expert autonomous programmer specialized in French carpentry ERP systems, working on JLM Menuiserie's comprehensive business management platform.

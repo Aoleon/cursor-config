@@ -18,6 +18,7 @@ import { FileText, Calendar, MapPin, User, Building, Save, ArrowLeft, Calculator
 import { useAoDocuments } from "@/hooks/use-ao-documents";
 import { DocumentUploadZone } from "@/components/ao/DocumentUploadZone";
 import { EnhancedDocumentManager } from "@/components/documents/EnhancedDocumentManager";
+import { CompactDocumentView } from "@/components/documents/CompactDocumentView";
 import { EnhancedBeValidation } from "@/components/validation/EnhancedBeValidation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -74,6 +75,7 @@ export default function AoDetail() {
   const [isEditingChiffrage, setIsEditingChiffrage] = useState(false);
   const [editingLotId, setEditingLotId] = useState<string | null>(null);
   const [showAddLot, setShowAddLot] = useState(false);
+  const [compactDocumentView, setCompactDocumentView] = useState(true);
   const [newLot, setNewLot] = useState<Partial<Lot>>({
     numero: "",
     designation: "",
@@ -1928,100 +1930,132 @@ export default function AoDetail() {
             </TabsContent>
 
             <TabsContent value="documents" className="space-y-6 mt-6">
-              <div className="grid gap-6">
-                {/* Section 1: DCE, Côtes et Photos */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <FolderOpen className="h-5 w-5" />
-                      <span>01 - DCE, Côtes et Photos</span>
-                    </CardTitle>
-                    <p className="text-sm text-gray-600">Documents de consultation des entreprises, côtes et photos du site</p>
-                  </CardHeader>
-                  <CardContent>
-                    <DocumentUploadZone
-                      folderName="01-DCE-Cotes-Photos"
-                      onFileUpload={uploadFile}
-                      uploadProgress={uploadProgress}
-                      isUploading={isUploading}
-                      documents={aoDocuments['01-DCE-Cotes-Photos'] || []}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Section 2: Études fournisseurs */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <FolderOpen className="h-5 w-5" />
-                      <span>02 - Études fournisseurs</span>
-                    </CardTitle>
-                    <p className="text-sm text-gray-600">Devis, catalogues et documentations techniques des fournisseurs</p>
-                  </CardHeader>
-                  <CardContent>
-                    <DocumentUploadZone
-                      folderName="02-Etudes-fournisseurs"
-                      onFileUpload={uploadFile}
-                      uploadProgress={uploadProgress}
-                      isUploading={isUploading}
-                      documents={aoDocuments['02-Etudes-fournisseurs'] || []}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Section 3: Devis et pièces administratives */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <FolderOpen className="h-5 w-5" />
-                      <span>03 - Devis et pièces administratives</span>
-                    </CardTitle>
-                    <p className="text-sm text-gray-600">Devis JLM, pièces administratives et documents contractuels</p>
-                  </CardHeader>
-                  <CardContent>
-                    <DocumentUploadZone
-                      folderName="03-Devis-pieces-administratives"
-                      onFileUpload={uploadFile}
-                      uploadProgress={uploadProgress}
-                      isUploading={isUploading}
-                      documents={aoDocuments['03-Devis-pieces-administratives'] || []}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Résumé des documents */}
-                <Card className="bg-gray-50 border-gray-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-gray-900">Résumé des documents</h4>
-                        <p className="text-sm text-gray-600">Total des fichiers stockés pour ce dossier</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-900">{documentStats.total}</div>
-                        <div className="text-xs text-gray-500">documents</div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 pt-3 border-t border-gray-200">
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                          <div className="text-lg font-semibold text-gray-700">{documentStats['dce-photos']}</div>
-                          <div className="text-xs text-gray-500">DCE & Photos</div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-semibold text-gray-700">{documentStats.etudes}</div>
-                          <div className="text-xs text-gray-500">Études</div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-semibold text-gray-700">{documentStats['devis-admin']}</div>
-                          <div className="text-xs text-gray-500">Devis & Admin</div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* Bascule entre vue compacte et détaillée */}
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Documents du dossier</h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={compactDocumentView ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCompactDocumentView(true)}
+                  >
+                    Vue synthétique
+                  </Button>
+                  <Button
+                    variant={!compactDocumentView ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCompactDocumentView(false)}
+                  >
+                    Vue détaillée
+                  </Button>
+                </div>
               </div>
+
+              {compactDocumentView ? (
+                <CompactDocumentView
+                  documents={aoDocuments}
+                  onFileUpload={uploadFile}
+                  uploadProgress={uploadProgress}
+                  isUploading={isUploading}
+                  onView={(doc) => console.log('View document:', doc)}
+                  onDownload={(doc) => console.log('Download document:', doc)}
+                />
+              ) : (
+                <div className="grid gap-6">
+                  {/* Section 1: DCE, Côtes et Photos */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <FolderOpen className="h-5 w-5" />
+                        <span>01 - DCE, Côtes et Photos</span>
+                      </CardTitle>
+                      <p className="text-sm text-gray-600">Documents de consultation des entreprises, côtes et photos du site</p>
+                    </CardHeader>
+                    <CardContent>
+                      <DocumentUploadZone
+                        folderName="01-DCE-Cotes-Photos"
+                        onFileUpload={uploadFile}
+                        uploadProgress={uploadProgress}
+                        isUploading={isUploading}
+                        documents={aoDocuments['01-DCE-Cotes-Photos'] || []}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Section 2: Études fournisseurs */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <FolderOpen className="h-5 w-5" />
+                        <span>02 - Études fournisseurs</span>
+                      </CardTitle>
+                      <p className="text-sm text-gray-600">Devis, catalogues et documentations techniques des fournisseurs</p>
+                    </CardHeader>
+                    <CardContent>
+                      <DocumentUploadZone
+                        folderName="02-Etudes-fournisseurs"
+                        onFileUpload={uploadFile}
+                        uploadProgress={uploadProgress}
+                        isUploading={isUploading}
+                        documents={aoDocuments['02-Etudes-fournisseurs'] || []}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Section 3: Devis et pièces administratives */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <FolderOpen className="h-5 w-5" />
+                        <span>03 - Devis et pièces administratives</span>
+                      </CardTitle>
+                      <p className="text-sm text-gray-600">Devis JLM, pièces administratives et documents contractuels</p>
+                    </CardHeader>
+                    <CardContent>
+                      <DocumentUploadZone
+                        folderName="03-Devis-pieces-administratives"
+                        onFileUpload={uploadFile}
+                        uploadProgress={uploadProgress}
+                        isUploading={isUploading}
+                        documents={aoDocuments['03-Devis-pieces-administratives'] || []}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Résumé des documents */}
+                  <Card className="bg-gray-50 border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-gray-900">Résumé des documents</h4>
+                          <p className="text-sm text-gray-600">Total des fichiers stockés pour ce dossier</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-gray-900">{documentStats.total}</div>
+                          <div className="text-xs text-gray-500">documents</div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 pt-3 border-t border-gray-200">
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <div className="text-lg font-semibold text-gray-700">{documentStats['dce-photos']}</div>
+                            <div className="text-xs text-gray-500">DCE & Photos</div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-semibold text-gray-700">{documentStats.etudes}</div>
+                            <div className="text-xs text-gray-500">Études</div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-semibold text-gray-700">{documentStats['devis-admin']}</div>
+                            <div className="text-xs text-gray-500">Devis & Admin</div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="validation" className="space-y-6 mt-6">

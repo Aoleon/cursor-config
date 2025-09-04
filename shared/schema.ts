@@ -97,6 +97,22 @@ export const documentAccessEnum = pgEnum("document_access", [
   "public", "equipe", "responsables", "prive"
 ]);
 
+// Types de validation BE (enrichi selon audit JLM)
+export const beValidationTypeEnum = pgEnum("be_validation_type", [
+  "etude_technique", "chiffrage", "fin_etudes", "validation_commercial", 
+  "preparation_production", "controle_qualite", "validation_documentaire"
+]);
+
+// Niveaux de criticité des contrôles BE
+export const validationCriticalityEnum = pgEnum("validation_criticality", [
+  "bloquant", "majeur", "mineur", "info"
+]);
+
+// Statuts des éléments de checklist
+export const checklistStatusEnum = pgEnum("checklist_status", [
+  "non_controle", "en_cours", "conforme", "non_conforme", "reserve", "na"
+]);
+
 // ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
@@ -815,6 +831,28 @@ export type InsertDocumentCollection = typeof documentCollections.$inferInsert;
 export type DocumentCollectionLink = typeof documentCollectionLinks.$inferSelect;
 export type InsertDocumentCollectionLink = typeof documentCollectionLinks.$inferInsert;
 
+// Types pour le système de validation BE enrichi
+export type BeValidationTemplate = typeof beValidationTemplates.$inferSelect;
+export type InsertBeValidationTemplate = typeof beValidationTemplates.$inferInsert;
+
+export type BeChecklistItem = typeof beChecklistItems.$inferSelect;
+export type InsertBeChecklistItem = typeof beChecklistItems.$inferInsert;
+
+export type BeValidationSession = typeof beValidationSessions.$inferSelect;
+export type InsertBeValidationSession = typeof beValidationSessions.$inferInsert;
+
+export type BeValidationMeeting = typeof beValidationMeetings.$inferSelect;
+export type InsertBeValidationMeeting = typeof beValidationMeetings.$inferInsert;
+
+export type BeValidationMeetingParticipant = typeof beValidationMeetingParticipants.$inferSelect;
+export type InsertBeValidationMeetingParticipant = typeof beValidationMeetingParticipants.$inferInsert;
+
+export type BeChecklistResult = typeof beChecklistResults.$inferSelect;
+export type InsertBeChecklistResult = typeof beChecklistResults.$inferInsert;
+
+export type BeQualityControl = typeof beQualityControls.$inferSelect;
+export type InsertBeQualityControl = typeof beQualityControls.$inferInsert;
+
 // ========================================
 // SCHÉMAS ZOD POUR VALIDATION POC
 // ========================================
@@ -1029,6 +1067,253 @@ export const documentCollectionLinks = pgTable("document_collection_links", {
   };
 });
 
+// ========================================
+// SYSTÈME DE VALIDATION BE ENRICHI
+// ========================================
+
+// Template des checklists de validation BE (configuration système)
+export const beValidationTemplates = pgTable("be_validation_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  validationType: beValidationTypeEnum("validation_type").notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  orderIndex: integer("order_index").default(0),
+  
+  // Paramètres de validation
+  requiresAllItems: boolean("requires_all_items").default(true), // Tous les éléments obligatoires
+  requiresMeeting: boolean("requires_meeting").default(false), // Réunion obligatoire
+  minParticipants: integer("min_participants").default(1),
+  
+  // Métadonnées
+  estimatedDuration: integer("estimated_duration"), // en minutes
+  prerequisites: jsonb("prerequisites").$type<string[]>().default([]),
+  
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    validationTypeIdx: index("be_validation_templates_type_idx").on(table.validationType),
+    activeIdx: index("be_validation_templates_active_idx").on(table.isActive),
+  };
+});
+
+// Éléments de checklist pour chaque template
+export const beChecklistItems = pgTable("be_checklist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").references(() => beValidationTemplates.id, { onDelete: "cascade" }).notNull(),
+  
+  // Définition de l'élément
+  code: varchar("code").notNull(), // Code unique par template (ex: "TECH-01")
+  title: varchar("title").notNull(),
+  description: text("description"),
+  criticality: validationCriticalityEnum("criticality").notNull(),
+  
+  // Organisation
+  category: varchar("category"), // Regroupement (ex: "Documents", "Calculs", etc.)
+  orderIndex: integer("order_index").default(0),
+  
+  // Contrôles
+  isRequired: boolean("is_required").default(true),
+  requiresEvidence: boolean("requires_evidence").default(false), // Document de preuve requis
+  requiresComment: boolean("requires_comment").default(false),
+  
+  // Aide contextuelle
+  helpText: text("help_text"),
+  checkCriteria: text("check_criteria"), // Critères de vérification
+  commonErrors: text("common_errors"), // Erreurs fréquentes à éviter
+  
+  // Liens vers documentation
+  referenceDocuments: jsonb("reference_documents").$type<string[]>().default([]),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    templateCodeIdx: index("be_checklist_items_template_code_idx").on(table.templateId, table.code),
+    criticalityIdx: index("be_checklist_items_criticality_idx").on(table.criticality),
+    categoryIdx: index("be_checklist_items_category_idx").on(table.category),
+  };
+});
+
+// Instances de validation BE (par offre)
+export const beValidationSessions = pgTable("be_validation_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  offerId: varchar("offer_id").references(() => offers.id, { onDelete: "cascade" }).notNull(),
+  templateId: varchar("template_id").references(() => beValidationTemplates.id).notNull(),
+  
+  // État de la session
+  status: varchar("status").notNull().default("en_preparation"), // en_preparation, en_cours, terminee, validee, rejetee
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  validatedAt: timestamp("validated_at"),
+  
+  // Responsables
+  validatorId: varchar("validator_id").references(() => users.id).notNull(), // Responsable BE
+  approvedBy: varchar("approved_by").references(() => users.id), // Approbateur final
+  
+  // Résultats globaux
+  totalItems: integer("total_items").default(0),
+  completedItems: integer("completed_items").default(0),
+  conformeItems: integer("conforme_items").default(0),
+  nonConformeItems: integer("non_conforme_items").default(0),
+  reserveItems: integer("reserve_items").default(0),
+  
+  // Commentaires et notes
+  validationNotes: text("validation_notes"),
+  globalComment: text("global_comment"),
+  nextSteps: text("next_steps"),
+  
+  // Métadonnées
+  estimatedDuration: integer("estimated_duration"), // Durée prévue (min)
+  actualDuration: integer("actual_duration"), // Durée réelle (min)
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    offerStatusIdx: index("be_validation_sessions_offer_status_idx").on(table.offerId, table.status),
+    validatorIdx: index("be_validation_sessions_validator_idx").on(table.validatorId),
+    templateIdx: index("be_validation_sessions_template_idx").on(table.templateId),
+  };
+});
+
+// Réunions de validation BE (audit JLM)
+export const beValidationMeetings = pgTable("be_validation_meetings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").references(() => beValidationSessions.id, { onDelete: "cascade" }).notNull(),
+  
+  // Informations de la réunion
+  title: varchar("title").notNull(),
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  actualStartTime: timestamp("actual_start_time"),
+  actualEndTime: timestamp("actual_end_time"),
+  
+  // Lieu et modalités
+  location: varchar("location"), // Bureau, salle, visio...
+  meetingType: varchar("meeting_type").default("presentiel"), // presentiel, visio, mixte
+  meetingUrl: varchar("meeting_url"), // Lien visio si applicable
+  
+  // Organisation
+  organizerId: varchar("organizer_id").references(() => users.id).notNull(),
+  
+  // Comptes-rendus
+  agenda: text("agenda"),
+  meetingNotes: text("meeting_notes"),
+  decisions: text("decisions"),
+  actionItems: jsonb("action_items").$type<Array<{task: string, assignee: string, deadline: string}>>().default([]),
+  
+  // Résultats
+  validationResult: varchar("validation_result"), // valide, rejete, reserve, reporte
+  rejectionReasons: text("rejection_reasons"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    sessionDateIdx: index("be_validation_meetings_session_date_idx").on(table.sessionId, table.scheduledDate),
+    organizerIdx: index("be_validation_meetings_organizer_idx").on(table.organizerId),
+  };
+});
+
+// Participants aux réunions de validation
+export const beValidationMeetingParticipants = pgTable("be_validation_meeting_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  meetingId: varchar("meeting_id").references(() => beValidationMeetings.id, { onDelete: "cascade" }).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  
+  // Participation
+  role: varchar("role").notNull(), // validateur, expert, observateur, client...
+  isRequired: boolean("is_required").default(true),
+  isPresent: boolean("is_present"),
+  
+  // Signature/Approbation
+  hasApproved: boolean("has_approved"),
+  approvalDate: timestamp("approval_date"),
+  approvalComment: text("approval_comment"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    meetingUserIdx: index("be_meeting_participants_meeting_user_idx").on(table.meetingId, table.userId),
+    userRoleIdx: index("be_meeting_participants_user_role_idx").on(table.userId, table.role),
+  };
+});
+
+// Résultats détaillés de checklist par session
+export const beChecklistResults = pgTable("be_checklist_results", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").references(() => beValidationSessions.id, { onDelete: "cascade" }).notNull(),
+  checklistItemId: varchar("checklist_item_id").references(() => beChecklistItems.id).notNull(),
+  
+  // Résultat du contrôle
+  status: checklistStatusEnum("status").notNull().default("non_controle"),
+  checkedAt: timestamp("checked_at"),
+  checkedBy: varchar("checked_by").references(() => users.id).notNull(),
+  
+  // Détails du contrôle
+  comment: text("comment"),
+  evidenceDocuments: jsonb("evidence_documents").$type<string[]>().default([]), // IDs des documents de preuve
+  nonConformityReason: text("non_conformity_reason"),
+  correctiveActions: text("corrective_actions"),
+  
+  // Validation hiérarchique
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewComment: text("review_comment"),
+  
+  // Suivi des corrections
+  correctionDeadline: timestamp("correction_deadline"),
+  correctionStatus: varchar("correction_status").default("pending"), // pending, in_progress, completed, verified
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    sessionItemIdx: index("be_checklist_results_session_item_idx").on(table.sessionId, table.checklistItemId),
+    statusCheckedIdx: index("be_checklist_results_status_checked_idx").on(table.status, table.checkedAt),
+    checkedByIdx: index("be_checklist_results_checked_by_idx").on(table.checkedBy),
+  };
+});
+
+// Contrôles qualité automatisés (anti-erreurs)
+export const beQualityControls = pgTable("be_quality_controls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").references(() => beValidationSessions.id, { onDelete: "cascade" }).notNull(),
+  
+  // Type de contrôle
+  controlType: varchar("control_type").notNull(), // coherence_donnees, calculs, normes, etc.
+  controlName: varchar("control_name").notNull(),
+  description: text("description"),
+  
+  // Résultat du contrôle automatique
+  status: varchar("status").notNull(), // passed, failed, warning, skipped
+  executedAt: timestamp("executed_at").notNull(),
+  
+  // Détails
+  expectedValue: varchar("expected_value"),
+  actualValue: varchar("actual_value"),
+  errorMessage: text("error_message"),
+  warningMessage: text("warning_message"),
+  
+  // Données de contrôle (JSON flexible)
+  controlData: jsonb("control_data").$type<Record<string, any>>().default({}),
+  
+  // Override manuel si nécessaire
+  manualOverride: boolean("manual_override").default(false),
+  overrideReason: text("override_reason"),
+  overrideBy: varchar("override_by").references(() => users.id),
+  overrideAt: timestamp("override_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    sessionControlIdx: index("be_quality_controls_session_control_idx").on(table.sessionId, table.controlType),
+    statusExecutedIdx: index("be_quality_controls_status_executed_idx").on(table.status, table.executedAt),
+  };
+});
+
 // Schémas d'insertion pour les nouvelles tables documentaires
 export const insertDocumentSchema = createInsertSchema(documents).omit({
   id: true,
@@ -1050,4 +1335,45 @@ export const insertDocumentCollectionSchema = createInsertSchema(documentCollect
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+// Schémas d'insertion pour le système de validation BE
+export const insertBeValidationTemplateSchema = createInsertSchema(beValidationTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBeChecklistItemSchema = createInsertSchema(beChecklistItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBeValidationSessionSchema = createInsertSchema(beValidationSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBeValidationMeetingSchema = createInsertSchema(beValidationMeetings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBeValidationMeetingParticipantSchema = createInsertSchema(beValidationMeetingParticipants).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBeChecklistResultSchema = createInsertSchema(beChecklistResults).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBeQualityControlSchema = createInsertSchema(beQualityControls).omit({
+  id: true,
+  createdAt: true,
 });

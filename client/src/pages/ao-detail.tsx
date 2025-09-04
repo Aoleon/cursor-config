@@ -18,6 +18,7 @@ import { FileText, Calendar, MapPin, User, Building, Save, ArrowLeft, Calculator
 import { useAoDocuments } from "@/hooks/use-ao-documents";
 import { DocumentUploadZone } from "@/components/ao/DocumentUploadZone";
 import { EnhancedDocumentManager } from "@/components/documents/EnhancedDocumentManager";
+import { EnhancedBeValidation } from "@/components/validation/EnhancedBeValidation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Lot {
@@ -2024,74 +2025,22 @@ export default function AoDetail() {
             </TabsContent>
 
             <TabsContent value="validation" className="space-y-6 mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5" />
-                    <span>Validation Bureau d'Études</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {/* Statut de validation */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-3 w-3 bg-amber-400 rounded-full"></div>
-                        <div>
-                          <p className="font-medium text-amber-800">En attente de validation</p>
-                          <p className="text-sm text-amber-600">L'AO nécessite une validation du Bureau d'Études avant de passer en chiffrage</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Critères de validation */}
-                    <div>
-                      <h4 className="font-medium mb-3">Critères de validation</h4>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-2 w-2 bg-gray-300 rounded-full"></div>
-                          <span className="text-sm">Analyse du CCTP et des plans</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="h-2 w-2 bg-gray-300 rounded-full"></div>
-                          <span className="text-sm">Vérification de la faisabilité technique</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="h-2 w-2 bg-gray-300 rounded-full"></div>
-                          <span className="text-sm">Validation des lots menuiserie</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="h-2 w-2 bg-gray-300 rounded-full"></div>
-                          <span className="text-sm">Estimation préliminaire des coûts</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions de validation */}
-                    <div className="flex gap-3 pt-4">
-                      <Button variant="outline" className="flex-1">
-                        <X className="h-4 w-4 mr-2" />
-                        Rejeter l'AO
-                      </Button>
-                      <Button className="flex-1">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Valider pour chiffrage
-                      </Button>
-                    </div>
-
-                    {/* Commentaires BE */}
-                    <div>
-                      <Label htmlFor="commentairesBE">Commentaires du Bureau d'Études</Label>
-                      <Textarea
-                        id="commentairesBE"
-                        placeholder="Ajoutez vos observations et recommandations..."
-                        rows={4}
-                        className="mt-2"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {aoData && (
+                <EnhancedBeValidation
+                  offerId={aoData.id}
+                  validationType="fin_etudes"
+                  onValidationComplete={(result) => {
+                    console.log('Validation completed:', result);
+                    toast({
+                      title: "Validation complétée",
+                      description: "La validation BE a été effectuée avec succès.",
+                    });
+                    // Optionnel: mettre à jour le statut de l'AO
+                    // queryClient.invalidateQueries({ queryKey: [`/api/aos/${id}`] });
+                  }}
+                  className=""
+                />
+              )}
             </TabsContent>
           </Tabs>
         </div>

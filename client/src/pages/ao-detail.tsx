@@ -14,7 +14,9 @@ import { LotsManager } from "@/components/ao/LotsManager";
 import { ContactSelector } from "@/components/contacts/ContactSelector";
 import { MaitreOuvrageForm } from "@/components/contacts/MaitreOuvrageForm";
 import { MaitreOeuvreForm } from "@/components/contacts/MaitreOeuvreForm";
-import { FileText, Calendar, MapPin, User, Building, Save, ArrowLeft, Calculator, Edit, X, CheckCircle, Euro, Trash2, Plus, Settings } from "lucide-react";
+import { FileText, Calendar, MapPin, User, Building, Save, ArrowLeft, Calculator, Edit, X, CheckCircle, Euro, Trash2, Plus, Settings, Upload, Download, FolderOpen, Eye } from "lucide-react";
+import { useAoDocuments } from "@/hooks/use-ao-documents";
+import { DocumentUploadZone } from "@/components/ao/DocumentUploadZone";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Lot {
@@ -79,6 +81,16 @@ export default function AoDetail() {
     isSelected: true,
     comment: ""
   });
+  
+  // Hook pour la gestion des documents
+  const {
+    documents: aoDocuments,
+    isLoading: isLoadingDocuments,
+    uploadFile,
+    uploadProgress,
+    stats: documentStats,
+    isUploading
+  } = useAoDocuments(id || "");
   
   // État local pour le formulaire
   const [formData, setFormData] = useState({
@@ -397,7 +409,7 @@ export default function AoDetail() {
         
         <div className="px-6 py-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="informations" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 Informations
@@ -405,6 +417,10 @@ export default function AoDetail() {
               <TabsTrigger value="chiffrage" className="flex items-center gap-2">
                 <Euro className="h-4 w-4" />
                 Chiffrage
+              </TabsTrigger>
+              <TabsTrigger value="documents" className="flex items-center gap-2">
+                <FolderOpen className="h-4 w-4" />
+                Documents
               </TabsTrigger>
               <TabsTrigger value="validation" className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" />
@@ -1866,6 +1882,103 @@ export default function AoDetail() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="documents" className="space-y-6 mt-6">
+              <div className="grid gap-6">
+                {/* Section 1: DCE, Côtes et Photos */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <FolderOpen className="h-5 w-5" />
+                      <span>01 - DCE, Côtes et Photos</span>
+                    </CardTitle>
+                    <p className="text-sm text-gray-600">Documents de consultation des entreprises, côtes et photos du site</p>
+                  </CardHeader>
+                  <CardContent>
+                    <DocumentUploadZone
+                      folderName="01-DCE-Cotes-Photos"
+                      onFileUpload={uploadFile}
+                      uploadProgress={uploadProgress}
+                      isUploading={isUploading}
+                      documents={aoDocuments['01-DCE-Cotes-Photos'] || []}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Section 2: Études fournisseurs */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <FolderOpen className="h-5 w-5" />
+                      <span>02 - Études fournisseurs</span>
+                    </CardTitle>
+                    <p className="text-sm text-gray-600">Devis, catalogues et documentations techniques des fournisseurs</p>
+                  </CardHeader>
+                  <CardContent>
+                    <DocumentUploadZone
+                      folderName="02-Etudes-fournisseurs"
+                      onFileUpload={uploadFile}
+                      uploadProgress={uploadProgress}
+                      isUploading={isUploading}
+                      documents={aoDocuments['02-Etudes-fournisseurs'] || []}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Section 3: Devis et pièces administratives */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <FolderOpen className="h-5 w-5" />
+                      <span>03 - Devis et pièces administratives</span>
+                    </CardTitle>
+                    <p className="text-sm text-gray-600">Devis JLM, pièces administratives et documents contractuels</p>
+                  </CardHeader>
+                  <CardContent>
+                    <DocumentUploadZone
+                      folderName="03-Devis-pieces-administratives"
+                      onFileUpload={uploadFile}
+                      uploadProgress={uploadProgress}
+                      isUploading={isUploading}
+                      documents={aoDocuments['03-Devis-pieces-administratives'] || []}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Résumé des documents */}
+                <Card className="bg-gray-50 border-gray-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-gray-900">Résumé des documents</h4>
+                        <p className="text-sm text-gray-600">Total des fichiers stockés pour ce dossier</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-gray-900">{documentStats.total}</div>
+                        <div className="text-xs text-gray-500">documents</div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 pt-3 border-t border-gray-200">
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <div className="text-lg font-semibold text-gray-700">{documentStats['dce-photos']}</div>
+                          <div className="text-xs text-gray-500">DCE & Photos</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-gray-700">{documentStats.etudes}</div>
+                          <div className="text-xs text-gray-500">Études</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-gray-700">{documentStats['devis-admin']}</div>
+                          <div className="text-xs text-gray-500">Devis & Admin</div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="validation" className="space-y-6 mt-6">

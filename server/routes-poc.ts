@@ -948,6 +948,96 @@ app.delete("/api/aos/:aoId/lots/:lotId", async (req, res) => {
 });
 
 // ========================================
+// AO DOCUMENTS ROUTES - Gestion des documents d'AO
+// ========================================
+
+// GET /api/aos/:aoId/documents - Lister les documents d'un AO
+app.get("/api/aos/:aoId/documents", async (req, res) => {
+  try {
+    const aoId = req.params.aoId;
+    const objectStorage = new ObjectStorageService();
+    
+    // Créer la structure de dossiers si elle n'existe pas
+    const ao = await storage.getAo(aoId);
+    if (!ao) {
+      return res.status(404).json({ message: "AO not found" });
+    }
+    
+    await objectStorage.createOfferDocumentStructure(aoId, ao.reference);
+    
+    // Pour l'instant, retourner une structure vide car nous n'avons pas encore
+    // implémenté la liste des fichiers dans l'object storage
+    const documents = {
+      "01-DCE-Cotes-Photos": [],
+      "02-Etudes-fournisseurs": [],
+      "03-Devis-pieces-administratives": []
+    };
+    
+    res.json(documents);
+  } catch (error) {
+    console.error("Error fetching AO documents:", error);
+    res.status(500).json({ message: "Failed to fetch AO documents" });
+  }
+});
+
+// POST /api/aos/:aoId/documents/upload-url - Obtenir l'URL d'upload pour un document
+app.post("/api/aos/:aoId/documents/upload-url", async (req, res) => {
+  try {
+    const aoId = req.params.aoId;
+    const { folderName, fileName } = req.body;
+    
+    if (!folderName || !fileName) {
+      return res.status(400).json({ message: "folderName and fileName are required" });
+    }
+    
+    // Vérifier que le dossier est valide
+    const validFolders = [
+      "01-DCE-Cotes-Photos",
+      "02-Etudes-fournisseurs", 
+      "03-Devis-pieces-administratives"
+    ];
+    
+    if (!validFolders.includes(folderName)) {
+      return res.status(400).json({ message: "Invalid folder name" });
+    }
+    
+    const objectStorage = new ObjectStorageService();
+    const uploadUrl = await objectStorage.getOfferFileUploadURL(aoId, folderName, fileName);
+    
+    res.json({ uploadUrl, folderName, fileName });
+  } catch (error) {
+    console.error("Error generating upload URL:", error);
+    res.status(500).json({ message: "Failed to generate upload URL" });
+  }
+});
+
+// POST /api/aos/:aoId/documents - Confirmer l'upload d'un document
+app.post("/api/aos/:aoId/documents", async (req, res) => {
+  try {
+    const aoId = req.params.aoId;
+    const { folderName, fileName, fileSize, uploadedUrl } = req.body;
+    
+    // Ici on pourrait enregistrer les métadonnées du document dans la DB
+    // Pour l'instant, on retourne juste une confirmation
+    
+    const documentInfo = {
+      id: `${aoId}-${folderName}-${Date.now()}`,
+      aoId,
+      folderName,
+      fileName,
+      fileSize,
+      uploadedAt: new Date().toISOString(),
+      uploadedUrl
+    };
+    
+    res.json(documentInfo);
+  } catch (error) {
+    console.error("Error confirming document upload:", error);
+    res.status(500).json({ message: "Failed to confirm document upload" });
+  }
+});
+
+// ========================================
 // MAITRES D'OUVRAGE ROUTES - Gestion contacts réutilisables
 // ========================================
 

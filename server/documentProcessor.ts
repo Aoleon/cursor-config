@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { contactService, type ExtractedContactData, type ContactLinkResult } from './contactService';
 
 /*
 <important_code_snippet_instructions>
@@ -54,6 +55,44 @@ export interface ExtractedAOData {
   contactEmail?: string;
   contactPhone?: string;
   lots?: ExtractedLotData[];
+  
+  // Informations enrichies pour la liaison automatique des contacts
+  maitreOuvrageDetails?: {
+    nom: string;
+    typeOrganisation?: string;
+    adresse?: string;
+    codePostal?: string;
+    ville?: string;
+    departement?: string;
+    telephone?: string;
+    email?: string;
+    siteWeb?: string;
+    siret?: string;
+    contactPrincipalNom?: string;
+    contactPrincipalPoste?: string;
+    contactPrincipalTelephone?: string;
+    contactPrincipalEmail?: string;
+  };
+  
+  maitreOeuvreDetails?: {
+    nom: string;
+    typeOrganisation?: string;
+    adresse?: string;
+    codePostal?: string;
+    ville?: string;
+    departement?: string;
+    telephone?: string;
+    email?: string;
+    siteWeb?: string;
+    siret?: string;
+    specialites?: string;
+  };
+  
+  // Résultats de la liaison automatique des contacts (ajoutés lors du traitement)
+  linkedContacts?: {
+    maitreOuvrage?: ContactLinkResult;
+    maitreOeuvre?: ContactLinkResult;
+  };
 }
 
 /**
@@ -73,7 +112,7 @@ export class DocumentProcessor {
       const prompt = `
 Tu es un expert en analyse de documents d'appels d'offres (AO) dans le secteur de la menuiserie.
 
-Analyse le contenu suivant d'un document DCE (Dossier de Consultation des Entreprises) et extrais les informations essentielles.
+Analyse le contenu suivant d'un document DCE (Dossier de Consultation des Entreprises) et extrais les informations essentielles, notamment les détails complets des maîtres d'ouvrage et maîtres d'œuvre pour permettre la liaison automatique avec la base de données.
 
 Document: ${filename}
 Contenu:
@@ -98,15 +137,48 @@ Extrais et structure les informations suivantes au format JSON strict :
   "administrativeElements": "éléments administratifs importants",
   "contactPerson": "personne de contact",
   "contactEmail": "email de contact",
-  "contactPhone": "téléphone de contact"
+  "contactPhone": "téléphone de contact",
+  
+  "maitreOuvrageDetails": {
+    "nom": "nom complet du maître d'ouvrage",
+    "typeOrganisation": "type d'organisation (Commune, Entreprise, Particulier, etc.)",
+    "adresse": "adresse complète",
+    "codePostal": "code postal",
+    "ville": "ville",
+    "departement": "numéro de département (ex: 59, 75, etc.)",
+    "telephone": "numéro de téléphone",
+    "email": "adresse email",
+    "siteWeb": "site web si mentionné",
+    "siret": "numéro SIRET si mentionné",
+    "contactPrincipalNom": "nom du contact principal",
+    "contactPrincipalPoste": "poste/fonction du contact principal",
+    "contactPrincipalTelephone": "téléphone du contact principal",
+    "contactPrincipalEmail": "email du contact principal"
+  },
+  
+  "maitreOeuvreDetails": {
+    "nom": "nom du cabinet d'architecture ou bureau d'études",
+    "typeOrganisation": "type (Cabinet d'architecture, Bureau d'études, etc.)",
+    "adresse": "adresse complète",
+    "codePostal": "code postal",
+    "ville": "ville",
+    "departement": "numéro de département",
+    "telephone": "numéro de téléphone",
+    "email": "adresse email",
+    "siteWeb": "site web si mentionné",
+    "siret": "numéro SIRET si mentionné",
+    "specialites": "spécialités (Logement, Tertiaire, Industriel, etc.)"
+  }
 }
 
 Règles importantes:
 - Si une information n'est pas trouvée, utilise null
 - Pour les dates, utilise uniquement le format YYYY-MM-DD
 - Pour les montants, extrait uniquement le nombre (sans devise ni espaces)
+- Pour les départements, utilise uniquement le numéro (ex: "59" pour le Nord)
 - Sois précis et factuel, évite les interprétations
-- Focus sur les informations essentielles pour créer un dossier d'offre
+- Focus sur l'extraction complète des informations de contact pour permettre la liaison automatique
+- Si le maître d'œuvre n'est pas mentionné, utilise null pour maitreOeuvreDetails
 
 Réponds UNIQUEMENT avec le JSON, sans explication.
 `;
@@ -157,6 +229,8 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         contactPerson: extractedData.contactPerson || null,
         contactEmail: extractedData.contactEmail || null,
         contactPhone: extractedData.contactPhone || null,
+        maitreOuvrageDetails: extractedData.maitreOuvrageDetails || null,
+        maitreOeuvreDetails: extractedData.maitreOeuvreDetails || null,
       };
 
       console.log(`[DocumentProcessor] Extracted data for ${filename}:`, cleanedData);
@@ -170,6 +244,72 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         reference: filename.replace(/\.[^/.]+$/, ""), // Enlever l'extension
         description: `Document importé: ${filename}`,
       };
+    }
+  }
+
+  /**
+   * Traite les contacts extraits et les lie automatiquement avec la base de données
+   * @param extractedData - Données extraites du document
+   * @returns Les données enrichies avec les informations de liaison des contacts
+   */
+  async processExtractedContactsWithLinking(extractedData: ExtractedAOData): Promise<ExtractedAOData> {
+    try {
+      console.log('[DocumentProcessor] Traitement des contacts extraits...');
+      
+      const contactsToProcess: ExtractedContactData[] = [];
+      const linkedContacts: { maitreOuvrage?: ContactLinkResult; maitreOeuvre?: ContactLinkResult } = {};
+      
+      // Préparer les données du maître d'ouvrage pour traitement
+      if (extractedData.maitreOuvrageDetails?.nom) {
+        const maitreOuvrageContact: ExtractedContactData = {
+          ...extractedData.maitreOuvrageDetails,
+          role: 'maitre_ouvrage',
+          source: 'ocr_extraction'
+        };
+        contactsToProcess.push(maitreOuvrageContact);
+      }
+      
+      // Préparer les données du maître d'œuvre pour traitement
+      if (extractedData.maitreOeuvreDetails?.nom) {
+        const maitreOeuvreContact: ExtractedContactData = {
+          ...extractedData.maitreOeuvreDetails,
+          role: 'maitre_oeuvre',
+          source: 'ocr_extraction'
+        };
+        contactsToProcess.push(maitreOeuvreContact);
+      }
+      
+      // Traiter tous les contacts extraits
+      if (contactsToProcess.length > 0) {
+        console.log(`[DocumentProcessor] Traitement de ${contactsToProcess.length} contact(s)...`);
+        
+        const results = await contactService.processExtractedContacts(contactsToProcess);
+        
+        // Organiser les résultats par type de contact
+        for (let i = 0; i < results.length; i++) {
+          const result = results[i];
+          const contactData = contactsToProcess[i];
+          
+          if (contactData.role === 'maitre_ouvrage') {
+            linkedContacts.maitreOuvrage = result;
+            console.log(`[DocumentProcessor] Maître d'ouvrage ${result.found ? 'trouvé' : 'créé'}: ${result.contact.nom} (confiance: ${Math.round(result.confidence * 100)}%)`);
+          } else if (contactData.role === 'maitre_oeuvre') {
+            linkedContacts.maitreOeuvre = result;
+            console.log(`[DocumentProcessor] Maître d'œuvre ${result.found ? 'trouvé' : 'créé'}: ${result.contact.nom} (confiance: ${Math.round(result.confidence * 100)}%)`);
+          }
+        }
+      }
+      
+      // Retourner les données enrichies avec les informations de liaison
+      return {
+        ...extractedData,
+        linkedContacts
+      };
+      
+    } catch (error) {
+      console.error('[DocumentProcessor] Erreur lors du traitement des contacts:', error);
+      // En cas d'erreur, retourner les données originales sans liaison
+      return extractedData;
     }
   }
 

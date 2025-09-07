@@ -21,8 +21,22 @@ import {
   MapPin, Building, Euro, Clock, AlertCircle, CheckCircle,
   Star, FileCheck, Settings
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { fr } from "date-fns/locale";
+
+// Fonction utilitaire pour formater les dates de façon sécurisée
+const formatSafeDate = (dateValue: string | null | undefined, formatStr: string = 'dd/MM/yyyy à HH:mm') => {
+  if (!dateValue) return 'Non défini';
+  
+  const date = new Date(dateValue);
+  
+  if (!isValid(date)) {
+    console.warn('Date invalide détectée:', dateValue);
+    return 'Date invalide';
+  }
+  
+  return format(date, formatStr, { locale: fr });
+};
 
 interface OfferDetail {
   id: string;
@@ -575,7 +589,7 @@ export default function OfferDetail() {
                           <span className="text-sm font-medium">Validé</span>
                         </div>
                         <p className="text-xs text-green-600 mt-1">
-                          Le {format(new Date(offer.finEtudesValidatedAt), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+                          Le {formatSafeDate(offer.finEtudesValidatedAt)}
                         </p>
                       </div>
                     ) : (
@@ -622,11 +636,11 @@ export default function OfferDetail() {
                 <CardContent className="space-y-2 text-sm">
                   <div>
                     <span className="text-gray-500">Créé le:</span>
-                    <p>{format(new Date(offer.createdAt), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
+                    <p>{formatSafeDate(offer.createdAt)}</p>
                   </div>
                   <div>
                     <span className="text-gray-500">Mis à jour le:</span>
-                    <p>{format(new Date(offer.updatedAt), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
+                    <p>{formatSafeDate(offer.updatedAt)}</p>
                   </div>
                   {offer.batigestRef && (
                     <div>
@@ -637,7 +651,7 @@ export default function OfferDetail() {
                   {offer.deadline && (
                     <div>
                       <span className="text-gray-500">Échéance:</span>
-                      <p>{format(new Date(offer.deadline), 'dd/MM/yyyy', { locale: fr })}</p>
+                      <p>{formatSafeDate(offer.deadline, 'dd/MM/yyyy')}</p>
                     </div>
                   )}
                 </CardContent>

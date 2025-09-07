@@ -20,15 +20,25 @@ export default function SuppliersPending() {
   const queryClient = useQueryClient();
 
   // Récupérer les offres en attente de fournisseurs
-  const { data: offers, isLoading } = useQuery({
+  const { data: offers, isLoading, error } = useQuery({
     queryKey: ["/api/offers", "suppliers-pending"],
     queryFn: async () => {
-      const response = await fetch("/api/offers/suppliers-pending");
-      if (!response.ok) {
-        throw new Error('Erreur lors de la récupération des offres');
+      console.log("🔍 Chargement des offres en attente de fournisseurs...");
+      try {
+        const response = await fetch("/api/offers/suppliers-pending");
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log("✅ Données reçues:", data?.length, "offres en attente");
+        return data || [];
+      } catch (err) {
+        console.error("❌ Erreur lors de la récupération des offres:", err);
+        throw err;
       }
-      return response.json();
-    }
+    },
+    retry: 1,
+    staleTime: 30000,
   });
 
   // Mutation pour démarrer le chiffrage
@@ -120,7 +130,32 @@ export default function SuppliersPending() {
   if (isLoading) {
     return (
       <div className="space-y-6 p-6">
-        <div className="text-center py-8">Chargement...</div>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p>Chargement des demandes fournisseurs...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="text-center py-8 text-red-500">
+          <AlertTriangle className="h-12 w-12 mx-auto mb-2" />
+          <p className="font-semibold">Erreur lors du chargement</p>
+          <p className="text-sm text-gray-600 mt-1">
+            {error instanceof Error ? error.message : "Erreur inconnue"}
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-3"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/offers", "suppliers-pending"] })}
+          >
+            Réessayer
+          </Button>
+        </div>
       </div>
     );
   }
@@ -196,7 +231,8 @@ export default function SuppliersPending() {
         <CardContent>
           {offers?.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              Aucune offre en attente de fournisseurs actuellement
+              <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>Aucune offre en attente de fournisseurs actuellement</p>
             </div>
           ) : (
             <div className="space-y-4">

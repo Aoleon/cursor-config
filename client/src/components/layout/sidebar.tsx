@@ -76,10 +76,6 @@ const navigation: NavigationItem[] = [
   { name: "Fournisseurs", href: "/suppliers", icon: Truck },
 ];
 
-const beNavigation = [
-  { name: "Indicateurs BE", href: "/be-indicators", icon: TrendingUp },
-  { name: "Priorités", href: "/priorities", icon: AlertTriangle },
-];
 
 export default function Sidebar() {
   const [location] = useLocation();
@@ -193,37 +189,6 @@ export default function Sidebar() {
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-        
-        <div className="mt-8 px-3">
-          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Bureau d'Études
-          </h3>
-          <div className="mt-2 space-y-1">
-            {beNavigation.map((item) => {
-              const isActive = location === item.href;
-              return (
-                <Link key={item.name} href={item.href}>
-                  <div
-                    className={cn(
-                      "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer",
-                      isActive
-                        ? "bg-primary-light text-primary"
-                        : "text-gray-700 hover:bg-gray-100"
-                    )}
-                  >
-                    <item.icon
-                      className={cn(
-                        "mr-3 text-base",
-                        isActive ? "text-primary" : "text-gray-400"
-                      )}
-                    />
-                    {item.name}
-                  </div>
-                </Link>
               );
             })}
           </div>

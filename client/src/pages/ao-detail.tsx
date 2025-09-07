@@ -1954,8 +1954,13 @@ export default function AoDetail() {
               {compactDocumentView ? (
                 <CompactDocumentView
                   documents={aoDocuments}
-                  onFileUpload={uploadFile}
-                  uploadProgress={uploadProgress}
+                  onFileUpload={(files: FileList, folderName: string) => {
+                    // Adapter la FileList vers des uploads individuels
+                    Array.from(files).forEach(file => {
+                      uploadFile(file, folderName).catch(console.error);
+                    });
+                  }}
+                  uploadProgress={Object.keys(uploadProgress).length > 0 ? 50 : 0}
                   isUploading={isUploading}
                   onView={(doc) => console.log('View document:', doc)}
                   onDownload={(doc) => console.log('Download document:', doc)}
@@ -2059,9 +2064,9 @@ export default function AoDetail() {
             </TabsContent>
 
             <TabsContent value="validation" className="space-y-6 mt-6">
-              {aoData && (
+              {ao && (
                 <EnhancedBeValidation
-                  offerId={aoData.id}
+                  offerId={ao.id}
                   validationType="fin_etudes"
                   onValidationComplete={(result) => {
                     console.log('Validation completed:', result);

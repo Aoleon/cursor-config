@@ -25,6 +25,7 @@ import ImportOCR from "@/pages/offers/import";
 import ProjectPlanning from "@/pages/projects/planning";
 // Import des pages workflow
 import EtudeTechnique from "@/pages/workflow/etude-technique";
+import SuppliersPending from "@/pages/workflow/suppliers-pending";
 import ChiffrageWorkflow from "@/pages/workflow/chiffrage";
 import EnvoiDevis from "@/pages/workflow/envoi-devis";
 import PlanificationWorkflow from "@/pages/workflow/planification";
@@ -44,6 +45,7 @@ function Router() {
       {/* Sous-étapes des Appels d'Offres */}
       <Route path="/offers/import" component={ImportOCR} />
       <Route path="/offers/create" component={CreateAO} />
+      <Route path="/offers/suppliers-pending" component={SuppliersPending} />
       <Route path="/offers/chiffrage" component={ChiffrageWorkflow} />
       <Route path="/offers/suppliers" component={Suppliers} />
       <Route path="/offers/validation" component={BEDashboard} />

@@ -45,7 +45,9 @@ export const marcheTypeEnum = pgEnum("marche_type", [
 // Statuts des dossiers d'offre (workflow POC)
 export const offerStatusEnum = pgEnum("offer_status", [
   "brouillon",           // Création en cours
-  "en_cours_chiffrage",  // Chiffrage en cours
+  "etude_technique",     // Étude technique en cours
+  "en_attente_fournisseurs", // Demandes fournisseurs envoyées
+  "en_cours_chiffrage",  // Chiffrage en cours (APRÈS réception prix fournisseurs)
   "en_attente_validation", // Validation BE
   "fin_etudes_validee",  // Jalon "Fin d'études" validé
   "valide",              // Offre validée

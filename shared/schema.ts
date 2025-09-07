@@ -105,6 +105,16 @@ export const beValidationTypeEnum = pgEnum("be_validation_type", [
   "preparation_production", "controle_qualite", "validation_documentaire"
 ]);
 
+// Types de contrats de travail
+export const contractTypeEnum = pgEnum("contract_type", [
+  "cdi", "cdd", "interim", "apprentissage", "stage", "sous_traitance", "freelance"
+]);
+
+// Niveaux d'expérience
+export const experienceLevelEnum = pgEnum("experience_level", [
+  "debutant", "junior", "confirme", "senior", "expert"
+]);
+
 // Niveaux de criticité des contrôles BE
 export const validationCriticalityEnum = pgEnum("validation_criticality", [
   "bloquant", "majeur", "mineur", "info"
@@ -606,20 +616,63 @@ export const teams = pgTable("teams", {
   };
 });
 
-// Membres des équipes
+// Membres des équipes (enrichi avec informations professionnelles complètes)
 export const teamMembers = pgTable("team_members", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   teamId: varchar("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  
+  // Identification membre
   userId: varchar("user_id").references(() => users.id), // Membre interne
   externalMemberName: varchar("external_member_name"), // Sous-traitant externe
   externalMemberEmail: varchar("external_member_email"),
   externalMemberPhone: varchar("external_member_phone"),
+  externalMemberAddress: text("external_member_address"), // Adresse complète
+  
+  // Informations professionnelles
   role: varchar("role").notNull(), // "chef_equipe", "poseur", "aide", "sous_traitant"
+  poste: varchar("poste"), // Poste précis (ex: "Poseur fenêtres spécialisé aluminium")
   skills: text("skills").array(), // Compétences (ex: ["fenêtres", "portes", "aluminium"])
+  experienceLevel: experienceLevelEnum("experience_level").default("confirme"),
+  yearsExperience: integer("years_experience").default(0), // Années d'expérience
+  certifications: text("certifications").array(), // Certifications (ex: ["QUALIBAT", "RGE"])
+  
+  // Contrat et conditions
+  contractType: contractTypeEnum("contract_type").default("cdi"),
+  contractStartDate: timestamp("contract_start_date"), // Date début contrat
+  contractEndDate: timestamp("contract_end_date"), // Date fin (si CDD)
+  weeklyHours: decimal("weekly_hours", { precision: 5, scale: 2 }).default("35.00"), // Heures hebdomadaires
+  hourlyRate: decimal("hourly_rate", { precision: 8, scale: 2 }), // Taux horaire (pour externes)
+  socialSecurityNumber: varchar("social_security_number"), // Numéro Sécurité Sociale
+  
+  // Contact et urgence
+  emergencyContactName: varchar("emergency_contact_name"), // Contact d'urgence
+  emergencyContactPhone: varchar("emergency_contact_phone"),
+  emergencyContactRelation: varchar("emergency_contact_relation"), // Relation (conjoint, parent, etc.)
+  
+  // Données administratives
+  birthDate: timestamp("birth_date"), // Date de naissance
+  nationalId: varchar("national_id"), // Carte d'identité / Passeport
+  bankAccount: varchar("bank_account"), // IBAN (chiffré)
+  
+  // Équipements et permissions
+  hasDriverLicense: boolean("has_driver_license").default(false), // Permis de conduire
+  hasVehicle: boolean("has_vehicle").default(false), // Véhicule personnel
+  vehicleDetails: text("vehicle_details"), // Détails véhicule (marque, modèle, plaque)
+  equipmentProvided: text("equipment_provided").array(), // Équipements fournis
+  accessPermissions: text("access_permissions").array(), // Permissions d'accès chantiers
+  
+  // Statuts et activité
   isActive: boolean("is_active").default(true),
   joinedAt: timestamp("joined_at").defaultNow(),
   leftAt: timestamp("left_at"),
-  notes: text("notes"),
+  leftReason: varchar("left_reason"), // Raison de départ
+  performanceRating: decimal("performance_rating", { precision: 3, scale: 2 }), // Note performance (0-5)
+  
+  // Notes et observations
+  notes: text("notes"), // Notes générales
+  medicalRestrictions: text("medical_restrictions"), // Restrictions médicales
+  
+  // Métadonnées
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
@@ -627,6 +680,9 @@ export const teamMembers = pgTable("team_members", {
     teamUserIdx: index("team_members_team_user_idx").on(table.teamId, table.userId),
     roleIdx: index("team_members_role_idx").on(table.role),
     activeIdx: index("team_members_active_idx").on(table.isActive),
+    contractIdx: index("team_members_contract_idx").on(table.contractType),
+    experienceIdx: index("team_members_experience_idx").on(table.experienceLevel),
+    nameSearchIdx: index("team_members_name_search_idx").on(table.externalMemberName),
   };
 });
 
@@ -1468,6 +1524,20 @@ export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
   joinedAt: true,
   createdAt: true,
   updatedAt: true,
+});
+
+// Schéma pour la recherche de membres
+export const searchTeamMembersSchema = z.object({
+  query: z.string().optional(), // Recherche textuelle
+  teamId: z.string().optional(), // Filtrer par équipe
+  role: z.string().optional(), // Filtrer par rôle
+  contractType: z.string().optional(), // Filtrer par type de contrat
+  experienceLevel: z.string().optional(), // Filtrer par niveau d'expérience
+  skills: z.array(z.string()).optional(), // Filtrer par compétences
+  isActive: z.boolean().optional(), // Filtrer par statut actif
+  hasDriverLicense: z.boolean().optional(), // Filtrer par permis
+  minExperience: z.number().optional(), // Expérience minimum en années
+  maxExperience: z.number().optional(), // Expérience maximum en années
 });
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;

@@ -1384,17 +1384,17 @@ export const insertBeQualityControlSchema = createInsertSchema(beQualityControls
   createdAt: true,
 });
 
-// ========================================
-// INTÉGRATION SAGE BATIGEST - POC
-// ========================================
-
-// Énumération pour statut de synchronisation Batigest
+// Énumération pour statut de synchronisation Batigest (placé avec les autres enums)
 export const batigestSyncStatusEnum = pgEnum('batigest_sync_status', [
   'pending',
   'synced', 
   'error',
   'manual_review'
 ]);
+
+// ========================================
+// INTÉGRATION SAGE BATIGEST - POC
+// ========================================
 
 // Schémas d'intégration Sage Batigest
 export const batigestIntegrations = pgTable('batigest_integrations', {

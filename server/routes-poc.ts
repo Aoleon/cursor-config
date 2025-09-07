@@ -1406,10 +1406,13 @@ app.post("/api/documents/analyze", async (req, res) => {
     // 2. Analyser le contenu avec l'IA pour extraire les données structurées
     const extractedData = await documentProcessor.extractAOInformation(textContent, filename);
     
+    // 2.5. Traiter les contacts extraits et les lier automatiquement avec la base de données
+    const enrichedData = await documentProcessor.processExtractedContactsWithLinking(extractedData);
+    
     // 3. Calculer automatiquement les dates importantes
     const datesImportantes = calculerDatesImportantes(
-      extractedData.deadlineDate,
-      extractedData.startDate,
+      enrichedData.deadlineDate,
+      enrichedData.startDate,
       extractedData.deliveryDate
     );
     

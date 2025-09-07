@@ -15,7 +15,7 @@ import { registerChiffrageRoutes } from "./routes/chiffrage";
 import { registerWorkflowRoutes } from "./routes-workflow";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { calculerDatesImportantes, calculerDateRemiseJ15 } from "./dateUtils";
+import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto } from "./dateUtils";
 
 // Configuration de multer pour l'upload de fichiers
 const uploadMiddleware = multer({ 
@@ -106,7 +106,30 @@ app.get("/api/aos/:id", async (req, res) => {
 app.post("/api/aos", async (req, res) => {
   try {
     const validatedData = insertAoSchema.parse(req.body);
-    const ao = await storage.createAo(validatedData);
+    
+    // Préparer les données avec les champs calculés
+    let aoData: any = { ...validatedData };
+    
+    // Si une date de sortie AO est fournie, calculer automatiquement la date limite de remise
+    if (aoData.dateSortieAO) {
+      const dateLimiteCalculee = calculerDateLimiteRemiseAuto(aoData.dateSortieAO, 30);
+      if (dateLimiteCalculee) {
+        aoData.dateLimiteRemise = dateLimiteCalculee;
+        
+        // Calculer la date de rendu AO (J-15)
+        const dateRenduCalculee = calculerDateRemiseJ15(dateLimiteCalculee);
+        if (dateRenduCalculee) {
+          aoData.dateRenduAO = dateRenduCalculee;
+        }
+        
+        console.log(`[AO Creation] Dates calculées automatiquement:
+          - Date sortie: ${aoData.dateSortieAO}
+          - Date limite remise: ${dateLimiteCalculee.toISOString()}
+          - Date rendu AO: ${dateRenduCalculee ? dateRenduCalculee.toISOString() : 'N/A'}`);
+      }
+    }
+    
+    const ao = await storage.createAo(aoData);
     res.status(201).json(ao);
   } catch (error) {
     console.error("Error creating AO:", error);
@@ -328,7 +351,7 @@ app.post("/api/offers", async (req, res) => {
       dateRenduAO: req.body.dateRenduAO ? new Date(req.body.dateRenduAO) : undefined,
       dateAcceptationAO: req.body.dateAcceptationAO ? new Date(req.body.dateAcceptationAO) : undefined,
       demarragePrevu: req.body.demarragePrevu ? new Date(req.body.demarragePrevu) : undefined,
-      deadline: req.body.deadline ? new Date(req.body.deadline) : undefined,
+      // deadline: supprimé, calculé automatiquement par le système
       // Convertir les chaînes numériques en decimals
       montantEstime: req.body.montantEstime ? req.body.montantEstime.toString() : undefined,
       prorataEventuel: req.body.prorataEventuel ? req.body.prorataEventuel.toString() : undefined,
@@ -362,7 +385,7 @@ app.post("/api/offers/create-with-structure", async (req, res) => {
       dateRenduAO: offerData.dateRenduAO ? new Date(offerData.dateRenduAO) : undefined,
       dateAcceptationAO: offerData.dateAcceptationAO ? new Date(offerData.dateAcceptationAO) : undefined,
       demarragePrevu: offerData.demarragePrevu ? new Date(offerData.demarragePrevu) : undefined,
-      deadline: offerData.deadline ? new Date(offerData.deadline) : undefined,
+      // deadline: supprimé, calculé automatiquement par le système
       dateOS: offerData.dateOS ? new Date(offerData.dateOS) : undefined,
       montantEstime: offerData.montantEstime ? offerData.montantEstime.toString() : undefined,
       prorataEventuel: offerData.prorataEventuel ? offerData.prorataEventuel.toString() : undefined,

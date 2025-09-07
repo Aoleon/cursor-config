@@ -58,7 +58,7 @@ const createOfferSchema = z.object({
   dateRenduAO: z.string().optional(),
   dateAcceptationAO: z.string().optional(),
   demarragePrevu: z.string().optional(),
-  deadline: z.string().optional(),
+  // deadline supprimé : calculé automatiquement par le système
   
   // Maître d'ouvrage
   maitreOuvrageNom: z.string().optional(),
@@ -175,7 +175,7 @@ export default function CreateOffer() {
       client: "",
       location: "",
       menuiserieType: "fenetre",
-      deadline: "",
+      // deadline: supprimé, calculé automatiquement
       demarragePrevu: "",
       maitreOuvrageNom: "",
       maitreOuvrageEmail: "",
@@ -311,15 +311,7 @@ export default function CreateOffer() {
   }, [selectedAoId, aos, form, toast]);
 
   const onSubmit = (data: CreateOfferFormData) => {
-    // Validation spéciale pour la date limite obligatoire
-    if (!data.deadline || data.deadline.trim() === '') {
-      toast({
-        title: "Date limite requise",
-        description: "La date limite de remise AO est obligatoire pour créer le jalon planning.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Validation deadline supprimée : calculée automatiquement par le système
 
     createOfferMutation.mutate({
       ...data,
@@ -420,10 +412,8 @@ export default function CreateOffer() {
               }
               
               if (data.deadlineDate) {
-                // Convertir la date en format requis pour l'input date
-                const dateOnly = new Date(data.deadlineDate).toISOString().split('T')[0];
-                form.setValue("deadline", dateOnly, { shouldValidate: true, shouldDirty: true });
-                console.log('Deadline mise à jour:', dateOnly);
+                // Deadline supprimé : calculé automatiquement par le système
+                console.log('Date limite détectée par OCR (calculée automatiquement):', data.deadlineDate);
               }
               
               if (data.startDate) {
@@ -522,7 +512,7 @@ export default function CreateOffer() {
       departement: fields.departement || "",
       dateOS: fields.dateOS || "",
       delaiContractuel: fields.delaiContractuel || "",
-      deadline: fields.deadline || "",
+      // deadline: supprimé, calculé automatiquement
       dateRenduAO: fields.dateRenduAO || "",
       dateAcceptationAO: fields.dateAcceptationAO || "",
       demarragePrevu: fields.demarragePrevu || "",

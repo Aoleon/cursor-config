@@ -31,7 +31,7 @@ const createAoSchema = z.object({
   intituleOperation: z.string().optional(),
   
   // Dates simplifiées
-  dateLimiteRemise: z.string().optional(),
+  // dateLimiteRemise: supprimé, calculé automatiquement par le système
   dateSortieAO: z.string().optional(),
   dateAcceptationAO: z.string().optional(),
   demarragePrevu: z.string().optional(),
@@ -105,25 +105,15 @@ export default function CreateAO() {
     },
   });
 
-  // Calcul automatique de la date de rendu
-  const calculateDateRendu = (dateLimiteRemise: string): string => {
-    if (!dateLimiteRemise) return "";
-    
-    const dateLimite = new Date(dateLimiteRemise);
-    const dateRendu = new Date(dateLimite);
-    dateRendu.setDate(dateRendu.getDate() - 3); // 3 jours avant la limite
-    
-    return dateRendu.toISOString().split('T')[0];
-  };
+  // Calcul automatique de dates supprimé : géré par le backend
 
   const createAoMutation = useMutation({
     mutationFn: async (data: CreateAoFormData) => {
-      // Calculer automatiquement la date de rendu
-      const dateRenduAO = data.dateLimiteRemise ? calculateDateRendu(data.dateLimiteRemise) : undefined;
+      // Date limite et date rendu calculées automatiquement par le système
       
       const aoData = {
         ...data,
-        dateRenduAO,
+        // dateRenduAO calculé automatiquement par le backend
         montantEstime: data.montantEstime ? parseFloat(data.montantEstime) : undefined,
         maitreOuvrageId: selectedMaitreOuvrage?.id,
         maitreOeuvreId: selectedMaitreOeuvre?.id,

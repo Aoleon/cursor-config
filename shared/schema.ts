@@ -868,6 +868,8 @@ export const insertAoSchema = createInsertSchema(aos).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  dateLimiteRemise: true, // Calculée automatiquement par le système
+  dateRenduAO: true, // Calculée automatiquement (J-15)
 });
 
 export const insertAoLotSchema = createInsertSchema(aoLots).omit({
@@ -898,6 +900,7 @@ export const insertOfferSchema = createInsertSchema(offers).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  deadline: true, // Calculée automatiquement par le système (date limite remise)
 });
 
 export const insertProjectSchema = createInsertSchema(projects).omit({

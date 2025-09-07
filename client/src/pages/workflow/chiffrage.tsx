@@ -24,38 +24,70 @@ export default function Chiffrage() {
   const queryClient = useQueryClient();
 
   // Récupérer les offres en chiffrage
-  const { data: offers, isLoading } = useQuery({
+  const { data: offers, isLoading, error } = useQuery({
     queryKey: ["/api/offers", "chiffrage"],
     queryFn: async () => {
-      const response = await fetch("/api/offers?status=en_cours_chiffrage");
-      if (!response.ok) {
-        throw new Error('Erreur lors de la récupération des offres');
+      console.log("🔍 Chargement des offres en chiffrage...");
+      try {
+        const response = await fetch("/api/offers?status=en_cours_chiffrage");
+        console.log("📡 Réponse API:", response.status, response.statusText);
+        
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log("✅ Données reçues:", data?.length, "offres");
+        return data;
+      } catch (err) {
+        console.error("❌ Erreur lors de la récupération des offres:", err);
+        throw err;
       }
-      return response.json();
-    }
+    },
+    retry: 1,
+    staleTime: 30000, // 30 secondes
   });
 
   // Mutation pour valider le chiffrage
   const validateChiffrageMutation = useMutation({
     mutationFn: async (offerId: string) => {
-      const response = await fetch(`/api/offers/${offerId}/validate-chiffrage`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          status: "en_attente_validation",
-          dpgfGenerated: true,
-          validatedAt: new Date()
-        })
-      });
-      return response.json();
+      console.log("🔄 Validation du chiffrage pour l'offre:", offerId);
+      try {
+        const response = await fetch(`/api/offers/${offerId}/validate-chiffrage`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            status: "en_attente_validation",
+            dpgfGenerated: true,
+            validatedAt: new Date()
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.json();
+      } catch (err) {
+        console.error("❌ Erreur validation chiffrage:", err);
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/offers", "chiffrage"] });
       toast({
         title: "Chiffrage validé",
         description: "Le devis peut être envoyé au client",
+      });
+    },
+    onError: (error: any) => {
+      console.error("❌ Erreur lors de la validation:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Erreur lors de la validation du chiffrage",
+        variant: "destructive",
       });
     }
   });
@@ -134,15 +166,50 @@ export default function Chiffrage() {
   };
 
   const handleOpenCalculator = (offerId: string) => {
-    window.location.href = `/offers/${offerId}/chiffrage`;
+    console.log("🧮 Ouverture du calculateur pour l'offre:", offerId);
+    try {
+      window.location.href = `/offers/${offerId}/chiffrage`;
+    } catch (err) {
+      console.error("❌ Erreur ouverture calculateur:", err);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ouvrir le module de chiffrage",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleViewDPGF = (offerId: string) => {
-    window.open(`/api/offers/${offerId}/dpgf/preview`, '_blank');
+    console.log("👁️ Visualisation DPGF pour l'offre:", offerId);
+    try {
+      window.open(`/api/offers/${offerId}/dpgf/preview`, '_blank');
+    } catch (err) {
+      console.error("❌ Erreur visualisation DPGF:", err);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ouvrir le DPGF",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDownloadDPGF = (offerId: string) => {
-    window.location.href = `/api/offers/${offerId}/dpgf/download`;
+    console.log("⬇️ Téléchargement DPGF pour l'offre:", offerId);
+    try {
+      const link = document.createElement('a');
+      link.href = `/api/offers/${offerId}/dpgf/download`;
+      link.download = `DPGF-${offerId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("❌ Erreur téléchargement DPGF:", err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le DPGF",
+        variant: "destructive",
+      });
+    }
   };
 
   const getMarginColor = (margin: number) => {
@@ -222,10 +289,30 @@ export default function Chiffrage() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8">Chargement...</div>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p>Chargement des offres...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-500">
+                  <AlertTriangle className="h-12 w-12 mx-auto mb-2" />
+                  <p className="font-semibold">Erreur lors du chargement</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {error instanceof Error ? error.message : "Erreur inconnue"}
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/offers", "chiffrage"] })}
+                  >
+                    Réessayer
+                  </Button>
+                </div>
               ) : offers?.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  Aucune offre en chiffrage actuellement
+                  <Calculator className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Aucune offre en chiffrage actuellement</p>
                 </div>
               ) : (
                 <div className="space-y-4">

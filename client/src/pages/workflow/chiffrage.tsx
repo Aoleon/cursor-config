@@ -23,25 +23,28 @@ export default function Chiffrage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Récupérer les AOs en chiffrage
-  const { data: aos, isLoading } = useQuery({
-    queryKey: ["/api/aos/chiffrage"],
+  // Récupérer les offres en chiffrage
+  const { data: offers, isLoading } = useQuery({
+    queryKey: ["/api/offers", "chiffrage"],
     queryFn: async () => {
-      const response = await fetch("/api/aos?status=chiffrage");
+      const response = await fetch("/api/offers?status=en_cours_chiffrage");
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des offres');
+      }
       return response.json();
     }
   });
 
   // Mutation pour valider le chiffrage
   const validateChiffrageMutation = useMutation({
-    mutationFn: async (aoId: string) => {
-      const response = await fetch(`/api/aos/${aoId}/validate-chiffrage`, {
+    mutationFn: async (offerId: string) => {
+      const response = await fetch(`/api/offers/${offerId}/validate-chiffrage`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ 
-          status: "devis_envoye",
+          status: "en_attente_validation",
           dpgfGenerated: true,
           validatedAt: new Date()
         })
@@ -49,7 +52,7 @@ export default function Chiffrage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", "chiffrage"] });
       toast({
         title: "Chiffrage validé",
         description: "Le devis peut être envoyé au client",
@@ -57,7 +60,7 @@ export default function Chiffrage() {
     }
   });
 
-  const getActionButtons = (ao: any) => {
+  const getActionButtons = (offer: any) => {
     const actions = [];
 
     // Actions de base toujours disponibles
@@ -66,20 +69,20 @@ export default function Chiffrage() {
         key="calculator"
         variant="outline" 
         size="sm"
-        onClick={() => handleOpenCalculator(ao.id)}
+        onClick={() => handleOpenCalculator(offer.id)}
       >
         <Calculator className="h-4 w-4 mr-2" />
         Module chiffrage
       </Button>
     );
 
-    if (ao.dpgfGenerated) {
+    if (offer.dpgfDocument) {
       actions.push(
         <Button 
           key="view-dpgf"
           variant="outline" 
           size="sm"
-          onClick={() => handleViewDPGF(ao.id)}
+          onClick={() => handleViewDPGF(offer.id)}
         >
           <Eye className="h-4 w-4 mr-2" />
           Voir DPGF
@@ -91,7 +94,7 @@ export default function Chiffrage() {
           key="download-dpgf"
           variant="outline" 
           size="sm"
-          onClick={() => handleDownloadDPGF(ao.id)}
+          onClick={() => handleDownloadDPGF(offer.id)}
         >
           <Download className="h-4 w-4 mr-2" />
           Télécharger
@@ -99,21 +102,18 @@ export default function Chiffrage() {
       );
     }
 
-    // Conditions pour envoyer le devis
-    const canSendQuote = 
-      ao.totalCalculated && 
-      ao.dpgfGenerated &&
-      ao.marginValidated;
+    // Conditions pour envoyer le devis - basé sur le statut de l'offre
+    const canSendQuote = offer.status === 'en_cours_chiffrage' && offer.montantEstime && offer.dpgfDocument;
 
     if (canSendQuote) {
       actions.push(
         <Button 
           key="send"
           size="sm"
-          onClick={() => validateChiffrageMutation.mutate(ao.id)}
+          onClick={() => validateChiffrageMutation.mutate(offer.id)}
         >
           <Send className="h-4 w-4 mr-2" />
-          Envoyer le devis
+          Valider le chiffrage
         </Button>
       );
     } else {
@@ -133,16 +133,16 @@ export default function Chiffrage() {
     return actions;
   };
 
-  const handleOpenCalculator = (aoId: string) => {
-    window.location.href = `/aos/${aoId}/chiffrage`;
+  const handleOpenCalculator = (offerId: string) => {
+    window.location.href = `/offers/${offerId}/chiffrage`;
   };
 
-  const handleViewDPGF = (aoId: string) => {
-    window.open(`/api/aos/${aoId}/dpgf/preview`, '_blank');
+  const handleViewDPGF = (offerId: string) => {
+    window.open(`/api/offers/${offerId}/dpgf/preview`, '_blank');
   };
 
-  const handleDownloadDPGF = (aoId: string) => {
-    window.location.href = `/api/aos/${aoId}/dpgf/download`;
+  const handleDownloadDPGF = (offerId: string) => {
+    window.location.href = `/api/offers/${offerId}/dpgf/download`;
   };
 
   const getMarginColor = (margin: number) => {
@@ -172,7 +172,7 @@ export default function Chiffrage() {
                 <CardTitle className="text-sm font-medium">En cours</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{aos?.length || 0}</div>
+                <div className="text-2xl font-bold">{offers?.length || 0}</div>
                 <p className="text-xs text-muted-foreground">Chiffrages actifs</p>
               </CardContent>
             </Card>
@@ -183,7 +183,7 @@ export default function Chiffrage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {aos?.reduce((sum: number, ao: any) => sum + (ao.montantTotal || 0), 0).toLocaleString('fr-FR')} €
+                  {offers?.reduce((sum: number, offer: any) => sum + (parseFloat(offer.montantEstime) || 0), 0).toLocaleString('fr-FR')} €
                 </div>
                 <p className="text-xs text-muted-foreground">Montant cumulé</p>
               </CardContent>
@@ -201,53 +201,53 @@ export default function Chiffrage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">À envoyer</CardTitle>
+                <CardTitle className="text-sm font-medium">À valider</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-600">
-                  {aos?.filter((ao: any) => ao.dpgfGenerated && !ao.sent).length || 0}
+                  {offers?.filter((offer: any) => offer.dpgfDocument && offer.montantEstime).length || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">Devis prêts</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Liste des AOs en chiffrage */}
+          {/* Liste des offres en chiffrage */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>Dossiers en phase de chiffrage</span>
-                <Badge variant="secondary">{aos?.length || 0} dossiers</Badge>
+                <span>Offres en phase de chiffrage</span>
+                <Badge variant="secondary">{offers?.length || 0} offres</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-8">Chargement...</div>
-              ) : aos?.length === 0 ? (
+              ) : offers?.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  Aucun dossier en chiffrage actuellement
+                  Aucune offre en chiffrage actuellement
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {aos?.map((ao: any) => (
+                  {offers?.map((offer: any) => (
                     <div 
-                      key={ao.id} 
+                      key={offer.id} 
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h3 className="font-semibold text-lg">{ao.reference}</h3>
-                          <p className="text-sm text-gray-600">{ao.client}</p>
-                          <p className="text-sm text-gray-500">{ao.intituleOperation}</p>
+                          <h3 className="font-semibold text-lg">{offer.reference}</h3>
+                          <p className="text-sm text-gray-600">{offer.client}</p>
+                          <p className="text-sm text-gray-500">{offer.intituleOperation}</p>
                         </div>
                         <div className="text-right">
-                          {ao.deadline && (
+                          {offer.deadline && (
                             <Badge variant="outline" className="mb-1">
-                              Échéance: {new Date(ao.deadline).toLocaleDateString('fr-FR')}
+                              Échéance: {new Date(offer.deadline).toLocaleDateString('fr-FR')}
                             </Badge>
                           )}
                           <p className="text-sm text-gray-500">
-                            {ao.lots?.length || 0} lots
+                            Status: {offer.status}
                           </p>
                         </div>
                       </div>
@@ -255,27 +255,27 @@ export default function Chiffrage() {
                       {/* Informations financières */}
                       <div className="grid grid-cols-4 gap-4 mb-3 bg-gray-50 p-3 rounded">
                         <div>
-                          <p className="text-xs text-gray-500">Coût matériaux</p>
+                          <p className="text-xs text-gray-500">Montant estimé</p>
                           <p className="font-semibold">
-                            {ao.coutMateriaux?.toLocaleString('fr-FR') || '-'} €
+                            {offer.montantEstime ? parseFloat(offer.montantEstime).toLocaleString('fr-FR') : '-'} €
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Main d'œuvre</p>
+                          <p className="text-xs text-gray-500">Prorata éventuel</p>
                           <p className="font-semibold">
-                            {ao.coutMainOeuvre?.toLocaleString('fr-FR') || '-'} €
+                            {offer.prorataEventuel ? parseFloat(offer.prorataEventuel).toLocaleString('fr-FR') : '-'} €
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Total HT</p>
+                          <p className="text-xs text-gray-500">Heures BE</p>
                           <p className="font-semibold">
-                            {ao.montantTotal?.toLocaleString('fr-FR') || '-'} €
+                            {offer.beHoursEstimated ? parseFloat(offer.beHoursEstimated) : '-'} h
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Marge</p>
-                          <p className={`font-semibold ${getMarginColor(ao.margin || 0)}`}>
-                            {ao.margin || '-'} %
+                          <p className="text-xs text-gray-500">Statut</p>
+                          <p className="font-semibold text-blue-600">
+                            {offer.status === 'en_cours_chiffrage' ? 'En cours' : offer.status}
                           </p>
                         </div>
                       </div>
@@ -283,22 +283,22 @@ export default function Chiffrage() {
                       {/* Indicateurs de progression */}
                       <div className="flex items-center gap-4 mb-3">
                         <div className="flex items-center">
-                          <Euro className={`h-4 w-4 mr-1 ${ao.totalCalculated ? 'text-green-600' : 'text-gray-400'}`} />
-                          <span className="text-sm">Montants calculés</span>
+                          <Euro className={`h-4 w-4 mr-1 ${offer.montantEstime ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className="text-sm">Montant estimé</span>
                         </div>
                         <div className="flex items-center">
-                          <FileText className={`h-4 w-4 mr-1 ${ao.dpgfGenerated ? 'text-green-600' : 'text-gray-400'}`} />
+                          <FileText className={`h-4 w-4 mr-1 ${offer.dpgfDocument ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">DPGF généré</span>
                         </div>
                         <div className="flex items-center">
-                          <CheckCircle className={`h-4 w-4 mr-1 ${ao.marginValidated ? 'text-green-600' : 'text-gray-400'}`} />
-                          <span className="text-sm">Marge validée</span>
+                          <CheckCircle className={`h-4 w-4 mr-1 ${offer.beHoursEstimated ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className="text-sm">Heures BE estimées</span>
                         </div>
                       </div>
 
                       {/* Actions contextuelles */}
                       <div className="flex gap-2 justify-end">
-                        {getActionButtons(ao)}
+                        {getActionButtons(offer)}
                       </div>
                     </div>
                   ))}

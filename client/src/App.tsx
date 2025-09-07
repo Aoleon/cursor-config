@@ -44,7 +44,7 @@ function Router() {
       {/* Sous-étapes des Appels d'Offres */}
       <Route path="/offers/import" component={ImportOCR} />
       <Route path="/offers/create" component={CreateAO} />
-      <Route path="/offers/chiffrage" component={Chiffrage} />
+      <Route path="/offers/chiffrage" component={ChiffrageWorkflow} />
       <Route path="/offers/suppliers" component={Suppliers} />
       <Route path="/offers/validation" component={BEDashboard} />
       <Route path="/offers/transform" component={CreateOffer} />

@@ -54,7 +54,7 @@ const navigation: NavigationItem[] = [
     icon: FolderOpen,
     subItems: [
       { name: "Étude technique", href: "/workflow/etude-technique", icon: FileText, description: "Études préliminaires" },
-      { name: "Demandes fournisseurs", href: "/offers/suppliers-pending", icon: Send, description: "Prix d'achat nécessaires" },
+      { name: "Demandes fournisseurs", href: "/supplier-requests", icon: Send, description: "Prix d'achat nécessaires" },
       { name: "Chiffrage", href: "/offers/chiffrage", icon: Calculator, description: "Calcul marges avec prix fournisseurs" },
       { name: "Validation BE", href: "/offers/validation", icon: CheckCircle, description: "Validation fin d'études" },
       { name: "Transformation", href: "/offers/transform", icon: ArrowRight, description: "Passage en projet" },

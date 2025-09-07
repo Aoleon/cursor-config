@@ -31,6 +31,7 @@ import EnvoiDevis from "@/pages/workflow/envoi-devis";
 import PlanificationWorkflow from "@/pages/workflow/planification";
 import ChantierWorkflow from "@/pages/workflow/chantier";
 import ValidationBE from "@/pages/validation-be";
+import SupplierRequests from "@/pages/supplier-requests";
 
 function Router() {
   // Temporarily disable authentication for development
@@ -68,6 +69,7 @@ function Router() {
       <Route path="/workflow/chantier" component={ChantierWorkflow} />
       <Route path="/teams" component={Teams} />
       <Route path="/suppliers" component={Suppliers} />
+      <Route path="/supplier-requests" component={SupplierRequests} />
       <Route path="/be-dashboard" component={BEDashboard} />
       <Route component={NotFound} />
     </Switch>

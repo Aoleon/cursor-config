@@ -581,6 +581,55 @@ export const teamResources = pgTable("team_resources", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ========================================
+// GESTION DES ÉQUIPES - POC
+// ========================================
+
+// Équipes de JLM Menuiserie
+export const teams = pgTable("teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // Nom de l'équipe (ex: "Équipe Pose Nord", "Équipe BE")
+  description: text("description"), // Description de l'équipe
+  teamLeaderId: varchar("team_leader_id").references(() => users.id), // Chef d'équipe
+  type: varchar("type").notNull().default("pose"), // "pose", "be", "commercial", "support"
+  specialization: varchar("specialization"), // Spécialisation (ex: "fenêtres", "portes", "verrières")
+  location: varchar("location"), // Localisation principale
+  isActive: boolean("is_active").default(true),
+  maxMembers: integer("max_members").default(10), // Nombre max de membres
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    nameIdx: index("teams_name_idx").on(table.name),
+    typeIdx: index("teams_type_idx").on(table.type),
+    leaderIdx: index("teams_leader_idx").on(table.teamLeaderId),
+  };
+});
+
+// Membres des équipes
+export const teamMembers = pgTable("team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: varchar("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id), // Membre interne
+  externalMemberName: varchar("external_member_name"), // Sous-traitant externe
+  externalMemberEmail: varchar("external_member_email"),
+  externalMemberPhone: varchar("external_member_phone"),
+  role: varchar("role").notNull(), // "chef_equipe", "poseur", "aide", "sous_traitant"
+  skills: text("skills").array(), // Compétences (ex: ["fenêtres", "portes", "aluminium"])
+  isActive: boolean("is_active").default(true),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  leftAt: timestamp("left_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    teamUserIdx: index("team_members_team_user_idx").on(table.teamId, table.userId),
+    roleIdx: index("team_members_role_idx").on(table.role),
+    activeIdx: index("team_members_active_idx").on(table.isActive),
+  };
+});
+
 // Indicateurs de charge BE (POC)
 export const beWorkload = pgTable("be_workload", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -616,6 +665,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   beWorkload: many(beWorkload),
   generatedDpgf: many(dpgfDocuments, { relationName: "dpgf_generator" }),
   validatedDpgf: many(dpgfDocuments, { relationName: "dpgf_validator" }),
+  ledTeams: many(teams, { relationName: "team_leader" }),
+  teamMemberships: many(teamMembers),
 }));
 
 export const aosRelations = relations(aos, ({ one, many }) => ({
@@ -1383,6 +1434,46 @@ export const insertBeQualityControlSchema = createInsertSchema(beQualityControls
   id: true,
   createdAt: true,
 });
+
+// Relations pour les équipes
+export const teamsRelations = relations(teams, ({ one, many }) => ({
+  teamLeader: one(users, {
+    fields: [teams.teamLeaderId],
+    references: [users.id],
+    relationName: "team_leader",
+  }),
+  members: many(teamMembers),
+}));
+
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamMembers.teamId],
+    references: [teams.id],
+  }),
+  user: one(users, {
+    fields: [teamMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+// Schémas d'insertion pour les équipes
+export const insertTeamSchema = createInsertSchema(teams).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
+  id: true,
+  joinedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
+export type Team = typeof teams.$inferSelect;
+export type TeamMember = typeof teamMembers.$inferSelect;
 
 // Énumération pour statut de synchronisation Batigest (placé avec les autres enums)
 export const batigestSyncStatusEnum = pgEnum('batigest_sync_status', [

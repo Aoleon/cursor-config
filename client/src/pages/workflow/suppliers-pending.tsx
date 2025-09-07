@@ -214,7 +214,7 @@ export default function SuppliersPending() {
                     </div>
                     <div className="text-right">
                       <Badge 
-                        variant={offer.readyForChiffrage ? "success" : "outline"}
+                        variant={offer.readyForChiffrage ? "default" : "outline"}
                         className="mb-1"
                       >
                         {offer.readyForChiffrage ? "Prêt pour chiffrage" : "En attente"}

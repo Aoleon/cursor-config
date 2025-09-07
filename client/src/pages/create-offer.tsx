@@ -818,21 +818,15 @@ export default function CreateOffer() {
                     />
                   </div>
                   
-                  <div>
-                    <Label htmlFor="deadline">Date limite remise AO *</Label>
-                    <Input
-                      id="deadline"
-                      data-testid="input-deadline"
-                      type="date"
-                      {...form.register("deadline")}
-                      className="border-orange-200 focus:border-orange-500"
-                    />
-                    <p className="text-xs text-orange-600 mt-1">
-                      Obligatoire - Alimente automatiquement le planning avec le jalon "Rendu AO"
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <Label className="text-sm text-gray-600">Date limite remise AO</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <p className="font-medium text-blue-700">Calculée automatiquement par le système</p>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      💡 La date limite est définie automatiquement selon les règles métier (Date sortie AO + 30 jours)
                     </p>
-                    {form.formState.errors.deadline && (
-                      <p className="text-sm text-red-600 mt-1">Date limite requise</p>
-                    )}
                   </div>
                 </div>
               </CardContent>

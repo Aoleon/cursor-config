@@ -32,6 +32,34 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
 }
 
 /**
+ * Calcule automatiquement la date limite de remise selon les règles métier JLM
+ * Règle : Date de sortie AO + 30 jours par défaut (délai standard pour les appels d'offres publics)
+ */
+export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null, delaiJours: number = 30): Date | undefined {
+  if (!dateSortieAO) return undefined;
+
+  try {
+    const dateSortie = typeof dateSortieAO === 'string' ? new Date(dateSortieAO) : dateSortieAO;
+    
+    if (isNaN(dateSortie.getTime())) {
+      console.warn('[DateUtils] Date de sortie AO invalide:', dateSortieAO);
+      return undefined;
+    }
+
+    // Calculer la date limite : date de sortie + délai en jours
+    const dateLimite = new Date(dateSortie);
+    dateLimite.setDate(dateLimite.getDate() + delaiJours);
+
+    console.log(`[DateUtils] Date sortie AO: ${dateSortie.toLocaleDateString('fr-FR')}, Date limite calculée (+${delaiJours}j): ${dateLimite.toLocaleDateString('fr-FR')}`);
+    
+    return dateLimite;
+  } catch (error) {
+    console.error('[DateUtils] Erreur lors du calcul de la date limite de remise:', error);
+    return undefined;
+  }
+}
+
+/**
  * Structure des dates importantes d'un dossier
  */
 export interface DatesImportantes {

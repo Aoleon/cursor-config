@@ -527,16 +527,14 @@ export default function CreateAO() {
                     />
                   </div>
                   
-                  <div>
-                    <Label htmlFor="dateLimiteRemise">Date limite de remise</Label>
-                    <Input
-                      id="dateLimiteRemise"
-                      type="date"
-                      data-testid="input-date-limite-remise"
-                      {...form.register("dateLimiteRemise")}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      La date de rendu sera calculée automatiquement (3 jours avant)
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <Label className="text-sm text-gray-600">Date limite de remise</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <p className="font-medium text-blue-700">Calculée automatiquement par le système</p>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      💡 Base : Date sortie AO + 30 jours | Date rendu calculée à J-15
                     </p>
                   </div>
                 </div>

@@ -685,15 +685,15 @@ export default function AoDetail() {
             <CardContent>
               {isEditing ? (
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <Label htmlFor="dateLimite">Date limite de remise</Label>
-                    <Input
-                      id="dateLimite"
-                      type="date"
-                      value={formData.dateLimiteRemise}
-                      onChange={(e) => handleFieldChange("dateLimiteRemise", e.target.value)}
-                      data-testid="input-date-limite"
-                    />
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <Label className="text-sm text-gray-600">Date limite de remise</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <p className="font-medium text-blue-700">Calculée automatiquement par le système</p>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      💡 Base : Date sortie AO + 30 jours (ajustable selon le type d'AO)
+                    </p>
                   </div>
 
                   <div>

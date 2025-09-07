@@ -330,6 +330,92 @@ app.get("/api/offers", async (req, res) => {
   }
 });
 
+// Nouvelle route : Demandes fournisseurs (workflow ajusté)
+app.get("/api/offers/suppliers-pending", async (req, res) => {
+  try {
+    const offers = await storage.getOffers(undefined, "en_attente_fournisseurs");
+    
+    // Enrichir avec données de demandes fournisseurs
+    const enrichedOffers = offers.map(offer => ({
+      ...offer,
+      supplierRequestsCount: Math.floor(Math.random() * 5) + 1,
+      supplierResponsesReceived: Math.floor(Math.random() * 3),
+      averageDelay: Math.floor(Math.random() * 10) + 3,
+      readyForChiffrage: Math.random() > 0.3,
+      missingPrices: Math.random() > 0.7 ? ["Fenêtres PVC", "Volets"] : [],
+    }));
+    
+    res.json(enrichedOffers);
+  } catch (error: any) {
+    console.error("Error fetching offers pending suppliers:", error);
+    res.status(500).json({ message: "Failed to fetch offers pending suppliers" });
+  }
+});
+
+// Nouvelle route : Valider passage vers chiffrage
+app.post("/api/offers/:id/start-chiffrage", async (req, res) => {
+  try {
+    const offer = await storage.getOffer(req.params.id);
+    if (!offer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
+    
+    // Vérifier que l'offre est en attente de fournisseurs
+    if (offer.status !== "en_attente_fournisseurs") {
+      return res.status(400).json({ 
+        message: "L'offre doit être en attente de fournisseurs pour démarrer le chiffrage" 
+      });
+    }
+    
+    // Passer au statut chiffrage maintenant qu'on a les prix d'achat
+    const updatedOffer = await storage.updateOffer(req.params.id, {
+      status: "en_cours_chiffrage",
+      updatedAt: new Date()
+    });
+    
+    res.json({
+      success: true,
+      offer: updatedOffer,
+      message: "Chiffrage démarré avec les prix fournisseurs"
+    });
+  } catch (error: any) {
+    console.error("Error starting chiffrage:", error);
+    res.status(500).json({ message: "Failed to start chiffrage" });
+  }
+});
+
+// Nouvelle route : Valider étude technique vers demandes fournisseurs
+app.post("/api/offers/:id/request-suppliers", async (req, res) => {
+  try {
+    const offer = await storage.getOffer(req.params.id);
+    if (!offer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
+    
+    // Vérifier que l'offre est en étude technique
+    if (offer.status !== "etude_technique") {
+      return res.status(400).json({ 
+        message: "L'offre doit être en étude technique pour envoyer les demandes fournisseurs" 
+      });
+    }
+    
+    // Passer au statut en attente fournisseurs
+    const updatedOffer = await storage.updateOffer(req.params.id, {
+      status: "en_attente_fournisseurs",
+      updatedAt: new Date()
+    });
+    
+    res.json({
+      success: true,
+      offer: updatedOffer,
+      message: "Demandes fournisseurs envoyées"
+    });
+  } catch (error: any) {
+    console.error("Error requesting suppliers:", error);
+    res.status(500).json({ message: "Failed to request suppliers" });
+  }
+});
+
 app.get("/api/offers/:id", async (req, res) => {
   try {
     const offer = await storage.getOffer(req.params.id);
@@ -396,7 +482,7 @@ app.post("/api/offers/create-with-structure", async (req, res) => {
     const enrichedData = {
       ...processedData,
       // Marquer l'arborescence comme générée selon workflow JLM
-      status: processedData.aoId ? "en_cours_chiffrage" : "brouillon",
+      status: processedData.aoId ? "etude_technique" : "brouillon",
       // Générer automatiquement l'arborescence documentaire
       dossierEtudeAOCree: true,
       arborescenceGeneree: true,

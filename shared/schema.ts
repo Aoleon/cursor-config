@@ -125,9 +125,33 @@ export const checklistStatusEnum = pgEnum("checklist_status", [
   "non_controle", "en_cours", "conforme", "non_conforme", "reserve", "na"
 ]);
 
+// Statuts des fournisseurs
+export const supplierStatusEnum = pgEnum("supplier_status", [
+  "actif", "inactif", "suspendu", "blackliste"
+]);
+
 // ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
+
+// Table des fournisseurs
+export const suppliers = pgTable("suppliers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  contact: varchar("contact"),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  address: text("address"),
+  siret: varchar("siret"),
+  specialties: text("specialties").array().default(sql`'{}'::text[]`),
+  status: supplierStatusEnum("status").default("actif"),
+  paymentTerms: integer("payment_terms").default(30),
+  deliveryDelay: integer("delivery_delay").default(15),
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
+  totalOrders: integer("total_orders").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // Table des utilisateurs (simplifiée pour POC)
 export const users = pgTable("users", {
@@ -916,6 +940,9 @@ export type InsertProjectTask = typeof projectTasks.$inferInsert;
 export type SupplierRequest = typeof supplierRequests.$inferSelect;
 export type InsertSupplierRequest = typeof supplierRequests.$inferInsert;
 
+export type Supplier = typeof suppliers.$inferSelect;
+export type InsertSupplier = typeof suppliers.$inferInsert;
+
 export type TeamResource = typeof teamResources.$inferSelect;
 export type InsertTeamResource = typeof teamResources.$inferInsert;
 
@@ -1025,6 +1052,12 @@ export const insertProjectTaskSchema = createInsertSchema(projectTasks).omit({
 });
 
 export const insertSupplierRequestSchema = createInsertSchema(supplierRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupplierSchema = createInsertSchema(suppliers).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

@@ -22,6 +22,24 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+interface Supplier {
+  id: string;
+  name: string;
+  contact: string;
+  email: string;
+  phone: string;
+  address: string;
+  siret: string;
+  specialties: string[];
+  status: 'actif' | 'inactif' | 'suspendu' | 'blackliste';
+  paymentTerms: number;
+  deliveryDelay: number;
+  rating: number;
+  totalOrders: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface SupplierRequest {
   id: string;
   offerId: string;
@@ -42,6 +60,18 @@ interface SupplierRequest {
   };
 }
 
+interface NewSupplier {
+  name: string;
+  contact?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  siret?: string;
+  specialties: string[];
+  paymentTerms?: number;
+  deliveryDelay?: number;
+}
+
 interface NewSupplierRequest {
   offerId: string;
   supplierName: string;
@@ -56,9 +86,16 @@ interface NewSupplierRequest {
 
 export default function Suppliers() {
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [showSupplierDetail, setShowSupplierDetail] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch suppliers
+  const { data: suppliers = [], isLoading: suppliersLoading } = useQuery<Supplier[]>({
+    queryKey: ['/api/suppliers/'],
+  });
 
   // Fetch supplier requests
   const { data: supplierRequests = [], isLoading } = useQuery<SupplierRequest[]>({
@@ -71,6 +108,36 @@ export default function Suppliers() {
     select: (data: any[]) => data.filter(offer => 
       ['nouveau', 'en_chiffrage', 'en_validation'].includes(offer.status)
     ),
+  });
+
+  // Create supplier mutation
+  const createSupplierMutation = useMutation({
+    mutationFn: async (supplierData: NewSupplier) => {
+      const response = await fetch('/api/suppliers/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(supplierData),
+      });
+      if (!response.ok) throw new Error('Failed to create supplier');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/suppliers/'] });
+      setShowRequestDialog(false);
+      toast({
+        title: "Fournisseur créé",
+        description: "Le nouveau fournisseur a été ajouté avec succès.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer le fournisseur.",
+        variant: "destructive",
+      });
+    },
   });
 
   // Create supplier request mutation
@@ -102,6 +169,25 @@ export default function Suppliers() {
       });
     },
   });
+
+  const handleCreateSupplier = (formData: FormData) => {
+    const specialtiesStr = formData.get('specialties') as string;
+    const specialties = specialtiesStr ? specialtiesStr.split(',').map(s => s.trim()) : [];
+    
+    const supplierData: NewSupplier = {
+      name: formData.get('name') as string,
+      contact: formData.get('contact') as string || undefined,
+      email: formData.get('email') as string || undefined,
+      phone: formData.get('phone') as string || undefined,
+      address: formData.get('address') as string || undefined,
+      siret: formData.get('siret') as string || undefined,
+      specialties: specialties,
+      paymentTerms: formData.get('paymentTerms') ? parseInt(formData.get('paymentTerms') as string) : 30,
+      deliveryDelay: formData.get('deliveryDelay') ? parseInt(formData.get('deliveryDelay') as string) : 15,
+    };
+
+    createSupplierMutation.mutate(supplierData);
+  };
 
   const handleCreateRequest = (formData: FormData) => {
     const requestData: NewSupplierRequest = {
@@ -177,126 +263,106 @@ export default function Suppliers() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              Nouvelle Demande
+              Nouveau fournisseur
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <form onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
-              handleCreateRequest(formData);
+              handleCreateSupplier(formData);
             }}>
               <DialogHeader>
-                <DialogTitle>Nouvelle Demande de Devis</DialogTitle>
+                <DialogTitle>Nouveau Fournisseur</DialogTitle>
                 <DialogDescription>
-                  Créer une demande de devis pour un fournisseur
+                  Ajouter un nouveau fournisseur à votre base de données
                 </DialogDescription>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="offerId">Offre concernée</Label>
-                  <Select name="offerId" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner une offre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {offers.filter((offer: any) => offer.id).map((offer: any) => (
-                        <SelectItem key={offer.id} value={offer.id}>
-                          {offer.reference} - {offer.client}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="supplierName">Nom du Fournisseur</Label>
+                  <Label htmlFor="name">Nom du Fournisseur *</Label>
                   <Input
-                    id="supplierName"
-                    name="supplierName"
-                    placeholder="Nom du fournisseur"
+                    id="name"
+                    name="name"
+                    placeholder="Nom de l'entreprise"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="productCategory">Catégorie de Produit</Label>
-                  <Select name="productCategory" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="menuiserie_ext">Menuiserie Extérieure</SelectItem>
-                      <SelectItem value="menuiserie_int">Menuiserie Intérieure</SelectItem>
-                      <SelectItem value="vitrage">Vitrage</SelectItem>
-                      <SelectItem value="quincaillerie">Quincaillerie</SelectItem>
-                      <SelectItem value="isolation">Isolation</SelectItem>
-                      <SelectItem value="autre">Autre</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="urgency">Urgence</Label>
-                  <Select name="urgency" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Niveau d'urgence" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="normale">Normale</SelectItem>
-                      <SelectItem value="haute">Haute</SelectItem>
-                      <SelectItem value="critique">Critique</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contactEmail">Email de Contact</Label>
+                  <Label htmlFor="contact">Personne de Contact</Label>
                   <Input
-                    id="contactEmail"
-                    name="contactEmail"
+                    id="contact"
+                    name="contact"
+                    placeholder="Nom du contact principal"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
                     type="email"
                     placeholder="contact@fournisseur.fr"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="contactPhone">Téléphone</Label>
+                  <Label htmlFor="phone">Téléphone</Label>
                   <Input
-                    id="contactPhone"
-                    name="contactPhone"
+                    id="phone"
+                    name="phone"
                     type="tel"
                     placeholder="02 XX XX XX XX"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="estimatedAmount">Montant Estimé (€)</Label>
-                  <Input
-                    id="estimatedAmount"
-                    name="estimatedAmount"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
-                </div>
                 <div className="space-y-2 col-span-2">
-                  <Label htmlFor="description">Description de la Demande</Label>
+                  <Label htmlFor="address">Adresse</Label>
                   <Textarea
-                    id="description"
-                    name="description"
-                    placeholder="Détails de la demande, spécifications techniques..."
-                    rows={3}
-                    required
-                  />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="notes">Notes Internes</Label>
-                  <Textarea
-                    id="notes"
-                    name="notes"
-                    placeholder="Notes pour usage interne..."
+                    id="address"
+                    name="address"
+                    placeholder="Adresse complète"
                     rows={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="siret">SIRET</Label>
+                  <Input
+                    id="siret"
+                    name="siret"
+                    placeholder="12345678901234"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="specialties">Spécialités</Label>
+                  <Input
+                    id="specialties"
+                    name="specialties"
+                    placeholder="Menuiserie,Vitrage,Quincaillerie"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="paymentTerms">Délai de Paiement (jours)</Label>
+                  <Input
+                    id="paymentTerms"
+                    name="paymentTerms"
+                    type="number"
+                    placeholder="30"
+                    defaultValue="30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryDelay">Délai de Livraison (jours)</Label>
+                  <Input
+                    id="deliveryDelay"
+                    name="deliveryDelay"
+                    type="number"
+                    placeholder="15"
+                    defaultValue="15"
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={createRequestMutation.isPending}>
-                  {createRequestMutation.isPending ? 'Envoi...' : 'Envoyer la Demande'}
+                <Button type="submit" disabled={createSupplierMutation.isPending}>
+                  {createSupplierMutation.isPending ? 'Création...' : 'Créer le Fournisseur'}
                 </Button>
               </DialogFooter>
             </form>

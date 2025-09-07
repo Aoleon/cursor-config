@@ -1416,16 +1416,34 @@ app.post("/api/documents/analyze", async (req, res) => {
       extractedData.deliveryDate
     );
     
-    console.log(`[DocumentAnalysis] Analysis completed for ${filename}:`, extractedData);
+    console.log(`[DocumentAnalysis] Analysis completed for ${filename}:`, enrichedData);
     console.log(`[DocumentAnalysis] Dates importantes calculées:`, datesImportantes);
 
     res.json({
       success: true,
       filename,
       extractedData: {
-        ...extractedData,
+        ...enrichedData,
         // Ajouter les dates calculées dans la réponse
         datesImportantes
+      },
+      contactLinking: {
+        maitreOuvrage: enrichedData.linkedContacts?.maitreOuvrage ? {
+          found: enrichedData.linkedContacts.maitreOuvrage.found,
+          created: enrichedData.linkedContacts.maitreOuvrage.created,
+          contactId: enrichedData.linkedContacts.maitreOuvrage.contact.id,
+          contactName: enrichedData.linkedContacts.maitreOuvrage.contact.nom,
+          confidence: enrichedData.linkedContacts.maitreOuvrage.confidence,
+          reason: enrichedData.linkedContacts.maitreOuvrage.reason
+        } : null,
+        maitreOeuvre: enrichedData.linkedContacts?.maitreOeuvre ? {
+          found: enrichedData.linkedContacts.maitreOeuvre.found,
+          created: enrichedData.linkedContacts.maitreOeuvre.created,
+          contactId: enrichedData.linkedContacts.maitreOeuvre.contact.id,
+          contactName: enrichedData.linkedContacts.maitreOeuvre.contact.nom,
+          confidence: enrichedData.linkedContacts.maitreOeuvre.confidence,
+          reason: enrichedData.linkedContacts.maitreOeuvre.reason
+        } : null
       },
       textLength: textContent.length,
       message: "Document analysé avec succès"

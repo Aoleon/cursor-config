@@ -13,6 +13,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { documentProcessor, type ExtractedAOData } from "./documentProcessor";
 import { registerChiffrageRoutes } from "./routes/chiffrage";
 import { registerWorkflowRoutes } from "./routes-workflow";
+import { registerBatigestRoutes } from "./routes-batigest";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto } from "./dateUtils";
@@ -1928,6 +1929,9 @@ registerChiffrageRoutes(app, storage);
 
 // Enregistrer les routes du workflow
 registerWorkflowRoutes(app);
+
+// Enregistrer les routes d'intégration Batigest
+registerBatigestRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

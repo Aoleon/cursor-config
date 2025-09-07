@@ -1383,3 +1383,62 @@ export const insertBeQualityControlSchema = createInsertSchema(beQualityControls
   id: true,
   createdAt: true,
 });
+
+// ========================================
+// INTÉGRATION SAGE BATIGEST - POC
+// ========================================
+
+// Énumération pour statut de synchronisation Batigest
+export const batigestSyncStatusEnum = pgEnum('batigest_sync_status', [
+  'pending',
+  'synced', 
+  'error',
+  'manual_review'
+]);
+
+// Schémas d'intégration Sage Batigest
+export const batigestIntegrations = pgTable('batigest_integrations', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  offerId: varchar('offer_id').references(() => offers.id),
+  batigestRef: varchar('batigest_ref', { length: 100 }),
+  numeroDevis: varchar('numero_devis', { length: 50 }),
+  montantBatigest: decimal('montant_batigest', { precision: 12, scale: 2 }),
+  tauxMarge: decimal('taux_marge', { precision: 5, scale: 2 }),
+  statutBatigest: varchar('statut_batigest', { length: 50 }),
+  lastSyncAt: timestamp('last_sync_at'),
+  syncStatus: batigestSyncStatusEnum('sync_status').default('pending'),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const batigestAnalytics = pgTable('batigest_analytics', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  periode: varchar('periode', { length: 20 }),
+  chiffreAffairesRealise: decimal('ca_realise', { precision: 15, scale: 2 }),
+  chiffreAffairesPrevu: decimal('ca_prevu', { precision: 15, scale: 2 }),
+  tauxConversion: decimal('taux_conversion', { precision: 5, scale: 2 }),
+  margeReelleMoyenne: decimal('marge_reelle_moyenne', { precision: 5, scale: 2 }),
+  margePrevueMoyenne: decimal('marge_prevue_moyenne', { precision: 5, scale: 2 }),
+  nombreDevis: integer('nombre_devis'),
+  nombreFactures: integer('nombre_factures'),
+  dataJson: jsonb('data_json'), // Stockage flexible pour données détaillées
+  generatedAt: timestamp('generated_at').defaultNow(),
+});
+
+// Types d'insertion pour Batigest
+export const insertBatigestIntegrationSchema = createInsertSchema(batigestIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBatigestAnalyticsSchema = createInsertSchema(batigestAnalytics).omit({
+  id: true,
+  generatedAt: true,
+});
+
+export type InsertBatigestIntegration = z.infer<typeof insertBatigestIntegrationSchema>;
+export type InsertBatigestAnalytics = z.infer<typeof insertBatigestAnalyticsSchema>;
+export type BatigestIntegration = typeof batigestIntegrations.$inferSelect;
+export type BatigestAnalytics = typeof batigestAnalytics.$inferSelect;

@@ -32,6 +32,9 @@ import PlanificationWorkflow from "@/pages/workflow/planification";
 import ChantierWorkflow from "@/pages/workflow/chantier";
 import ValidationBE from "@/pages/validation-be";
 import SupplierRequests from "@/pages/supplier-requests";
+import ChiffrageList from "@/pages/offers/chiffrage-list";
+import ValidationList from "@/pages/offers/validation-list";
+import TransformList from "@/pages/offers/transform-list";
 
 function Router() {
   // Temporarily disable authentication for development
@@ -48,10 +51,10 @@ function Router() {
       <Route path="/offers/import" component={ImportOCR} />
       <Route path="/offers/create" component={CreateAO} />
       <Route path="/offers/suppliers-pending" component={SuppliersPending} />
-      <Route path="/offers/chiffrage" component={ChiffrageWorkflow} />
+      <Route path="/offers/chiffrage" component={ChiffrageList} />
       <Route path="/offers/suppliers" component={Suppliers} />
-      <Route path="/offers/validation" component={ValidationBE} />
-      <Route path="/offers/transform" component={CreateOffer} />
+      <Route path="/offers/validation" component={ValidationList} />
+      <Route path="/offers/transform" component={TransformList} />
       <Route path="/projects" component={Projects} />
       <Route path="/projects/:id" component={ProjectDetail} />
       <Route path="/projects/:id/planning" component={Planning} />

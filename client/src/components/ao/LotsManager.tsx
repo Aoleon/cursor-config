@@ -5,6 +5,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Trash2, Plus, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,6 +43,7 @@ interface LotsManagerProps {
 
 export function LotsManager({ lots, onLotsChange, disabled = false }: LotsManagerProps) {
   const { toast } = useToast();
+  const [lotToDelete, setLotToDelete] = useState<{index: number, lot: Lot} | null>(null);
   const [newLot, setNewLot] = useState<Omit<Lot, 'id'>>({
     numero: "",
     designation: "",
@@ -78,15 +96,19 @@ export function LotsManager({ lots, onLotsChange, disabled = false }: LotsManage
     });
   };
 
-  const removeLot = (index: number) => {
-    const lot = lots[index];
+  const confirmRemoveLot = () => {
+    if (!lotToDelete) return;
+    
+    const { index, lot } = lotToDelete;
     const updatedLots = lots.filter((_, i) => i !== index);
     onLotsChange(updatedLots);
     
     toast({
       title: "Lot supprimé",
-      description: `Le lot ${lot.numero} a été supprimé`,
+      description: `Le lot ${lot.numero} a été supprimé avec succès`,
     });
+    
+    setLotToDelete(null);
   };
 
   const updateLot = (index: number, field: keyof Lot, value: any) => {
@@ -133,15 +155,43 @@ export function LotsManager({ lots, onLotsChange, disabled = false }: LotsManage
                     <span className="text-sm">{lot.designation}</span>
                   </div>
                   {!disabled && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeLot(index)}
-                      data-testid={`button-remove-lot-${index}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <AlertDialog open={lotToDelete?.index === index} onOpenChange={(open) => !open && setLotToDelete(null)}>
+                          <AlertDialogTrigger asChild>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setLotToDelete({index, lot})}
+                                data-testid={`button-remove-lot-${index}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                          </AlertDialogTrigger>
+                          <TooltipContent>
+                            <p>Supprimer le lot {lot.numero}</p>
+                          </TooltipContent>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Supprimer le lot</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Êtes-vous sûr de vouloir supprimer le lot <strong>{lot.numero} - {lot.designation}</strong> ?
+                                Cette action est irréversible.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction onClick={confirmRemoveLot} className="bg-red-600 hover:bg-red-700">
+                                Supprimer
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
                 

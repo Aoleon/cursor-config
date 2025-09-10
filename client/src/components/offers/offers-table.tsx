@@ -10,6 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Eye, Edit, Star, Search, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -308,23 +314,52 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Link href={`/offers/${offer.id}`}>
-                            <Button variant="ghost" size="sm" className="text-primary hover:text-primary-dark" data-testid={`button-view-${offer.id}`}>
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </Link>
-                          <Button variant="ghost" size="sm" className="text-accent hover:text-orange-700">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className={offer.isPriority ? "text-red-600 hover:text-red-700" : "text-success hover:text-green-700"}
-                            onClick={() => handlePrioritize(offer)}
-                            disabled={prioritizeMutation.isPending}
-                          >
-                            <Star className={`w-4 h-4 ${offer.isPriority ? 'fill-current' : ''}`} />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link href={`/offers/${offer.id}`}>
+                                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary-dark" data-testid={`button-view-${offer.id}`}>
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Voir les détails de l'offre</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-accent hover:text-orange-700">
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Modifier l'offre</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className={offer.isPriority ? "text-red-600 hover:text-red-700" : "text-success hover:text-green-700"}
+                                  onClick={() => handlePrioritize(offer)}
+                                  disabled={prioritizeMutation.isPending}
+                                >
+                                  <Star className={`w-4 h-4 ${offer.isPriority ? 'fill-current' : ''}`} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{offer.isPriority ? "Retirer la priorité" : "Marquer comme prioritaire"}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       </TableCell>
                     </TableRow>

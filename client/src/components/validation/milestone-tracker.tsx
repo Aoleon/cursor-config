@@ -6,6 +6,23 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -33,6 +50,8 @@ interface MilestoneTrackerProps {
 export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
   const [selectedOfferId, setSelectedOfferId] = useState<string>(offerId || '');
   const [isValidationDialogOpen, setIsValidationDialogOpen] = useState(false);
+  const [milestoneToValidate, setMilestoneToValidate] = useState<any>(null);
+  const [milestoneToReject, setMilestoneToReject] = useState<any>(null);
   const { toast } = useToast();
 
   // Fetch offers for selection
@@ -57,10 +76,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
   // Create validation milestone mutation
   const createMilestoneMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest(`/api/validation-milestones/`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return apiRequest('POST', `/api/validation-milestones/`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/validation-milestones/'] });
@@ -83,10 +99,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
   // Validate milestone mutation
   const validateMilestoneMutation = useMutation({
     mutationFn: async ({ milestoneId, status, comment }: any) => {
-      return apiRequest(`/api/validation-milestones/${milestoneId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status, validationComment: comment }),
-      });
+      return apiRequest('PATCH', `/api/validation-milestones/${milestoneId}`, { status, validationComment: comment });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/validation-milestones/'] });
@@ -405,34 +418,103 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
 
                   {milestone.status !== 'valide' && (
                     <div className="flex gap-2 mt-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 border-green-300 hover:bg-green-50"
-                        onClick={() => validateMilestoneMutation.mutate({
-                          milestoneId: milestone.id,
-                          status: 'valide',
-                          comment: 'Jalon validé'
-                        })}
-                        disabled={validateMilestoneMutation.isPending}
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-1" />
-                        Valider
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600 border-red-300 hover:bg-red-50"
-                        onClick={() => validateMilestoneMutation.mutate({
-                          milestoneId: milestone.id,
-                          status: 'rejete',
-                          comment: 'Jalon rejeté - révision nécessaire'
-                        })}
-                        disabled={validateMilestoneMutation.isPending}
-                      >
-                        <AlertTriangle className="w-4 h-4 mr-1" />
-                        Rejeter
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <AlertDialog open={milestoneToValidate?.id === milestone.id} onOpenChange={(open) => !open && setMilestoneToValidate(null)}>
+                            <AlertDialogTrigger asChild>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-green-600 border-green-300 hover:bg-green-50"
+                                  onClick={() => setMilestoneToValidate(milestone)}
+                                  disabled={validateMilestoneMutation.isPending}
+                                >
+                                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                                  Valider
+                                </Button>
+                              </TooltipTrigger>
+                            </AlertDialogTrigger>
+                            <TooltipContent>
+                              <p>Valider ce jalon définitivement</p>
+                            </TooltipContent>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmer la validation</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Êtes-vous sûr de vouloir valider le jalon <strong>"{milestone.title}"</strong> ?
+                                  Cette action confirmera que cette étape a été réalisée avec succès.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => {
+                                    validateMilestoneMutation.mutate({
+                                      milestoneId: milestone.id,
+                                      status: 'valide',
+                                      comment: 'Jalon validé'
+                                    });
+                                    setMilestoneToValidate(null);
+                                  }}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  Valider
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <AlertDialog open={milestoneToReject?.id === milestone.id} onOpenChange={(open) => !open && setMilestoneToReject(null)}>
+                            <AlertDialogTrigger asChild>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 border-red-300 hover:bg-red-50"
+                                  onClick={() => setMilestoneToReject(milestone)}
+                                  disabled={validateMilestoneMutation.isPending}
+                                >
+                                  <AlertTriangle className="w-4 h-4 mr-1" />
+                                  Rejeter
+                                </Button>
+                              </TooltipTrigger>
+                            </AlertDialogTrigger>
+                            <TooltipContent>
+                              <p>Rejeter ce jalon pour révision</p>
+                            </TooltipContent>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmer le rejet</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Êtes-vous sûr de vouloir rejeter le jalon <strong>"{milestone.title}"</strong> ?
+                                  Cette action indiquera qu'une révision est nécessaire avant validation.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => {
+                                    validateMilestoneMutation.mutate({
+                                      milestoneId: milestone.id,
+                                      status: 'rejete',
+                                      comment: 'Jalon rejeté - révision nécessaire'
+                                    });
+                                    setMilestoneToReject(null);
+                                  }}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Rejeter
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   )}
 

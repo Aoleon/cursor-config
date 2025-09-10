@@ -8,6 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { FileText, Search, Calendar, MapPin, Building, Plus, Star, Eye, Edit } from "lucide-react";
 
 interface UnifiedOffersDisplayProps {
@@ -165,10 +171,19 @@ export default function UnifiedOffersDisplay({
             <span>{title} ({offers.length})</span>
           </div>
           {showCreateButton && (
-            <Button onClick={() => setLocation("/create-ao")}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvel AO
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={() => setLocation("/create-ao")}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nouvel AO
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Créer un nouvel appel d'offres</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </CardTitle>
         
@@ -259,38 +274,67 @@ export default function UnifiedOffersDisplay({
                             </div>
                             {/* Actions */}
                             <div className="flex items-center space-x-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLocation(`/offers/${offer.id}`);
-                                }}
-                                data-testid={`button-view-${offer.id}`}
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLocation(`/offers/${offer.id}/edit`);
-                                }}
-                                data-testid={`button-edit-${offer.id}`}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className={offer.isPriority ? "text-red-600 hover:text-red-700" : "text-gray-400 hover:text-yellow-600"}
-                                onClick={(e) => handlePrioritize(offer, e)}
-                                disabled={prioritizeMutation.isPending}
-                                data-testid={`button-priority-${offer.id}`}
-                              >
-                                <Star className={`w-4 h-4 ${offer.isPriority ? 'fill-current' : ''}`} />
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setLocation(`/offers/${offer.id}`);
+                                      }}
+                                      data-testid={`button-view-${offer.id}`}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Voir les détails de l'offre</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setLocation(`/offers/${offer.id}/edit`);
+                                      }}
+                                      data-testid={`button-edit-${offer.id}`}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Modifier l'offre</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className={offer.isPriority ? "text-red-600 hover:text-red-700" : "text-gray-400 hover:text-yellow-600"}
+                                      onClick={(e) => handlePrioritize(offer, e)}
+                                      disabled={prioritizeMutation.isPending}
+                                      data-testid={`button-priority-${offer.id}`}
+                                    >
+                                      <Star className={`w-4 h-4 ${offer.isPriority ? 'fill-current' : ''}`} />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{offer.isPriority ? "Retirer la priorité" : "Marquer comme prioritaire"}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                           </div>
                         </div>

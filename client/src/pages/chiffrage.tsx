@@ -40,6 +40,23 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   ArrowLeft,
   Plus,
   Calculator,
@@ -106,6 +123,7 @@ export default function Chiffrage() {
   const [showDpgfDialog, setShowDpgfDialog] = useState(false);
   const [showSupplierRequestDialog, setShowSupplierRequestDialog] = useState(false);
   const [selectedLots, setSelectedLots] = useState<string[]>([]);
+  const [elementToDelete, setElementToDelete] = useState<any>(null);
 
   // Récupérer l'offre
   const { data: offer, isLoading: offerLoading } = useQuery<any>({
@@ -235,10 +253,25 @@ export default function Chiffrage() {
       queryClient.invalidateQueries({ queryKey: [`/api/offers/${id}/chiffrage-elements`] });
       toast({
         title: "Élément supprimé",
-        description: "L'élément a été supprimé avec succès.",
+        description: `Élément "${elementToDelete?.designation}" supprimé avec succès.`,
       });
+      setElementToDelete(null);
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'élément",
+        variant: "destructive",
+      });
+      setElementToDelete(null);
     },
   });
+
+  const confirmDeleteElement = () => {
+    if (elementToDelete) {
+      deleteElementMutation.mutate(elementToDelete.id);
+    }
+  };
 
   // Mutation pour générer le DPGF
   const generateDpgfMutation = useMutation({
@@ -459,22 +492,60 @@ export default function Chiffrage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditElement(element)}
-                            data-testid={`button-edit-${element.id}`}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteElementMutation.mutate(element.id)}
-                            data-testid={`button-delete-${element.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditElement(element)}
+                                  data-testid={`button-edit-${element.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Modifier l'élément</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          
+                          <TooltipProvider>
+                            <Tooltip>
+                              <AlertDialog open={elementToDelete?.id === element.id} onOpenChange={(open) => !open && setElementToDelete(null)}>
+                                <AlertDialogTrigger asChild>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setElementToDelete(element)}
+                                      data-testid={`button-delete-${element.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                </AlertDialogTrigger>
+                                <TooltipContent>
+                                  <p>Supprimer l'élément</p>
+                                </TooltipContent>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Supprimer l'élément de chiffrage</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Êtes-vous sûr de vouloir supprimer l'élément <strong>"{element.designation}"</strong> ?
+                                      Cette action est irréversible et supprimera définitivement cet élément du chiffrage.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction onClick={confirmDeleteElement} className="bg-red-600 hover:bg-red-700">
+                                      Supprimer
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       </TableCell>
                     </TableRow>

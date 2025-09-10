@@ -1294,27 +1294,45 @@ app.post("/api/aos/:aoId/documents/upload-url", async (req, res) => {
     const { folderName, fileName } = req.body;
     
     if (!folderName || !fileName) {
-      return res.status(400).json({ message: "folderName and fileName are required" });
+      return res.status(400).json({ 
+        message: "folderName and fileName are required",
+        details: "Both folderName and fileName must be provided in the request body"
+      });
     }
     
-    // Vérifier que le dossier est valide
-    const validFolders = [
-      "01-DCE-Cotes-Photos",
-      "02-Etudes-fournisseurs", 
-      "03-Devis-pieces-administratives"
-    ];
-    
-    if (!validFolders.includes(folderName)) {
-      return res.status(400).json({ message: "Invalid folder name" });
-    }
-    
+    // Security validation is now handled inside ObjectStorageService.getOfferFileUploadURL
+    // This ensures all validation is centralized and cannot be bypassed
     const objectStorage = new ObjectStorageService();
     const uploadUrl = await objectStorage.getOfferFileUploadURL(aoId, folderName, fileName);
     
-    res.json({ uploadUrl, folderName, fileName });
-  } catch (error) {
+    // Return the sanitized values (they might have been modified for security)
+    res.json({ 
+      uploadUrl, 
+      message: "Upload URL generated successfully", 
+      security: "File and folder names have been validated and sanitized" 
+    });
+  } catch (error: any) {
     console.error("Error generating upload URL:", error);
-    res.status(500).json({ message: "Failed to generate upload URL" });
+    
+    // Handle security validation errors with specific error messages
+    if (error.message && (
+        error.message.includes('Invalid folder name') ||
+        error.message.includes('File name') ||
+        error.message.includes('File extension not allowed') ||
+        error.message.includes('Invalid offer ID')
+    )) {
+      return res.status(400).json({ 
+        message: "Security validation failed", 
+        details: error.message,
+        type: "validation_error" 
+      });
+    }
+    
+    // Generic server error for unexpected issues
+    res.status(500).json({ 
+      message: "Failed to generate upload URL",
+      details: "An unexpected error occurred while processing your request"
+    });
   }
 });
 

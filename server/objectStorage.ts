@@ -1,7 +1,85 @@
 import { Response } from "express";
 import { randomUUID } from "crypto";
+import path from "path";
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+
+// Security: Whitelist of allowed folder names for offer document structure
+export const ALLOWED_OFFER_FOLDERS = [
+  '01-DCE-Cotes-Photos',
+  '02-Etudes-fournisseurs', 
+  '03-Devis-pieces-administratives'
+] as const;
+
+export type AllowedOfferFolder = typeof ALLOWED_OFFER_FOLDERS[number];
+
+// Security: File name sanitization functions
+export function sanitizeFileName(fileName: string): string {
+  if (!fileName || typeof fileName !== 'string') {
+    throw new Error('File name is required and must be a string');
+  }
+
+  // SECURITY: Immediately reject path traversal attempts - don't sanitize, reject!
+  if (fileName.includes('../') || fileName.includes('..\\') || 
+      fileName.includes('/') || fileName.includes('\\') ||
+      fileName.includes('..') || fileName.startsWith('.')) {
+    throw new Error('Path traversal attempts are not allowed in file names');
+  }
+
+  // Extract file extension first to preserve it during length limiting
+  const lastDotIndex = fileName.lastIndexOf('.');
+  if (lastDotIndex === -1) {
+    throw new Error('File must have an extension');
+  }
+
+  const extension = fileName.substring(lastDotIndex).toLowerCase();
+  const nameWithoutExtension = fileName.substring(0, lastDotIndex);
+
+  // Validate extension first
+  const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.gif', '.txt', '.zip'];
+  if (!allowedExtensions.includes(extension)) {
+    throw new Error(`File extension not allowed. Allowed extensions: ${allowedExtensions.join(', ')}`);
+  }
+
+  // Sanitize the filename part (without extension)
+  const sanitized = nameWithoutExtension
+    .replace(/[^\w\-_\s]/g, '') // Keep only alphanumeric, hyphens, underscores, spaces
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/--+/g, '-') // Replace multiple hyphens with single hyphen
+    .toLowerCase()
+    .trim();
+
+  // Ensure we have a valid name after sanitization
+  if (!sanitized || sanitized === '' || sanitized === '-') {
+    throw new Error('File name cannot be empty after sanitization');
+  }
+
+  // Limit length of filename (without extension) to prevent extremely long filenames
+  const maxNameLength = 80; // Leave room for extension and path structure
+  const truncatedName = sanitized.length > maxNameLength ? sanitized.substring(0, maxNameLength) : sanitized;
+
+  // Combine sanitized name with validated extension
+  return truncatedName + extension;
+}
+
+export function validateOfferFolder(folderName: string): AllowedOfferFolder {
+  if (!folderName || typeof folderName !== 'string') {
+    throw new Error('Folder name is required and must be a string');
+  }
+
+  // Trim and check for empty/whitespace-only strings
+  const trimmedFolder = folderName.trim();
+  if (!trimmedFolder) {
+    throw new Error('Invalid folder name. Allowed folders: ' + ALLOWED_OFFER_FOLDERS.join(', '));
+  }
+
+  // Check against whitelist
+  if (!ALLOWED_OFFER_FOLDERS.includes(trimmedFolder as AllowedOfferFolder)) {
+    throw new Error(`Invalid folder name. Allowed folders: ${ALLOWED_OFFER_FOLDERS.join(', ')}`);
+  }
+
+  return trimmedFolder as AllowedOfferFolder;
+}
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -50,6 +128,7 @@ export class ObjectStorageService {
   // Downloads an object from storage via Replit sidecar
   async downloadObject(objectPath: string, res: Response) {
     try {
+      console.log(`[ObjectStorage] Downloading object: ${objectPath}`);
       // Use Replit's sidecar to get the file
       const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/get-object`, {
         method: "POST",
@@ -59,7 +138,9 @@ export class ObjectStorageService {
         body: JSON.stringify({ object_path: objectPath }),
       });
 
+      console.log(`[ObjectStorage] Download response status: ${response.status}`);
       if (!response.ok) {
+        console.log(`[ObjectStorage] Download failed with status ${response.status}`);
         return res.status(404).json({ error: "File not found" });
       }
 
@@ -118,6 +199,7 @@ export class ObjectStorageService {
   // Checks if an object exists in storage
   async objectExists(objectPath: string): Promise<boolean> {
     try {
+      console.log(`[ObjectStorage] Checking if object exists: ${objectPath}`);
       const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/object-exists`, {
         method: "POST",
         headers: {
@@ -126,8 +208,13 @@ export class ObjectStorageService {
         body: JSON.stringify({ object_path: objectPath }),
       });
       
-      if (!response.ok) return false;
+      console.log(`[ObjectStorage] Object exists response status: ${response.status}`);
+      if (!response.ok) {
+        console.log(`[ObjectStorage] Object exists failed with status ${response.status}`);
+        return false;
+      }
       const data = await response.json();
+      console.log(`[ObjectStorage] Object exists data:`, data);
       return data.exists === true;
     } catch (error) {
       console.error("Error checking object existence:", error);
@@ -161,12 +248,8 @@ export class ObjectStorageService {
     const privateObjectDir = this.getPrivateObjectDir();
     const basePath = `${privateObjectDir}/offers/${offerId}`;
     
-    // Standard folder structure for offers per POC spec
-    const folders = [
-      '01-DCE-Cotes-Photos',
-      '02-Etudes-fournisseurs', 
-      '03-Devis-pieces-administratives'
-    ];
+    // Use the security-hardened folder list
+    const folders = [...ALLOWED_OFFER_FOLDERS];
     
     // Create folder structure by uploading empty .gitkeep files via Replit sidecar
     for (const folder of folders) {
@@ -201,10 +284,26 @@ export class ObjectStorageService {
     return { basePath, folders };
   }
 
-  // Get upload URL for specific offer folder
+  // Get upload URL for specific offer folder - SECURITY HARDENED
   async getOfferFileUploadURL(offerId: string, folderName: string, fileName: string): Promise<string> {
+    // SECURITY: Validate folder name against whitelist
+    const validatedFolder = validateOfferFolder(folderName);
+    
+    // SECURITY: Sanitize file name to prevent path traversal and other attacks
+    const sanitizedFileName = sanitizeFileName(fileName);
+    
+    // SECURITY: Validate offer ID format (should be UUID-like)
+    if (!offerId || typeof offerId !== 'string' || offerId.length < 10) {
+      throw new Error('Invalid offer ID format');
+    }
+
     const privateObjectDir = this.getPrivateObjectDir();
-    const filePath = `${privateObjectDir}/offers/${offerId}/${folderName}/${fileName}`;
+    
+    // Use validated and sanitized inputs only - NO direct concatenation of user input
+    const filePath = `${privateObjectDir}/offers/${offerId}/${validatedFolder}/${sanitizedFileName}`;
+    
+    // Log security-related upload attempts for monitoring
+    console.log(`[ObjectStorage] Secure upload URL generated: offer=${offerId}, folder=${validatedFolder}, file=${sanitizedFileName}`);
     
     const { bucketName, objectName } = parseObjectPath(filePath);
 

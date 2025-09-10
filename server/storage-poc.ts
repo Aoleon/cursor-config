@@ -49,6 +49,7 @@ export interface IStorage {
   
   // Project task operations - Planning partagé
   getProjectTasks(projectId: string): Promise<(ProjectTask & { assignedUser?: User })[]>;
+  getAllTasks(): Promise<(ProjectTask & { assignedUser?: User })[]>;
   createProjectTask(task: InsertProjectTask): Promise<ProjectTask>;
   updateProjectTask(id: string, task: Partial<InsertProjectTask>): Promise<ProjectTask>;
   
@@ -304,6 +305,26 @@ export class DatabaseStorage implements IStorage {
   async createProjectTask(task: InsertProjectTask): Promise<ProjectTask> {
     const [newTask] = await db.insert(projectTasks).values(task).returning();
     return newTask;
+  }
+
+  async getAllTasks(): Promise<(ProjectTask & { assignedUser?: User })[]> {
+    const baseTasks = await db
+      .select()
+      .from(projectTasks)
+      .orderBy(projectTasks.startDate);
+
+    const result = [];
+    for (const task of baseTasks) {
+      let assignedUser = undefined;
+
+      if (task.assignedUserId) {
+        assignedUser = await this.getUser(task.assignedUserId);
+      }
+
+      result.push({ ...task, assignedUser });
+    }
+
+    return result;
   }
 
   async updateProjectTask(id: string, task: Partial<InsertProjectTask>): Promise<ProjectTask> {

@@ -1,44 +1,107 @@
 import { useState } from "react";
-import { Calendar, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Calendar, Clock, AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
+import GanttChart from "@/components/projects/GanttChart";
+import type { Project, ProjectTask } from "@shared/schema";
 
 export default function ProjectPlanningPage() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  const milestones = [
-    {
-      id: 1,
-      name: "Fin d'études",
-      date: "2025-03-15",
-      status: "completed",
-      project: "Résidence Sandettie",
+  // Récupérer les projets
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+  });
+
+  // Récupérer toutes les tâches pour les jalons
+  const { data: allTasks = [], isLoading: tasksLoading } = useQuery<ProjectTask[]>({
+    queryKey: ["/api/tasks/all"],
+  });
+
+  // Mutation pour mettre à jour les dates des projets
+  const updateProjectMutation = useMutation({
+    mutationFn: async ({ projectId, startDate, endDate }: { projectId: string; startDate: Date; endDate: Date }) => {
+      return await apiRequest(`/api/projects/${projectId}`, 'PATCH', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
     },
-    {
-      id: 2,
-      name: "Commande matériaux",
-      date: "2025-03-20",
-      status: "in-progress",
-      project: "Résidence Sandettie",
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({
+        title: "Projet mis à jour",
+        description: "Les dates du projet ont été modifiées avec succès.",
+      });
     },
-    {
-      id: 3,
-      name: "Démarrage chantier",
-      date: "2025-04-01",
-      status: "pending",
-      project: "Résidence Sandettie",
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour les dates du projet.",
+        variant: "destructive",
+      });
     },
-    {
-      id: 4,
-      name: "Réception travaux",
-      date: "2025-05-15",
-      status: "pending",
-      project: "Résidence Sandettie",
+  });
+
+  // Mutation pour mettre à jour les dates des tâches (jalons)
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ taskId, startDate, endDate }: { taskId: string; startDate: Date; endDate: Date }) => {
+      return await apiRequest(`/api/tasks/${taskId}`, 'PATCH', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
     },
-  ];
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/all"] });
+      toast({
+        title: "Jalon mis à jour",
+        description: "Les dates du jalon ont été modifiées avec succès.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour les dates du jalon.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Gestionnaire de mise à jour des dates depuis le Gantt
+  const handleDateUpdate = (itemId: string, newStartDate: Date, newEndDate: Date, type: 'project' | 'milestone') => {
+    if (type === 'project') {
+      updateProjectMutation.mutate({
+        projectId: itemId,
+        startDate: newStartDate,
+        endDate: newEndDate,
+      });
+    } else {
+      updateTaskMutation.mutate({
+        taskId: itemId,
+        startDate: newStartDate,
+        endDate: newEndDate,
+      });
+    }
+  };
+
+  // Préparer les jalons depuis les tâches
+  const milestones = allTasks
+    .filter(task => task.isJalon || task.status === 'termine')
+    .map(task => ({
+      id: task.id,
+      name: task.name,
+      date: task.startDate,
+      status: task.status === 'termine' ? 'completed' : 
+              task.status === 'en_cours' ? 'in-progress' : 'pending',
+      project: projects.find(p => p.id === task.projectId)?.name || 'Projet inconnu',
+      projectId: task.projectId,
+    }));
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -69,58 +132,79 @@ export default function ProjectPlanningPage() {
         />
 
         <div className="p-6">
+          {/* Composant Gantt Chart principal */}
+          <div className="mb-6">
+            {projectsLoading || tasksLoading ? (
+              <Card>
+                <CardContent className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <span className="ml-2">Chargement du planning...</span>
+                </CardContent>
+              </Card>
+            ) : (
+              <GanttChart 
+                projects={projects}
+                milestones={milestones}
+                onDateUpdate={handleDateUpdate}
+                data-testid="gantt-chart"
+              />
+            )}
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Planning Gantt</CardTitle>
+                  <CardTitle>Jalons Récents</CardTitle>
                   <CardDescription>
-                    Vue d'ensemble des jalons et tâches du projet
+                    Liste des jalons importants des projets en cours
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {milestones.map((milestone) => (
-                      <div
-                        key={milestone.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                      >
-                        <div className="flex items-center space-x-3">
-                          {milestone.status === "completed" ? (
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                          ) : milestone.status === "in-progress" ? (
-                            <Clock className="h-5 w-5 text-blue-600" />
-                          ) : (
-                            <Calendar className="h-5 w-5 text-gray-400" />
-                          )}
-                          <div>
-                            <p className="font-medium">{milestone.name}</p>
-                            <p className="text-sm text-gray-500">
-                              {milestone.project}
-                            </p>
+                  {milestones.length > 0 ? (
+                    <div className="space-y-4">
+                      {milestones.slice(0, 5).map((milestone) => (
+                        <div
+                          key={milestone.id}
+                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                          data-testid={`milestone-${milestone.id}`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            {milestone.status === "completed" ? (
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            ) : milestone.status === "in-progress" ? (
+                              <Clock className="h-5 w-5 text-blue-600" />
+                            ) : (
+                              <Calendar className="h-5 w-5 text-gray-400" />
+                            )}
+                            <div>
+                              <p className="font-medium">{milestone.name}</p>
+                              <p className="text-sm text-gray-500">
+                                {milestone.project}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <span className="text-sm text-gray-600">
+                              {new Date(milestone.date).toLocaleDateString("fr-FR")}
+                            </span>
+                            <Badge className={getStatusColor(milestone.status)}>
+                              {milestone.status === "completed"
+                                ? "Terminé"
+                                : milestone.status === "in-progress"
+                                ? "En cours"
+                                : "À venir"}
+                            </Badge>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-3">
-                          <span className="text-sm text-gray-600">
-                            {new Date(milestone.date).toLocaleDateString("fr-FR")}
-                          </span>
-                          <Badge className={getStatusColor(milestone.status)}>
-                            {milestone.status === "completed"
-                              ? "Terminé"
-                              : milestone.status === "in-progress"
-                              ? "En cours"
-                              : "À venir"}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-700">
-                      💡 Glissez-déposez les jalons pour ajuster les dates
-                    </p>
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>Aucun jalon planifié</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

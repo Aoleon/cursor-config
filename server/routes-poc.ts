@@ -809,6 +809,43 @@ app.post("/api/offers/:id/transform-to-project", async (req, res) => {
 });
 
 // ========================================
+// HELPER FUNCTIONS - Date conversion
+// ========================================
+
+// Helper function to safely convert string dates to Date objects and handle type conversions
+function convertDatesInObject(obj: any): any {
+  if (!obj) return obj;
+  
+  const dateFields = ['startDate', 'endDate', 'dateRenduAO', 'dateAcceptationAO', 'demarragePrevu', 'dateOS', 'dateLimiteRemise', 'dateSortieAO'];
+  const converted = { ...obj };
+  
+  // Convert dates
+  for (const field of dateFields) {
+    if (converted[field]) {
+      try {
+        if (typeof converted[field] === 'string') {
+          converted[field] = new Date(converted[field]);
+          console.log(`Converted ${field} from string to Date:`, converted[field]);
+        }
+      } catch (e) {
+        console.warn(`Failed to convert ${field}:`, converted[field]);
+      }
+    }
+  }
+  
+  // Convert decimal fields to string if they're numbers (Drizzle decimal expects string)
+  const decimalFields = ['budget', 'estimatedHours', 'actualHours', 'montantEstime', 'progressPercentage'];
+  for (const field of decimalFields) {
+    if (converted[field] && typeof converted[field] === 'number') {
+      converted[field] = converted[field].toString();
+      console.log(`Converted ${field} from number to string:`, converted[field]);
+    }
+  }
+  
+  return converted;
+}
+
+// ========================================
 // PROJECT ROUTES - 5 étapes POC
 // ========================================
 
@@ -837,23 +874,75 @@ app.get("/api/projects/:id", async (req, res) => {
 
 app.post("/api/projects", async (req, res) => {
   try {
-    const validatedData = insertProjectSchema.parse(req.body);
+    console.log('Raw request body:', JSON.stringify(req.body, null, 2));
+    
+    // Convert string dates to Date objects before validation - WITH EXPLICIT HANDLING
+    const projectData = { ...req.body };
+    
+    // Manual conversion for debugging
+    if (projectData.startDate && typeof projectData.startDate === 'string') {
+      projectData.startDate = new Date(projectData.startDate);
+      console.log('Converted startDate:', projectData.startDate);
+    }
+    
+    if (projectData.endDate && typeof projectData.endDate === 'string') {
+      projectData.endDate = new Date(projectData.endDate);
+      console.log('Converted endDate:', projectData.endDate);
+    }
+    
+    if (projectData.budget && typeof projectData.budget === 'number') {
+      projectData.budget = projectData.budget.toString();
+      console.log('Converted budget to string:', projectData.budget);
+    }
+    
+    console.log('Data after conversion:', JSON.stringify(projectData, null, 2));
+    
+    // Validate the data
+    const validatedData = insertProjectSchema.parse(projectData);
     const project = await storage.createProject(validatedData);
+    
+    console.log('Project created successfully:', project.id);
     res.status(201).json(project);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating project:", error);
-    res.status(500).json({ message: "Failed to create project" });
+    
+    // Return proper validation errors
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        message: "Validation failed",
+        errors: error.errors
+      });
+    }
+    
+    res.status(500).json({ message: "Failed to create project", error: error.message });
   }
 });
 
 app.patch("/api/projects/:id", async (req, res) => {
   try {
-    const partialData = insertProjectSchema.partial().parse(req.body);
+    // Convert string dates to Date objects before validation
+    const convertedData = convertDatesInObject(req.body);
+    convertedData.updatedAt = new Date();
+    
+    console.log('Updating project with data:', JSON.stringify(convertedData, null, 2));
+    
+    const partialData = insertProjectSchema.partial().parse(convertedData);
     const project = await storage.updateProject(req.params.id, partialData);
+    
+    console.log('Project updated successfully:', project.id);
     res.json(project);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating project:", error);
-    res.status(500).json({ message: "Failed to update project" });
+    
+    // Return proper validation errors
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        message: "Validation failed",
+        errors: error.errors
+      });
+    }
+    
+    res.status(500).json({ message: "Failed to update project", error: error.message });
   }
 });
 
@@ -873,28 +962,49 @@ app.get("/api/projects/:projectId/tasks", async (req, res) => {
 
 app.post("/api/projects/:projectId/tasks", async (req, res) => {
   try {
-    // Convertir les dates string en objets Date
+    // Convert string dates to Date objects
     const taskData = {
       ...req.body,
       projectId: req.params.projectId,
-      startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
-      endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
       progress: req.body.progress || 0
     };
     
-    const validatedData = insertProjectTaskSchema.parse(taskData);
+    const convertedData = convertDatesInObject(taskData);
+    
+    console.log('Creating task with data:', JSON.stringify(convertedData, null, 2));
+    
+    const validatedData = insertProjectTaskSchema.parse(convertedData);
     const task = await storage.createProjectTask(validatedData);
+    
+    console.log('Task created successfully:', task.id);
     res.status(201).json(task);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating project task:", error);
-    res.status(500).json({ message: "Failed to create project task" });
+    
+    // Return proper validation errors
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        message: "Validation failed",
+        errors: error.errors
+      });
+    }
+    
+    res.status(500).json({ message: "Failed to create project task", error: error.message });
   }
 });
 
 app.patch("/api/tasks/:id", async (req, res) => {
   try {
-    const partialData = insertProjectTaskSchema.partial().parse(req.body);
+    // Convert string dates to Date objects before validation
+    const convertedData = convertDatesInObject(req.body);
+    convertedData.updatedAt = new Date();
+    
+    console.log('Updating task with data:', JSON.stringify(convertedData, null, 2));
+    
+    const partialData = insertProjectTaskSchema.partial().parse(convertedData);
     const task = await storage.updateProjectTask(req.params.id, partialData);
+    
+    console.log('Task updated successfully:', task.id);
     res.json(task);
   } catch (error) {
     console.error("Error updating project task:", error);
@@ -905,14 +1015,7 @@ app.patch("/api/tasks/:id", async (req, res) => {
 // Récupérer toutes les tâches pour la timeline
 app.get("/api/tasks/all", async (req, res) => {
   try {
-    const allTasks = [];
-    const projects = await storage.getProjects();
-    
-    for (const project of projects) {
-      const tasks = await storage.getProjectTasks(project.id);
-      allTasks.push(...tasks);
-    }
-    
+    const allTasks = await storage.getAllTasks();
     res.json(allTasks);
   } catch (error) {
     console.error("Error fetching all tasks:", error);
@@ -920,11 +1023,41 @@ app.get("/api/tasks/all", async (req, res) => {
   }
 });
 
-// Route pour créer des tâches de test pour le projet École Versailles
-app.post("/api/test-data/tasks", async (req, res) => {
+// Route pour créer des données de test complètes pour le planning Gantt
+app.post("/api/test-data/planning", async (req, res) => {
   try {
-    // Utiliser le projet "École Versailles" existant (project-2)
-    const projectId = "project-2";
+    // Créer d'abord des projets de test avec dates
+    const testProjects = [
+      {
+        name: "École Versailles",
+        client: "Mairie de Versailles", 
+        location: "Versailles (78)",
+        status: "planification" as const,
+        startDate: new Date("2025-01-15"),
+        endDate: new Date("2025-05-20"),
+        responsibleUserId: "test-user-1",
+        budget: "85000.00"
+      },
+      {
+        name: "Résidence Sandettie", 
+        client: "Promoteur Immobilier",
+        location: "Calais (62)",
+        status: "chantier" as const,
+        startDate: new Date("2025-02-01"),
+        endDate: new Date("2025-06-15"),
+        responsibleUserId: "test-user-1", 
+        budget: "120000.00"
+      }
+    ];
+
+    const createdProjects = [];
+    for (const projectData of testProjects) {
+      const project = await storage.createProject(projectData);
+      createdProjects.push(project);
+    }
+
+    // Créer des tâches pour le premier projet (École Versailles)
+    const projectId = createdProjects[0].id;
 
     // Créer des tâches directement dans la base de données
     const tasks = [
@@ -1003,10 +1136,51 @@ app.post("/api/test-data/tasks", async (req, res) => {
       createdTasks.push(task);
     }
 
+    // Créer des tâches pour le deuxième projet (Résidence Sandettie)
+    const project2Id = createdProjects[1].id;
+    const project2Tasks = [
+      {
+        projectId: project2Id,
+        name: "Études Techniques",
+        description: "Validation technique et conception",
+        status: "termine" as const,
+        startDate: new Date(2025, 1, 1), // 1 février 2025
+        endDate: new Date(2025, 1, 15), // 15 février 2025
+        assignedUserId: "test-user-1",
+        isJalon: true
+      },
+      {
+        projectId: project2Id,
+        name: "Commande Matériaux",
+        description: "Commande des menuiseries",
+        status: "en_cours" as const,
+        startDate: new Date(2025, 1, 16), // 16 février 2025
+        endDate: new Date(2025, 2, 15), // 15 mars 2025
+        assignedUserId: "test-user-1",
+        isJalon: true
+      },
+      {
+        projectId: project2Id,
+        name: "Installation Chantier",
+        description: "Pose des menuiseries",
+        status: "a_faire" as const,
+        startDate: new Date(2025, 2, 16), // 16 mars 2025
+        endDate: new Date(2025, 4, 30), // 30 mai 2025
+        assignedUserId: "test-user-1",
+        isJalon: true
+      }
+    ];
+
+    const createdTasks2 = [];
+    for (const taskData of project2Tasks) {
+      const task = await storage.createProjectTask(taskData);
+      createdTasks2.push(task);
+    }
+
     res.json({
-      projectId: projectId,
-      tasks: createdTasks,
-      message: "Tâches de test créées avec succès pour École Versailles"
+      projects: createdProjects,
+      tasks: [...createdTasks, ...createdTasks2],
+      message: "Données de test complètes créées pour le planning Gantt"
     });
   } catch (error) {
     console.error("Error creating test tasks:", error);

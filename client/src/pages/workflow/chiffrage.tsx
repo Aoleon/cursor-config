@@ -231,9 +231,9 @@ export default function Chiffrage() {
           ]}
         />
         
-        <div className="px-6 py-6">
+        <div className="px-4 sm:px-6 py-6">
           {/* Statistiques */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">En cours</CardTitle>
@@ -340,7 +340,7 @@ export default function Chiffrage() {
                       </div>
 
                       {/* Informations financières */}
-                      <div className="grid grid-cols-4 gap-4 mb-3 bg-gray-50 p-3 rounded">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-3 bg-gray-50 p-3 rounded">
                         <div>
                           <p className="text-xs text-gray-500">Montant estimé</p>
                           <p className="font-semibold">
@@ -368,7 +368,7 @@ export default function Chiffrage() {
                       </div>
 
                       {/* Indicateurs de progression */}
-                      <div className="flex items-center gap-4 mb-3">
+                      <div className="flex flex-wrap items-center gap-4 mb-3">
                         <div className="flex items-center">
                           <Euro className={`h-4 w-4 mr-1 ${offer.montantEstime ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Montant estimé</span>
@@ -384,7 +384,7 @@ export default function Chiffrage() {
                       </div>
 
                       {/* Actions contextuelles */}
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex flex-wrap gap-2 justify-end">
                         {getActionButtons(offer)}
                       </div>
                     </div>

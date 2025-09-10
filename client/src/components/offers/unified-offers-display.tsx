@@ -188,7 +188,7 @@ export default function UnifiedOffersDisplay({
           </div>
           
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48" data-testid="select-status-filter-unified">
+            <SelectTrigger className="w-full sm:w-48" data-testid="select-status-filter-unified">
               <SelectValue placeholder="Filtrer par statut" />
             </SelectTrigger>
             <SelectContent>
@@ -342,7 +342,7 @@ export default function UnifiedOffersDisplay({
 
                       {/* Badges et montant */}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           {getStatusBadge(offer)}
                           {getMenuiserieTypeBadge(offer.menuiserieType)}
                         </div>

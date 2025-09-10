@@ -45,10 +45,10 @@ export default function Header({ title, breadcrumbs = [], actions = [] }: Header
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{title}</h1>
           {breadcrumbs.length > 0 && (
             <Breadcrumb className="mt-1">
               <BreadcrumbList>
@@ -72,7 +72,7 @@ export default function Header({ title, breadcrumbs = [], actions = [] }: Header
         </div>
         
         {actions.length > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {actions.map((action, index) => (
               <Button
                 key={index}

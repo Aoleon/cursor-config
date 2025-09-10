@@ -375,9 +375,9 @@ export default function Chiffrage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-4 sm:p-6">
       {/* En-tête */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
         <Link href="/offers">
           <Button variant="ghost" size="sm" data-testid="button-back">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -404,7 +404,7 @@ export default function Chiffrage() {
       </div>
 
       <Tabs defaultValue="elements" className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full max-w-2xl">
+        <TabsList className="grid grid-cols-1 sm:grid-cols-3 w-full max-w-2xl">
           <TabsTrigger value="elements" data-testid="tab-elements">
             <Calculator className="h-4 w-4 mr-2" />
             Éléments de chiffrage
@@ -431,7 +431,8 @@ export default function Chiffrage() {
 
           <Card>
             <CardContent className="p-0">
-              <Table>
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Catégorie</TableHead>
@@ -486,7 +487,8 @@ export default function Chiffrage() {
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
@@ -496,7 +498,7 @@ export default function Chiffrage() {
               <CardTitle>Résumé du chiffrage</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold">{totals.totalHT} €</div>
                   <div className="text-sm text-muted-foreground">Total HT</div>
@@ -514,7 +516,7 @@ export default function Chiffrage() {
           </Card>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               onClick={() => generateDpgfMutation.mutate()}
               disabled={chiffrageElements.length === 0 || generateDpgfMutation.isPending}
@@ -609,7 +611,8 @@ export default function Chiffrage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Fournisseur</TableHead>
@@ -691,7 +694,8 @@ export default function Chiffrage() {
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
@@ -710,7 +714,7 @@ export default function Chiffrage() {
                     .filter((r: any) => r.quotationAmount)
                     .sort((a: any, b: any) => Number(a.quotationAmount) - Number(b.quotationAmount))
                     .map((request: any, index: number) => (
-                      <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div key={request.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                             index === 0 ? 'bg-green-100 text-green-700' :
@@ -726,7 +730,7 @@ export default function Chiffrage() {
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right sm:text-left">
                           <div className="text-lg font-bold">
                             {Number(request.quotationAmount).toLocaleString('fr-FR')} € HT
                           </div>
@@ -772,7 +776,7 @@ export default function Chiffrage() {
                   {/* En-tête du DPGF */}
                   <div className="bg-muted p-4 rounded-lg">
                     <h3 className="font-semibold mb-2">Informations du projet</h3>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                       <div>Client: {offer.client}</div>
                       <div>Référence: {offer.reference}</div>
                       <div>Localisation: {offer.location}</div>
@@ -781,7 +785,8 @@ export default function Chiffrage() {
                   </div>
 
                   {/* Détail des éléments */}
-                  <Table>
+                  <div className="overflow-x-auto">
+                    <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Catégorie</TableHead>
@@ -804,13 +809,14 @@ export default function Chiffrage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
+                    </Table>
+                  </div>
 
                   <Separator />
 
                   {/* Totaux */}
                   <div className="flex justify-end">
-                    <div className="w-80 space-y-2">
+                    <div className="w-full max-w-80 space-y-2">
                       <div className="flex justify-between">
                         <span>Total HT:</span>
                         <span className="font-medium">{parseFloat(dpgfDocument.totalHT).toFixed(2)} €</span>
@@ -869,7 +875,7 @@ export default function Chiffrage() {
                 data-testid="input-supplier-name"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Email</Label>
                 <Input 
@@ -983,7 +989,7 @@ export default function Chiffrage() {
 
       {/* Dialog pour ajouter/modifier un élément */}
       <Dialog open={showElementDialog} onOpenChange={setShowElementDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
           <DialogHeader>
             <DialogTitle>
               {editingElement ? "Modifier l'élément" : "Nouvel élément de chiffrage"}
@@ -995,7 +1001,7 @@ export default function Chiffrage() {
 
           <Form {...elementForm}>
             <form onSubmit={elementForm.handleSubmit(handleSubmitElement)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={elementForm.control}
                   name="category"
@@ -1058,7 +1064,7 @@ export default function Chiffrage() {
                 )}
               />
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <FormField
                   control={elementForm.control}
                   name="quantity"
@@ -1125,7 +1131,7 @@ export default function Chiffrage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={elementForm.control}
                   name="coefficient"
@@ -1167,7 +1173,7 @@ export default function Chiffrage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={elementForm.control}
                   name="supplier"

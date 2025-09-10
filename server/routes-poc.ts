@@ -420,7 +420,15 @@ app.post("/api/offers/:id/request-suppliers", async (req, res) => {
 
 app.get("/api/offers/:id", async (req, res) => {
   try {
-    const offer = await storage.getOffer(req.params.id);
+    // D'abord essayer de trouver l'offre par son ID
+    let offer = await storage.getOffer(req.params.id);
+    
+    // Si pas trouvé, essayer de trouver une offre avec ce aoId (pour la compatibilité navigation AO->Offre)
+    if (!offer) {
+      const offers = await storage.getOffers();
+      offer = offers.find(o => o.aoId === req.params.id);
+    }
+    
     if (!offer) {
       return res.status(404).json({ message: "Offer not found" });
     }
@@ -657,12 +665,25 @@ app.delete("/api/offers/:id", async (req, res) => {
 app.patch("/api/offers/:id/validate-studies", async (req, res) => {
   try {
     const { finEtudesValidatedAt, status } = req.body;
-    const offer = await storage.updateOffer(req.params.id, {
+    
+    // Trouver l'offre par son ID ou par aoId (même logique que GET /api/offers/:id)
+    let offer = await storage.getOffer(req.params.id);
+    if (!offer) {
+      const offers = await storage.getOffers();
+      offer = offers.find(o => o.aoId === req.params.id);
+    }
+    
+    if (!offer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
+    
+    // Mettre à jour l'offre avec son vrai ID
+    const updatedOffer = await storage.updateOffer(offer.id, {
       finEtudesValidatedAt: finEtudesValidatedAt ? new Date(finEtudesValidatedAt) : new Date(),
       finEtudesValidatedBy: 'user-be-1', // TODO: Use real auth when available
       status: status || 'fin_etudes_validee'
     });
-    res.json(offer);
+    res.json(updatedOffer);
   } catch (error) {
     console.error("Error validating studies:", error);
     res.status(500).json({ message: "Failed to validate studies" });

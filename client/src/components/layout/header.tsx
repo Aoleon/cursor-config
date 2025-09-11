@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { WebSocketStatus } from "@/components/ui/websocket-status";
 import { 
   Breadcrumb, 
   BreadcrumbItem, 
@@ -71,21 +72,25 @@ export default function Header({ title, breadcrumbs = [], actions = [] }: Header
           )}
         </div>
         
-        {actions.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            {actions.map((action, index) => (
-              <Button
-                key={index}
-                variant={action.variant || "default"}
-                onClick={() => handleActionClick(action.action, action.onClick)}
-                className="flex items-center gap-2"
-              >
-                {getIcon(action.icon)}
-                {action.label}
-              </Button>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <WebSocketStatus variant="badge" showLabel={false} data-testid="header-websocket-status" />
+          
+          {actions.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {actions.map((action, index) => (
+                <Button
+                  key={index}
+                  variant={action.variant || "default"}
+                  onClick={() => handleActionClick(action.action, action.onClick)}
+                  className="flex items-center gap-2"
+                >
+                  {getIcon(action.icon)}
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

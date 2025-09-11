@@ -19,6 +19,7 @@ import { registerTeamsRoutes } from "./routes-teams";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto } from "./dateUtils";
+import type { EventBus } from "./eventBus";
 
 // Configuration de multer pour l'upload de fichiers
 const uploadMiddleware = multer({ 
@@ -679,11 +680,24 @@ app.patch("/api/offers/:id/validate-studies", async (req, res) => {
     }
     
     // Mettre à jour l'offre avec son vrai ID
+    const prevStatus = offer.status;
+    const newStatus = status || 'fin_etudes_validee';
+    
     const updatedOffer = await storage.updateOffer(offer.id, {
       finEtudesValidatedAt: finEtudesValidatedAt ? new Date(finEtudesValidatedAt) : new Date(),
       finEtudesValidatedBy: 'user-be-1', // TODO: Use real auth when available
-      status: status || 'fin_etudes_validee'
+      status: newStatus
     });
+    
+    // Emit validation event
+    const eventBus = app.get('eventBus') as EventBus;
+    eventBus.publishOfferValidated({
+      offerId: updatedOffer.id,
+      reference: updatedOffer.reference,
+      userId: 'user-be-1', // TODO: Use real auth
+      validationType: 'fin_etudes'
+    });
+    
     res.json(updatedOffer);
   } catch (error) {
     console.error("Error validating studies:", error);
@@ -795,8 +809,27 @@ app.post("/api/offers/:id/transform-to-project", async (req, res) => {
     }
 
     // Mettre à jour le statut de l'offre
-    await storage.updateOffer(offerId, {
+    const transformedOffer = await storage.updateOffer(offerId, {
       status: "transforme_en_projet"
+    });
+
+    // Emit offer transformation event
+    const eventBus = app.get('eventBus') as EventBus;
+    eventBus.publishOfferStatusChanged({
+      offerId: offerId,
+      reference: offer.reference,
+      prevStatus: 'fin_etudes_validee',
+      newStatus: 'transforme_en_projet',
+      userId: 'user-be-1', // TODO: Use real auth
+      projectId: project.id
+    });
+
+    // Emit project creation event  
+    eventBus.publishProjectCreated({
+      projectId: project.id,
+      name: project.name,
+      offerId: offerId,
+      userId: 'user-be-1' // TODO: Use real auth
     });
 
     res.status(201).json({ 

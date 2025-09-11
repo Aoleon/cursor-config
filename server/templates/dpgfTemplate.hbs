@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DPGF - {{metadata.offerReference}}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm 1.5cm 3cm 1.5cm;
+      
+      @top-center {
+        content: "DÉTAIL DE PRIX GLOBAL ET FORFAITAIRE";
+        font-family: Arial, sans-serif;
+        font-size: 10pt;
+        font-weight: bold;
+        color: #333;
+      }
+      
+      @bottom-left {
+        content: "{{metadata.client}} - {{metadata.aoReference}}";
+        font-family: Arial, sans-serif;
+        font-size: 8pt;
+        color: #666;
+      }
+      
+      @bottom-center {
+        content: "{{formatDate metadata.generatedAt}}";
+        font-family: Arial, sans-serif;
+        font-size: 8pt;
+        color: #666;
+      }
+      
+      @bottom-right {
+        content: "Page " counter(page) " / " counter(pages);
+        font-family: Arial, sans-serif;
+        font-size: 8pt;
+        color: #666;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 9pt;
+      line-height: 1.4;
+      color: #333;
+      background-color: #fff;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 20px;
+    }
+
+    .header h1 {
+      font-size: 18pt;
+      font-weight: bold;
+      color: #2563eb;
+      margin-bottom: 10px;
+    }
+
+    .header-info {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+      font-size: 8pt;
+    }
+
+    .header-info div {
+      text-align: left;
+    }
+
+    .header-info .right {
+      text-align: right;
+    }
+
+    .lot-section {
+      margin-bottom: 25px;
+      page-break-inside: avoid;
+    }
+
+    .lot-header {
+      background-color: #1e40af;
+      color: white;
+      padding: 8px 12px;
+      font-weight: bold;
+      font-size: 10pt;
+      margin-bottom: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .category-header {
+      background-color: #3b82f6;
+      color: white;
+      padding: 6px 12px;
+      font-weight: bold;
+      font-size: 9pt;
+      margin-top: 2px;
+      margin-bottom: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dpgf-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+      font-size: 8pt;
+    }
+
+    .dpgf-table th {
+      background-color: #f8fafc;
+      border: 1px solid #cbd5e1;
+      padding: 6px 4px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 7pt;
+      color: #374151;
+    }
+
+    .dpgf-table td {
+      border: 1px solid #e2e8f0;
+      padding: 4px 4px;
+      vertical-align: top;
+    }
+
+    .dpgf-table .col-num { width: 4%; text-align: center; }
+    .dpgf-table .col-designation { width: 35%; text-align: left; }
+    .dpgf-table .col-unit { width: 6%; text-align: center; }
+    .dpgf-table .col-qty { width: 8%; text-align: right; }
+    .dpgf-table .col-unit-price { width: 12%; text-align: right; }
+    .dpgf-table .col-total { width: 15%; text-align: right; font-weight: bold; }
+    .dpgf-table .col-supplier { width: 20%; text-align: left; font-size: 7pt; color: #666; }
+
+    .dpgf-table tr:nth-child(even) {
+      background-color: #fefefe;
+    }
+
+    .dpgf-table tr:hover {
+      background-color: #f1f5f9;
+    }
+
+    .optional-item {
+      background-color: #fef3c7 !important;
+      font-style: italic;
+    }
+
+    .optional-item td {
+      color: #92400e;
+    }
+
+    .subtotal-row {
+      background-color: #dbeafe !important;
+      font-weight: bold;
+    }
+
+    .subtotal-row td {
+      border-top: 2px solid #3b82f6;
+      padding: 6px 4px;
+      color: #1e40af;
+    }
+
+    .lot-subtotal-row {
+      background-color: #1e40af !important;
+      color: white;
+      font-weight: bold;
+    }
+
+    .lot-subtotal-row td {
+      border-top: 2px solid #1e40af;
+      padding: 8px 4px;
+    }
+
+    .totals-section {
+      margin-top: 30px;
+      page-break-inside: avoid;
+    }
+
+    .totals-header {
+      background-color: #059669;
+      color: white;
+      padding: 10px 15px;
+      font-weight: bold;
+      font-size: 12pt;
+      text-align: center;
+      margin-bottom: 0;
+    }
+
+    .totals-table {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      border-collapse: collapse;
+      font-size: 10pt;
+    }
+
+    .totals-table td {
+      border: 1px solid #d1d5db;
+      padding: 8px 15px;
+    }
+
+    .totals-table .label {
+      background-color: #f9fafb;
+      font-weight: bold;
+      text-align: right;
+      width: 60%;
+    }
+
+    .totals-table .value {
+      background-color: white;
+      text-align: right;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      width: 40%;
+    }
+
+    .total-ht { color: #1f2937; }
+    .total-tva { color: #dc2626; }
+    .total-ttc { 
+      color: #059669; 
+      font-size: 12pt;
+      background-color: #ecfccb !important;
+    }
+
+    .margin-info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f0f9ff;
+      border-left: 4px solid #0ea5e9;
+      font-size: 8pt;
+      color: #0c4a6e;
+    }
+
+    .margin-info strong {
+      color: #0369a1;
+    }
+
+    .notes-section {
+      margin-top: 30px;
+      padding: 15px;
+      background-color: #fef7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 4px;
+      font-size: 8pt;
+      page-break-inside: avoid;
+    }
+
+    .notes-section h3 {
+      color: #c2410c;
+      margin-bottom: 10px;
+      font-size: 9pt;
+    }
+
+    .signature-section {
+      margin-top: 40px;
+      display: flex;
+      justify-content: space-between;
+      page-break-inside: avoid;
+    }
+
+    .signature-box {
+      width: 45%;
+      border: 1px solid #d1d5db;
+      padding: 15px;
+      min-height: 80px;
+      text-align: center;
+      font-size: 8pt;
+    }
+
+    .signature-box h4 {
+      margin-bottom: 10px;
+      color: #374151;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 5px;
+    }
+
+    /* Utilitaires d'impression */
+    @media print {
+      body { -webkit-print-color-adjust: exact; }
+      .lot-section { page-break-inside: avoid; }
+      .totals-section { page-break-inside: avoid; }
+      .signature-section { page-break-inside: avoid; }
+    }
+
+    /* Styles pour les éléments longs */
+    .long-designation {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- En-tête du document -->
+  <div class="header">
+    <h1>DÉTAIL DE PRIX GLOBAL ET FORFAITAIRE</h1>
+    <div class="header-info">
+      <div>
+        <strong>Offre :</strong> {{metadata.offerReference}}<br>
+        <strong>Client :</strong> {{metadata.client}}<br>
+        <strong>Localisation :</strong> {{metadata.location}}
+      </div>
+      <div class="right">
+        <strong>AO :</strong> {{metadata.aoReference}}<br>
+        <strong>Date :</strong> {{formatDate metadata.generatedAt}}<br>
+        <strong>Version :</strong> {{metadata.version}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Corps du DPGF par lots -->
+  {{#each lots}}
+  <div class="lot-section">
+    <div class="lot-header">
+      <span>{{this.lotName}}</span>
+      <span>{{formatCurrency this.subtotalHT}} € HT</span>
+    </div>
+
+    {{#each this.categories}}
+    <div class="category-header">
+      <span>{{this.categoryLabel}}</span>
+      <span>{{formatCurrency this.subtotalHT}} € HT</span>
+    </div>
+
+    <table class="dpgf-table">
+      <thead>
+        <tr>
+          <th class="col-num">N°</th>
+          <th class="col-designation">Désignation</th>
+          <th class="col-unit">Unité</th>
+          <th class="col-qty">Qté</th>
+          <th class="col-unit-price">PU HT</th>
+          <th class="col-total">Total HT</th>
+          <th class="col-supplier">Fournisseur</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each this.items}}
+        <tr {{#if this.isOptional}}class="optional-item"{{/if}}>
+          <td class="col-num">{{this.position}}</td>
+          <td class="col-designation long-designation">
+            {{this.designation}}
+            {{#if this.subcategory}}
+            <br><small style="color: #666; font-style: italic;">{{this.subcategory}}</small>
+            {{/if}}
+            {{#if this.notes}}
+            <br><small style="color: #666;">{{this.notes}}</small>
+            {{/if}}
+            {{#if this.isOptional}}
+            <br><small style="color: #92400e; font-weight: bold;">[OPTION]</small>
+            {{/if}}
+          </td>
+          <td class="col-unit">{{this.unit}}</td>
+          <td class="col-qty">{{formatQuantity this.quantity}}</td>
+          <td class="col-unit-price">{{formatCurrency this.sellUnitPriceHT}} €</td>
+          <td class="col-total">{{formatCurrency this.lineTotalHT}} €</td>
+          <td class="col-supplier">
+            {{#if this.supplier}}
+            {{this.supplier}}
+            {{#if this.supplierRef}}
+            <br><small>Réf: {{this.supplierRef}}</small>
+            {{/if}}
+            {{/if}}
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{/each}}
+  </div>
+  {{/each}}
+
+  <!-- Section des totaux -->
+  <div class="totals-section">
+    <div class="totals-header">RÉCAPITULATIF FINANCIER</div>
+    
+    <table class="totals-table">
+      <tr class="total-ht">
+        <td class="label">Total HT :</td>
+        <td class="value">{{formatCurrency totals.totalHT}} €</td>
+      </tr>
+      <tr class="total-tva">
+        <td class="label">TVA ({{formatQuantity totals.tvaPercentage 1}}%) :</td>
+        <td class="value">{{formatCurrency totals.totalTVA}} €</td>
+      </tr>
+      <tr class="total-ttc">
+        <td class="label">TOTAL TTC :</td>
+        <td class="value">{{formatCurrency totals.totalTTC}} €</td>
+      </tr>
+    </table>
+
+    <div class="margin-info">
+      <strong>Informations sur la marge :</strong><br>
+      Montant total des marges : <strong>{{formatCurrency totals.totalMarginAmount}} €</strong><br>
+      Taux de marge moyen : <strong>{{formatQuantity totals.totalMarginPercentage 1}} %</strong><br>
+      Nombre d'éléments : <strong>{{metadata.itemCount}}</strong>
+      {{#if metadata.optionalItemsIncluded}}
+      <br><em>Les éléments optionnels sont inclus dans ce devis.</em>
+      {{else}}
+      <br><em>Les éléments optionnels ne sont pas inclus dans ce devis.</em>
+      {{/if}}
+    </div>
+  </div>
+
+  <!-- Notes et conditions -->
+  <div class="notes-section">
+    <h3>CONDITIONS GÉNÉRALES</h3>
+    <p>• Ce devis est valable 30 jours à compter de sa date d'émission.</p>
+    <p>• Les prix sont exprimés en euros TTC.</p>
+    <p>• Les travaux seront réalisés conformément aux règles de l'art et aux normes en vigueur.</p>
+    <p>• Tout travail supplémentaire fera l'objet d'un devis complémentaire.</p>
+    <p>• Le règlement s'effectuera selon les conditions convenues au contrat.</p>
+  </div>
+
+  <!-- Section signatures -->
+  <div class="signature-section">
+    <div class="signature-box">
+      <h4>L'ENTREPRISE</h4>
+      <p>Date et signature</p>
+    </div>
+    <div class="signature-box">
+      <h4>LE CLIENT</h4>
+      <p>Date et signature<br>Mention "Bon pour accord"</p>
+    </div>
+  </div>
+</body>
+</html>

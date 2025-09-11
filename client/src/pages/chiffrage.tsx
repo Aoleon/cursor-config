@@ -273,24 +273,56 @@ export default function Chiffrage() {
     }
   };
 
-  // Mutation pour générer le DPGF
+  // Mutation pour générer le DPGF avec PDF
   const generateDpgfMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (options: { includeOptional?: boolean; tvaPercentage?: number } = {}) => {
       const response = await fetch(`/api/offers/${id}/dpgf/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          includeOptional: options.includeOptional || false,
+          tvaPercentage: options.tvaPercentage || 20
+        }),
       });
       if (!response.ok) throw new Error("Erreur lors de la génération du DPGF");
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/offers/${id}/dpgf`] });
       toast({
-        title: "DPGF généré",
-        description: "Le Document Provisoire de Gestion Financière a été généré.",
+        title: "DPGF généré avec succès",
+        description: `Le PDF ${data.pdfFilename} a été généré (${Math.round(data.pdfSize / 1024)} Ko)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Erreur lors de la génération du DPGF",
+        variant: "destructive",
       });
     },
   });
+
+  // Fonctions pour prévisualiser et télécharger le DPGF
+  const handleViewDpgf = () => {
+    const previewUrl = `/api/offers/${id}/dpgf/preview`;
+    window.open(previewUrl, '_blank');
+  };
+
+  const handleDownloadDpgf = () => {
+    const downloadUrl = `/api/offers/${id}/dpgf/download`;
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `DPGF-${offer?.reference || id}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Téléchargement en cours",
+      description: "Le PDF DPGF est en cours de téléchargement...",
+    });
+  };
 
   // Mutation pour valider la fin d'études
   const validateStudiesMutation = useMutation({
@@ -589,13 +621,32 @@ export default function Chiffrage() {
           {/* Actions */}
           <div className="flex flex-wrap justify-end gap-2">
             <Button
-              onClick={() => generateDpgfMutation.mutate()}
+              onClick={() => generateDpgfMutation.mutate({})}
               disabled={chiffrageElements.length === 0 || generateDpgfMutation.isPending}
               data-testid="button-generate-dpgf"
             >
               <FileText className="h-4 w-4 mr-2" />
-              Générer le DPGF
+              {generateDpgfMutation.isPending ? "Génération..." : "Générer le DPGF"}
             </Button>
+            {dpgfDocument && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleViewDpgf}
+                  data-testid="button-preview-dpgf-header"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Prévisualiser
+                </Button>
+                <Button
+                  onClick={handleDownloadDpgf}
+                  data-testid="button-download-dpgf-header"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Télécharger
+                </Button>
+              </>
+            )}
             {!offer.finEtudesValidatedAt && (
               <Button
                 onClick={() => validateStudiesMutation.mutate()}
@@ -903,6 +954,34 @@ export default function Chiffrage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Actions DPGF */}
+                  <div className="flex flex-wrap gap-3 justify-center mt-6 pt-6 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={handleViewDpgf}
+                      data-testid="button-preview-dpgf"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Prévisualiser le PDF
+                    </Button>
+                    <Button
+                      onClick={handleDownloadDpgf}
+                      data-testid="button-download-dpgf"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Télécharger le PDF
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => generateDpgfMutation.mutate({})}
+                      disabled={generateDpgfMutation.isPending}
+                      data-testid="button-regenerate-dpgf"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Régénérer le DPGF
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -915,7 +994,7 @@ export default function Chiffrage() {
                   Ajoutez des éléments de chiffrage puis générez le DPGF pour voir le document.
                 </p>
                 <Button
-                  onClick={() => generateDpgfMutation.mutate()}
+                  onClick={() => generateDpgfMutation.mutate({})}
                   disabled={chiffrageElements.length === 0}
                   data-testid="button-generate-dpgf-empty"
                 >

@@ -3,10 +3,32 @@ import { z } from "zod";
 import { insertChiffrageElementSchema, insertDpgfDocumentSchema } from "../../shared/schema";
 import type { IStorage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
+import { DpgfComputeService } from "../services/dpgfComputeService";
+import { PdfGeneratorService } from "../services/pdfGeneratorService";
+
+// Schéma de validation pour les paramètres DPGF
+const dpgfParamsSchema = z.object({
+  includeOptional: z.boolean().optional().default(false),
+  tvaPercentage: z.number().min(0).max(100).optional().default(20)
+});
+
+const dpgfQuerySchema = z.object({
+  includeOptional: z.enum(["true", "false"]).optional().default("false"),
+  tvaPercentage: z.string().regex(/^\d+(\.\d+)?$/).optional().default("20")
+});
+
+// Helper pour récupérer l'utilisateur authentifié
+function getAuthenticatedUserId(req: any): string {
+  const user = req.user;
+  if (!user || !user.claims) {
+    throw new Error("User not authenticated");
+  }
+  return user.claims.sub || user.claims.id || "unknown-user";
+}
 
 export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   // Récupérer les éléments de chiffrage d'une offre
-  app.get("/api/offers/:offerId/chiffrage-elements", async (req, res) => {
+  app.get("/api/offers/:offerId/chiffrage-elements", isAuthenticated, async (req, res) => {
     try {
       const { offerId } = req.params;
       
@@ -19,7 +41,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Créer un nouvel élément de chiffrage
-  app.post("/api/offers/:offerId/chiffrage-elements", async (req, res) => {
+  app.post("/api/offers/:offerId/chiffrage-elements", isAuthenticated, async (req, res) => {
     try {
       const { offerId } = req.params;
       
@@ -41,7 +63,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Mettre à jour un élément de chiffrage
-  app.put("/api/offers/:offerId/chiffrage-elements/:elementId", async (req, res) => {
+  app.put("/api/offers/:offerId/chiffrage-elements/:elementId", isAuthenticated, async (req, res) => {
     try {
       const { elementId } = req.params;
       
@@ -60,7 +82,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Supprimer un élément de chiffrage
-  app.delete("/api/offers/:offerId/chiffrage-elements/:elementId", async (req, res) => {
+  app.delete("/api/offers/:offerId/chiffrage-elements/:elementId", isAuthenticated, async (req, res) => {
     try {
       const { elementId } = req.params;
       
@@ -73,7 +95,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Récupérer le DPGF d'une offre
-  app.get("/api/offers/:offerId/dpgf", async (req, res) => {
+  app.get("/api/offers/:offerId/dpgf", isAuthenticated, async (req, res) => {
     try {
       const { offerId } = req.params;
       
@@ -89,15 +111,19 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     }
   });
 
-  // Générer un DPGF à partir des éléments de chiffrage
-  app.post("/api/offers/:offerId/dpgf/generate", async (req, res) => {
+  // Générer un DPGF à partir des éléments de chiffrage avec PDF
+  app.post("/api/offers/:offerId/dpgf/generate", isAuthenticated, async (req, res) => {
     try {
       const { offerId } = req.params;
-      const userId = "test-user-1"; // TODO: Get from authenticated user
+      
+      // Validation des paramètres avec Zod
+      const validatedParams = dpgfParamsSchema.parse(req.body);
+      const { includeOptional, tvaPercentage } = validatedParams;
+      
+      // Récupération de l'utilisateur authentifié
+      const userId = getAuthenticatedUserId(req);
 
-      if (!userId) {
-        return res.status(401).json({ error: "User not authenticated" });
-      }
+      console.log(`🔄 Generating DPGF for offer ${offerId}...`);
 
       // Récupérer les éléments de chiffrage
       const elements = await storage.getChiffrageElementsByOffer(offerId);
@@ -106,34 +132,29 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
         return res.status(400).json({ error: "Aucun élément de chiffrage trouvé" });
       }
 
-      // Calculer les totaux
-      const totalHT = elements.reduce((sum: number, el: any) => sum + parseFloat(el.totalPrice), 0);
-      const totalTVA = totalHT * 0.20; // 20% TVA
-      const totalTTC = totalHT + totalTVA;
+      // Récupérer les données contextuelles
+      const offer = await storage.getOffer(offerId);
+      const [ao, aoLots] = offer?.aoId ? await Promise.all([
+        storage.getAo(offer.aoId),
+        storage.getAoLots(offer.aoId)
+      ]) : [null, []];
 
-      // Préparer les données structurées pour le DPGF
-      const dpgfData = {
-        elements: elements.map((el: any) => ({
-          category: el.category,
-          subcategory: el.subcategory,
-          designation: el.designation,
-          quantity: parseFloat(el.quantity),
-          unit: el.unit,
-          unitPrice: parseFloat(el.unitPrice),
-          totalPrice: parseFloat(el.totalPrice),
-          coefficient: parseFloat(el.coefficient || '1'),
-          marginPercentage: parseFloat(el.marginPercentage || '20'),
-          supplier: el.supplier,
-          supplierRef: el.supplierRef,
-        })),
-        totals: {
-          totalHT: totalHT.toFixed(2),
-          totalTVA: totalTVA.toFixed(2),
-          totalTTC: totalTTC.toFixed(2),
-        },
-        generatedAt: new Date().toISOString(),
-      };
+      // Calculer les données DPGF avec le service spécialisé
+      const dpgfData = await DpgfComputeService.computeDpgf(elements, {
+        includeOptional,
+        tvaPercentage,
+        offer: offer || undefined,
+        ao: ao || undefined,
+        aoLots: aoLots || []
+      });
 
+      // Sérialiser les données pour le stockage
+      const serializedData = DpgfComputeService.serializeForStorage(dpgfData);
+
+      // Génération du PDF
+      console.log("🔄 Generating DPGF PDF...");
+      const pdfResult = await PdfGeneratorService.generateDpgfPdf(dpgfData);
+      
       // Vérifier s'il existe déjà un DPGF pour cette offre
       const existingDpgf = await storage.getDpgfDocumentByOffer(offerId);
       
@@ -141,46 +162,160 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
       if (existingDpgf) {
         // Mettre à jour le DPGF existant
         dpgf = await storage.updateDpgfDocument(existingDpgf.id, {
-          totalHT: totalHT.toString(),
-          totalTVA: totalTVA.toString(),
-          totalTTC: totalTTC.toString(),
-          dpgfData,
+          totalHT: dpgfData.totals.totalHT.toString(),
+          totalTVA: dpgfData.totals.totalTVA.toString(),
+          totalTTC: dpgfData.totals.totalTTC.toString(),
+          dpgfData: serializedData,
           generatedBy: userId,
           batigestRef: `BGT-${Date.now()}`, // Simulation Batigest
           batigestSyncedAt: new Date(),
+          status: "finalise",
         });
       } else {
         // Créer un nouveau DPGF
         dpgf = await storage.createDpgfDocument({
           offerId,
           version: "1.0",
-          status: "brouillon",
-          totalHT: totalHT.toString(),
-          totalTVA: totalTVA.toString(),
-          totalTTC: totalTTC.toString(),
-          dpgfData,
+          status: "finalise",
+          totalHT: dpgfData.totals.totalHT.toString(),
+          totalTVA: dpgfData.totals.totalTVA.toString(),
+          totalTTC: dpgfData.totals.totalTTC.toString(),
+          dpgfData: serializedData,
           generatedBy: userId,
           batigestRef: `BGT-${Date.now()}`, // Simulation Batigest
           batigestSyncedAt: new Date(),
         });
       }
 
-      res.status(201).json(dpgf);
+      console.log(`✅ DPGF generated successfully: ${pdfResult.filename}`);
+      
+      // Retourner les métadonnées du DPGF avec info PDF
+      res.status(201).json({
+        ...dpgf,
+        pdfGenerated: true,
+        pdfFilename: pdfResult.filename,
+        pdfSize: pdfResult.size
+      });
     } catch (error) {
-      console.error("Error generating DPGF:", error);
-      res.status(500).json({ error: "Internal server error" });
+      console.error("❌ Error generating DPGF:", error);
+      res.status(500).json({ 
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Prévisualisation HTML du DPGF
+  app.get("/api/offers/:offerId/dpgf/preview", isAuthenticated, async (req, res) => {
+    try {
+      const { offerId } = req.params;
+      
+      // Validation des paramètres query avec Zod
+      const validatedQuery = dpgfQuerySchema.parse(req.query);
+      const { includeOptional, tvaPercentage } = validatedQuery;
+
+      console.log(`🔄 Generating DPGF preview for offer ${offerId}...`);
+
+      // Récupérer les éléments de chiffrage
+      const elements = await storage.getChiffrageElementsByOffer(offerId);
+      
+      if (elements.length === 0) {
+        return res.status(404).json({ error: "Aucun élément de chiffrage trouvé" });
+      }
+
+      // Récupérer les données contextuelles
+      const offer = await storage.getOffer(offerId);
+      const [ao, aoLots] = offer?.aoId ? await Promise.all([
+        storage.getAo(offer.aoId),
+        storage.getAoLots(offer.aoId)
+      ]) : [null, []];
+
+      // Calculer les données DPGF
+      const dpgfData = await DpgfComputeService.computeDpgf(elements, {
+        includeOptional: includeOptional === "true",
+        tvaPercentage: parseFloat(tvaPercentage),
+        offer: offer || undefined,
+        ao: ao || undefined,
+        aoLots: aoLots || []
+      });
+
+      // Générer le HTML de prévisualisation
+      const htmlPreview = await PdfGeneratorService.generateDpgfPreview(dpgfData);
+
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(htmlPreview);
+    } catch (error) {
+      console.error("❌ Error generating DPGF preview:", error);
+      res.status(500).json({ 
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Téléchargement du PDF DPGF
+  app.get("/api/offers/:offerId/dpgf/download", isAuthenticated, async (req, res) => {
+    try {
+      const { offerId } = req.params;
+      
+      // Validation des paramètres query avec Zod
+      const validatedQuery = dpgfQuerySchema.parse(req.query);
+      const { includeOptional, tvaPercentage } = validatedQuery;
+
+      console.log(`🔄 Generating DPGF PDF download for offer ${offerId}...`);
+
+      // Récupérer les éléments de chiffrage
+      const elements = await storage.getChiffrageElementsByOffer(offerId);
+      
+      if (elements.length === 0) {
+        return res.status(404).json({ error: "Aucun élément de chiffrage trouvé" });
+      }
+
+      // Récupérer les données contextuelles
+      const offer = await storage.getOffer(offerId);
+      const [ao, aoLots] = offer?.aoId ? await Promise.all([
+        storage.getAo(offer.aoId),
+        storage.getAoLots(offer.aoId)
+      ]) : [null, []];
+
+      // Calculer les données DPGF
+      const dpgfData = await DpgfComputeService.computeDpgf(elements, {
+        includeOptional: includeOptional === "true",
+        tvaPercentage: parseFloat(tvaPercentage),
+        offer: offer || undefined,
+        ao: ao || undefined,
+        aoLots: aoLots || []
+      });
+
+      // Générer le PDF
+      const pdfResult = await PdfGeneratorService.generateDpgfPdf(dpgfData);
+
+      // Configuration des en-têtes pour le téléchargement
+      res.setHeader("Content-Type", pdfResult.mimeType);
+      res.setHeader("Content-Disposition", `attachment; filename="${pdfResult.filename}"`);
+      res.setHeader("Content-Length", pdfResult.size);
+      res.setHeader("Cache-Control", "no-cache");
+
+      console.log(`✅ DPGF PDF download ready: ${pdfResult.filename}`);
+      
+      // Envoi du PDF
+      res.send(pdfResult.buffer);
+    } catch (error) {
+      console.error("❌ Error downloading DPGF PDF:", error);
+      res.status(500).json({ 
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
   // Valider la fin d'études d'une offre
-  app.post("/api/offers/:offerId/validate-studies", async (req, res) => {
+  app.post("/api/offers/:offerId/validate-studies", isAuthenticated, async (req, res) => {
     try {
       const { offerId } = req.params;
-      const userId = "test-user-1"; // TODO: Get from authenticated user
-
-      if (!userId) {
-        return res.status(401).json({ error: "User not authenticated" });
-      }
+      
+      // Récupération de l'utilisateur authentifié
+      const userId = getAuthenticatedUserId(req);
 
       // Vérifier qu'un DPGF existe
       const dpgf = await storage.getDpgfDocumentByOffer(offerId);
@@ -211,14 +346,12 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
   });
 
   // Transformer une offre validée en projet
-  app.post("/api/offers/:offerId/convert-to-project", async (req, res) => {
+  app.post("/api/offers/:offerId/convert-to-project", isAuthenticated, async (req, res) => {
     try {
       const { offerId } = req.params;
-      const userId = "test-user-1"; // TODO: Get from authenticated user
-
-      if (!userId) {
-        return res.status(401).json({ error: "User not authenticated" });
-      }
+      
+      // Récupération de l'utilisateur authentifié
+      const userId = getAuthenticatedUserId(req);
 
       // Récupérer l'offre
       const offer = await storage.getOfferById(offerId);

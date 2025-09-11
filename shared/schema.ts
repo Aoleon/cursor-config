@@ -538,6 +538,10 @@ export const chiffrageElements = pgTable("chiffrage_elements", {
   supplier: varchar("supplier"),
   supplierRef: varchar("supplier_ref"),
   
+  // Association avec les lots AO
+  lotId: varchar("lot_id").references(() => aoLots.id), // Référence vers le lot AO
+  lotNumber: integer("lot_number"), // Numéro de lot pour groupement DPGF
+  
   // Métadonnées
   position: integer("position").default(0), // Ordre d'affichage
   isOptional: boolean("is_optional").default(false),

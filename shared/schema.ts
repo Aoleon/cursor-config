@@ -738,6 +738,27 @@ export const beWorkload = pgTable("be_workload", {
   };
 });
 
+// Table des jalons de validation (validation milestones)
+export const validationMilestones = pgTable("validation_milestones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  offerId: varchar("offer_id").references(() => offers.id),
+  projectId: varchar("project_id").references(() => projects.id),
+  milestoneType: varchar("milestone_type").notNull(), // "fin_etudes", "validation_technique", "validation_commercial", "preparation_production"
+  isCompleted: boolean("is_completed").default(false),
+  completedBy: varchar("completed_by").references(() => users.id),
+  completedAt: timestamp("completed_at"),
+  comment: text("comment"),
+  blockers: text("blockers"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    offerIdx: index("validation_milestones_offer_idx").on(table.offerId),
+    projectIdx: index("validation_milestones_project_idx").on(table.projectId),
+    typeIdx: index("validation_milestones_type_idx").on(table.milestoneType),
+  };
+});
+
 // ========================================
 // RELATIONS DRIZZLE
 // ========================================
@@ -958,6 +979,9 @@ export type InsertTeamResource = typeof teamResources.$inferInsert;
 export type BeWorkload = typeof beWorkload.$inferSelect;
 export type InsertBeWorkload = typeof beWorkload.$inferInsert;
 
+export type ValidationMilestone = typeof validationMilestones.$inferSelect;
+export type InsertValidationMilestone = typeof validationMilestones.$inferInsert;
+
 export type ChiffrageElement = typeof chiffrageElements.$inferSelect;
 export type InsertChiffrageElement = typeof chiffrageElements.$inferInsert;
 
@@ -1079,6 +1103,12 @@ export const insertTeamResourceSchema = createInsertSchema(teamResources).omit({
 });
 
 export const insertBeWorkloadSchema = createInsertSchema(beWorkload).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertValidationMilestoneSchema = createInsertSchema(validationMilestones).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

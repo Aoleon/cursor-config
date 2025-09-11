@@ -2,6 +2,7 @@ import { eq, desc, and, sql, gte, lte, count, sum, avg } from "drizzle-orm";
 import { 
   users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
   chiffrageElements, dpgfDocuments, aoLots, maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre,
+  validationMilestones,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -15,7 +16,8 @@ import {
   type AoLot, type InsertAoLot,
   type MaitreOuvrage, type InsertMaitreOuvrage,
   type MaitreOeuvre, type InsertMaitreOeuvre,
-  type ContactMaitreOeuvre, type InsertContactMaitreOeuvre
+  type ContactMaitreOeuvre, type InsertContactMaitreOeuvre,
+  type ValidationMilestone, type InsertValidationMilestone
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -149,6 +151,12 @@ export interface IStorage {
   createContactMaitreOeuvre(contact: InsertContactMaitreOeuvre): Promise<ContactMaitreOeuvre>;
   updateContactMaitreOeuvre(id: string, contact: Partial<InsertContactMaitreOeuvre>): Promise<ContactMaitreOeuvre>;
   deleteContactMaitreOeuvre(id: string): Promise<void>;
+  
+  // Validation Milestones operations - Jalons de validation
+  getValidationMilestones(offerId: string): Promise<ValidationMilestone[]>;
+  createValidationMilestone(milestone: InsertValidationMilestone): Promise<ValidationMilestone>;
+  updateValidationMilestone(id: string, milestone: Partial<InsertValidationMilestone>): Promise<ValidationMilestone>;
+  deleteValidationMilestone(id: string): Promise<void>;
   
   // Additional helper methods for conversion workflow
   getOfferById(id: string): Promise<Offer | undefined>;
@@ -1080,6 +1088,33 @@ export class DatabaseStorage implements IStorage {
     await db.update(contactsMaitreOeuvre)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(contactsMaitreOeuvre.id, id));
+  }
+
+  // Validation Milestones operations
+  async getValidationMilestones(offerId: string): Promise<ValidationMilestone[]> {
+    return await db.select().from(validationMilestones)
+      .where(eq(validationMilestones.offerId, offerId))
+      .orderBy(validationMilestones.createdAt);
+  }
+
+  async createValidationMilestone(milestoneData: InsertValidationMilestone): Promise<ValidationMilestone> {
+    const [newMilestone] = await db.insert(validationMilestones)
+      .values(milestoneData)
+      .returning();
+    return newMilestone;
+  }
+
+  async updateValidationMilestone(id: string, milestoneData: Partial<InsertValidationMilestone>): Promise<ValidationMilestone> {
+    const [updatedMilestone] = await db.update(validationMilestones)
+      .set({ ...milestoneData, updatedAt: new Date() })
+      .where(eq(validationMilestones.id, id))
+      .returning();
+    return updatedMilestone;
+  }
+
+  async deleteValidationMilestone(id: string): Promise<void> {
+    await db.delete(validationMilestones)
+      .where(eq(validationMilestones.id, id));
   }
 
   // Additional helper methods for conversion workflow

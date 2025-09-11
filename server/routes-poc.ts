@@ -7,12 +7,13 @@ import multer from "multer";
 import { 
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
   insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
-  insertChiffrageElementSchema, insertDpgfDocumentSchema
+  insertChiffrageElementSchema, insertDpgfDocumentSchema, insertValidationMilestoneSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
 import { documentProcessor, type ExtractedAOData } from "./documentProcessor";
 import { registerChiffrageRoutes } from "./routes/chiffrage";
+import validationMilestonesRouter from "./routes/validation-milestones";
 import { registerWorkflowRoutes } from "./routes-workflow";
 import { registerBatigestRoutes } from "./routes-batigest";
 import { registerTeamsRoutes } from "./routes-teams";
@@ -2248,6 +2249,9 @@ status: "brouillon" as const,
 
 // Enregistrer les routes de chiffrage
 registerChiffrageRoutes(app, storage);
+
+// Enregistrer les routes de jalons de validation
+app.use("/api/validation-milestones", validationMilestonesRouter);
 
 // Enregistrer les routes du workflow
 registerWorkflowRoutes(app);

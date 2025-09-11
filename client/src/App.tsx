@@ -38,45 +38,62 @@ import ValidationList from "@/pages/offers/validation-list";
 import TransformList from "@/pages/offers/transform-list";
 import BatigestPage from "@/pages/batigest";
 
+function ProtectedRoute({ component: Component }: { component: React.ComponentType<any> }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Landing />;
+  }
+  
+  return <Component />;
+}
+
 function Router() {
-  // Temporarily disable authentication for development
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/offers" component={Offers} />
-      <Route path="/create-offer" component={CreateOffer} />
-      <Route path="/create-ao" component={CreateAO} />
-      <Route path="/offers/:id" component={OfferDetail} />
-      <Route path="/offers/:id/edit" component={AoDetail} />
-      <Route path="/offers/:id/chiffrage" component={Chiffrage} />
+      <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
+      <Route path="/offers" component={() => <ProtectedRoute component={Offers} />} />
+      <Route path="/create-offer" component={() => <ProtectedRoute component={CreateOffer} />} />
+      <Route path="/create-ao" component={() => <ProtectedRoute component={CreateAO} />} />
+      <Route path="/offers/:id" component={() => <ProtectedRoute component={OfferDetail} />} />
+      <Route path="/offers/:id/edit" component={() => <ProtectedRoute component={AoDetail} />} />
+      <Route path="/offers/:id/chiffrage" component={() => <ProtectedRoute component={Chiffrage} />} />
       {/* Sous-étapes des Appels d'Offres */}
-      <Route path="/offers/import" component={ImportOCR} />
-      <Route path="/offers/create" component={CreateAO} />
-      <Route path="/offers/suppliers-pending" component={SuppliersPending} />
-      <Route path="/offers/chiffrage" component={ChiffrageList} />
-      <Route path="/offers/suppliers" component={Suppliers} />
-      <Route path="/offers/validation" component={ValidationList} />
-      <Route path="/offers/transform" component={TransformList} />
-      <Route path="/projects" component={Projects} />
-      <Route path="/projects/:id" component={ProjectDetail} />
-      <Route path="/projects/:id/planning" component={Planning} />
+      <Route path="/offers/import" component={() => <ProtectedRoute component={ImportOCR} />} />
+      <Route path="/offers/create" component={() => <ProtectedRoute component={CreateAO} />} />
+      <Route path="/offers/suppliers-pending" component={() => <ProtectedRoute component={SuppliersPending} />} />
+      <Route path="/offers/chiffrage" component={() => <ProtectedRoute component={ChiffrageList} />} />
+      <Route path="/offers/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
+      <Route path="/offers/validation" component={() => <ProtectedRoute component={ValidationList} />} />
+      <Route path="/offers/transform" component={() => <ProtectedRoute component={TransformList} />} />
+      <Route path="/projects" component={() => <ProtectedRoute component={Projects} />} />
+      <Route path="/projects/:id" component={() => <ProtectedRoute component={ProjectDetail} />} />
+      <Route path="/projects/:id/planning" component={() => <ProtectedRoute component={Planning} />} />
       {/* Sous-étapes des Projets */}
-      <Route path="/projects/study" component={Projects} />
-      <Route path="/projects/planning" component={ProjectPlanning} />
-      <Route path="/projects/supply" component={Suppliers} />
-      <Route path="/projects/worksite" component={Projects} />
-      <Route path="/projects/support" component={Projects} />
+      <Route path="/projects/study" component={() => <ProtectedRoute component={Projects} />} />
+      <Route path="/projects/planning" component={() => <ProtectedRoute component={ProjectPlanning} />} />
+      <Route path="/projects/supply" component={() => <ProtectedRoute component={Suppliers} />} />
+      <Route path="/projects/worksite" component={() => <ProtectedRoute component={Projects} />} />
+      <Route path="/projects/support" component={() => <ProtectedRoute component={Projects} />} />
       {/* Routes du workflow */}
-      <Route path="/workflow/etude-technique" component={EtudeTechnique} />
-      <Route path="/workflow/chiffrage" component={ChiffrageWorkflow} />
-      <Route path="/workflow/envoi-devis" component={EnvoiDevis} />
-      <Route path="/workflow/planification" component={PlanificationWorkflow} />
-      <Route path="/workflow/chantier" component={ChantierWorkflow} />
-      <Route path="/teams" component={Teams} />
-      <Route path="/suppliers" component={Suppliers} />
-      <Route path="/supplier-requests" component={SupplierRequests} />
-      <Route path="/be-dashboard" component={BEDashboard} />
-      <Route path="/batigest" component={BatigestPage} />
+      <Route path="/workflow/etude-technique" component={() => <ProtectedRoute component={EtudeTechnique} />} />
+      <Route path="/workflow/chiffrage" component={() => <ProtectedRoute component={ChiffrageWorkflow} />} />
+      <Route path="/workflow/envoi-devis" component={() => <ProtectedRoute component={EnvoiDevis} />} />
+      <Route path="/workflow/planification" component={() => <ProtectedRoute component={PlanificationWorkflow} />} />
+      <Route path="/workflow/chantier" component={() => <ProtectedRoute component={ChantierWorkflow} />} />
+      <Route path="/teams" component={() => <ProtectedRoute component={Teams} />} />
+      <Route path="/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
+      <Route path="/supplier-requests" component={() => <ProtectedRoute component={SupplierRequests} />} />
+      <Route path="/be-dashboard" component={() => <ProtectedRoute component={BEDashboard} />} />
+      <Route path="/batigest" component={() => <ProtectedRoute component={BatigestPage} />} />
       <Route component={NotFound} />
     </Switch>
   );

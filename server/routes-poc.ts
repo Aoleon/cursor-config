@@ -36,29 +36,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
   // Auth routes
-  app.get('/api/auth/user', async (req: any, res) => {
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      // Return mock user for testing
-      const mockUser = {
-        id: "test-user-1",
-        email: "sylvie.be@jlm-menuiserie.fr",
-        firstName: "Sylvie",
-        lastName: "Martin",
-        role: "responsable_be",
-        profileImageUrl: null
+      const user = req.user;
+      
+      if (!user || !user.claims) {
+        return res.status(401).json({ message: "No user session found" });
+      }
+
+      // Récupérer les données utilisateur depuis la session OIDC
+      const userProfile = {
+        id: user.claims.sub,
+        email: user.claims.email,
+        firstName: user.claims.first_name,
+        lastName: user.claims.last_name,
+        profileImageUrl: user.claims.profile_image_url || null,
+        // Déterminer le rôle basé sur l'email ou claims
+        role: determineUserRole(user.claims.email)
       };
-      res.json(mockUser);
+
+      res.json(userProfile);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
+  // Fonction helper pour déterminer le rôle utilisateur
+  function determineUserRole(email: string): string {
+    // Logique basée sur l'email pour déterminer le rôle
+    if (email.includes('be@') || email.includes('bureau-etude')) {
+      return 'responsable_be';
+    }
+    if (email.includes('admin@') || email.includes('direction@')) {
+      return 'admin';
+    }
+    if (email.includes('chiffrage@') || email.includes('commercial@')) {
+      return 'responsable_chiffrage';
+    }
+    return 'collaborateur'; // Rôle par défaut
+  }
+
 // ========================================
 // USER ROUTES - Gestion utilisateurs POC
 // ========================================
 
-app.get("/api/users", async (req, res) => {
+app.get("/api/users", isAuthenticated, async (req, res) => {
   try {
     const users = await storage.getUsers();
     res.json(users);
@@ -68,7 +91,7 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-app.get("/api/users/:id", async (req, res) => {
+app.get("/api/users/:id", isAuthenticated, async (req, res) => {
   try {
     const user = await storage.getUser(req.params.id);
     if (!user) {
@@ -85,7 +108,7 @@ app.get("/api/users/:id", async (req, res) => {
 // AO ROUTES - Base pour éviter double saisie
 // ========================================
 
-app.get("/api/aos", async (req, res) => {
+app.get("/api/aos", isAuthenticated, async (req, res) => {
   try {
     const aos = await storage.getAos();
     res.json(aos);
@@ -95,7 +118,7 @@ app.get("/api/aos", async (req, res) => {
   }
 });
 
-app.get("/api/aos/:id", async (req, res) => {
+app.get("/api/aos/:id", isAuthenticated, async (req, res) => {
   try {
     const ao = await storage.getAo(req.params.id);
     if (!ao) {
@@ -108,7 +131,7 @@ app.get("/api/aos/:id", async (req, res) => {
   }
 });
 
-app.post("/api/aos", async (req, res) => {
+app.post("/api/aos", isAuthenticated, async (req, res) => {
   try {
     const validatedData = insertAoSchema.parse(req.body);
     
@@ -162,7 +185,7 @@ const uploadPDF = multer({
 });
 
 // Endpoint pour traiter un PDF avec OCR
-app.post("/api/ocr/process-pdf", uploadPDF.single('pdf'), async (req, res) => {
+app.post("/api/ocr/process-pdf", isAuthenticated, uploadPDF.single('pdf'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Aucun fichier PDF fourni' });
@@ -194,7 +217,7 @@ app.post("/api/ocr/process-pdf", uploadPDF.single('pdf'), async (req, res) => {
 });
 
 // Endpoint pour créer un AO automatiquement depuis OCR
-app.post("/api/ocr/create-ao-from-pdf", uploadPDF.single('pdf'), async (req, res) => {
+app.post("/api/ocr/create-ao-from-pdf", isAuthenticated, uploadPDF.single('pdf'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Aucun fichier PDF fourni' });
@@ -293,7 +316,7 @@ app.post("/api/ocr/create-ao-from-pdf", uploadPDF.single('pdf'), async (req, res
 });
 
 // Endpoint pour ajouter des patterns personnalisés
-app.post("/api/ocr/add-pattern", async (req, res) => {
+app.post("/api/ocr/add-pattern", isAuthenticated, async (req, res) => {
   try {
     const { field, pattern } = req.body;
     
@@ -321,7 +344,7 @@ app.post("/api/ocr/add-pattern", async (req, res) => {
 // OFFER ROUTES - Cœur du POC (Dossiers d'Offre & Chiffrage)
 // ========================================
 
-app.get("/api/offers", async (req, res) => {
+app.get("/api/offers", isAuthenticated, async (req, res) => {
   try {
     const { search, status } = req.query;
     const offers = await storage.getOffers(
@@ -336,7 +359,7 @@ app.get("/api/offers", async (req, res) => {
 });
 
 // Nouvelle route : Demandes fournisseurs (workflow ajusté)
-app.get("/api/offers/suppliers-pending", async (req, res) => {
+app.get("/api/offers/suppliers-pending", isAuthenticated, async (req, res) => {
   try {
     const offers = await storage.getOffers(undefined, "en_attente_fournisseurs");
     
@@ -358,7 +381,7 @@ app.get("/api/offers/suppliers-pending", async (req, res) => {
 });
 
 // Nouvelle route : Valider passage vers chiffrage
-app.post("/api/offers/:id/start-chiffrage", async (req, res) => {
+app.post("/api/offers/:id/start-chiffrage", isAuthenticated, async (req, res) => {
   try {
     const offer = await storage.getOffer(req.params.id);
     if (!offer) {
@@ -390,7 +413,7 @@ app.post("/api/offers/:id/start-chiffrage", async (req, res) => {
 });
 
 // Nouvelle route : Valider étude technique vers demandes fournisseurs
-app.post("/api/offers/:id/request-suppliers", async (req, res) => {
+app.post("/api/offers/:id/request-suppliers", isAuthenticated, async (req, res) => {
   try {
     const offer = await storage.getOffer(req.params.id);
     if (!offer) {
@@ -453,7 +476,7 @@ app.post("/api/offers/:id/validate-studies", isAuthenticated, async (req, res) =
   }
 });
 
-app.get("/api/offers/:id", async (req, res) => {
+app.get("/api/offers/:id", isAuthenticated, async (req, res) => {
   try {
     // D'abord essayer de trouver l'offre par son ID
     let offer = await storage.getOffer(req.params.id);
@@ -474,7 +497,7 @@ app.get("/api/offers/:id", async (req, res) => {
   }
 });
 
-app.post("/api/offers", async (req, res) => {
+app.post("/api/offers", isAuthenticated, async (req, res) => {
   try {
     // Convertir les dates string en objets Date si elles sont présentes
     const processedData = {
@@ -506,7 +529,7 @@ app.post("/api/offers", async (req, res) => {
 });
 
 // Endpoint enrichi pour créer offre avec arborescence documentaire (audit JLM)
-app.post("/api/offers/create-with-structure", async (req, res) => {
+app.post("/api/offers/create-with-structure", isAuthenticated, async (req, res) => {
   try {
     const { uploadedFiles, creationMethod, ...offerData } = req.body;
     
@@ -579,7 +602,7 @@ app.post("/api/offers/create-with-structure", async (req, res) => {
   }
 });
 
-app.patch("/api/offers/:id", async (req, res) => {
+app.patch("/api/offers/:id", isAuthenticated, async (req, res) => {
   try {
     const partialData = insertOfferSchema.partial().parse(req.body);
     const offer = await storage.updateOffer(req.params.id, partialData);
@@ -591,7 +614,7 @@ app.patch("/api/offers/:id", async (req, res) => {
 });
 
 // Transformer une offre signée en projet
-app.post("/api/offers/:id/convert-to-project", async (req, res) => {
+app.post("/api/offers/:id/convert-to-project", isAuthenticated, async (req, res) => {
   try {
     const offer = await storage.getOffer(req.params.id);
     if (!offer) {
@@ -686,7 +709,7 @@ app.post("/api/offers/:id/convert-to-project", async (req, res) => {
   }
 });
 
-app.delete("/api/offers/:id", async (req, res) => {
+app.delete("/api/offers/:id", isAuthenticated, async (req, res) => {
   try {
     await storage.deleteOffer(req.params.id);
     res.status(204).send();
@@ -697,7 +720,7 @@ app.delete("/api/offers/:id", async (req, res) => {
 });
 
 // Validation jalon Fin d'études (spécifique POC)
-app.patch("/api/offers/:id/validate-studies", async (req, res) => {
+app.patch("/api/offers/:id/validate-studies", isAuthenticated, async (req, res) => {
   try {
     const { finEtudesValidatedAt, status } = req.body;
     
@@ -739,7 +762,7 @@ app.patch("/api/offers/:id/validate-studies", async (req, res) => {
 });
 
 // Transformation AO → Projet (principe formulaire unique évolutif)
-app.post("/api/offers/:id/transform-to-project", async (req, res) => {
+app.post("/api/offers/:id/transform-to-project", isAuthenticated, async (req, res) => {
   try {
     const offerId = req.params.id;
     const offer = await storage.getOffer(offerId);
@@ -916,7 +939,7 @@ function convertDatesInObject(obj: any): any {
 // PROJECT ROUTES - 5 étapes POC
 // ========================================
 
-app.get("/api/projects", async (req, res) => {
+app.get("/api/projects", isAuthenticated, async (req, res) => {
   try {
     const projects = await storage.getProjects();
     res.json(projects);
@@ -926,7 +949,7 @@ app.get("/api/projects", async (req, res) => {
   }
 });
 
-app.get("/api/projects/:id", async (req, res) => {
+app.get("/api/projects/:id", isAuthenticated, async (req, res) => {
   try {
     const project = await storage.getProject(req.params.id);
     if (!project) {
@@ -939,12 +962,62 @@ app.get("/api/projects/:id", async (req, res) => {
   }
 });
 
-app.post("/api/projects", async (req, res) => {
+app.post("/api/projects", isAuthenticated, async (req, res) => {
   try {
     console.log('Raw request body:', JSON.stringify(req.body, null, 2));
     
     // Convert string dates to Date objects before validation - WITH EXPLICIT HANDLING
     const projectData = { ...req.body };
+    
+    // 🔧 FIX: Récupérer les données manquantes depuis l'offre si offerId est fourni
+    if (projectData.offerId) {
+      console.log('🔍 Récupération des données de l\'offre:', projectData.offerId);
+      
+      const offer = await storage.getOffer(projectData.offerId);
+      if (!offer) {
+        return res.status(400).json({ 
+          message: "Offer not found",
+          offerId: projectData.offerId 
+        });
+      }
+      
+      console.log('✅ Offre trouvée:', {
+        reference: offer.reference,
+        client: offer.client,
+        location: offer.location
+      });
+      
+      // Compléter les champs requis depuis l'offre
+      if (!projectData.name && projectData.title) {
+        projectData.name = projectData.title; // Mapper title -> name
+      }
+      if (!projectData.name) {
+        projectData.name = `Projet ${offer.reference || offer.client}`;
+      }
+      if (!projectData.client) {
+        projectData.client = offer.client;
+      }
+      if (!projectData.location) {
+        projectData.location = offer.location;
+      }
+      
+      // Mapper d'autres champs utiles depuis l'offre
+      if (!projectData.description && offer.intituleOperation) {
+        projectData.description = offer.intituleOperation;
+      }
+      if (!projectData.budget && offer.montantFinal) {
+        projectData.budget = offer.montantFinal.toString();
+      }
+      
+      console.log('✅ Données complétées depuis l\'offre:', {
+        name: projectData.name,
+        client: projectData.client,
+        location: projectData.location
+      });
+      
+      // Supprimer le champ title qui n'existe pas dans le schéma
+      delete projectData.title;
+    }
     
     // Manual conversion for debugging
     if (projectData.startDate && typeof projectData.startDate === 'string') {
@@ -962,7 +1035,7 @@ app.post("/api/projects", async (req, res) => {
       console.log('Converted budget to string:', projectData.budget);
     }
     
-    console.log('Data after conversion:', JSON.stringify(projectData, null, 2));
+    console.log('Data after conversion and completion:', JSON.stringify(projectData, null, 2));
     
     // Validate the data
     const validatedData = insertProjectSchema.parse(projectData);
@@ -985,7 +1058,7 @@ app.post("/api/projects", async (req, res) => {
   }
 });
 
-app.patch("/api/projects/:id", async (req, res) => {
+app.patch("/api/projects/:id", isAuthenticated, async (req, res) => {
   try {
     // Convert string dates to Date objects before validation
     const convertedData = convertDatesInObject(req.body);
@@ -1017,7 +1090,7 @@ app.patch("/api/projects/:id", async (req, res) => {
 // PROJECT TASK ROUTES - Planning partagé
 // ========================================
 
-app.get("/api/projects/:projectId/tasks", async (req, res) => {
+app.get("/api/projects/:projectId/tasks", isAuthenticated, async (req, res) => {
   try {
     const tasks = await storage.getProjectTasks(req.params.projectId);
     res.json(tasks);
@@ -1027,7 +1100,7 @@ app.get("/api/projects/:projectId/tasks", async (req, res) => {
   }
 });
 
-app.post("/api/projects/:projectId/tasks", async (req, res) => {
+app.post("/api/projects/:projectId/tasks", isAuthenticated, async (req, res) => {
   try {
     // Convert string dates to Date objects
     const taskData = {
@@ -1060,7 +1133,7 @@ app.post("/api/projects/:projectId/tasks", async (req, res) => {
   }
 });
 
-app.patch("/api/tasks/:id", async (req, res) => {
+app.patch("/api/tasks/:id", isAuthenticated, async (req, res) => {
   try {
     // Convert string dates to Date objects before validation
     const convertedData = convertDatesInObject(req.body);
@@ -1080,7 +1153,7 @@ app.patch("/api/tasks/:id", async (req, res) => {
 });
 
 // Récupérer toutes les tâches pour la timeline
-app.get("/api/tasks/all", async (req, res) => {
+app.get("/api/tasks/all", isAuthenticated, async (req, res) => {
   try {
     const allTasks = await storage.getAllTasks();
     res.json(allTasks);
@@ -1091,7 +1164,7 @@ app.get("/api/tasks/all", async (req, res) => {
 });
 
 // Route pour créer des données de test complètes pour le planning Gantt
-app.post("/api/test-data/planning", async (req, res) => {
+app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
   try {
     // Créer d'abord des projets de test avec dates
     const testProjects = [
@@ -1260,7 +1333,7 @@ app.post("/api/test-data/planning", async (req, res) => {
 // ========================================
 
 // GET /api/aos/:aoId/lots - Récupérer les lots d'un AO (avec données OCR)
-app.get("/api/aos/:aoId/lots", async (req, res) => {
+app.get("/api/aos/:aoId/lots", isAuthenticated, async (req, res) => {
   try {
     // Récupérer les lots directement de la base de données (table lots créée par le test)
     const result = await db.execute(sql`
@@ -1286,7 +1359,7 @@ app.get("/api/aos/:aoId/lots", async (req, res) => {
 });
 
 // POST /api/aos/:aoId/lots - Créer un lot pour un AO
-app.post("/api/aos/:aoId/lots", async (req, res) => {
+app.post("/api/aos/:aoId/lots", isAuthenticated, async (req, res) => {
   try {
     const lot = await storage.createAoLot({
       ...req.body,
@@ -1300,7 +1373,7 @@ app.post("/api/aos/:aoId/lots", async (req, res) => {
 });
 
 // PUT /api/aos/:aoId/lots/:lotId - Mettre à jour un lot
-app.put("/api/aos/:aoId/lots/:lotId", async (req, res) => {
+app.put("/api/aos/:aoId/lots/:lotId", isAuthenticated, async (req, res) => {
   try {
     const lot = await storage.updateAoLot(req.params.lotId, req.body);
     res.json(lot);
@@ -1311,7 +1384,7 @@ app.put("/api/aos/:aoId/lots/:lotId", async (req, res) => {
 });
 
 // DELETE /api/aos/:aoId/lots/:lotId - Supprimer un lot
-app.delete("/api/aos/:aoId/lots/:lotId", async (req, res) => {
+app.delete("/api/aos/:aoId/lots/:lotId", isAuthenticated, async (req, res) => {
   try {
     await storage.deleteAoLot(req.params.lotId);
     res.status(204).send();
@@ -1326,7 +1399,7 @@ app.delete("/api/aos/:aoId/lots/:lotId", async (req, res) => {
 // ========================================
 
 // GET /api/aos/:aoId/documents - Lister les documents d'un AO
-app.get("/api/aos/:aoId/documents", async (req, res) => {
+app.get("/api/aos/:aoId/documents", isAuthenticated, async (req, res) => {
   try {
     const aoId = req.params.aoId;
     const objectStorage = new ObjectStorageService();
@@ -1355,7 +1428,7 @@ app.get("/api/aos/:aoId/documents", async (req, res) => {
 });
 
 // POST /api/aos/:aoId/documents/upload-url - Obtenir l'URL d'upload pour un document
-app.post("/api/aos/:aoId/documents/upload-url", async (req, res) => {
+app.post("/api/aos/:aoId/documents/upload-url", isAuthenticated, async (req, res) => {
   try {
     const aoId = req.params.aoId;
     const { folderName, fileName } = req.body;
@@ -1404,7 +1477,7 @@ app.post("/api/aos/:aoId/documents/upload-url", async (req, res) => {
 });
 
 // POST /api/aos/:aoId/documents - Confirmer l'upload d'un document
-app.post("/api/aos/:aoId/documents", async (req, res) => {
+app.post("/api/aos/:aoId/documents", isAuthenticated, async (req, res) => {
   try {
     const aoId = req.params.aoId;
     const { folderName, fileName, fileSize, uploadedUrl } = req.body;
@@ -1434,7 +1507,7 @@ app.post("/api/aos/:aoId/documents", async (req, res) => {
 // ========================================
 
 // GET /api/maitres-ouvrage - Récupérer tous les maîtres d'ouvrage
-app.get("/api/maitres-ouvrage", async (req, res) => {
+app.get("/api/maitres-ouvrage", isAuthenticated, async (req, res) => {
   try {
     const maitresOuvrage = await storage.getMaitresOuvrage();
     res.json(maitresOuvrage);
@@ -1445,7 +1518,7 @@ app.get("/api/maitres-ouvrage", async (req, res) => {
 });
 
 // GET /api/maitres-ouvrage/:id - Récupérer un maître d'ouvrage
-app.get("/api/maitres-ouvrage/:id", async (req, res) => {
+app.get("/api/maitres-ouvrage/:id", isAuthenticated, async (req, res) => {
   try {
     const maitreOuvrage = await storage.getMaitreOuvrage(req.params.id);
     if (!maitreOuvrage) {
@@ -1459,7 +1532,7 @@ app.get("/api/maitres-ouvrage/:id", async (req, res) => {
 });
 
 // POST /api/maitres-ouvrage - Créer un maître d'ouvrage
-app.post("/api/maitres-ouvrage", async (req, res) => {
+app.post("/api/maitres-ouvrage", isAuthenticated, async (req, res) => {
   try {
     const maitreOuvrage = await storage.createMaitreOuvrage(req.body);
     res.status(201).json(maitreOuvrage);
@@ -1470,7 +1543,7 @@ app.post("/api/maitres-ouvrage", async (req, res) => {
 });
 
 // PUT /api/maitres-ouvrage/:id - Mettre à jour un maître d'ouvrage
-app.put("/api/maitres-ouvrage/:id", async (req, res) => {
+app.put("/api/maitres-ouvrage/:id", isAuthenticated, async (req, res) => {
   try {
     const maitreOuvrage = await storage.updateMaitreOuvrage(req.params.id, req.body);
     res.json(maitreOuvrage);
@@ -1481,7 +1554,7 @@ app.put("/api/maitres-ouvrage/:id", async (req, res) => {
 });
 
 // DELETE /api/maitres-ouvrage/:id - Supprimer un maître d'ouvrage (soft delete)
-app.delete("/api/maitres-ouvrage/:id", async (req, res) => {
+app.delete("/api/maitres-ouvrage/:id", isAuthenticated, async (req, res) => {
   try {
     await storage.deleteMaitreOuvrage(req.params.id);
     res.status(204).send();
@@ -1496,7 +1569,7 @@ app.delete("/api/maitres-ouvrage/:id", async (req, res) => {
 // ========================================
 
 // GET /api/maitres-oeuvre - Récupérer tous les maîtres d'œuvre avec leurs contacts
-app.get("/api/maitres-oeuvre", async (req, res) => {
+app.get("/api/maitres-oeuvre", isAuthenticated, async (req, res) => {
   try {
     const maitresOeuvre = await storage.getMaitresOeuvre();
     res.json(maitresOeuvre);
@@ -1507,7 +1580,7 @@ app.get("/api/maitres-oeuvre", async (req, res) => {
 });
 
 // GET /api/maitres-oeuvre/:id - Récupérer un maître d'œuvre avec ses contacts
-app.get("/api/maitres-oeuvre/:id", async (req, res) => {
+app.get("/api/maitres-oeuvre/:id", isAuthenticated, async (req, res) => {
   try {
     const maitreOeuvre = await storage.getMaitreOeuvre(req.params.id);
     if (!maitreOeuvre) {
@@ -1521,7 +1594,7 @@ app.get("/api/maitres-oeuvre/:id", async (req, res) => {
 });
 
 // POST /api/maitres-oeuvre - Créer un maître d'œuvre
-app.post("/api/maitres-oeuvre", async (req, res) => {
+app.post("/api/maitres-oeuvre", isAuthenticated, async (req, res) => {
   try {
     const maitreOeuvre = await storage.createMaitreOeuvre(req.body);
     res.status(201).json(maitreOeuvre);
@@ -1532,7 +1605,7 @@ app.post("/api/maitres-oeuvre", async (req, res) => {
 });
 
 // PUT /api/maitres-oeuvre/:id - Mettre à jour un maître d'œuvre
-app.put("/api/maitres-oeuvre/:id", async (req, res) => {
+app.put("/api/maitres-oeuvre/:id", isAuthenticated, async (req, res) => {
   try {
     const maitreOeuvre = await storage.updateMaitreOeuvre(req.params.id, req.body);
     res.json(maitreOeuvre);
@@ -1543,7 +1616,7 @@ app.put("/api/maitres-oeuvre/:id", async (req, res) => {
 });
 
 // DELETE /api/maitres-oeuvre/:id - Supprimer un maître d'œuvre (soft delete)
-app.delete("/api/maitres-oeuvre/:id", async (req, res) => {
+app.delete("/api/maitres-oeuvre/:id", isAuthenticated, async (req, res) => {
   try {
     await storage.deleteMaitreOeuvre(req.params.id);
     res.status(204).send();
@@ -1558,7 +1631,7 @@ app.delete("/api/maitres-oeuvre/:id", async (req, res) => {
 // ========================================
 
 // GET /api/maitres-oeuvre/:maitreOeuvreId/contacts - Récupérer les contacts d'un maître d'œuvre
-app.get("/api/maitres-oeuvre/:maitreOeuvreId/contacts", async (req, res) => {
+app.get("/api/maitres-oeuvre/:maitreOeuvreId/contacts", isAuthenticated, async (req, res) => {
   try {
     const contacts = await storage.getContactsMaitreOeuvre(req.params.maitreOeuvreId);
     res.json(contacts);
@@ -1569,7 +1642,7 @@ app.get("/api/maitres-oeuvre/:maitreOeuvreId/contacts", async (req, res) => {
 });
 
 // POST /api/maitres-oeuvre/:maitreOeuvreId/contacts - Créer un contact pour un maître d'œuvre
-app.post("/api/maitres-oeuvre/:maitreOeuvreId/contacts", async (req, res) => {
+app.post("/api/maitres-oeuvre/:maitreOeuvreId/contacts", isAuthenticated, async (req, res) => {
   try {
     const contact = await storage.createContactMaitreOeuvre({
       ...req.body,
@@ -1583,7 +1656,7 @@ app.post("/api/maitres-oeuvre/:maitreOeuvreId/contacts", async (req, res) => {
 });
 
 // PUT /api/contacts-maitre-oeuvre/:contactId - Mettre à jour un contact
-app.put("/api/contacts-maitre-oeuvre/:contactId", async (req, res) => {
+app.put("/api/contacts-maitre-oeuvre/:contactId", isAuthenticated, async (req, res) => {
   try {
     const contact = await storage.updateContactMaitreOeuvre(req.params.contactId, req.body);
     res.json(contact);
@@ -1594,7 +1667,7 @@ app.put("/api/contacts-maitre-oeuvre/:contactId", async (req, res) => {
 });
 
 // DELETE /api/contacts-maitre-oeuvre/:contactId - Supprimer un contact (soft delete)
-app.delete("/api/contacts-maitre-oeuvre/:contactId", async (req, res) => {
+app.delete("/api/contacts-maitre-oeuvre/:contactId", isAuthenticated, async (req, res) => {
   try {
     await storage.deleteContactMaitreOeuvre(req.params.contactId);
     res.status(204).send();
@@ -1608,7 +1681,7 @@ app.delete("/api/contacts-maitre-oeuvre/:contactId", async (req, res) => {
 // SUPPLIER REQUEST ROUTES - Demandes prix simplifiées
 // ========================================
 
-app.get("/api/supplier-requests", async (req, res) => {
+app.get("/api/supplier-requests", isAuthenticated, async (req, res) => {
   try {
     const { offerId } = req.query;
     const requests = await storage.getSupplierRequests(offerId as string);
@@ -1619,7 +1692,7 @@ app.get("/api/supplier-requests", async (req, res) => {
   }
 });
 
-app.post("/api/supplier-requests", async (req, res) => {
+app.post("/api/supplier-requests", isAuthenticated, async (req, res) => {
   try {
     const validatedData = insertSupplierRequestSchema.parse(req.body);
     const request = await storage.createSupplierRequest(validatedData);
@@ -1630,7 +1703,7 @@ app.post("/api/supplier-requests", async (req, res) => {
   }
 });
 
-app.patch("/api/supplier-requests/:id", async (req, res) => {
+app.patch("/api/supplier-requests/:id", isAuthenticated, async (req, res) => {
   try {
     const partialData = insertSupplierRequestSchema.partial().parse(req.body);
     const request = await storage.updateSupplierRequest(req.params.id, partialData);
@@ -1642,7 +1715,7 @@ app.patch("/api/supplier-requests/:id", async (req, res) => {
 });
 
 // Récupérer les demandes fournisseurs pour une offre spécifique
-app.get("/api/offers/:offerId/supplier-requests", async (req, res) => {
+app.get("/api/offers/:offerId/supplier-requests", isAuthenticated, async (req, res) => {
   try {
     const { offerId } = req.params;
     const requests = await storage.getSupplierRequests(offerId);
@@ -1654,7 +1727,7 @@ app.get("/api/offers/:offerId/supplier-requests", async (req, res) => {
 });
 
 // Créer une demande fournisseur pour une offre
-app.post("/api/offers/:offerId/supplier-requests", async (req, res) => {
+app.post("/api/offers/:offerId/supplier-requests", isAuthenticated, async (req, res) => {
   try {
     const requestData = {
       ...req.body,
@@ -1673,7 +1746,7 @@ app.post("/api/offers/:offerId/supplier-requests", async (req, res) => {
 // TEAM RESOURCE ROUTES - Gestion équipes simplifiée
 // ========================================
 
-app.get("/api/team-resources", async (req, res) => {
+app.get("/api/team-resources", isAuthenticated, async (req, res) => {
   try {
     const { projectId } = req.query;
     const resources = await storage.getTeamResources(projectId as string);
@@ -1684,7 +1757,7 @@ app.get("/api/team-resources", async (req, res) => {
   }
 });
 
-app.post("/api/team-resources", async (req, res) => {
+app.post("/api/team-resources", isAuthenticated, async (req, res) => {
   try {
     const validatedData = insertTeamResourceSchema.parse(req.body);
     const resource = await storage.createTeamResource(validatedData);
@@ -1695,7 +1768,7 @@ app.post("/api/team-resources", async (req, res) => {
   }
 });
 
-app.patch("/api/team-resources/:id", async (req, res) => {
+app.patch("/api/team-resources/:id", isAuthenticated, async (req, res) => {
   try {
     const partialData = insertTeamResourceSchema.partial().parse(req.body);
     const resource = await storage.updateTeamResource(req.params.id, partialData);
@@ -1710,7 +1783,7 @@ app.patch("/api/team-resources/:id", async (req, res) => {
 // BE WORKLOAD ROUTES - Indicateurs charge BE
 // ========================================
 
-app.get("/api/be-workload", async (req, res) => {
+app.get("/api/be-workload", isAuthenticated, async (req, res) => {
   try {
     const { weekNumber, year } = req.query;
     const workload = await storage.getBeWorkload(
@@ -1724,7 +1797,7 @@ app.get("/api/be-workload", async (req, res) => {
   }
 });
 
-app.post("/api/be-workload", async (req, res) => {
+app.post("/api/be-workload", isAuthenticated, async (req, res) => {
   try {
     const validatedData = insertBeWorkloadSchema.parse(req.body);
     const workload = await storage.createOrUpdateBeWorkload(validatedData);
@@ -1740,7 +1813,7 @@ app.post("/api/be-workload", async (req, res) => {
 // ========================================
 
 // Route pour obtenir une URL d'upload pour les fichiers
-app.post("/api/objects/upload", async (req, res) => {
+app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
   try {
     const objectStorageService = new ObjectStorageService();
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
@@ -1755,7 +1828,7 @@ app.post("/api/objects/upload", async (req, res) => {
 });
 
 // Route pour analyser un fichier uploadé et extraire les données AO
-app.post("/api/documents/analyze", async (req, res) => {
+app.post("/api/documents/analyze", isAuthenticated, async (req, res) => {
   try {
     const { fileUrl, filename } = req.body;
     
@@ -1832,7 +1905,7 @@ app.post("/api/documents/analyze", async (req, res) => {
 // ========================================
 
 // Créer une offre avec génération automatique d'arborescence documentaire
-app.post("/api/offers/create-with-structure", async (req, res) => {
+app.post("/api/offers/create-with-structure", isAuthenticated, async (req, res) => {
   try {
     const { creationMethod, uploadedFiles, ...offerData } = req.body;
     
@@ -1959,7 +2032,7 @@ app.post("/api/offers/create-with-structure", async (req, res) => {
 });
 
 // Route pour servir les objets/fichiers depuis l'object storage
-app.get("/api/objects/:objectPath(*)", async (req, res) => {
+app.get("/api/objects/:objectPath(*)", isAuthenticated, async (req, res) => {
   try {
     const objectStorageService = new ObjectStorageService();
     const objectPath = `/${req.params.objectPath}`;
@@ -2074,7 +2147,7 @@ app.get("/api/dashboard/kpis", async (req, res) => {
 // ========================================
 
 // Route pour récupérer les quotations d'une offre (mapping vers chiffrage-elements)
-app.get("/api/quotations/:offerId", async (req, res) => {
+app.get("/api/quotations/:offerId", isAuthenticated, async (req, res) => {
   try {
     const { offerId } = req.params;
     
@@ -2105,7 +2178,7 @@ app.get("/api/quotations/:offerId", async (req, res) => {
 });
 
 // Route legacy pour compatibilité avec le format ancien
-app.get("/api/quotations/", async (req, res) => {
+app.get("/api/quotations/", isAuthenticated, async (req, res) => {
   try {
     // Retourner une liste vide ou rediriger vers la nouvelle implémentation
     res.json([]);
@@ -2116,7 +2189,7 @@ app.get("/api/quotations/", async (req, res) => {
 });
 
 // Route pour créer une quotation (mapping vers chiffrage-element)
-app.post("/api/quotations", async (req, res) => {
+app.post("/api/quotations", isAuthenticated, async (req, res) => {
   try {
     const quotationData = req.body;
     

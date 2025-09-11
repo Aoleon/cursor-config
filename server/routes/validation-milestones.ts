@@ -72,6 +72,25 @@ router.patch('/:milestoneId', async (req, res) => {
     }
 
     const updatedMilestone = await storage.updateValidationMilestone(milestoneId, validatedData)
+    
+    // CORRECTION POC CRITIQUE : Si c'est le jalon "Fin d'études" qui est validé,
+    // mettre à jour automatiquement le statut de l'offre associée
+    if (validatedData.isCompleted && updatedMilestone.milestoneType === 'fin_etudes' && updatedMilestone.offerId) {
+      console.log(`[POC] Validation jalon Fin d'études détectée - Mise à jour automatique statut offre ${updatedMilestone.offerId}`)
+      
+      try {
+        await storage.updateOffer(updatedMilestone.offerId, {
+          status: 'fin_etudes_validee',
+          finEtudesValidatedAt: new Date(),
+          finEtudesValidatedBy: 'test-user-1'
+        })
+        console.log(`[POC] ✅ Statut offre mis à jour: fin_etudes_validee`)
+      } catch (offerUpdateError) {
+        console.error('[POC] ❌ Erreur mise à jour statut offre:', offerUpdateError)
+        // Ne pas faire échouer la requête si la mise à jour de l'offre échoue
+      }
+    }
+    
     res.json(updatedMilestone)
   } catch (error) {
     console.error('Error updating validation milestone:', error)

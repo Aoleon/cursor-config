@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { OCRService } from "./ocrService";
 import multer from "multer";
 import { 
@@ -418,6 +418,38 @@ app.post("/api/offers/:id/request-suppliers", async (req, res) => {
   } catch (error: any) {
     console.error("Error requesting suppliers:", error);
     res.status(500).json({ message: "Failed to request suppliers" });
+  }
+});
+
+// Route pour valider la fin d'études d'une offre
+app.post("/api/offers/:id/validate-studies", isAuthenticated, async (req, res) => {
+  try {
+    const offer = await storage.getOffer(req.params.id);
+    if (!offer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
+    
+    // Vérifier que l'offre est dans un état valide pour validation d'études
+    if (offer.status !== "brouillon" && offer.status !== "etude_technique") {
+      return res.status(400).json({ 
+        message: "L'offre doit être en brouillon ou en étude technique pour valider les études" 
+      });
+    }
+    
+    // Mettre à jour le statut vers etude technique validée
+    const updatedOffer = await storage.updateOffer(req.params.id, {
+      status: "etude_technique",
+      updatedAt: new Date()
+    });
+    
+    res.json({
+      success: true,
+      offer: updatedOffer,
+      message: "Études techniques validées avec succès"
+    });
+  } catch (error: any) {
+    console.error("Error validating studies:", error);
+    res.status(500).json({ message: "Failed to validate studies" });
   }
 });
 

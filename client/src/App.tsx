@@ -35,6 +35,7 @@ import SupplierRequests from "@/pages/supplier-requests";
 import ChiffrageList from "@/pages/offers/chiffrage-list";
 import ValidationList from "@/pages/offers/validation-list";
 import TransformList from "@/pages/offers/transform-list";
+import BatigestPage from "@/pages/batigest";
 
 function Router() {
   // Temporarily disable authentication for development
@@ -74,6 +75,7 @@ function Router() {
       <Route path="/suppliers" component={Suppliers} />
       <Route path="/supplier-requests" component={SupplierRequests} />
       <Route path="/be-dashboard" component={BEDashboard} />
+      <Route path="/batigest" component={BatigestPage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -29,7 +29,8 @@ import {
   Building,
   Package,
   HardHat,
-  Headphones
+  Headphones,
+  Database
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -74,6 +75,7 @@ const navigation: NavigationItem[] = [
   },
   { name: "Équipes", href: "/teams", icon: Users },
   { name: "Fournisseurs", href: "/suppliers", icon: Truck },
+  { name: "Batigest", href: "/batigest", icon: Database },
 ];
 
 

@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Save, ArrowLeft, Eye, FileText, Users, Calendar, 
   MapPin, Building, Euro, Clock, AlertCircle, CheckCircle,
-  Star, FileCheck, Settings
+  Star, FileCheck, Settings, Database, RotateCcw, RefreshCw
 } from "lucide-react";
 import { format, isValid } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -52,6 +52,15 @@ interface OfferDetail {
   isPriority: boolean;
   dpgfData?: any;
   batigestRef?: string;
+  batigestIntegration?: {
+    id: string;
+    numeroDevis: string;
+    montantBatigest: string;
+    tauxMarge: string;
+    statutBatigest: string;
+    lastSyncAt: string;
+    syncStatus: string;
+  };
   finEtudesValidatedAt?: string;
   finEtudesValidatedBy?: string;
   beHoursEstimated?: string;
@@ -100,6 +109,15 @@ export default function OfferDetail() {
   // Récupérer la liste des utilisateurs pour l'assignation
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ["/api/users"],
+  });
+
+  // Récupérer l'intégration Batigest pour cette offre
+  const { data: batigestIntegration, isLoading: isBatigestLoading } = useQuery({
+    queryKey: ['/api/batigest/integrations', offerId],
+    queryFn: () => apiRequest('/api/batigest/integrations').then(res => 
+      res.integrations?.find((integration: any) => integration.integration.offerId === offerId)
+    ),
+    enabled: !!offerId,
   });
 
   // Mutation pour la mise à jour
@@ -216,6 +234,34 @@ export default function OfferDetail() {
     },
   });
 
+  // Mutation pour synchroniser avec Batigest
+  const syncBatigestMutation = useMutation({
+    mutationFn: async (batigestRef: string) => {
+      return apiRequest('/api/batigest/sync-offer', {
+        method: 'POST',
+        body: JSON.stringify({
+          offerId: offerId,
+          batigestRef: batigestRef
+        })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/offers/${offerId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/batigest/integrations', offerId] });
+      toast({
+        title: "Succès",
+        description: "Synchronisation Batigest réussie",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Erreur lors de la synchronisation Batigest",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (offer && !isEditing) {
       setFormData(offer);
@@ -276,6 +322,18 @@ export default function OfferDetail() {
 
   const handleConvertToProject = () => {
     convertToProjectMutation.mutate();
+  };
+
+  const handleSyncBatigest = () => {
+    if (formData.batigestRef) {
+      syncBatigestMutation.mutate(formData.batigestRef);
+    } else {
+      toast({
+        title: "Erreur",
+        description: "Veuillez renseigner une référence Batigest",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -622,6 +680,147 @@ export default function OfferDetail() {
                       </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Intégration Batigest */}
+              <Card data-testid="offer-batigest-integration">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="w-4 h-4" />
+                    Intégration Batigest
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Champ référence Batigest */}
+                  <div className="space-y-2">
+                    <Label htmlFor="batigest-ref">Référence Batigest</Label>
+                    {isEditing ? (
+                      <Input 
+                        id="batigest-ref"
+                        value={formData.batigestRef || ''}
+                        onChange={(e) => handleInputChange('batigestRef', e.target.value)}
+                        placeholder="DEV-2024-001 ou AO-2503-21612025-03-05"
+                        data-testid="input-batigest-ref"
+                      />
+                    ) : (
+                      <div className="text-sm">
+                        {offer.batigestRef || (
+                          <span className="text-gray-500 italic">Non renseigné</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bouton synchronisation */}
+                  {offer.batigestRef && (
+                    <Button
+                      onClick={handleSyncBatigest}
+                      disabled={syncBatigestMutation.isPending || isEditing}
+                      size="sm"
+                      className="w-full"
+                      data-testid="button-sync-batigest"
+                    >
+                      {syncBatigestMutation.isPending ? (
+                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                      )}
+                      {syncBatigestMutation.isPending ? "Synchronisation..." : "Synchroniser avec Batigest"}
+                    </Button>
+                  )}
+
+                  {/* Statut intégration */}
+                  {isBatigestLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Chargement de l'intégration...
+                    </div>
+                  ) : batigestIntegration ? (
+                    <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-300 mb-2">
+                        <CheckCircle className="w-4 h-4" />
+                        <span className="text-sm font-medium">Synchronisé</span>
+                      </div>
+                      
+                      <div className="space-y-1 text-xs">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-gray-500">N° Devis:</span>
+                            <p className="font-medium" data-testid="text-batigest-devis">
+                              {batigestIntegration.integration.numeroDevis}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Statut:</span>
+                            <p className="font-medium">
+                              {batigestIntegration.integration.statutBatigest}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {batigestIntegration.integration.montantBatigest && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <span className="text-gray-500">Montant HT:</span>
+                              <p className="font-medium">
+                                {new Intl.NumberFormat('fr-FR', {
+                                  style: 'currency',
+                                  currency: 'EUR'
+                                }).format(parseFloat(batigestIntegration.integration.montantBatigest))}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Marge:</span>
+                              <p className="font-medium">
+                                {batigestIntegration.integration.tauxMarge}%
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="pt-2 border-t border-green-200 dark:border-green-800">
+                          <span className="text-gray-500">Dernière sync:</span>
+                          <p className="font-medium">
+                            {formatSafeDate(batigestIntegration.integration.lastSyncAt)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : offer.batigestRef ? (
+                    <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg">
+                      <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-sm font-medium">Non synchronisé</span>
+                      </div>
+                      <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                        Référence renseignée mais synchronisation en attente
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                        <Database className="w-4 h-4" />
+                        <span className="text-sm font-medium">Intégration disponible</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Renseignez une référence Batigest pour synchroniser cette offre
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Erreur synchronisation */}
+                  {syncBatigestMutation.isError && (
+                    <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+                      <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-sm font-medium">Erreur de synchronisation</span>
+                      </div>
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        {syncBatigestMutation.error?.message || "Erreur inconnue"}
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

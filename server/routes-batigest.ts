@@ -4,6 +4,7 @@ import { batigestService } from "./batigestService";
 import { eq, desc } from "drizzle-orm";
 import { db } from "./db";
 import { batigestIntegrations, batigestAnalytics, offers } from "../shared/schema";
+import { isAuthenticated } from "./replitAuth";
 
 // Schémas de validation pour les requêtes
 const syncOfferSchema = z.object({
@@ -22,7 +23,7 @@ export function registerBatigestRoutes(app: Express) {
   /**
    * Test de connectivité avec Sage Batigest
    */
-  app.get("/api/batigest/connection-test", async (req, res) => {
+  app.get("/api/batigest/connection-test", isAuthenticated, async (req, res) => {
     try {
       const result = await batigestService.testConnection();
       res.json(result);
@@ -38,7 +39,7 @@ export function registerBatigestRoutes(app: Express) {
   /**
    * Synchronise un dossier d'offre avec Batigest
    */
-  app.post("/api/batigest/sync-offer", async (req, res) => {
+  app.post("/api/batigest/sync-offer", isAuthenticated, async (req, res) => {
     try {
       const { offerId, batigestRef } = syncOfferSchema.parse(req.body);
 
@@ -58,17 +59,39 @@ export function registerBatigestRoutes(app: Express) {
         });
       }
 
-      // Enregistrer l'intégration en base
-      const integration = await db.insert(batigestIntegrations).values({
-        offerId,
-        batigestRef: batigestRef || '',
-        numeroDevis: syncResult.batigestData?.NUMERO_DEVIS || '',
-        montantBatigest: syncResult.batigestData?.MONTANT_HT?.toString() || null,
-        tauxMarge: syncResult.batigestData?.TAUX_MARGE?.toString() || null,
-        statutBatigest: syncResult.batigestData?.STATUT || '',
-        lastSyncAt: new Date(),
-        syncStatus: 'synced',
-      }).returning();
+      // Vérifier si une intégration existe déjà pour cette offre
+      const existingIntegration = await db.select().from(batigestIntegrations)
+        .where(eq(batigestIntegrations.offerId, offerId)).limit(1);
+
+      let integration;
+      
+      if (existingIntegration.length > 0) {
+        // Mettre à jour l'intégration existante
+        integration = await db.update(batigestIntegrations)
+          .set({
+            batigestRef: batigestRef || '',
+            numeroDevis: syncResult.batigestData?.NUMERO_DEVIS || '',
+            montantBatigest: syncResult.batigestData?.MONTANT_HT?.toString() || null,
+            tauxMarge: syncResult.batigestData?.TAUX_MARGE?.toString() || null,
+            statutBatigest: syncResult.batigestData?.STATUT || '',
+            lastSyncAt: new Date(),
+            syncStatus: 'synced',
+          })
+          .where(eq(batigestIntegrations.offerId, offerId))
+          .returning();
+      } else {
+        // Créer une nouvelle intégration
+        integration = await db.insert(batigestIntegrations).values({
+          offerId,
+          batigestRef: batigestRef || '',
+          numeroDevis: syncResult.batigestData?.NUMERO_DEVIS || '',
+          montantBatigest: syncResult.batigestData?.MONTANT_HT?.toString() || null,
+          tauxMarge: syncResult.batigestData?.TAUX_MARGE?.toString() || null,
+          statutBatigest: syncResult.batigestData?.STATUT || '',
+          lastSyncAt: new Date(),
+          syncStatus: 'synced',
+        }).returning();
+      }
 
       res.json({
         synchronized: true,
@@ -97,7 +120,7 @@ export function registerBatigestRoutes(app: Express) {
   /**
    * Récupère les devis clients depuis Batigest
    */
-  app.get("/api/batigest/devis-clients", async (req, res) => {
+  app.get("/api/batigest/devis-clients", isAuthenticated, async (req, res) => {
     try {
       const { startDate, endDate, statut, clientCode } = req.query;
 
@@ -139,7 +162,7 @@ export function registerBatigestRoutes(app: Express) {
   /**
    * Récupère les coefficients de marge par famille
    */
-  app.get("/api/batigest/coefficients-marges", async (req, res) => {
+  app.get("/api/batigest/coefficients-marges", isAuthenticated, async (req, res) => {
     try {
       const ouvrages = await batigestService.getOuvragesEtCoefficients();
       
@@ -188,7 +211,7 @@ export function registerBatigestRoutes(app: Express) {
   /**
    * Récupère l'état des facturations en cours
    */
-  app.get("/api/batigest/facturations-en-cours", async (req, res) => {
+  app.get("/api/batigest/facturations-en-cours", isAuthenticated, async (req, res) => {
     try {
       const factures = await batigestService.getFacturationsEnCours();
       
@@ -222,7 +245,7 @@ export function registerBatigestRoutes(app: Express) {
   /**
    * Génère les analytics de Business Intelligence
    */
-  app.post("/api/batigest/generate-analytics", async (req, res) => {
+  app.post("/api/batigest/generate-analytics", isAuthenticated, async (req, res) => {
     try {
       const { startDate, endDate, periode } = analyticsRequestSchema.parse(req.body);
 
@@ -272,7 +295,7 @@ export function registerBatigestRoutes(app: Express) {
   /**
    * Récupère l'historique des analytics
    */
-  app.get("/api/batigest/analytics-history", async (req, res) => {
+  app.get("/api/batigest/analytics-history", isAuthenticated, async (req, res) => {
     try {
       const { periode, limit = '10' } = req.query;
 
@@ -304,7 +327,7 @@ export function registerBatigestRoutes(app: Express) {
   /**
    * Récupère toutes les intégrations Batigest
    */
-  app.get("/api/batigest/integrations", async (req, res) => {
+  app.get("/api/batigest/integrations", isAuthenticated, async (req, res) => {
     try {
       const integrations = await db.select({
         integration: batigestIntegrations,
@@ -337,7 +360,7 @@ export function registerBatigestRoutes(app: Express) {
   /**
    * Dashboard consolidé Batigest
    */
-  app.get("/api/batigest/dashboard", async (req, res) => {
+  app.get("/api/batigest/dashboard", isAuthenticated, async (req, res) => {
     try {
       // Test de connexion (sans accès aux tables pour le POC)
       const connectionTest = await batigestService.testConnection();

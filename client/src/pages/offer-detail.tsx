@@ -3,6 +3,7 @@ import { useParams } from "wouter";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useKpiInvalidation } from "@/hooks/use-kpi-invalidation";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -97,6 +98,7 @@ export default function OfferDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<OfferDetail>>({});
   const { toast } = useToast();
+  const kpiInvalidation = useKpiInvalidation();
 
   const offerId = params.id;
 
@@ -134,6 +136,7 @@ export default function OfferDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/offers/${offerId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      kpiInvalidation.invalidateKpisAndRelatedData(); // Invalidation automatique KPIs
       setIsEditing(false);
       toast({
         title: "Succès",
@@ -166,6 +169,7 @@ export default function OfferDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/offers/${offerId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      kpiInvalidation.invalidateKpisAndRelatedData(); // Invalidation automatique KPIs
       toast({
         title: "Succès",
         description: "Jalon 'Fin d'études' validé avec succès",
@@ -187,6 +191,7 @@ export default function OfferDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/offers/${offerId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      kpiInvalidation.invalidateKpisAndRelatedData(); // Invalidation automatique KPIs - Impact taux conversion
       toast({
         title: "Succès",
         description: "Offre marquée comme signée",
@@ -218,6 +223,7 @@ export default function OfferDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/offers/${offerId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      kpiInvalidation.invalidateKpisForProjects(); // Invalidation KPIs - Impact charge BE et projets
       toast({
         title: "Succès",
         description: `Projet "${data.project.name}" créé avec succès`,

@@ -1,4 +1,4 @@
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, gte, lte, count, sum, avg } from "drizzle-orm";
 import { 
   users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
   chiffrageElements, dpgfDocuments, aoLots, maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre,
@@ -18,6 +18,35 @@ import {
   type ContactMaitreOeuvre, type InsertContactMaitreOeuvre
 } from "@shared/schema";
 import { db } from "./db";
+
+// ========================================
+// TYPES POUR KPIs CONSOLIDÉS
+// ========================================
+
+export interface ConsolidatedKpis {
+  periodSummary: {
+    conversionRate: number;
+    forecastRevenue: number;
+    teamLoadPercentage: number;
+    averageDelayDays: number;
+    expectedMarginPercentage: number;
+    totalDelayedTasks: number;
+    totalOffers: number;
+    totalWonOffers: number;
+  };
+  breakdowns: {
+    conversionByUser: Record<string, { rate: number; offersCount: number; wonCount: number }>;
+    loadByUser: Record<string, { percentage: number; hours: number; capacity: number }>;
+    marginByCategory: Record<string, number>;
+  };
+  timeSeries: Array<{
+    date: string;
+    offersCreated: number;
+    offersWon: number;
+    forecastRevenue: number;
+    teamLoadHours: number;
+  }>;
+}
 
 // ========================================
 // INTERFACE DE STOCKAGE POC UNIQUEMENT
@@ -74,6 +103,14 @@ export interface IStorage {
     offersPendingValidation: number;
     beLoad: number;
   }>;
+
+  // KPI consolidés avec métriques de performance temps réel
+  getConsolidatedKpis(params: {
+    from: string;      // ISO date
+    to: string;        // ISO date  
+    granularity: 'day' | 'week';
+    segment?: string;   // Pour futures segmentations (BE, région, etc.)
+  }): Promise<ConsolidatedKpis>;
   
   // Chiffrage Elements operations - Module de chiffrage POC
   getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]>;
@@ -479,6 +516,379 @@ export class DatabaseStorage implements IStorage {
       offersInPricing: offersInPricing.count,
       offersPendingValidation: offersPendingValidation.count,
       beLoad: beLoadResult.avgLoad || 25,
+    };
+  }
+
+  // KPI consolidés avec métriques de performance temps réel
+  async getConsolidatedKpis(params: {
+    from: string;
+    to: string;
+    granularity: 'day' | 'week';
+    segment?: string;
+  }): Promise<ConsolidatedKpis> {
+    const fromDate = new Date(params.from);
+    const toDate = new Date(params.to);
+    
+    // ========================================
+    // 1. CALCUL TAUX DE CONVERSION
+    // ========================================
+    
+    // Offres totales dans la période
+    const [totalOffersInPeriod] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(offers)
+      .where(and(
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate)
+      ));
+
+    // Offres gagnées dans la période (utilise updatedAt comme approximation de la date de signature)
+    const [wonOffersInPeriod] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(offers)
+      .where(and(
+        gte(offers.updatedAt, fromDate),
+        lte(offers.updatedAt, toDate),
+        sql`status IN ('signe', 'transforme_en_projet', 'termine')`
+      ));
+
+    const conversionRate = totalOffersInPeriod.count > 0 
+      ? (wonOffersInPeriod.count / totalOffersInPeriod.count) * 100 
+      : 0;
+
+    // ========================================
+    // 2. CA PRÉVISIONNEL (FORECAST REVENUE)
+    // ========================================
+    
+    // Probabilités par statut selon spécifications
+    const statusProbabilities = {
+      'en_attente_fournisseurs': 0.2,
+      'en_cours_chiffrage': 0.35,
+      'en_attente_validation': 0.55,
+      'fin_etudes_validee': 0.7,
+      'valide': 0.85,
+      'signe': 1.0
+    };
+
+    // Calcul CA prévisionnel pondéré
+    const forecastRevenueQuery = await db
+      .select({
+        totalRevenue: sql<number>`COALESCE(SUM(
+          COALESCE(montant_final, montant_propose, montant_estime, 0) * 
+          CASE status
+            WHEN 'en_attente_fournisseurs' THEN 0.2
+            WHEN 'en_cours_chiffrage' THEN 0.35
+            WHEN 'en_attente_validation' THEN 0.55
+            WHEN 'fin_etudes_validee' THEN 0.7
+            WHEN 'valide' THEN 0.85
+            WHEN 'signe' THEN 1.0
+            ELSE 0
+          END
+        ), 0)`
+      })
+      .from(offers)
+      .where(and(
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate),
+        sql`status IN ('en_attente_fournisseurs', 'en_cours_chiffrage', 'en_attente_validation', 'fin_etudes_validee', 'valide', 'signe')`
+      ));
+
+    const forecastRevenue = forecastRevenueQuery[0]?.totalRevenue || 0;
+
+    // ========================================
+    // 3. CHARGE ÉQUIPES BE
+    // ========================================
+    
+    // Capacité théorique (35h/semaine par BE actif)
+    const [activeBeCount] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(users)
+      .where(and(
+        eq(users.isActive, true),
+        sql`role LIKE '%be%' OR role LIKE '%technicien%'`
+      ));
+
+    const weeksBetween = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24 * 7));
+    const totalCapacityHours = (activeBeCount.count || 1) * 35 * weeksBetween;
+
+    // Charge BE planifiée (basée sur beWorkload et heures estimées des offres)
+    const [totalPlannedHours] = await db
+      .select({
+        totalHours: sql<number>`COALESCE(SUM(be_hours_estimated), 0)`
+      })
+      .from(offers)
+      .where(and(
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate),
+        sql`be_hours_estimated IS NOT NULL`
+      ));
+
+    const teamLoadPercentage = totalCapacityHours > 0 
+      ? Math.min((totalPlannedHours.totalHours / totalCapacityHours) * 100, 100)
+      : 0;
+
+    // ========================================
+    // 4. INDICATEURS DE RETARDS
+    // ========================================
+    
+    // Tâches en retard
+    const [delayedTasksQuery] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(projectTasks)
+      .innerJoin(projects, eq(projectTasks.projectId, projects.id))
+      .innerJoin(offers, eq(projects.offerId, offers.id))
+      .where(and(
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate),
+        sql`(project_tasks.status = 'en_retard' OR (project_tasks.end_date IS NOT NULL AND project_tasks.end_date < NOW() AND project_tasks.status != 'termine'))`
+      ));
+
+    // Calcul moyenne des jours de retard  
+    const averageDelayQuery = await db
+      .select({
+        avgDelay: sql<number>`COALESCE(AVG(EXTRACT(DAY FROM (NOW() - end_date))), 0)`
+      })
+      .from(projectTasks)
+      .innerJoin(projects, eq(projectTasks.projectId, projects.id))
+      .innerJoin(offers, eq(projects.offerId, offers.id))
+      .where(and(
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate),
+        sql`(project_tasks.end_date IS NOT NULL AND project_tasks.end_date < NOW() AND project_tasks.status != 'termine')`
+      ));
+
+    const averageDelayDays = Math.max(averageDelayQuery[0]?.avgDelay || 0, 0);
+    const totalDelayedTasks = delayedTasksQuery.count;
+
+    // ========================================
+    // 5. MARGE ATTENDUE
+    // ========================================
+    
+    // Calcul marge depuis chiffrage détaillé
+    const marginQuery = await db
+      .select({
+        totalRevenue: sql<number>`COALESCE(SUM(total_price), 0)`,
+        totalCost: sql<number>`COALESCE(SUM(total_price / (1 + margin_percentage/100)), 0)`
+      })
+      .from(chiffrageElements)
+      .innerJoin(offers, eq(chiffrageElements.offerId, offers.id))
+      .where(and(
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate)
+      ));
+
+    const totalRevenue = marginQuery[0]?.totalRevenue || 0;
+    const totalCost = marginQuery[0]?.totalCost || 0;
+    
+    // Fallback sur taux_marge si pas de chiffrage détaillé
+    const [fallbackMarginQuery] = await db
+      .select({
+        avgMargin: sql<number>`COALESCE(AVG(taux_marge), 20)`
+      })
+      .from(offers)
+      .where(and(
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate),
+        sql`taux_marge IS NOT NULL`
+      ));
+
+    const expectedMarginPercentage = totalRevenue > 0 
+      ? ((totalRevenue - totalCost) / totalRevenue) * 100
+      : fallbackMarginQuery.avgMargin || 20;
+
+    // ========================================
+    // 6. BREAKDOWNS (analyse détaillée)
+    // ========================================
+    
+    // Conversion par utilisateur  
+    const conversionByUserQuery = await db
+      .select({
+        userId: offers.responsibleUserId,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        totalOffers: sql<number>`cast(count(*) as int)`,
+        wonOffers: sql<number>`cast(sum(CASE WHEN status IN ('signe', 'transforme_en_projet', 'termine') THEN 1 ELSE 0 END) as int)`
+      })
+      .from(offers)
+      .leftJoin(users, eq(offers.responsibleUserId, users.id))
+      .where(and(
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate)
+      ))
+      .groupBy(offers.responsibleUserId, users.firstName, users.lastName);
+
+    const conversionByUser: Record<string, { rate: number; offersCount: number; wonCount: number }> = {};
+    conversionByUserQuery.forEach(row => {
+      if (row.userId) {
+        const userName = `${row.firstName || ''} ${row.lastName || ''}`.trim() || `User ${row.userId}`;
+        conversionByUser[userName] = {
+          rate: row.totalOffers > 0 ? (row.wonOffers / row.totalOffers) * 100 : 0,
+          offersCount: row.totalOffers,
+          wonCount: row.wonOffers
+        };
+      }
+    });
+
+    // Charge par utilisateur (simplifié)
+    const loadByUserQuery = await db
+      .select({
+        userId: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        totalHours: sql<number>`COALESCE(SUM(COALESCE(be_hours_estimated, 0)), 0)`
+      })
+      .from(users)
+      .leftJoin(offers, eq(users.id, offers.responsibleUserId))
+      .where(and(
+        eq(users.isActive, true),
+        sql`role LIKE '%be%' OR role LIKE '%technicien%'`,
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate)
+      ))
+      .groupBy(users.id, users.firstName, users.lastName);
+
+    const loadByUser: Record<string, { percentage: number; hours: number; capacity: number }> = {};
+    const individualCapacity = 35 * weeksBetween;
+    
+    loadByUserQuery.forEach(row => {
+      const userName = `${row.firstName || ''} ${row.lastName || ''}`.trim() || `User ${row.userId}`;
+      const percentage = individualCapacity > 0 ? Math.min((row.totalHours / individualCapacity) * 100, 100) : 0;
+      loadByUser[userName] = {
+        percentage,
+        hours: row.totalHours,
+        capacity: individualCapacity
+      };
+    });
+
+    // Marge par catégorie (menuiserie)
+    const marginByCategoryQuery = await db
+      .select({
+        category: offers.menuiserieType,
+        avgMargin: sql<number>`COALESCE(AVG(
+          CASE WHEN montant_final > 0 AND montant_estime > 0 
+          THEN ((montant_final - montant_estime) / montant_final * 100)
+          ELSE taux_marge
+          END
+        ), 20)`
+      })
+      .from(offers)
+      .where(and(
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate)
+      ))
+      .groupBy(offers.menuiserieType);
+
+    const marginByCategory: Record<string, number> = {};
+    marginByCategoryQuery.forEach(row => {
+      if (row.category) {
+        marginByCategory[row.category] = row.avgMargin;
+      }
+    });
+
+    // ========================================
+    // 7. SÉRIES TEMPORELLES
+    // ========================================
+    
+    // Génération des dates selon granularité
+    const timeSeries: Array<{
+      date: string;
+      offersCreated: number;
+      offersWon: number;
+      forecastRevenue: number;
+      teamLoadHours: number;
+    }> = [];
+
+    const currentDate = new Date(fromDate);
+    const incrementDays = params.granularity === 'week' ? 7 : 1;
+
+    while (currentDate <= toDate) {
+      const periodStart = new Date(currentDate);
+      const periodEnd = new Date(currentDate.getTime() + (incrementDays * 24 * 60 * 60 * 1000));
+
+      // Offres créées dans cette période
+      const [offersCreatedInPeriod] = await db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(offers)
+        .where(and(
+          gte(offers.createdAt, periodStart),
+          lte(offers.createdAt, periodEnd)
+        ));
+
+      // Offres gagnées dans cette période (utilise updatedAt comme approximation de la date de signature)
+      const [offersWonInPeriod] = await db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(offers)
+        .where(and(
+          gte(offers.updatedAt, periodStart),
+          lte(offers.updatedAt, periodEnd),
+          sql`status IN ('signe', 'transforme_en_projet', 'terme')`
+        ));
+
+      // CA prévisionnel de la période
+      const [forecastForPeriod] = await db
+        .select({
+          revenue: sql<number>`COALESCE(SUM(
+            COALESCE(montant_final, montant_propose, montant_estime, 0) * 
+            CASE status
+              WHEN 'en_attente_fournisseurs' THEN 0.2
+              WHEN 'en_cours_chiffrage' THEN 0.35
+              WHEN 'en_attente_validation' THEN 0.55
+              WHEN 'fin_etudes_validee' THEN 0.7
+              WHEN 'valide' THEN 0.85
+              WHEN 'signe' THEN 1.0
+              ELSE 0
+            END
+          ), 0)`
+        })
+        .from(offers)
+        .where(and(
+          gte(offers.createdAt, periodStart),
+          lte(offers.createdAt, periodEnd)
+        ));
+
+      // Charge workload de la période
+      const [loadForPeriod] = await db
+        .select({
+          hours: sql<number>`COALESCE(SUM(be_hours_estimated), 0)`
+        })
+        .from(offers)
+        .where(and(
+          gte(offers.createdAt, periodStart),
+          lte(offers.createdAt, periodEnd)
+        ));
+
+      timeSeries.push({
+        date: periodStart.toISOString().split('T')[0],
+        offersCreated: offersCreatedInPeriod.count,
+        offersWon: offersWonInPeriod.count,
+        forecastRevenue: forecastForPeriod.revenue || 0,
+        teamLoadHours: loadForPeriod.hours || 0
+      });
+
+      currentDate.setTime(currentDate.getTime() + (incrementDays * 24 * 60 * 60 * 1000));
+    }
+
+    // ========================================
+    // 8. RETOUR DES KPIs CONSOLIDÉS
+    // ========================================
+    
+    return {
+      periodSummary: {
+        conversionRate,
+        forecastRevenue,
+        teamLoadPercentage,
+        averageDelayDays,
+        expectedMarginPercentage,
+        totalDelayedTasks,
+        totalOffers: totalOffersInPeriod.count,
+        totalWonOffers: wonOffersInPeriod.count
+      },
+      breakdowns: {
+        conversionByUser,
+        loadByUser,
+        marginByCategory
+      },
+      timeSeries
     };
   }
 

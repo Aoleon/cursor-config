@@ -466,6 +466,11 @@ export const offers = pgTable("offers", {
   beHoursActual: decimal("be_hours_actual", { precision: 8, scale: 2 }),
   deadline: timestamp("deadline"),
   
+  // KPI Fields - Montants pour calculs KPIs
+  montantPropose: decimal("montant_propose", { precision: 12, scale: 2 }), // Montant commercial proposé
+  probabilite: decimal("probabilite", { precision: 3, scale: 2 }), // Probabilité 0-100 de signature (optionnel)
+  tauxMarge: decimal("taux_marge", { precision: 5, scale: 2 }), // Taux de marge attendu (%) pour fallback
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {

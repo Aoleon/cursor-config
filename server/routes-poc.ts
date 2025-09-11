@@ -9,6 +9,7 @@ import {
   insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
   insertChiffrageElementSchema, insertDpgfDocumentSchema
 } from "@shared/schema";
+import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
 import { documentProcessor, type ExtractedAOData } from "./documentProcessor";
 import { registerChiffrageRoutes } from "./routes/chiffrage";
@@ -1925,6 +1926,80 @@ app.get("/api/dashboard/stats", async (req, res) => {
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     res.status(500).json({ message: "Failed to fetch dashboard stats" });
+  }
+});
+
+// KPI consolidés avec métriques de performance temps réel
+const kpiParamsSchema = z.object({
+  from: z.string().min(1, "Date de début requise (format ISO)"),
+  to: z.string().min(1, "Date de fin requise (format ISO)"),
+  granularity: z.enum(['day', 'week']).default('week'),
+  segment: z.string().optional()
+});
+
+app.get("/api/dashboard/kpis", async (req, res) => {
+  try {
+    // Validation des paramètres de requête
+    const parseResult = kpiParamsSchema.safeParse(req.query);
+    if (!parseResult.success) {
+      return res.status(400).json({ 
+        message: "Paramètres invalides",
+        errors: parseResult.error.flatten().fieldErrors 
+      });
+    }
+
+    const { from, to, granularity, segment } = parseResult.data;
+
+    // Validation des dates
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      return res.status(400).json({ 
+        message: "Format de date invalide. Utilisez le format ISO (YYYY-MM-DD)" 
+      });
+    }
+
+    if (fromDate >= toDate) {
+      return res.status(400).json({ 
+        message: "La date de début doit être antérieure à la date de fin" 
+      });
+    }
+
+    // Limitation de la plage pour éviter les requêtes trop lourdes
+    const daysDifference = (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysDifference > 365) {
+      return res.status(400).json({ 
+        message: "Plage maximale autorisée : 365 jours" 
+      });
+    }
+
+    // Calcul des KPIs consolidés
+    const kpis = await storage.getConsolidatedKpis({
+      from,
+      to,
+      granularity,
+      segment
+    });
+
+    // Ajout métadonnées de réponse
+    res.json({
+      ...kpis,
+      metadata: {
+        period: { from, to },
+        granularity,
+        calculatedAt: new Date().toISOString(),
+        dataPoints: kpis.timeSeries.length,
+        segment: segment || "all"
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching consolidated KPIs:", error);
+    res.status(500).json({ 
+      message: "Erreur lors du calcul des KPIs",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    });
   }
 });
 

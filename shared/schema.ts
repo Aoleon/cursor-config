@@ -1039,6 +1039,12 @@ export const insertAoSchema = createInsertSchema(aos).omit({
   updatedAt: true,
   dateLimiteRemise: true, // Calculée automatiquement par le système
   dateRenduAO: true, // Calculée automatiquement (J-15)
+}).extend({
+  // Transform string dates from frontend to Date objects
+  dateSortieAO: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  dateAcceptationAO: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  demarragePrevu: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  dateOS: z.string().optional().transform((val) => val ? new Date(val) : undefined),
 });
 
 export const insertAoLotSchema = createInsertSchema(aoLots).omit({

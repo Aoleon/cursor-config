@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,8 @@ import {
   Clock,
   Calendar,
   TrendingUp,
-  ArrowUpDown
+  ArrowUpDown,
+  Users
 } from "lucide-react";
 import { 
   format, 
@@ -411,6 +412,245 @@ export default function GanttChart({
   
   const goToCurrentPeriod = () => setCurrentPeriod(new Date());
 
+  // Configuration de la charge de travail
+  const workingDaysPerWeek = 5; // Lundi à vendredi
+  const hoursPerWorkingDay = 8; // 8h par jour ouvrable
+  const weeklyFteHours = workingDaysPerWeek * hoursPerWorkingDay; // 40h par semaine
+
+  // Utilitaire pour calculer les jours ouvrables entre deux dates
+  const getWorkingDaysBetween = (startDate: Date, endDate: Date): number => {
+    let workingDays = 0;
+    let current = new Date(startDate);
+    
+    while (current <= endDate) {
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Lundi (1) à vendredi (5)
+        workingDays++;
+      }
+      current = addDays(current, 1);
+    }
+    
+    return workingDays;
+  };
+
+  // Calcul optimisé de la charge d'équipe par période avec répartition proportionnelle
+  const calculateTeamWorkload = useMemo(() => {
+    const workloadByPeriod: { [key: string]: { 
+      totalHours: number; 
+      estimatedPersons: number; 
+      activeProjects: number; 
+      periodStart: Date; 
+      periodEnd: Date;
+      projectDetails: Array<{
+        name: string;
+        totalHours: number;
+        projectDuration: number;
+        overlapDays: number;
+        proportionalHours: number;
+        hoursPerDay: number;
+      }>;
+    } } = {};
+
+    // Filtrer les projets actifs (phases de production)
+    const activeProjects = ganttItems.filter(item => 
+      item.type === 'project' && 
+      ['planification', 'approvisionnement', 'chantier'].includes(item.status)
+    );
+
+    if (viewMode === 'week') {
+      // Calcul par semaine avec répartition proportionnelle
+      periodDays.forEach((day, index) => {
+        if (index % 7 === 0) { // Une fois par semaine
+          const weekStart = day;
+          const weekEnd = addDays(weekStart, 6);
+          const weekKey = format(weekStart, 'yyyy-MM-dd');
+          
+          let totalProportionalHours = 0;
+          const projectDetails: Array<{
+            name: string;
+            totalHours: number;
+            projectDuration: number;
+            overlapDays: number;
+            proportionalHours: number;
+            hoursPerDay: number;
+          }> = [];
+          
+          activeProjects.forEach(project => {
+            // Vérifier s'il y a intersection entre le projet et la période
+            const projectStart = new Date(Math.max(project.startDate.getTime(), weekStart.getTime()));
+            const projectEnd = new Date(Math.min(project.endDate.getTime(), weekEnd.getTime()));
+            
+            if (projectStart <= projectEnd) {
+              // Calcul de la durée totale du projet en jours ouvrables
+              const projectDurationDays = getWorkingDaysBetween(project.startDate, project.endDate);
+              
+              // Calcul des jours d'overlap en jours ouvrables
+              const overlapWorkingDays = getWorkingDaysBetween(projectStart, projectEnd);
+              
+              if (overlapWorkingDays > 0) {
+                const estimatedHours = project.estimatedHours || 0;
+                
+                // Répartition proportionnelle : heures par jour ouvrable
+                const hoursPerWorkingDay = projectDurationDays > 0 ? estimatedHours / projectDurationDays : 0;
+                
+                // Heures proportionnelles pour la période d'overlap
+                const proportionalHours = hoursPerWorkingDay * overlapWorkingDays;
+                
+                totalProportionalHours += proportionalHours;
+                
+                projectDetails.push({
+                  name: project.name,
+                  totalHours: estimatedHours,
+                  projectDuration: projectDurationDays,
+                  overlapDays: overlapWorkingDays,
+                  proportionalHours: Math.round(proportionalHours * 100) / 100,
+                  hoursPerDay: Math.round(hoursPerWorkingDay * 100) / 100
+                });
+              }
+            }
+          });
+          
+          // Estimation du nombre de personnes nécessaires
+          const estimatedPersons = Math.ceil(totalProportionalHours / weeklyFteHours);
+
+          workloadByPeriod[weekKey] = {
+            totalHours: Math.round(totalProportionalHours * 100) / 100,
+            estimatedPersons,
+            activeProjects: projectDetails.length,
+            periodStart: weekStart,
+            periodEnd: weekEnd,
+            projectDetails
+          };
+        }
+      });
+    } else {
+      // Calcul par mois avec répartition proportionnelle
+      const monthStart = periodStart;
+      const monthEnd = periodEnd;
+      const monthKey = format(monthStart, 'yyyy-MM');
+      
+      let totalProportionalHours = 0;
+      const projectDetails: Array<{
+        name: string;
+        totalHours: number;
+        projectDuration: number;
+        overlapDays: number;
+        proportionalHours: number;
+        hoursPerDay: number;
+      }> = [];
+      
+      activeProjects.forEach(project => {
+        // Vérifier s'il y a intersection entre le projet et la période
+        const projectStart = new Date(Math.max(project.startDate.getTime(), monthStart.getTime()));
+        const projectEnd = new Date(Math.min(project.endDate.getTime(), monthEnd.getTime()));
+        
+        if (projectStart <= projectEnd) {
+          // Calcul de la durée totale du projet en jours ouvrables
+          const projectDurationDays = getWorkingDaysBetween(project.startDate, project.endDate);
+          
+          // Calcul des jours d'overlap en jours ouvrables
+          const overlapWorkingDays = getWorkingDaysBetween(projectStart, projectEnd);
+          
+          if (overlapWorkingDays > 0) {
+            const estimatedHours = project.estimatedHours || 0;
+            
+            // Répartition proportionnelle : heures par jour ouvrable
+            const hoursPerWorkingDay = projectDurationDays > 0 ? estimatedHours / projectDurationDays : 0;
+            
+            // Heures proportionnelles pour la période d'overlap
+            const proportionalHours = hoursPerWorkingDay * overlapWorkingDays;
+            
+            totalProportionalHours += proportionalHours;
+            
+            projectDetails.push({
+              name: project.name,
+              totalHours: estimatedHours,
+              projectDuration: projectDurationDays,
+              overlapDays: overlapWorkingDays,
+              proportionalHours: Math.round(proportionalHours * 100) / 100,
+              hoursPerDay: Math.round(hoursPerWorkingDay * 100) / 100
+            });
+          }
+        }
+      });
+      
+      // Calcul des jours ouvrables dans le mois
+      const monthWorkingDays = getWorkingDaysBetween(monthStart, monthEnd);
+      const monthlyFteHours = monthWorkingDays * hoursPerWorkingDay;
+      
+      // Estimation du nombre de personnes nécessaires
+      const estimatedPersons = Math.ceil(totalProportionalHours / monthlyFteHours);
+
+      workloadByPeriod[monthKey] = {
+        totalHours: Math.round(totalProportionalHours * 100) / 100,
+        estimatedPersons,
+        activeProjects: projectDetails.length,
+        periodStart: monthStart,
+        periodEnd: monthEnd,
+        projectDetails
+      };
+    }
+
+    return workloadByPeriod;
+  }, [ganttItems, viewMode, currentPeriod, periodDays, periodStart, periodEnd, weeklyFteHours, hoursPerWorkingDay]);
+
+  // Obtenir la couleur selon la charge
+  const getWorkloadColor = (estimatedPersons: number) => {
+    if (estimatedPersons === 0) {
+      return "bg-gray-300 border-gray-400 text-gray-600"; // Aucune charge
+    } else if (estimatedPersons <= 2) {
+      return "bg-green-400 border-green-500 text-green-800"; // Charge normale
+    } else if (estimatedPersons <= 4) {
+      return "bg-yellow-400 border-yellow-500 text-yellow-800"; // Charge élevée
+    } else if (estimatedPersons <= 6) {
+      return "bg-orange-400 border-orange-500 text-orange-800"; // Charge importante
+    } else {
+      return "bg-red-400 border-red-500 text-red-800"; // Charge critique
+    }
+  };
+
+  // Obtenir le tooltip avec détails de calcul amélioré
+  const getWorkloadTooltip = (workload: { 
+    totalHours: number; 
+    estimatedPersons: number; 
+    activeProjects: number; 
+    periodStart: Date; 
+    periodEnd: Date;
+    projectDetails: Array<{
+      name: string;
+      totalHours: number;
+      projectDuration: number;
+      overlapDays: number;
+      proportionalHours: number;
+      hoursPerDay: number;
+    }>;
+  }) => {
+    const { totalHours, estimatedPersons, activeProjects, periodStart, periodEnd, projectDetails } = workload;
+    const periodLabel = viewMode === 'week' 
+      ? `Semaine du ${format(periodStart, 'dd/MM', { locale: fr })} au ${format(periodEnd, 'dd/MM', { locale: fr })}`
+      : format(periodStart, 'MMMM yyyy', { locale: fr });
+    
+    let tooltip = `${periodLabel}\n`;
+    tooltip += `${activeProjects} projet${activeProjects > 1 ? 's' : ''} actif${activeProjects > 1 ? 's' : ''}\n`;
+    tooltip += `${totalHours}h proportionnelles (jours ouvrables)\n`;
+    tooltip += `≈ ${estimatedPersons} personne${estimatedPersons > 1 ? 's' : ''} nécessaire${estimatedPersons > 1 ? 's' : ''} (${hoursPerWorkingDay}h/jour)\n\n`;
+    
+    tooltip += "Détail par projet :\n";
+    projectDetails.forEach(project => {
+      tooltip += `• ${project.name}\n`;
+      tooltip += `  ${project.totalHours}h ÷ ${project.projectDuration} jours = ${project.hoursPerDay}h/jour\n`;
+      tooltip += `  ${project.hoursPerDay}h/jour × ${project.overlapDays} jours = ${project.proportionalHours}h\n`;
+    });
+    
+    const fteHours = viewMode === 'week' ? weeklyFteHours : getWorkingDaysBetween(periodStart, periodEnd) * hoursPerWorkingDay;
+    tooltip += `\nFormule : ${totalHours}h ÷ ${fteHours}h = ${estimatedPersons} ETP`;
+    
+    return tooltip;
+  };
+
+  // Calculer la charge d'équipe (déjà mémorisé avec useMemo)
+  const teamWorkload = calculateTeamWorkload;
+
   // Rendu des lignes de dépendances
   const renderDependencyLines = () => {
     if (!ganttRef.current) return null;
@@ -763,6 +1003,154 @@ export default function GanttChart({
               {ganttItems.reduce((total, item) => total + (item.estimatedHours || 0), 0)}h
             </div>
           </Card>
+        </div>
+
+        {/* Section Charge d'équipe */}
+        <div className="mt-6">
+          <Separator className="mb-4" />
+          
+          <div className="flex items-center space-x-2 mb-4">
+            <Users className="h-5 w-5 text-purple-600" />
+            <h4 className="text-sm font-medium text-gray-700">Charge d'équipe par période</h4>
+            <Badge variant="outline" className="text-xs">
+              Projets actifs uniquement
+            </Badge>
+          </div>
+
+          {/* En-tête de la charge d'équipe */}
+          <div className="grid grid-cols-12 gap-1 mb-2">
+            <div className="col-span-4 text-sm font-medium text-gray-700 p-2">
+              Charge équipe
+            </div>
+            <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-31'}`}>
+              {viewMode === 'week' ? (
+                // Vue hebdomadaire : afficher chaque jour
+                periodDays.map((day) => (
+                  <div
+                    key={`workload-header-${day.toISOString()}`}
+                    className="text-center p-1 text-xs font-medium text-gray-500 bg-gray-50 rounded"
+                  >
+                    {format(day, 'EEE', { locale: fr })}
+                  </div>
+                ))
+              ) : (
+                // Vue mensuelle : afficher les semaines
+                eachWeekOfInterval({ 
+                  start: periodStart, 
+                  end: periodEnd 
+                }, { weekStartsOn: 1 }).map((week, index) => (
+                  <div
+                    key={`workload-header-${week.toISOString()}`}
+                    className="text-center p-1 text-xs font-medium text-gray-500 bg-gray-50 rounded"
+                  >
+                    S{index + 1}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Ligne de charge d'équipe */}
+          <div className="grid grid-cols-12 gap-1 group">
+            <div className="col-span-4 flex items-center justify-between p-2">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-purple-500 rounded border-2 border-purple-600" />
+                <span className="text-sm font-medium">Besoin en personnel</span>
+              </div>
+              <Badge variant="outline" className="text-xs">
+                {Object.values(teamWorkload).reduce((total, period) => total + period.estimatedPersons, 0)} pers. total
+              </Badge>
+            </div>
+
+            <div className="col-span-8 relative h-8 border border-gray-200 rounded bg-gray-50">
+              {viewMode === 'week' ? (
+                // Vue hebdomadaire : afficher par jour
+                periodDays.map((day, dayIndex) => {
+                  if (dayIndex % 7 === 0) { // Une fois par semaine
+                    const weekKey = format(day, 'yyyy-MM-dd');
+                    const workload = teamWorkload[weekKey];
+                    
+                    if (!workload) return null;
+                    
+                    const position = getBarPosition(workload.periodStart, workload.periodEnd);
+                    const workloadColor = getWorkloadColor(workload.estimatedPersons);
+                    const tooltip = getWorkloadTooltip(workload);
+                    
+                    return (
+                      <div
+                        key={`workload-bar-${weekKey}`}
+                        className={`absolute top-0 h-full rounded flex items-center justify-center text-xs font-medium border-2 transition-all ${workloadColor} hover:shadow-md cursor-help`}
+                        style={position}
+                        title={tooltip}
+                        data-testid={`workload-bar-${weekKey}`}
+                      >
+                        {workload.estimatedPersons > 0 && (
+                          <span className="flex items-center space-x-1">
+                            <Users className="h-3 w-3" />
+                            <span>{workload.estimatedPersons}</span>
+                          </span>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })
+              ) : (
+                // Vue mensuelle : afficher pour tout le mois
+                (() => {
+                  const monthKey = format(periodStart, 'yyyy-MM');
+                  const workload = teamWorkload[monthKey];
+                  
+                  if (!workload) return null;
+                  
+                  const workloadColor = getWorkloadColor(workload.estimatedPersons);
+                  const tooltip = getWorkloadTooltip(workload);
+                  
+                  return (
+                    <div
+                      key={`workload-bar-${monthKey}`}
+                      className={`absolute top-0 left-0 w-full h-full rounded flex items-center justify-center text-sm font-medium border-2 transition-all ${workloadColor} hover:shadow-md cursor-help`}
+                      title={tooltip}
+                      data-testid={`workload-bar-${monthKey}`}
+                    >
+                      {workload.estimatedPersons > 0 && (
+                        <span className="flex items-center space-x-2">
+                          <Users className="h-4 w-4" />
+                          <span>{workload.estimatedPersons} personne{workload.estimatedPersons > 1 ? 's' : ''}</span>
+                          <span className="text-xs opacity-70">({workload.totalHours}h)</span>
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          </div>
+
+          {/* Résumé de la charge */}
+          <div className="mt-3 p-3 bg-purple-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-400 rounded border border-green-500" />
+                <span>1-2 pers. (Normal)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-yellow-400 rounded border border-yellow-500" />
+                <span>3-4 pers. (Élevé)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-orange-400 rounded border border-orange-500" />
+                <span>5-6 pers. (Important)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-red-400 rounded border border-red-500" />
+                <span>7+ pers. (Critique)</span>
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+              Estimation basée sur 40h/semaine par personne • Projets en phase planification, approvisionnement et chantier
+            </div>
+          </div>
         </div>
 
         {/* Légende améliorée */}

@@ -118,7 +118,7 @@ export default function ProjectPlanningPage() {
   };
 
   // Gestionnaire de mise à jour des dates depuis le Gantt
-  const handleDateUpdate = (itemId: string, newStartDate: Date, newEndDate: Date, type: 'project' | 'milestone') => {
+  const handleDateUpdate = (itemId: string, newStartDate: Date, newEndDate: Date, type: 'project' | 'milestone' | 'task') => {
     if (type === 'project') {
       updateProjectMutation.mutate({
         projectId: itemId,
@@ -349,7 +349,7 @@ export default function ProjectPlanningPage() {
                             </div>
                             <div className="flex items-center space-x-3">
                               <span className="text-sm text-gray-600">
-                                {new Date(milestone.date).toLocaleDateString("fr-FR")}
+                                {milestone.date ? new Date(milestone.date).toLocaleDateString("fr-FR") : "Date non définie"}
                               </span>
                               <Badge className={getStatusColor(milestone.status)}>
                                 {milestone.status === "completed"

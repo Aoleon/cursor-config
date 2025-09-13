@@ -494,6 +494,10 @@ export const offers = pgTable("offers", {
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   offerId: varchar("offer_id").references(() => offers.id), // Lien avec dossier d'offre
+  
+  // ========================================
+  // INFORMATIONS DE BASE (EXISTANTES)
+  // ========================================
   name: varchar("name").notNull(),
   client: varchar("client").notNull(),
   location: varchar("location").notNull(),
@@ -504,6 +508,79 @@ export const projects = pgTable("projects", {
   responsibleUserId: varchar("responsible_user_id").references(() => users.id),
   chefTravaux: varchar("chef_travaux").references(() => users.id),
   progressPercentage: integer("progress_percentage").default(0),
+  
+  // ========================================
+  // INFORMATIONS TECHNIQUES (héritées AO/Offers)
+  // ========================================
+  reference: varchar("reference"), // Référence projet héritée d'offre
+  intituleOperation: text("intitule_operation"), // Intitulé complet opération
+  description: text("description"), // Description détaillée du projet
+  menuiserieType: menuiserieTypeEnum("menuiserie_type"), // Type menuiserie principal
+  typeMarche: marcheTypeEnum("type_marche"), // Type de marché
+  departement: departementEnum("departement"), // Département localisation
+  
+  // Montants et financier
+  montantEstime: decimal("montant_estime", { precision: 12, scale: 2 }), // Montant initial estimé
+  montantFinal: decimal("montant_final", { precision: 12, scale: 2 }), // Montant contractuel final
+  prorataEventuel: decimal("prorata_eventuel", { precision: 5, scale: 2 }), // Prorata éventuel
+  
+  // ========================================
+  // RELATIONS CONTACTS (héritées AO/Offers)
+  // ========================================
+  maitreOuvrageId: varchar("maitre_ouvrage_id").references(() => maitresOuvrage.id),
+  maitreOeuvreId: varchar("maitre_oeuvre_id").references(() => maitresOeuvre.id),
+  
+  // Contacts spécifiques au projet (si différents d'AO/Offre)
+  contactProjetNom: varchar("contact_projet_nom"),
+  contactProjetPoste: varchar("contact_projet_poste"),
+  contactProjetTelephone: varchar("contact_projet_telephone"),
+  contactProjetEmail: varchar("contact_projet_email"),
+  
+  // ========================================
+  // DATES CRITIQUES (héritées AO/Offers)
+  // ========================================
+  dateOS: timestamp("date_os"), // Date Ordre de Service
+  delaiContractuel: integer("delai_contractuel"), // Délai contractuel en jours
+  dateLimiteRemise: timestamp("date_limite_remise"), // Date limite remise originale AO
+  dateLivraisonPrevue: timestamp("date_livraison_prevue"), // Date livraison contractuelle
+  demarragePrevu: timestamp("demarrage_prevu"), // Date démarrage prévue
+  dateLivraisonReelle: timestamp("date_livraison_reelle"), // Date livraison réelle
+  
+  // ========================================
+  // ÉLÉMENTS ADMINISTRATIFS (hérités AO/Offers)
+  // ========================================
+  bureauEtudes: varchar("bureau_etudes"), // Bureau d'études associé
+  bureauControle: varchar("bureau_controle"), // Bureau de contrôle
+  sps: varchar("sps"), // Service Prévention Sécurité
+  
+  // ========================================
+  // SOURCE ET WORKFLOW (hérités AO/Offers)
+  // ========================================
+  source: aoSourceEnum("source"), // Source originale AO
+  plateformeSource: varchar("plateforme_source"), // Plateforme d'origine si applicable
+  batigestRef: varchar("batigest_ref"), // Référence Batigest héritée
+  
+  // ========================================
+  // VALIDATION ET JALONS (hérités Offers)
+  // ========================================
+  finEtudesValidatedAt: timestamp("fin_etudes_validated_at"), // Validation fin études
+  finEtudesValidatedBy: varchar("fin_etudes_validated_by").references(() => users.id),
+  
+  // ========================================
+  // GESTION CHANTIER (spécifique Projets)
+  // ========================================
+  dateDebutChantier: timestamp("date_debut_chantier"), // Date réelle début chantier
+  dateFinChantier: timestamp("date_fin_chantier"), // Date réelle fin chantier
+  coordinateurSPS: varchar("coordinateur_sps"), // Coordinateur SPS chantier
+  
+  // Suivi avancement chantier
+  acompteVerse: decimal("acompte_verse", { precision: 12, scale: 2 }).default("0"), // Acomptes versés
+  restantDu: decimal("restant_du", { precision: 12, scale: 2 }), // Restant dû
+  retenuGarantie: decimal("retenu_garantie", { precision: 12, scale: 2 }), // Retenue de garantie
+  
+  // ========================================
+  // MÉTADONNÉES (existantes)
+  // ========================================
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

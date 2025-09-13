@@ -1,16 +1,54 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { CalendarDays, ChevronLeft, ChevronRight, Move, AlertTriangle } from "lucide-react";
-import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, startOfDay, addWeeks, subWeeks, isSameDay, isWithinInterval } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  CalendarDays, 
+  ChevronLeft, 
+  ChevronRight, 
+  Move, 
+  AlertTriangle, 
+  Plus, 
+  Link,
+  GripHorizontal,
+  Clock,
+  Calendar,
+  TrendingUp,
+  ArrowUpDown
+} from "lucide-react";
+import { 
+  format, 
+  addDays, 
+  startOfWeek, 
+  endOfWeek, 
+  eachDayOfInterval, 
+  differenceInDays, 
+  startOfDay, 
+  addWeeks, 
+  subWeeks, 
+  isSameDay, 
+  isWithinInterval,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  subMonths,
+  eachWeekOfInterval,
+  isAfter,
+  isBefore
+} from "date-fns";
 import { fr } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
-interface GanttItem {
+interface GanttTask {
   id: string;
   name: string;
-  type: 'project' | 'milestone';
+  type: 'project' | 'milestone' | 'task';
   startDate: Date;
   endDate: Date;
   status: string;
@@ -18,28 +56,70 @@ interface GanttItem {
   progress?: number;
   isJalon?: boolean;
   projectId?: string;
+  dependencies?: string[]; // IDs des tâches dont celle-ci dépend
+  priority?: 'tres_faible' | 'faible' | 'normale' | 'elevee' | 'critique';
+  estimatedHours?: number;
+  actualHours?: number;
 }
+
+type ViewMode = 'week' | 'month';
+type ResizeHandle = 'start' | 'end' | null;
 
 interface GanttChartProps {
   projects: any[];
   milestones: any[];
-  onDateUpdate?: (itemId: string, newStartDate: Date, newEndDate: Date, type: 'project' | 'milestone') => void;
+  tasks?: any[];
+  onDateUpdate?: (itemId: string, newStartDate: Date, newEndDate: Date, type: 'project' | 'milestone' | 'task') => void;
+  onTaskCreate?: (task: Partial<GanttTask>) => void;
+  onDependencyCreate?: (fromId: string, toId: string) => void;
   'data-testid'?: string;
+  enableRealtime?: boolean;
 }
 
-export default function GanttChart({ projects, milestones, onDateUpdate, 'data-testid': dataTestId }: GanttChartProps) {
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+export default function GanttChart({ 
+  projects, 
+  milestones, 
+  tasks = [],
+  onDateUpdate, 
+  onTaskCreate,
+  onDependencyCreate,
+  'data-testid': dataTestId,
+  enableRealtime = false
+}: GanttChartProps) {
+  const [currentPeriod, setCurrentPeriod] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  const [resizeItem, setResizeItem] = useState<{ id: string; handle: ResizeHandle } | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  const [linkMode, setLinkMode] = useState(false);
+  const [linkFromId, setLinkFromId] = useState<string | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
   const ganttRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
-  // Calculer les dates de la semaine courante
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
-  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  // États pour la création de tâche
+  const [newTaskName, setNewTaskName] = useState("");
+  const [newTaskType, setNewTaskType] = useState<'task' | 'milestone'>('task');
+  const [newTaskProject, setNewTaskProject] = useState("");
 
-  // Préparer les éléments Gantt
-  const ganttItems: GanttItem[] = [
+  // Calculer les périodes selon le mode de vue
+  const periodStart = viewMode === 'week' 
+    ? startOfWeek(currentPeriod, { weekStartsOn: 1 })
+    : startOfMonth(currentPeriod);
+  
+  const periodEnd = viewMode === 'week'
+    ? endOfWeek(currentPeriod, { weekStartsOn: 1 })
+    : endOfMonth(currentPeriod);
+
+  const periodDays = viewMode === 'week'
+    ? eachDayOfInterval({ start: periodStart, end: periodEnd })
+    : eachDayOfInterval({ start: periodStart, end: periodEnd });
+
+  const totalDays = periodDays.length;
+
+  // Préparer les éléments Gantt avec dépendances et priorités
+  const ganttItems: GanttTask[] = [
     ...projects.filter(p => p.startDate && p.endDate).map(project => ({
       id: project.id,
       name: project.name,
@@ -48,7 +128,11 @@ export default function GanttChart({ projects, milestones, onDateUpdate, 'data-t
       endDate: new Date(project.endDate),
       status: project.status,
       responsibleUser: project.responsibleUser,
-      progress: project.progressPercentage || 0
+      progress: project.progressPercentage || 0,
+      priority: project.priority || 'normale',
+      estimatedHours: project.estimatedHours,
+      actualHours: project.actualHours,
+      dependencies: project.dependencies || []
     })),
     ...milestones.filter(m => m.date).map(milestone => ({
       id: milestone.id,
@@ -58,38 +142,64 @@ export default function GanttChart({ projects, milestones, onDateUpdate, 'data-t
       endDate: new Date(milestone.date),
       status: milestone.status,
       isJalon: true,
-      projectId: milestone.project
+      projectId: milestone.project,
+      priority: milestone.priority || 'normale',
+      dependencies: milestone.dependencies || []
+    })),
+    ...tasks.filter(t => t.startDate && t.endDate).map(task => ({
+      id: task.id,
+      name: task.name,
+      type: 'task' as const,
+      startDate: new Date(task.startDate),
+      endDate: new Date(task.endDate),
+      status: task.status,
+      projectId: task.projectId,
+      estimatedHours: task.estimatedHours,
+      actualHours: task.actualHours,
+      isJalon: task.isJalon,
+      priority: task.priority || 'normale',
+      dependencies: task.dependencies || []
     }))
   ];
 
-  // Obtenir la couleur du statut
-  const getStatusColor = (status: string, type: 'project' | 'milestone') => {
+  // Obtenir la couleur selon le statut et la priorité
+  const getItemColor = (status: string, type: 'project' | 'milestone' | 'task', priority?: string, isOverdue?: boolean) => {
+    if (isOverdue) {
+      return "bg-red-500 border-red-600"; // Rouge pour les éléments en retard
+    }
+    
+    if (priority === 'critique') {
+      return "bg-red-400 border-red-500";
+    } else if (priority === 'elevee') {
+      return "bg-orange-400 border-orange-500";
+    }
+    
     if (type === 'milestone') {
       switch (status) {
-        case "completed": return "bg-green-500";
-        case "in-progress": return "bg-blue-500";
-        case "pending": return "bg-gray-400";
-        case "overdue": return "bg-red-500";
-        default: return "bg-gray-400";
+        case "completed": return "bg-green-500 border-green-600";
+        case "in-progress": return "bg-blue-500 border-blue-600";
+        case "pending": return "bg-gray-400 border-gray-500";
+        case "overdue": return "bg-red-500 border-red-600";
+        default: return "bg-gray-400 border-gray-500";
       }
     } else {
       switch (status) {
-        case "etude": return "bg-blue-500";
-        case "planification": return "bg-yellow-500";
-        case "approvisionnement": return "bg-orange-500";
-        case "chantier": return "bg-green-500";
-        case "sav": return "bg-purple-500";
-        default: return "bg-gray-500";
+        case "etude": return "bg-blue-500 border-blue-600";
+        case "planification": return "bg-yellow-500 border-yellow-600";
+        case "approvisionnement": return "bg-orange-500 border-orange-600";
+        case "chantier": return "bg-green-500 border-green-600";
+        case "sav": return "bg-purple-500 border-purple-600";
+        case "termine": return "bg-green-600 border-green-700";
+        default: return "bg-gray-500 border-gray-600";
       }
     }
   };
 
   // Calculer la position et largeur des barres
   const getBarPosition = (startDate: Date, endDate: Date) => {
-    const totalDays = 7; // Semaine de 7 jours
-    const dayWidth = 100 / totalDays; // Pourcentage par jour
+    const dayWidth = 100 / totalDays;
     
-    const startDayIndex = differenceInDays(startDate, weekStart);
+    const startDayIndex = differenceInDays(startDate, periodStart);
     const duration = differenceInDays(endDate, startDate) + 1;
     
     const left = Math.max(0, startDayIndex * dayWidth);
@@ -98,31 +208,83 @@ export default function GanttChart({ projects, milestones, onDateUpdate, 'data-t
     return { left: `${left}%`, width: `${width}%` };
   };
 
-  // Vérifier si l'élément est visible dans la semaine courante
+  // Vérifier si l'élément est visible dans la période courante
   const isItemVisible = (startDate: Date, endDate: Date) => {
-    return isWithinInterval(startDate, { start: weekStart, end: weekEnd }) ||
-           isWithinInterval(endDate, { start: weekStart, end: weekEnd }) ||
-           (startDate <= weekStart && endDate >= weekEnd);
+    return isWithinInterval(startDate, { start: periodStart, end: periodEnd }) ||
+           isWithinInterval(endDate, { start: periodStart, end: periodEnd }) ||
+           (startDate <= periodStart && endDate >= periodEnd);
   };
 
-  // Gestion du drag and drop
+  // Vérifier si l'élément est en retard
+  const isOverdue = (item: GanttTask) => {
+    const now = new Date();
+    if (item.type === 'milestone') {
+      return isAfter(now, item.endDate) && item.status !== 'completed';
+    }
+    return isAfter(now, item.endDate) && item.status !== 'termine' && item.status !== 'completed';
+  };
+
+  // Gestion du drag and drop amélioré
   const handleDragStart = (e: React.DragEvent, itemId: string) => {
+    if (linkMode) return; // Pas de drag en mode liaison
+    
     setDraggedItem(itemId);
     e.dataTransfer.effectAllowed = 'move';
     
-    // Calculer l'offset initial
     const rect = ganttRef.current?.getBoundingClientRect();
     if (rect) {
       const relativeX = e.clientX - rect.left;
-      const dayWidth = rect.width / 7;
+      const dayWidth = rect.width / totalDays;
       setDragOffset(relativeX % dayWidth);
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+  const handleResizeStart = (e: React.MouseEvent, itemId: string, handle: 'start' | 'end') => {
+    e.stopPropagation();
+    setResizeItem({ id: itemId, handle });
   };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (resizeItem && ganttRef.current) {
+      const rect = ganttRef.current.getBoundingClientRect();
+      const relativeX = e.clientX - rect.left;
+      const dayWidth = rect.width / totalDays;
+      const dayIndex = Math.floor(relativeX / dayWidth);
+      
+      if (dayIndex >= 0 && dayIndex < totalDays) {
+        const newDate = addDays(periodStart, dayIndex);
+        const item = ganttItems.find(i => i.id === resizeItem.id);
+        
+        if (item && onDateUpdate) {
+          if (resizeItem.handle === 'start') {
+            if (isBefore(newDate, item.endDate)) {
+              onDateUpdate(resizeItem.id, newDate, item.endDate, item.type);
+            }
+          } else {
+            if (isAfter(newDate, item.startDate)) {
+              onDateUpdate(resizeItem.id, item.startDate, newDate, item.type);
+            }
+          }
+        }
+      }
+    }
+  }, [resizeItem, ganttItems, onDateUpdate, periodStart, totalDays]);
+
+  const handleMouseUp = useCallback(() => {
+    setResizeItem(null);
+  }, []);
+
+  useEffect(() => {
+    if (resizeItem) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizeItem, handleMouseMove, handleMouseUp]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -130,11 +292,11 @@ export default function GanttChart({ projects, milestones, onDateUpdate, 'data-t
 
     const rect = ganttRef.current.getBoundingClientRect();
     const relativeX = e.clientX - rect.left - dragOffset;
-    const dayWidth = rect.width / 7;
+    const dayWidth = rect.width / totalDays;
     const dayIndex = Math.floor(relativeX / dayWidth);
     
-    if (dayIndex >= 0 && dayIndex < 7) {
-      const newStartDate = addDays(weekStart, dayIndex);
+    if (dayIndex >= 0 && dayIndex < totalDays) {
+      const newStartDate = addDays(periodStart, dayIndex);
       const item = ganttItems.find(i => i.id === draggedItem);
       
       if (item) {
@@ -151,10 +313,149 @@ export default function GanttChart({ projects, milestones, onDateUpdate, 'data-t
     setDragOffset(0);
   };
 
-  // Navigation dans les semaines
-  const goToPreviousWeek = () => setCurrentWeek(subWeeks(currentWeek, 1));
-  const goToNextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1));
-  const goToCurrentWeek = () => setCurrentWeek(new Date());
+  // Gestion du double-clic pour créer une tâche
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    if (!ganttRef.current) return;
+    
+    const rect = ganttRef.current.getBoundingClientRect();
+    const relativeX = e.clientX - rect.left;
+    const dayWidth = rect.width / totalDays;
+    const dayIndex = Math.floor(relativeX / dayWidth);
+    
+    if (dayIndex >= 0 && dayIndex < totalDays) {
+      const clickedDate = addDays(periodStart, dayIndex);
+      setNewTaskDate(clickedDate);
+      setShowCreateDialog(true);
+    }
+  };
+
+  // Gestion des liaisons de dépendances
+  const handleItemClick = (itemId: string) => {
+    if (linkMode) {
+      if (!linkFromId) {
+        setLinkFromId(itemId);
+        toast({
+          title: "Mode liaison",
+          description: "Cliquez sur la tâche de destination pour créer la liaison",
+        });
+      } else if (linkFromId !== itemId) {
+        if (onDependencyCreate) {
+          onDependencyCreate(linkFromId, itemId);
+          toast({
+            title: "Dépendance créée",
+            description: "La liaison entre les tâches a été établie",
+          });
+        }
+        setLinkFromId(null);
+        setLinkMode(false);
+      }
+    }
+  };
+
+  // Créer une nouvelle tâche
+  const handleCreateTask = () => {
+    console.log("handleCreateTask called with:", { newTaskName, newTaskDate, newTaskProject, newTaskType });
+    
+    if (!newTaskName || !newTaskProject) {
+      console.log("Validation failed - missing required fields");
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs obligatoires",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Si pas de date, utiliser aujourd'hui par défaut
+    const taskDate = newTaskDate || new Date();
+    
+    const endDate = newTaskType === 'milestone' 
+      ? taskDate 
+      : addDays(taskDate, 1); // Tâche d'1 jour par défaut
+    
+    const newTask: Partial<GanttTask> = {
+      name: newTaskName,
+      type: newTaskType,
+      startDate: taskDate,
+      endDate: endDate,
+      status: 'a_faire',
+      projectId: newTaskProject,
+      priority: 'normale'
+    };
+    
+    if (onTaskCreate) {
+      onTaskCreate(newTask);
+    }
+    
+    // Reset
+    setNewTaskName("");
+    setNewTaskType('task');
+    setNewTaskProject("");
+    setNewTaskDate(null);
+    setShowCreateDialog(false);
+    
+    toast({
+      title: "Tâche créée",
+      description: `${newTaskType === 'milestone' ? 'Jalon' : 'Tâche'} "${newTaskName}" ajouté(e) au planning`,
+    });
+  };
+
+  // Navigation dans les périodes
+  const goToPreviousPeriod = () => {
+    setCurrentPeriod(viewMode === 'week' ? subWeeks(currentPeriod, 1) : subMonths(currentPeriod, 1));
+  };
+  
+  const goToNextPeriod = () => {
+    setCurrentPeriod(viewMode === 'week' ? addWeeks(currentPeriod, 1) : addMonths(currentPeriod, 1));
+  };
+  
+  const goToCurrentPeriod = () => setCurrentPeriod(new Date());
+
+  // Rendu des lignes de dépendances
+  const renderDependencyLines = () => {
+    if (!ganttRef.current) return null;
+    
+    const lines: JSX.Element[] = [];
+    
+    ganttItems.forEach(item => {
+      if (item.dependencies && item.dependencies.length > 0) {
+        item.dependencies.forEach(depId => {
+          const dependency = ganttItems.find(dep => dep.id === depId);
+          if (dependency && isItemVisible(dependency.startDate, dependency.endDate) && isItemVisible(item.startDate, item.endDate)) {
+            // Calculer les positions pour dessiner la ligne
+            // Cette logique serait complexe, simplifions avec une indication visuelle
+            lines.push(
+              <div
+                key={`dep-${depId}-${item.id}`}
+                className="absolute inset-0 pointer-events-none"
+              >
+                <svg className="w-full h-full">
+                  <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                     refX="0" refY="3.5" orient="auto">
+                      <polygon points="0 0, 10 3.5, 0 7" fill="blue" opacity="0.6" />
+                    </marker>
+                  </defs>
+                  <line
+                    x1="50%"
+                    y1="20px"
+                    x2="50%"
+                    y2="40px"
+                    stroke="blue"
+                    strokeWidth="2"
+                    opacity="0.6"
+                    markerEnd="url(#arrowhead)"
+                  />
+                </svg>
+              </div>
+            );
+          }
+        });
+      }
+    });
+    
+    return lines;
+  };
 
   return (
     <Card className="w-full" data-testid={dataTestId}>
@@ -162,24 +463,66 @@ export default function GanttChart({ projects, milestones, onDateUpdate, 'data-t
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center space-x-2">
             <CalendarDays className="h-5 w-5" />
-            <span>Planning Gantt</span>
+            <span>Planning Gantt Interactif</span>
+            {enableRealtime && (
+              <Badge variant="outline" className="ml-2 text-green-600">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse" />
+                Temps réel
+              </Badge>
+            )}
           </CardTitle>
           
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={goToPreviousWeek}>
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+              <TabsList className="grid w-fit grid-cols-2">
+                <TabsTrigger value="week" className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  Semaine
+                </TabsTrigger>
+                <TabsTrigger value="month" className="flex items-center gap-1">
+                  <CalendarDays className="h-4 w-4" />
+                  Mois
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            <Separator orientation="vertical" className="h-6" />
+            
+            <Button
+              variant={linkMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setLinkMode(!linkMode);
+                setLinkFromId(null);
+                if (!linkMode) {
+                  toast({
+                    title: "Mode liaison activé",
+                    description: "Cliquez sur une tâche source puis sur une tâche cible",
+                  });
+                }
+              }}
+              data-testid="link-mode-button"
+            >
+              <Link className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="outline" size="sm" onClick={goToPreviousPeriod}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={goToCurrentWeek}>
+            <Button variant="outline" size="sm" onClick={goToCurrentPeriod}>
               Aujourd'hui
             </Button>
-            <Button variant="outline" size="sm" onClick={goToNextWeek}>
+            <Button variant="outline" size="sm" onClick={goToNextPeriod}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
         
         <div className="text-sm text-gray-600">
-          Semaine du {format(weekStart, 'dd MMM', { locale: fr })} au {format(weekEnd, 'dd MMM yyyy', { locale: fr })}
+          {viewMode === 'week' 
+            ? `Semaine du ${format(periodStart, 'dd MMM', { locale: fr })} au ${format(periodEnd, 'dd MMM yyyy', { locale: fr })}`
+            : `${format(periodStart, 'MMMM yyyy', { locale: fr })}`
+          }
         </div>
       </CardHeader>
 
@@ -189,20 +532,36 @@ export default function GanttChart({ projects, milestones, onDateUpdate, 'data-t
           <div className="col-span-4 text-sm font-medium text-gray-700 p-2">
             Éléments de planning
           </div>
-          <div className="col-span-8 grid grid-cols-7 gap-1">
-            {weekDays.map((day) => (
-              <div
-                key={day.toISOString()}
-                className={`text-center p-2 text-sm font-medium rounded ${
-                  isSameDay(day, new Date()) 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'text-gray-700 bg-gray-50'
-                }`}
-              >
-                <div>{format(day, 'EEE', { locale: fr })}</div>
-                <div className="text-xs">{format(day, 'd')}</div>
-              </div>
-            ))}
+          <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-31'}`}>
+            {viewMode === 'week' ? (
+              // Vue hebdomadaire : afficher chaque jour
+              periodDays.map((day) => (
+                <div
+                  key={day.toISOString()}
+                  className={`text-center p-1 text-xs font-medium rounded ${
+                    isSameDay(day, new Date()) 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'text-gray-700 bg-gray-50'
+                  }`}
+                >
+                  <div>{format(day, 'EEE', { locale: fr })}</div>
+                  <div className="text-xs">{format(day, 'd')}</div>
+                </div>
+              ))
+            ) : (
+              // Vue mensuelle : afficher les semaines
+              eachWeekOfInterval({ 
+                start: periodStart, 
+                end: periodEnd 
+              }, { weekStartsOn: 1 }).map((week, index) => (
+                <div
+                  key={week.toISOString()}
+                  className="text-center p-1 text-xs font-medium text-gray-700 bg-gray-50 rounded"
+                >
+                  S{index + 1}
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -211,50 +570,133 @@ export default function GanttChart({ projects, milestones, onDateUpdate, 'data-t
         {/* Zone de planning Gantt */}
         <div 
           ref={ganttRef}
-          className="space-y-2"
-          onDragOver={handleDragOver}
+          className="space-y-2 relative"
+          onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
+          onDoubleClick={handleDoubleClick}
         >
-          {ganttItems.filter(item => isItemVisible(item.startDate, item.endDate)).map((item) => {
+          {renderDependencyLines()}
+          
+          {ganttItems
+            .filter(item => isItemVisible(item.startDate, item.endDate))
+            .sort((a, b) => {
+              // Trier par priorité puis par date
+              const priorityOrder = { 'critique': 5, 'elevee': 4, 'normale': 3, 'faible': 2, 'tres_faible': 1 };
+              const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 3;
+              const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 3;
+              
+              if (aPriority !== bPriority) return bPriority - aPriority;
+              return a.startDate.getTime() - b.startDate.getTime();
+            })
+            .map((item) => {
             const position = getBarPosition(item.startDate, item.endDate);
-            const statusColor = getStatusColor(item.status, item.type);
+            const itemIsOverdue = isOverdue(item);
+            const statusColor = getItemColor(item.status, item.type, item.priority, itemIsOverdue);
             
             return (
               <div key={item.id} className="grid grid-cols-12 gap-1 group">
-                {/* Nom de l'élément */}
-                <div className="col-span-4 flex items-center space-x-2 p-2">
-                  <div className="flex items-center space-x-2">
+                {/* Nom de l'élément avec informations étendues */}
+                <div className="col-span-4 flex items-center justify-between p-2">
+                  <div className="flex items-center space-x-2 flex-1">
                     {item.type === 'milestone' ? (
-                      <div className={`w-3 h-3 rounded-full ${statusColor}`} />
+                      <div className={`w-3 h-3 rounded-full border-2 ${statusColor}`} />
                     ) : (
-                      <div className={`w-3 h-3 rounded ${statusColor}`} />
+                      <div className={`w-3 h-3 rounded border-2 ${statusColor}`} />
                     )}
-                    <span className="text-sm font-medium truncate" title={item.name}>
-                      {item.name}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-1">
+                        <span 
+                          className="text-sm font-medium truncate cursor-pointer hover:text-primary"
+                          title={item.name}
+                          onClick={() => handleItemClick(item.id)}
+                        >
+                          {item.name}
+                        </span>
+                        {itemIsOverdue && (
+                          <AlertTriangle className="h-3 w-3 text-red-500" />
+                        )}
+                        {item.priority === 'critique' && (
+                          <TrendingUp className="h-3 w-3 text-red-500" />
+                        )}
+                      </div>
+                      
+                      {/* Heures estimées vs réelles */}
+                      {item.estimatedHours && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          <Clock className="h-3 w-3 inline mr-1" />
+                          {item.estimatedHours}h 
+                          {item.actualHours && (
+                            <span className={item.actualHours > item.estimatedHours ? 'text-red-500' : 'text-green-600'}>
+                              / {item.actualHours}h
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
-                  <Badge variant="outline" className="text-xs ml-auto">
-                    {item.type === 'milestone' ? 'Jalon' : 'Projet'}
-                  </Badge>
+                  <div className="flex flex-col space-y-1">
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${
+                        item.priority === 'critique' ? 'border-red-500 text-red-700' :
+                        item.priority === 'elevee' ? 'border-orange-500 text-orange-700' :
+                        'border-gray-500 text-gray-700'
+                      }`}
+                    >
+                      {item.type === 'milestone' ? 'Jalon' : item.type === 'task' ? 'Tâche' : 'Projet'}
+                    </Badge>
+                    
+                    {item.dependencies && item.dependencies.length > 0 && (
+                      <div className="text-xs text-blue-600 flex items-center">
+                        <Link className="h-2 w-2 mr-1" />
+                        {item.dependencies.length}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Barre Gantt */}
+                {/* Barre Gantt avec redimensionnement */}
                 <div className="col-span-8 relative h-8 border border-gray-200 rounded">
                   <div
-                    className={`absolute top-0 h-full rounded cursor-move flex items-center px-2 text-white text-xs font-medium ${statusColor} ${
-                      draggedItem === item.id ? 'opacity-50' : ''
-                    } group-hover:shadow-md transition-shadow`}
+                    className={`absolute top-0 h-full rounded flex items-center px-2 text-white text-xs font-medium border-2 transition-all ${statusColor} ${
+                      draggedItem === item.id ? 'opacity-50 z-10' : ''
+                    } ${linkFromId === item.id ? 'ring-2 ring-blue-400' : ''} group-hover:shadow-md cursor-move`}
                     style={position}
-                    draggable
+                    draggable={!linkMode}
                     onDragStart={(e) => handleDragStart(e, item.id)}
+                    onClick={() => handleItemClick(item.id)}
                     data-testid={`gantt-bar-${item.id}`}
                   >
-                    <Move className="h-3 w-3 mr-1 opacity-70" />
-                    <span className="truncate">{item.name}</span>
+                    {/* Poignée de redimensionnement gauche */}
+                    {item.type !== 'milestone' && (
+                      <div
+                        className="absolute left-0 top-0 h-full w-2 cursor-ew-resize flex items-center justify-center group-hover:bg-black group-hover:bg-opacity-20"
+                        onMouseDown={(e) => handleResizeStart(e, item.id, 'start')}
+                        data-testid={`resize-start-${item.id}`}
+                      >
+                        <GripHorizontal className="h-2 w-2 opacity-0 group-hover:opacity-70" />
+                      </div>
+                    )}
                     
-                    {/* Indicateur de progression pour les projets */}
-                    {item.type === 'project' && item.progress !== undefined && (
+                    <div className="flex items-center space-x-1 flex-1 min-w-0">
+                      <Move className="h-3 w-3 opacity-70 flex-shrink-0" />
+                      <span className="truncate flex-1">{item.name}</span>
+                    </div>
+                    
+                    {/* Poignée de redimensionnement droite */}
+                    {item.type !== 'milestone' && (
+                      <div
+                        className="absolute right-0 top-0 h-full w-2 cursor-ew-resize flex items-center justify-center group-hover:bg-black group-hover:bg-opacity-20"
+                        onMouseDown={(e) => handleResizeStart(e, item.id, 'end')}
+                        data-testid={`resize-end-${item.id}`}
+                      >
+                        <GripHorizontal className="h-2 w-2 opacity-0 group-hover:opacity-70" />
+                      </div>
+                    )}
+                    
+                    {/* Indicateur de progression pour les projets/tâches */}
+                    {item.type !== 'milestone' && item.progress !== undefined && (
                       <div className="absolute bottom-0 left-0 h-1 bg-white bg-opacity-30 rounded-b">
                         <div 
                           className="h-full bg-white rounded-b transition-all duration-300"
@@ -273,48 +715,162 @@ export default function GanttChart({ projects, milestones, onDateUpdate, 'data-t
         {ganttItems.filter(item => isItemVisible(item.startDate, item.endDate)).length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <CalendarDays className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>Aucun projet ou jalon planifié pour cette semaine</p>
-            <Button variant="outline" size="sm" className="mt-2" onClick={goToCurrentWeek}>
-              Revenir à la semaine courante
-            </Button>
+            <p>Aucun projet ou jalon planifié pour cette période</p>
+            <div className="flex justify-center space-x-2 mt-4">
+              <Button variant="outline" size="sm" onClick={goToCurrentPeriod}>
+                Revenir à la période courante
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowCreateDialog(true)}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Créer une tâche
+              </Button>
+            </div>
           </div>
         )}
 
-        {/* Légende */}
+        {/* Statistiques et alertes */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-3">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <span className="text-sm font-medium">Éléments en retard</span>
+            </div>
+            <div className="text-lg font-bold text-red-600 mt-1">
+              {ganttItems.filter(isOverdue).length}
+            </div>
+          </Card>
+          
+          <Card className="p-3">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="h-4 w-4 text-orange-500" />
+              <span className="text-sm font-medium">Priorité critique</span>
+            </div>
+            <div className="text-lg font-bold text-orange-600 mt-1">
+              {ganttItems.filter(item => item.priority === 'critique').length}
+            </div>
+          </Card>
+          
+          <Card className="p-3">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-blue-500" />
+              <span className="text-sm font-medium">Heures planifiées</span>
+            </div>
+            <div className="text-lg font-bold text-blue-600 mt-1">
+              {ganttItems.reduce((total, item) => total + (item.estimatedHours || 0), 0)}h
+            </div>
+          </Card>
+        </div>
+
+        {/* Légende améliorée */}
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Légende</h4>
-          <div className="grid grid-cols-2 gap-4 text-xs">
+          <h4 className="text-sm font-medium text-gray-700 mb-3">Légende et actions</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded" />
-                <span>Étude</span>
+                <div className="w-3 h-3 bg-blue-500 rounded border-2 border-blue-600" />
+                <span>Étude / En cours</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-yellow-500 rounded" />
-                <span>Planification</span>
+                <div className="w-3 h-3 bg-red-500 rounded border-2 border-red-600" />
+                <span>En retard / Critique</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-orange-500 rounded" />
-                <span>Approvisionnement</span>
+                <Move className="h-3 w-3 text-gray-500" />
+                <span>Glissez-déposez pour modifier</span>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded" />
-                <span>Chantier</span>
+                <ArrowUpDown className="h-3 w-3 text-gray-500" />
+                <span>Redimensionnez par les bords</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-purple-500 rounded" />
-                <span>SAV</span>
+                <span className="text-gray-500">Double-clic</span>
+                <span>Créer une nouvelle tâche</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Move className="h-3 w-3 text-gray-500" />
-                <span>Glissez-déposez pour modifier les dates</span>
+                <Link className="h-3 w-3 text-blue-500" />
+                <span>Mode liaison pour dépendances</span>
               </div>
             </div>
           </div>
         </div>
       </CardContent>
+
+      {/* Dialog de création de tâche */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Créer une nouvelle tâche</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="task-name">Nom de la tâche</Label>
+              <Input
+                id="task-name"
+                value={newTaskName}
+                onChange={(e) => setNewTaskName(e.target.value)}
+                placeholder="Entrez le nom de la tâche"
+                data-testid="input-task-name"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="task-type">Type</Label>
+              <Select value={newTaskType} onValueChange={(value: 'task' | 'milestone') => setNewTaskType(value)}>
+                <SelectTrigger data-testid="select-task-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="task">Tâche</SelectItem>
+                  <SelectItem value="milestone">Jalon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="task-project">Projet</Label>
+              <Select value={newTaskProject} onValueChange={setNewTaskProject}>
+                <SelectTrigger data-testid="select-task-project">
+                  <SelectValue placeholder="Sélectionnez un projet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map(project => (
+                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {newTaskDate && (
+              <div>
+                <Label>Date sélectionnée</Label>
+                <div className="text-sm text-gray-600 p-2 bg-gray-100 rounded">
+                  {format(newTaskDate, 'dd/MM/yyyy', { locale: fr })}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Annuler
+              </Button>
+              <Button 
+                onClick={handleCreateTask} 
+                disabled={!newTaskName || !newTaskProject}
+                data-testid="button-create-task"
+              >
+                Créer la tâche
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

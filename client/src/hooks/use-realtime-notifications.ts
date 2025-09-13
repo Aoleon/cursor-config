@@ -90,6 +90,35 @@ export function useRealtimeNotifications(options: NotificationOptions = {}) {
         return '📊';
       case EventTypeEnum.SYSTEM_MAINTENANCE:
         return '🔧';
+      // Nouveaux événements priorités
+      case EventTypeEnum.PRIORITY_SCORE_UPDATED:
+        return '🎯';
+      case EventTypeEnum.PRIORITY_LEVEL_CHANGED:
+        return '🔺';
+      case EventTypeEnum.PRIORITY_OVERRIDE_APPLIED:
+        return '⚡';
+      case EventTypeEnum.PRIORITY_ALERT_CREATED:
+        return '🚨';
+      case EventTypeEnum.PRIORITY_CONFIG_UPDATED:
+        return '⚙️';
+      // Nouveaux événements métriques
+      case EventTypeEnum.WORKLOAD_UPDATED:
+        return '📊';
+      case EventTypeEnum.PERFORMANCE_METRICS_UPDATED:
+        return '📈';
+      case EventTypeEnum.HOURS_VARIANCE_ALERT:
+        return '⚠️';
+      case EventTypeEnum.ESTIMATION_ACCURACY_ALERT:
+        return '📉';
+      // Nouveaux événements Gantt
+      case EventTypeEnum.GANTT_TASK_MOVED:
+        return '📅';
+      case EventTypeEnum.GANTT_TASK_RESIZED:
+        return '⏱️';
+      case EventTypeEnum.GANTT_DEPENDENCY_CREATED:
+        return '🔗';
+      case EventTypeEnum.GANTT_MILESTONE_CREATED:
+        return '🎯';
       default:
         return '📢';
     }
@@ -251,7 +280,59 @@ export function useCriticalNotifications() {
       types: [
         EventTypeEnum.TASK_OVERDUE,
         EventTypeEnum.VALIDATION_MILESTONE_REJECTED,
-        EventTypeEnum.SYSTEM_MAINTENANCE
+        EventTypeEnum.SYSTEM_MAINTENANCE,
+        EventTypeEnum.PRIORITY_ALERT_CREATED,
+        EventTypeEnum.HOURS_VARIANCE_ALERT,
+        EventTypeEnum.ESTIMATION_ACCURACY_ALERT
+      ]
+    }
+  });
+}
+
+// Hook for priority notifications
+export function usePriorityNotifications() {
+  return useRealtimeNotifications({
+    enableToasts: true,
+    enableCacheInvalidation: true,
+    eventFilter: {
+      types: [
+        EventTypeEnum.PRIORITY_SCORE_UPDATED,
+        EventTypeEnum.PRIORITY_LEVEL_CHANGED,
+        EventTypeEnum.PRIORITY_OVERRIDE_APPLIED,
+        EventTypeEnum.PRIORITY_ALERT_CREATED,
+        EventTypeEnum.PRIORITY_CONFIG_UPDATED
+      ]
+    }
+  });
+}
+
+// Hook for workload and performance notifications
+export function useWorkloadNotifications() {
+  return useRealtimeNotifications({
+    enableToasts: true,
+    enableCacheInvalidation: true,
+    eventFilter: {
+      types: [
+        EventTypeEnum.WORKLOAD_UPDATED,
+        EventTypeEnum.PERFORMANCE_METRICS_UPDATED,
+        EventTypeEnum.HOURS_VARIANCE_ALERT,
+        EventTypeEnum.ESTIMATION_ACCURACY_ALERT
+      ]
+    }
+  });
+}
+
+// Hook for Gantt chart notifications
+export function useGanttNotifications() {
+  return useRealtimeNotifications({
+    enableToasts: true,
+    enableCacheInvalidation: true,
+    eventFilter: {
+      types: [
+        EventTypeEnum.GANTT_TASK_MOVED,
+        EventTypeEnum.GANTT_TASK_RESIZED,
+        EventTypeEnum.GANTT_DEPENDENCY_CREATED,
+        EventTypeEnum.GANTT_MILESTONE_CREATED
       ]
     }
   });

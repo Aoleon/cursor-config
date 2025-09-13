@@ -1,7 +1,9 @@
 import type { Express } from "express";
 import { storage } from "./storage";
+import { EventType, createRealtimeEvent, commonQueryKeys } from '../shared/events';
+import type { EventBus } from './eventBus';
 
-export function registerWorkflowRoutes(app: Express) {
+export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
   // ROUTES ÉTUDE TECHNIQUE
   // ========================================
@@ -320,5 +322,471 @@ export function registerWorkflowRoutes(app: Express) {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="devis-${req.params.id}.pdf"`);
     res.send("Contenu Devis PDF simulé");
+  });
+
+  // ========================================
+  // ROUTES SYSTÈME DE PRIORISATION INTELLIGENTE
+  // ========================================
+
+  // Récupérer toutes les priorités avec enrichissement des données
+  app.get("/api/priorities", async (req, res) => {
+    try {
+      const offers = await storage.getOffers();
+      const projects = await storage.getProjects();
+      
+      // Générer les données de priorité enrichies
+      const priorities = [
+        ...offers.map((offer: any) => {
+          const montantScore = Math.min(((offer.montantEstime || 50000) / 200000) * 100, 100);
+          const delaiScore = offer.deadline ? 
+            Math.max(100 - (new Date(offer.deadline).getTime() - Date.now()) / (7 * 24 * 60 * 60 * 1000) * 10, 0) 
+            : 50;
+          const typeClientScore = offer.typeMarche === 'public' ? 80 : 
+                                 offer.typeMarche === 'prive' ? 60 : 40;
+          const complexiteScore = (offer.lots?.length || 1) * 20 + 30;
+          const chargeBeScore = Math.random() * 100;
+          const risqueScore = 50 + Math.random() * 30;
+          const strategiqueScore = Math.random() * 100;
+          
+          const priorityScore = (
+            montantScore * 0.25 + 
+            delaiScore * 0.25 + 
+            typeClientScore * 0.15 + 
+            complexiteScore * 0.10 + 
+            chargeBeScore * 0.10 + 
+            risqueScore * 0.10 + 
+            strategiqueScore * 0.05
+          );
+
+          const getPriorityLevel = (score: number) => {
+            if (score > 80) return 'critique';
+            if (score > 60) return 'elevee';
+            if (score > 40) return 'normale';
+            if (score > 20) return 'faible';
+            return 'tres_faible';
+          };
+
+          return {
+            id: `offer-${offer.id}`,
+            offerId: offer.id,
+            name: offer.reference || `Offre ${offer.id.slice(0, 8)}`,
+            client: offer.clientName || 'Client inconnu',
+            type: 'offer',
+            priorityLevel: getPriorityLevel(priorityScore),
+            priorityScore: Math.round(priorityScore * 100) / 100,
+            montantScore: Math.round(montantScore * 100) / 100,
+            delaiScore: Math.round(delaiScore * 100) / 100,
+            typeClientScore: Math.round(typeClientScore * 100) / 100,
+            complexiteScore: Math.round(complexiteScore * 100) / 100,
+            chargeBeScore: Math.round(chargeBeScore * 100) / 100,
+            risqueScore: Math.round(risqueScore * 100) / 100,
+            strategiqueScore: Math.round(strategiqueScore * 100) / 100,
+            montant: offer.montantEstime,
+            deadline: offer.deadline,
+            typeClient: offer.typeMarche,
+            complexite: offer.lots?.length > 3 ? 'haute' : 'normale',
+            chargeBeEstimee: offer.beHoursEstimated,
+            autoCalculated: true,
+            manualOverride: false,
+            alertCritical: priorityScore > 80,
+            alertSent: false,
+            lastCalculatedAt: new Date(),
+            isActive: true
+          };
+        }),
+        
+        ...projects.map((project: any) => {
+          const montantScore = Math.min(((project.budget || 75000) / 300000) * 100, 100);
+          const delaiScore = project.endDate ? 
+            Math.max(100 - (new Date(project.endDate).getTime() - Date.now()) / (14 * 24 * 60 * 60 * 1000) * 10, 0) 
+            : 50;
+          const typeClientScore = 70;
+          const complexiteScore = Math.random() * 100;
+          const chargeBeScore = Math.random() * 100;
+          const risqueScore = 40 + Math.random() * 40;
+          const strategiqueScore = Math.random() * 100;
+          
+          const priorityScore = (
+            montantScore * 0.25 + 
+            delaiScore * 0.25 + 
+            typeClientScore * 0.15 + 
+            complexiteScore * 0.10 + 
+            chargeBeScore * 0.10 + 
+            risqueScore * 0.10 + 
+            strategiqueScore * 0.05
+          );
+
+          const getPriorityLevel = (score: number) => {
+            if (score > 80) return 'critique';
+            if (score > 60) return 'elevee';
+            if (score > 40) return 'normale';
+            if (score > 20) return 'faible';
+            return 'tres_faible';
+          };
+
+          return {
+            id: `project-${project.id}`,
+            projectId: project.id,
+            name: project.name || `Projet ${project.id.slice(0, 8)}`,
+            client: project.client || 'Client projet',
+            type: 'project',
+            priorityLevel: getPriorityLevel(priorityScore),
+            priorityScore: Math.round(priorityScore * 100) / 100,
+            montantScore: Math.round(montantScore * 100) / 100,
+            delaiScore: Math.round(delaiScore * 100) / 100,
+            typeClientScore: Math.round(typeClientScore * 100) / 100,
+            complexiteScore: Math.round(complexiteScore * 100) / 100,
+            chargeBeScore: Math.round(chargeBeScore * 100) / 100,
+            risqueScore: Math.round(risqueScore * 100) / 100,
+            strategiqueScore: Math.round(strategiqueScore * 100) / 100,
+            montant: project.budget,
+            deadline: project.endDate,
+            typeClient: 'prive',
+            complexite: 'normale',
+            autoCalculated: true,
+            manualOverride: false,
+            alertCritical: priorityScore > 80,
+            alertSent: false,
+            lastCalculatedAt: new Date(),
+            isActive: true
+          };
+        })
+      ];
+
+      res.json(priorities);
+    } catch (error) {
+      console.error('Erreur priorities:', error);
+      res.status(500).json({ error: "Erreur lors de la récupération des priorités" });
+    }
+  });
+
+  // Recalculer les priorités avec de nouveaux poids
+  app.post("/api/priorities/recalculate", async (req, res) => {
+    try {
+      const { 
+        montantWeight, 
+        delaiWeight, 
+        typeClientWeight, 
+        complexiteWeight, 
+        chargeBeWeight, 
+        risqueWeight, 
+        strategiqueWeight 
+      } = req.body;
+      
+      // Vérifier que la somme des poids = 100
+      const totalWeight = montantWeight + delaiWeight + typeClientWeight + 
+                         complexiteWeight + chargeBeWeight + risqueWeight + strategiqueWeight;
+      
+      if (Math.abs(totalWeight - 100) > 0.01) {
+        return res.status(400).json({ 
+          error: "La somme des poids doit être égale à 100%",
+          totalReceived: totalWeight 
+        });
+      }
+      
+      // Simuler le recalcul avec les nouveaux poids
+      const offers = await storage.getOffers();
+      const projects = await storage.getProjects();
+      
+      const recalculatedCount = offers.length + projects.length;
+      
+      // Émettre événement de mise à jour de configuration
+      if (eventBus) {
+        const configEvent = createRealtimeEvent({
+          type: EventType.PRIORITY_CONFIG_UPDATED,
+          entity: 'project',
+          entityId: 'config',
+          severity: 'info',
+          affectedQueryKeys: [commonQueryKeys.priorities(), commonQueryKeys.priorityConfig()],
+          metadata: {
+            updatedBy: 'admin', // TODO: récupérer l'utilisateur réel
+            newWeights: { montantWeight, delaiWeight, typeClientWeight, complexiteWeight, chargeBeWeight, risqueWeight, strategiqueWeight }
+          }
+        });
+        eventBus.emit(configEvent);
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `${recalculatedCount} éléments recalculés avec les nouveaux poids`,
+        weights: {
+          montantWeight, delaiWeight, typeClientWeight,
+          complexiteWeight, chargeBeWeight, risqueWeight, strategiqueWeight
+        },
+        recalculatedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Erreur recalcul priorités:', error);
+      res.status(500).json({ error: "Erreur lors du recalcul des priorités" });
+    }
+  });
+
+  // Forcer la priorité manuellement
+  app.post("/api/priorities/:itemId/override", async (req, res) => {
+    try {
+      const { itemId } = req.params;
+      const { priorityLevel, reason } = req.body;
+      
+      if (!['tres_faible', 'faible', 'normale', 'elevee', 'critique'].includes(priorityLevel)) {
+        return res.status(400).json({ error: "Niveau de priorité invalide" });
+      }
+      
+      // Émettre événement de priorité forcée
+      if (eventBus) {
+        const overrideEvent = createRealtimeEvent({
+          type: EventType.PRIORITY_OVERRIDE_APPLIED,
+          entity: itemId.startsWith('project-') ? 'project' : 'offer',
+          entityId: itemId,
+          severity: priorityLevel === 'critique' ? 'warning' : 'info',
+          prevStatus: 'auto',
+          newStatus: priorityLevel,
+          affectedQueryKeys: [commonQueryKeys.priorities(), commonQueryKeys.priority(itemId)],
+          metadata: {
+            itemName: `Élément ${itemId}`,
+            reason,
+            overrideBy: 'user'
+          }
+        });
+        eventBus.emit(overrideEvent);
+      }
+      
+      // Simuler la mise à jour
+      res.json({ 
+        success: true, 
+        message: "Priorité forcée avec succès",
+        itemId,
+        newPriorityLevel: priorityLevel,
+        reason,
+        overrideBy: "user", // Dans un vrai système, récupérer l'utilisateur depuis la session
+        overrideAt: new Date()
+      });
+    } catch (error) {
+      console.error('Erreur override priorité:', error);
+      res.status(500).json({ error: "Erreur lors du forçage de priorité" });
+    }
+  });
+
+  // Obtenir l'historique des priorités d'un élément
+  app.get("/api/priorities/:itemId/history", async (req, res) => {
+    try {
+      const { itemId } = req.params;
+      
+      // Simuler un historique de changements
+      const history = [
+        {
+          id: "hist-1",
+          itemId,
+          previousLevel: "normale",
+          newLevel: "elevee",
+          previousScore: 55.2,
+          newScore: 72.8,
+          reason: "Délai raccourci par le client",
+          changedBy: "System",
+          changedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // Il y a 2 jours
+          isAutomatic: true
+        },
+        {
+          id: "hist-2",
+          itemId,
+          previousLevel: "elevee",
+          newLevel: "critique",
+          previousScore: 72.8,
+          newScore: 85.1,
+          reason: "Priorité forcée par manager",
+          changedBy: "Julien Lemaire",
+          changedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // Il y a 1 jour
+          isAutomatic: false
+        }
+      ];
+      
+      res.json(history);
+    } catch (error) {
+      console.error('Erreur historique priorité:', error);
+      res.status(500).json({ error: "Erreur lors de la récupération de l'historique" });
+    }
+  });
+
+  // Obtenir les alertes de priorité critique
+  app.get("/api/priorities/alerts", async (req, res) => {
+    try {
+      // Simuler des alertes critiques
+      const alerts = [
+        {
+          id: "alert-1",
+          itemId: "offer-123",
+          itemName: "Rénovation Mairie Boulogne",
+          priorityLevel: "critique",
+          priorityScore: 87.5,
+          alertType: "deadline_approaching",
+          message: "Délai de réponse dans 2 jours",
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // Il y a 2 heures
+          isActive: true,
+          isDismissed: false
+        },
+        {
+          id: "alert-2",
+          itemId: "project-456",
+          itemName: "Chantier Résidence Neptune",
+          priorityLevel: "critique",
+          priorityScore: 91.2,
+          alertType: "high_value_urgent",
+          message: "Projet haute valeur avec délai serré",
+          createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // Il y a 4 heures
+          isActive: true,
+          isDismissed: false
+        }
+      ];
+      
+      res.json(alerts);
+    } catch (error) {
+      console.error('Erreur alertes priorité:', error);
+      res.status(500).json({ error: "Erreur lors de la récupération des alertes" });
+    }
+  });
+
+  // Marquer une alerte comme vue/résolue
+  app.post("/api/priorities/alerts/:alertId/dismiss", async (req, res) => {
+    try {
+      const { alertId } = req.params;
+      
+      // Émettre événement de mise à jour des alertes
+      if (eventBus) {
+        const alertDismissEvent = createRealtimeEvent({
+          type: EventType.PRIORITY_ALERT_CREATED,
+          entity: 'project',
+          entityId: alertId,
+          severity: 'info',
+          affectedQueryKeys: [commonQueryKeys.priorityAlerts()],
+          metadata: {
+            action: 'dismissed',
+            dismissedBy: 'user'
+          }
+        });
+        eventBus.emit(alertDismissEvent);
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Alerte marquée comme vue",
+        alertId,
+        dismissedAt: new Date(),
+        dismissedBy: "user"
+      });
+    } catch (error) {
+      console.error('Erreur dismiss alerte:', error);
+      res.status(500).json({ error: "Erreur lors de la suppression de l'alerte" });
+    }
+  });
+
+  // Obtenir les statistiques de priorité
+  app.get("/api/priorities/stats", async (req, res) => {
+    try {
+      const offers = await storage.getOffers();
+      const projects = await storage.getProjects();
+      
+      // Simuler les statistiques
+      const stats = {
+        totalItems: offers.length + projects.length,
+        byLevel: {
+          critique: Math.floor((offers.length + projects.length) * 0.15),
+          elevee: Math.floor((offers.length + projects.length) * 0.25),
+          normale: Math.floor((offers.length + projects.length) * 0.40),
+          faible: Math.floor((offers.length + projects.length) * 0.15),
+          tres_faible: Math.floor((offers.length + projects.length) * 0.05)
+        },
+        averageScore: 62.3,
+        alertsActive: 3,
+        manualOverrides: 5,
+        lastUpdate: new Date(),
+        trendsLastWeek: {
+          criticalIncrease: 2,
+          manualOverridesCount: 3,
+          averageScoreChange: +2.1
+        }
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error('Erreur stats priorité:', error);
+      res.status(500).json({ error: "Erreur lors de la récupération des statistiques" });
+    }
+  });
+
+  // Configuration des règles de priorité
+  app.get("/api/priorities/config", async (req, res) => {
+    try {
+      const config = {
+        weights: {
+          montantWeight: 25,
+          delaiWeight: 25,
+          typeClientWeight: 15,
+          complexiteWeight: 10,
+          chargeBeWeight: 10,
+          risqueWeight: 10,
+          strategiqueWeight: 5
+        },
+        thresholds: {
+          critique: 80,
+          elevee: 60,
+          normale: 40,
+          faible: 20
+        },
+        autoRecalculate: true,
+        alertsEnabled: true,
+        notificationChannels: ['email', 'dashboard'],
+        lastConfigUpdate: new Date(),
+        configuredBy: "admin"
+      };
+      
+      res.json(config);
+    } catch (error) {
+      console.error('Erreur config priorité:', error);
+      res.status(500).json({ error: "Erreur lors de la récupération de la configuration" });
+    }
+  });
+
+  // Sauvegarder la configuration des règles de priorité
+  app.post("/api/priorities/config", async (req, res) => {
+    try {
+      const { weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels } = req.body;
+      
+      // Validation basique
+      if (weights) {
+        const totalWeight = Object.values(weights).reduce((sum: number, weight: any) => sum + weight, 0);
+        if (Math.abs(totalWeight - 100) > 0.01) {
+          return res.status(400).json({ error: "La somme des poids doit être égale à 100%" });
+        }
+      }
+      
+      // Émettre événement de configuration mise à jour
+      if (eventBus) {
+        const configSaveEvent = createRealtimeEvent({
+          type: EventType.PRIORITY_CONFIG_UPDATED,
+          entity: 'project',
+          entityId: 'config-save',
+          severity: 'info',
+          affectedQueryKeys: [commonQueryKeys.priorityConfig(), commonQueryKeys.priorities()],
+          metadata: {
+            updatedBy: 'user',
+            newConfig: { weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels }
+          }
+        });
+        eventBus.emit(configSaveEvent);
+      }
+      
+      // Simuler la sauvegarde
+      res.json({ 
+        success: true, 
+        message: "Configuration sauvegardée",
+        config: {
+          weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels,
+          lastConfigUpdate: new Date(),
+          configuredBy: "user"
+        }
+      });
+    } catch (error) {
+      console.error('Erreur save config priorité:', error);
+      res.status(500).json({ error: "Erreur lors de la sauvegarde de la configuration" });
+    }
   });
 }

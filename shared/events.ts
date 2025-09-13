@@ -36,7 +36,26 @@ export enum EventType {
   
   // Fournisseurs
   SUPPLIER_REQUEST_SENT = 'supplier_request.sent',
-  SUPPLIER_RESPONSE_RECEIVED = 'supplier_response.received'
+  SUPPLIER_RESPONSE_RECEIVED = 'supplier_response.received',
+  
+  // Priorités intelligentes
+  PRIORITY_SCORE_UPDATED = 'priority.score_updated',
+  PRIORITY_LEVEL_CHANGED = 'priority.level_changed',
+  PRIORITY_OVERRIDE_APPLIED = 'priority.override_applied',
+  PRIORITY_ALERT_CREATED = 'priority.alert_created',
+  PRIORITY_CONFIG_UPDATED = 'priority.config_updated',
+  
+  // Métriques et performances
+  WORKLOAD_UPDATED = 'workload.updated',
+  PERFORMANCE_METRICS_UPDATED = 'performance.metrics_updated',
+  HOURS_VARIANCE_ALERT = 'hours.variance_alert',
+  ESTIMATION_ACCURACY_ALERT = 'estimation.accuracy_alert',
+  
+  // Gantt et planification
+  GANTT_TASK_MOVED = 'gantt.task_moved',
+  GANTT_TASK_RESIZED = 'gantt.task_resized',
+  GANTT_DEPENDENCY_CREATED = 'gantt.dependency_created',
+  GANTT_MILESTONE_CREATED = 'gantt.milestone_created'
 }
 
 // ========================================
@@ -244,6 +263,74 @@ export const eventMessageTemplates: Record<EventType, (event: RealtimeEvent) => 
     title: "Tâche assignée",
     message: `👤 Tâche ${event.metadata?.taskName || 'nouvelle'} assignée à ${event.metadata?.assigneeName || 'l\'équipe'}`
   }),
+  
+  // Priorités intelligentes
+  [EventType.PRIORITY_SCORE_UPDATED]: (event) => ({
+    title: "Score de priorité mis à jour",
+    message: `🎯 Score: ${event.metadata?.oldScore || 'N/A'} → ${event.metadata?.newScore || 'N/A'} pour ${event.metadata?.itemName || event.entityId}`
+  }),
+  
+  [EventType.PRIORITY_LEVEL_CHANGED]: (event) => ({
+    title: "Niveau de priorité modifié",
+    message: `🔺 Priorité ${event.metadata?.itemName || event.entityId}: ${event.prevStatus} → ${event.newStatus}`
+  }),
+  
+  [EventType.PRIORITY_OVERRIDE_APPLIED]: (event) => ({
+    title: "Priorité forcée manuellement",
+    message: `⚡ Priorité forcée pour ${event.metadata?.itemName || event.entityId}: ${event.newStatus} (${event.metadata?.reason || 'Aucune raison'})`
+  }),
+  
+  [EventType.PRIORITY_ALERT_CREATED]: (event) => ({
+    title: "Alerte de priorité critique",
+    message: `🚨 Nouvelle alerte critique: ${event.metadata?.itemName || event.entityId} (Score: ${event.metadata?.score || 'N/A'})`
+  }),
+  
+  [EventType.PRIORITY_CONFIG_UPDATED]: (event) => ({
+    title: "Configuration priorité mise à jour",
+    message: `⚙️ Règles de priorisation mises à jour par ${event.metadata?.updatedBy || 'admin'}`
+  }),
+  
+  // Métriques et performances  
+  [EventType.WORKLOAD_UPDATED]: (event) => ({
+    title: "Charge de travail mise à jour",
+    message: `📊 Charge BE mise à jour: ${event.metadata?.memberName || 'équipe'} (${event.metadata?.newLoad || 'N/A'}%)`
+  }),
+  
+  [EventType.PERFORMANCE_METRICS_UPDATED]: (event) => ({
+    title: "Métriques de performance actualisées",
+    message: `📈 Précision: ${event.metadata?.accuracy || 'N/A'}% | Productivité: ${event.metadata?.productivity || 'N/A'}%`
+  }),
+  
+  [EventType.HOURS_VARIANCE_ALERT]: (event) => ({
+    title: "Écart important d'heures détecté",
+    message: `⚠️ Écart de ${event.metadata?.variancePercent || 'N/A'}% détecté pour ${event.metadata?.itemName || event.entityId}`
+  }),
+  
+  [EventType.ESTIMATION_ACCURACY_ALERT]: (event) => ({
+    title: "Précision d'estimation faible",
+    message: `📉 Précision d'estimation à ${event.metadata?.accuracy || 'N/A'}% (seuil: ${event.metadata?.threshold || '70'}%)`
+  }),
+  
+  // Gantt et planification
+  [EventType.GANTT_TASK_MOVED]: (event) => ({
+    title: "Tâche déplacée",
+    message: `📅 ${event.metadata?.taskName || 'Tâche'} déplacée: ${event.metadata?.oldDate || 'N/A'} → ${event.metadata?.newDate || 'N/A'}`
+  }),
+  
+  [EventType.GANTT_TASK_RESIZED]: (event) => ({
+    title: "Durée de tâche modifiée", 
+    message: `⏱️ ${event.metadata?.taskName || 'Tâche'} redimensionnée: ${event.metadata?.oldDuration || 'N/A'} → ${event.metadata?.newDuration || 'N/A'} jours`
+  }),
+  
+  [EventType.GANTT_DEPENDENCY_CREATED]: (event) => ({
+    title: "Dépendance créée",
+    message: `🔗 Dépendance créée entre ${event.metadata?.fromTask || 'tâche'} → ${event.metadata?.toTask || 'tâche'}`
+  }),
+  
+  [EventType.GANTT_MILESTONE_CREATED]: (event) => ({
+    title: "Nouveau jalon créé",
+    message: `🎯 Jalon "${event.metadata?.milestoneName || 'Nouveau jalon'}" créé le ${event.metadata?.date || 'N/A'}`
+  }),
 };
 
 // ========================================
@@ -304,4 +391,14 @@ export const commonQueryKeys = {
     entityType && entityId ? ['/api/validation-milestones', entityType, entityId] : ['/api/validation-milestones'],
   suppliers: () => ['/api/suppliers'],
   supplierRequests: () => ['/api/supplier-requests'],
+  
+  // Nouvelles query keys pour priorités et métriques
+  priorities: () => ['/api/priorities'],
+  priority: (id: string) => ['/api/priorities', id],
+  priorityAlerts: () => ['/api/priorities/alerts'],
+  priorityHistory: (itemId: string) => ['/api/priorities', itemId, 'history'],
+  priorityStats: () => ['/api/priorities/stats'],
+  priorityConfig: () => ['/api/priorities/config'],
+  workloadMetrics: (period?: string) => period ? ['/api/workload/performance-history', period] : ['/api/workload/performance-history'],
+  projectMetrics: () => ['/api/projects/metrics'],
 };

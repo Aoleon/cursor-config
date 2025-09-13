@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, ChevronRight, Calendar, User, Clock, MapPin, Folder, Target } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isWithinInterval, differenceInDays, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import GanttChart from "@/components/projects/GanttChart";
 
 interface TimelineViewProps {
   selectedProjectId?: string;
@@ -269,15 +270,19 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
         </div>
       )}
 
-      {/* Vue Gantt simplifiée */}
+      {/* Vue Gantt interactive complète */}
       {viewMode === "gantt" && (
         <div className="space-y-4">
-          <div className="text-center py-8 text-gray-500">
-            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-medium mb-2">Vue Gantt</h3>
-            <p>Fonctionnalité en cours de développement</p>
-            <p className="text-sm mt-2">Utilisez la vue liste pour visualiser les projets et leurs tâches</p>
-          </div>
+          <GanttChart 
+            projects={filteredProjects}
+            milestones={[]} 
+            onDateUpdate={(itemId, newStartDate, newEndDate, type) => {
+              // Handler pour mise à jour des dates
+              console.log(`Date update: ${itemId}, ${type}, ${newStartDate} - ${newEndDate}`);
+            }}
+            enableRealtime={true}
+            data-testid="timeline-gantt-chart"
+          />
         </div>
       )}
 

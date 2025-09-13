@@ -130,6 +130,16 @@ export const supplierStatusEnum = pgEnum("supplier_status", [
   "actif", "inactif", "suspendu", "blackliste"
 ]);
 
+// Niveaux de priorité pour projets et offres
+export const priorityLevelEnum = pgEnum("priority_level", [
+  "tres_faible", "faible", "normale", "elevee", "critique"
+]);
+
+// Types de facteurs de priorité
+export const priorityFactorEnum = pgEnum("priority_factor", [
+  "montant", "delai", "type_client", "complexite", "charge_be", "risque", "strategique"
+]);
+
 // ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
@@ -756,6 +766,66 @@ export const validationMilestones = pgTable("validation_milestones", {
     offerIdx: index("validation_milestones_offer_idx").on(table.offerId),
     projectIdx: index("validation_milestones_project_idx").on(table.projectId),
     typeIdx: index("validation_milestones_type_idx").on(table.milestoneType),
+  };
+});
+
+// Table de priorisation intelligente des projets et offres
+export const projectPriorities = pgTable("project_priorities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  offerId: varchar("offer_id").references(() => offers.id),
+  projectId: varchar("project_id").references(() => projects.id),
+  
+  // Score et niveau de priorité
+  priorityLevel: priorityLevelEnum("priority_level").default("normale"),
+  priorityScore: decimal("priority_score", { precision: 10, scale: 2 }).default("50.00"), // Score sur 100
+  
+  // Facteurs de scoring (valeurs 0-100 pour chaque facteur)
+  montantScore: decimal("montant_score", { precision: 5, scale: 2 }).default("50.00"),
+  delaiScore: decimal("delai_score", { precision: 5, scale: 2 }).default("50.00"),
+  typeClientScore: decimal("type_client_score", { precision: 5, scale: 2 }).default("50.00"),
+  complexiteScore: decimal("complexite_score", { precision: 5, scale: 2 }).default("50.00"),
+  chargeBeScore: decimal("charge_be_score", { precision: 5, scale: 2 }).default("50.00"),
+  risqueScore: decimal("risque_score", { precision: 5, scale: 2 }).default("50.00"),
+  strategiqueScore: decimal("strategique_score", { precision: 5, scale: 2 }).default("50.00"),
+  
+  // Poids des facteurs (configurable, somme doit = 100)
+  montantWeight: decimal("montant_weight", { precision: 5, scale: 2 }).default("25.00"),
+  delaiWeight: decimal("delai_weight", { precision: 5, scale: 2 }).default("25.00"),
+  typeClientWeight: decimal("type_client_weight", { precision: 5, scale: 2 }).default("15.00"),
+  complexiteWeight: decimal("complexite_weight", { precision: 5, scale: 2 }).default("10.00"),
+  chargeBeWeight: decimal("charge_be_weight", { precision: 5, scale: 2 }).default("10.00"),
+  risqueWeight: decimal("risque_weight", { precision: 5, scale: 2 }).default("10.00"),
+  strategiqueWeight: decimal("strategique_weight", { precision: 5, scale: 2 }).default("5.00"),
+  
+  // Règles et configuration
+  autoCalculated: boolean("auto_calculated").default(true), // Si calculé automatiquement
+  manualOverride: boolean("manual_override").default(false), // Si priorité forcée manuellement
+  manualPriorityLevel: priorityLevelEnum("manual_priority_level"), // Priorité forcée
+  overrideReason: text("override_reason"), // Raison du forçage
+  overrideBy: varchar("override_by").references(() => users.id), // Qui a forcé
+  overrideAt: timestamp("override_at"),
+  
+  // Notifications et alertes
+  alertCritical: boolean("alert_critical").default(false), // Alerte critique activée
+  alertSent: boolean("alert_sent").default(false), // Alerte déjà envoyée
+  alertSentAt: timestamp("alert_sent_at"),
+  
+  // Historique et suivi
+  lastCalculatedAt: timestamp("last_calculated_at").defaultNow(),
+  calculationHistory: jsonb("calculation_history"), // Historique des changements de score
+  
+  // Métadonnées
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    offerIdx: index("project_priorities_offer_idx").on(table.offerId),
+    projectIdx: index("project_priorities_project_idx").on(table.projectId),
+    priorityLevelIdx: index("project_priorities_level_idx").on(table.priorityLevel),
+    scoreIdx: index("project_priorities_score_idx").on(table.priorityScore),
+    activeIdx: index("project_priorities_active_idx").on(table.isActive),
   };
 });
 
@@ -1681,3 +1751,45 @@ export type InsertBatigestIntegration = z.infer<typeof insertBatigestIntegration
 export type InsertBatigestAnalytics = z.infer<typeof insertBatigestAnalyticsSchema>;
 export type BatigestIntegration = typeof batigestIntegrations.$inferSelect;
 export type BatigestAnalytics = typeof batigestAnalytics.$inferSelect;
+
+// Schema d'insertion pour project_priorities
+export const insertProjectPrioritySchema = createInsertSchema(projectPriorities).omit({
+  id: true,
+  lastCalculatedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schema pour la configuration des poids de priorité
+export const priorityWeightsConfigSchema = z.object({
+  montantWeight: z.number().min(0).max(100).default(25),
+  delaiWeight: z.number().min(0).max(100).default(25),
+  typeClientWeight: z.number().min(0).max(100).default(15),
+  complexiteWeight: z.number().min(0).max(100).default(10),
+  chargeBeWeight: z.number().min(0).max(100).default(10),
+  risqueWeight: z.number().min(0).max(100).default(10),
+  strategiqueWeight: z.number().min(0).max(100).default(5),
+}).refine(data => {
+  const total = Object.values(data).reduce((sum, weight) => sum + weight, 0);
+  return Math.abs(total - 100) < 0.01; // Tolérance pour les erreurs de float
+}, {
+  message: "La somme des poids doit être égale à 100"
+});
+
+// Schema pour la recherche de priorités
+export const searchProjectPrioritiesSchema = z.object({
+  priorityLevel: z.array(z.string()).optional(), // Filtrer par niveau de priorité
+  minScore: z.number().min(0).max(100).optional(),
+  maxScore: z.number().min(0).max(100).optional(),
+  onlyAlerts: z.boolean().optional(), // Seulement les alertes critiques
+  manualOverride: z.boolean().optional(), // Seulement les priorités forcées
+  isActive: z.boolean().optional().default(true),
+  offerId: z.string().optional(),
+  projectId: z.string().optional(),
+});
+
+// Types pour project_priorities
+export type InsertProjectPriority = z.infer<typeof insertProjectPrioritySchema>;
+export type ProjectPriority = typeof projectPriorities.$inferSelect;
+export type PriorityWeightsConfig = z.infer<typeof priorityWeightsConfigSchema>;
+export type SearchProjectPriorities = z.infer<typeof searchProjectPrioritiesSchema>;

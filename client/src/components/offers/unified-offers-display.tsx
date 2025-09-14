@@ -32,7 +32,7 @@ export default function UnifiedOffersDisplay({
   const [statusFilter, setStatusFilter] = useState("tous");
   const { toast } = useToast();
 
-  const { data: offers = [], isLoading } = useQuery({
+  const { data: offers = [], isLoading, isError, error } = useQuery({
     queryKey: [endpoint, search, statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -40,7 +40,7 @@ export default function UnifiedOffersDisplay({
       if (statusFilter !== "tous") params.append('status', statusFilter);
       const queryString = params.toString();
       const response = await fetch(`${endpoint}${queryString ? `?${queryString}` : ''}`);
-      if (!response.ok) throw new Error('Failed to fetch offers');
+      if (!response.ok) throw new Error(`Erreur ${response.status}: ${response.statusText}`);
       return response.json();
     },
   });
@@ -151,11 +151,34 @@ export default function UnifiedOffersDisplay({
 
   if (isLoading) {
     return (
-      <Card>
+      <Card data-testid="offers-loading">
         <CardContent className="p-6">
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-500">Chargement des offres...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" data-testid="loading-spinner"></div>
+            <p className="text-gray-500" data-testid="loading-message">Chargement des offres...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card data-testid="offers-error">
+        <CardContent className="p-6">
+          <div className="text-center py-8">
+            <div className="text-red-500 mb-4">⚠️</div>
+            <p className="text-gray-600 mb-4" data-testid="error-message">
+              Impossible de charger les offres.
+              {error && ` (${(error as Error).message})`}
+            </p>
+            <Button 
+              onClick={() => window.location.reload()}
+              variant="outline"
+              data-testid="button-reload-offers"
+            >
+              Réessayer
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -163,18 +186,18 @@ export default function UnifiedOffersDisplay({
   }
 
   return (
-    <Card>
+    <Card data-testid="unified-offers-display">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between" data-testid="offers-header">
           <div className="flex items-center space-x-2">
             <FileText className="h-5 w-5" />
-            <span>{title} ({offers.length})</span>
+            <span data-testid="offers-count">{title} ({offers.length})</span>
           </div>
           {showCreateButton && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={() => setLocation("/create-ao")}>
+                  <Button onClick={() => setLocation("/create-ao")} data-testid="button-create-ao-unified">
                     <Plus className="h-4 w-4 mr-2" />
                     Nouvel AO
                   </Button>
@@ -188,7 +211,7 @@ export default function UnifiedOffersDisplay({
         </CardTitle>
         
         {/* Filtres */}
-        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+        <div className="flex flex-col sm:flex-row gap-4 mt-4" data-testid="offers-filters">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -224,12 +247,12 @@ export default function UnifiedOffersDisplay({
       
       <CardContent>
         {offers.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="text-center py-12" data-testid="offers-empty-state">
             <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-lg font-medium text-gray-900 mb-2" data-testid="empty-title">
               Aucune offre trouvée
             </h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-gray-500 mb-4" data-testid="empty-description">
               {search || statusFilter !== "tous" 
                 ? "Aucune offre ne correspond aux critères de recherche"
                 : "Commencez par créer votre première offre"
@@ -246,7 +269,7 @@ export default function UnifiedOffersDisplay({
             )}
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-4" data-testid="offers-list">
             {offers.map((offer: any) => (
               <Card 
                 key={offer.id} 

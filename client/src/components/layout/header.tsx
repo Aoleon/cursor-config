@@ -49,20 +49,20 @@ export default function Header({ title, breadcrumbs = [], actions = [] }: Header
     <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900" data-testid="header-title">{title}</h1>
           {breadcrumbs.length > 0 && (
-            <Breadcrumb className="mt-1">
+            <Breadcrumb className="mt-1" data-testid="header-breadcrumbs">
               <BreadcrumbList>
                 {breadcrumbs.map((crumb, index) => (
                   <div key={index} className="flex items-center">
                     {index > 0 && <BreadcrumbSeparator />}
                     <BreadcrumbItem>
                       {crumb.href ? (
-                        <BreadcrumbLink href={crumb.href}>
+                        <BreadcrumbLink href={crumb.href} data-testid={`breadcrumb-link-${crumb.label.toLowerCase().replace(/\s+/g, '-')}`}>
                           {crumb.label}
                         </BreadcrumbLink>
                       ) : (
-                        <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                        <BreadcrumbPage data-testid={`breadcrumb-page-${crumb.label.toLowerCase().replace(/\s+/g, '-')}`}>{crumb.label}</BreadcrumbPage>
                       )}
                     </BreadcrumbItem>
                   </div>
@@ -76,13 +76,14 @@ export default function Header({ title, breadcrumbs = [], actions = [] }: Header
           <WebSocketStatus variant="badge" showLabel={false} data-testid="header-websocket-status" />
           
           {actions.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2" data-testid="header-actions">
               {actions.map((action, index) => (
                 <Button
                   key={index}
                   variant={action.variant || "default"}
                   onClick={() => handleActionClick(action.action, action.onClick)}
                   className="flex items-center gap-2"
+                  data-testid={`button-${action.label.toLowerCase().replace(/\s+/g, '-')}`}
                 >
                   {getIcon(action.icon)}
                   {action.label}

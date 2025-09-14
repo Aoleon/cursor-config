@@ -93,20 +93,20 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="flex w-64 bg-white shadow-card flex-col">
+    <aside className="flex w-64 bg-white shadow-card flex-col" data-testid="sidebar">
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3" data-testid="sidebar-brand">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
             <Wrench className="text-white text-lg" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">JLM ERP</h1>
-            <p className="text-sm text-gray-600">Menuiserie</p>
+            <h1 className="text-xl font-bold text-gray-900" data-testid="brand-title">JLM ERP</h1>
+            <p className="text-sm text-gray-600" data-testid="brand-subtitle">Menuiserie</p>
           </div>
         </div>
       </div>
       
-      <nav className="flex-1 mt-6 overflow-y-auto">
+      <nav className="flex-1 mt-6 overflow-y-auto" data-testid="sidebar-navigation">
         <div className="px-3">
           <div className="space-y-1">
             {navigation.map((item) => {
@@ -128,8 +128,9 @@ export default function Sidebar() {
                         toggleExpanded(item.name);
                       }
                     }}
+                    data-testid={`nav-item-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                   >
-                    <Link href={item.href} className="flex items-center flex-1">
+                    <Link href={item.href} className="flex items-center flex-1" data-testid={`nav-link-${item.name.toLowerCase().replace(/\s+/g, '-')}`}>
                       <div className="flex items-center">
                         <item.icon
                           className={cn(
@@ -147,6 +148,7 @@ export default function Sidebar() {
                           e.stopPropagation();
                           toggleExpanded(item.name);
                         }}
+                        data-testid={`button-expand-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                       >
                         {isExpanded ? (
                           <ChevronDown className="w-4 h-4" />
@@ -158,11 +160,11 @@ export default function Sidebar() {
                   </div>
                   
                   {hasSubItems && isExpanded && (
-                    <div className="mt-1 ml-4 space-y-1">
+                    <div className="mt-1 ml-4 space-y-1" data-testid={`nav-subitems-${item.name.toLowerCase().replace(/\s+/g, '-')}`}>
                       {item.subItems?.map((subItem) => {
                         const isSubActive = location === subItem.href;
                         return (
-                          <Link key={subItem.name} href={subItem.href}>
+                          <Link key={subItem.name} href={subItem.href} data-testid={`nav-sublink-${subItem.name.toLowerCase().replace(/\s+/g, '-')}`}>
                             <div
                               className={cn(
                                 "group flex items-center px-3 py-2 text-xs rounded-md transition-colors cursor-pointer",
@@ -171,6 +173,7 @@ export default function Sidebar() {
                                   : "text-gray-600 hover:bg-gray-50"
                               )}
                               title={subItem.description}
+                              data-testid={`nav-subitem-${subItem.name.toLowerCase().replace(/\s+/g, '-')}`}
                             >
                               <subItem.icon
                                 className={cn(
@@ -197,20 +200,20 @@ export default function Sidebar() {
         </div>
       </nav>
       
-      <div className="p-4">
+      <div className="p-4" data-testid="sidebar-user-section">
         <div className="bg-gray-100 rounded-lg p-3">
           <div className="flex items-center space-x-3">
-            <Avatar className="w-8 h-8">
+            <Avatar className="w-8 h-8" data-testid="user-avatar">
               <AvatarImage src={(user as any)?.profileImageUrl || ''} alt={`${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`} />
               <AvatarFallback>
                 {`${(user as any)?.firstName?.[0] || ''}${(user as any)?.lastName?.[0] || 'U'}`}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-medium text-gray-900 truncate" data-testid="user-name">
                 {(user as any)?.firstName || ''} {(user as any)?.lastName || ''}
               </p>
-              <p className="text-xs text-gray-600 truncate">
+              <p className="text-xs text-gray-600 truncate" data-testid="user-role">
                 {(user as any)?.role === 'admin' ? 'Administrateur' : 'Chef de projet'}
               </p>
             </div>
@@ -219,6 +222,8 @@ export default function Sidebar() {
               size="sm"
               onClick={() => window.location.href = "/api/logout"}
               className="text-gray-400 hover:text-gray-600"
+              data-testid="button-logout"
+              title="Se déconnecter"
             >
               <LogOut className="w-4 h-4" />
             </Button>

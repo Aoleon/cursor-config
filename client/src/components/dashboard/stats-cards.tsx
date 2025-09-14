@@ -4,20 +4,43 @@ import { Progress } from "@/components/ui/progress";
 import { FolderOpen, Calculator, Clock, TrendingUp } from "lucide-react";
 
 export default function StatsCards() {
-  const { data: stats = {}, isLoading } = useQuery({
+  const { data: stats = {}, isLoading, isError, error } = useQuery({
     queryKey: ["/api/dashboard/stats"],
   });
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-testid="stats-cards-loading">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
+          <Card key={i} className="animate-pulse" data-testid={`stats-card-skeleton-${i}`}>
             <CardContent className="p-6">
               <div className="h-16 bg-gray-200 rounded"></div>
             </CardContent>
           </Card>
         ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-testid="stats-cards-error">
+        <Card className="col-span-full">
+          <CardContent className="p-6 text-center">
+            <div className="text-red-500 mb-2">⚠️</div>
+            <p className="text-sm text-gray-600" data-testid="stats-error-message">
+              Impossible de charger les statistiques. 
+              {error && ` (${(error as Error).message})`}
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-2 text-sm text-primary hover:underline"
+              data-testid="button-reload-stats"
+            >
+              Réessayer
+            </button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -62,14 +85,18 @@ export default function StatsCards() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-testid="stats-cards">
       {cardsData.map((card, index) => (
-        <Card key={index} className="shadow-card">
+        <Card key={index} className="shadow-card" data-testid={`stats-card-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{card.title}</p>
-                <p className="text-3xl font-bold text-gray-900">{card.value}</p>
+                <p className="text-sm font-medium text-gray-600" data-testid={`stats-title-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                  {card.title}
+                </p>
+                <p className="text-3xl font-bold text-gray-900" data-testid={`stats-value-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                  {card.value}
+                </p>
               </div>
               <div className={`w-12 h-12 ${card.iconBg} rounded-lg flex items-center justify-center`}>
                 <card.icon className={`${card.iconColor} text-xl`} />
@@ -77,11 +104,11 @@ export default function StatsCards() {
             </div>
             <div className="mt-4">
               {card.showProgress ? (
-                <div className="w-full">
+                <div className="w-full" data-testid={`stats-progress-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
                   <Progress value={card.progressValue} className="h-2" />
                 </div>
               ) : (
-                <span className={`text-sm ${card.footerColor}`}>
+                <span className={`text-sm ${card.footerColor}`} data-testid={`stats-footer-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
                   {card.footer}
                 </span>
               )}

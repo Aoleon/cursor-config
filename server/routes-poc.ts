@@ -134,7 +134,7 @@ app.get("/api/aos/:id",
 
 app.post("/api/aos", 
   isAuthenticated,
-  rateLimits.createResource,
+  rateLimits.creation,
   validateBody(insertAoSchema),
   asyncHandler(async (req, res) => {
     // Préparer les données avec les champs calculés
@@ -186,8 +186,8 @@ const uploadPDF = multer({
 // Endpoint pour traiter un PDF avec OCR
 app.post("/api/ocr/process-pdf", 
   isAuthenticated, 
-  rateLimits.ocr,
-  secureFileUpload().single('pdf'),
+  rateLimits.processing,
+  uploadPDF.single('pdf'),
   asyncHandler(async (req, res) => {
     if (!req.file) {
       throw createError.badRequest('Aucun fichier PDF fourni');
@@ -213,8 +213,8 @@ app.post("/api/ocr/process-pdf",
 // Endpoint pour créer un AO automatiquement depuis OCR
 app.post("/api/ocr/create-ao-from-pdf", 
   isAuthenticated,
-  rateLimits.ocr,
-  secureFileUpload().single('pdf'),
+  rateLimits.processing,
+  uploadPDF.single('pdf'),
   asyncHandler(async (req, res) => {
     if (!req.file) {
       throw createError.badRequest('Aucun fichier PDF fourni');

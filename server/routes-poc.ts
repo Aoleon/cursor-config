@@ -5,7 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { OCRService } from "./ocrService";
 import multer from "multer";
 // Import des nouveaux middlewares de validation et sécurité
-import { validateBody, validateParams, validateQuery, commonParamSchemas, commonQuerySchemas } from "./middleware/validation";
+import { validateBody, validateParams, validateQuery, commonParamSchemas, commonQuerySchemas, validateFileUpload } from "./middleware/validation";
 import { rateLimits, secureFileUpload } from "./middleware/security";
 import { sendSuccess, sendPaginatedSuccess, createError, asyncHandler } from "./middleware/errorHandler";
 import { 
@@ -482,7 +482,7 @@ app.get("/api/offers/:id", isAuthenticated, async (req, res) => {
 
 app.post("/api/offers", 
   isAuthenticated,
-  rateLimits.createResource,
+  rateLimits.creation,
   validateBody(insertOfferSchema.omit({ 
     dateRenduAO: true, 
     dateAcceptationAO: true, 
@@ -586,7 +586,7 @@ app.post("/api/offers/create-with-structure", isAuthenticated, async (req, res) 
 
 app.patch("/api/offers/:id", 
   isAuthenticated,
-  rateLimits.updateResource,
+  rateLimits.creation,
   validateParams(commonParamSchemas.id),
   validateBody(insertOfferSchema.partial()),
   asyncHandler(async (req, res) => {

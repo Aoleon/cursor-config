@@ -164,6 +164,28 @@ app.post("/api/aos",
   })
 );
 
+app.put("/api/aos/:id", 
+  isAuthenticated,
+  rateLimits.creation,
+  validateParams(commonParamSchemas.id),
+  validateBody(insertAoSchema.partial()),
+  asyncHandler(async (req, res) => {
+    const ao = await storage.updateAo(req.params.id, req.body);
+    sendSuccess(res, ao);
+  })
+);
+
+app.patch("/api/aos/:id", 
+  isAuthenticated,
+  rateLimits.creation,
+  validateParams(commonParamSchemas.id),
+  validateBody(insertAoSchema.partial()),
+  asyncHandler(async (req, res) => {
+    const ao = await storage.updateAo(req.params.id, req.body);
+    sendSuccess(res, ao);
+  })
+);
+
 // ========================================
 // OCR ROUTES - Traitement automatique PDF
 // ========================================

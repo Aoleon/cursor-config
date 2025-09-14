@@ -64,6 +64,7 @@ export interface IStorage {
   getAos(): Promise<Ao[]>;
   getAo(id: string): Promise<Ao | undefined>;
   createAo(ao: InsertAo): Promise<Ao>;
+  updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao>;
   
   // Offer operations - Cœur du POC
   getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]>;
@@ -206,6 +207,14 @@ export class DatabaseStorage implements IStorage {
   async createAo(ao: InsertAo): Promise<Ao> {
     const [newAo] = await db.insert(aos).values(ao).returning();
     return newAo;
+  }
+
+  async updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao> {
+    const [updatedAo] = await db.update(aos)
+      .set({ ...ao, updatedAt: new Date() })
+      .where(eq(aos.id, id))
+      .returning();
+    return updatedAo;
   }
 
   // Offer operations (cœur du POC)

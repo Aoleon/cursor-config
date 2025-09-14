@@ -84,7 +84,12 @@ export default function UnifiedOffersDisplay({
   });
 
   const handleOfferClick = (offerId: string) => {
-    setLocation(`/offers/${offerId}/edit`);
+    // Naviguer vers la route appropriée selon l'endpoint
+    if (endpoint === "/api/aos") {
+      setLocation(`/aos/${offerId}`);
+    } else {
+      setLocation(`/offers/${offerId}/edit`);
+    }
   };
 
   const handlePrioritize = (offer: any, e: React.MouseEvent) => {
@@ -317,7 +322,11 @@ export default function UnifiedOffersDisplay({
                                       size="sm" 
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setLocation(`/offers/${offer.id}`);
+                                        if (endpoint === "/api/aos") {
+                                          setLocation(`/aos/${offer.id}`);
+                                        } else {
+                                          setLocation(`/offers/${offer.id}`);
+                                        }
                                       }}
                                       data-testid={`button-view-${offer.id}`}
                                     >
@@ -338,7 +347,11 @@ export default function UnifiedOffersDisplay({
                                       size="sm" 
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setLocation(`/offers/${offer.id}/edit`);
+                                        if (endpoint === "/api/aos") {
+                                          setLocation(`/aos/${offer.id}`);
+                                        } else {
+                                          setLocation(`/offers/${offer.id}/edit`);
+                                        }
                                       }}
                                       data-testid={`button-edit-${offer.id}`}
                                     >

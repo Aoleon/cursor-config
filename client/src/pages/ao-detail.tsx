@@ -370,7 +370,7 @@ export default function AoDetail() {
         <main className="flex-1 overflow-auto">
           <div className="text-center py-8">
             <p className="text-red-500">AO non trouvé</p>
-            <Button onClick={() => setLocation("/offers")} className="mt-4">
+            <Button onClick={() => setLocation("/aos")} className="mt-4">
               Retour à la liste
             </Button>
           </div>
@@ -384,18 +384,18 @@ export default function AoDetail() {
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
-          title={`AO ${ao.reference}`}
+          title={`AO ${ao?.reference || 'Chargement...'}`}
           breadcrumbs={[
             { label: "Accueil", href: "/" },
-            { label: "Appels d'Offres", href: "/offers" },
-            { label: ao.reference }
+            { label: "Appels d'Offres", href: "/aos" },
+            { label: ao?.reference || "Chargement..." }
           ]}
           actions={[
             {
               label: "Retour",
               variant: "outline",
               icon: "arrow-left",
-              onClick: () => setLocation("/offers")
+              onClick: () => setLocation("/aos")
             },
             relatedOffer ? {
               label: "Voir Chiffrage",

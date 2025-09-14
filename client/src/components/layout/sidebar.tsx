@@ -51,7 +51,7 @@ const navigation: NavigationItem[] = [
   { name: "Tableau de Bord", href: "/", icon: TrendingUp },
   { 
     name: "Appels d'Offre", 
-    href: "/offers", 
+    href: "/aos", 
     icon: FolderOpen,
     subItems: [
       { name: "Étude technique", href: "/workflow/etude-technique", icon: FileText, description: "Études préliminaires" },

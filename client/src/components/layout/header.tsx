@@ -58,11 +58,11 @@ export default function Header({ title, breadcrumbs = [], actions = [] }: Header
                     {index > 0 && <BreadcrumbSeparator />}
                     <BreadcrumbItem>
                       {crumb.href ? (
-                        <BreadcrumbLink href={crumb.href} data-testid={`breadcrumb-link-${crumb.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <BreadcrumbLink href={crumb.href} data-testid={`breadcrumb-link-${crumb.label?.toLowerCase().replace(/\s+/g, '-') || 'unknown'}`}>
                           {crumb.label}
                         </BreadcrumbLink>
                       ) : (
-                        <BreadcrumbPage data-testid={`breadcrumb-page-${crumb.label.toLowerCase().replace(/\s+/g, '-')}`}>{crumb.label}</BreadcrumbPage>
+                        <BreadcrumbPage data-testid={`breadcrumb-page-${crumb.label?.toLowerCase().replace(/\s+/g, '-') || 'unknown'}`}>{crumb.label}</BreadcrumbPage>
                       )}
                     </BreadcrumbItem>
                   </div>

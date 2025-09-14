@@ -68,6 +68,7 @@ function Router() {
       <Route path="/create-ao" component={() => <ProtectedRoute component={CreateAO} />} />
       <Route path="/offers/:id" component={() => <ProtectedRoute component={OfferDetail} />} />
       <Route path="/offers/:id/edit" component={() => <ProtectedRoute component={AoDetail} />} />
+      <Route path="/aos/:id" component={() => <ProtectedRoute component={AoDetail} />} />
       <Route path="/offers/:id/chiffrage" component={() => <ProtectedRoute component={Chiffrage} />} />
       {/* Sous-étapes des Appels d'Offres */}
       <Route path="/offers/import" component={() => <ProtectedRoute component={ImportOCR} />} />

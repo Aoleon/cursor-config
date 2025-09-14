@@ -64,6 +64,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = req.body;
 
+      console.log('[DEBUG] /api/login/basic - Login attempt:', {
+        username,
+        hasSession: !!req.session,
+        sessionId: req.session?.id
+      });
+
       // Validation basique pour le développement
       if (username === 'admin' && password === 'admin') {
         // Créer un utilisateur admin fictif dans la session
@@ -77,13 +83,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isBasicAuth: true, // Flag pour identifier l'auth basique
         };
 
+        console.log('[DEBUG] /api/login/basic - Creating admin user:', adminUser);
+        
         // Stocker dans la session
         req.session.user = adminUser;
+        
+        console.log('[DEBUG] /api/login/basic - Before session save:', {
+          sessionUser: req.session.user,
+          sessionId: req.session.id
+        });
+
         await new Promise<void>((resolve, reject) => {
           req.session.save((err: any) => {
-            if (err) reject(err);
-            else resolve();
+            if (err) {
+              console.error('[DEBUG] /api/login/basic - Session save error:', err);
+              reject(err);
+            } else {
+              console.log('[DEBUG] /api/login/basic - Session saved successfully');
+              resolve();
+            }
           });
+        });
+
+        console.log('[DEBUG] /api/login/basic - After session save:', {
+          sessionUser: req.session.user,
+          sessionId: req.session.id
         });
 
         res.json({
@@ -92,6 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user: adminUser
         });
       } else {
+        console.log('[DEBUG] /api/login/basic - Invalid credentials');
         res.status(401).json({
           success: false,
           message: 'Identifiants incorrects'
@@ -110,13 +135,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const user = req.user;
+      const sessionUser = req.session?.user;
       
-      // Vérifier si c'est un utilisateur basic auth
-      if (req.session?.user?.isBasicAuth) {
-        return res.json(req.session.user);
+      // Debug logging
+      console.log('[DEBUG] /api/auth/user - Session info:', {
+        hasUser: !!user,
+        hasSessionUser: !!sessionUser,
+        isBasicAuth: sessionUser?.isBasicAuth,
+        userType: user?.isBasicAuth ? 'basic' : 'oidc'
+      });
+      
+      // Vérifier si c'est un utilisateur basic auth (maintenant dans req.user grâce au middleware)
+      if (user?.isBasicAuth) {
+        console.log('[DEBUG] Returning basic auth user:', user);
+        return res.json(user);
       }
       
       if (!user || !user.claims) {
+        console.log('[DEBUG] No valid user or claims found');
         return res.status(401).json({ message: "No user session found" });
       }
 
@@ -131,6 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: determineUserRole(user.claims.email)
       };
 
+      console.log('[DEBUG] Returning OIDC user profile:', userProfile);
       res.json(userProfile);
     } catch (error) {
       console.error("Error fetching user:", error);

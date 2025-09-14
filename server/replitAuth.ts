@@ -38,7 +38,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production', // false in development for HTTP
       maxAge: sessionTtl,
     },
   });
@@ -129,9 +129,25 @@ export async function setupAuth(app: Express) {
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
+  const session = (req as any).session;
+  
+  // Debug logging au début du middleware
+  console.log('[DEBUG] isAuthenticated middleware - Initial state:', {
+    path: req.path,
+    method: req.method,
+    hasUser: !!user,
+    hasSession: !!session,
+    sessionId: session?.id,
+    sessionUser: session?.user,
+    isBasicAuthSession: session?.user?.isBasicAuth,
+    isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
+  });
 
   // Vérifier d'abord si c'est un utilisateur basic auth
-  if ((req as any).session?.user?.isBasicAuth) {
+  if (session?.user?.isBasicAuth) {
+    console.log('[DEBUG] Found basic auth session, setting req.user');
+    // Pour l'auth basique, utiliser les données de session
+    (req as any).user = session.user;
     return next();
   }
 

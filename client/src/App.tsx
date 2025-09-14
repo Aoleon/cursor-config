@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Offers from "@/pages/offers";
+import AOsPage from "@/pages/aos";
 import Pricing from "@/pages/pricing";
 import Projects from "@/pages/projects";
 import ProjectDetail from "@/pages/project-detail";
@@ -62,6 +63,7 @@ function Router() {
     <Switch>
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/offers" component={() => <ProtectedRoute component={Offers} />} />
+      <Route path="/aos" component={() => <ProtectedRoute component={AOsPage} />} />
       <Route path="/create-offer" component={() => <ProtectedRoute component={CreateOffer} />} />
       <Route path="/create-ao" component={() => <ProtectedRoute component={CreateAO} />} />
       <Route path="/offers/:id" component={() => <ProtectedRoute component={OfferDetail} />} />

@@ -41,7 +41,19 @@ export default function UnifiedOffersDisplay({
       const queryString = params.toString();
       const response = await fetch(`${endpoint}${queryString ? `?${queryString}` : ''}`);
       if (!response.ok) throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-      return response.json();
+      const data = await response.json();
+      
+      // Gérer les différents formats de réponse
+      if (data && typeof data === 'object' && 'data' in data) {
+        // Format {success: true, data: [...]} pour /api/aos
+        return Array.isArray(data.data) ? data.data : [];
+      } else if (Array.isArray(data)) {
+        // Format direct [...] pour /api/offers
+        return data;
+      } else {
+        // Fallback pour tout autre format
+        return [];
+      }
     },
   });
 

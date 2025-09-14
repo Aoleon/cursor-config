@@ -1,7 +1,7 @@
 import { vi } from 'vitest'
 
 /**
- * Helpers utilitaires pour les tests JLM ERP
+ * Helpers utilitaires pour les tests Saxium
  * Optimisations anti-boucles et patterns de test robustes
  */
 

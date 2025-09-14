@@ -1,5 +1,5 @@
 /**
- * Script pour créer des données d'exemple pour le POC JLM ERP
+ * Script pour créer des données d'exemple pour le POC Saxium
  * Exécuter avec: node scripts/seed-data.js
  */
 
@@ -16,7 +16,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const db = drizzle({ client: pool, schema })
 
 async function seedData() {
-  console.log('🌱 Création des données d\'exemple pour le POC JLM ERP...')
+  console.log('🌱 Création des données d\'exemple pour le POC Saxium...')
 
   try {
     // 1. Utilisateurs de test
@@ -226,7 +226,7 @@ async function seedData() {
     console.log(`- ${workloads.length} charges de travail BE`)
     console.log(`- ${milestones.length} jalons de validation`)
     console.log('')
-    console.log('🚀 Le POC JLM ERP est prêt à être testé!')
+    console.log('🚀 Le POC Saxium est prêt à être testé!')
 
   } catch (error) {
     console.error('❌ Erreur lors de la création des données:', error)

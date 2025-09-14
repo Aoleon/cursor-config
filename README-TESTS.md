@@ -1,4 +1,4 @@
-# Guide de Tests JLM ERP Menuiserie
+# Guide de Tests Saxium
 
 ## 🧪 Architecture de Tests Complète
 
@@ -179,4 +179,4 @@ const mock = addMock(vi.fn())
 5. ✅ Validation couverture
 6. 🚀 Déploiement si tout vert
 
-Cette infrastructure garantit la robustesse du code JLM ERP et prévient efficacement les boucles de bugs grâce à des patterns éprouvés et des optimisations de performance.
+Cette infrastructure garantit la robustesse du code Saxium et prévient efficacement les boucles de bugs grâce à des patterns éprouvés et des optimisations de performance.

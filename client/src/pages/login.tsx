@@ -42,7 +42,7 @@ export default function Login() {
     onSuccess: () => {
       toast({
         title: "Connexion réussie",
-        description: "Bienvenue dans JLM ERP !",
+        description: "Bienvenue dans Saxium !",
       });
       // Invalider le cache d'auth pour forcer le rechargement
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -82,7 +82,7 @@ export default function Login() {
               <Wrench className="text-white text-xl" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">JLM ERP</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Saxium</h1>
               <p className="text-sm text-gray-600">Connexion</p>
             </div>
           </div>
@@ -212,7 +212,7 @@ export default function Login() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-500">
-            © 2025 JLM ERP - Solution de gestion pour menuiserie
+            © 2025 Saxium - Solution de gestion d'entreprise
           </p>
         </div>
       </div>

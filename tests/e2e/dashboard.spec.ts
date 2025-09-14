@@ -6,7 +6,7 @@ test.describe('Dashboard E2E Tests', () => {
   })
 
   test('should display dashboard correctly', async ({ page }) => {
-    await expect(page).toHaveTitle(/JLM ERP/)
+    await expect(page).toHaveTitle(/Saxium/)
     
     // Vérifier la présence du header
     await expect(page.locator('[data-testid="header"]')).toBeVisible()

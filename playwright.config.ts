@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Configuration Playwright pour les tests E2E
- * Tests de l'interface utilisateur JLM ERP Menuiserie
+ * Tests de l'interface utilisateur Saxium
  */
 export default defineConfig({
   testDir: './tests/e2e',

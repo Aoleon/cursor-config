@@ -13,14 +13,14 @@ export default function Landing() {
               <Wrench className="text-white text-2xl" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">JLM ERP</h1>
-              <p className="text-xl text-gray-600">Solution de gestion pour menuiserie</p>
+              <h1 className="text-4xl font-bold text-gray-900">Saxium</h1>
+              <p className="text-xl text-gray-600">Solution de gestion d'entreprise</p>
             </div>
           </div>
           <p className="text-lg text-gray-700 max-w-2xl mx-auto">
             Digitalisez et optimisez la gestion de vos dossiers d'offre, 
             le chiffrage et le suivi de projet avec notre solution ERP 
-            spécialement conçue pour les entreprises de menuiserie.
+            adaptée aux besoins de votre entreprise.
           </p>
         </div>
 
@@ -109,7 +109,7 @@ export default function Landing() {
         <div className="text-center">
           <Card className="border-0 shadow-card bg-primary text-white max-w-2xl mx-auto">
             <CardContent className="pt-6">
-              <h2 className="text-2xl font-bold mb-4">Prêt à digitaliser votre menuiserie ?</h2>
+              <h2 className="text-2xl font-bold mb-4">Prêt à digitaliser votre entreprise ?</h2>
               <p className="text-primary-foreground/90 mb-6">
                 Connectez-vous pour accéder à votre espace de travail 
                 et commencer à optimiser vos processus métier.

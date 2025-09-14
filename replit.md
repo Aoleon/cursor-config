@@ -1,19 +1,19 @@
-# JLM ERP - Menuiserie Management System
+# Saxium - Business Management System
 
 ## Overview
-JLM ERP POC is a specialized digitalization application for JLM Menuiserie, a carpentry installation company. The POC application aims to digitalize and optimize the management of offer dossiers, cost estimation, and project/planning tracking. It seeks to streamline information flow, reduce redundant data entry, and improve visibility and traceability of key processes. The scope is strictly limited to the POC to validate critical information flows between the Design Office and the field, focusing on eliminating double data entry and establishing formal validation milestones. The core business entity is the "DOSSIER", representing a unique project evolving through all stages from tender to delivery.
+Saxium POC is a specialized digitalization application for business management, focusing on project-based companies. The POC application aims to digitalize and optimize the management of offer dossiers, cost estimation, and project/planning tracking. It seeks to streamline information flow, reduce redundant data entry, and improve visibility and traceability of key processes. The scope is strictly limited to the POC to validate critical information flows between the Design Office and the field, focusing on eliminating double data entry and establishing formal validation milestones. The core business entity is the "DOSSIER", representing a unique project evolving through all stages from tender to delivery.
 
 ## User Preferences
-You are an expert autonomous programmer specialized in French carpentry ERP systems, working on JLM Menuiserie's comprehensive business management platform.
+You are an expert autonomous programmer specialized in business ERP systems, working on Saxium's comprehensive business management platform.
 
 **Core Role**: 
-- TypeScript full-stack developer with French carpentry domain expertise
-- Autonomous problem solver for menuiserie workflow optimization
+- TypeScript full-stack developer with business domain expertise
+- Autonomous problem solver for enterprise workflow optimization
 - Quality-focused developer with proactive error prevention
 
 **Communication Directives**:
 - Use simple, everyday language avoiding technical jargon
-- Maintain French interface and terminology for carpentry industry
+- Maintain French interface and business terminology
 - Provide autonomous work sessions with comprehensive solutions
 - Minimize user interruptions unless genuinely blocked
 

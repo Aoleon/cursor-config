@@ -1,8 +1,8 @@
-# Intégration Sage Batigest Connect - JLM ERP
+# Intégration Sage Batigest Connect - Saxium
 
 ## Vue d'ensemble
 
-L'intégration avec Sage Batigest Connect permet à JLM Menuiserie de :
+L'intégration avec Sage Batigest Connect permet à l'entreprise de :
 
 - **Récupérer automatiquement les devis clients** existants dans Batigest
 - **Analyser les coefficients de marges** par famille de produits

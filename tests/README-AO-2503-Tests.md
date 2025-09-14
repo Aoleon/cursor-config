@@ -1,8 +1,8 @@
-# Guide Test Global AO 2503 - ERP JLM Menuiserie
+# Guide Test Global AO 2503 - Saxium
 
 ## Objectif
 
-Ce guide présente le test global basé sur l'AO 2503 (SCICV Boulogne Sandettie) qui sert de référence pour tester l'ensemble des fonctionnalités de l'ERP JLM Menuiserie au fur et à mesure de leur développement.
+Ce guide présente le test global basé sur l'AO 2503 (SCICV Boulogne Sandettie) qui sert de référence pour tester l'ensemble des fonctionnalités de Saxium au fur et à mesure de leur développement.
 
 ## Données de référence AO 2503
 

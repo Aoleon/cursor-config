@@ -31,6 +31,11 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  // Configuration spéciale pour Replit (iframe/third-party context)
+  const isReplit = !!process.env.REPLIT_DOMAINS;
+  const isHttps = isReplit || process.env.NODE_ENV === 'production';
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -38,8 +43,9 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // false in development for HTTP
+      secure: isHttps, // true pour Replit (HTTPS) et production
       maxAge: sessionTtl,
+      sameSite: isHttps ? 'none' : 'lax', // 'none' pour les contextes third-party (Replit iframe)
     },
   });
 }

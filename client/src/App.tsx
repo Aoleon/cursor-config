@@ -7,8 +7,9 @@ import { WebSocketProvider } from "@/providers/websocket-provider";
 import { useAuth } from "@/hooks/useAuth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
 import Login from "@/pages/login";
+import { useLocation } from "wouter";
+import { useEffect } from "react";
 import Dashboard from "@/pages/dashboard";
 import Offers from "@/pages/offers";
 import AOsPage from "@/pages/aos";
@@ -43,6 +44,14 @@ import BatigestPage from "@/pages/batigest";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType<any> }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+  
+  // Utiliser useEffect pour éviter la mise à jour d'état pendant le render
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      setLocation("/login");
+    }
+  }, [isLoading, isAuthenticated, setLocation]);
   
   if (isLoading) {
     return (
@@ -53,7 +62,12 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   }
   
   if (!isAuthenticated) {
-    return <Landing />;
+    // Afficher le loading pendant la redirection
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
   }
   
   return <Component />;

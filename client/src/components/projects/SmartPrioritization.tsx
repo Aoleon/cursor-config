@@ -60,6 +60,7 @@ interface PriorityItem {
   autoCalculated: boolean;
   manualOverride: boolean;
   alertCritical: boolean;
+  alertSent?: boolean; // Prevent duplicate notifications
   lastCalculatedAt: Date;
   isActive: boolean;
 }

@@ -1090,6 +1090,100 @@ export const beWorkloadRelations = relations(beWorkload, ({ one }) => ({
 export type User = typeof users.$inferSelect;
 export type UpsertUser = typeof users.$inferInsert;
 
+// ========================================
+// TYPES POUR PRIORITÉS ET ALERTES
+// ========================================
+
+// Type pour les éléments de priorité (utilisé par SmartPrioritization)
+export interface PriorityItem {
+  id: string;
+  name: string;
+  type: 'offer' | 'project' | 'task';
+  offerId?: string;
+  projectId?: string;
+  client: string;
+  montant: number;
+  delai: number; // en jours
+  priorityScore: number;
+  priorityLevel: 'tres_faible' | 'faible' | 'normale' | 'elevee' | 'critique';
+  typeClient: 'particulier' | 'professionnel' | 'public';
+  complexite: number; // 1-10
+  chargeBeEstimee: number; // en heures
+  risque: number; // 1-10
+  isStrategic: boolean;
+  lastUpdated: Date;
+  isManualOverride: boolean;
+  overrideReason?: string;
+  trends?: {
+    scoreEvolution: number;
+    levelChange?: string;
+  };
+}
+
+// Type pour les alertes critiques
+export interface CriticalAlert {
+  id: string;
+  itemId: string;
+  itemName: string;
+  priorityLevel: 'critique' | 'elevee';
+  priorityScore: number;
+  alertType: 'deadline_approaching' | 'high_value_urgent' | 'resource_conflict' | 'quality_issue';
+  message: string;
+  createdAt: Date;
+  isActive: boolean;
+  isDismissed: boolean;
+  severity: 'high' | 'medium' | 'low';
+  metadata?: Record<string, any>;
+}
+
+// Type pour la configuration des poids de priorité
+export interface PriorityWeightsConfig {
+  montantWeight: number;
+  delaiWeight: number;
+  typeClientWeight: number;
+  complexiteWeight: number;
+  chargeBeWeight: number;
+  risqueWeight: number;
+  strategiqueWeight: number;
+}
+
+// Type pour les milestones du Gantt (utilisé dans GanttChart)
+export interface GanttMilestone {
+  id: string;
+  name: string;
+  date: Date | string;
+  status: 'completed' | 'in-progress' | 'pending' | 'overdue';
+  project: string;
+  projectId?: string;
+  priority?: 'tres_faible' | 'faible' | 'normale' | 'elevee' | 'critique';
+  dependencies?: string[];
+}
+
+// Type enrichi pour les projets dans le contexte Gantt
+export interface GanttProject extends Project {
+  reference?: string;
+  client?: string;
+  location?: string;
+  montantTotal?: number;
+  progressPercentage?: number;
+  priority?: 'tres_faible' | 'faible' | 'normale' | 'elevee' | 'critique';
+  estimatedHours?: number;
+  actualHours?: number;
+  dependencies?: string[];
+  isOverdue?: boolean;
+}
+
+// Type enrichi pour les tâches dans le contexte Gantt
+export interface GanttTask extends ProjectTask {
+  isJalon?: boolean;
+  priority?: 'tres_faible' | 'faible' | 'normale' | 'elevee' | 'critique';
+  dependencies?: string[];
+  estimatedHours?: number;
+  actualHours?: number;
+  isOverdue?: boolean;
+  responsibleUser?: User;
+}
+
 export type Ao = typeof aos.$inferSelect;
 export type InsertAo = typeof aos.$inferInsert;
 

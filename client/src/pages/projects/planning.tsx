@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Clock, AlertTriangle, CheckCircle, Loader2, Target, Zap, BarChart3, Eye, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,37 +6,38 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import GanttChart from "@/components/projects/GanttChart";
 import SmartPrioritization from "@/components/projects/SmartPrioritization";
 import WorkloadPlanner from "@/components/projects/workload-planner";
-import type { Project, ProjectTask } from "@shared/schema";
+import type { Project, ProjectTask, PriorityItem, CriticalAlert } from "@shared/schema";
 
 export default function ProjectPlanningPage() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'planning' | 'priorities' | 'workload'>('planning');
   const { toast } = useToast();
+  const queryClient = useQueryClient(); // OPTIMISÉ: Hook au lieu du module-level queryClient
 
   // Récupérer les projets
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
+    queryKey: ['/api', 'projects'],
   });
 
   // Récupérer toutes les tâches pour les jalons
   const { data: allTasks = [], isLoading: tasksLoading } = useQuery<ProjectTask[]>({
-    queryKey: ["/api/tasks/all"],
+    queryKey: ['/api', 'tasks', 'all'],
   });
 
   // Récupérer les priorités pour les alertes
-  const { data: priorities = [] } = useQuery<any[]>({
-    queryKey: ['/api/priorities'],
+  const { data: priorities = [] } = useQuery<PriorityItem[]>({
+    queryKey: ['/api', 'priorities'],
   });
 
   // Récupérer les alertes critiques
-  const { data: criticalAlerts = [] } = useQuery<any[]>({
-    queryKey: ['/api/priorities/alerts'],
+  const { data: criticalAlerts = [] } = useQuery<CriticalAlert[]>({
+    queryKey: ['/api', 'priorities', 'alerts'],
   });
 
   // Mutation pour mettre à jour les dates des projets
@@ -48,7 +49,7 @@ export default function ProjectPlanningPage() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ['/api', 'projects'] });
       toast({
         title: "Projet mis à jour",
         description: "Les dates du projet ont été modifiées avec succès.",
@@ -72,7 +73,7 @@ export default function ProjectPlanningPage() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks/all"] });
+      queryClient.invalidateQueries({ queryKey: ['/api', 'tasks', 'all'] });
       toast({
         title: "Jalon mis à jour",
         description: "Les dates du jalon ont été modifiées avec succès.",
@@ -89,15 +90,15 @@ export default function ProjectPlanningPage() {
 
   // Mutation pour créer une nouvelle tâche
   const createTaskMutation = useMutation({
-    mutationFn: async (newTask: any) => {
+    mutationFn: async (newTask: Partial<ProjectTask>) => {
       if (!newTask.projectId) {
         throw new Error('Project ID is required to create a task');
       }
       return await apiRequest(`/api/projects/${newTask.projectId}/tasks`, 'POST', newTask);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks/all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ['/api', 'tasks', 'all'] });
+      queryClient.invalidateQueries({ queryKey: ['/api', 'projects'] });
       toast({
         title: "Tâche créée",
         description: "La nouvelle tâche a été ajoutée au planning avec succès.",
@@ -112,13 +113,13 @@ export default function ProjectPlanningPage() {
     },
   });
 
-  // Gestionnaire de création de tâche depuis le Gantt
-  const handleTaskCreate = (newTask: any) => {
+  // Gestionnaire de création de tâche depuis le Gantt - OPTIMISÉ avec useCallback
+  const handleTaskCreate = useCallback((newTask: Partial<ProjectTask>) => {
     createTaskMutation.mutate(newTask);
-  };
+  }, [createTaskMutation]);
 
-  // Gestionnaire de mise à jour des dates depuis le Gantt
-  const handleDateUpdate = (itemId: string, newStartDate: Date, newEndDate: Date, type: 'project' | 'milestone' | 'task') => {
+  // Gestionnaire de mise à jour des dates depuis le Gantt - OPTIMISÉ avec useCallback
+  const handleDateUpdate = useCallback((itemId: string, newStartDate: Date, newEndDate: Date, type: 'project' | 'milestone' | 'task') => {
     if (type === 'project') {
       updateProjectMutation.mutate({
         projectId: itemId,
@@ -132,22 +133,22 @@ export default function ProjectPlanningPage() {
         endDate: newEndDate,
       });
     }
-  };
+  }, [updateProjectMutation, updateTaskMutation]);
 
-  // Préparer les jalons depuis les tâches
-  const milestones = allTasks
+  // Préparer les jalons depuis les tâches - OPTIMISÉ avec useMemo
+  const milestones = useMemo(() => allTasks
     .filter(task => task.isJalon || task.status === 'termine')
     .map(task => ({
       id: task.id,
-      name: task.name,
-      date: task.startDate,
+      name: task.name || `Tâche ${task.id?.slice(0,8)}`,
+      date: task.startDate || new Date(),
       status: task.status === 'termine' ? 'completed' : 
               task.status === 'en_cours' ? 'in-progress' : 'pending',
       project: projects.find(p => p.id === task.projectId)?.name || 'Projet inconnu',
       projectId: task.projectId,
-    }));
+    })), [allTasks, projects]);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case "completed":
         return "bg-green-100 text-green-800";
@@ -160,7 +161,7 @@ export default function ProjectPlanningPage() {
       default:
         return "bg-gray-100 text-gray-800";
     }
-  };
+  }, []);
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -189,7 +190,7 @@ export default function ProjectPlanningPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {criticalAlerts.slice(0, 3).map((alert: any) => (
+                    {criticalAlerts.slice(0, 3).map((alert: CriticalAlert) => (
                       <div key={alert.id} className="flex items-center justify-between p-2 bg-white rounded border border-red-200">
                         <div>
                           <p className="font-medium text-red-900">{alert.itemName}</p>
@@ -229,9 +230,9 @@ export default function ProjectPlanningPage() {
                   <TabsTrigger value="priorities" className="flex items-center space-x-2" data-testid="tab-priorities">
                     <Target className="h-4 w-4" />
                     <span>Priorisation</span>
-                    {priorities.filter((p: any) => p.priorityLevel === 'critique').length > 0 && (
+                    {priorities.filter((p: PriorityItem) => p.priorityLevel === 'critique').length > 0 && (
                       <Badge variant="destructive" className="ml-1">
-                        {priorities.filter((p: any) => p.priorityLevel === 'critique').length}
+                        {priorities.filter((p: PriorityItem) => p.priorityLevel === 'critique').length}
                       </Badge>
                     )}
                   </TabsTrigger>
@@ -266,8 +267,8 @@ export default function ProjectPlanningPage() {
                     enableNotifications={true}
                     onPriorityUpdate={(itemId, newPriority) => {
                       // Invalider les caches pour mettre à jour les vues
-                      queryClient.invalidateQueries({ queryKey: ['/api/priorities'] });
-                      queryClient.invalidateQueries({ queryKey: ['/api/priorities/alerts'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api', 'priorities'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api', 'priorities', 'alerts'] });
                       toast({
                         title: "Priorité mise à jour",
                         description: `La priorité de l'élément a été modifiée`,

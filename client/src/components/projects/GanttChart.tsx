@@ -45,6 +45,7 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import type { GanttProject, GanttMilestone, GanttTask, User } from "@shared/schema";
 
 interface GanttTask {
   id: string;
@@ -53,11 +54,11 @@ interface GanttTask {
   startDate: Date;
   endDate: Date;
   status: string;
-  responsibleUser?: any;
+  responsibleUser?: User;
   progress?: number;
   isJalon?: boolean;
   projectId?: string;
-  dependencies?: string[]; // IDs des tâches dont celle-ci dépend
+  dependencies?: string[];
   priority?: 'tres_faible' | 'faible' | 'normale' | 'elevee' | 'critique';
   estimatedHours?: number;
   actualHours?: number;
@@ -67,9 +68,9 @@ type ViewMode = 'week' | 'month';
 type ResizeHandle = 'start' | 'end' | null;
 
 interface GanttChartProps {
-  projects: any[];
-  milestones: any[];
-  tasks?: any[];
+  projects: GanttProject[];
+  milestones: GanttMilestone[];
+  tasks?: GanttTask[];
   onDateUpdate?: (itemId: string, newStartDate: Date, newEndDate: Date, type: 'project' | 'milestone' | 'task') => void;
   onTaskCreate?: (task: Partial<GanttTask>) => void;
   onDependencyCreate?: (fromId: string, toId: string) => void;
@@ -104,29 +105,34 @@ export default function GanttChart({
   const [newTaskType, setNewTaskType] = useState<'task' | 'milestone'>('task');
   const [newTaskProject, setNewTaskProject] = useState("");
 
-  // Calculer les périodes selon le mode de vue
-  const periodStart = viewMode === 'week' 
-    ? startOfWeek(currentPeriod, { weekStartsOn: 1 })
-    : startOfMonth(currentPeriod);
-  
-  const periodEnd = viewMode === 'week'
-    ? endOfWeek(currentPeriod, { weekStartsOn: 1 })
-    : endOfMonth(currentPeriod);
+  // Calculer les périodes selon le mode de vue - OPTIMISÉ avec useMemo
+  const { periodStart, periodEnd, periodDays, totalDays } = useMemo(() => {
+    const start = viewMode === 'week' 
+      ? startOfWeek(currentPeriod, { weekStartsOn: 1 })
+      : startOfMonth(currentPeriod);
+    
+    const end = viewMode === 'week'
+      ? endOfWeek(currentPeriod, { weekStartsOn: 1 })
+      : endOfMonth(currentPeriod);
 
-  const periodDays = viewMode === 'week'
-    ? eachDayOfInterval({ start: periodStart, end: periodEnd })
-    : eachDayOfInterval({ start: periodStart, end: periodEnd });
+    const days = eachDayOfInterval({ start, end });
 
-  const totalDays = periodDays.length;
+    return {
+      periodStart: start,
+      periodEnd: end,
+      periodDays: days,
+      totalDays: days.length
+    };
+  }, [currentPeriod, viewMode]);
 
   // Préparer les éléments Gantt avec dépendances et priorités
-  const ganttItems: GanttTask[] = [
+  const ganttItems: GanttTask[] = useMemo(() => [
     ...projects.filter(p => p.startDate && p.endDate).map(project => ({
       id: project.id,
       name: project.name,
       type: 'project' as const,
-      startDate: new Date(project.startDate),
-      endDate: new Date(project.endDate),
+      startDate: new Date(project.startDate!),
+      endDate: new Date(project.endDate!),
       status: project.status,
       responsibleUser: project.responsibleUser,
       progress: project.progressPercentage || 0,
@@ -151,8 +157,8 @@ export default function GanttChart({
       id: task.id,
       name: task.name,
       type: 'task' as const,
-      startDate: new Date(task.startDate),
-      endDate: new Date(task.endDate),
+      startDate: new Date(task.startDate!),
+      endDate: new Date(task.endDate!),
       status: task.status,
       projectId: task.projectId,
       estimatedHours: task.estimatedHours,
@@ -161,10 +167,10 @@ export default function GanttChart({
       priority: task.priority || 'normale',
       dependencies: task.dependencies || []
     }))
-  ];
+  ], [projects, milestones, tasks]);
 
-  // Obtenir la couleur selon le statut et la priorité
-  const getItemColor = (status: string, type: 'project' | 'milestone' | 'task', priority?: string, isOverdue?: boolean) => {
+  // Obtenir la couleur selon le statut et la priorité - OPTIMISÉ avec useCallback
+  const getItemColor = useCallback((status: string, type: 'project' | 'milestone' | 'task', priority?: string, isOverdue?: boolean) => {
     if (isOverdue) {
       return "bg-red-500 border-red-600"; // Rouge pour les éléments en retard
     }
@@ -194,10 +200,10 @@ export default function GanttChart({
         default: return "bg-gray-500 border-gray-600";
       }
     }
-  };
+  }, []);
 
-  // Calculer la position et largeur des barres
-  const getBarPosition = (startDate: Date, endDate: Date) => {
+  // Calculer la position et largeur des barres - OPTIMISÉ avec useCallback
+  const getBarPosition = useCallback((startDate: Date, endDate: Date) => {
     const dayWidth = 100 / totalDays;
     
     const startDayIndex = differenceInDays(startDate, periodStart);
@@ -207,23 +213,23 @@ export default function GanttChart({
     const width = Math.min(100 - left, duration * dayWidth);
     
     return { left: `${left}%`, width: `${width}%` };
-  };
+  }, [totalDays, periodStart]);
 
-  // Vérifier si l'élément est visible dans la période courante
-  const isItemVisible = (startDate: Date, endDate: Date) => {
+  // Vérifier si l'élément est visible dans la période courante - OPTIMISÉ avec useCallback
+  const isItemVisible = useCallback((startDate: Date, endDate: Date) => {
     return isWithinInterval(startDate, { start: periodStart, end: periodEnd }) ||
            isWithinInterval(endDate, { start: periodStart, end: periodEnd }) ||
            (startDate <= periodStart && endDate >= periodEnd);
-  };
+  }, [periodStart, periodEnd]);
 
-  // Vérifier si l'élément est en retard
-  const isOverdue = (item: GanttTask) => {
+  // Vérifier si l'élément est en retard - OPTIMISÉ avec useCallback
+  const isOverdue = useCallback((item: GanttTask) => {
     const now = new Date();
     if (item.type === 'milestone') {
       return isAfter(now, item.endDate) && item.status !== 'completed';
     }
     return isAfter(now, item.endDate) && item.status !== 'termine' && item.status !== 'completed';
-  };
+  }, []);
 
   // Gestion du drag and drop amélioré
   const handleDragStart = (e: React.DragEvent, itemId: string) => {

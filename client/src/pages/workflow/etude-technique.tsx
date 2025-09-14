@@ -29,7 +29,15 @@ export default function EtudeTechnique() {
     queryKey: ["/api/aos/etude"],
     queryFn: async () => {
       const response = await fetch("/api/aos?status=etude");
-      return response.json();
+      const result = await response.json();
+      
+      // Extraire le tableau data si la réponse est encapsulée
+      if (result && typeof result === 'object' && 'data' in result) {
+        return result.data; // Retourner directement le tableau
+      }
+      
+      // Fallback si c'est déjà un tableau 
+      return Array.isArray(result) ? result : [];
     }
   });
 

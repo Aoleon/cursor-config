@@ -57,8 +57,8 @@ export default function KpiCard({
   const getTrendIcon = () => {
     if (!trend) return null;
     switch (trend) {
-      case 'up': return <TrendingUp className="w-4 h-4 text-green-600" />;
-      case 'down': return <TrendingDown className="w-4 h-4 text-red-600" />;
+      case 'up': return <TrendingUp className="w-4 h-4 text-success" />;
+      case 'down': return <TrendingDown className="w-4 h-4 text-error" />;
       case 'stable': return <Minus className="w-4 h-4 text-muted-foreground" />;
       default: return null;
     }
@@ -84,10 +84,10 @@ export default function KpiCard({
   
   const getStatusColor = () => {
     switch (thresholdStatus) {
-      case 'critical': return 'bg-red-100 border-red-200';
-      case 'warning': return 'bg-orange-100 border-orange-200';
-      case 'good': return 'bg-green-100 border-green-200';
-      default: return 'bg-white';
+      case 'critical': return 'bg-error/10 border-error/20';
+      case 'warning': return 'bg-warning/10 border-warning/20';
+      case 'good': return 'bg-success/10 border-success/20';
+      default: return 'bg-surface';
     }
   };
 
@@ -96,9 +96,9 @@ export default function KpiCard({
       case 'critical':
         return <Badge variant="destructive" className="text-xs"><AlertTriangle className="w-3 h-3 mr-1" />Critique</Badge>;
       case 'warning':
-        return <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">Attention</Badge>;
+        return <Badge variant="secondary" className="text-xs bg-warning/10 text-warning">Attention</Badge>;
       case 'good':
-        return <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">OK</Badge>;
+        return <Badge variant="secondary" className="text-xs bg-success/10 text-success">OK</Badge>;
       default:
         return null;
     }
@@ -152,8 +152,8 @@ export default function KpiCard({
               {getTrendIcon()}
               {trendPercentage !== null && (
                 <span className={`text-sm font-medium ${
-                  trendPercentage > 0 ? 'text-green-600' : 
-                  trendPercentage < 0 ? 'text-red-600' : 
+                  trendPercentage > 0 ? 'text-success' : 
+                  trendPercentage < 0 ? 'text-error' : 
                   'text-muted-foreground'
                 }`} data-testid={`kpi-trend-${title.toLowerCase().replace(/\s+/g, '-')}`}>
                   {trendPercentage > 0 ? '+' : ''}{trendPercentage.toFixed(1)}%

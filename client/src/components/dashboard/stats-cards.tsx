@@ -27,7 +27,7 @@ export default function StatsCards() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-testid="stats-cards-error">
         <Card className="col-span-full">
           <CardContent className="p-6 text-center">
-            <div className="text-red-500 mb-2">⚠️</div>
+            <div className="text-error mb-2">⚠️</div>
             <p className="text-sm text-on-surface-muted" data-testid="stats-error-message">
               Impossible de charger les statistiques. 
               {error && ` (${(error as Error).message})`}
@@ -68,8 +68,8 @@ export default function StatsCards() {
       title: "En Attente Validation",
       value: (stats as any)?.offersPendingValidation || 0,
       icon: Clock,
-      iconBg: "bg-yellow-100",
-      iconColor: "text-yellow-600",
+      iconBg: "bg-warning/10",
+      iconColor: "text-warning",
       footer: "2 prioritaires",
       footerColor: "text-warning"
     },

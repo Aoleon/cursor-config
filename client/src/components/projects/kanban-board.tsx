@@ -29,32 +29,32 @@ const columns: KanbanColumn[] = [
   {
     id: 'etude',
     title: 'Étude',
-    color: 'bg-blue-100 border-blue-300',
-    icon: <Calendar className="h-4 w-4 text-blue-600" />
+    color: 'bg-primary/10 border-primary/20',
+    icon: <Calendar className="h-4 w-4 text-primary" />
   },
   {
     id: 'planification', 
     title: 'Planification',
-    color: 'bg-yellow-100 border-yellow-300',
-    icon: <Clock className="h-4 w-4 text-yellow-600" />
+    color: 'bg-warning/10 border-warning/20',
+    icon: <Clock className="h-4 w-4 text-warning" />
   },
   {
     id: 'approvisionnement',
     title: 'Approvisionnement', 
-    color: 'bg-orange-100 border-orange-300',
-    icon: <Users className="h-4 w-4 text-orange-600" />
+    color: 'bg-accent/10 border-accent/20',
+    icon: <Users className="h-4 w-4 text-accent" />
   },
   {
     id: 'realisation',
     title: 'Réalisation',
-    color: 'bg-green-100 border-green-300', 
-    icon: <CheckCircle2 className="h-4 w-4 text-green-600" />
+    color: 'bg-success/10 border-success/20', 
+    icon: <CheckCircle2 className="h-4 w-4 text-success" />
   },
   {
     id: 'sav',
     title: 'SAV',
-    color: 'bg-gray-100 border-gray-300',
-    icon: <AlertTriangle className="h-4 w-4 text-gray-600" />
+    color: 'bg-surface-muted border-border',
+    icon: <AlertTriangle className="h-4 w-4 text-on-surface-muted" />
   }
 ]
 
@@ -78,12 +78,12 @@ function ProjectCard({ project, onStatusChange }: ProjectCardProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'etude': return 'bg-blue-500'
-      case 'planification': return 'bg-yellow-500'
-      case 'approvisionnement': return 'bg-orange-500'
-      case 'realisation': return 'bg-green-500' 
-      case 'sav': return 'bg-gray-500'
-      default: return 'bg-gray-400'
+      case 'etude': return 'bg-primary'
+      case 'planification': return 'bg-warning'
+      case 'approvisionnement': return 'bg-accent'
+      case 'realisation': return 'bg-success' 
+      case 'sav': return 'bg-secondary'
+      default: return 'bg-surface-muted'
     }
   }
 
@@ -99,7 +99,7 @@ function ProjectCard({ project, onStatusChange }: ProjectCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">{project.name}</CardTitle>
-          <GripVertical className="h-4 w-4 text-gray-400" />
+          <GripVertical className="h-4 w-4 text-on-surface-muted" />
         </div>
         <CardDescription className="text-xs">
           {project.client} - {project.location}

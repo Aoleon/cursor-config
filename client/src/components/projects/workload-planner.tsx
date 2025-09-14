@@ -74,9 +74,9 @@ export default function WorkloadPlanner() {
   });
 
   const getWorkloadLevel = (loadPercentage: number) => {
-    if (loadPercentage < 80) return { level: 'low', color: 'text-green-600', bg: 'bg-green-100' };
-    if (loadPercentage < 100) return { level: 'medium', color: 'text-yellow-600', bg: 'bg-yellow-100' };
-    return { level: 'high', color: 'text-red-600', bg: 'bg-red-100' };
+    if (loadPercentage < 80) return { level: 'low', color: 'text-success', bg: 'bg-success/10' };
+    if (loadPercentage < 100) return { level: 'medium', color: 'text-warning', bg: 'bg-warning/10' };
+    return { level: 'high', color: 'text-error', bg: 'bg-error/10' };
   };
 
   const getWorkloadLabel = (loadPercentage: number) => {
@@ -163,14 +163,14 @@ export default function WorkloadPlanner() {
   const getPerformanceIndicator = (value: number, type: 'accuracy' | 'productivity' | 'variance') => {
     if (type === 'variance') {
       const absValue = Math.abs(value);
-      if (absValue < 10) return { color: 'text-green-600', bg: 'bg-green-100', icon: CheckCircle, status: 'Excellent' };
-      if (absValue < 25) return { color: 'text-yellow-600', bg: 'bg-yellow-100', icon: AlertCircle, status: 'Acceptable' };
-      return { color: 'text-red-600', bg: 'bg-red-100', icon: XCircle, status: 'Critique' };
+      if (absValue < 10) return { color: 'text-success', bg: 'bg-success/10', icon: CheckCircle, status: 'Excellent' };
+      if (absValue < 25) return { color: 'text-warning', bg: 'bg-warning/10', icon: AlertCircle, status: 'Acceptable' };
+      return { color: 'text-error', bg: 'bg-error/10', icon: XCircle, status: 'Critique' };
     } else {
-      if (value >= 90) return { color: 'text-green-600', bg: 'bg-green-100', icon: CheckCircle, status: 'Excellent' };
-      if (value >= 75) return { color: 'text-yellow-600', bg: 'bg-yellow-100', icon: AlertCircle, status: 'Bon' };
-      if (value >= 60) return { color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertTriangle, status: 'Moyen' };
-      return { color: 'text-red-600', bg: 'bg-red-100', icon: XCircle, status: 'Faible' };
+      if (value >= 90) return { color: 'text-success', bg: 'bg-success/10', icon: CheckCircle, status: 'Excellent' };
+      if (value >= 75) return { color: 'text-warning', bg: 'bg-warning/10', icon: AlertCircle, status: 'Bon' };
+      if (value >= 60) return { color: 'text-accent', bg: 'bg-accent/10', icon: AlertTriangle, status: 'Moyen' };
+      return { color: 'text-error', bg: 'bg-error/10', icon: XCircle, status: 'Faible' };
     }
   };
 
@@ -199,17 +199,17 @@ export default function WorkloadPlanner() {
         <div className="space-y-3">
           {performanceAlerts.map((alert) => (
             <Card key={alert.id} className={`border-l-4 ${
-              alert.severity === 'critical' ? 'border-red-500 bg-red-50' : 'border-orange-500 bg-orange-50'
+              alert.severity === 'critical' ? 'border-error bg-error/5' : 'border-warning bg-warning/5'
             }`}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <AlertTriangle className={`h-5 w-5 ${
-                      alert.severity === 'critical' ? 'text-red-600' : 'text-orange-600'
+                      alert.severity === 'critical' ? 'text-error' : 'text-warning'
                     }`} />
                     <div>
                       <h4 className="font-medium">{alert.title}</h4>
-                      <p className="text-sm text-gray-600">{alert.message}</p>
+                      <p className="text-sm text-on-surface-muted">{alert.message}</p>
                     </div>
                   </div>
                   <Button
@@ -233,10 +233,10 @@ export default function WorkloadPlanner() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Équipe BE</p>
+                <p className="text-sm font-medium text-on-surface-muted">Équipe BE</p>
                 <p className="text-2xl font-bold">{teamStats.totalMembers}</p>
               </div>
-              <User className="h-8 w-8 text-blue-600" />
+              <User className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -245,10 +245,10 @@ export default function WorkloadPlanner() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Surchargés</p>
-                <p className="text-2xl font-bold text-red-600">{teamStats.overloaded}</p>
+                <p className="text-sm font-medium text-on-surface-muted">Surchargés</p>
+                <p className="text-2xl font-bold text-error">{teamStats.overloaded}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-600" />
+              <AlertTriangle className="h-8 w-8 text-error" />
             </div>
           </CardContent>
         </Card>
@@ -257,10 +257,10 @@ export default function WorkloadPlanner() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Disponibles</p>
-                <p className="text-2xl font-bold text-green-600">{teamStats.available}</p>
+                <p className="text-sm font-medium text-on-surface-muted">Disponibles</p>
+                <p className="text-2xl font-bold text-success">{teamStats.available}</p>
               </div>
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
+              <CheckCircle2 className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -269,10 +269,10 @@ export default function WorkloadPlanner() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Charge Moy.</p>
+                <p className="text-sm font-medium text-on-surface-muted">Charge Moy.</p>
                 <p className="text-2xl font-bold">{teamStats.avgLoad}%</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-purple-600" />
+              <TrendingUp className="h-8 w-8 text-accent" />
             </div>
           </CardContent>
         </Card>
@@ -281,10 +281,10 @@ export default function WorkloadPlanner() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Précision</p>
-                <p className="text-2xl font-bold text-blue-600">{teamStats.estimationAccuracy}%</p>
+                <p className="text-sm font-medium text-on-surface-muted">Précision</p>
+                <p className="text-2xl font-bold text-primary">{teamStats.estimationAccuracy}%</p>
               </div>
-              <Target className="h-8 w-8 text-blue-600" />
+              <Target className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -293,20 +293,20 @@ export default function WorkloadPlanner() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Écart</p>
+                <p className="text-sm font-medium text-on-surface-muted">Écart</p>
                 <p className={`text-2xl font-bold ${
-                  Math.abs(teamStats.variancePercent) <= 10 ? 'text-green-600' : 
-                  Math.abs(teamStats.variancePercent) <= 25 ? 'text-orange-600' : 'text-red-600'
+                  Math.abs(teamStats.variancePercent) <= 10 ? 'text-success' : 
+                  Math.abs(teamStats.variancePercent) <= 25 ? 'text-warning' : 'text-error'
                 }`}>
                   {teamStats.variancePercent > 0 ? '+' : ''}{teamStats.variancePercent}%
                 </p>
               </div>
               {teamStats.variancePercent > 0 ? (
-                <ArrowUpRight className="h-8 w-8 text-red-600" />
+                <ArrowUpRight className="h-8 w-8 text-error" />
               ) : teamStats.variancePercent < 0 ? (
-                <ArrowDownRight className="h-8 w-8 text-green-600" />
+                <ArrowDownRight className="h-8 w-8 text-success" />
               ) : (
-                <Activity className="h-8 w-8 text-blue-600" />
+                <Activity className="h-8 w-8 text-primary" />
               )}
             </div>
           </CardContent>
@@ -342,7 +342,7 @@ export default function WorkloadPlanner() {
               </Tabs>
             </div>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-on-surface-muted">
             Semaine du {format(weekStart, 'dd/MM', { locale: fr })} au {format(weekEnd, 'dd/MM/yyyy', { locale: fr })}
           </p>
         </CardHeader>
@@ -386,7 +386,7 @@ export default function WorkloadPlanner() {
                             <h4 className="font-medium">
                               {workload.user?.firstName} {workload.user?.lastName}
                             </h4>
-                            <p className="text-sm text-gray-600 capitalize">
+                            <p className="text-sm text-on-surface-muted capitalize">
                               {workload.user?.role?.replace('_', ' ')}
                             </p>
                           </div>
@@ -396,7 +396,7 @@ export default function WorkloadPlanner() {
                             {getWorkloadLabel(parseFloat(workload.loadPercentage))}
                           </Badge>
                           {Math.abs(variancePercent) > 25 && (
-                            <Badge variant="outline" className="text-red-600 border-red-300">
+                            <Badge variant="outline" className="text-error border-error/20">
                               Écart: {variancePercent > 0 ? '+' : ''}{variancePercent}%
                             </Badge>
                           )}
@@ -416,20 +416,20 @@ export default function WorkloadPlanner() {
                         />
                         
                         {/* Enhanced Metrics Row */}
-                        <div className="grid grid-cols-3 gap-4 pt-2 border-t border-gray-100">
+                        <div className="grid grid-cols-3 gap-4 pt-2 border-t border-border">
                           <div className="text-center">
-                            <div className="text-xs text-gray-500">Estimé</div>
+                            <div className="text-xs text-on-surface-muted">Estimé</div>
                             <div className="font-medium">{estimatedHours}h</div>
                           </div>
                           <div className="text-center">
-                            <div className="text-xs text-gray-500">Réalisé</div>
+                            <div className="text-xs text-on-surface-muted">Réalisé</div>
                             <div className="font-medium">{actualHours}h</div>
                           </div>
                           <div className="text-center">
-                            <div className="text-xs text-gray-500">Écart</div>
+                            <div className="text-xs text-on-surface-muted">Écart</div>
                             <div className={`font-medium ${
-                              Math.abs(variancePercent) <= 10 ? 'text-green-600' : 
-                              Math.abs(variancePercent) <= 25 ? 'text-orange-600' : 'text-red-600'
+                              Math.abs(variancePercent) <= 10 ? 'text-success' : 
+                              Math.abs(variancePercent) <= 25 ? 'text-warning' : 'text-error'
                             }`}>
                               {variance > 0 ? '+' : ''}{variance}h
                             </div>
@@ -438,7 +438,7 @@ export default function WorkloadPlanner() {
                       </div>
 
                       {parseFloat(workload.loadPercentage) > 100 && (
-                        <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                        <div className="mt-3 p-2 bg-error/5 border border-error/20 rounded text-sm text-error">
                           <div className="flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4" />
                             <span>Surcharge détectée - Redistribution recommandée</span>
@@ -447,7 +447,7 @@ export default function WorkloadPlanner() {
                       )}
                       
                       {Math.abs(variancePercent) > 25 && (
-                        <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-sm text-orange-700">
+                        <div className="mt-2 p-2 bg-warning/5 border border-warning/20 rounded text-sm text-warning">
                           <div className="flex items-center gap-2">
                             <AlertCircle className="h-4 w-4" />
                             <span>Écart important entre estimé et réalisé ({variancePercent > 0 ? '+' : ''}{variancePercent}%)</span>
@@ -460,7 +460,7 @@ export default function WorkloadPlanner() {
               </div>
 
               {beWorkload.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-on-surface-muted">
                   <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Aucune donnée de charge BE disponible</p>
                   <p className="text-sm">Les données de workload apparaîtront ici une fois configurées</p>
@@ -651,7 +651,7 @@ export default function WorkloadPlanner() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8 text-on-surface-muted">
                         <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p>Historique des performances disponible prochainement</p>
                       </div>

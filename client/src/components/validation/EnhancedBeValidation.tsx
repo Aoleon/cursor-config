@@ -359,12 +359,12 @@ export function EnhancedBeValidation({
         <CardContent className="space-y-4">
           {/* Criteres de verification */}
           {item.checkCriteria && (
-            <div className="bg-blue-50 border-l-4 border-blue-200 p-3 rounded">
+            <div className="bg-primary/5 border-l-4 border-primary/20 p-3 rounded">
               <div className="flex items-start gap-2">
-                <BookOpen className="h-4 w-4 text-blue-600 mt-0.5" />
+                <BookOpen className="h-4 w-4 text-primary mt-0.5" />
                 <div>
-                  <h5 className="font-medium text-blue-900 text-sm">Criteres de verification</h5>
-                  <p className="text-blue-700 text-sm mt-1">{item.checkCriteria}</p>
+                  <h5 className="font-medium text-primary text-sm">Criteres de verification</h5>
+                  <p className="text-primary text-sm mt-1">{item.checkCriteria}</p>
                 </div>
               </div>
             </div>
@@ -372,12 +372,12 @@ export function EnhancedBeValidation({
           
           {/* Erreurs courantes */}
           {item.commonErrors && (
-            <div className="bg-orange-50 border-l-4 border-orange-200 p-3 rounded">
+            <div className="bg-warning/5 border-l-4 border-warning/20 p-3 rounded">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5" />
+                <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
                 <div>
-                  <h5 className="font-medium text-orange-900 text-sm">Erreurs courantes a eviter</h5>
-                  <p className="text-orange-700 text-sm mt-1">{item.commonErrors}</p>
+                  <h5 className="font-medium text-warning text-sm">Erreurs courantes a eviter</h5>
+                  <p className="text-warning text-sm mt-1">{item.commonErrors}</p>
                 </div>
               </div>
             </div>
@@ -385,7 +385,7 @@ export function EnhancedBeValidation({
           
           {/* Aide contextuelle */}
           {item.helpText && (
-            <div className="bg-gray-50 border-l-4 border-gray-200 p-3 rounded">
+            <div className="bg-surface-muted border-l-4 border-border p-3 rounded">
               <div className="flex items-start gap-2">
                 <Settings className="h-4 w-4 text-on-surface-muted mt-0.5" />
                 <div>
@@ -450,9 +450,9 @@ export function EnhancedBeValidation({
           
           {/* Raisons de non-conformite et actions correctives */}
           {item.status === 'non_conforme' && (
-            <div className="bg-red-50 border border-red-200 rounded p-3 space-y-2">
+            <div className="bg-error/5 border border-error/20 rounded p-3 space-y-2">
               <div>
-                <Label className="text-sm font-medium text-red-900">Raison de non-conformite *</Label>
+                <Label className="text-sm font-medium text-error">Raison de non-conformite *</Label>
                 <Textarea
                   placeholder="Decrire precisement la non-conformite detectee..."
                   value={item.nonConformityReason || ''}
@@ -778,7 +778,7 @@ export function EnhancedBeValidation({
                     {control.status === 'warning' && control.warningMessage && (
                       <div className="bg-orange-50 border border-orange-200 rounded p-3 mb-3">
                         <div className="flex items-start gap-2">
-                          <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5" />
+                          <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
                           <div>
                             <h5 className="font-medium text-orange-900 text-sm">Attention</h5>
                             <p className="text-orange-700 text-sm mt-1">{control.warningMessage}</p>

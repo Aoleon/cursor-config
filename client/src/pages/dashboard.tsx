@@ -12,7 +12,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-surface-muted">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 

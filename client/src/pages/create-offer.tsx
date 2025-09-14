@@ -158,11 +158,35 @@ export default function CreateOffer() {
   // Récupérer les AO pour le sélecteur
   const { data: aos = [], isLoading: aosLoading } = useQuery<any[]>({
     queryKey: ["/api/aos"],
+    queryFn: async () => {
+      const response = await fetch("/api/aos");
+      const result = await response.json();
+      
+      // Extraire le tableau data si la réponse est encapsulée
+      if (result && typeof result === 'object' && 'data' in result) {
+        return result.data; // Retourner directement le tableau
+      }
+      
+      // Fallback si c'est déjà un tableau
+      return Array.isArray(result) ? result : [];
+    }
   });
 
   // Récupérer les utilisateurs pour le responsable
   const { data: users = [], isLoading: usersLoading } = useQuery<any[]>({
     queryKey: ["/api/users"],
+    queryFn: async () => {
+      const response = await fetch("/api/users");
+      const result = await response.json();
+      
+      // Extraire le tableau data si la réponse est encapsulée
+      if (result && typeof result === 'object' && 'data' in result) {
+        return result.data; // Retourner directement le tableau
+      }
+      
+      // Fallback si c'est déjà un tableau
+      return Array.isArray(result) ? result : [];
+    }
   });
 
   // Configuration du formulaire

@@ -304,6 +304,8 @@ export default function AoDetail() {
         ...formData,
         dateRenduAO,
         montantEstime: formData.montantEstime ? parseFloat(formData.montantEstime) : undefined,
+        prorataEventuel: formData.prorataEventuel ? parseFloat(formData.prorataEventuel) : undefined,
+        delaiContractuel: formData.delaiContractuel ? parseInt(formData.delaiContractuel) : undefined,
         maitreOuvrageId: selectedMaitreOuvrage?.id,
         maitreOeuvreId: selectedMaitreOeuvre?.id,
       };

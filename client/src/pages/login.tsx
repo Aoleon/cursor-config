@@ -44,10 +44,8 @@ export default function Login() {
         title: "Connexion réussie",
         description: "Bienvenue dans Saxium !",
       });
-      // Invalider le cache d'auth pour forcer le rechargement
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      // Rediriger vers le dashboard
-      setTimeout(() => setLocation("/"), 100);
+      // Rediriger directement vers le dashboard sans attendre la validation de session
+      window.location.href = "/";
     },
     onError: (error: any) => {
       toast({

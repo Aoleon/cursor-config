@@ -13,14 +13,14 @@
   --card-foreground: hsl(20, 14.3%, 4.1%);
   --border: hsl(20, 5.9%, 90%);
   --input: hsl(20, 5.9%, 90%);
-  --primary: hsl(207, 90%, 54%);
+  --primary: #1e96fc;
   --primary-foreground: hsl(211, 100%, 99%);
-  --primary-light: hsl(207, 100%, 94%);
-  --primary-dark: hsl(208, 90%, 44%);
-  --secondary: hsl(60, 4.8%, 95.9%);
+  --primary-light: #4aa9fc;
+  --primary-dark: #0377dd;
+  --secondary: #a2d6f9;
   --secondary-foreground: hsl(24, 9.8%, 10%);
-  --accent: hsl(36, 100%, 50%);
-  --accent-light: hsl(36, 100%, 94%);
+  --accent: #fcf300;
+  --accent-light: #fff82f;
   --accent-foreground: hsl(24, 9.8%, 10%);
   --success: hsl(122, 39%, 49%);
   --warning: hsl(43, 100%, 50%);
@@ -42,14 +42,14 @@
   --card-foreground: hsl(0, 0%, 98%);
   --border: hsl(240, 3.7%, 15.9%);
   --input: hsl(240, 3.7%, 15.9%);
-  --primary: hsl(207, 90%, 54%);
+  --primary: #1e96fc;
   --primary-foreground: hsl(211, 100%, 99%);
-  --primary-light: hsl(207, 100%, 94%);
-  --primary-dark: hsl(208, 90%, 44%);
+  --primary-light: #4aa9fc;
+  --primary-dark: #0377dd;
   --secondary: hsl(240, 3.7%, 15.9%);
   --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(36, 100%, 50%);
-  --accent-light: hsl(36, 100%, 94%);
+  --accent: #fcf300;
+  --accent-light: #fff82f;
   --accent-foreground: hsl(0, 0%, 98%);
   --success: hsl(122, 39%, 49%);
   --warning: hsl(43, 100%, 50%);
@@ -80,23 +80,23 @@
   }
   
   .text-primary {
-    color: hsl(207, 90%, 54%);
+    color: #1e96fc;
   }
   
   .text-primary-dark {
-    color: hsl(208, 90%, 44%);
+    color: #0377dd;
   }
   
   .bg-primary-light {
-    background-color: hsl(207, 100%, 94%);
+    background-color: #4aa9fc;
   }
   
   .text-accent {
-    color: hsl(36, 100%, 50%);
+    color: #fcf300;
   }
   
   .bg-accent-light {
-    background-color: hsl(36, 100%, 94%);
+    background-color: #fff82f;
   }
   
   .text-success {

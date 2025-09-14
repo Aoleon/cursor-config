@@ -130,7 +130,13 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  // Vérifier d'abord si c'est un utilisateur basic auth
+  if ((req as any).session?.user?.isBasicAuth) {
+    return next();
+  }
+
+  // Si pas d'utilisateur basic auth, vérifier l'authentification OIDC
+  if (!req.isAuthenticated() || !user?.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 

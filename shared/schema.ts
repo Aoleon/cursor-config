@@ -1136,16 +1136,7 @@ export interface CriticalAlert {
   metadata?: Record<string, any>;
 }
 
-// Type pour la configuration des poids de priorité
-export interface PriorityWeightsConfig {
-  montantWeight: number;
-  delaiWeight: number;
-  typeClientWeight: number;
-  complexiteWeight: number;
-  chargeBeWeight: number;
-  risqueWeight: number;
-  strategiqueWeight: number;
-}
+// Type pour la configuration des poids de priorité (utilise le schéma Zod défini plus loin)
 
 // Type pour les milestones du Gantt (utilisé dans GanttChart)
 export interface GanttMilestone {
@@ -1161,11 +1152,11 @@ export interface GanttMilestone {
 
 // Type enrichi pour les projets dans le contexte Gantt
 export interface GanttProject extends Project {
-  reference?: string;
-  client?: string;
-  location?: string;
+  reference: string | null;
+  client: string;
+  location: string;
   montantTotal?: number;
-  progressPercentage?: number;
+  progressPercentage: number | null;
   priority?: 'tres_faible' | 'faible' | 'normale' | 'elevee' | 'critique';
   estimatedHours?: number;
   actualHours?: number;
@@ -1175,11 +1166,11 @@ export interface GanttProject extends Project {
 
 // Type enrichi pour les tâches dans le contexte Gantt
 export interface GanttTask extends ProjectTask {
-  isJalon?: boolean;
+  isJalon: boolean | null;
   priority?: 'tres_faible' | 'faible' | 'normale' | 'elevee' | 'critique';
   dependencies?: string[];
-  estimatedHours?: number;
-  actualHours?: number;
+  estimatedHours: string | null;
+  actualHours: string | null;
   isOverdue?: boolean;
   responsibleUser?: User;
 }

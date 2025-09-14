@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Offers from "@/pages/offers";
 import AOsPage from "@/pages/aos";
@@ -61,6 +62,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 function Router() {
   return (
     <Switch>
+      <Route path="/login" component={Login} />
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/offers" component={() => <ProtectedRoute component={Offers} />} />
       <Route path="/aos" component={() => <ProtectedRoute component={AOsPage} />} />

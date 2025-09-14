@@ -117,8 +117,9 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 variant="secondary"
-                onClick={() => window.location.href = "/api/login"}
+                onClick={() => window.location.href = "/login"}
                 className="bg-white text-primary hover:bg-gray-100"
+                data-testid="button-login"
               >
                 Se connecter
               </Button>

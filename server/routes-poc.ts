@@ -26,6 +26,21 @@ import { sql } from "drizzle-orm";
 import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto } from "./dateUtils";
 import type { EventBus } from "./eventBus";
 
+// Extension du type Session pour inclure la propriété user
+declare module 'express-session' {
+  interface SessionData {
+    user?: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      profileImageUrl: string | null;
+      role: string;
+      isBasicAuth?: boolean;
+    };
+  }
+}
+
 // Configuration de multer pour l'upload de fichiers
 const uploadMiddleware = multer({ 
   storage: multer.memoryStorage(),
@@ -39,10 +54,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // Basic Auth Login Route
+  app.post('/api/login/basic', async (req, res) => {
+    // Protection de sécurité : désactiver en production
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    
+    try {
+      const { username, password } = req.body;
+
+      // Validation basique pour le développement
+      if (username === 'admin' && password === 'admin') {
+        // Créer un utilisateur admin fictif dans la session
+        const adminUser = {
+          id: 'admin-dev-user',
+          email: 'admin@jlm-dev.local',
+          firstName: 'Admin',
+          lastName: 'Development',
+          profileImageUrl: null,
+          role: 'admin',
+          isBasicAuth: true, // Flag pour identifier l'auth basique
+        };
+
+        // Stocker dans la session
+        req.session.user = adminUser;
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err: any) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
+        res.json({
+          success: true,
+          message: 'Connexion réussie',
+          user: adminUser
+        });
+      } else {
+        res.status(401).json({
+          success: false,
+          message: 'Identifiants incorrects'
+        });
+      }
+    } catch (error) {
+      console.error("Error in basic auth:", error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur'
+      });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const user = req.user;
+      
+      // Vérifier si c'est un utilisateur basic auth
+      if (req.session?.user?.isBasicAuth) {
+        return res.json(req.session.user);
+      }
       
       if (!user || !user.claims) {
         return res.status(401).json({ message: "No user session found" });

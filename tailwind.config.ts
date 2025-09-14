@@ -24,6 +24,8 @@ export default {
         primary: {
           DEFAULT: "var(--primary)",
           foreground: "var(--primary-foreground)",
+          light: "var(--primary-light)",
+          dark: "var(--primary-dark)",
         },
         secondary: {
           DEFAULT: "var(--secondary)",
@@ -36,6 +38,7 @@ export default {
         accent: {
           DEFAULT: "var(--accent)",
           foreground: "var(--accent-foreground)",
+          light: "var(--accent-light)",
         },
         destructive: {
           DEFAULT: "var(--destructive)",

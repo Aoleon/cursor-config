@@ -13,14 +13,14 @@
   --card-foreground: hsl(20, 14.3%, 4.1%);
   --border: hsl(20, 5.9%, 90%);
   --input: hsl(20, 5.9%, 90%);
-  --primary: #1e96fc;
+  --primary: #072ac8;
   --primary-foreground: hsl(211, 100%, 99%);
-  --primary-light: #4aa9fc;
-  --primary-dark: #0377dd;
+  --primary-light: #1740f7;
+  --primary-dark: #041a79;
   --secondary: #a2d6f9;
   --secondary-foreground: hsl(24, 9.8%, 10%);
-  --accent: #fcf300;
-  --accent-light: #fff82f;
+  --accent: #ffc600;
+  --accent-light: #ffd333;
   --accent-foreground: hsl(24, 9.8%, 10%);
   --success: hsl(122, 39%, 49%);
   --warning: hsl(43, 100%, 50%);
@@ -80,23 +80,23 @@
   }
   
   .text-primary {
-    color: #1e96fc;
+    color: var(--primary);
   }
   
   .text-primary-dark {
-    color: #0377dd;
+    color: var(--primary-dark);
   }
   
   .bg-primary-light {
-    background-color: #4aa9fc;
+    background-color: var(--primary-light);
   }
   
   .text-accent {
-    color: #fcf300;
+    color: var(--accent);
   }
   
   .bg-accent-light {
-    background-color: #fff82f;
+    background-color: var(--accent-light);
   }
   
   .text-success {

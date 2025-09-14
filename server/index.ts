@@ -4,9 +4,34 @@ import { setupVite, serveStatic, log } from "./vite";
 import { WebSocketManager } from "./websocket";
 import { eventBus } from "./eventBus";
 
+// Import des nouveaux middlewares de robustesse
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
+import { securityHeaders, sanitizeQuery, rateLimits } from "./middleware/security";
+
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// ========================================
+// MIDDLEWARES DE SÉCURITÉ (en premier)
+// ========================================
+app.use(securityHeaders());
+app.use(sanitizeQuery());
+
+// ========================================
+// MIDDLEWARES DE PARSING (avec limites de sécurité)
+// ========================================
+app.use(express.json({ 
+  limit: '10mb',
+  strict: true 
+}));
+app.use(express.urlencoded({ 
+  extended: false,
+  limit: '10mb'
+}));
+
+// ========================================
+// RATE LIMITING GLOBAL
+// ========================================
+app.use(rateLimits.general);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -47,13 +72,15 @@ app.use((req, res, next) => {
   
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    console.error(err);
-    if (!res.headersSent) res.status(status).json({ message });
-  });
+  // ========================================
+  // GESTION CENTRALISÉE DES ERREURS
+  // ========================================
+  
+  // Handler pour les routes non trouvées (avant le catch-all de Vite)
+  app.use('/api/*', notFoundHandler);
+  
+  // Middleware global de gestion d'erreurs
+  app.use(errorHandler);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

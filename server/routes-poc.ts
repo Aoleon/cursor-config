@@ -4,6 +4,10 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { OCRService } from "./ocrService";
 import multer from "multer";
+// Import des nouveaux middlewares de validation et sécurité
+import { validateBody, validateParams, validateQuery, commonParamSchemas, commonQuerySchemas } from "./middleware/validation";
+import { rateLimits, secureFileUpload } from "./middleware/security";
+import { sendSuccess, sendPaginatedSuccess, createError, asyncHandler } from "./middleware/errorHandler";
 import { 
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
   insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
@@ -91,52 +95,50 @@ app.get("/api/users", isAuthenticated, async (req, res) => {
   }
 });
 
-app.get("/api/users/:id", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/users/:id", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  asyncHandler(async (req, res) => {
     const user = await storage.getUser(req.params.id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      throw createError.notFound('Utilisateur', req.params.id);
     }
-    res.json(user);
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    res.status(500).json({ message: "Failed to fetch user" });
-  }
-});
+    sendSuccess(res, user);
+  })
+);
 
 // ========================================
 // AO ROUTES - Base pour éviter double saisie
 // ========================================
 
-app.get("/api/aos", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/aos", 
+  isAuthenticated,
+  validateQuery(commonQuerySchemas.search.optional()),
+  asyncHandler(async (req, res) => {
     const aos = await storage.getAos();
-    res.json(aos);
-  } catch (error) {
-    console.error("Error fetching AOs:", error);
-    res.status(500).json({ message: "Failed to fetch AOs" });
-  }
-});
+    sendSuccess(res, aos);
+  })
+);
 
-app.get("/api/aos/:id", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/aos/:id", 
+  isAuthenticated,
+  validateParams(commonParamSchemas.id),
+  asyncHandler(async (req, res) => {
     const ao = await storage.getAo(req.params.id);
     if (!ao) {
-      return res.status(404).json({ message: "AO not found" });
+      throw createError.notFound('AO', req.params.id);
     }
-    res.json(ao);
-  } catch (error) {
-    console.error("Error fetching AO:", error);
-    res.status(500).json({ message: "Failed to fetch AO" });
-  }
-});
+    sendSuccess(res, ao);
+  })
+);
 
-app.post("/api/aos", isAuthenticated, async (req, res) => {
-  try {
-    const validatedData = insertAoSchema.parse(req.body);
-    
+app.post("/api/aos", 
+  isAuthenticated,
+  rateLimits.createResource,
+  validateBody(insertAoSchema),
+  asyncHandler(async (req, res) => {
     // Préparer les données avec les champs calculés
-    let aoData: any = { ...validatedData };
+    let aoData: any = { ...req.body };
     
     // Si une date de sortie AO est fournie, calculer automatiquement la date limite de remise
     if (aoData.dateSortieAO) {
@@ -158,12 +160,9 @@ app.post("/api/aos", isAuthenticated, async (req, res) => {
     }
     
     const ao = await storage.createAo(aoData);
-    res.status(201).json(ao);
-  } catch (error) {
-    console.error("Error creating AO:", error);
-    res.status(500).json({ message: "Failed to create AO" });
-  }
-});
+    sendSuccess(res, ao, 201);
+  })
+);
 
 // ========================================
 // OCR ROUTES - Traitement automatique PDF
@@ -185,10 +184,13 @@ const uploadPDF = multer({
 });
 
 // Endpoint pour traiter un PDF avec OCR
-app.post("/api/ocr/process-pdf", isAuthenticated, uploadPDF.single('pdf'), async (req, res) => {
-  try {
+app.post("/api/ocr/process-pdf", 
+  isAuthenticated, 
+  rateLimits.ocr,
+  secureFileUpload().single('pdf'),
+  asyncHandler(async (req, res) => {
     if (!req.file) {
-      return res.status(400).json({ error: 'Aucun fichier PDF fourni' });
+      throw createError.badRequest('Aucun fichier PDF fourni');
     }
 
     console.log(`Processing PDF: ${req.file.originalname} (${req.file.size} bytes)`);
@@ -196,8 +198,7 @@ app.post("/api/ocr/process-pdf", isAuthenticated, uploadPDF.single('pdf'), async
     // Traitement OCR du PDF
     const result = await ocrService.processPDF(req.file.buffer);
     
-    res.json({
-      success: true,
+    sendSuccess(res, {
       filename: req.file.originalname,
       extractedText: result.extractedText,
       confidence: result.confidence,
@@ -206,21 +207,17 @@ app.post("/api/ocr/process-pdf", isAuthenticated, uploadPDF.single('pdf'), async
       processingMethod: result.rawData.method,
       message: `PDF traité avec succès (${result.rawData.method})`
     });
-
-  } catch (error: any) {
-    console.error('OCR processing error:', error);
-    res.status(500).json({ 
-      error: 'Erreur lors du traitement OCR',
-      details: error.message 
-    });
-  }
-});
+  })
+);
 
 // Endpoint pour créer un AO automatiquement depuis OCR
-app.post("/api/ocr/create-ao-from-pdf", isAuthenticated, uploadPDF.single('pdf'), async (req, res) => {
-  try {
+app.post("/api/ocr/create-ao-from-pdf", 
+  isAuthenticated,
+  rateLimits.ocr,
+  secureFileUpload().single('pdf'),
+  asyncHandler(async (req, res) => {
     if (!req.file) {
-      return res.status(400).json({ error: 'Aucun fichier PDF fourni' });
+      throw createError.badRequest('Aucun fichier PDF fourni');
     }
 
     // Initialiser le service OCR
@@ -285,8 +282,7 @@ app.post("/api/ocr/create-ao-from-pdf", isAuthenticated, uploadPDF.single('pdf')
     const validatedData = insertAoSchema.parse(aoData);
     const ao = await storage.createAo(validatedData);
 
-    res.status(201).json({
-      success: true,
+    sendSuccess(res, {
       ao,
       ocrResult: {
         confidence: ocrResult.confidence,
@@ -297,48 +293,35 @@ app.post("/api/ocr/create-ao-from-pdf", isAuthenticated, uploadPDF.single('pdf')
         ).length
       },
       message: `AO créé automatiquement avec ${Object.keys(ocrResult.processedFields).length} champs remplis`
-    });
-
-  } catch (error: any) {
-    console.error('Error creating AO from PDF:', error);
-    if (error.name === 'ZodError') {
-      res.status(400).json({ 
-        error: 'Erreur de validation des données extraites',
-        details: error.errors 
-      });
-    } else {
-      res.status(500).json({ 
-        error: 'Erreur lors de la création de l\'AO',
-        details: error.message 
-      });
-    }
-  }
-});
+    }, 201);
+  })
+);
 
 // Endpoint pour ajouter des patterns personnalisés
-app.post("/api/ocr/add-pattern", isAuthenticated, async (req, res) => {
-  try {
+const ocrPatternSchema = z.object({
+  field: z.string().min(1, 'Le champ est requis'),
+  pattern: z.string().min(1, 'Le pattern est requis')
+});
+
+app.post("/api/ocr/add-pattern", 
+  isAuthenticated,
+  rateLimits.general,
+  validateBody(ocrPatternSchema),
+  asyncHandler(async (req, res) => {
     const { field, pattern } = req.body;
     
-    if (!field || !pattern) {
-      return res.status(400).json({ error: 'Champ et pattern requis' });
+    try {
+      const regex = new RegExp(pattern, 'i');
+      ocrService.addCustomPattern(field, regex);
+      
+      sendSuccess(res, {
+        message: `Pattern ajouté pour le champ "${field}"`
+      });
+    } catch (regexError) {
+      throw createError.badRequest('Pattern regex invalide', { pattern });
     }
-    
-    const regex = new RegExp(pattern, 'i');
-    ocrService.addCustomPattern(field, regex);
-    
-    res.json({ 
-      success: true, 
-      message: `Pattern ajouté pour le champ "${field}"` 
-    });
-    
-  } catch (error: any) {
-    res.status(400).json({ 
-      error: 'Pattern invalide',
-      details: error.message 
-    });
-  }
-});
+  })
+);
 
 // ========================================
 // OFFER ROUTES - Cœur du POC (Dossiers d'Offre & Chiffrage)
@@ -497,15 +480,24 @@ app.get("/api/offers/:id", isAuthenticated, async (req, res) => {
   }
 });
 
-app.post("/api/offers", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/offers", 
+  isAuthenticated,
+  rateLimits.createResource,
+  validateBody(insertOfferSchema.omit({ 
+    dateRenduAO: true, 
+    dateAcceptationAO: true, 
+    demarragePrevu: true,
+    montantEstime: true,
+    prorataEventuel: true,
+    beHoursEstimated: true
+  })),
+  asyncHandler(async (req, res) => {
     // Convertir les dates string en objets Date si elles sont présentes
     const processedData = {
       ...req.body,
       dateRenduAO: req.body.dateRenduAO ? new Date(req.body.dateRenduAO) : undefined,
       dateAcceptationAO: req.body.dateAcceptationAO ? new Date(req.body.dateAcceptationAO) : undefined,
       demarragePrevu: req.body.demarragePrevu ? new Date(req.body.demarragePrevu) : undefined,
-      // deadline: supprimé, calculé automatiquement par le système
       // Convertir les chaînes numériques en decimals
       montantEstime: req.body.montantEstime ? req.body.montantEstime.toString() : undefined,
       prorataEventuel: req.body.prorataEventuel ? req.body.prorataEventuel.toString() : undefined,
@@ -514,19 +506,9 @@ app.post("/api/offers", isAuthenticated, async (req, res) => {
 
     const validatedData = insertOfferSchema.parse(processedData);
     const offer = await storage.createOffer(validatedData);
-    res.status(201).json(offer);
-  } catch (error: any) {
-    console.error("Error creating offer:", error);
-    if (error.name === 'ZodError') {
-      res.status(400).json({ 
-        message: "Validation error", 
-        errors: error.errors 
-      });
-    } else {
-      res.status(500).json({ message: "Failed to create offer" });
-    }
-  }
-});
+    sendSuccess(res, offer, 201);
+  })
+);
 
 // Endpoint enrichi pour créer offre avec arborescence documentaire (audit JLM)
 app.post("/api/offers/create-with-structure", isAuthenticated, async (req, res) => {
@@ -602,16 +584,19 @@ app.post("/api/offers/create-with-structure", isAuthenticated, async (req, res) 
   }
 });
 
-app.patch("/api/offers/:id", isAuthenticated, async (req, res) => {
-  try {
-    const partialData = insertOfferSchema.partial().parse(req.body);
-    const offer = await storage.updateOffer(req.params.id, partialData);
-    res.json(offer);
-  } catch (error) {
-    console.error("Error updating offer:", error);
-    res.status(500).json({ message: "Failed to update offer" });
-  }
-});
+app.patch("/api/offers/:id", 
+  isAuthenticated,
+  rateLimits.updateResource,
+  validateParams(commonParamSchemas.id),
+  validateBody(insertOfferSchema.partial()),
+  asyncHandler(async (req, res) => {
+    const offer = await storage.updateOffer(req.params.id, req.body);
+    if (!offer) {
+      throw createError.notFound('Offre', req.params.id);
+    }
+    sendSuccess(res, offer);
+  })
+);
 
 // Transformer une offre signée en projet
 app.post("/api/offers/:id/convert-to-project", isAuthenticated, async (req, res) => {

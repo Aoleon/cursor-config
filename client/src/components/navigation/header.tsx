@@ -37,7 +37,7 @@ export default function Header() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 shadow-sm">
+    <header className="bg-surface border-b border shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -47,7 +47,7 @@ export default function Header() {
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">JLM</span>
                 </div>
-                <span className="font-semibold text-gray-900">ERP Menuiserie</span>
+                <span className="font-semibold text-on-surface">ERP Menuiserie</span>
               </div>
             </Link>
           </div>
@@ -64,7 +64,7 @@ export default function Header() {
                     className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-primary-light text-primary border-b-2 border-primary"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        : "text-on-surface-muted hover:text-on-surface hover:bg-surface-muted"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -83,10 +83,10 @@ export default function Header() {
             {user && (
               <div className="flex items-center space-x-3">
                 <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-on-surface">
                     {(user as any).firstName} {(user as any).lastName}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground">
                     {(user as any).role === "responsable_be" ? "Responsable BE" : ""}
                     {(user as any).role === "technicien_be" ? "Technicien BE" : ""}
                     {(user as any).role === "chef_projet" ? "Chef de Projet" : ""}
@@ -110,7 +110,7 @@ export default function Header() {
               variant="outline" 
               size="sm" 
               asChild
-              className="text-gray-600 hover:text-gray-900"
+              className="text-on-surface-muted hover:text-on-surface"
             >
               <a href="/api/logout">
                 <LogOut className="w-4 h-4 mr-2" />
@@ -123,7 +123,7 @@ export default function Header() {
 
       {/* Mobile navigation */}
       <div className="md:hidden">
-        <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-gray-200">
+        <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border">
           {navigation.map((item) => {
             const isActive = location === item.href;
             const Icon = item.icon;
@@ -134,7 +134,7 @@ export default function Header() {
                   className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
                     isActive
                       ? "bg-primary-light text-primary"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      : "text-on-surface-muted hover:text-on-surface hover:bg-surface-muted"
                   }`}
                 >
                   <Icon className="w-5 h-5" />

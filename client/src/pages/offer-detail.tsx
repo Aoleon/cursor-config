@@ -116,9 +116,11 @@ export default function OfferDetail() {
   // Récupérer l'intégration Batigest pour cette offre
   const { data: batigestIntegration, isLoading: isBatigestLoading } = useQuery({
     queryKey: ['/api/batigest/integrations', offerId],
-    queryFn: () => apiRequest('/api/batigest/integrations').then(res => 
-      res.integrations?.find((integration: any) => integration.integration.offerId === offerId)
-    ),
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/batigest/integrations');
+      const data = await res.json();
+      return data.integrations?.find((integration: any) => integration.integration.offerId === offerId);
+    },
     enabled: !!offerId,
   });
 
@@ -243,12 +245,9 @@ export default function OfferDetail() {
   // Mutation pour synchroniser avec Batigest
   const syncBatigestMutation = useMutation({
     mutationFn: async (batigestRef: string) => {
-      return apiRequest('/api/batigest/sync-offer', {
-        method: 'POST',
-        body: JSON.stringify({
-          offerId: offerId,
-          batigestRef: batigestRef
-        })
+      return apiRequest('POST', '/api/batigest/sync-offer', {
+        offerId: offerId,
+        batigestRef: batigestRef
       });
     },
     onSuccess: () => {
@@ -677,11 +676,11 @@ export default function OfferDetail() {
                     <Label className="text-sm font-medium">Heures BE</Label>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-gray-500">Estimé:</span>
+                        <span className="text-muted-foreground">Estimé:</span>
                         <p>{offer.beHoursEstimated ? `${offer.beHoursEstimated}h` : 'N/A'}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Réel:</span>
+                        <span className="text-muted-foreground">Réel:</span>
                         <p>{offer.beHoursActual ? `${offer.beHoursActual}h` : 'N/A'}</p>
                       </div>
                     </div>
@@ -712,7 +711,7 @@ export default function OfferDetail() {
                     ) : (
                       <div className="text-sm">
                         {offer.batigestRef || (
-                          <span className="text-gray-500 italic">Non renseigné</span>
+                          <span className="text-muted-foreground italic">Non renseigné</span>
                         )}
                       </div>
                     )}
@@ -738,7 +737,7 @@ export default function OfferDetail() {
 
                   {/* Statut intégration */}
                   {isBatigestLoading ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <RefreshCw className="w-4 h-4 animate-spin" />
                       Chargement de l'intégration...
                     </div>
@@ -752,13 +751,13 @@ export default function OfferDetail() {
                       <div className="space-y-1 text-xs">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <span className="text-gray-500">N° Devis:</span>
+                            <span className="text-muted-foreground">N° Devis:</span>
                             <p className="font-medium" data-testid="text-batigest-devis">
                               {batigestIntegration.integration.numeroDevis}
                             </p>
                           </div>
                           <div>
-                            <span className="text-gray-500">Statut:</span>
+                            <span className="text-muted-foreground">Statut:</span>
                             <p className="font-medium">
                               {batigestIntegration.integration.statutBatigest}
                             </p>
@@ -768,7 +767,7 @@ export default function OfferDetail() {
                         {batigestIntegration.integration.montantBatigest && (
                           <div className="grid grid-cols-2 gap-2">
                             <div>
-                              <span className="text-gray-500">Montant HT:</span>
+                              <span className="text-muted-foreground">Montant HT:</span>
                               <p className="font-medium">
                                 {new Intl.NumberFormat('fr-FR', {
                                   style: 'currency',
@@ -777,7 +776,7 @@ export default function OfferDetail() {
                               </p>
                             </div>
                             <div>
-                              <span className="text-gray-500">Marge:</span>
+                              <span className="text-muted-foreground">Marge:</span>
                               <p className="font-medium">
                                 {batigestIntegration.integration.tauxMarge}%
                               </p>
@@ -786,7 +785,7 @@ export default function OfferDetail() {
                         )}
                         
                         <div className="pt-2 border-t border-green-200 dark:border-green-800">
-                          <span className="text-gray-500">Dernière sync:</span>
+                          <span className="text-muted-foreground">Dernière sync:</span>
                           <p className="font-medium">
                             {formatSafeDate(batigestIntegration.integration.lastSyncAt)}
                           </p>
@@ -805,7 +804,7 @@ export default function OfferDetail() {
                     </div>
                   ) : (
                     <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center gap-2 text-on-surface-muted">
                         <Database className="w-4 h-4" />
                         <span className="text-sm font-medium">Intégration disponible</span>
                       </div>

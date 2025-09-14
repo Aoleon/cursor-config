@@ -65,10 +65,10 @@ export class ErrorBoundary extends Component<Props, State> {
             <CardContent className="space-y-4">
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="mt-4" data-testid="error-details">
-                  <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                  <summary className="cursor-pointer text-sm font-medium text-on-surface-muted hover:text-on-surface">
                     Détails techniques (dev uniquement)
                   </summary>
-                  <div className="mt-2 rounded-md bg-gray-100 p-3 text-xs font-mono text-gray-800 overflow-auto max-h-40">
+                  <div className="mt-2 rounded-md bg-surface-muted p-3 text-xs font-mono text-on-surface overflow-auto max-h-40">
                     <div className="font-semibold">Error:</div>
                     <div>{this.state.error.message}</div>
                     {this.state.errorInfo && (

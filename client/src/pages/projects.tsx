@@ -27,12 +27,12 @@ export default function Projects() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "etude": return "bg-blue-100 text-blue-800";
-      case "planification": return "bg-yellow-100 text-yellow-800";
-      case "approvisionnement": return "bg-orange-100 text-orange-800";
-      case "chantier": return "bg-green-100 text-green-800";
-      case "sav": return "bg-purple-100 text-purple-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "etude": return "bg-primary/10 text-primary";
+      case "planification": return "bg-warning/10 text-warning";
+      case "approvisionnement": return "bg-warning/20 text-warning";
+      case "chantier": return "bg-success/10 text-success";
+      case "sav": return "bg-secondary/20 text-secondary-foreground";
+      default: return "bg-surface-muted text-on-surface";
     }
   };
 
@@ -48,7 +48,7 @@ export default function Projects() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-background">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
@@ -99,7 +99,7 @@ export default function Projects() {
               ) : projects.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center">
-                    <p className="text-gray-500">Aucun projet trouvé.</p>
+                    <p className="text-muted-foreground">Aucun projet trouvé.</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -119,25 +119,25 @@ export default function Projects() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <div className="flex items-center space-x-2 text-sm text-on-surface-muted">
                       <User className="w-4 h-4" />
                       <span>{project.client}</span>
                     </div>
                     
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <div className="flex items-center space-x-2 text-sm text-on-surface-muted">
                       <MapPin className="w-4 h-4" />
                       <span>{project.location}</span>
                     </div>
                     
                     {project.budget && (
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <div className="flex items-center space-x-2 text-sm text-on-surface-muted">
                         <Euro className="w-4 h-4" />
                         <span>{Number(project.budget).toLocaleString('fr-FR')} €</span>
                       </div>
                     )}
                     
                     {project.startDate && (
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <div className="flex items-center space-x-2 text-sm text-on-surface-muted">
                         <Calendar className="w-4 h-4" />
                         <span>
                           Début: {format(new Date(project.startDate), 'dd MMM yyyy', { locale: fr })}
@@ -146,7 +146,7 @@ export default function Projects() {
                     )}
                     
                     {project.endDate && (
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <div className="flex items-center space-x-2 text-sm text-on-surface-muted">
                         <Calendar className="w-4 h-4" />
                         <span>
                           Fin: {format(new Date(project.endDate), 'dd MMM yyyy', { locale: fr })}
@@ -155,7 +155,7 @@ export default function Projects() {
                     )}
 
                     {project.responsibleUser && (
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <div className="flex items-center space-x-2 text-sm text-on-surface-muted">
                         <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
                           <span className="text-xs font-medium text-white">
                             {`${project.responsibleUser.firstName?.[0] || ''}${project.responsibleUser.lastName?.[0] || ''}`}

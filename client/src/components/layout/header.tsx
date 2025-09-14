@@ -49,7 +49,7 @@ export default function Header({ title, breadcrumbs = [], actions = [] }: Header
     <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900" data-testid="header-title">{title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-on-surface" data-testid="header-title">{title}</h1>
           {breadcrumbs.length > 0 && (
             <Breadcrumb className="mt-1" data-testid="header-breadcrumbs">
               <BreadcrumbList>

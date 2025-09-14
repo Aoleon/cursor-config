@@ -116,7 +116,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
     switch (status) {
       case "brouillon":
         return (
-          <Badge className="bg-gray-100 text-gray-800">
+          <Badge className="bg-surface-muted text-on-surface">
             Brouillon
           </Badge>
         );
@@ -154,7 +154,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
   const getMenuiserieTypeBadge = (type: string) => {
     const typeColors = {
       fenetres_pvc: "bg-blue-100 text-blue-800",
-      fenetres_aluminium: "bg-gray-100 text-gray-800",
+      fenetres_aluminium: "bg-surface-muted text-on-surface",
       mur_rideau: "bg-green-100 text-green-800",
       portes_bois: "bg-purple-100 text-purple-800",
       portes_alu: "bg-orange-100 text-orange-800",
@@ -171,7 +171,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
     };
 
     return (
-      <Badge className={typeColors[type as keyof typeof typeColors] || "bg-gray-100 text-gray-800"}>
+      <Badge className={typeColors[type as keyof typeof typeColors] || "bg-surface-muted text-on-surface"}>
         {typeLabels[type as keyof typeof typeLabels] || type}
       </Badge>
     );
@@ -189,7 +189,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
       <Card className="shadow-card">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-medium text-gray-900">
+            <CardTitle className="text-lg font-medium text-on-surface">
               Liste des Appels d'Offre
             </CardTitle>
             <div className="flex items-center space-x-4">
@@ -201,7 +201,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-64 pl-10"
                 />
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-48">

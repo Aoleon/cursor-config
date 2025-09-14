@@ -13,11 +13,11 @@ export default function Landing() {
               <Wrench className="text-white text-2xl" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">Saxium</h1>
-              <p className="text-xl text-gray-600">Solution de gestion d'entreprise</p>
+              <h1 className="text-4xl font-bold text-on-surface">Saxium</h1>
+              <p className="text-xl text-on-surface-muted">Solution de gestion d'entreprise</p>
             </div>
           </div>
-          <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+          <p className="text-lg text-on-surface max-w-2xl mx-auto">
             Digitalisez et optimisez la gestion de vos dossiers d'offre, 
             le chiffrage et le suivi de projet avec notre solution ERP 
             adaptée aux besoins de votre entreprise.
@@ -32,7 +32,7 @@ export default function Landing() {
               <CardTitle>Gestion des Dossiers d'Offre</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
+              <p className="text-on-surface-muted">
                 Créez et gérez vos appels d'offre avec récupération assistée des données AO. 
                 Éliminez la double saisie et fluidifiez votre workflow.
               </p>
@@ -45,7 +45,7 @@ export default function Landing() {
               <CardTitle>Module de Chiffrage</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
+              <p className="text-on-surface-muted">
                 Intégrez votre chiffrage directement dans l'application. 
                 Éditez vos devis et DPGF simplement et efficacement.
               </p>
@@ -58,7 +58,7 @@ export default function Landing() {
               <CardTitle>Planning Projet</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
+              <p className="text-on-surface-muted">
                 Visualisez et gérez vos projets avec un planning partagé. 
                 Suivez les étapes clés et optimisez vos ressources.
               </p>
@@ -71,7 +71,7 @@ export default function Landing() {
               <CardTitle>Gestion des Équipes</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
+              <p className="text-on-surface-muted">
                 Gérez vos équipes internes et sous-traitants. 
                 Visualisez la charge de travail et optimisez l'affectation.
               </p>
@@ -84,7 +84,7 @@ export default function Landing() {
               <CardTitle>Bureau d'Étude</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
+              <p className="text-on-surface-muted">
                 Suivez la charge du Bureau d'Étude avec des indicateurs visuels. 
                 Priorisez les dossiers et optimisez les délais.
               </p>
@@ -97,7 +97,7 @@ export default function Landing() {
               <CardTitle>Workflow Auditable</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
+              <p className="text-on-surface-muted">
                 Bénéficiez d'un workflow visible et traçable. 
                 Validez les jalons et assurez un suivi complet de vos projets.
               </p>
@@ -118,7 +118,7 @@ export default function Landing() {
                 size="lg" 
                 variant="secondary"
                 onClick={() => window.location.href = "/login"}
-                className="bg-white text-primary hover:bg-gray-100"
+                className="bg-white text-primary hover:bg-surface-muted"
                 data-testid="button-login"
               >
                 Se connecter

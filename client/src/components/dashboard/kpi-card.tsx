@@ -59,7 +59,7 @@ export default function KpiCard({
     switch (trend) {
       case 'up': return <TrendingUp className="w-4 h-4 text-green-600" />;
       case 'down': return <TrendingDown className="w-4 h-4 text-red-600" />;
-      case 'stable': return <Minus className="w-4 h-4 text-gray-400" />;
+      case 'stable': return <Minus className="w-4 h-4 text-muted-foreground" />;
       default: return null;
     }
   };
@@ -117,9 +117,9 @@ export default function KpiCard({
       <Card className={`animate-pulse ${className}`} data-testid={`kpi-card-${title.toLowerCase().replace(/\s+/g, '-')}-loading`}>
         <CardContent className="p-6">
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-4 bg-surface-muted rounded w-1/2"></div>
+            <div className="h-8 bg-surface-muted rounded w-3/4"></div>
+            <div className="h-3 bg-surface-muted rounded w-1/3"></div>
           </div>
         </CardContent>
       </Card>
@@ -130,7 +130,7 @@ export default function KpiCard({
     <Card className={`shadow-card transition-all hover:shadow-lg ${getStatusColor()} ${className}`} data-testid={`kpi-card-${title.toLowerCase().replace(/\s+/g, '-')}`}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-gray-600" data-testid={`kpi-title-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <h3 className="text-sm font-medium text-on-surface-muted" data-testid={`kpi-title-${title.toLowerCase().replace(/\s+/g, '-')}`}>
             {title}
           </h3>
           <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ export default function KpiCard({
 
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
-            <p className="text-3xl font-bold text-gray-900" data-testid={`kpi-value-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+            <p className="text-3xl font-bold text-on-surface" data-testid={`kpi-value-${title.toLowerCase().replace(/\s+/g, '-')}`}>
               {formatValue(value)}
             </p>
             <div className="flex items-center gap-1">
@@ -154,7 +154,7 @@ export default function KpiCard({
                 <span className={`text-sm font-medium ${
                   trendPercentage > 0 ? 'text-green-600' : 
                   trendPercentage < 0 ? 'text-red-600' : 
-                  'text-gray-500'
+                  'text-muted-foreground'
                 }`} data-testid={`kpi-trend-${title.toLowerCase().replace(/\s+/g, '-')}`}>
                   {trendPercentage > 0 ? '+' : ''}{trendPercentage.toFixed(1)}%
                 </span>
@@ -163,7 +163,7 @@ export default function KpiCard({
           </div>
 
           {subtitle && (
-            <p className="text-sm text-gray-500" data-testid={`kpi-subtitle-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+            <p className="text-sm text-muted-foreground" data-testid={`kpi-subtitle-${title.toLowerCase().replace(/\s+/g, '-')}`}>
               {subtitle}
             </p>
           )}

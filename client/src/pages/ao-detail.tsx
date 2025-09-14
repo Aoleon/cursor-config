@@ -47,7 +47,7 @@ interface Lot {
 }
 
 const LOT_STATUS_OPTIONS = [
-  { value: "brouillon", label: "Brouillon", color: "bg-gray-100 text-gray-700" },
+  { value: "brouillon", label: "Brouillon", color: "bg-surface-muted text-on-surface" },
   { value: "en_attente_fournisseur", label: "En attente fournisseur", color: "bg-orange-100 text-orange-700" },
   { value: "pre_devis_recu", label: "Pré-devis reçu", color: "bg-blue-100 text-blue-700" },
   { value: "chiffrage_final_recu", label: "Chiffrage final reçu", color: "bg-purple-100 text-purple-700" },
@@ -60,7 +60,7 @@ const LOT_STATUS_OPTIONS = [
 
 const getStatusLabel = (status?: string) => {
   const option = LOT_STATUS_OPTIONS.find(opt => opt.value === status);
-  return option || { value: status || "brouillon", label: status || "Brouillon", color: "bg-gray-100 text-gray-700" };
+  return option || { value: status || "brouillon", label: status || "Brouillon", color: "bg-surface-muted text-on-surface" };
 };
 
 export default function AoDetail() {
@@ -121,6 +121,8 @@ export default function AoDetail() {
     sps: "",
     source: "website",
     description: "",
+    prorataEventuel: "",
+    delaiContractuel: "",
   });
 
   // États pour la gestion des contacts
@@ -190,6 +192,8 @@ export default function AoDetail() {
         sps: ao.sps || "",
         source: ao.source || "website",
         description: ao.description || "",
+        prorataEventuel: ao.prorataEventuel ? ao.prorataEventuel.toString() : "",
+        delaiContractuel: ao.delaiContractuel ? ao.delaiContractuel.toString() : "",
       });
 
       // Charger les contacts sélectionnés
@@ -358,7 +362,7 @@ export default function AoDetail() {
         <main className="flex-1 overflow-auto">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-500">Chargement de l'AO...</p>
+            <p className="text-muted-foreground">Chargement de l'AO...</p>
           </div>
         </main>
       </div>
@@ -474,6 +478,8 @@ export default function AoDetail() {
                         sps: ao.sps || "",
                         source: ao.source || "website",
                         description: ao.description || "",
+                        prorataEventuel: ao.prorataEventuel ? ao.prorataEventuel.toString() : "",
+                        delaiContractuel: ao.delaiContractuel ? ao.delaiContractuel.toString() : "",
                       });
                     }
                   }}
@@ -585,18 +591,18 @@ export default function AoDetail() {
                 <div className="space-y-3">
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <Label className="text-sm text-gray-600">Référence</Label>
+                      <Label className="text-sm text-on-surface-muted">Référence</Label>
                       <p className="font-medium">{formData.reference || "Non définie"}</p>
                     </div>
                     <div>
-                      <Label className="text-sm text-gray-600">Client</Label>
+                      <Label className="text-sm text-on-surface-muted">Client</Label>
                       <p className="font-medium">{formData.client || "Non défini"}</p>
                     </div>
                   </div>
                   
                   {formData.intituleOperation && (
                     <div>
-                      <Label className="text-sm text-gray-600">Intitulé de l'opération</Label>
+                      <Label className="text-sm text-on-surface-muted">Intitulé de l'opération</Label>
                       <p className="font-medium">{formData.intituleOperation}</p>
                     </div>
                   )}
@@ -616,7 +622,7 @@ export default function AoDetail() {
                   
                   {formData.description && (
                     <div>
-                      <Label className="text-sm text-gray-600">Description</Label>
+                      <Label className="text-sm text-on-surface-muted">Description</Label>
                       <p className="text-sm">{formData.description}</p>
                     </div>
                   )}
@@ -667,7 +673,7 @@ export default function AoDetail() {
                   
                   {formData.departement && (
                     <div>
-                      <Label className="text-sm text-gray-600">Département</Label>
+                      <Label className="text-sm text-on-surface-muted">Département</Label>
                       <p className="font-medium">{formData.departement}</p>
                     </div>
                   )}
@@ -735,34 +741,34 @@ export default function AoDetail() {
                 <div className="grid gap-3 md:grid-cols-2">
                   {formData.dateLimiteRemise && (
                     <div>
-                      <Label className="text-sm text-gray-600">Date limite de remise</Label>
+                      <Label className="text-sm text-on-surface-muted">Date limite de remise</Label>
                       <p className="font-medium">{new Date(formData.dateLimiteRemise).toLocaleDateString('fr-FR')}</p>
                     </div>
                   )}
                   
                   {formData.dateSortieAO && (
                     <div>
-                      <Label className="text-sm text-gray-600">Date sortie AO</Label>
+                      <Label className="text-sm text-on-surface-muted">Date sortie AO</Label>
                       <p className="font-medium">{new Date(formData.dateSortieAO).toLocaleDateString('fr-FR')}</p>
                     </div>
                   )}
                   
                   {formData.dateAcceptationAO && (
                     <div>
-                      <Label className="text-sm text-gray-600">Date acceptation</Label>
+                      <Label className="text-sm text-on-surface-muted">Date acceptation</Label>
                       <p className="font-medium">{new Date(formData.dateAcceptationAO).toLocaleDateString('fr-FR')}</p>
                     </div>
                   )}
                   
                   {formData.demarragePrevu && (
                     <div>
-                      <Label className="text-sm text-gray-600">Démarrage prévu</Label>
+                      <Label className="text-sm text-on-surface-muted">Démarrage prévu</Label>
                       <p className="font-medium">{new Date(formData.demarragePrevu).toLocaleDateString('fr-FR')}</p>
                     </div>
                   )}
                   
                   {!formData.dateLimiteRemise && !formData.dateSortieAO && !formData.dateAcceptationAO && !formData.demarragePrevu && (
-                    <p className="text-gray-500 text-sm">Aucune date définie</p>
+                    <p className="text-muted-foreground text-sm">Aucune date définie</p>
                   )}
                 </div>
               )}
@@ -860,34 +866,34 @@ export default function AoDetail() {
                 <div className="space-y-3">
                   {selectedMaitreOuvrage && (
                     <div>
-                      <Label className="text-sm text-gray-600">Maître d'ouvrage</Label>
+                      <Label className="text-sm text-on-surface-muted">Maître d'ouvrage</Label>
                       <p className="font-medium">{selectedMaitreOuvrage.nom}</p>
                       {selectedMaitreOuvrage.ville && (
-                        <p className="text-sm text-gray-500">{selectedMaitreOuvrage.ville}</p>
+                        <p className="text-sm text-muted-foreground">{selectedMaitreOuvrage.ville}</p>
                       )}
                     </div>
                   )}
                   
                   {selectedMaitreOeuvre && (
                     <div>
-                      <Label className="text-sm text-gray-600">Maître d'œuvre</Label>
+                      <Label className="text-sm text-on-surface-muted">Maître d'œuvre</Label>
                       <p className="font-medium">{selectedMaitreOeuvre.nom}</p>
                       {selectedMaitreOeuvre.typeOrganisation && (
-                        <p className="text-sm text-gray-500">{selectedMaitreOeuvre.typeOrganisation}</p>
+                        <p className="text-sm text-muted-foreground">{selectedMaitreOeuvre.typeOrganisation}</p>
                       )}
                     </div>
                   )}
                   
                   {(formData.contactAONom || formData.contactAOEmail || formData.contactAOTelephone) && (
                     <div>
-                      <Label className="text-sm text-gray-600">Contact AO</Label>
+                      <Label className="text-sm text-on-surface-muted">Contact AO</Label>
                       {formData.contactAONom && (
                         <p className="font-medium">{formData.contactAONom}</p>
                       )}
                       {formData.contactAOPoste && (
-                        <p className="text-sm text-gray-500">{formData.contactAOPoste}</p>
+                        <p className="text-sm text-muted-foreground">{formData.contactAOPoste}</p>
                       )}
-                      <div className="flex flex-col text-sm text-gray-600">
+                      <div className="flex flex-col text-sm text-on-surface-muted">
                         {formData.contactAOEmail && <span>{formData.contactAOEmail}</span>}
                         {formData.contactAOTelephone && <span>{formData.contactAOTelephone}</span>}
                       </div>
@@ -895,7 +901,7 @@ export default function AoDetail() {
                   )}
                   
                   {!selectedMaitreOuvrage && !selectedMaitreOeuvre && !formData.contactAONom && !formData.contactAOEmail && (
-                    <p className="text-gray-500 text-sm">Aucun contact défini</p>
+                    <p className="text-muted-foreground text-sm">Aucun contact défini</p>
                   )}
                 </div>
               )}
@@ -1002,14 +1008,14 @@ export default function AoDetail() {
                   <div className="grid gap-3 md:grid-cols-2">
                     {formData.montantEstime && (
                       <div>
-                        <Label className="text-sm text-gray-600">Montant estimé</Label>
+                        <Label className="text-sm text-on-surface-muted">Montant estimé</Label>
                         <p className="font-medium">{parseFloat(formData.montantEstime).toLocaleString('fr-FR')} €</p>
                       </div>
                     )}
                     
                     {formData.typeMarche && (
                       <div>
-                        <Label className="text-sm text-gray-600">Type de marché</Label>
+                        <Label className="text-sm text-on-surface-muted">Type de marché</Label>
                         <p className="font-medium">
                           {formData.typeMarche === "public" && "Public"}
                           {formData.typeMarche === "prive" && "Privé"}
@@ -1023,28 +1029,28 @@ export default function AoDetail() {
                     
                     {formData.bureauEtudes && (
                       <div>
-                        <Label className="text-sm text-gray-600">Bureau d'études</Label>
+                        <Label className="text-sm text-on-surface-muted">Bureau d'études</Label>
                         <p className="font-medium">{formData.bureauEtudes}</p>
                       </div>
                     )}
                     
                     {formData.bureauControle && (
                       <div>
-                        <Label className="text-sm text-gray-600">Bureau de contrôle</Label>
+                        <Label className="text-sm text-on-surface-muted">Bureau de contrôle</Label>
                         <p className="font-medium">{formData.bureauControle}</p>
                       </div>
                     )}
                     
                     {formData.sps && (
                       <div>
-                        <Label className="text-sm text-gray-600">SPS</Label>
+                        <Label className="text-sm text-on-surface-muted">SPS</Label>
                         <p className="font-medium">{formData.sps}</p>
                       </div>
                     )}
                     
                     {formData.source && (
                       <div>
-                        <Label className="text-sm text-gray-600">Source AO</Label>
+                        <Label className="text-sm text-on-surface-muted">Source AO</Label>
                         <p className="font-medium">
                           {formData.source === "mail" && "Email"}
                           {formData.source === "phone" && "Téléphone"}
@@ -1083,7 +1089,7 @@ export default function AoDetail() {
                         <div className="flex items-center justify-between">
                           <div>
                             <Label className="font-medium">{lot.numero}</Label>
-                            <span className="text-sm text-gray-500 ml-2">-</span>
+                            <span className="text-sm text-muted-foreground ml-2">-</span>
                             <span className="text-sm ml-2">{lot.designation}</span>
                           </div>
                           {lot.montantEstime && (
@@ -1109,7 +1115,7 @@ export default function AoDetail() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm">Aucun lot défini</p>
+                  <p className="text-muted-foreground text-sm">Aucun lot défini</p>
                 )}
               </CardContent>
             </Card>
@@ -1352,8 +1358,8 @@ export default function AoDetail() {
                                     <div className="flex-1">
                                       <div className="flex items-center gap-3 mb-1">
                                         <span className="font-semibold text-lg">{lot.numero}</span>
-                                        <span className="text-gray-400">•</span>
-                                        <span className="text-gray-700">{lot.designation}</span>
+                                        <span className="text-muted-foreground">•</span>
+                                        <span className="text-on-surface">{lot.designation}</span>
                                         {/* Statut très visible dans l'en-tête */}
                                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border-2 ${statusInfo.color} ${statusInfo.color.includes('red') ? 'border-red-300' : statusInfo.color.includes('green') ? 'border-green-300' : statusInfo.color.includes('blue') ? 'border-blue-300' : statusInfo.color.includes('yellow') ? 'border-yellow-300' : statusInfo.color.includes('orange') ? 'border-orange-300' : statusInfo.color.includes('purple') ? 'border-purple-300' : 'border-gray-300'}`}>
                                           <div className={`h-2 w-2 rounded-full mr-2 ${statusInfo.color.includes('red') ? 'bg-red-500' : statusInfo.color.includes('green') ? 'bg-green-500' : statusInfo.color.includes('blue') ? 'bg-blue-500' : statusInfo.color.includes('yellow') ? 'bg-yellow-500' : statusInfo.color.includes('orange') ? 'bg-orange-500' : statusInfo.color.includes('purple') ? 'bg-purple-500' : 'bg-gray-500'}`}></div>
@@ -1361,7 +1367,7 @@ export default function AoDetail() {
                                         </span>
                                       </div>
                                       {lot.quantite && (
-                                        <div className="text-sm text-gray-600">
+                                        <div className="text-sm text-on-surface-muted">
                                           {lot.quantite} élément{lot.quantite > 1 ? 's' : ''} • {lot.materiau || 'Matériau non spécifié'}
                                         </div>
                                       )}
@@ -1373,7 +1379,7 @@ export default function AoDetail() {
                                         <span className="text-lg font-bold text-green-600">
                                           {parseFloat(lot.montantEstime).toLocaleString('fr-FR')} €
                                         </span>
-                                        <p className="text-xs text-gray-500">Montant estimé</p>
+                                        <p className="text-xs text-muted-foreground">Montant estimé</p>
                                       </div>
                                     )}
                                     {isEditing ? (
@@ -1899,28 +1905,28 @@ export default function AoDetail() {
                       <div className="grid md:grid-cols-2 gap-4">
                         {formData.bureauEtudes && (
                           <div>
-                            <Label className="text-sm text-gray-600">Bureau d'études</Label>
+                            <Label className="text-sm text-on-surface-muted">Bureau d'études</Label>
                             <p className="font-medium">{formData.bureauEtudes}</p>
                           </div>
                         )}
                         
                         {formData.bureauControle && (
                           <div>
-                            <Label className="text-sm text-gray-600">Bureau de contrôle</Label>
+                            <Label className="text-sm text-on-surface-muted">Bureau de contrôle</Label>
                             <p className="font-medium">{formData.bureauControle}</p>
                           </div>
                         )}
                         
                         {formData.sps && (
                           <div>
-                            <Label className="text-sm text-gray-600">Coordinateur SPS</Label>
+                            <Label className="text-sm text-on-surface-muted">Coordinateur SPS</Label>
                             <p className="font-medium">{formData.sps}</p>
                           </div>
                         )}
                         
                         {formData.montantEstime && (
                           <div>
-                            <Label className="text-sm text-gray-600">Budget estimé global</Label>
+                            <Label className="text-sm text-on-surface-muted">Budget estimé global</Label>
                             <p className="font-medium">{parseFloat(formData.montantEstime).toLocaleString('fr-FR')} €</p>
                           </div>
                         )}

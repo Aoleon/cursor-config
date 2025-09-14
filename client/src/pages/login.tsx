@@ -71,20 +71,20 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-light to-white flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-primary-light to-surface flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
             <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-              <Wrench className="text-white text-xl" />
+              <Wrench className="text-on-primary text-xl" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Saxium</h1>
-              <p className="text-sm text-gray-600">Connexion</p>
+              <h1 className="text-2xl font-bold text-on-surface">Saxium</h1>
+              <p className="text-sm text-on-surface-muted">Connexion</p>
             </div>
           </div>
-          <p className="text-gray-700">
+          <p className="text-on-surface">
             Accédez à votre espace de travail
           </p>
         </div>
@@ -108,7 +108,7 @@ export default function Login() {
                       <FormLabel>Nom d'utilisateur</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
                             {...field}
                             type="text"
@@ -131,7 +131,7 @@ export default function Login() {
                       <FormLabel>Mot de passe</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
                             {...field}
                             type="password"
@@ -154,7 +154,7 @@ export default function Login() {
                 >
                   {(isBasicLoading || basicLoginMutation.isPending) ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-primary mr-2"></div>
                       Connexion...
                     </>
                   ) : (
@@ -168,8 +168,8 @@ export default function Login() {
             </Form>
 
             {/* Hint pour le développement */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600">
+            <div className="mt-4 p-3 bg-surface-muted rounded-lg">
+              <p className="text-xs text-on-surface-muted">
                 <strong>Développement:</strong> Utilisez admin/admin pour la connexion basique
               </p>
             </div>
@@ -182,7 +182,7 @@ export default function Login() {
             <Separator />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-500">Ou</span>
+            <span className="bg-surface px-2 text-muted-foreground">Ou</span>
           </div>
         </div>
 
@@ -192,16 +192,16 @@ export default function Login() {
             <Button
               onClick={handleRobinswoodLogin}
               variant="outline"
-              className="w-full border-2 border-primary text-primary hover:bg-primary hover:text-white"
+              className="w-full border-2 border-primary text-primary hover:bg-primary hover:text-on-primary"
               data-testid="button-login-robinswood"
             >
               <div className="w-5 h-5 mr-2 bg-primary rounded flex items-center justify-center">
-                <span className="text-white text-xs font-bold">R</span>
+                <span className="text-on-primary text-xs font-bold">R</span>
               </div>
               Connexion Robinswood
             </Button>
             
-            <p className="text-xs text-gray-500 text-center mt-2">
+            <p className="text-xs text-muted-foreground text-center mt-2">
               Authentification via le compte Robinswood
             </p>
           </CardContent>
@@ -209,7 +209,7 @@ export default function Login() {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             © 2025 Saxium - Solution de gestion d'entreprise
           </p>
         </div>

@@ -86,19 +86,19 @@ interface EnhancedBeValidationProps {
 }
 
 const CRITICALITY_CONFIG = {
-  bloquant: { color: 'bg-red-500', textColor: 'text-red-700', bgColor: 'bg-red-50', label: 'BLOQUANT' },
-  majeur: { color: 'bg-orange-500', textColor: 'text-orange-700', bgColor: 'bg-orange-50', label: 'MAJEUR' },
-  mineur: { color: 'bg-yellow-500', textColor: 'text-yellow-700', bgColor: 'bg-yellow-50', label: 'MINEUR' },
-  info: { color: 'bg-blue-500', textColor: 'text-blue-700', bgColor: 'bg-blue-50', label: 'INFO' }
+  bloquant: { color: 'bg-error', textColor: 'text-error', bgColor: 'bg-error/10', label: 'BLOQUANT' },
+  majeur: { color: 'bg-warning', textColor: 'text-warning', bgColor: 'bg-warning/10', label: 'MAJEUR' },
+  mineur: { color: 'bg-warning/70', textColor: 'text-warning', bgColor: 'bg-warning/5', label: 'MINEUR' },
+  info: { color: 'bg-primary', textColor: 'text-primary', bgColor: 'bg-primary/10', label: 'INFO' }
 };
 
 const STATUS_CONFIG = {
-  non_controle: { color: 'bg-gray-200', textColor: 'text-gray-700', label: 'Non controle', icon: Clock },
-  en_cours: { color: 'bg-blue-200', textColor: 'text-blue-700', label: 'En cours', icon: Settings },
-  conforme: { color: 'bg-green-200', textColor: 'text-green-700', label: 'Conforme', icon: CheckCircle },
-  non_conforme: { color: 'bg-red-200', textColor: 'text-red-700', label: 'Non conforme', icon: XCircle },
-  reserve: { color: 'bg-orange-200', textColor: 'text-orange-700', label: 'Reserve', icon: AlertTriangle },
-  na: { color: 'bg-gray-100', textColor: 'text-gray-500', label: 'N/A', icon: Eye }
+  non_controle: { color: 'bg-surface-muted', textColor: 'text-on-surface', label: 'Non controle', icon: Clock },
+  en_cours: { color: 'bg-primary/20', textColor: 'text-primary', label: 'En cours', icon: Settings },
+  conforme: { color: 'bg-success/20', textColor: 'text-success', label: 'Conforme', icon: CheckCircle },
+  non_conforme: { color: 'bg-error/20', textColor: 'text-error', label: 'Non conforme', icon: XCircle },
+  reserve: { color: 'bg-warning/20', textColor: 'text-warning', label: 'Reserve', icon: AlertTriangle },
+  na: { color: 'bg-surface-muted', textColor: 'text-muted-foreground', label: 'N/A', icon: Eye }
 };
 
 export function EnhancedBeValidation({ 
@@ -344,7 +344,7 @@ export function EnhancedBeValidation({
                 )}
               </div>
               <CardTitle className="text-base font-medium">{item.title}</CardTitle>
-              <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+              <p className="text-sm text-on-surface-muted mt-1">{item.description}</p>
             </div>
             
             <div className="flex items-center gap-2 ml-4">
@@ -387,10 +387,10 @@ export function EnhancedBeValidation({
           {item.helpText && (
             <div className="bg-gray-50 border-l-4 border-gray-200 p-3 rounded">
               <div className="flex items-start gap-2">
-                <Settings className="h-4 w-4 text-gray-600 mt-0.5" />
+                <Settings className="h-4 w-4 text-on-surface-muted mt-0.5" />
                 <div>
-                  <h5 className="font-medium text-gray-900 text-sm">Aide</h5>
-                  <p className="text-gray-700 text-sm mt-1">{item.helpText}</p>
+                  <h5 className="font-medium text-on-surface text-sm">Aide</h5>
+                  <p className="text-on-surface text-sm mt-1">{item.helpText}</p>
                 </div>
               </div>
             </div>
@@ -474,7 +474,7 @@ export function EnhancedBeValidation({
           
           {/* Informations de controle */}
           {item.checkedAt && (
-            <div className="text-xs text-gray-500 flex items-center gap-4">
+            <div className="text-xs text-muted-foreground flex items-center gap-4">
               <span>Controle le {item.checkedAt.toLocaleDateString()} a {item.checkedAt.toLocaleTimeString()}</span>
               {item.checkedBy && <span>par {item.checkedBy}</span>}
             </div>
@@ -492,8 +492,8 @@ export function EnhancedBeValidation({
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Validation BE - {validationType}</h2>
-            <p className="text-gray-600">Controle qualite renforce selon audit JLM</p>
+            <h2 className="text-2xl font-bold text-on-surface">Validation BE - {validationType}</h2>
+            <p className="text-on-surface-muted">Controle qualite renforce selon audit JLM</p>
           </div>
           
           <div className="flex items-center gap-4">
@@ -509,7 +509,7 @@ export function EnhancedBeValidation({
             
             <div className="text-right">
               <div className="text-2xl font-bold text-blue-600">{Math.round(validationProgress)}%</div>
-              <div className="text-xs text-gray-500">Progression</div>
+              <div className="text-xs text-muted-foreground">Progression</div>
             </div>
           </div>
         </div>
@@ -519,8 +519,8 @@ export function EnhancedBeValidation({
         {/* Resume rapide */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
           <div>
-            <div className="text-xl font-bold text-gray-900">{summary.total}</div>
-            <div className="text-xs text-gray-500">Total requis</div>
+            <div className="text-xl font-bold text-on-surface">{summary.total}</div>
+            <div className="text-xs text-muted-foreground">Total requis</div>
           </div>
           <div>
             <div className="text-xl font-bold text-green-600">{summary.conforme}</div>

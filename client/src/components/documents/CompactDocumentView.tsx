@@ -39,19 +39,19 @@ const FOLDER_CONFIG = {
   '01-DCE-Cotes-Photos': {
     label: 'DCE & Photos',
     icon: FileImage,
-    color: 'bg-blue-100 text-blue-700 border-blue-200',
+    color: 'bg-primary/10 text-primary border-primary/20',
     shortLabel: 'DCE'
   },
   '02-Etudes-fournisseurs': {
     label: 'Études fournisseurs',
     icon: User,
-    color: 'bg-green-100 text-green-700 border-green-200',
+    color: 'bg-success/10 text-success border-success/20',
     shortLabel: 'Études'
   },
   '03-Devis-pieces-administratives': {
     label: 'Devis & Admin',
     icon: FileSpreadsheet,
-    color: 'bg-purple-100 text-purple-700 border-purple-200',
+    color: 'bg-secondary/20 text-secondary-foreground border-secondary/30',
     shortLabel: 'Devis'
   }
 } as const;
@@ -130,16 +130,16 @@ export function CompactDocumentView({
   return (
     <div className={cn('space-y-4', className)}>
       {/* Résumé global compact */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-xs text-blue-600">documents</div>
+              <div className="text-2xl font-bold text-primary">{stats.total}</div>
+              <div className="text-xs text-primary">documents</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-semibold text-gray-700">{formatFileSize(stats.totalSize)}</div>
-              <div className="text-xs text-gray-500">taille totale</div>
+              <div className="text-lg font-semibold text-on-surface">{formatFileSize(stats.totalSize)}</div>
+              <div className="text-xs text-muted-foreground">taille totale</div>
             </div>
           </div>
           
@@ -162,10 +162,10 @@ export function CompactDocumentView({
       </div>
 
       {/* Barre d'outils compacte */}
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-gray-50 rounded-lg">
+      <div className="flex flex-wrap items-center gap-3 p-3 bg-surface-muted rounded-lg">
         <div className="flex-1 min-w-48">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher des documents..."
               value={searchTerm}
@@ -214,7 +214,7 @@ export function CompactDocumentView({
         {Object.entries(FOLDER_CONFIG).map(([folderKey, config]) => {
           const Icon = config.icon;
           return (
-            <div key={folderKey} className={cn('border-2 border-dashed rounded-lg p-3 transition-colors hover:bg-gray-50', config.color)}>
+            <div key={folderKey} className={cn('border-2 border-dashed rounded-lg p-3 transition-colors hover:bg-surface-muted', config.color)}>
               <label htmlFor={`upload-${folderKey}`} className="cursor-pointer block">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -264,11 +264,11 @@ export function CompactDocumentView({
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr className="text-left">
-                    <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
-                    <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Dossier</th>
-                    <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Taille</th>
-                    <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Ajouté</th>
-                    <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Document</th>
+                    <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Dossier</th>
+                    <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Taille</th>
+                    <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Ajouté</th>
+                    <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -280,13 +280,13 @@ export function CompactDocumentView({
                       <tr key={doc.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <FileIcon className="h-5 w-5 text-gray-400" />
+                            <FileIcon className="h-5 w-5 text-muted-foreground" />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-gray-900 truncate">
+                              <p className="text-sm font-medium text-on-surface truncate">
                                 {doc.originalName}
                               </p>
                               {doc.name !== doc.originalName && (
-                                <p className="text-xs text-gray-500 truncate">{doc.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{doc.name}</p>
                               )}
                             </div>
                           </div>
@@ -298,10 +298,10 @@ export function CompactDocumentView({
                             </Badge>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
                           {formatFileSize(doc.fileSize)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
                           {new Date(doc.uploadedAt).toLocaleDateString('fr-FR', {
                             day: '2-digit',
                             month: '2-digit',
@@ -340,8 +340,8 @@ export function CompactDocumentView({
               
               {filteredDocuments.length === 0 && (
                 <div className="text-center py-8">
-                  <FolderOpen className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">
+                  <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground">
                     {searchTerm || selectedFolder !== 'all' 
                       ? 'Aucun document ne correspond aux critères de recherche' 
                       : 'Aucun document uploadé pour le moment'
@@ -363,7 +363,7 @@ export function CompactDocumentView({
               <Card key={doc.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-3">
                   <div className="flex items-start justify-between mb-2">
-                    <FileIcon className="h-8 w-8 text-gray-400" />
+                    <FileIcon className="h-8 w-8 text-muted-foreground" />
                     <div className="flex items-center gap-1">
                       {onView && (
                         <Button
@@ -388,11 +388,11 @@ export function CompactDocumentView({
                     </div>
                   </div>
                   
-                  <h4 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
+                  <h4 className="text-sm font-medium text-on-surface mb-1 line-clamp-2">
                     {doc.originalName}
                   </h4>
                   
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{formatFileSize(doc.fileSize)}</span>
                     {folderConfig && (
                       <Badge className={cn('text-xs', folderConfig.color)}>
@@ -401,7 +401,7 @@ export function CompactDocumentView({
                     )}
                   </div>
                   
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="text-xs text-muted-foreground mt-1">
                     {new Date(doc.uploadedAt).toLocaleDateString('fr-FR')}
                   </div>
                 </CardContent>
@@ -411,8 +411,8 @@ export function CompactDocumentView({
           
           {filteredDocuments.length === 0 && (
             <div className="col-span-full text-center py-8">
-              <FolderOpen className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">
+              <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">
                 {searchTerm || selectedFolder !== 'all' 
                   ? 'Aucun document ne correspond aux critères de recherche' 
                   : 'Aucun document uploadé pour le moment'
@@ -427,7 +427,7 @@ export function CompactDocumentView({
       {stats.recentUploads.length > 0 && !searchTerm && selectedFolder === 'all' && (
         <Card>
           <CardContent className="p-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+            <h4 className="text-sm font-medium text-on-surface mb-3 flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               Derniers ajouts
             </h4>
@@ -436,9 +436,9 @@ export function CompactDocumentView({
                 const FileIcon = getFileIcon(doc.mimeType);
                 return (
                   <div key={doc.id} className="flex items-center gap-3 text-sm">
-                    <FileIcon className="h-4 w-4 text-gray-400" />
+                    <FileIcon className="h-4 w-4 text-muted-foreground" />
                     <span className="flex-1 truncate">{doc.originalName}</span>
-                    <span className="text-gray-500 text-xs">
+                    <span className="text-muted-foreground text-xs">
                       {new Date(doc.uploadedAt).toLocaleDateString('fr-FR')}
                     </span>
                   </div>

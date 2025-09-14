@@ -78,8 +78,8 @@ export function DocumentUploadZone({
           isDragOver 
             ? 'border-primary bg-primary/5' 
             : isUploading 
-              ? 'border-gray-200 bg-gray-50' 
-              : 'border-gray-300 hover:border-gray-400'
+              ? 'border-surface-muted bg-surface-muted' 
+              : 'border-border hover:border-border-hover'
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -87,14 +87,14 @@ export function DocumentUploadZone({
         onClick={!isUploading ? handleClickUpload : undefined}
       >
         <Upload className={`h-8 w-8 mx-auto mb-2 ${
-          isDragOver ? 'text-primary' : 'text-gray-400'
+          isDragOver ? 'text-primary' : 'text-muted-foreground'
         }`} />
         <p className={`text-sm font-medium ${
-          isDragOver ? 'text-primary' : 'text-gray-600'
+          isDragOver ? 'text-primary' : 'text-on-surface-muted'
         }`}>
           {isDragOver ? 'Relâchez pour uploader' : 'Glissez-déposez vos fichiers ici'}
         </p>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           ou cliquez pour sélectionner
         </p>
         <Button 
@@ -124,22 +124,22 @@ export function DocumentUploadZone({
       {/* Progrès d'upload */}
       {currentFolderProgress.length > 0 && (
         <div className="space-y-2">
-          <div className="text-sm font-medium text-gray-700">Upload en cours</div>
+          <div className="text-sm font-medium text-on-surface-muted">Upload en cours</div>
           {currentFolderProgress.map(([key, progress]) => (
-            <div key={key} className="bg-white border rounded-lg p-3">
+            <div key={key} className="bg-surface border rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-gray-500" />
+                  <FileText className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium truncate">{progress.fileName}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {progress.status === 'success' && (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircle className="h-4 w-4 text-success" />
                   )}
                   {progress.status === 'error' && (
-                    <AlertCircle className="h-4 w-4 text-red-500" />
+                    <AlertCircle className="h-4 w-4 text-error" />
                   )}
-                  <span className="text-xs text-gray-500">{progress.progress}%</span>
+                  <span className="text-xs text-muted-foreground">{progress.progress}%</span>
                 </div>
               </div>
               <Progress value={progress.progress} className="h-2" />
@@ -150,22 +150,22 @@ export function DocumentUploadZone({
 
       {/* Liste des documents existants */}
       <div className="space-y-2">
-        <div className="text-sm font-medium text-gray-700 mb-2">
+        <div className="text-sm font-medium text-on-surface-muted mb-2">
           Fichiers ({documents.length})
         </div>
         {documents.length === 0 ? (
-          <div className="text-center py-4 text-gray-500 text-sm">
+          <div className="text-center py-4 text-muted-foreground text-sm">
             Aucun document dans cette section
           </div>
         ) : (
           <div className="space-y-2">
             {documents.map((doc: any, index) => (
-              <div key={index} className="flex items-center justify-between bg-white border rounded-lg p-3">
+              <div key={index} className="flex items-center justify-between bg-surface border rounded-lg p-3">
                 <div className="flex items-center gap-3">
-                  <FileText className="h-4 w-4 text-gray-500" />
+                  <FileText className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <div className="text-sm font-medium">{doc.fileName}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                       Uploadé le {new Date(doc.uploadedAt).toLocaleDateString('fr-FR')}
                     </div>
                   </div>

@@ -182,18 +182,18 @@ export function OCRUploader({ onAOCreated, onFieldsExtracted, className }: OCRUp
 
   const getConfidenceColor = (level: string) => {
     switch (level) {
-      case 'excellent': return 'text-green-600 bg-green-50';
-      case 'bon': return 'text-blue-600 bg-blue-50';
-      case 'moyen': return 'text-yellow-600 bg-yellow-50';
-      case 'faible': return 'text-red-600 bg-red-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case 'excellent': return 'text-success bg-success/10';
+      case 'bon': return 'text-primary bg-primary/10';
+      case 'moyen': return 'text-warning bg-warning/10';
+      case 'faible': return 'text-error bg-error/10';
+      default: return 'text-on-surface-muted bg-surface-muted';
     }
   };
 
   const getProcessingMethodIcon = (method: string) => {
     switch (method) {
-      case 'native-text': return <Zap className="h-4 w-4 text-green-600" />;
-      case 'ocr': return <Brain className="h-4 w-4 text-blue-600" />;
+      case 'native-text': return <Zap className="h-4 w-4 text-success" />;
+      case 'ocr': return <Brain className="h-4 w-4 text-primary" />;
       default: return <FileText className="h-4 w-4" />;
     }
   };
@@ -205,7 +205,7 @@ export function OCRUploader({ onAOCreated, onFieldsExtracted, className }: OCRUp
           <Brain className="h-5 w-5" />
           Traitement OCR Automatique
         </CardTitle>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-on-surface-muted">
           Glissez-déposez un PDF d'appel d'offres pour extraire automatiquement les informations
         </p>
       </CardHeader>
@@ -215,20 +215,20 @@ export function OCRUploader({ onAOCreated, onFieldsExtracted, className }: OCRUp
         <div
           className={`
             border-2 border-dashed rounded-lg p-8 text-center transition-colors
-            ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}
-            ${isProcessing ? 'opacity-50 pointer-events-none' : 'hover:border-gray-400'}
+            ${dragActive ? 'border-primary bg-primary/10' : 'border'}
+            ${isProcessing ? 'opacity-50 pointer-events-none' : 'hover:border-muted'}
           `}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
         >
-          <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <div className="space-y-2">
             <p className="text-lg font-medium">
               Glissez-déposez votre PDF ici
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               ou cliquez pour sélectionner un fichier
             </p>
             <Input
@@ -289,16 +289,16 @@ export function OCRUploader({ onAOCreated, onFieldsExtracted, className }: OCRUp
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries(ocrResult.processedFields).map(([key, value]) => (
                     value && (
-                      <div key={key} className="p-3 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-medium text-gray-700 capitalize">
+                      <div key={key} className="p-3 bg-surface-muted rounded-lg">
+                        <div className="text-sm font-medium text-on-surface capitalize">
                           {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
                         </div>
                         <div className="text-sm mt-1">
                           {typeof value === 'boolean' ? (
                             value ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <CheckCircle className="h-4 w-4 text-success" />
                             ) : (
-                              <AlertCircle className="h-4 w-4 text-red-600" />
+                              <AlertCircle className="h-4 w-4 text-error" />
                             )
                           ) : (
                             String(value)
@@ -311,7 +311,7 @@ export function OCRUploader({ onAOCreated, onFieldsExtracted, className }: OCRUp
               </TabsContent>
 
               <TabsContent value="text" className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg max-h-64 overflow-y-auto">
+                <div className="p-4 bg-surface-muted rounded-lg max-h-64 overflow-y-auto">
                   <pre className="text-sm whitespace-pre-wrap">
                     {ocrResult.extractedText}
                   </pre>
@@ -341,7 +341,7 @@ export function OCRUploader({ onAOCreated, onFieldsExtracted, className }: OCRUp
                   </Button>
                 </div>
                 
-                <div className="text-sm text-gray-600 space-y-1">
+                <div className="text-sm text-on-surface-muted space-y-1">
                   <p>• <strong>Créer un AO</strong> : Génère automatiquement un nouvel appel d'offres</p>
                   <p>• <strong>Pré-remplir</strong> : Utilise les données pour remplir le formulaire actuel</p>
                 </div>

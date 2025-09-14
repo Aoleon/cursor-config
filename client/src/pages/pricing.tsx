@@ -161,9 +161,9 @@ export default function Pricing() {
           <CardContent>
             <div className="space-y-3">
               {offersLoading ? (
-                <div className="text-center py-4 text-gray-500">Chargement...</div>
+                <div className="text-center py-4 text-muted-foreground">Chargement...</div>
               ) : offers.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
+                <div className="text-center py-4 text-muted-foreground">
                   Aucune offre en cours de chiffrage
                 </div>
               ) : (
@@ -180,8 +180,8 @@ export default function Pricing() {
                     <CardContent className="p-4">
                       <div className="space-y-2">
                         <div className="font-medium">{offer.reference}</div>
-                        <div className="text-sm text-gray-600">{offer.client}</div>
-                        <div className="text-sm text-gray-500">{offer.location}</div>
+                        <div className="text-sm text-on-surface-muted">{offer.client}</div>
+                        <div className="text-sm text-muted-foreground">{offer.location}</div>
                         <div className="flex items-center justify-between">
                           <Badge variant="outline">
                             {offer.menuiserieType}
@@ -191,7 +191,7 @@ export default function Pricing() {
                           </span>
                         </div>
                         {offer.responsibleUser && (
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <User className="w-3 h-3" />
                             {offer.responsibleUser.firstName} {offer.responsibleUser.lastName}
                           </div>

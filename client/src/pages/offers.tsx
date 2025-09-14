@@ -8,7 +8,7 @@ export default function Offers() {
   const [_, setLocation] = useLocation();
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-background">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 

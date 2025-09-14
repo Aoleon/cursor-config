@@ -104,7 +104,7 @@ export default function UnifiedOffersDisplay({
     // Si prioritaire, toujours afficher en rouge
     if (offer.isPriority) {
       return (
-        <Badge className="bg-red-100 text-red-800">
+        <Badge className="bg-error/10 text-error">
           <Star className="w-3 h-3 mr-1" />
           Prioritaire
         </Badge>
@@ -113,19 +113,19 @@ export default function UnifiedOffersDisplay({
 
     // Sinon afficher le statut normal
     const statusConfig = {
-      nouveau: { color: "bg-blue-100 text-blue-800", label: "Nouveau" },
-      brouillon: { color: "bg-gray-100 text-gray-800", label: "Brouillon" },
-      en_cours: { color: "bg-yellow-100 text-yellow-800", label: "En cours" },
-      en_cours_chiffrage: { color: "bg-yellow-100 text-yellow-800", label: "En cours chiffrage" },
-      en_attente_validation: { color: "bg-orange-100 text-orange-800", label: "En attente validation" },
-      fini: { color: "bg-green-100 text-green-800", label: "Terminé" },
-      valide: { color: "bg-green-100 text-green-800", label: "Validé" },
-      perdu: { color: "bg-red-100 text-red-800", label: "Perdu" },
-      archive: { color: "bg-gray-100 text-gray-800", label: "Archivé" },
+      nouveau: { color: "bg-primary/10 text-primary", label: "Nouveau" },
+      brouillon: { color: "bg-surface-muted text-on-surface", label: "Brouillon" },
+      en_cours: { color: "bg-warning/10 text-warning", label: "En cours" },
+      en_cours_chiffrage: { color: "bg-warning/10 text-warning", label: "En cours chiffrage" },
+      en_attente_validation: { color: "bg-warning/20 text-warning", label: "En attente validation" },
+      fini: { color: "bg-success/10 text-success", label: "Terminé" },
+      valide: { color: "bg-success/10 text-success", label: "Validé" },
+      perdu: { color: "bg-error/10 text-error", label: "Perdu" },
+      archive: { color: "bg-surface-muted text-on-surface", label: "Archivé" },
     };
 
     const config = statusConfig[offer.status as keyof typeof statusConfig] || 
-                  { color: "bg-gray-100 text-gray-800", label: offer.status };
+                  { color: "bg-surface-muted text-on-surface", label: offer.status };
 
     return (
       <Badge className={config.color}>
@@ -136,23 +136,23 @@ export default function UnifiedOffersDisplay({
 
   const getMenuiserieTypeBadge = (type: string) => {
     const typeConfig = {
-      fenetre: { color: "bg-blue-100 text-blue-800", label: "Fenêtre" },
-      fenetres_pvc: { color: "bg-blue-100 text-blue-800", label: "Fenêtres PVC" },
-      fenetres_aluminium: { color: "bg-gray-100 text-gray-800", label: "Fenêtres Alu" },
-      porte: { color: "bg-green-100 text-green-800", label: "Porte" },
-      portes_bois: { color: "bg-purple-100 text-purple-800", label: "Portes Bois" },
-      portes_alu: { color: "bg-orange-100 text-orange-800", label: "Portes Alu" },
-      portail: { color: "bg-purple-100 text-purple-800", label: "Portail" },
-      volet: { color: "bg-orange-100 text-orange-800", label: "Volet" },
-      cloison: { color: "bg-yellow-100 text-yellow-800", label: "Cloison" },
-      verriere: { color: "bg-indigo-100 text-indigo-800", label: "Verrière" },
-      mur_rideau: { color: "bg-green-100 text-green-800", label: "Mur-rideau" },
-      bardage: { color: "bg-yellow-100 text-yellow-800", label: "Bardage" },
-      autre: { color: "bg-gray-100 text-gray-800", label: "Autre" },
+      fenetre: { color: "bg-primary/10 text-primary", label: "Fenêtre" },
+      fenetres_pvc: { color: "bg-primary/10 text-primary", label: "Fenêtres PVC" },
+      fenetres_aluminium: { color: "bg-surface-muted text-on-surface", label: "Fenêtres Alu" },
+      porte: { color: "bg-success/10 text-success", label: "Porte" },
+      portes_bois: { color: "bg-secondary/20 text-secondary-foreground", label: "Portes Bois" },
+      portes_alu: { color: "bg-warning/10 text-warning", label: "Portes Alu" },
+      portail: { color: "bg-secondary/20 text-secondary-foreground", label: "Portail" },
+      volet: { color: "bg-warning/10 text-warning", label: "Volet" },
+      cloison: { color: "bg-warning/10 text-warning", label: "Cloison" },
+      verriere: { color: "bg-primary/20 text-primary", label: "Verrière" },
+      mur_rideau: { color: "bg-success/10 text-success", label: "Mur-rideau" },
+      bardage: { color: "bg-warning/10 text-warning", label: "Bardage" },
+      autre: { color: "bg-surface-muted text-on-surface", label: "Autre" },
     };
 
     const config = typeConfig[type as keyof typeof typeConfig] || 
-                  { color: "bg-gray-100 text-gray-800", label: type || "Non défini" };
+                  { color: "bg-surface-muted text-on-surface", label: type || "Non défini" };
 
     return (
       <Badge variant="outline" className={config.color}>
@@ -172,7 +172,7 @@ export default function UnifiedOffersDisplay({
         <CardContent className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" data-testid="loading-spinner"></div>
-            <p className="text-gray-500" data-testid="loading-message">Chargement des offres...</p>
+            <p className="text-muted-foreground" data-testid="loading-message">Chargement des offres...</p>
           </div>
         </CardContent>
       </Card>
@@ -184,8 +184,8 @@ export default function UnifiedOffersDisplay({
       <Card data-testid="offers-error">
         <CardContent className="p-6">
           <div className="text-center py-8">
-            <div className="text-red-500 mb-4">⚠️</div>
-            <p className="text-gray-600 mb-4" data-testid="error-message">
+            <div className="text-error mb-4">⚠️</div>
+            <p className="text-on-surface-muted mb-4" data-testid="error-message">
               Impossible de charger les offres.
               {error && ` (${(error as Error).message})`}
             </p>
@@ -231,7 +231,7 @@ export default function UnifiedOffersDisplay({
         <div className="flex flex-col sm:flex-row gap-4 mt-4" data-testid="offers-filters">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Rechercher par référence, client, localisation..."
                 value={search}
@@ -265,11 +265,11 @@ export default function UnifiedOffersDisplay({
       <CardContent>
         {offers.length === 0 ? (
           <div className="text-center py-12" data-testid="offers-empty-state">
-            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2" data-testid="empty-title">
+            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-on-surface mb-2" data-testid="empty-title">
               Aucune offre trouvée
             </h3>
-            <p className="text-gray-500 mb-4" data-testid="empty-description">
+            <p className="text-muted-foreground mb-4" data-testid="empty-description">
               {search || statusFilter !== "tous" 
                 ? "Aucune offre ne correspond aux critères de recherche"
                 : "Commencez par créer votre première offre"
@@ -305,10 +305,10 @@ export default function UnifiedOffersDisplay({
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h3 className="font-semibold text-gray-900 text-lg">
+                              <h3 className="font-semibold text-on-surface text-lg">
                                 {offer.reference}
                               </h3>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-muted-foreground">
                                 Créé le {formatDate(offer.createdAt)}
                               </p>
                             </div>
@@ -370,7 +370,7 @@ export default function UnifiedOffersDisplay({
                                     <Button 
                                       variant="ghost" 
                                       size="sm" 
-                                      className={offer.isPriority ? "text-red-600 hover:text-red-700" : "text-gray-400 hover:text-yellow-600"}
+                                      className={offer.isPriority ? "text-red-600 hover:text-red-700" : "text-muted-foreground hover:text-yellow-600"}
                                       onClick={(e) => handlePrioritize(offer, e)}
                                       disabled={prioritizeMutation.isPending}
                                       data-testid={`button-priority-${offer.id}`}
@@ -391,34 +391,34 @@ export default function UnifiedOffersDisplay({
                       {/* Informations principales */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div className="flex items-center space-x-2">
-                          <Building className="h-4 w-4 text-gray-400" />
+                          <Building className="h-4 w-4 text-muted-foreground" />
                           <div>
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-on-surface">
                               {offer.client}
                             </p>
-                            <p className="text-xs text-gray-500">Client</p>
+                            <p className="text-xs text-muted-foreground">Client</p>
                           </div>
                         </div>
                         
                         <div className="flex items-center space-x-2">
-                          <MapPin className="h-4 w-4 text-gray-400" />
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
                           <div>
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-on-surface">
                               {offer.location}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               Dép. {offer.departement}
                             </p>
                           </div>
                         </div>
                         
                         <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
                           <div>
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-on-surface">
                               {formatDate(offer.dateLimiteRemise || offer.deadline)}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               Date limite remise
                             </p>
                           </div>
@@ -427,7 +427,7 @@ export default function UnifiedOffersDisplay({
 
                       {/* Intitulé de l'opération si présent */}
                       {offer.intituleOperation && (
-                        <p className="text-sm text-gray-700 mb-3 italic">
+                        <p className="text-sm text-on-surface-muted mb-3 italic">
                           "{offer.intituleOperation}"
                         </p>
                       )}
@@ -441,10 +441,10 @@ export default function UnifiedOffersDisplay({
                         
                         {(offer.montantEstime || offer.estimatedAmount) && (
                           <div className="text-right">
-                            <p className="text-lg font-semibold text-gray-900">
+                            <p className="text-lg font-semibold text-on-surface">
                               {Number(offer.montantEstime || offer.estimatedAmount).toLocaleString('fr-FR')} €
                             </p>
-                            <p className="text-xs text-gray-500">Montant estimé</p>
+                            <p className="text-xs text-muted-foreground">Montant estimé</p>
                           </div>
                         )}
                       </div>

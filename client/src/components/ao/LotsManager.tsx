@@ -135,7 +135,7 @@ export function LotsManager({ lots, onLotsChange, disabled = false }: LotsManage
           <Package className="h-5 w-5" />
           <span>Gestion des Lots</span>
           {lots.length > 0 && (
-            <span className="text-sm font-normal text-gray-500">
+            <span className="text-sm font-normal text-muted-foreground">
               ({lots.length} lot{lots.length > 1 ? 's' : ''})
             </span>
           )}
@@ -151,7 +151,7 @@ export function LotsManager({ lots, onLotsChange, disabled = false }: LotsManage
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Label className="font-medium">{lot.numero}</Label>
-                    <span className="text-sm text-gray-500">-</span>
+                    <span className="text-sm text-muted-foreground">-</span>
                     <span className="text-sm">{lot.designation}</span>
                   </div>
                   {!disabled && (
@@ -234,7 +234,7 @@ export function LotsManager({ lots, onLotsChange, disabled = false }: LotsManage
                 {lot.comment && (
                   <div>
                     <Label className="text-xs">Commentaire</Label>
-                    <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">{lot.comment}</p>
+                    <p className="text-sm text-on-surface-muted bg-surface-muted p-2 rounded">{lot.comment}</p>
                   </div>
                 )}
               </div>
@@ -334,7 +334,7 @@ export function LotsManager({ lots, onLotsChange, disabled = false }: LotsManage
         )}
 
         {lots.length === 0 && disabled && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
             <p>Aucun lot défini pour cet AO</p>
           </div>

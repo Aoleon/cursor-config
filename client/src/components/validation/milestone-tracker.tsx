@@ -128,15 +128,15 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
   const getMilestoneTypeIcon = (type: string) => {
     switch (type) {
       case 'fin_etudes':
-        return <Award className="h-5 w-5 text-green-600" />;
+        return <Award className="h-5 w-5 text-success" />;
       case 'validation_technique':
-        return <Target className="h-5 w-5 text-blue-600" />;
+        return <Target className="h-5 w-5 text-primary" />;
       case 'validation_commerciale':
-        return <FileText className="h-5 w-5 text-purple-600" />;
+        return <FileText className="h-5 w-5 text-secondary-foreground" />;
       case 'validation_production':
-        return <Zap className="h-5 w-5 text-orange-600" />;
+        return <Zap className="h-5 w-5 text-warning" />;
       default:
-        return <CheckCircle2 className="h-5 w-5 text-gray-600" />;
+        return <CheckCircle2 className="h-5 w-5 text-on-surface-muted" />;
     }
   };
 
@@ -158,15 +158,15 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'en_attente':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-warning/10 text-warning';
       case 'en_cours':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-primary/10 text-primary';
       case 'valide':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success/10 text-success';
       case 'rejete':
-        return 'bg-red-100 text-red-800';
+        return 'bg-error/10 text-error';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-surface-muted text-on-surface-muted';
     }
   };
 

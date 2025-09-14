@@ -90,7 +90,7 @@ export function ContactSelector({
                     <div className="font-medium text-sm">
                       {getContactDisplayName(selectedContact)}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                       {getContactSubtext(selectedContact)}
                     </div>
                     {selectedContact.departement && (

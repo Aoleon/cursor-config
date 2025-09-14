@@ -48,15 +48,15 @@ export default function SupplierRequests() {
   // Fonction pour obtenir le badge de statut
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      'envoyee': { label: 'Envoyée', variant: 'default' as const, color: 'text-blue-600', icon: Send },
-      'en_attente': { label: 'En attente', variant: 'secondary' as const, color: 'text-orange-600', icon: Clock },
-      'reponse_recue': { label: 'Réponse reçue', variant: 'default' as const, color: 'text-green-600', icon: CheckCircle },
-      'terminee': { label: 'Terminée', variant: 'outline' as const, color: 'text-gray-600', icon: CheckCircle },
+      'envoyee': { label: 'Envoyée', variant: 'default' as const, color: 'text-primary', icon: Send },
+      'en_attente': { label: 'En attente', variant: 'secondary' as const, color: 'text-warning', icon: Clock },
+      'reponse_recue': { label: 'Réponse reçue', variant: 'default' as const, color: 'text-success', icon: CheckCircle },
+      'terminee': { label: 'Terminée', variant: 'outline' as const, color: 'text-on-surface-muted', icon: CheckCircle },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { 
       label: status, 
       variant: 'outline' as const, 
-      color: 'text-gray-600',
+      color: 'text-on-surface-muted',
       icon: Package
     };
     
@@ -103,10 +103,10 @@ export default function SupplierRequests() {
   if (error) {
     return (
       <div className="space-y-6 p-6">
-        <div className="text-center py-8 text-red-500">
+        <div className="text-center py-8 text-error">
           <AlertTriangle className="h-12 w-12 mx-auto mb-2" />
           <p className="font-semibold">Erreur lors du chargement</p>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-on-surface-muted mt-1">
             {error instanceof Error ? error.message : "Erreur inconnue"}
           </p>
           <Button 
@@ -140,7 +140,7 @@ export default function SupplierRequests() {
             <CardTitle className="text-sm font-medium">Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-on-surface">
               {stats.total}
             </div>
             <p className="text-xs text-muted-foreground">Demandes totales</p>
@@ -152,7 +152,7 @@ export default function SupplierRequests() {
             <CardTitle className="text-sm font-medium">Envoyées</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-primary">
               {stats.envoyees}
             </div>
             <p className="text-xs text-muted-foreground">Aux fournisseurs</p>
@@ -164,7 +164,7 @@ export default function SupplierRequests() {
             <CardTitle className="text-sm font-medium">En attente</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
+            <div className="text-2xl font-bold text-warning">
               {stats.enAttente}
             </div>
             <p className="text-xs text-muted-foreground">Réponses attendues</p>
@@ -176,7 +176,7 @@ export default function SupplierRequests() {
             <CardTitle className="text-sm font-medium">Reçues</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-success">
               {stats.recues}
             </div>
             <p className="text-xs text-muted-foreground">Réponses reçues</p>
@@ -191,9 +191,9 @@ export default function SupplierRequests() {
         {requests.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
-              <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune demande fournisseur</h3>
-              <p className="text-gray-600 mb-4">
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-on-surface mb-2">Aucune demande fournisseur</h3>
+              <p className="text-on-surface-muted mb-4">
                 Les demandes de prix fournisseurs seront créées depuis les pages de chiffrage.
               </p>
               <Button variant="outline" onClick={() => window.location.href = "/offers"}>
@@ -209,7 +209,7 @@ export default function SupplierRequests() {
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <Package className="h-5 w-5 text-gray-400" />
+                        <Package className="h-5 w-5 text-muted-foreground" />
                         {request.supplierName}
                       </CardTitle>
                       <CardDescription className="mt-1">
@@ -222,7 +222,7 @@ export default function SupplierRequests() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="font-medium text-gray-600">Contact</p>
+                      <p className="font-medium text-on-surface-muted">Contact</p>
                       <p>{request.supplierEmail || '-'}</p>
                       <p>{request.supplierPhone || '-'}</p>
                     </div>

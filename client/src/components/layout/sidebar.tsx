@@ -93,15 +93,15 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="flex w-64 bg-white shadow-card flex-col" data-testid="sidebar">
-      <div className="p-6 border-b border-gray-200">
+    <aside className="flex w-64 bg-surface shadow-card flex-col" data-testid="sidebar">
+      <div className="p-6 border-b border">
         <div className="flex items-center space-x-3" data-testid="sidebar-brand">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <Wrench className="text-white text-lg" />
+            <Wrench className="text-on-primary text-lg" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900" data-testid="brand-title">Saxium</h1>
-            <p className="text-sm text-gray-600" data-testid="brand-subtitle">Business</p>
+            <h1 className="text-xl font-bold text-on-surface" data-testid="brand-title">Saxium</h1>
+            <p className="text-sm text-on-surface-muted" data-testid="brand-subtitle">Business</p>
           </div>
         </div>
       </div>
@@ -120,8 +120,8 @@ export default function Sidebar() {
                     className={cn(
                       "group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer",
                       isActive
-                        ? "bg-primary-light text-primary"
-                        : "text-gray-700 hover:bg-gray-100"
+                        ? "bg-secondary text-on-secondary"
+                        : "text-on-surface hover:bg-surface-muted"
                     )}
                     onClick={() => {
                       if (hasSubItems) {
@@ -135,7 +135,7 @@ export default function Sidebar() {
                         <item.icon
                           className={cn(
                             "mr-3 text-base",
-                            isActive ? "text-primary" : "text-gray-400"
+                            isActive ? "text-on-secondary" : "text-muted-foreground"
                           )}
                         />
                         {item.name}
@@ -169,8 +169,8 @@ export default function Sidebar() {
                               className={cn(
                                 "group flex items-center px-3 py-2 text-xs rounded-md transition-colors cursor-pointer",
                                 isSubActive
-                                  ? "bg-primary-light/50 text-primary"
-                                  : "text-gray-600 hover:bg-gray-50"
+                                  ? "bg-secondary/50 text-on-secondary"
+                                  : "text-on-surface-muted hover:bg-surface-muted"
                               )}
                               title={subItem.description}
                               data-testid={`nav-subitem-${subItem.name.toLowerCase().replace(/\s+/g, '-')}`}
@@ -178,12 +178,12 @@ export default function Sidebar() {
                               <subItem.icon
                                 className={cn(
                                   "mr-2 text-sm",
-                                  isSubActive ? "text-primary" : "text-gray-400"
+                                  isSubActive ? "text-on-secondary" : "text-muted-foreground"
                                 )}
                               />
                               <div className="flex flex-col">
                                 <span className="font-medium">{subItem.name}</span>
-                                <span className="text-xs text-gray-500 mt-0.5">
+                                <span className="text-xs text-muted-foreground mt-0.5">
                                   {subItem.description}
                                 </span>
                               </div>
@@ -201,7 +201,7 @@ export default function Sidebar() {
       </nav>
       
       <div className="p-4" data-testid="sidebar-user-section">
-        <div className="bg-gray-100 rounded-lg p-3">
+        <div className="bg-surface-muted rounded-lg p-3">
           <div className="flex items-center space-x-3">
             <Avatar className="w-8 h-8" data-testid="user-avatar">
               <AvatarImage src={(user as any)?.profileImageUrl || ''} alt={`${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`} />
@@ -210,10 +210,10 @@ export default function Sidebar() {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate" data-testid="user-name">
+              <p className="text-sm font-medium text-on-surface truncate" data-testid="user-name">
                 {(user as any)?.firstName || ''} {(user as any)?.lastName || ''}
               </p>
-              <p className="text-xs text-gray-600 truncate" data-testid="user-role">
+              <p className="text-xs text-on-surface-muted truncate" data-testid="user-role">
                 {(user as any)?.role === 'admin' ? 'Administrateur' : 'Chef de projet'}
               </p>
             </div>
@@ -221,7 +221,7 @@ export default function Sidebar() {
               variant="ghost"
               size="sm"
               onClick={() => window.location.href = "/api/logout"}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-muted-foreground hover:text-on-surface-muted"
               data-testid="button-logout"
               title="Se déconnecter"
             >

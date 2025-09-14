@@ -14,7 +14,7 @@ export default function StatsCards() {
         {[...Array(4)].map((_, i) => (
           <Card key={i} className="animate-pulse" data-testid={`stats-card-skeleton-${i}`}>
             <CardContent className="p-6">
-              <div className="h-16 bg-gray-200 rounded"></div>
+              <div className="h-16 bg-surface-muted rounded"></div>
             </CardContent>
           </Card>
         ))}
@@ -28,7 +28,7 @@ export default function StatsCards() {
         <Card className="col-span-full">
           <CardContent className="p-6 text-center">
             <div className="text-red-500 mb-2">⚠️</div>
-            <p className="text-sm text-gray-600" data-testid="stats-error-message">
+            <p className="text-sm text-on-surface-muted" data-testid="stats-error-message">
               Impossible de charger les statistiques. 
               {error && ` (${(error as Error).message})`}
             </p>
@@ -62,7 +62,7 @@ export default function StatsCards() {
       iconBg: "bg-accent-light",
       iconColor: "text-accent",
       footer: "Moyenne: 3.2 jours",
-      footerColor: "text-gray-600"
+      footerColor: "text-on-surface-muted"
     },
     {
       title: "En Attente Validation",
@@ -91,10 +91,10 @@ export default function StatsCards() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600" data-testid={`stats-title-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                <p className="text-sm font-medium text-on-surface-muted" data-testid={`stats-title-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
                   {card.title}
                 </p>
-                <p className="text-3xl font-bold text-gray-900" data-testid={`stats-value-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                <p className="text-3xl font-bold text-on-surface" data-testid={`stats-value-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
                   {card.value}
                 </p>
               </div>

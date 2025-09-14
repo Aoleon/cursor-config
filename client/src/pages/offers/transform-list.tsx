@@ -56,7 +56,7 @@ export default function TransformList() {
   const getStatusBadge = (status: string, offerId: string) => {
     if (isTransformed(offerId)) {
       return (
-        <Badge variant="default" className="text-green-600">
+        <Badge variant="default" className="text-success">
           <CheckCircle className="h-3 w-3 mr-1" />
           Transformée
         </Badge>
@@ -64,13 +64,13 @@ export default function TransformList() {
     }
     
     const statusMap = {
-      'fin_etudes_validee': { label: 'Validée BE', variant: 'default' as const, color: 'text-blue-600' },
-      'valide': { label: 'Prête', variant: 'secondary' as const, color: 'text-green-600' },
+      'fin_etudes_validee': { label: 'Validée BE', variant: 'default' as const, color: 'text-primary' },
+      'valide': { label: 'Prête', variant: 'secondary' as const, color: 'text-success' },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { 
       label: status, 
       variant: 'outline' as const, 
-      color: 'text-gray-600'
+      color: 'text-on-surface-muted'
     };
     
     return (
@@ -112,10 +112,10 @@ export default function TransformList() {
   if (error) {
     return (
       <div className="space-y-6 p-6">
-        <div className="text-center py-8 text-red-500">
+        <div className="text-center py-8 text-error">
           <AlertTriangle className="h-12 w-12 mx-auto mb-2" />
           <p className="font-semibold">Erreur lors du chargement</p>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-on-surface-muted mt-1">
             {error instanceof Error ? error.message : "Erreur inconnue"}
           </p>
           <Button 

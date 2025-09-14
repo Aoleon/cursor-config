@@ -134,7 +134,7 @@ export default function Planification() {
         <Button 
           key="start"
           size="sm"
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-success hover:bg-success/90"
           onClick={() => startChantierMutation.mutate(project.id)}
         >
           <Play className="h-4 w-4 mr-2" />
@@ -168,15 +168,15 @@ export default function Planification() {
 
   const getPriorityColor = (priority: string) => {
     switch(priority) {
-      case 'urgent': return 'text-red-600';
-      case 'high': return 'text-orange-600';
-      case 'normal': return 'text-blue-600';
-      default: return 'text-gray-600';
+      case 'urgent': return 'text-error';
+      case 'high': return 'text-warning';
+      case 'normal': return 'text-primary';
+      default: return 'text-on-surface-muted';
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-background flex">
       <Sidebar />
       
       <main className="flex-1">

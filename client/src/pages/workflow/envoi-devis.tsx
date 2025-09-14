@@ -152,7 +152,7 @@ export default function EnvoiDevis() {
           <Button 
             key="convert"
             size="sm"
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-success hover:bg-success/90"
             onClick={() => handleConvertToProject(ao.id)}
           >
             <CheckCircle className="h-4 w-4 mr-2" />
@@ -184,7 +184,7 @@ export default function EnvoiDevis() {
 
   const getStatusBadge = (ao: any) => {
     if (ao.clientAccepted) {
-      return <Badge className="bg-green-600">Accepté</Badge>;
+      return <Badge className="bg-success text-success-foreground">Accepté</Badge>;
     }
     if (ao.clientRefused) {
       return <Badge variant="destructive">Refusé</Badge>;
@@ -196,7 +196,7 @@ export default function EnvoiDevis() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-background flex">
       <Sidebar />
       
       <main className="flex-1">

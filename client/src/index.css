@@ -3,8 +3,16 @@
 @tailwind utilities;
 
 :root {
+  /* Base surfaces */
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);
+  --surface: hsl(0, 0%, 100%);
+  --surface-muted: hsl(60, 4.8%, 95.9%);
+  --surface-elevated: hsl(0, 0%, 100%);
+  --on-surface: hsl(20, 14.3%, 4.1%);
+  --on-surface-muted: hsl(25, 5.3%, 44.7%);
+  
+  /* Legacy compatibility */
   --muted: hsl(60, 4.8%, 95.9%);
   --muted-foreground: hsl(25, 5.3%, 44.7%);
   --popover: hsl(0, 0%, 100%);
@@ -13,27 +21,51 @@
   --card-foreground: hsl(20, 14.3%, 4.1%);
   --border: hsl(20, 5.9%, 90%);
   --input: hsl(20, 5.9%, 90%);
-  --primary: #072ac8;
-  --primary-foreground: hsl(211, 100%, 99%);
-  --primary-light: #1740f7;
-  --primary-dark: #041a79;
-  --secondary: #a2d6f9;
-  --secondary-foreground: hsl(24, 9.8%, 10%);
-  --accent: #ffc600;
-  --accent-light: #ffd333;
-  --accent-foreground: hsl(24, 9.8%, 10%);
-  --success: hsl(122, 39%, 49%);
-  --warning: hsl(43, 100%, 50%);
-  --error: hsl(4, 90%, 58%);
+  
+  /* Semantic colors with explicit "on-*" tokens (WCAG AA compliant) */
+  --primary: hsl(220, 95%, 42%);
+  --primary-light: hsl(220, 95%, 50%);
+  --primary-dark: hsl(220, 95%, 32%);
+  --on-primary: hsl(0, 0%, 100%);
+  --primary-foreground: hsl(0, 0%, 100%); /* Legacy compatibility */
+  
+  --secondary: hsl(206, 75%, 75%);
+  --on-secondary: hsl(220, 20%, 15%);
+  --secondary-foreground: hsl(220, 20%, 15%); /* Legacy compatibility */
+  
+  --accent: hsl(43, 100%, 50%);
+  --accent-light: hsl(43, 100%, 65%);
+  --on-accent: hsl(25, 30%, 15%);
+  --accent-foreground: hsl(25, 30%, 15%); /* Legacy compatibility */
+  
+  --success: hsl(122, 39%, 38%);
+  --on-success: hsl(0, 0%, 100%);
+  
+  --warning: hsl(43, 96%, 56%);
+  --on-warning: hsl(25, 30%, 15%);
+  
+  --error: hsl(4, 90%, 45%);
+  --on-error: hsl(0, 0%, 100%);
+  
   --destructive: hsl(0, 84.2%, 60.2%);
-  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --on-destructive: hsl(0, 0%, 100%);
+  
   --ring: hsl(20, 14.3%, 4.1%);
   --radius: 0.5rem;
 }
 
 .dark {
+  /* Base surfaces */
   --background: hsl(240, 10%, 3.9%);
   --foreground: hsl(0, 0%, 98%);
+  --surface: hsl(240, 10%, 3.9%);
+  --surface-muted: hsl(240, 3.7%, 15.9%);
+  --surface-elevated: hsl(240, 5%, 8%);
+  --on-surface: hsl(0, 0%, 98%);
+  --on-surface-muted: hsl(240, 5%, 64.9%);
+  
+  /* Legacy compatibility */
   --muted: hsl(240, 3.7%, 15.9%);
   --muted-foreground: hsl(240, 5%, 64.9%);
   --popover: hsl(240, 10%, 3.9%);
@@ -42,20 +74,36 @@
   --card-foreground: hsl(0, 0%, 98%);
   --border: hsl(240, 3.7%, 15.9%);
   --input: hsl(240, 3.7%, 15.9%);
-  --primary: #1e96fc;
-  --primary-foreground: hsl(211, 100%, 99%);
-  --primary-light: #4aa9fc;
-  --primary-dark: #0377dd;
+  
+  /* Semantic colors with explicit "on-*" tokens (WCAG AA compliant) */
+  --primary: hsl(220, 95%, 60%);
+  --primary-light: hsl(220, 95%, 70%);
+  --primary-dark: hsl(220, 95%, 45%);
+  --on-primary: hsl(0, 0%, 0%);
+  --primary-foreground: hsl(0, 0%, 0%); /* Legacy compatibility */
+  
   --secondary: hsl(240, 3.7%, 15.9%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: #fcf300;
-  --accent-light: #fff82f;
-  --accent-foreground: hsl(0, 0%, 98%);
-  --success: hsl(122, 39%, 49%);
-  --warning: hsl(43, 100%, 50%);
-  --error: hsl(4, 90%, 58%);
+  --on-secondary: hsl(0, 0%, 98%);
+  --secondary-foreground: hsl(0, 0%, 98%); /* Legacy compatibility */
+  
+  --accent: hsl(43, 100%, 65%);
+  --accent-light: hsl(43, 100%, 75%);
+  --on-accent: hsl(0, 0%, 0%);
+  --accent-foreground: hsl(0, 0%, 0%); /* Legacy compatibility */
+  
+  --success: hsl(122, 39%, 38%);
+  --on-success: hsl(0, 0%, 100%);
+  
+  --warning: hsl(43, 96%, 56%);
+  --on-warning: hsl(0, 0%, 0%);
+  
+  --error: hsl(4, 90%, 45%);
+  --on-error: hsl(0, 0%, 100%);
+  
   --destructive: hsl(0, 62.8%, 30.6%);
   --destructive-foreground: hsl(0, 0%, 98%);
+  --on-destructive: hsl(0, 0%, 98%);
+  
   --ring: hsl(240, 4.9%, 83.9%);
   --radius: 0.5rem;
 }
@@ -79,6 +127,53 @@
     box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   }
   
+  /* Semantic text colors with guaranteed contrast */
+  .text-on-primary {
+    color: var(--on-primary);
+  }
+  
+  .text-on-secondary {
+    color: var(--on-secondary);
+  }
+  
+  .text-on-accent {
+    color: var(--on-accent);
+  }
+  
+  .text-on-success {
+    color: var(--on-success);
+  }
+  
+  .text-on-warning {
+    color: var(--on-warning);
+  }
+  
+  .text-on-error {
+    color: var(--on-error);
+  }
+  
+  .text-on-surface {
+    color: var(--on-surface);
+  }
+  
+  .text-on-surface-muted {
+    color: var(--on-surface-muted);
+  }
+  
+  /* Surface backgrounds */
+  .bg-surface {
+    background-color: var(--surface);
+  }
+  
+  .bg-surface-muted {
+    background-color: var(--surface-muted);
+  }
+  
+  .bg-surface-elevated {
+    background-color: var(--surface-elevated);
+  }
+  
+  /* Legacy utilities for compatibility */
   .text-primary {
     color: var(--primary);
   }
@@ -100,14 +195,14 @@
   }
   
   .text-success {
-    color: hsl(122, 39%, 49%);
+    color: var(--success);
   }
   
   .text-warning {
-    color: hsl(43, 100%, 50%);
+    color: var(--warning);
   }
   
   .text-error {
-    color: hsl(4, 90%, 58%);
+    color: var(--error);
   }
 }

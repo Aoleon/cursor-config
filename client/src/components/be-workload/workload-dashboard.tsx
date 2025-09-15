@@ -19,7 +19,7 @@ export default function WorkloadDashboard() {
   const { user } = useAuth();
   const [selectedWeek, setSelectedWeek] = useState(getCurrentWeek());
 
-  const { data: workloadData = [], isLoading } = useQuery({
+  const { data: workloadData = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/be-workload", selectedWeek],
     enabled: !!user,
   });
@@ -152,7 +152,7 @@ export default function WorkloadDashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{weeklyStats.overloadedMembers}</div>
             <p className="text-xs text-muted-foreground">
-              {workloadData.length > 0 ? `sur ${workloadData.length} membres` : "Aucune donnée"}
+              {(workloadData as any[]).length > 0 ? `sur ${(workloadData as any[]).length} membres` : "Aucune donnée"}
             </p>
           </CardContent>
         </Card>

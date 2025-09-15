@@ -1,9 +1,9 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,48 +26,18 @@ import {
 import { 
   format, 
   addDays, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
   differenceInDays, 
-  startOfDay, 
-  addWeeks, 
-  subWeeks, 
-  isSameDay, 
   isWithinInterval,
-  startOfMonth,
-  endOfMonth,
-  addMonths,
-  subMonths,
   eachWeekOfInterval,
-  isAfter,
-  isBefore
+  isAfter
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import type { GanttProject, GanttMilestone, GanttTask, User } from "@shared/schema";
-
-// Type unifié pour tous les éléments Gantt basé sur les types du schema
-interface GanttItem {
-  id: string;
-  name: string;
-  type: 'project' | 'milestone' | 'task';
-  startDate: Date;
-  endDate: Date;
-  status: string;
-  responsibleUserId?: string | null;
-  responsibleUser?: User;
-  progress?: number;
-  isJalon?: boolean | null;
-  projectId?: string;
-  dependencies?: string[];
-  priority?: 'tres_faible' | 'faible' | 'normale' | 'elevee' | 'critique';
-  estimatedHours?: number | string | null;
-  actualHours?: number | string | null;
-}
-
-type ViewMode = 'week' | 'month';
-type ResizeHandle = 'start' | 'end' | null;
+import { useGanttDrag } from "@/hooks/useGanttDrag";
+import { useGanttPeriods } from "@/hooks/useGanttPeriods";
+import { useGanttWorkload } from "@/hooks/useGanttWorkload";
+import type { GanttProject, GanttMilestone, GanttTask } from "@shared/schema";
+import type { GanttItem } from "@/types/gantt";
 
 interface GanttChartProps {
   projects: GanttProject[];
@@ -90,50 +60,32 @@ export default function GanttChart({
   'data-testid': dataTestId,
   enableRealtime = false
 }: GanttChartProps) {
-  const [currentPeriod, setCurrentPeriod] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('week');
-  const [draggedItem, setDraggedItem] = useState<string | null>(null);
-  const [resizeItem, setResizeItem] = useState<{ id: string; handle: ResizeHandle } | null>(null);
-  const [dragOffset, setDragOffset] = useState(0);
+  // États locaux pour les fonctionnalités non extraites
   const [linkMode, setLinkMode] = useState(false);
   const [linkFromId, setLinkFromId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
-  const ganttRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-
-  // États pour la création de tâche
   const [newTaskName, setNewTaskName] = useState("");
   const [newTaskType, setNewTaskType] = useState<'task' | 'milestone'>('task');
   const [newTaskProject, setNewTaskProject] = useState("");
+  
+  const { toast } = useToast();
 
-  // Calculer les périodes selon le mode de vue - OPTIMISÉ avec useMemo
-  const { periodStart, periodEnd, periodDays, totalDays, monthWeeksCount } = useMemo(() => {
-    const start = viewMode === 'week' 
-      ? startOfWeek(currentPeriod, { weekStartsOn: 1 })
-      : startOfMonth(currentPeriod);
-    
-    const end = viewMode === 'week'
-      ? endOfWeek(currentPeriod, { weekStartsOn: 1 })
-      : endOfMonth(currentPeriod);
+  // Hook pour la gestion des périodes et navigation
+  const {
+    currentPeriod,
+    viewMode,
+    periodInfo,
+    goToPreviousPeriod,
+    goToNextPeriod,
+    goToCurrentPeriod,
+    goToSpecificPeriod,
+    setViewMode,
+    isCurrentPeriod,
+    getPeriodLabel
+  } = useGanttPeriods();
 
-    const days = eachDayOfInterval({ start, end });
-    
-    // Calculer le nombre de semaines pour la vue mensuelle
-    const weeksInMonth = viewMode === 'month' 
-      ? eachWeekOfInterval({ start, end }, { weekStartsOn: 1 }).length 
-      : 0;
-
-    return {
-      periodStart: start,
-      periodEnd: end,
-      periodDays: days,
-      totalDays: days.length,
-      monthWeeksCount: weeksInMonth
-    };
-  }, [currentPeriod, viewMode]);
-
-  // Préparer les éléments Gantt avec dépendances et priorités
+  // Préparer les éléments Gantt
   const ganttItems: GanttItem[] = useMemo(() => [
     ...projects.filter(p => p.startDate && p.endDate).map(project => ({
       id: project.id,
@@ -177,10 +129,49 @@ export default function GanttChart({
     }))
   ], [projects, milestones, tasks]);
 
-  // Obtenir la couleur selon le statut et la priorité - OPTIMISÉ avec useCallback
+  // Hook pour la gestion du drag/drop avec navigation automatique
+  const {
+    draggedItem,
+    resizeItem,
+    dragPreview,
+    handleDragStart,
+    handleDrop,
+    handleDragOver,
+    handleDragEnd,
+    handleResizeStart,
+    ganttRef,
+    isNavigating
+  } = useGanttDrag({
+    ganttItems,
+    periodStart: periodInfo.periodStart,
+    periodEnd: periodInfo.periodEnd,
+    totalDays: periodInfo.totalDays,
+    viewMode,
+    currentPeriod,
+    linkMode,
+    onDateUpdate,
+    onPeriodChange: goToSpecificPeriod
+  });
+
+  // Hook pour les calculs de workload
+  const {
+    teamWorkload,
+    getWorkloadColor,
+    getWorkloadTooltip,
+    totalEstimatedPersons,
+    totalActiveProjects,
+    totalPlannedHours
+  } = useGanttWorkload({
+    ganttItems,
+    periodInfo,
+    viewMode,
+    currentPeriod
+  });
+
+  // Utilitaires de calcul pour le rendu
   const getItemColor = useCallback((status: string, type: 'project' | 'milestone' | 'task', priority?: string, isOverdue?: boolean) => {
     if (isOverdue) {
-      return "bg-error border-error"; // Rouge pour les éléments en retard
+      return "bg-error border-error";
     }
     
     if (priority === 'critique') {
@@ -210,27 +201,21 @@ export default function GanttChart({
     }
   }, []);
 
-  // Calculer la position et largeur des barres - OPTIMISÉ avec useCallback
   const getBarPosition = useCallback((startDate: Date, endDate: Date) => {
-    const dayWidth = 100 / totalDays;
-    
-    const startDayIndex = differenceInDays(startDate, periodStart);
+    const dayWidth = 100 / periodInfo.totalDays;
+    const startDayIndex = differenceInDays(startDate, periodInfo.periodStart);
     const duration = differenceInDays(endDate, startDate) + 1;
-    
     const left = Math.max(0, startDayIndex * dayWidth);
     const width = Math.min(100 - left, duration * dayWidth);
-    
     return { left: `${left}%`, width: `${width}%` };
-  }, [totalDays, periodStart]);
+  }, [periodInfo.totalDays, periodInfo.periodStart]);
 
-  // Vérifier si l'élément est visible dans la période courante - OPTIMISÉ avec useCallback
   const isItemVisible = useCallback((startDate: Date, endDate: Date) => {
-    return isWithinInterval(startDate, { start: periodStart, end: periodEnd }) ||
-           isWithinInterval(endDate, { start: periodStart, end: periodEnd }) ||
-           (startDate <= periodStart && endDate >= periodEnd);
-  }, [periodStart, periodEnd]);
+    return isWithinInterval(startDate, { start: periodInfo.periodStart, end: periodInfo.periodEnd }) ||
+           isWithinInterval(endDate, { start: periodInfo.periodStart, end: periodInfo.periodEnd }) ||
+           (startDate <= periodInfo.periodStart && endDate >= periodInfo.periodEnd);
+  }, [periodInfo.periodStart, periodInfo.periodEnd]);
 
-  // Vérifier si l'élément est en retard - OPTIMISÉ avec useCallback
   const isOverdue = useCallback((item: GanttItem) => {
     const now = new Date();
     if (item.type === 'milestone') {
@@ -238,111 +223,6 @@ export default function GanttChart({
     }
     return isAfter(now, item.endDate) && item.status !== 'termine' && item.status !== 'completed';
   }, []);
-
-  // Gestion du drag and drop amélioré
-  const handleDragStart = (e: React.DragEvent, itemId: string) => {
-    if (linkMode) return; // Pas de drag en mode liaison
-    
-    setDraggedItem(itemId);
-    e.dataTransfer.effectAllowed = 'move';
-    
-    const rect = ganttRef.current?.getBoundingClientRect();
-    if (rect) {
-      const relativeX = e.clientX - rect.left;
-      const dayWidth = rect.width / totalDays;
-      setDragOffset(relativeX % dayWidth);
-    }
-  };
-
-  const handleResizeStart = (e: React.MouseEvent, itemId: string, handle: 'start' | 'end') => {
-    e.stopPropagation();
-    setResizeItem({ id: itemId, handle });
-  };
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (resizeItem && ganttRef.current) {
-      const rect = ganttRef.current.getBoundingClientRect();
-      const relativeX = e.clientX - rect.left;
-      const dayWidth = rect.width / totalDays;
-      const dayIndex = Math.floor(relativeX / dayWidth);
-      
-      if (dayIndex >= 0 && dayIndex < totalDays) {
-        const newDate = addDays(periodStart, dayIndex);
-        const item = ganttItems.find(i => i.id === resizeItem.id);
-        
-        if (item && onDateUpdate) {
-          if (resizeItem.handle === 'start') {
-            if (isBefore(newDate, item.endDate)) {
-              onDateUpdate(resizeItem.id, newDate, item.endDate, item.type);
-            }
-          } else {
-            if (isAfter(newDate, item.startDate)) {
-              onDateUpdate(resizeItem.id, item.startDate, newDate, item.type);
-            }
-          }
-        }
-      }
-    }
-  }, [resizeItem, ganttItems, onDateUpdate, periodStart, totalDays]);
-
-  const handleMouseUp = useCallback(() => {
-    setResizeItem(null);
-  }, []);
-
-  useEffect(() => {
-    if (resizeItem) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-    
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [resizeItem, handleMouseMove, handleMouseUp]);
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggedItem || !ganttRef.current) return;
-
-    const rect = ganttRef.current.getBoundingClientRect();
-    const relativeX = e.clientX - rect.left - dragOffset;
-    const dayWidth = rect.width / totalDays;
-    const dayIndex = Math.floor(relativeX / dayWidth);
-    
-    if (dayIndex >= 0 && dayIndex < totalDays) {
-      const newStartDate = addDays(periodStart, dayIndex);
-      const item = ganttItems.find(i => i.id === draggedItem);
-      
-      if (item) {
-        const duration = differenceInDays(item.endDate, item.startDate);
-        const newEndDate = addDays(newStartDate, duration);
-        
-        if (onDateUpdate) {
-          onDateUpdate(draggedItem, newStartDate, newEndDate, item.type);
-        }
-      }
-    }
-    
-    setDraggedItem(null);
-    setDragOffset(0);
-  };
-
-  // Gestion du double-clic pour créer une tâche
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    if (!ganttRef.current) return;
-    
-    const rect = ganttRef.current.getBoundingClientRect();
-    const relativeX = e.clientX - rect.left;
-    const dayWidth = rect.width / totalDays;
-    const dayIndex = Math.floor(relativeX / dayWidth);
-    
-    if (dayIndex >= 0 && dayIndex < totalDays) {
-      const clickedDate = addDays(periodStart, dayIndex);
-      setNewTaskDate(clickedDate);
-      setShowCreateDialog(true);
-    }
-  };
 
   // Gestion des liaisons de dépendances
   const handleItemClick = (itemId: string) => {
@@ -367,12 +247,25 @@ export default function GanttChart({
     }
   };
 
+  // Gestion du double-clic pour créer une tâche
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    if (!ganttRef.current) return;
+    
+    const rect = ganttRef.current.getBoundingClientRect();
+    const relativeX = e.clientX - rect.left;
+    const dayWidth = rect.width / periodInfo.totalDays;
+    const dayIndex = Math.floor(relativeX / dayWidth);
+    
+    if (dayIndex >= 0 && dayIndex < periodInfo.totalDays) {
+      const clickedDate = addDays(periodInfo.periodStart, dayIndex);
+      setNewTaskDate(clickedDate);
+      setShowCreateDialog(true);
+    }
+  };
+
   // Créer une nouvelle tâche
   const handleCreateTask = () => {
-    console.log("handleCreateTask called with:", { newTaskName, newTaskDate, newTaskProject, newTaskType });
-    
     if (!newTaskName || !newTaskProject) {
-      console.log("Validation failed - missing required fields");
       toast({
         title: "Erreur",
         description: "Veuillez remplir tous les champs obligatoires",
@@ -381,12 +274,8 @@ export default function GanttChart({
       return;
     }
     
-    // Si pas de date, utiliser aujourd'hui par défaut
     const taskDate = newTaskDate || new Date();
-    
-    const endDate = newTaskType === 'milestone' 
-      ? taskDate 
-      : addDays(taskDate, 1); // Tâche d'1 jour par défaut
+    const endDate = newTaskType === 'milestone' ? taskDate : addDays(taskDate, 1);
     
     const newTask: Partial<GanttTask> = {
       name: newTaskName,
@@ -415,306 +304,6 @@ export default function GanttChart({
     });
   };
 
-  // Navigation dans les périodes
-  const goToPreviousPeriod = () => {
-    setCurrentPeriod(viewMode === 'week' ? subWeeks(currentPeriod, 1) : subMonths(currentPeriod, 1));
-  };
-  
-  const goToNextPeriod = () => {
-    setCurrentPeriod(viewMode === 'week' ? addWeeks(currentPeriod, 1) : addMonths(currentPeriod, 1));
-  };
-  
-  const goToCurrentPeriod = () => setCurrentPeriod(new Date());
-
-  // Configuration de la charge de travail
-  const workingDaysPerWeek = 5; // Lundi à vendredi
-  const hoursPerWorkingDay = 8; // 8h par jour ouvrable
-  const weeklyFteHours = workingDaysPerWeek * hoursPerWorkingDay; // 40h par semaine
-
-  // Utilitaire pour calculer les jours ouvrables entre deux dates
-  const getWorkingDaysBetween = (startDate: Date, endDate: Date): number => {
-    let workingDays = 0;
-    let current = new Date(startDate);
-    
-    while (current <= endDate) {
-      const dayOfWeek = current.getDay();
-      if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Lundi (1) à vendredi (5)
-        workingDays++;
-      }
-      current = addDays(current, 1);
-    }
-    
-    return workingDays;
-  };
-
-  // Calcul optimisé de la charge d'équipe par période avec répartition proportionnelle
-  const calculateTeamWorkload = useMemo(() => {
-    const workloadByPeriod: { [key: string]: { 
-      totalHours: number; 
-      estimatedPersons: number; 
-      activeProjects: number; 
-      periodStart: Date; 
-      periodEnd: Date;
-      projectDetails: Array<{
-        name: string;
-        totalHours: number;
-        projectDuration: number;
-        overlapDays: number;
-        proportionalHours: number;
-        hoursPerDay: number;
-      }>;
-    } } = {};
-
-    // Filtrer les projets actifs (phases de production)
-    const activeProjects = ganttItems.filter(item => 
-      item.type === 'project' && 
-      ['planification', 'approvisionnement', 'chantier'].includes(item.status)
-    );
-
-    if (viewMode === 'week') {
-      // Calcul par semaine avec répartition proportionnelle
-      periodDays.forEach((day, index) => {
-        if (index % 7 === 0) { // Une fois par semaine
-          const weekStart = day;
-          const weekEnd = addDays(weekStart, 6);
-          const weekKey = format(weekStart, 'yyyy-MM-dd');
-          
-          let totalProportionalHours = 0;
-          const projectDetails: Array<{
-            name: string;
-            totalHours: number;
-            projectDuration: number;
-            overlapDays: number;
-            proportionalHours: number;
-            hoursPerDay: number;
-          }> = [];
-          
-          activeProjects.forEach(project => {
-            // Vérifier s'il y a intersection entre le projet et la période
-            const projectStart = new Date(Math.max(project.startDate.getTime(), weekStart.getTime()));
-            const projectEnd = new Date(Math.min(project.endDate.getTime(), weekEnd.getTime()));
-            
-            if (projectStart <= projectEnd) {
-              // Calcul de la durée totale du projet en jours ouvrables
-              const projectDurationDays = getWorkingDaysBetween(project.startDate, project.endDate);
-              
-              // Calcul des jours d'overlap en jours ouvrables
-              const overlapWorkingDays = getWorkingDaysBetween(projectStart, projectEnd);
-              
-              if (overlapWorkingDays > 0) {
-                const estimatedHours = typeof project.estimatedHours === 'string' 
-                  ? parseFloat(project.estimatedHours) || 0 
-                  : project.estimatedHours || 0;
-                
-                // Répartition proportionnelle : heures par jour ouvrable
-                const hoursPerWorkingDay = projectDurationDays > 0 ? estimatedHours / projectDurationDays : 0;
-                
-                // Heures proportionnelles pour la période d'overlap
-                const proportionalHours = hoursPerWorkingDay * overlapWorkingDays;
-                
-                totalProportionalHours += proportionalHours;
-                
-                projectDetails.push({
-                  name: project.name,
-                  totalHours: estimatedHours,
-                  projectDuration: projectDurationDays,
-                  overlapDays: overlapWorkingDays,
-                  proportionalHours: Math.round(proportionalHours * 100) / 100,
-                  hoursPerDay: Math.round(hoursPerWorkingDay * 100) / 100
-                });
-              }
-            }
-          });
-          
-          // Estimation du nombre de personnes nécessaires
-          const estimatedPersons = Math.ceil(totalProportionalHours / weeklyFteHours);
-
-          workloadByPeriod[weekKey] = {
-            totalHours: Math.round(totalProportionalHours * 100) / 100,
-            estimatedPersons,
-            activeProjects: projectDetails.length,
-            periodStart: weekStart,
-            periodEnd: weekEnd,
-            projectDetails
-          };
-        }
-      });
-    } else {
-      // Calcul par mois avec répartition proportionnelle
-      const monthStart = periodStart;
-      const monthEnd = periodEnd;
-      const monthKey = format(monthStart, 'yyyy-MM');
-      
-      let totalProportionalHours = 0;
-      const projectDetails: Array<{
-        name: string;
-        totalHours: number;
-        projectDuration: number;
-        overlapDays: number;
-        proportionalHours: number;
-        hoursPerDay: number;
-      }> = [];
-      
-      activeProjects.forEach(project => {
-        // Vérifier s'il y a intersection entre le projet et la période
-        const projectStart = new Date(Math.max(project.startDate.getTime(), monthStart.getTime()));
-        const projectEnd = new Date(Math.min(project.endDate.getTime(), monthEnd.getTime()));
-        
-        if (projectStart <= projectEnd) {
-          // Calcul de la durée totale du projet en jours ouvrables
-          const projectDurationDays = getWorkingDaysBetween(project.startDate, project.endDate);
-          
-          // Calcul des jours d'overlap en jours ouvrables
-          const overlapWorkingDays = getWorkingDaysBetween(projectStart, projectEnd);
-          
-          if (overlapWorkingDays > 0) {
-            const estimatedHours = typeof project.estimatedHours === 'string' 
-              ? parseFloat(project.estimatedHours) || 0 
-              : project.estimatedHours || 0;
-            
-            // Répartition proportionnelle : heures par jour ouvrable
-            const hoursPerWorkingDay = projectDurationDays > 0 ? estimatedHours / projectDurationDays : 0;
-            
-            // Heures proportionnelles pour la période d'overlap
-            const proportionalHours = hoursPerWorkingDay * overlapWorkingDays;
-            
-            totalProportionalHours += proportionalHours;
-            
-            projectDetails.push({
-              name: project.name,
-              totalHours: estimatedHours,
-              projectDuration: projectDurationDays,
-              overlapDays: overlapWorkingDays,
-              proportionalHours: Math.round(proportionalHours * 100) / 100,
-              hoursPerDay: Math.round(hoursPerWorkingDay * 100) / 100
-            });
-          }
-        }
-      });
-      
-      // Calcul des jours ouvrables dans le mois
-      const monthWorkingDays = getWorkingDaysBetween(monthStart, monthEnd);
-      const monthlyFteHours = monthWorkingDays * hoursPerWorkingDay;
-      
-      // Estimation du nombre de personnes nécessaires
-      const estimatedPersons = Math.ceil(totalProportionalHours / monthlyFteHours);
-
-      workloadByPeriod[monthKey] = {
-        totalHours: Math.round(totalProportionalHours * 100) / 100,
-        estimatedPersons,
-        activeProjects: projectDetails.length,
-        periodStart: monthStart,
-        periodEnd: monthEnd,
-        projectDetails
-      };
-    }
-
-    return workloadByPeriod;
-  }, [ganttItems, viewMode, currentPeriod, periodDays, periodStart, periodEnd, weeklyFteHours, hoursPerWorkingDay]);
-
-  // Obtenir la couleur selon la charge
-  const getWorkloadColor = (estimatedPersons: number) => {
-    if (estimatedPersons === 0) {
-      return "bg-gray-300 border-gray-400 text-gray-600"; // Aucune charge
-    } else if (estimatedPersons <= 2) {
-      return "bg-green-400 border-green-500 text-green-800"; // Charge normale
-    } else if (estimatedPersons <= 4) {
-      return "bg-yellow-400 border-yellow-500 text-yellow-800"; // Charge élevée
-    } else if (estimatedPersons <= 6) {
-      return "bg-orange-400 border-orange-500 text-orange-800"; // Charge importante
-    } else {
-      return "bg-red-400 border-red-500 text-red-800"; // Charge critique
-    }
-  };
-
-  // Obtenir le tooltip avec détails de calcul amélioré
-  const getWorkloadTooltip = (workload: { 
-    totalHours: number; 
-    estimatedPersons: number; 
-    activeProjects: number; 
-    periodStart: Date; 
-    periodEnd: Date;
-    projectDetails: Array<{
-      name: string;
-      totalHours: number;
-      projectDuration: number;
-      overlapDays: number;
-      proportionalHours: number;
-      hoursPerDay: number;
-    }>;
-  }) => {
-    const { totalHours, estimatedPersons, activeProjects, periodStart, periodEnd, projectDetails } = workload;
-    const periodLabel = viewMode === 'week' 
-      ? `Semaine du ${format(periodStart, 'dd/MM', { locale: fr })} au ${format(periodEnd, 'dd/MM', { locale: fr })}`
-      : format(periodStart, 'MMMM yyyy', { locale: fr });
-    
-    let tooltip = `${periodLabel}\n`;
-    tooltip += `${activeProjects} projet${activeProjects > 1 ? 's' : ''} actif${activeProjects > 1 ? 's' : ''}\n`;
-    tooltip += `${totalHours}h proportionnelles (jours ouvrables)\n`;
-    tooltip += `≈ ${estimatedPersons} personne${estimatedPersons > 1 ? 's' : ''} nécessaire${estimatedPersons > 1 ? 's' : ''} (${hoursPerWorkingDay}h/jour)\n\n`;
-    
-    tooltip += "Détail par projet :\n";
-    projectDetails.forEach(project => {
-      tooltip += `• ${project.name}\n`;
-      tooltip += `  ${project.totalHours}h ÷ ${project.projectDuration} jours = ${project.hoursPerDay}h/jour\n`;
-      tooltip += `  ${project.hoursPerDay}h/jour × ${project.overlapDays} jours = ${project.proportionalHours}h\n`;
-    });
-    
-    const fteHours = viewMode === 'week' ? weeklyFteHours : getWorkingDaysBetween(periodStart, periodEnd) * hoursPerWorkingDay;
-    tooltip += `\nFormule : ${totalHours}h ÷ ${fteHours}h = ${estimatedPersons} ETP`;
-    
-    return tooltip;
-  };
-
-  // Calculer la charge d'équipe (déjà mémorisé avec useMemo)
-  const teamWorkload = calculateTeamWorkload;
-
-  // Rendu des lignes de dépendances
-  const renderDependencyLines = () => {
-    if (!ganttRef.current) return null;
-    
-    const lines: JSX.Element[] = [];
-    
-    ganttItems.forEach(item => {
-      if (item.dependencies && item.dependencies.length > 0) {
-        item.dependencies.forEach(depId => {
-          const dependency = ganttItems.find(dep => dep.id === depId);
-          if (dependency && isItemVisible(dependency.startDate, dependency.endDate) && isItemVisible(item.startDate, item.endDate)) {
-            // Calculer les positions pour dessiner la ligne
-            // Cette logique serait complexe, simplifions avec une indication visuelle
-            lines.push(
-              <div
-                key={`dep-${depId}-${item.id}`}
-                className="absolute inset-0 pointer-events-none"
-              >
-                <svg className="w-full h-full">
-                  <defs>
-                    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
-                     refX="0" refY="3.5" orient="auto">
-                      <polygon points="0 0, 10 3.5, 0 7" fill="blue" opacity="0.6" />
-                    </marker>
-                  </defs>
-                  <line
-                    x1="50%"
-                    y1="20px"
-                    x2="50%"
-                    y2="40px"
-                    stroke="blue"
-                    strokeWidth="2"
-                    opacity="0.6"
-                    markerEnd="url(#arrowhead)"
-                  />
-                </svg>
-              </div>
-            );
-          }
-        });
-      }
-    });
-    
-    return lines;
-  };
-
   return (
     <Card className="w-full" data-testid={dataTestId}>
       <CardHeader>
@@ -728,10 +317,16 @@ export default function GanttChart({
                 Temps réel
               </Badge>
             )}
+            {isNavigating && (
+              <Badge variant="outline" className="ml-2 text-blue-600">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mr-1 animate-pulse" />
+                Navigation...
+              </Badge>
+            )}
           </CardTitle>
           
           <div className="flex items-center space-x-2">
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'week' | 'month')}>
               <TabsList className="grid w-fit grid-cols-2">
                 <TabsTrigger value="week" className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
@@ -759,28 +354,46 @@ export default function GanttChart({
                   });
                 }
               }}
-              data-testid="link-mode-button"
+              data-testid="button-link-mode"
             >
-              <Link className="h-4 w-4" />
+              <Link className="h-4 w-4 mr-1" />
+              {linkMode ? "Annuler liaison" : "Créer liaison"}
             </Button>
             
-            <Button variant="outline" size="sm" onClick={goToPreviousPeriod}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={goToCurrentPeriod}>
-              Aujourd'hui
-            </Button>
-            <Button variant="outline" size="sm" onClick={goToNextPeriod}>
-              <ChevronRight className="h-4 w-4" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCreateDialog(true)}
+              data-testid="button-create-task"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Nouvelle tâche
             </Button>
           </div>
         </div>
         
-        <div className="text-sm text-gray-600">
-          {viewMode === 'week' 
-            ? `Semaine du ${format(periodStart, 'dd MMM', { locale: fr })} au ${format(periodEnd, 'dd MMM yyyy', { locale: fr })}`
-            : `${format(periodStart, 'MMMM yyyy', { locale: fr })}`
-          }
+        {/* Navigation de période */}
+        <div className="flex items-center justify-between pt-4">
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm" onClick={goToPreviousPeriod} data-testid="button-previous-period">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={goToNextPeriod} data-testid="button-next-period">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant={isCurrentPeriod ? "default" : "outline"} 
+              size="sm" 
+              onClick={goToCurrentPeriod}
+              data-testid="button-current-period"
+            >
+              Aujourd'hui
+            </Button>
+          </div>
+          
+          <div className="text-sm font-medium text-gray-700">
+            {getPeriodLabel()}
+          </div>
         </div>
       </CardHeader>
 
@@ -788,33 +401,27 @@ export default function GanttChart({
         {/* En-tête du calendrier */}
         <div className="grid grid-cols-12 gap-1 mb-4">
           <div className="col-span-4 text-sm font-medium text-gray-700 p-2">
-            Éléments de planning
+            Projet / Tâche
           </div>
-          <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : `grid-cols-${monthWeeksCount}`}`}>
+          <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : `grid-cols-${periodInfo.monthWeeksCount}`}`}>
             {viewMode === 'week' ? (
-              // Vue hebdomadaire : afficher chaque jour
-              periodDays.map((day) => (
+              periodInfo.periodDays.map((day) => (
                 <div
                   key={day.toISOString()}
-                  className={`text-center p-1 text-xs font-medium rounded ${
-                    isSameDay(day, new Date()) 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'text-gray-700 bg-gray-50'
-                  }`}
+                  className="text-center p-1 text-xs font-medium text-gray-500 bg-gray-50 rounded"
                 >
                   <div>{format(day, 'EEE', { locale: fr })}</div>
-                  <div className="text-xs">{format(day, 'd')}</div>
+                  <div>{format(day, 'dd')}</div>
                 </div>
               ))
             ) : (
-              // Vue mensuelle : afficher les semaines
               eachWeekOfInterval({ 
-                start: periodStart, 
-                end: periodEnd 
+                start: periodInfo.periodStart, 
+                end: periodInfo.periodEnd 
               }, { weekStartsOn: 1 }).map((week, index) => (
                 <div
                   key={week.toISOString()}
-                  className="text-center p-1 text-xs font-medium text-gray-700 bg-gray-50 rounded"
+                  className="text-center p-1 text-xs font-medium text-gray-500 bg-gray-50 rounded"
                 >
                   S{index + 1}
                 </div>
@@ -823,145 +430,73 @@ export default function GanttChart({
           </div>
         </div>
 
-        <Separator className="mb-4" />
-
-        {/* Zone de planning Gantt */}
+        {/* Zone principale du Gantt avec drag/drop */}
         <div 
           ref={ganttRef}
-          className="space-y-2 relative"
-          onDragOver={(e) => e.preventDefault()}
+          className="space-y-1"
           onDrop={handleDrop}
+          onDragOver={handleDragOver}
           onDoubleClick={handleDoubleClick}
+          data-testid="gantt-chart-area"
         >
-          {renderDependencyLines()}
-          
-          {ganttItems
-            .filter(item => isItemVisible(item.startDate, item.endDate))
-            .sort((a, b) => {
-              // Trier par priorité puis par date
-              const priorityOrder = { 'critique': 5, 'elevee': 4, 'normale': 3, 'faible': 2, 'tres_faible': 1 };
-              const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 3;
-              const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 3;
-              
-              if (aPriority !== bPriority) return bPriority - aPriority;
-              return a.startDate.getTime() - b.startDate.getTime();
-            })
-            .map((item) => {
+          {ganttItems.filter(item => isItemVisible(item.startDate, item.endDate)).map((item) => {
             const position = getBarPosition(item.startDate, item.endDate);
-            const itemIsOverdue = isOverdue(item);
-            const statusColor = getItemColor(item.status, item.type, item.priority, itemIsOverdue);
+            const colorClass = getItemColor(item.status, item.type, item.priority, isOverdue(item));
+            const isDragged = draggedItem === item.id;
             
             return (
               <div key={item.id} className="grid grid-cols-12 gap-1 group">
-                {/* Nom de l'élément avec informations étendues */}
+                {/* Nom de l'élément */}
                 <div className="col-span-4 flex items-center justify-between p-2">
-                  <div className="flex items-center space-x-2 flex-1">
-                    {item.type === 'milestone' ? (
-                      <div className={`w-3 h-3 rounded-full border-2 ${statusColor}`} />
-                    ) : (
-                      <div className={`w-3 h-3 rounded border-2 ${statusColor}`} />
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-3 h-3 ${colorClass.includes('bg-') ? colorClass.split(' ')[0] : 'bg-gray-400'} rounded border-2 ${colorClass.includes('border-') ? colorClass.split(' ')[1] || 'border-gray-500' : 'border-gray-500'}`} />
+                    <span className="text-sm font-medium truncate" title={item.name}>
+                      {item.name}
+                    </span>
+                    {item.priority === 'critique' && (
+                      <AlertTriangle className="h-3 w-3 text-red-500" />
                     )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-1">
-                        <span 
-                          className="text-sm font-medium truncate cursor-pointer hover:text-primary"
-                          title={item.name}
-                          onClick={() => handleItemClick(item.id)}
-                        >
-                          {item.name}
-                        </span>
-                        {itemIsOverdue && (
-                          <AlertTriangle className="h-3 w-3 text-red-500" />
-                        )}
-                        {item.priority === 'critique' && (
-                          <TrendingUp className="h-3 w-3 text-red-500" />
-                        )}
-                      </div>
-                      
-                      {/* Heures estimées vs réelles */}
-                      {item.estimatedHours && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          <Clock className="h-3 w-3 inline mr-1" />
-                          {item.estimatedHours}h 
-                          {item.actualHours && (
-                            <span className={item.actualHours > item.estimatedHours ? 'text-red-500' : 'text-green-600'}>
-                              / {item.actualHours}h
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
                   </div>
-                  
-                  <div className="flex flex-col space-y-1">
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs ${
-                        item.priority === 'critique' ? 'border-red-500 text-red-700' :
-                        item.priority === 'elevee' ? 'border-orange-500 text-orange-700' :
-                        'border-gray-500 text-gray-700'
-                      }`}
-                    >
-                      {item.type === 'milestone' ? 'Jalon' : item.type === 'task' ? 'Tâche' : 'Projet'}
+                  {item.progress !== undefined && (
+                    <Badge variant="outline" className="text-xs">
+                      {item.progress}%
                     </Badge>
-                    
-                    {item.dependencies && item.dependencies.length > 0 && (
-                      <div className="text-xs text-blue-600 flex items-center">
-                        <Link className="h-2 w-2 mr-1" />
-                        {item.dependencies.length}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
 
-                {/* Barre Gantt avec redimensionnement */}
-                <div className="col-span-8 relative h-8 border border-gray-200 rounded">
+                {/* Barre Gantt avec drag/drop et resize */}
+                <div className="col-span-8 relative h-8 border border-gray-200 rounded bg-gray-50">
                   <div
-                    className={`absolute top-0 h-full rounded flex items-center px-2 text-white text-xs font-medium border-2 transition-all ${statusColor} ${
-                      draggedItem === item.id ? 'opacity-50 z-10' : ''
-                    } ${linkFromId === item.id ? 'ring-2 ring-blue-400' : ''} group-hover:shadow-md cursor-move`}
+                    className={`absolute top-0 h-full rounded flex items-center justify-between text-xs font-medium border-2 transition-all cursor-move ${colorClass} hover:shadow-md ${isDragged ? 'opacity-60 z-10' : ''} ${item.id === linkFromId ? 'ring-2 ring-blue-400' : ''}`}
                     style={position}
                     draggable={!linkMode}
                     onDragStart={(e) => handleDragStart(e, item.id)}
+                    onDragEnd={handleDragEnd}
                     onClick={() => handleItemClick(item.id)}
                     data-testid={`gantt-bar-${item.id}`}
                   >
-                    {/* Poignée de redimensionnement gauche */}
-                    {item.type !== 'milestone' && (
-                      <div
-                        className="absolute left-0 top-0 h-full w-2 cursor-ew-resize flex items-center justify-center group-hover:bg-black group-hover:bg-opacity-20"
-                        onMouseDown={(e) => handleResizeStart(e, item.id, 'start')}
-                        data-testid={`resize-start-${item.id}`}
-                      >
-                        <GripHorizontal className="h-2 w-2 opacity-0 group-hover:opacity-70" />
-                      </div>
-                    )}
+                    {/* Handle de resize début */}
+                    <div 
+                      className="absolute left-0 top-0 w-2 h-full bg-gray-600/30 hover:bg-gray-600/60 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                      onMouseDown={(e) => handleResizeStart(e, item.id, 'start')}
+                      data-testid={`resize-start-${item.id}`}
+                    />
                     
-                    <div className="flex items-center space-x-1 flex-1 min-w-0">
-                      <Move className="h-3 w-3 opacity-70 flex-shrink-0" />
-                      <span className="truncate flex-1">{item.name}</span>
+                    {/* Contenu de la barre */}
+                    <div className="px-2 flex items-center space-x-1 flex-1 min-w-0">
+                      {item.type === 'milestone' && <div className="w-2 h-2 bg-current rounded-full" />}
+                      <span className="truncate text-xs">{item.name}</span>
+                      {item.dependencies && item.dependencies.length > 0 && (
+                        <Link className="h-3 w-3 text-blue-500" />
+                      )}
                     </div>
                     
-                    {/* Poignée de redimensionnement droite */}
-                    {item.type !== 'milestone' && (
-                      <div
-                        className="absolute right-0 top-0 h-full w-2 cursor-ew-resize flex items-center justify-center group-hover:bg-black group-hover:bg-opacity-20"
-                        onMouseDown={(e) => handleResizeStart(e, item.id, 'end')}
-                        data-testid={`resize-end-${item.id}`}
-                      >
-                        <GripHorizontal className="h-2 w-2 opacity-0 group-hover:opacity-70" />
-                      </div>
-                    )}
-                    
-                    {/* Indicateur de progression pour les projets/tâches */}
-                    {item.type !== 'milestone' && item.progress !== undefined && (
-                      <div className="absolute bottom-0 left-0 h-1 bg-white bg-opacity-30 rounded-b">
-                        <div 
-                          className="h-full bg-white rounded-b transition-all duration-300"
-                          style={{ width: `${item.progress}%` }}
-                        />
-                      </div>
-                    )}
+                    {/* Handle de resize fin */}
+                    <div 
+                      className="absolute right-0 top-0 w-2 h-full bg-gray-600/30 hover:bg-gray-600/60 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                      onMouseDown={(e) => handleResizeStart(e, item.id, 'end')}
+                      data-testid={`resize-end-${item.id}`}
+                    />
                   </div>
                 </div>
               </div>
@@ -969,9 +504,29 @@ export default function GanttChart({
           })}
         </div>
 
-        {/* Message si aucun élément visible */}
+        {/* Preview pendant le drag */}
+        {dragPreview && (
+          <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-50">
+            <div className="absolute bg-blue-500/20 border-2 border-blue-500 rounded p-2 text-sm">
+              <div className="font-medium">{dragPreview.itemId}</div>
+              <div>
+                {format(dragPreview.previewStartDate, 'dd/MM/yyyy')} - {format(dragPreview.previewEndDate, 'dd/MM/yyyy')}
+              </div>
+              {dragPreview.willNavigate && (
+                <div className="text-blue-600 font-medium">
+                  → Navigation vers {dragPreview.targetPeriod ? format(dragPreview.targetPeriod, 'MMM yyyy') : 'période adjacente'}
+                </div>
+              )}
+              <div className={`text-xs ${dragPreview.isValidPosition ? 'text-green-600' : 'text-red-600'}`}>
+                {dragPreview.isValidPosition ? '✓ Position valide' : '✗ Position invalide'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* État vide */}
         {ganttItems.filter(item => isItemVisible(item.startDate, item.endDate)).length === 0 && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-12 text-gray-500">
             <CalendarDays className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>Aucun projet ou jalon planifié pour cette période</p>
             <div className="flex justify-center space-x-2 mt-4">
@@ -990,7 +545,7 @@ export default function GanttChart({
           </div>
         )}
 
-        {/* Statistiques et alertes */}
+        {/* Statistiques */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-3">
             <div className="flex items-center space-x-2">
@@ -1018,12 +573,7 @@ export default function GanttChart({
               <span className="text-sm font-medium">Heures planifiées</span>
             </div>
             <div className="text-lg font-bold text-blue-600 mt-1">
-              {ganttItems.reduce((total, item) => {
-                const hours = typeof item.estimatedHours === 'string' 
-                  ? parseFloat(item.estimatedHours) || 0 
-                  : item.estimatedHours || 0;
-                return total + hours;
-              }, 0)}h
+              {totalPlannedHours}h
             </div>
           </Card>
         </div>
@@ -1045,10 +595,9 @@ export default function GanttChart({
             <div className="col-span-4 text-sm font-medium text-gray-700 p-2">
               Charge équipe
             </div>
-            <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : `grid-cols-${monthWeeksCount}`}`}>
+            <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : `grid-cols-${periodInfo.monthWeeksCount}`}`}>
               {viewMode === 'week' ? (
-                // Vue hebdomadaire : afficher chaque jour
-                periodDays.map((day) => (
+                periodInfo.periodDays.map((day) => (
                   <div
                     key={`workload-header-${day.toISOString()}`}
                     className="text-center p-1 text-xs font-medium text-gray-500 bg-gray-50 rounded"
@@ -1057,10 +606,9 @@ export default function GanttChart({
                   </div>
                 ))
               ) : (
-                // Vue mensuelle : afficher les semaines
                 eachWeekOfInterval({ 
-                  start: periodStart, 
-                  end: periodEnd 
+                  start: periodInfo.periodStart, 
+                  end: periodInfo.periodEnd 
                 }, { weekStartsOn: 1 }).map((week, index) => (
                   <div
                     key={`workload-header-${week.toISOString()}`}
@@ -1081,15 +629,14 @@ export default function GanttChart({
                 <span className="text-sm font-medium">Besoin en personnel</span>
               </div>
               <Badge variant="outline" className="text-xs">
-                {Object.values(teamWorkload).reduce((total, period) => total + period.estimatedPersons, 0)} pers. total
+                {totalEstimatedPersons} pers. total
               </Badge>
             </div>
 
             <div className="col-span-8 relative h-8 border border-gray-200 rounded bg-gray-50">
               {viewMode === 'week' ? (
-                // Vue hebdomadaire : afficher par jour
-                periodDays.map((day, dayIndex) => {
-                  if (dayIndex % 7 === 0) { // Une fois par semaine
+                periodInfo.periodDays.map((day, dayIndex) => {
+                  if (dayIndex % 7 === 0) {
                     const weekKey = format(day, 'yyyy-MM-dd');
                     const workload = teamWorkload[weekKey];
                     
@@ -1119,9 +666,8 @@ export default function GanttChart({
                   return null;
                 })
               ) : (
-                // Vue mensuelle : afficher pour tout le mois
                 (() => {
-                  const monthKey = format(periodStart, 'yyyy-MM');
+                  const monthKey = format(periodInfo.periodStart, 'yyyy-MM');
                   const workload = teamWorkload[monthKey];
                   
                   if (!workload) return null;
@@ -1191,7 +737,7 @@ export default function GanttChart({
               </div>
               <div className="flex items-center space-x-2">
                 <Move className="h-3 w-3 text-gray-500" />
-                <span>Glissez-déposez pour modifier</span>
+                <span>Glissez-déposez pour modifier (drag latéral supporté)</span>
               </div>
             </div>
             <div className="space-y-2">

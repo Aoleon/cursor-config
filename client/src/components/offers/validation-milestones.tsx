@@ -133,7 +133,7 @@ export default function ValidationMilestones({ offerId }: ValidationMilestonesPr
         <CardContent>
           <div className="animate-pulse space-y-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-16 bg-gray-200 rounded" />
+              <div key={i} className="h-16 bg-surface-muted rounded" />
             ))}
           </div>
         </CardContent>
@@ -152,20 +152,20 @@ export default function ValidationMilestones({ offerId }: ValidationMilestonesPr
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="h-5 w-5 text-green-600" />
+        return <CheckCircle className="h-5 w-5 text-success" />
       case 'blocked':
-        return <XCircle className="h-5 w-5 text-red-600" />
+        return <XCircle className="h-5 w-5 text-error" />
       case 'pending':
-        return <Clock className="h-5 w-5 text-yellow-600" />
+        return <Clock className="h-5 w-5 text-warning" />
       default:
-        return <AlertTriangle className="h-5 w-5 text-gray-400" />
+        return <AlertTriangle className="h-5 w-5 text-on-surface-muted" />
     }
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800">Validé</Badge>
+        return <Badge className="bg-success/10 text-success">Validé</Badge>
       case 'blocked':
         return <Badge variant="destructive">Bloqué</Badge>
       case 'pending':
@@ -240,10 +240,10 @@ export default function ValidationMilestones({ offerId }: ValidationMilestonesPr
                       <h4 className="font-medium">{milestoneType.label}</h4>
                       <p className="text-sm text-muted-foreground">{milestoneType.description}</p>
                       {milestone?.comment && (
-                        <p className="text-xs text-blue-600 mt-1">💬 {milestone.comment}</p>
+                        <p className="text-xs text-primary mt-1">💬 {milestone.comment}</p>
                       )}
                       {milestone?.blockers && (
-                        <p className="text-xs text-red-600 mt-1">🚫 {milestone.blockers}</p>
+                        <p className="text-xs text-error mt-1">🚫 {milestone.blockers}</p>
                       )}
                     </div>
                   </div>
@@ -262,7 +262,7 @@ export default function ValidationMilestones({ offerId }: ValidationMilestonesPr
             })}
 
             {selectedMilestone && (
-              <Card className="mt-6 border-blue-200 bg-blue-50">
+              <Card className="mt-6 border-primary/20 bg-primary/10">
                 <CardHeader>
                   <CardTitle className="text-lg">Validation du Jalon</CardTitle>
                 </CardHeader>

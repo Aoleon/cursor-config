@@ -370,7 +370,7 @@ export default function UnifiedOffersDisplay({
                                     <Button 
                                       variant="ghost" 
                                       size="sm" 
-                                      className={offer.isPriority ? "text-red-600 hover:text-red-700" : "text-muted-foreground hover:text-yellow-600"}
+                                      className={offer.isPriority ? "text-error hover:text-error" : "text-muted-foreground hover:text-warning"}
                                       onClick={(e) => handlePrioritize(offer, e)}
                                       disabled={prioritizeMutation.isPending}
                                       data-testid={`button-priority-${offer.id}`}

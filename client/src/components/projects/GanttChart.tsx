@@ -180,32 +180,32 @@ export default function GanttChart({
   // Obtenir la couleur selon le statut et la priorité - OPTIMISÉ avec useCallback
   const getItemColor = useCallback((status: string, type: 'project' | 'milestone' | 'task', priority?: string, isOverdue?: boolean) => {
     if (isOverdue) {
-      return "bg-red-500 border-red-600"; // Rouge pour les éléments en retard
+      return "bg-error border-error"; // Rouge pour les éléments en retard
     }
     
     if (priority === 'critique') {
-      return "bg-red-400 border-red-500";
+      return "bg-error/80 border-error";
     } else if (priority === 'elevee') {
-      return "bg-orange-400 border-orange-500";
+      return "bg-warning border-warning";
     }
     
     if (type === 'milestone') {
       switch (status) {
-        case "completed": return "bg-green-500 border-green-600";
-        case "in-progress": return "bg-blue-500 border-blue-600";
-        case "pending": return "bg-gray-400 border-gray-500";
-        case "overdue": return "bg-red-500 border-red-600";
-        default: return "bg-gray-400 border-gray-500";
+        case "completed": return "bg-success border-success";
+        case "in-progress": return "bg-primary border-primary";
+        case "pending": return "bg-surface-elevated border-border";
+        case "overdue": return "bg-error border-error";
+        default: return "bg-surface-elevated border-border";
       }
     } else {
       switch (status) {
-        case "etude": return "bg-blue-500 border-blue-600";
-        case "planification": return "bg-yellow-500 border-yellow-600";
-        case "approvisionnement": return "bg-orange-500 border-orange-600";
-        case "chantier": return "bg-green-500 border-green-600";
-        case "sav": return "bg-purple-500 border-purple-600";
-        case "termine": return "bg-green-600 border-green-700";
-        default: return "bg-gray-500 border-gray-600";
+        case "etude": return "bg-primary border-primary";
+        case "planification": return "bg-warning border-warning";
+        case "approvisionnement": return "bg-warning border-warning";
+        case "chantier": return "bg-success border-success";
+        case "sav": return "bg-accent border-accent";
+        case "termine": return "bg-success border-success";
+        default: return "bg-surface-elevated border-border";
       }
     }
   }, []);

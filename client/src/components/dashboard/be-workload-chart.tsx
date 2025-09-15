@@ -44,11 +44,11 @@ export default function BeWorkloadChart() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'surchargé':
-        return 'bg-red-500'
+        return 'bg-error'
       case 'occupé':
-        return 'bg-yellow-500'
+        return 'bg-warning'
       default:
-        return 'bg-green-500'
+        return 'bg-success'
     }
   }
 
@@ -57,9 +57,9 @@ export default function BeWorkloadChart() {
       case 'surchargé':
         return <Badge variant="destructive">Surchargé</Badge>
       case 'occupé':
-        return <Badge className="bg-yellow-100 text-yellow-800">Occupé</Badge>
+        return <Badge className="bg-warning/10 text-warning">Occupé</Badge>
       default:
-        return <Badge className="bg-green-100 text-green-800">Disponible</Badge>
+        return <Badge className="bg-success/10 text-success">Disponible</Badge>
     }
   }
 
@@ -98,7 +98,7 @@ export default function BeWorkloadChart() {
         <CardContent>
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-gray-200 rounded" />
+              <div key={i} className="h-20 bg-surface-muted rounded" />
             ))}
           </div>
         </CardContent>
@@ -230,7 +230,7 @@ export default function BeWorkloadChart() {
 
           {currentWeekData.length === 0 && (
             <div className="text-center py-8">
-              <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <Clock className="h-12 w-12 text-on-surface-muted mx-auto mb-4" />
               <p className="text-muted-foreground">
                 Aucune donnée de charge pour la semaine courante
               </p>

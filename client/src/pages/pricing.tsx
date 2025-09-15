@@ -134,7 +134,7 @@ export default function Pricing() {
   const totalQuotations = quotations.reduce((sum, q) => sum + parseFloat(q.totalPrice), 0);
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-surface">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
@@ -173,7 +173,7 @@ export default function Pricing() {
                     className={`cursor-pointer transition-colors ${
                       selectedOfferId === offer.id 
                         ? 'ring-2 ring-primary bg-primary/5' 
-                        : 'hover:bg-gray-50'
+                        : 'hover:bg-surface'
                     }`}
                     onClick={() => setSelectedOfferId(offer.id)}
                   >
@@ -340,40 +340,40 @@ export default function Pricing() {
           </CardHeader>
           <CardContent>
             {!selectedOfferId ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-on-surface-muted">
                 Sélectionnez une offre pour voir ses devis
               </div>
             ) : quotationsLoading ? (
-              <div className="text-center py-8 text-gray-500">Chargement...</div>
+              <div className="text-center py-8 text-on-surface-muted">Chargement...</div>
             ) : quotations.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-on-surface-muted">
                 Aucun devis pour cette offre
               </div>
             ) : (
               <div className="space-y-4">
                 {/* Résumé financier */}
-                <Card className="bg-blue-50">
+                <Card className="bg-primary/10">
                   <CardContent className="p-4">
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
-                        <div className="text-2xl font-bold text-blue-600">
+                        <div className="text-2xl font-bold text-primary">
                           {quotations.length}
                         </div>
-                        <div className="text-sm text-gray-600">Devis</div>
+                        <div className="text-sm text-on-surface-muted">Devis</div>
                       </div>
                       <div>
-                        <div className="text-2xl font-bold text-green-600">
+                        <div className="text-2xl font-bold text-success">
                           {totalQuotations.toLocaleString()} €
                         </div>
-                        <div className="text-sm text-gray-600">Total</div>
+                        <div className="text-sm text-on-surface-muted">Total</div>
                       </div>
                       <div>
-                        <div className="text-2xl font-bold text-orange-600">
+                        <div className="text-2xl font-bold text-warning">
                           {selectedOffer ? (
                             Math.round((totalQuotations / parseFloat(selectedOffer.estimatedAmount)) * 100)
                           ) : 0}%
                         </div>
-                        <div className="text-sm text-gray-600">du Budget</div>
+                        <div className="text-sm text-on-surface-muted">du Budget</div>
                       </div>
                     </div>
                   </CardContent>
@@ -387,8 +387,8 @@ export default function Pricing() {
                         <div className="flex items-center justify-between">
                           <div className="space-y-1">
                             <div className="font-medium">{quotation.supplierName}</div>
-                            <div className="text-sm text-gray-600">{quotation.productCategory}</div>
-                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <div className="text-sm text-on-surface-muted">{quotation.productCategory}</div>
+                            <div className="flex items-center gap-4 text-xs text-on-surface-muted">
                               <span className="flex items-center gap-1">
                                 <Euro className="w-3 h-3" />
                                 {parseFloat(quotation.unitPrice).toLocaleString()} € × {quotation.quantity}
@@ -407,7 +407,7 @@ export default function Pricing() {
                           </div>
                         </div>
                         {quotation.notes && (
-                          <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
+                          <div className="mt-3 p-2 bg-surface rounded text-sm">
                             {quotation.notes}
                           </div>
                         )}

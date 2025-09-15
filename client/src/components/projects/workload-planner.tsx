@@ -544,8 +544,8 @@ export default function WorkloadPlanner() {
                     <CardContent>
                       <div className="space-y-3">
                         <div className={`text-3xl font-bold text-center ${
-                          Math.abs(teamStats.variancePercent) <= 10 ? 'text-green-600' : 
-                          Math.abs(teamStats.variancePercent) <= 25 ? 'text-orange-600' : 'text-red-600'
+                          Math.abs(teamStats.variancePercent) <= 10 ? 'text-success' : 
+                          Math.abs(teamStats.variancePercent) <= 25 ? 'text-warning' : 'text-error'
                         }`}>
                           {teamStats.variancePercent > 0 ? '+' : ''}{teamStats.variancePercent}%
                         </div>
@@ -583,30 +583,30 @@ export default function WorkloadPlanner() {
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
+                        <div className="text-2xl font-bold text-primary">
                           {teamStats.totalEstimated}h
                         </div>
-                        <div className="text-sm text-gray-600">Total Estimé</div>
+                        <div className="text-sm text-on-surface-muted">Total Estimé</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">
+                        <div className="text-2xl font-bold text-accent">
                           {teamStats.totalActual}h
                         </div>
-                        <div className="text-sm text-gray-600">Total Réalisé</div>
+                        <div className="text-sm text-on-surface-muted">Total Réalisé</div>
                       </div>
                       <div className="text-center">
                         <div className={`text-2xl font-bold ${
-                          teamStats.varianceHours >= 0 ? 'text-red-600' : 'text-green-600'
+                          teamStats.varianceHours >= 0 ? 'text-error' : 'text-success'
                         }`}>
                           {teamStats.varianceHours > 0 ? '+' : ''}{teamStats.varianceHours}h
                         </div>
-                        <div className="text-sm text-gray-600">Écart Heures</div>
+                        <div className="text-sm text-on-surface-muted">Écart Heures</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-800">
+                        <div className="text-2xl font-bold text-on-surface">
                           {beWorkload.length}
                         </div>
-                        <div className="text-sm text-gray-600">Ressources</div>
+                        <div className="text-sm text-on-surface-muted">Ressources</div>
                       </div>
                     </div>
                   </CardContent>
@@ -630,19 +630,19 @@ export default function WorkloadPlanner() {
                           <div key={index} className="flex items-center justify-between p-3 border rounded">
                             <div className="flex-1">
                               <div className="font-medium">{trend.period}</div>
-                              <div className="text-sm text-gray-600">
+                              <div className="text-sm text-on-surface-muted">
                                 Estimé: {trend.estimated}h | Réel: {trend.actual}h
                               </div>
                             </div>
                             <div className="flex items-center space-x-3">
                               <div className={`text-right ${
-                                trend.variance <= 10 ? 'text-green-600' : 
-                                trend.variance <= 25 ? 'text-orange-600' : 'text-red-600'
+                                trend.variance <= 10 ? 'text-success' : 
+                                trend.variance <= 25 ? 'text-warning' : 'text-error'
                               }`}>
                                 <div className="font-bold">{trend.variance > 0 ? '+' : ''}{trend.variance}%</div>
                                 <div className="text-xs">Écart</div>
                               </div>
-                              <div className="text-right text-blue-600">
+                              <div className="text-right text-primary">
                                 <div className="font-bold">{trend.efficiency}%</div>
                                 <div className="text-xs">Efficacité</div>
                               </div>
@@ -666,7 +666,7 @@ export default function WorkloadPlanner() {
 
       {/* Recommendations */}
       {teamStats.overloaded > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-warning/20 bg-warning/10">
           <CardHeader>
             <CardTitle className="text-orange-800">Recommandations</CardTitle>
           </CardHeader>

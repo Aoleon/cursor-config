@@ -162,7 +162,7 @@ export function ContactSelector({
           <div className="space-y-4">
             {/* Recherche */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-on-surface-muted" />
               <Input
                 placeholder="Rechercher par nom, ville, type..."
                 value={searchTerm}
@@ -174,7 +174,7 @@ export function ContactSelector({
 
             {/* Actions */}
             <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-on-surface-muted">
                 {filteredContacts.length} contact{filteredContacts.length > 1 ? 's' : ''} trouvé{filteredContacts.length > 1 ? 's' : ''}
               </div>
               {onCreateNew && (
@@ -194,18 +194,18 @@ export function ContactSelector({
             {/* Liste des contacts */}
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {isLoading ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-on-surface-muted">
                   Chargement des contacts...
                 </div>
               ) : filteredContacts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-on-surface-muted">
                   {searchTerm ? 'Aucun contact trouvé pour cette recherche' : 'Aucun contact disponible'}
                 </div>
               ) : (
                 filteredContacts.map((contact: Contact) => (
                   <Card 
                     key={contact.id} 
-                    className={`cursor-pointer transition-colors hover:bg-gray-50 ${
+                    className={`cursor-pointer transition-colors hover:bg-surface-muted ${
                       selectedContactId === contact.id ? 'border-primary bg-primary/5' : ''
                     }`}
                     onClick={() => handleContactSelect(contact)}
@@ -217,7 +217,7 @@ export function ContactSelector({
                           <div className="font-medium">
                             {getContactDisplayName(contact)}
                           </div>
-                          <div className="text-sm text-gray-600 mt-1">
+                          <div className="text-sm text-on-surface-muted mt-1">
                             {getContactSubtext(contact)}
                           </div>
                           <div className="flex gap-2 mt-2">
@@ -233,7 +233,7 @@ export function ContactSelector({
                             )}
                           </div>
                           {(contact.contactPrincipalEmail || contact.email) && (
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-on-surface-muted mt-1">
                               {contact.contactPrincipalEmail || contact.email}
                             </div>
                           )}

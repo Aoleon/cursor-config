@@ -326,15 +326,15 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
           <CardContent>
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div>
-                <span className="text-sm text-gray-600">Client:</span>
+                <span className="text-sm text-on-surface-muted">Client:</span>
                 <p className="font-medium">{selectedOffer.client}</p>
               </div>
               <div>
-                <span className="text-sm text-gray-600">Montant:</span>
+                <span className="text-sm text-on-surface-muted">Montant:</span>
                 <p className="font-medium">€{Number(selectedOffer.estimatedAmount).toLocaleString('fr-FR')}</p>
               </div>
               <div>
-                <span className="text-sm text-gray-600">Responsable BE:</span>
+                <span className="text-sm text-on-surface-muted">Responsable BE:</span>
                 <p className="font-medium">
                   {selectedOffer.responsibleUser?.firstName} {selectedOffer.responsibleUser?.lastName}
                 </p>
@@ -347,7 +347,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
                 <span>{calculateProgress()}%</span>
               </div>
               <Progress value={calculateProgress()} className="h-2" />
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-on-surface-muted">
                 {milestones.filter((m: any) => m.status === 'valide').length} sur {milestones.length} jalons validés
               </p>
             </div>
@@ -373,7 +373,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
                       {getMilestoneTypeIcon(milestone.milestoneType)}
                       <div>
                         <h4 className="font-medium">{milestone.title}</h4>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-on-surface-muted">
                           {getMilestoneTypeLabel(milestone.milestoneType)}
                         </p>
                       </div>
@@ -384,12 +384,12 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
                   </div>
 
                   {milestone.description && (
-                    <p className="text-sm text-gray-700 mb-3">{milestone.description}</p>
+                    <p className="text-sm text-on-surface-muted mb-3">{milestone.description}</p>
                   )}
 
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-600">Assigné à:</span>
+                      <span className="text-on-surface-muted">Assigné à:</span>
                       <div className="flex items-center gap-2 mt-1">
                         <Avatar className="w-6 h-6">
                           <AvatarImage src={milestone.assignedUser?.profileImageUrl} />
@@ -403,13 +403,13 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
                       </div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Échéance:</span>
+                      <span className="text-on-surface-muted">Échéance:</span>
                       <p className="font-medium">
                         {format(new Date(milestone.expectedCompletionDate), 'dd/MM/yyyy', { locale: fr })}
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-600">Créé le:</span>
+                      <span className="text-on-surface-muted">Créé le:</span>
                       <p className="font-medium">
                         {format(new Date(milestone.createdAt), 'dd/MM/yyyy', { locale: fr })}
                       </p>
@@ -426,7 +426,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-green-600 border-green-300 hover:bg-green-50"
+                                  className="text-success border-success/30 hover:bg-success/10"
                                   onClick={() => setMilestoneToValidate(milestone)}
                                   disabled={validateMilestoneMutation.isPending}
                                 >
@@ -457,7 +457,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
                                     });
                                     setMilestoneToValidate(null);
                                   }}
-                                  className="bg-green-600 hover:bg-green-700"
+                                  className="bg-success hover:bg-success/90"
                                 >
                                   Valider
                                 </AlertDialogAction>
@@ -475,7 +475,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-red-600 border-red-300 hover:bg-red-50"
+                                  className="text-error border-error/30 hover:bg-error/10"
                                   onClick={() => setMilestoneToReject(milestone)}
                                   disabled={validateMilestoneMutation.isPending}
                                 >
@@ -506,7 +506,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
                                     });
                                     setMilestoneToReject(null);
                                   }}
-                                  className="bg-red-600 hover:bg-red-700"
+                                  className="bg-error hover:bg-error/90"
                                 >
                                   Rejeter
                                 </AlertDialogAction>
@@ -519,13 +519,13 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
                   )}
 
                   {milestone.validationComment && (
-                    <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
+                    <div className="mt-3 p-2 bg-surface-muted rounded text-sm">
                       <strong>Commentaire:</strong> {milestone.validationComment}
                     </div>
                   )}
 
                   {milestone.completedAt && (
-                    <div className="mt-2 text-sm text-green-600">
+                    <div className="mt-2 text-sm text-success">
                       ✓ Validé le {format(new Date(milestone.completedAt), 'dd/MM/yyyy à HH:mm', { locale: fr })}
                     </div>
                   )}
@@ -533,7 +533,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
               ))}
 
               {milestones.length === 0 && selectedOfferId && (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-on-surface-muted">
                   <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Aucun jalon de validation créé</p>
                   <p className="text-sm">Créez le premier jalon pour commencer le suivi</p>
@@ -547,8 +547,8 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
       {!selectedOfferId && (
         <Card>
           <CardContent className="text-center py-8">
-            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50 text-gray-400" />
-            <p className="text-gray-500">Sélectionnez une offre pour gérer ses jalons de validation</p>
+            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50 text-on-surface-muted" />
+            <p className="text-on-surface-muted">Sélectionnez une offre pour gérer ses jalons de validation</p>
           </CardContent>
         </Card>
       )}

@@ -77,8 +77,8 @@ export default function StatsCards() {
       title: "Charge BE",
       value: `${(stats as any)?.beLoad || 0}%`,
       icon: TrendingUp,
-      iconBg: "bg-green-100",
-      iconColor: "text-green-600",
+      iconBg: "bg-success/10",
+      iconColor: "text-success",
       showProgress: true,
       progressValue: (stats as any)?.beLoad || 0
     }

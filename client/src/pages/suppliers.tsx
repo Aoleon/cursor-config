@@ -242,7 +242,7 @@ export default function Suppliers() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-surface">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
@@ -256,8 +256,8 @@ export default function Suppliers() {
         <div className="px-6 py-6 space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Fournisseurs</h1>
-              <p className="text-gray-600">Gestion des demandes de devis et relations fournisseurs</p>
+              <h1 className="text-2xl font-bold text-on-surface">Fournisseurs</h1>
+              <p className="text-on-surface-muted">Gestion des demandes de devis et relations fournisseurs</p>
             </div>
         <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
           <DialogTrigger asChild>
@@ -376,10 +376,10 @@ export default function Suppliers() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Demandes</p>
+                <p className="text-sm text-on-surface-muted">Total Demandes</p>
                 <p className="text-2xl font-bold">{stats.total}</p>
               </div>
-              <Truck className="w-8 h-8 text-blue-500" />
+              <Truck className="w-8 h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -387,10 +387,10 @@ export default function Suppliers() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">En Attente</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
+                <p className="text-sm text-on-surface-muted">En Attente</p>
+                <p className="text-2xl font-bold text-warning">{stats.pending}</p>
               </div>
-              <Clock className="w-8 h-8 text-orange-500" />
+              <Clock className="w-8 h-8 text-warning" />
             </div>
           </CardContent>
         </Card>
@@ -398,10 +398,10 @@ export default function Suppliers() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Reçus</p>
-                <p className="text-2xl font-bold text-green-600">{stats.received}</p>
+                <p className="text-sm text-on-surface-muted">Reçus</p>
+                <p className="text-2xl font-bold text-success">{stats.received}</p>
               </div>
-              <Star className="w-8 h-8 text-green-500" />
+              <Star className="w-8 h-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -409,10 +409,10 @@ export default function Suppliers() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Délai Moyen</p>
+                <p className="text-sm text-on-surface-muted">Délai Moyen</p>
                 <p className="text-2xl font-bold">{stats.avgResponseTime}j</p>
               </div>
-              <Clock className="w-8 h-8 text-purple-500" />
+              <Clock className="w-8 h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -442,9 +442,9 @@ export default function Suppliers() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-gray-500">Chargement...</div>
+            <div className="text-center py-8 text-on-surface-muted">Chargement...</div>
           ) : filteredRequests.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-on-surface-muted">
               Aucune demande trouvée
             </div>
           ) : (
@@ -462,17 +462,17 @@ export default function Suppliers() {
                         
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div className="space-y-1">
-                            <p className="text-gray-600">Offre: {request.offer?.reference || 'N/A'}</p>
-                            <p className="text-gray-600">Client: {request.offer?.client || 'N/A'}</p>
-                            <p className="text-gray-600">Catégorie: {request.productCategory}</p>
+                            <p className="text-on-surface-muted">Offre: {request.offer?.reference || 'N/A'}</p>
+                            <p className="text-on-surface-muted">Client: {request.offer?.client || 'N/A'}</p>
+                            <p className="text-on-surface-muted">Catégorie: {request.productCategory}</p>
                           </div>
                           <div className="space-y-1">
-                            <p className="text-gray-600">Demande: {new Date(request.requestDate).toLocaleDateString()}</p>
+                            <p className="text-on-surface-muted">Demande: {new Date(request.requestDate).toLocaleDateString()}</p>
                             {request.responseDate && (
-                              <p className="text-gray-600">Réponse: {new Date(request.responseDate).toLocaleDateString()}</p>
+                              <p className="text-on-surface-muted">Réponse: {new Date(request.responseDate).toLocaleDateString()}</p>
                             )}
                             {request.estimatedAmount && (
-                              <p className="text-gray-600">Montant: {parseFloat(request.estimatedAmount).toLocaleString()} €</p>
+                              <p className="text-on-surface-muted">Montant: {parseFloat(request.estimatedAmount).toLocaleString()} €</p>
                             )}
                           </div>
                         </div>
@@ -480,7 +480,7 @@ export default function Suppliers() {
                         <div className="space-y-2">
                           <p className="text-sm">{request.description}</p>
                           {request.notes && (
-                            <div className="p-2 bg-gray-50 rounded text-sm">
+                            <div className="p-2 bg-surface rounded text-sm">
                               <span className="font-medium">Notes: </span>
                               {request.notes}
                             </div>
@@ -488,7 +488,7 @@ export default function Suppliers() {
                         </div>
 
                         {(request.contactEmail || request.contactPhone) && (
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <div className="flex items-center gap-4 text-sm text-on-surface-muted">
                             {request.contactEmail && (
                               <div className="flex items-center gap-1">
                                 <Mail className="w-4 h-4" />

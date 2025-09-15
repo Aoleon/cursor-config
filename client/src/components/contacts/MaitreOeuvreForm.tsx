@@ -267,7 +267,7 @@ export function MaitreOeuvreForm({
                     data-testid="input-nom"
                   />
                   {form.formState.errors.nom && (
-                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.nom.message}</p>
+                    <p className="text-sm text-error mt-1">{form.formState.errors.nom.message}</p>
                   )}
                 </div>
                 
@@ -416,8 +416,8 @@ export function MaitreOeuvreForm({
             </CardHeader>
             <CardContent className="space-y-4">
               {fields.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <User className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <div className="text-center py-8 text-on-surface-muted">
+                  <User className="h-12 w-12 mx-auto mb-4 text-on-surface-muted" />
                   <p>Aucun contact ajouté</p>
                   <p className="text-sm">Cliquez sur "Ajouter un contact" pour commencer</p>
                 </div>
@@ -431,7 +431,7 @@ export function MaitreOeuvreForm({
                             Contact #{index + 1}
                           </Badge>
                           {form.watch(`contacts.${index}.isContactPrincipal`) && (
-                            <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                            <Badge variant="outline" className="text-warning border-warning">
                               <Star className="h-3 w-3 mr-1" />
                               Principal
                             </Badge>

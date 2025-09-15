@@ -584,7 +584,7 @@ export default function CreateOffer() {
   const completeness = getFormCompleteness();
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-surface-muted">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
@@ -612,13 +612,13 @@ export default function CreateOffer() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg">Création de dossier d'offre</CardTitle>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-on-surface-muted mt-1">
                       Choisissez votre méthode de création (zéro double saisie garantie)
                     </p>
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-primary">{completeness}%</div>
-                    <div className="text-sm text-gray-500">Complétude</div>
+                    <div className="text-sm text-on-surface-muted">Complétude</div>
                   </div>
                 </div>
                 
@@ -655,7 +655,7 @@ export default function CreateOffer() {
                                 <span>-</span>
                                 <span>{ao.client}</span>
                                 <span>-</span>
-                                <span className="text-gray-500">{ao.location}</span>
+                                <span className="text-on-surface-muted">{ao.location}</span>
                               </div>
                             </SelectItem>
                           ))}
@@ -673,14 +673,14 @@ export default function CreateOffer() {
                   </TabsContent>
                   
                   <TabsContent value="import" className="mt-4 space-y-4">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                    <div className="border-2 border-dashed border-border rounded-lg p-6">
                       <div className="text-center space-y-4">
                         <div className="flex justify-center">
-                          <Archive className="h-12 w-12 text-gray-400" />
+                          <Archive className="h-12 w-12 text-on-surface-muted" />
                         </div>
                         <div>
                           <h3 className="text-lg font-medium">Import DCE</h3>
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-on-surface-muted mt-1">
                             Téléchargez un fichier ZIP ou PDF contenant le DCE (Dossier de Consultation des Entreprises)
                           </p>
                         </div>
@@ -701,11 +701,11 @@ export default function CreateOffer() {
                           <div className="mt-4 space-y-2">
                             <h4 className="font-medium text-sm">Fichiers importés :</h4>
                             {uploadedFiles.map((file, index) => (
-                              <div key={index} className="flex items-center justify-between bg-green-50 p-2 rounded border">
+                              <div key={index} className="flex items-center justify-between bg-success/10 p-2 rounded border">
                                 <div className="flex items-center space-x-2">
-                                  <FileCheck className="h-4 w-4 text-green-600" />
+                                  <FileCheck className="h-4 w-4 text-success" />
                                   <span className="text-sm font-medium">{file.name}</span>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-on-surface-muted">
                                     ({(file.size / 1024 / 1024).toFixed(2)} MB)
                                   </span>
                                 </div>
@@ -714,7 +714,7 @@ export default function CreateOffer() {
                           </div>
                         )}
                         
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-on-surface-muted">
                           Types acceptés : ZIP, PDF, DOC, DOCX • Taille max : 50MB par fichier
                         </p>
                       </div>
@@ -832,11 +832,11 @@ export default function CreateOffer() {
                     />
                   </div>
                   
-                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <Label className="text-sm text-gray-600">Date limite remise AO</Label>
+                  <div className="bg-primary/10 p-3 rounded-lg border border-primary/20">
+                    <Label className="text-sm text-on-surface-muted">Date limite remise AO</Label>
                     <div className="flex items-center space-x-2 mt-1">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <p className="font-medium text-blue-700">Calculée automatiquement par le système</p>
+                      <div className="w-3 h-3 bg-primary/100 rounded-full"></div>
+                      <p className="font-medium text-primary">Calculée automatiquement par le système</p>
                     </div>
                     <p className="text-xs text-blue-600 mt-1">
                       💡 La date limite est définie automatiquement selon les règles métier (Date sortie AO + 30 jours)
@@ -1221,10 +1221,10 @@ export default function CreateOffer() {
               </Button>
               
               <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-500 space-y-1">
+                <div className="text-sm text-on-surface-muted space-y-1">
                   <div>Formulaire complété à {completeness}%</div>
                   {creationMethod === "import" && uploadedFiles.length > 0 && (
-                    <div className="flex items-center space-x-1 text-green-600">
+                    <div className="flex items-center space-x-1 text-success">
                       <FileCheck className="h-3 w-3" />
                       <span className="text-xs">{uploadedFiles.length} fichier(s) importé(s)</span>
                     </div>

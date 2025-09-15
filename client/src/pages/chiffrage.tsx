@@ -460,7 +460,7 @@ export default function Chiffrage() {
             {offer.status}
           </Badge>
           {offer.finEtudesValidatedAt && (
-            <Badge variant="secondary" className="bg-green-100 text-green-800">
+            <Badge variant="secondary" className="bg-success/10 text-success">
               <CheckCircle className="h-4 w-4 mr-1" />
               Fin d'études validée
             </Badge>
@@ -570,7 +570,7 @@ export default function Chiffrage() {
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                    <AlertDialogAction onClick={confirmDeleteElement} className="bg-red-600 hover:bg-red-700">
+                                    <AlertDialogAction onClick={confirmDeleteElement} className="bg-error hover:bg-error">
                                       Supprimer
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
@@ -662,7 +662,7 @@ export default function Chiffrage() {
                 onClick={() => transformToProjectMutation.mutate()}
                 disabled={transformToProjectMutation.isPending}
                 data-testid="button-transform-to-project"
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-success hover:bg-success"
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Transformer en projet
@@ -710,7 +710,7 @@ export default function Chiffrage() {
                       <label htmlFor={`lot-${lot.id}`} className="flex-1 cursor-pointer">
                         <div className="font-medium">{lot.numero} - {lot.designation}</div>
                         {lot.montantEstime && (
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-on-surface-muted">
                             Montant estimé: {Number(lot.montantEstime).toLocaleString('fr-FR')} €
                           </div>
                         )}
@@ -719,7 +719,7 @@ export default function Chiffrage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">Aucun lot défini pour cet AO</p>
+                <p className="text-on-surface-muted">Aucun lot défini pour cet AO</p>
               )}
             </CardContent>
           </Card>
@@ -752,7 +752,7 @@ export default function Chiffrage() {
                         <div>
                           <div className="font-medium">{request.supplierName}</div>
                           {request.supplierEmail && (
-                            <div className="text-sm text-gray-500">{request.supplierEmail}</div>
+                            <div className="text-sm text-on-surface-muted">{request.supplierEmail}</div>
                           )}
                         </div>
                       </TableCell>
@@ -839,15 +839,15 @@ export default function Chiffrage() {
                       <div key={request.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            index === 0 ? 'bg-green-100 text-green-700' :
-                            index === 1 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-gray-100 text-gray-700'
+                            index === 0 ? 'bg-success/10 text-success' :
+                            index === 1 ? 'bg-warning/10 text-warning' :
+                            'bg-surface-muted text-on-surface-muted'
                           }`}>
                             {index + 1}
                           </div>
                           <div>
                             <div className="font-medium">{request.supplierName}</div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-on-surface-muted">
                               Reçu le {format(new Date(request.responseAt || request.sentAt), 'dd/MM/yyyy', { locale: fr })}
                             </div>
                           </div>
@@ -857,7 +857,7 @@ export default function Chiffrage() {
                             {Number(request.quotationAmount).toLocaleString('fr-FR')} € HT
                           </div>
                           {index === 0 && (
-                            <Badge className="bg-green-100 text-green-700">Meilleur prix</Badge>
+                            <Badge className="bg-success/10 text-success">Meilleur prix</Badge>
                           )}
                         </div>
                       </div>
@@ -887,7 +887,7 @@ export default function Chiffrage() {
                 <CardDescription>
                   Généré le {format(new Date(dpgfDocument.createdAt), "dd MMMM yyyy à HH:mm", { locale: fr })}
                   {dpgfDocument.validatedAt && (
-                    <span className="text-green-600 ml-2">
+                    <span className="text-success ml-2">
                       • Validé le {format(new Date(dpgfDocument.validatedAt), "dd MMMM yyyy", { locale: fr })}
                     </span>
                   )}
@@ -1055,7 +1055,7 @@ export default function Chiffrage() {
             </div>
             <div>
               <Label>Lots concernés</Label>
-              <div className="text-sm text-gray-600 mt-1">
+              <div className="text-sm text-on-surface-muted mt-1">
                 {selectedLots.length > 0 ? (
                   <div>
                     {selectedLots.map(lotId => {
@@ -1068,7 +1068,7 @@ export default function Chiffrage() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-orange-600">Veuillez sélectionner au moins un lot</p>
+                  <p className="text-warning">Veuillez sélectionner au moins un lot</p>
                 )}
               </div>
             </div>

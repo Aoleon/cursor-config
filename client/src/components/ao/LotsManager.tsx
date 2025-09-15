@@ -184,7 +184,7 @@ export function LotsManager({ lots, onLotsChange, disabled = false }: LotsManage
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction onClick={confirmRemoveLot} className="bg-red-600 hover:bg-red-700">
+                              <AlertDialogAction onClick={confirmRemoveLot} className="bg-error hover:bg-error">
                                 Supprimer
                               </AlertDialogAction>
                             </AlertDialogFooter>

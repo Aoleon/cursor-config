@@ -42,7 +42,7 @@ export default function BEDashboard() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-surface">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
@@ -70,7 +70,7 @@ export default function BEDashboard() {
                     <p className="text-sm font-medium text-on-surface-muted">Offres BE</p>
                     <p className="text-2xl font-bold">{beStats.totalOffers}</p>
                   </div>
-                  <BarChart3 className="h-8 w-8 text-blue-600" />
+                  <BarChart3 className="h-8 w-8 text-primary" />
                 </div>
               </CardContent>
             </Card>
@@ -80,9 +80,9 @@ export default function BEDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-on-surface-muted">En Chiffrage</p>
-                    <p className="text-2xl font-bold text-orange-600">{beStats.inProgress}</p>
+                    <p className="text-2xl font-bold text-warning">{beStats.inProgress}</p>
                   </div>
-                  <Clock className="h-8 w-8 text-orange-600" />
+                  <Clock className="h-8 w-8 text-warning" />
                 </div>
               </CardContent>
             </Card>
@@ -92,9 +92,9 @@ export default function BEDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-on-surface-muted">Prioritaires</p>
-                    <p className="text-2xl font-bold text-red-600">{beStats.priority}</p>
+                    <p className="text-2xl font-bold text-error">{beStats.priority}</p>
                   </div>
-                  <AlertTriangle className="h-8 w-8 text-red-600" />
+                  <AlertTriangle className="h-8 w-8 text-error" />
                 </div>
               </CardContent>
             </Card>
@@ -104,9 +104,9 @@ export default function BEDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-on-surface-muted">Surchargés</p>
-                    <p className="text-2xl font-bold text-red-600">{beStats.overloaded}</p>
+                    <p className="text-2xl font-bold text-error">{beStats.overloaded}</p>
                   </div>
-                  <User className="h-8 w-8 text-red-600" />
+                  <User className="h-8 w-8 text-error" />
                 </div>
               </CardContent>
             </Card>
@@ -118,7 +118,7 @@ export default function BEDashboard() {
                     <p className="text-sm font-medium text-on-surface-muted">Charge Moy.</p>
                     <p className="text-2xl font-bold">{beStats.avgWorkload}%</p>
                   </div>
-                  <Activity className="h-8 w-8 text-purple-600" />
+                  <Activity className="h-8 w-8 text-primary" />
                 </div>
               </CardContent>
             </Card>
@@ -140,7 +140,7 @@ export default function BEDashboard() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <AlertTriangle className="h-5 w-5 text-error" />
                     Offres Prioritaires BE
                   </CardTitle>
                 </CardHeader>

@@ -16,13 +16,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 // Types pour les espaces documentaires
 const DOCUMENT_SPACES = [
-  { value: 'informations_generales', label: 'Informations générales', icon: FileText, color: 'bg-blue-500' },
-  { value: 'chiffrage', label: 'Chiffrage', icon: FileSpreadsheet, color: 'bg-green-500' },
-  { value: 'etude_technique', label: 'Étude technique', icon: Settings, color: 'bg-purple-500' },
-  { value: 'planification', label: 'Planification', icon: Calendar, color: 'bg-orange-500' },
-  { value: 'chantier', label: 'Chantier', icon: FileImage, color: 'bg-red-500' },
-  { value: 'fournisseurs', label: 'Fournisseurs', icon: User, color: 'bg-yellow-500' },
-  { value: 'administratif', label: 'Administratif', icon: FolderOpen, color: 'bg-gray-500' },
+  { value: 'informations_generales', label: 'Informations générales', icon: FileText, color: 'bg-primary' },
+  { value: 'chiffrage', label: 'Chiffrage', icon: FileSpreadsheet, color: 'bg-success' },
+  { value: 'etude_technique', label: 'Étude technique', icon: Settings, color: 'bg-accent' },
+  { value: 'planification', label: 'Planification', icon: Calendar, color: 'bg-warning' },
+  { value: 'chantier', label: 'Chantier', icon: FileImage, color: 'bg-error' },
+  { value: 'fournisseurs', label: 'Fournisseurs', icon: User, color: 'bg-warning' },
+  { value: 'administratif', label: 'Administratif', icon: FolderOpen, color: 'bg-surface-elevated' },
 ] as const;
 
 const DOCUMENT_CATEGORIES = [
@@ -167,8 +167,8 @@ export function EnhancedDocumentManager({
         <CardContent className={`${compact ? 'p-0' : 'p-4'}`}>
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <FileIcon className="h-5 w-5 text-blue-600" />
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                <FileIcon className="h-5 w-5 text-primary" />
               </div>
             </div>
             
@@ -179,7 +179,7 @@ export function EnhancedDocumentManager({
                     {doc.name}
                   </h4>
                   {doc.description && (
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    <p className="text-xs text-on-surface-muted mt-1 line-clamp-2">
                       {doc.description}
                     </p>
                   )}
@@ -213,10 +213,10 @@ export function EnhancedDocumentManager({
                     {categoryInfo.label}
                   </Badge>
                 )}
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-on-surface-muted">
                   {formatFileSize(doc.fileSize)}
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-on-surface-muted">
                   {doc.viewCount} vues
                 </span>
               </div>
@@ -261,7 +261,7 @@ export function EnhancedDocumentManager({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Gestionnaire de documents</h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-on-surface-muted">
             {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''} 
             {documents.length !== filteredDocuments.length && ` sur ${documents.length}`}
           </p>
@@ -295,10 +295,10 @@ export function EnhancedDocumentManager({
       </div>
 
       {/* Barre de recherche et filtres */}
-      <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
+      <div className="flex flex-wrap items-center gap-4 p-4 bg-surface-muted rounded-lg">
         <div className="flex-1 min-w-64">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-on-surface-muted" />
             <Input
               placeholder="Rechercher par nom, description ou tags..."
               value={searchTerm}
@@ -367,7 +367,7 @@ export function EnhancedDocumentManager({
             return (
               <Card key={space.value}>
                 <CardHeader 
-                  className="cursor-pointer hover:bg-gray-50" 
+                  className="cursor-pointer hover:bg-surface-muted" 
                   onClick={() => toggleSpaceExpansion(space.value)}
                 >
                   <CardTitle className="flex items-center justify-between">
@@ -426,9 +426,9 @@ export function EnhancedDocumentManager({
       {filteredDocuments.length === 0 && (
         <Card>
           <CardContent className="text-center py-8">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 mb-2">Aucun document trouvé</p>
-            <p className="text-sm text-gray-400">
+            <FileText className="h-12 w-12 text-on-surface-muted mx-auto mb-4" />
+            <p className="text-on-surface-muted mb-2">Aucun document trouvé</p>
+            <p className="text-sm text-on-surface-muted">
               Essayez de modifier vos critères de recherche ou d'ajouter de nouveaux documents
             </p>
           </CardContent>

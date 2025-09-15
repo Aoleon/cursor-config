@@ -174,7 +174,7 @@ export function DocumentUploadZone({
                   <Button variant="ghost" size="sm">
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                  <Button variant="ghost" size="sm" className="text-error hover:text-error">
                     <X className="h-4 w-4" />
                   </Button>
                 </div>

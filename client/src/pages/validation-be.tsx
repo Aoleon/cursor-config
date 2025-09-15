@@ -110,20 +110,20 @@ export default function ValidationBE() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "en_attente_validation": return "bg-orange-100 text-orange-800";
-      case "validee": return "bg-green-100 text-green-800";
-      case "rejetee": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "en_attente_validation": return "bg-warning/10 text-warning";
+      case "validee": return "bg-success/10 text-success";
+      case "rejetee": return "bg-error/10 text-error";
+      default: return "bg-surface-muted text-on-surface-muted";
     }
   };
 
   const getPriorityColor = (isPriority: boolean) => {
-    return isPriority ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800";
+    return isPriority ? "bg-error/10 text-error" : "bg-primary/10 text-primary";
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex bg-gray-50">
+      <div className="min-h-screen flex bg-surface">
         <Sidebar />
         <main className="flex-1">
           <Header 
@@ -146,7 +146,7 @@ export default function ValidationBE() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex bg-gray-50">
+      <div className="min-h-screen flex bg-surface">
         <Sidebar />
         <main className="flex-1">
           <Header 
@@ -157,10 +157,10 @@ export default function ValidationBE() {
             ]}
           />
           <div className="px-6 py-6">
-            <div className="text-center py-8 text-red-500">
+            <div className="text-center py-8 text-error">
               <AlertTriangle className="h-12 w-12 mx-auto mb-2" />
               <p className="font-semibold">Erreur lors du chargement</p>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-on-surface-muted mt-1">
                 {error instanceof Error ? error.message : "Erreur inconnue"}
               </p>
               <Button 
@@ -179,7 +179,7 @@ export default function ValidationBE() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-surface">
       <Sidebar />
       <main className="flex-1">
         <Header 
@@ -198,7 +198,7 @@ export default function ValidationBE() {
                 <CardTitle className="text-sm font-medium">En attente</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{offers?.length || 0}</div>
+                <div className="text-2xl font-bold text-warning">{offers?.length || 0}</div>
                 <p className="text-xs text-muted-foreground">Offres à valider</p>
               </CardContent>
             </Card>
@@ -208,7 +208,7 @@ export default function ValidationBE() {
                 <CardTitle className="text-sm font-medium">Prioritaires</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-2xl font-bold text-error">
                   {offers?.filter((offer: any) => offer.isPriority).length || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">Urgentes</p>
@@ -232,7 +232,7 @@ export default function ValidationBE() {
                 <CardTitle className="text-sm font-medium">Délai moyen</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">2.5j</div>
+                <div className="text-2xl font-bold text-primary">2.5j</div>
                 <p className="text-xs text-muted-foreground">Temps de validation</p>
               </CardContent>
             </Card>
@@ -249,14 +249,14 @@ export default function ValidationBE() {
             <CardContent>
               {offers?.length === 0 ? (
                 <div className="text-center py-12">
-                  <CheckCircle className="h-16 w-16 mx-auto mb-4 text-green-500 opacity-50" />
-                  <h3 className="text-lg font-semibold mb-2 text-gray-700">
+                  <CheckCircle className="h-16 w-16 mx-auto mb-4 text-success opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2 text-on-surface">
                     Aucune offre en attente de validation
                   </h3>
-                  <p className="text-gray-500 mb-4">
+                  <p className="text-on-surface-muted mb-4">
                     Toutes les offres ont été traitées par le Bureau d'Études.
                   </p>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-on-surface-muted">
                     Les nouvelles offres nécessitant une validation apparaîtront ici.
                   </p>
                 </div>
@@ -265,7 +265,7 @@ export default function ValidationBE() {
                   {offers?.map((offer: any) => (
                     <div 
                       key={offer.id} 
-                      className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      className="border rounded-lg p-4 hover:bg-surface transition-colors"
                       data-testid={`validation-offer-${offer.id}`}
                     >
                       <div className="flex justify-between items-start mb-3">
@@ -278,15 +278,15 @@ export default function ValidationBE() {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600">{offer.client}</p>
-                          <p className="text-sm text-gray-500">{offer.intituleOperation}</p>
+                          <p className="text-sm text-on-surface-muted">{offer.client}</p>
+                          <p className="text-sm text-on-surface-muted">{offer.intituleOperation}</p>
                         </div>
                         <div className="text-right">
                           <Badge variant="outline" className={getStatusColor(offer.status)}>
                             En attente de validation
                           </Badge>
                           {offer.deadline && (
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-on-surface-muted mt-1">
                               Échéance: {formatSafeDate(offer.deadline, 'dd/MM/yyyy')}
                             </p>
                           )}
@@ -294,19 +294,19 @@ export default function ValidationBE() {
                       </div>
 
                       {/* Informations détaillées */}
-                      <div className="grid grid-cols-4 gap-4 mb-3 bg-gray-50 p-3 rounded">
+                      <div className="grid grid-cols-4 gap-4 mb-3 bg-surface p-3 rounded">
                         <div>
-                          <p className="text-xs text-gray-500">Montant estimé</p>
+                          <p className="text-xs text-on-surface-muted">Montant estimé</p>
                           <p className="font-semibold">
                             {offer.montantEstime ? parseFloat(offer.montantEstime).toLocaleString('fr-FR') : '-'} €
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Type menuiserie</p>
+                          <p className="text-xs text-on-surface-muted">Type menuiserie</p>
                           <p className="font-semibold capitalize">{offer.menuiserieType || '-'}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Responsable BE</p>
+                          <p className="text-xs text-on-surface-muted">Responsable BE</p>
                           <p className="font-semibold">
                             {offer.responsibleUser ? 
                               `${offer.responsibleUser.firstName} ${offer.responsibleUser.lastName}` 
@@ -315,7 +315,7 @@ export default function ValidationBE() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Créé le</p>
+                          <p className="text-xs text-on-surface-muted">Créé le</p>
                           <p className="font-semibold">
                             {formatSafeDate(offer.createdAt, 'dd/MM/yyyy')}
                           </p>

@@ -49,11 +49,11 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4" data-testid="error-boundary-fallback">
+        <div className="min-h-screen flex items-center justify-center bg-surface p-4" data-testid="error-boundary-fallback">
           <Card className="w-full max-w-lg">
             <CardHeader className="text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                <AlertTriangle className="h-6 w-6 text-red-600" data-testid="error-icon" />
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-error/10">
+                <AlertTriangle className="h-6 w-6 text-error" data-testid="error-icon" />
               </div>
               <CardTitle className="text-xl" data-testid="error-title">
                 Une erreur s'est produite

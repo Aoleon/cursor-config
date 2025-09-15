@@ -106,7 +106,7 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
   const getStatusBadge = (status: string, isPriority: boolean) => {
     if (isPriority) {
       return (
-        <Badge className="bg-red-100 text-red-800">
+        <Badge className="bg-error/10 text-error">
           <Star className="w-3 h-3 mr-1" />
           Prioritaire
         </Badge>
@@ -122,27 +122,27 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
         );
       case "en_cours_chiffrage":
         return (
-          <Badge className="bg-yellow-100 text-yellow-800">
+          <Badge className="bg-warning/10 text-warning">
             <Clock className="w-3 h-3 mr-1" />
             En Cours Chiffrage
           </Badge>
         );
       case "en_attente_validation":
         return (
-          <Badge className="bg-orange-100 text-orange-800">
+          <Badge className="bg-warning/10 text-warning">
             <CheckCircle className="w-3 h-3 mr-1" />
             En Attente Validation
           </Badge>
         );
       case "valide":
         return (
-          <Badge className="bg-green-100 text-green-800">
+          <Badge className="bg-success/10 text-success">
             Validé
           </Badge>
         );
       case "perdu":
         return (
-          <Badge className="bg-red-100 text-red-800">
+          <Badge className="bg-error/10 text-error">
             Perdu
           </Badge>
         );
@@ -155,10 +155,10 @@ export default function OffersTable({ showCreateButton }: OffersTableProps) {
     const typeColors = {
       fenetres_pvc: "bg-blue-100 text-blue-800",
       fenetres_aluminium: "bg-surface-muted text-on-surface",
-      mur_rideau: "bg-green-100 text-green-800",
+      mur_rideau: "bg-success/10 text-success",
       portes_bois: "bg-purple-100 text-purple-800",
-      portes_alu: "bg-orange-100 text-orange-800",
-      bardage: "bg-yellow-100 text-yellow-800",
+      portes_alu: "bg-warning/10 text-warning",
+      bardage: "bg-warning/10 text-warning",
     };
 
     const typeLabels = {

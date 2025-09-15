@@ -33,13 +33,13 @@ export default function ValidationList() {
   // Fonction pour obtenir le badge de statut
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      'chiffrage_termine': { label: 'Chiffrage terminé', variant: 'default' as const, color: 'text-blue-600' },
-      'en_attente_validation': { label: 'En attente validation', variant: 'secondary' as const, color: 'text-orange-600' },
+      'chiffrage_termine': { label: 'Chiffrage terminé', variant: 'default' as const, color: 'text-primary' },
+      'en_attente_validation': { label: 'En attente validation', variant: 'secondary' as const, color: 'text-warning' },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { 
       label: status, 
       variant: 'outline' as const, 
-      color: 'text-gray-600'
+      color: 'text-on-surface-muted'
     };
     
     return (
@@ -84,10 +84,10 @@ export default function ValidationList() {
   if (error) {
     return (
       <div className="space-y-6 p-6">
-        <div className="text-center py-8 text-red-500">
+        <div className="text-center py-8 text-error">
           <AlertTriangle className="h-12 w-12 mx-auto mb-2" />
           <p className="font-semibold">Erreur lors du chargement</p>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-on-surface-muted mt-1">
             {error instanceof Error ? error.message : "Erreur inconnue"}
           </p>
           <Button 
@@ -121,7 +121,7 @@ export default function ValidationList() {
             <CardTitle className="text-sm font-medium">Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-on-surface">
               {stats.total}
             </div>
             <p className="text-xs text-muted-foreground">Offres à valider</p>
@@ -133,7 +133,7 @@ export default function ValidationList() {
             <CardTitle className="text-sm font-medium">Chiffrage terminé</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-primary">
               {stats.chiffrageTermine}
             </div>
             <p className="text-xs text-muted-foreground">Prêtes à valider</p>
@@ -145,7 +145,7 @@ export default function ValidationList() {
             <CardTitle className="text-sm font-medium">En attente</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
+            <div className="text-2xl font-bold text-warning">
               {stats.attente}
             </div>
             <p className="text-xs text-muted-foreground">Validation en cours</p>
@@ -173,8 +173,8 @@ export default function ValidationList() {
           <Card>
             <CardContent className="text-center py-8">
               <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune offre à valider</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-lg font-medium text-on-surface mb-2">Aucune offre à valider</h3>
+              <p className="text-on-surface-muted mb-4">
                 Toutes les offres sont soit en cours de chiffrage, soit déjà validées.
               </p>
               <Button variant="outline" onClick={() => window.location.href = "/offers"}>
@@ -195,7 +195,7 @@ export default function ValidationList() {
                         <CardTitle className="text-lg flex items-center gap-2">
                           <FolderOpen className="h-5 w-5 text-gray-400" />
                           {offer.reference || offer.id}
-                          {isLate && <Clock className="h-4 w-4 text-red-500" />}
+                          {isLate && <Clock className="h-4 w-4 text-error" />}
                         </CardTitle>
                         <CardDescription className="mt-1">
                           {offer.client || 'Client non renseigné'}
@@ -214,19 +214,19 @@ export default function ValidationList() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <p className="font-medium text-gray-600">Localisation</p>
+                        <p className="font-medium text-on-surface-muted">Localisation</p>
                         <p>{offer.location || '-'}</p>
                       </div>
                       
                       <div>
-                        <p className="font-medium text-gray-600">Description</p>
-                        <p className="text-gray-900">
+                        <p className="font-medium text-on-surface-muted">Description</p>
+                        <p className="text-on-surface">
                           {offer.description || 'Description non renseignée'}
                         </p>
                       </div>
                       
                       <div>
-                        <p className="font-medium text-gray-600">Montant chiffré</p>
+                        <p className="font-medium text-on-surface-muted">Montant chiffré</p>
                         <p>
                           {offer.finalAmount ? 
                             new Intl.NumberFormat('fr-FR', { 
@@ -239,7 +239,7 @@ export default function ValidationList() {
                       </div>
                       
                       <div>
-                        <p className="font-medium text-gray-600">Échéance</p>
+                        <p className="font-medium text-on-surface-muted">Échéance</p>
                         <p className={isLate ? 'text-red-600 font-medium' : ''}>
                           {formatDate(offer.deadlineDate)}
                         </p>

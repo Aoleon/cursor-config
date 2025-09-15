@@ -275,12 +275,12 @@ export default function OfferDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex bg-gray-50">
+      <div className="min-h-screen flex bg-surface-muted">
         <Sidebar />
         <main className="flex-1 overflow-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p>Chargement de l'appel d'offre...</p>
             </div>
           </div>
@@ -291,12 +291,12 @@ export default function OfferDetail() {
 
   if (error || !offer) {
     return (
-      <div className="min-h-screen flex bg-gray-50">
+      <div className="min-h-screen flex bg-surface-muted">
         <Sidebar />
         <main className="flex-1 overflow-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+              <AlertCircle className="h-8 w-8 text-error mx-auto mb-4" />
               <p>Erreur lors du chargement de l'appel d'offre</p>
               <Button 
                 variant="outline" 
@@ -371,7 +371,7 @@ export default function OfferDetail() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-surface-muted">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
@@ -571,7 +571,7 @@ export default function OfferDetail() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="bg-primary/10 p-4 rounded-lg">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="font-medium">Référence AO:</span>
@@ -646,12 +646,12 @@ export default function OfferDetail() {
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">Jalon "Fin d'études"</Label>
                     {offer.finEtudesValidatedAt ? (
-                      <div className="bg-green-50 p-3 rounded-lg">
-                        <div className="flex items-center gap-2 text-green-700">
+                      <div className="bg-success/10 p-3 rounded-lg">
+                        <div className="flex items-center gap-2 text-success">
                           <CheckCircle className="w-4 h-4" />
                           <span className="text-sm font-medium">Validé</span>
                         </div>
-                        <p className="text-xs text-green-600 mt-1">
+                        <p className="text-xs text-success mt-1">
                           Le {formatSafeDate(offer.finEtudesValidatedAt)}
                         </p>
                       </div>
@@ -742,8 +742,8 @@ export default function OfferDetail() {
                       Chargement de l'intégration...
                     </div>
                   ) : batigestIntegration ? (
-                    <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                      <div className="flex items-center gap-2 text-green-700 dark:text-green-300 mb-2">
+                    <div className="bg-success/10 dark:bg-green-900/20 p-3 rounded-lg">
+                      <div className="flex items-center gap-2 text-success dark:text-success mb-2">
                         <CheckCircle className="w-4 h-4" />
                         <span className="text-sm font-medium">Synchronisé</span>
                       </div>
@@ -784,7 +784,7 @@ export default function OfferDetail() {
                           </div>
                         )}
                         
-                        <div className="pt-2 border-t border-green-200 dark:border-green-800">
+                        <div className="pt-2 border-t border-success/20 dark:border-success/40">
                           <span className="text-muted-foreground">Dernière sync:</span>
                           <p className="font-medium">
                             {formatSafeDate(batigestIntegration.integration.lastSyncAt)}
@@ -803,7 +803,7 @@ export default function OfferDetail() {
                       </p>
                     </div>
                   ) : (
-                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                    <div className="bg-surface-muted dark:bg-gray-800 p-3 rounded-lg">
                       <div className="flex items-center gap-2 text-on-surface-muted">
                         <Database className="w-4 h-4" />
                         <span className="text-sm font-medium">Intégration disponible</span>

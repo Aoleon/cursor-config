@@ -197,17 +197,17 @@ export default function SmartPrioritization({
   const getPriorityColor = (level: string, score: number) => {
     switch (level) {
       case 'critique':
-        return { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-500', accent: 'bg-red-500' };
+        return { bg: 'bg-error/10', text: 'text-error', border: 'border-error/50', accent: 'bg-error' };
       case 'elevee':
-        return { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-500', accent: 'bg-orange-500' };
+        return { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/50', accent: 'bg-warning' };
       case 'normale':
-        return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-500', accent: 'bg-blue-500' };
+        return { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/50', accent: 'bg-primary' };
       case 'faible':
-        return { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-500', accent: 'bg-green-500' };
+        return { bg: 'bg-success/10', text: 'text-success', border: 'border-success/50', accent: 'bg-success' };
       case 'tres_faible':
-        return { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-500', accent: 'bg-gray-500' };
+        return { bg: 'bg-surface-muted', text: 'text-on-surface-muted', border: 'border-border', accent: 'bg-surface-elevated' };
       default:
-        return { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-500', accent: 'bg-gray-500' };
+        return { bg: 'bg-surface-muted', text: 'text-on-surface-muted', border: 'border-border', accent: 'bg-surface-elevated' };
     }
   };
 
@@ -287,8 +287,8 @@ export default function SmartPrioritization({
               <Target className="h-5 w-5" />
               <span>Système de Priorisation Intelligente</span>
               {autoRefresh && (
-                <Badge variant="outline" className="ml-2 text-green-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse" />
+                <Badge variant="outline" className="ml-2 text-success">
+                  <div className="w-2 h-2 bg-success rounded-full mr-1 animate-pulse" />
                   Auto-refresh
                 </Badge>
               )}
@@ -402,13 +402,13 @@ export default function SmartPrioritization({
                       </div>
                     </div>
                     
-                    <div className="p-4 bg-gray-50 rounded">
+                    <div className="p-4 bg-surface-muted rounded">
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Total des poids:</span>
                         <span className={`font-bold ${
                           Math.abs(Object.values(weights).reduce((sum, w) => sum + w, 0) - 100) < 0.01 
-                            ? 'text-green-600' 
-                            : 'text-red-600'
+                            ? 'text-success' 
+                            : 'text-error'
                         }`}>
                           {Object.values(weights).reduce((sum, w) => sum + w, 0)}%
                         </span>
@@ -450,7 +450,7 @@ export default function SmartPrioritization({
                 <div className="w-3 h-3 bg-red-500 rounded" />
                 <span className="text-sm font-medium">Critique</span>
               </div>
-              <div className="text-xl font-bold text-red-600 mt-1">
+              <div className="text-xl font-bold text-error mt-1">
                 {priorityStats.critique}
               </div>
             </Card>
@@ -477,10 +477,10 @@ export default function SmartPrioritization({
             
             <Card className="p-3">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded" />
+                <div className="w-3 h-3 bg-success rounded" />
                 <span className="text-sm font-medium">Faible</span>
               </div>
-              <div className="text-xl font-bold text-green-600 mt-1">
+              <div className="text-xl font-bold text-success mt-1">
                 {priorityStats.faible}
               </div>
             </Card>
@@ -490,7 +490,7 @@ export default function SmartPrioritization({
                 <AlertTriangle className="h-4 w-4 text-red-500" />
                 <span className="text-sm font-medium">En retard</span>
               </div>
-              <div className="text-xl font-bold text-red-600 mt-1">
+              <div className="text-xl font-bold text-error mt-1">
                 {priorityStats.overdue}
               </div>
             </Card>
@@ -733,7 +733,7 @@ export default function SmartPrioritization({
                   <li className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded mr-2"></span><strong>Critique:</strong> Score &gt; 80</li>
                   <li className="flex items-center"><span className="w-3 h-3 bg-orange-500 rounded mr-2"></span><strong>Élevée:</strong> Score 60-80</li>
                   <li className="flex items-center"><span className="w-3 h-3 bg-blue-500 rounded mr-2"></span><strong>Normale:</strong> Score 40-60</li>
-                  <li className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded mr-2"></span><strong>Faible:</strong> Score &lt; 40</li>
+                  <li className="flex items-center"><span className="w-3 h-3 bg-success rounded mr-2"></span><strong>Faible:</strong> Score &lt; 40</li>
                 </ul>
               </div>
             </div>

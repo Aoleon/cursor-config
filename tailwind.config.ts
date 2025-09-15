@@ -11,75 +11,75 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         
         /* Surface tokens */
         surface: {
-          DEFAULT: "var(--surface)",
-          muted: "var(--surface-muted)",
-          elevated: "var(--surface-elevated)",
+          DEFAULT: "hsl(var(--surface))",
+          muted: "hsl(var(--surface-muted))",
+          elevated: "hsl(var(--surface-elevated))",
         },
         
         card: {
-          DEFAULT: "var(--card)",
-          foreground: "var(--card-foreground)",
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
         popover: {
-          DEFAULT: "var(--popover)",
-          foreground: "var(--popover-foreground)",
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
         },
         
         /* Semantic colors with explicit "on-*" tokens */
         primary: {
-          DEFAULT: "var(--primary)",
-          foreground: "var(--primary-foreground)", // Legacy compatibility
-          light: "var(--primary-light)",
-          dark: "var(--primary-dark)",
+          DEFAULT: "hsl(var(--primary) / <alpha-value>)",
+          foreground: "hsl(var(--primary-foreground))", // Legacy compatibility
+          light: "hsl(var(--primary-light) / <alpha-value>)",
+          dark: "hsl(var(--primary-dark) / <alpha-value>)",
         },
-        "on-primary": "var(--on-primary)",
+        "on-primary": "hsl(var(--on-primary))",
         
         secondary: {
-          DEFAULT: "var(--secondary)",
-          foreground: "var(--secondary-foreground)", // Legacy compatibility
+          DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
+          foreground: "hsl(var(--secondary-foreground))", // Legacy compatibility
         },
-        "on-secondary": "var(--on-secondary)",
+        "on-secondary": "hsl(var(--on-secondary))",
         
         muted: {
-          DEFAULT: "var(--muted)",
-          foreground: "var(--muted-foreground)", // Legacy compatibility
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))", // Legacy compatibility
         },
         
         accent: {
-          DEFAULT: "var(--accent)",
-          foreground: "var(--accent-foreground)", // Legacy compatibility
-          light: "var(--accent-light)",
+          DEFAULT: "hsl(var(--accent) / <alpha-value>)",
+          foreground: "hsl(var(--accent-foreground))", // Legacy compatibility
+          light: "hsl(var(--accent-light) / <alpha-value>)",
         },
-        "on-accent": "var(--on-accent)",
+        "on-accent": "hsl(var(--on-accent))",
         
         /* Status colors with "on-*" tokens */
-        success: "var(--success)",
-        "on-success": "var(--on-success)",
+        success: "hsl(var(--success) / <alpha-value>)",
+        "on-success": "hsl(var(--on-success))",
         
-        warning: "var(--warning)",
-        "on-warning": "var(--on-warning)",
+        warning: "hsl(var(--warning) / <alpha-value>)",
+        "on-warning": "hsl(var(--on-warning))",
         
-        error: "var(--error)",
-        "on-error": "var(--on-error)",
+        error: "hsl(var(--error) / <alpha-value>)",
+        "on-error": "hsl(var(--on-error))",
         
         destructive: {
-          DEFAULT: "var(--destructive)",
-          foreground: "var(--destructive-foreground)", // Legacy compatibility
+          DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
+          foreground: "hsl(var(--destructive-foreground))", // Legacy compatibility
         },
-        "on-destructive": "var(--on-destructive)",
+        "on-destructive": "hsl(var(--on-destructive))",
         
         /* Surface text tokens */
-        "on-surface": "var(--on-surface)",
-        "on-surface-muted": "var(--on-surface-muted)",
+        "on-surface": "hsl(var(--on-surface))",
+        "on-surface-muted": "hsl(var(--on-surface-muted))",
         
-        border: "var(--border)",
-        input: "var(--input)",
-        ring: "var(--ring)",
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
         chart: {
           "1": "var(--chart-1)",
           "2": "var(--chart-2)",

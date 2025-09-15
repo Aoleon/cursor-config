@@ -18,14 +18,14 @@ export function WebSocketStatus({ className, showLabel = false, variant = 'badge
   const getStatusColor = () => {
     switch (connectionStatus) {
       case 'connected':
-        return 'bg-green-500 hover:bg-green-600';
+        return 'bg-success hover:bg-success';
       case 'connecting':
-        return 'bg-yellow-500 hover:bg-yellow-600';
+        return 'bg-warning hover:bg-warning';
       case 'error':
-        return 'bg-red-500 hover:bg-red-600';
+        return 'bg-error hover:bg-error';
       case 'disconnected':
       default:
-        return 'bg-gray-500 hover:bg-gray-600';
+        return 'bg-surface-muted hover:bg-surface-muted';
     }
   };
 

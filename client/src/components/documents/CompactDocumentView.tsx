@@ -242,14 +242,14 @@ export function CompactDocumentView({
 
       {/* Barre de progression d'upload */}
       {isUploading && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-blue-900">Upload en cours...</span>
-            <span className="text-sm text-blue-700">{uploadProgress}%</span>
+            <span className="text-sm font-medium text-primary">Upload en cours...</span>
+            <span className="text-sm text-primary">{uploadProgress}%</span>
           </div>
-          <div className="w-full bg-blue-200 rounded-full h-2">
+          <div className="w-full bg-primary/20 rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -262,7 +262,7 @@ export function CompactDocumentView({
           <CardContent className="p-0">
             <div className="overflow-hidden">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-surface-muted border-b">
                   <tr className="text-left">
                     <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Document</th>
                     <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Dossier</th>
@@ -277,7 +277,7 @@ export function CompactDocumentView({
                     const folderConfig = FOLDER_CONFIG[doc.folderName as keyof typeof FOLDER_CONFIG];
                     
                     return (
-                      <tr key={doc.id} className="hover:bg-gray-50">
+                      <tr key={doc.id} className="hover:bg-surface-muted">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <FileIcon className="h-5 w-5 text-muted-foreground" />

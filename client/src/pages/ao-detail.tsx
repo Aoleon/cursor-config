@@ -48,14 +48,14 @@ interface Lot {
 
 const LOT_STATUS_OPTIONS = [
   { value: "brouillon", label: "Brouillon", color: "bg-surface-muted text-on-surface" },
-  { value: "en_attente_fournisseur", label: "En attente fournisseur", color: "bg-orange-100 text-orange-700" },
-  { value: "pre_devis_recu", label: "Pré-devis reçu", color: "bg-blue-100 text-blue-700" },
-  { value: "chiffrage_final_recu", label: "Chiffrage final reçu", color: "bg-purple-100 text-purple-700" },
-  { value: "chiffrage_valide", label: "Chiffrage validé", color: "bg-green-100 text-green-700" },
-  { value: "commande_en_cours", label: "Commande en cours", color: "bg-yellow-100 text-yellow-700" },
-  { value: "en_attente_livraison", label: "En attente de livraison", color: "bg-indigo-100 text-indigo-700" },
-  { value: "livre", label: "Livré", color: "bg-emerald-100 text-emerald-700" },
-  { value: "sav", label: "SAV", color: "bg-red-100 text-red-700" }
+  { value: "en_attente_fournisseur", label: "En attente fournisseur", color: "bg-warning/10 text-warning" },
+  { value: "pre_devis_recu", label: "Pré-devis reçu", color: "bg-primary/10 text-primary" },
+  { value: "chiffrage_final_recu", label: "Chiffrage final reçu", color: "bg-accent/10 text-accent" },
+  { value: "chiffrage_valide", label: "Chiffrage validé", color: "bg-success/10 text-success" },
+  { value: "commande_en_cours", label: "Commande en cours", color: "bg-warning/10 text-warning" },
+  { value: "en_attente_livraison", label: "En attente de livraison", color: "bg-primary/10 text-primary" },
+  { value: "livre", label: "Livré", color: "bg-success/10 text-success" },
+  { value: "sav", label: "SAV", color: "bg-error/10 text-error" }
 ];
 
 const getStatusLabel = (status?: string) => {
@@ -357,7 +357,7 @@ export default function AoDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex bg-gray-50">
+      <div className="min-h-screen flex bg-surface-muted">
         <Sidebar />
         <main className="flex-1 overflow-auto">
           <div className="text-center py-8">
@@ -371,11 +371,11 @@ export default function AoDetail() {
 
   if (!ao) {
     return (
-      <div className="min-h-screen flex bg-gray-50">
+      <div className="min-h-screen flex bg-surface-muted">
         <Sidebar />
         <main className="flex-1 overflow-auto">
           <div className="text-center py-8">
-            <p className="text-red-500">AO non trouvé</p>
+            <p className="text-error">AO non trouvé</p>
             <Button onClick={() => setLocation("/aos")} className="mt-4">
               Retour à la liste
             </Button>
@@ -386,7 +386,7 @@ export default function AoDetail() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-surface-muted">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
@@ -441,10 +441,10 @@ export default function AoDetail() {
             <TabsContent value="informations" className="space-y-6 mt-6">
           {/* Barre d'actions en mode édition */}
           {isEditing && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Edit className="h-4 w-4 text-blue-600" />
-                <span className="text-sm text-blue-800">Mode édition activé - Modifiez les champs puis enregistrez</span>
+                <Edit className="h-4 w-4 text-primary" />
+                <span className="text-sm text-primary">Mode édition activé - Modifiez les champs puis enregistrez</span>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -608,7 +608,7 @@ export default function AoDetail() {
                   )}
                   
                   <div>
-                    <Label className="text-sm text-gray-600">Type de menuiserie</Label>
+                    <Label className="text-sm text-on-surface-muted">Type de menuiserie</Label>
                     <p className="font-medium">
                       {formData.menuiserieType === "fenetre" && "Fenêtre"}
                       {formData.menuiserieType === "porte" && "Porte"}
@@ -667,7 +667,7 @@ export default function AoDetail() {
               ) : (
                 <div className="space-y-3">
                   <div>
-                    <Label className="text-sm text-gray-600">Adresse du chantier</Label>
+                    <Label className="text-sm text-on-surface-muted">Adresse du chantier</Label>
                     <p className="font-medium">{formData.location || "Non définie"}</p>
                   </div>
                   
@@ -693,13 +693,13 @@ export default function AoDetail() {
             <CardContent>
               {isEditing ? (
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <Label className="text-sm text-gray-600">Date limite de remise</Label>
+                  <div className="bg-primary/10 p-3 rounded-lg border border-primary/20">
+                    <Label className="text-sm text-on-surface-muted">Date limite de remise</Label>
                     <div className="flex items-center space-x-2 mt-1">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <p className="font-medium text-blue-700">Calculée automatiquement par le système</p>
+                      <div className="w-3 h-3 bg-primary rounded-full"></div>
+                      <p className="font-medium text-primary">Calculée automatiquement par le système</p>
                     </div>
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className="text-xs text-primary mt-1">
                       💡 Base : Date sortie AO + 30 jours (ajustable selon le type d'AO)
                     </p>
                   </div>
@@ -1093,7 +1093,7 @@ export default function AoDetail() {
                             <span className="text-sm ml-2">{lot.designation}</span>
                           </div>
                           {lot.montantEstime && (
-                            <span className="font-medium text-green-600">
+                            <span className="font-medium text-success">
                               {parseFloat(lot.montantEstime).toLocaleString('fr-FR')} €
                             </span>
                           )}
@@ -1129,7 +1129,7 @@ export default function AoDetail() {
                     <div className="flex items-center space-x-2">
                       <Euro className="h-5 w-5" />
                       <span>Chiffrage automatisé par OCR</span>
-                      <span className="text-sm font-normal text-orange-600 bg-orange-100 px-2 py-1 rounded">BROUILLON</span>
+                      <span className="text-sm font-normal text-warning bg-warning/10 px-2 py-1 rounded">BROUILLON</span>
                     </div>
                     <div className="flex gap-2">
                       {isEditingChiffrage ? (
@@ -1170,12 +1170,12 @@ export default function AoDetail() {
                 <CardContent>
                   <div className="space-y-6">
                     {/* Statut d'extraction */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-3 w-3 bg-blue-400 rounded-full"></div>
+                        <div className="h-3 w-3 bg-primary rounded-full"></div>
                         <div>
-                          <p className="font-medium text-blue-800">Données OCR disponibles</p>
-                          <p className="text-sm text-blue-600">Les informations ont été extraites automatiquement des documents PDF de l'AO</p>
+                          <p className="font-medium text-primary">Données OCR disponibles</p>
+                          <p className="text-sm text-primary">Les informations ont été extraites automatiquement des documents PDF de l'AO</p>
                         </div>
                       </div>
                     </div>
@@ -1203,10 +1203,10 @@ export default function AoDetail() {
                       
                       {/* Formulaire d'ajout de lot */}
                       {showAddLot && (
-                        <Card className="mb-4 border-2 border-dashed border-blue-300 bg-blue-50">
+                        <Card className="mb-4 border-2 border-dashed border-primary/30 bg-primary/10">
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h5 className="font-medium text-blue-800">Nouveau lot</h5>
+                              <h5 className="font-medium text-primary">Nouveau lot</h5>
                               <Button 
                                 variant="ghost" 
                                 size="sm"
@@ -1354,15 +1354,15 @@ export default function AoDetail() {
                               <div key={lot.id || index} className="border rounded-lg p-5 bg-white shadow-sm hover:shadow-md transition-all duration-200">
                                 <div className="flex items-center justify-between mb-4">
                                   <div className="flex items-center gap-3">
-                                    <div className={`h-3 w-3 rounded-full ${statusInfo.value === 'brouillon' ? 'bg-gray-400' : statusInfo.value === 'livre' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                                    <div className={`h-3 w-3 rounded-full ${statusInfo.value === 'brouillon' ? 'bg-gray-400' : statusInfo.value === 'livre' ? 'bg-success/100' : 'bg-primary'}`}></div>
                                     <div className="flex-1">
                                       <div className="flex items-center gap-3 mb-1">
                                         <span className="font-semibold text-lg">{lot.numero}</span>
                                         <span className="text-muted-foreground">•</span>
                                         <span className="text-on-surface">{lot.designation}</span>
                                         {/* Statut très visible dans l'en-tête */}
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border-2 ${statusInfo.color} ${statusInfo.color.includes('red') ? 'border-red-300' : statusInfo.color.includes('green') ? 'border-green-300' : statusInfo.color.includes('blue') ? 'border-blue-300' : statusInfo.color.includes('yellow') ? 'border-yellow-300' : statusInfo.color.includes('orange') ? 'border-orange-300' : statusInfo.color.includes('purple') ? 'border-purple-300' : 'border-gray-300'}`}>
-                                          <div className={`h-2 w-2 rounded-full mr-2 ${statusInfo.color.includes('red') ? 'bg-red-500' : statusInfo.color.includes('green') ? 'bg-green-500' : statusInfo.color.includes('blue') ? 'bg-blue-500' : statusInfo.color.includes('yellow') ? 'bg-yellow-500' : statusInfo.color.includes('orange') ? 'bg-orange-500' : statusInfo.color.includes('purple') ? 'bg-purple-500' : 'bg-gray-500'}`}></div>
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border-2 ${statusInfo.color} ${statusInfo.color.includes('red') ? 'border-red-300' : statusInfo.color.includes('green') ? 'border-green-300' : statusInfo.color.includes('blue') ? 'border-blue-300' : statusInfo.color.includes('yellow') ? 'border-yellow-300' : statusInfo.color.includes('orange') ? 'border-orange-300' : statusInfo.color.includes('purple') ? 'border-purple-300' : 'border-border'}`}>
+                                          <div className={`h-2 w-2 rounded-full mr-2 ${statusInfo.color.includes('red') ? 'bg-red-500' : statusInfo.color.includes('green') ? 'bg-success/100' : statusInfo.color.includes('blue') ? 'bg-primary' : statusInfo.color.includes('yellow') ? 'bg-yellow-500' : statusInfo.color.includes('orange') ? 'bg-orange-500' : statusInfo.color.includes('purple') ? 'bg-purple-500' : 'bg-surface-muted0'}`}></div>
                                           {statusInfo.label}
                                         </span>
                                       </div>
@@ -1376,7 +1376,7 @@ export default function AoDetail() {
                                   <div className="flex items-center gap-2">
                                     {lot.montantEstime && (
                                       <div className="text-right mr-4">
-                                        <span className="text-lg font-bold text-green-600">
+                                        <span className="text-lg font-bold text-success">
                                           {parseFloat(lot.montantEstime).toLocaleString('fr-FR')} €
                                         </span>
                                         <p className="text-xs text-muted-foreground">Montant estimé</p>
@@ -1438,7 +1438,7 @@ export default function AoDetail() {
                                     </h6>
                                     <div className="grid md:grid-cols-3 gap-4">
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Quantité</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Quantité</Label>
                                         {isEditing ? (
                                           <Input
                                             type="number"
@@ -1454,13 +1454,13 @@ export default function AoDetail() {
                                           />
                                         ) : (
                                           <p className="font-medium mt-1">
-                                            {lot.quantite ? `${lot.quantite} éléments` : <span className="text-gray-400">Non spécifié</span>}
+                                            {lot.quantite ? `${lot.quantite} éléments` : <span className="text-on-surface-muted">Non spécifié</span>}
                                           </p>
                                         )}
                                       </div>
                                       
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Montant estimé (€)</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Montant estimé (€)</Label>
                                         {isEditing ? (
                                           <Input
                                             type="number"
@@ -1475,14 +1475,14 @@ export default function AoDetail() {
                                             className="mt-1"
                                           />
                                         ) : (
-                                          <p className="font-medium mt-1 text-green-600">
-                                            {lot.montantEstime ? `${parseFloat(lot.montantEstime).toLocaleString('fr-FR')} €` : <span className="text-gray-400">Non défini</span>}
+                                          <p className="font-medium mt-1 text-success">
+                                            {lot.montantEstime ? `${parseFloat(lot.montantEstime).toLocaleString('fr-FR')} €` : <span className="text-on-surface-muted">Non défini</span>}
                                           </p>
                                         )}
                                       </div>
                                       
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Statut du lot</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Statut du lot</Label>
                                         {isEditing ? (
                                           <Select 
                                             value={lot.status || "brouillon"} 
@@ -1523,7 +1523,7 @@ export default function AoDetail() {
                                     </h6>
                                     <div className="grid md:grid-cols-4 gap-4">
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Matériau</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Matériau</Label>
                                         {isEditing ? (
                                           <Input
                                             value={lot.materiau || ""}
@@ -1538,13 +1538,13 @@ export default function AoDetail() {
                                           />
                                         ) : (
                                           <p className="font-medium mt-1">
-                                            {lot.materiau || <span className="text-gray-400">Non spécifié</span>}
+                                            {lot.materiau || <span className="text-on-surface-muted">Non spécifié</span>}
                                           </p>
                                         )}
                                       </div>
                                       
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Vitrage</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Vitrage</Label>
                                         {isEditing ? (
                                           <Input
                                             value={lot.vitrage || ""}
@@ -1559,13 +1559,13 @@ export default function AoDetail() {
                                           />
                                         ) : (
                                           <p className="font-medium mt-1">
-                                            {lot.vitrage || <span className="text-gray-400">N/A</span>}
+                                            {lot.vitrage || <span className="text-on-surface-muted">N/A</span>}
                                           </p>
                                         )}
                                       </div>
                                       
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Couleur</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Couleur</Label>
                                         {isEditing ? (
                                           <Input
                                             value={lot.couleur || ""}
@@ -1580,13 +1580,13 @@ export default function AoDetail() {
                                           />
                                         ) : (
                                           <p className="font-medium mt-1">
-                                            {lot.couleur || <span className="text-gray-400">Non spécifiée</span>}
+                                            {lot.couleur || <span className="text-on-surface-muted">Non spécifiée</span>}
                                           </p>
                                         )}
                                       </div>
                                       
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Dimensions</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Dimensions</Label>
                                         {isEditing ? (
                                           <Input
                                             value={lot.dimensions || ""}
@@ -1601,7 +1601,7 @@ export default function AoDetail() {
                                           />
                                         ) : (
                                           <p className="font-medium mt-1">
-                                            {lot.dimensions || <span className="text-gray-400">Non spécifiées</span>}
+                                            {lot.dimensions || <span className="text-on-surface-muted">Non spécifiées</span>}
                                           </p>
                                         )}
                                       </div>
@@ -1616,7 +1616,7 @@ export default function AoDetail() {
                                     </h6>
                                     <div className="grid md:grid-cols-3 gap-4">
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Localisation</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Localisation</Label>
                                         {isEditing ? (
                                           <Input
                                             value={lot.localisation || ""}
@@ -1631,13 +1631,13 @@ export default function AoDetail() {
                                           />
                                         ) : (
                                           <p className="font-medium mt-1">
-                                            {lot.localisation || <span className="text-gray-400">Non spécifiée</span>}
+                                            {lot.localisation || <span className="text-on-surface-muted">Non spécifiée</span>}
                                           </p>
                                         )}
                                       </div>
                                       
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Performance thermique</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Performance thermique</Label>
                                         {isEditing ? (
                                           <Input
                                             value={lot.performanceThermique || ""}
@@ -1652,13 +1652,13 @@ export default function AoDetail() {
                                           />
                                         ) : (
                                           <p className="font-medium mt-1">
-                                            {lot.performanceThermique || <span className="text-gray-400">N/A</span>}
+                                            {lot.performanceThermique || <span className="text-on-surface-muted">N/A</span>}
                                           </p>
                                         )}
                                       </div>
                                       
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Performance acoustique</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Performance acoustique</Label>
                                         {isEditing ? (
                                           <Input
                                             value={lot.performanceAcoustique || ""}
@@ -1673,7 +1673,7 @@ export default function AoDetail() {
                                           />
                                         ) : (
                                           <p className="font-medium mt-1">
-                                            {lot.performanceAcoustique || <span className="text-gray-400">N/A</span>}
+                                            {lot.performanceAcoustique || <span className="text-on-surface-muted">N/A</span>}
                                           </p>
                                         )}
                                       </div>
@@ -1688,7 +1688,7 @@ export default function AoDetail() {
                                     </h6>
                                     <div className="grid md:grid-cols-3 gap-4">
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Délai de livraison</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Délai de livraison</Label>
                                         {isEditing ? (
                                           <Input
                                             value={lot.delaiLivraison || ""}
@@ -1703,13 +1703,13 @@ export default function AoDetail() {
                                           />
                                         ) : (
                                           <p className="font-medium mt-1">
-                                            {lot.delaiLivraison || <span className="text-gray-400">Non spécifié</span>}
+                                            {lot.delaiLivraison || <span className="text-on-surface-muted">Non spécifié</span>}
                                           </p>
                                         )}
                                       </div>
                                       
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Unité d'œuvre</Label>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Unité d'œuvre</Label>
                                         {isEditing ? (
                                           <Input
                                             value={lot.uniteOeuvre || ""}
@@ -1724,15 +1724,15 @@ export default function AoDetail() {
                                           />
                                         ) : (
                                           <p className="font-medium mt-1">
-                                            {lot.uniteOeuvre || <span className="text-gray-400">Non spécifiée</span>}
+                                            {lot.uniteOeuvre || <span className="text-on-surface-muted">Non spécifiée</span>}
                                           </p>
                                         )}
                                       </div>
                                       
                                       <div>
-                                        <Label className="text-sm text-gray-600 font-medium">Source</Label>
-                                        <p className="font-medium text-blue-600 mt-1 flex items-center gap-1">
-                                          <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                                        <Label className="text-sm text-on-surface-muted font-medium">Source</Label>
+                                        <p className="font-medium text-primary mt-1 flex items-center gap-1">
+                                          <div className="h-2 w-2 bg-primary rounded-full"></div>
                                           {lot.id?.includes('temp-') ? 'Manuel' : 'OCR'}
                                         </p>
                                       </div>
@@ -1746,16 +1746,16 @@ export default function AoDetail() {
                                       <div className="grid md:grid-cols-2 gap-4">
                                         {lot.accessoires && (
                                           <div>
-                                            <Label className="text-sm text-gray-600 font-medium">Accessoires</Label>
+                                            <Label className="text-sm text-on-surface-muted font-medium">Accessoires</Label>
                                             <p className="text-sm text-gray-700 mt-1">{lot.accessoires}</p>
                                           </div>
                                         )}
                                         {lot.normes && lot.normes.length > 0 && (
                                           <div>
-                                            <Label className="text-sm text-gray-600 font-medium">Normes</Label>
+                                            <Label className="text-sm text-on-surface-muted font-medium">Normes</Label>
                                             <div className="flex flex-wrap gap-1 mt-1">
                                               {lot.normes.map((norme, idx) => (
-                                                <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                                <span key={idx} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
                                                   {norme}
                                                 </span>
                                               ))}
@@ -1769,7 +1769,7 @@ export default function AoDetail() {
                                 
                                 {/* Commentaires techniques (bruts depuis l'OCR) */}
                                 {lot.comment && (
-                                  <div className="mt-6 pt-4 border-t border-gray-200">
+                                  <div className="mt-6 pt-4 border-t border-border">
                                     <details className="group">
                                       <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
                                         <FileText className="h-4 w-4" />
@@ -1778,7 +1778,7 @@ export default function AoDetail() {
                                           ▼
                                         </div>
                                       </summary>
-                                      <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm font-mono text-gray-600 whitespace-pre-line border">
+                                      <div className="mt-3 p-3 bg-surface-muted rounded-lg text-sm font-mono text-on-surface-muted whitespace-pre-line border">
                                         {lot.comment}
                                       </div>
                                     </details>
@@ -1789,41 +1789,41 @@ export default function AoDetail() {
                           })}
                           
                           {/* Résumé avancé des lots */}
-                          <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6 mt-6">
+                          <div className="bg-gradient-to-r from-success/10 to-primary/10 border border-success/20 rounded-lg p-6 mt-6">
                             <h4 className="font-semibold text-gray-800 mb-4">Résumé des lots</h4>
                             
                             {/* Statistiques principales */}
                             <div className="grid md:grid-cols-4 gap-4 mb-6">
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-blue-600">{lots.length}</p>
-                                <p className="text-sm text-gray-600">Lots totaux</p>
+                                <p className="text-2xl font-bold text-primary">{lots.length}</p>
+                                <p className="text-sm text-on-surface-muted">Lots totaux</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-green-600">
+                                <p className="text-2xl font-bold text-success">
                                   {lots.filter(lot => ['chiffrage_valide', 'commande_en_cours', 'livre'].includes(lot.status || '')).length}
                                 </p>
-                                <p className="text-sm text-gray-600">Validés</p>
+                                <p className="text-sm text-on-surface-muted">Validés</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-orange-600">
+                                <p className="text-2xl font-bold text-warning">
                                   {lots.filter(lot => ['brouillon', 'en_attente_fournisseur'].includes(lot.status || 'brouillon')).length}
                                 </p>
-                                <p className="text-sm text-gray-600">En attente</p>
+                                <p className="text-sm text-on-surface-muted">En attente</p>
                               </div>
                               <div className="text-center">
                                 <div>
-                                  <span className="text-2xl font-bold text-green-600">
+                                  <span className="text-2xl font-bold text-success">
                                     {lots.reduce((total, lot) => {
                                       return total + (lot.montantEstime ? parseFloat(lot.montantEstime) : 0);
                                     }, 0).toLocaleString('fr-FR')} €
                                   </span>
-                                  <p className="text-xs text-gray-500">Total estimé HT</p>
+                                  <p className="text-xs text-on-surface-muted">Total estimé HT</p>
                                 </div>
                               </div>
                             </div>
                             
                             {/* Détail des statuts */}
-                            <div className="border-t border-gray-200 pt-4">
+                            <div className="border-t border-border pt-4">
                               <h5 className="font-medium text-gray-700 mb-3">Répartition par statut</h5>
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 {LOT_STATUS_OPTIONS.map(statusOption => {
@@ -1832,10 +1832,10 @@ export default function AoDetail() {
                                   return (
                                     <div key={statusOption.value} className="flex items-center justify-between bg-white rounded-lg p-3 border">
                                       <div className="flex items-center gap-2">
-                                        <div className={`h-3 w-3 rounded-full ${statusOption.color.includes('red') ? 'bg-red-500' : statusOption.color.includes('green') ? 'bg-green-500' : statusOption.color.includes('blue') ? 'bg-blue-500' : statusOption.color.includes('yellow') ? 'bg-yellow-500' : statusOption.color.includes('orange') ? 'bg-orange-500' : statusOption.color.includes('purple') ? 'bg-purple-500' : 'bg-gray-500'}`}></div>
+                                        <div className={`h-3 w-3 rounded-full ${statusOption.color.includes('red') ? 'bg-red-500' : statusOption.color.includes('green') ? 'bg-success/100' : statusOption.color.includes('blue') ? 'bg-primary' : statusOption.color.includes('yellow') ? 'bg-yellow-500' : statusOption.color.includes('orange') ? 'bg-orange-500' : statusOption.color.includes('purple') ? 'bg-purple-500' : 'bg-surface-muted0'}`}></div>
                                         <span className="text-sm font-medium">{statusOption.label}</span>
                                       </div>
-                                      <span className="text-sm font-bold text-gray-600">{count}</span>
+                                      <span className="text-sm font-bold text-on-surface-muted">{count}</span>
                                     </div>
                                   );
                                 })}
@@ -1844,10 +1844,10 @@ export default function AoDetail() {
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-                          <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                          <p className="text-lg font-medium text-gray-600 mb-2">Aucun lot détecté par l'OCR</p>
-                          <p className="text-sm text-gray-500 mb-4">Les documents PDF n'ont pas révélé de lots menuiserie exploitables</p>
+                        <div className="text-center py-8 border-2 border-dashed border-border rounded-lg bg-surface-muted">
+                          <FileText className="h-16 w-16 text-on-surface-muted mx-auto mb-4" />
+                          <p className="text-lg font-medium text-on-surface-muted mb-2">Aucun lot détecté par l'OCR</p>
+                          <p className="text-sm text-on-surface-muted mb-4">Les documents PDF n'ont pas révélé de lots menuiserie exploitables</p>
                           <Button variant="outline" className="flex items-center gap-2">
                             <FileText className="h-4 w-4" />
                             Re-analyser les documents
@@ -1857,7 +1857,7 @@ export default function AoDetail() {
                     </div>
 
                     {/* Actions de chiffrage */}
-                    <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-6">
+                    <div className="bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20 rounded-lg p-6">
                       <h4 className="font-semibold mb-4 flex items-center gap-2">
                         <Calculator className="h-5 w-5" />
                         Actions de chiffrage
@@ -1884,7 +1884,7 @@ export default function AoDetail() {
                           <FileText className="h-5 w-5" />
                           <div className="text-left">
                             <div className="font-medium">Re-analyser les PDF</div>
-                            <div className="text-xs text-gray-600">Nouvelle extraction OCR</div>
+                            <div className="text-xs text-on-surface-muted">Nouvelle extraction OCR</div>
                           </div>
                         </Button>
                       </div>
@@ -1982,7 +1982,7 @@ export default function AoDetail() {
                         <FolderOpen className="h-5 w-5" />
                         <span>01 - DCE, Côtes et Photos</span>
                       </CardTitle>
-                      <p className="text-sm text-gray-600">Documents de consultation des entreprises, côtes et photos du site</p>
+                      <p className="text-sm text-on-surface-muted">Documents de consultation des entreprises, côtes et photos du site</p>
                     </CardHeader>
                     <CardContent>
                       <DocumentUploadZone
@@ -2002,7 +2002,7 @@ export default function AoDetail() {
                         <FolderOpen className="h-5 w-5" />
                         <span>02 - Études fournisseurs</span>
                       </CardTitle>
-                      <p className="text-sm text-gray-600">Devis, catalogues et documentations techniques des fournisseurs</p>
+                      <p className="text-sm text-on-surface-muted">Devis, catalogues et documentations techniques des fournisseurs</p>
                     </CardHeader>
                     <CardContent>
                       <DocumentUploadZone
@@ -2022,7 +2022,7 @@ export default function AoDetail() {
                         <FolderOpen className="h-5 w-5" />
                         <span>03 - Devis et pièces administratives</span>
                       </CardTitle>
-                      <p className="text-sm text-gray-600">Devis JLM, pièces administratives et documents contractuels</p>
+                      <p className="text-sm text-on-surface-muted">Devis JLM, pièces administratives et documents contractuels</p>
                     </CardHeader>
                     <CardContent>
                       <DocumentUploadZone
@@ -2036,32 +2036,32 @@ export default function AoDetail() {
                   </Card>
 
                   {/* Résumé des documents */}
-                  <Card className="bg-gray-50 border-gray-200">
+                  <Card className="bg-surface-muted border-border">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="font-medium text-gray-900">Résumé des documents</h4>
-                          <p className="text-sm text-gray-600">Total des fichiers stockés pour ce dossier</p>
+                          <p className="text-sm text-on-surface-muted">Total des fichiers stockés pour ce dossier</p>
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-gray-900">{documentStats.total}</div>
-                          <div className="text-xs text-gray-500">documents</div>
+                          <div className="text-xs text-on-surface-muted">documents</div>
                         </div>
                       </div>
                       
-                      <div className="mt-4 pt-3 border-t border-gray-200">
+                      <div className="mt-4 pt-3 border-t border-border">
                         <div className="grid grid-cols-3 gap-4 text-center">
                           <div>
                             <div className="text-lg font-semibold text-gray-700">{documentStats['dce-photos']}</div>
-                            <div className="text-xs text-gray-500">DCE & Photos</div>
+                            <div className="text-xs text-on-surface-muted">DCE & Photos</div>
                           </div>
                           <div>
                             <div className="text-lg font-semibold text-gray-700">{documentStats.etudes}</div>
-                            <div className="text-xs text-gray-500">Études</div>
+                            <div className="text-xs text-on-surface-muted">Études</div>
                           </div>
                           <div>
                             <div className="text-lg font-semibold text-gray-700">{documentStats['devis-admin']}</div>
-                            <div className="text-xs text-gray-500">Devis & Admin</div>
+                            <div className="text-xs text-on-surface-muted">Devis & Admin</div>
                           </div>
                         </div>
                       </div>

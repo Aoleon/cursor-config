@@ -277,7 +277,7 @@ export default function KanbanBoard() {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-2 text-sm text-muted-foreground">Chargement des projets...</p>
         </div>
       </div>
@@ -289,7 +289,7 @@ export default function KanbanBoard() {
       {/* Statistiques */}
       <div className="flex items-center gap-4 p-4 bg-white rounded-lg border">
         <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-blue-600" />
+          <Users className="h-5 w-5 text-primary" />
           <span className="font-medium">Total projets:</span>
           <Badge variant="outline">{totalProjects}</Badge>
         </div>
@@ -317,8 +317,8 @@ export default function KanbanBoard() {
 
       {totalProjects === 0 && (
         <div className="text-center py-12">
-          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun projet</h3>
+          <Users className="h-12 w-12 text-on-surface-muted mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-on-surface mb-2">Aucun projet</h3>
           <p className="text-muted-foreground">
             Créez votre premier projet à partir d'une offre validée
           </p>

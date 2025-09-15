@@ -83,10 +83,10 @@ export default function KpiCharts({
   const LoadingCard = ({ title }: { title: string }) => (
     <Card className="animate-pulse" data-testid={`chart-${title.toLowerCase().replace(/\s+/g, '-')}-loading`}>
       <CardHeader>
-        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+        <div className="h-4 bg-surface-muted rounded w-1/3"></div>
       </CardHeader>
       <CardContent>
-        <div className="h-64 bg-gray-200 rounded"></div>
+        <div className="h-64 bg-surface-muted rounded"></div>
       </CardContent>
     </Card>
   );
@@ -297,10 +297,10 @@ export default function KpiCharts({
               const status = percentage > 90 ? 'critical' : percentage > 75 ? 'warning' : 'good';
               
               return (
-                <div key={name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg" data-testid={`team-detail-${name.toLowerCase().replace(/\s+/g, '-')}`}>
+                <div key={name} className="flex items-center justify-between p-3 bg-surface rounded-lg" data-testid={`team-detail-${name.toLowerCase().replace(/\s+/g, '-')}`}>
                   <div className="flex-1">
                     <p className="font-medium text-sm">{name}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-on-surface-muted">
                       {data.hours.toFixed(0)}h / {data.capacity}h
                     </p>
                   </div>

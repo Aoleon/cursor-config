@@ -456,16 +456,16 @@ export function EnhancedBeValidation({
                 <Textarea
                   placeholder="Decrire precisement la non-conformite detectee..."
                   value={item.nonConformityReason || ''}
-                  className="mt-1 border-red-200"
+                  className="mt-1 border-error/20"
                   rows={2}
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-red-900">Actions correctives a entreprendre *</Label>
+                <Label className="text-sm font-medium text-error">Actions correctives a entreprendre *</Label>
                 <Textarea
                   placeholder="Definir les actions pour corriger la non-conformite..."
                   value={item.correctiveActions || ''}
-                  className="mt-1 border-red-200"
+                  className="mt-1 border-error/20"
                   rows={2}
                 />
               </div>
@@ -489,7 +489,7 @@ export function EnhancedBeValidation({
   return (
     <div className={cn('max-w-7xl mx-auto space-y-6', className)}>
       {/* En-tete avec progression */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+      <div className="bg-gradient-to-r from-primary/10 to-primary/15 border border-primary/20 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl font-bold text-on-surface">Validation BE - {validationType}</h2>
@@ -508,7 +508,7 @@ export function EnhancedBeValidation({
             </Badge>
             
             <div className="text-right">
-              <div className="text-2xl font-bold text-blue-600">{Math.round(validationProgress)}%</div>
+              <div className="text-2xl font-bold text-primary">{Math.round(validationProgress)}%</div>
               <div className="text-xs text-muted-foreground">Progression</div>
             </div>
           </div>
@@ -523,20 +523,20 @@ export function EnhancedBeValidation({
             <div className="text-xs text-muted-foreground">Total requis</div>
           </div>
           <div>
-            <div className="text-xl font-bold text-green-600">{summary.conforme}</div>
-            <div className="text-xs text-gray-500">Conformes</div>
+            <div className="text-xl font-bold text-success">{summary.conforme}</div>
+            <div className="text-xs text-on-surface-muted">Conformes</div>
           </div>
           <div>
-            <div className="text-xl font-bold text-red-600">{summary.nonConforme}</div>
-            <div className="text-xs text-gray-500">Non conformes</div>
+            <div className="text-xl font-bold text-error">{summary.nonConforme}</div>
+            <div className="text-xs text-on-surface-muted">Non conformes</div>
           </div>
           <div>
-            <div className="text-xl font-bold text-orange-600">{summary.reserve}</div>
-            <div className="text-xs text-gray-500">Reserves</div>
+            <div className="text-xl font-bold text-warning">{summary.reserve}</div>
+            <div className="text-xs text-on-surface-muted">Reserves</div>
           </div>
           <div>
-            <div className="text-xl font-bold text-blue-600">{summary.enCours}</div>
-            <div className="text-xs text-gray-500">En cours</div>
+            <div className="text-xl font-bold text-primary">{summary.enCours}</div>
+            <div className="text-xs text-on-surface-muted">En cours</div>
           </div>
         </div>
       </div>
@@ -594,7 +594,7 @@ export function EnhancedBeValidation({
           <div className="space-y-6">
             {Object.entries(itemsByCategory).map(([category, items]) => (
               <div key={category}>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-on-surface mb-4 flex items-center gap-2">
                   <div className="w-1 h-6 bg-blue-500 rounded"></div>
                   {category}
                   <Badge variant="outline">{items.length}</Badge>
@@ -675,7 +675,7 @@ export function EnhancedBeValidation({
                 {/* Participants */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-semibold text-gray-900">Participants requis</h4>
+                    <h4 className="font-semibold text-on-surface">Participants requis</h4>
                     <Button size="sm" variant="outline">
                       <Plus className="h-4 w-4 mr-2" />
                       Ajouter un participant
@@ -687,11 +687,11 @@ export function EnhancedBeValidation({
                       <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <User className="h-4 w-4 text-blue-600" />
+                            <User className="h-4 w-4 text-primary" />
                           </div>
                           <div>
                             <div className="font-medium">{participant.name}</div>
-                            <div className="text-sm text-gray-500">{participant.role}</div>
+                            <div className="text-sm text-on-surface-muted">{participant.role}</div>
                           </div>
                         </div>
                         
@@ -754,7 +754,7 @@ export function EnhancedBeValidation({
                           <StatusIcon className={cn('h-5 w-5', statusConfig.textColor)} />
                           {control.controlName}
                         </CardTitle>
-                        <p className="text-sm text-gray-600 mt-1">{control.description}</p>
+                        <p className="text-sm text-on-surface-muted mt-1">{control.description}</p>
                       </div>
                       <Badge className={cn('text-xs', statusConfig.color, statusConfig.textColor)}>
                         {control.status.toUpperCase()}
@@ -764,11 +764,11 @@ export function EnhancedBeValidation({
                   
                   <CardContent>
                     {control.status === 'failed' && control.errorMessage && (
-                      <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
+                      <div className="bg-red-50 border border-error/20 rounded p-3 mb-3">
                         <div className="flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                          <AlertCircle className="h-4 w-4 text-error mt-0.5" />
                           <div>
-                            <h5 className="font-medium text-red-900 text-sm">Erreur detectee</h5>
+                            <h5 className="font-medium text-error text-sm">Erreur detectee</h5>
                             <p className="text-red-700 text-sm mt-1">{control.errorMessage}</p>
                           </div>
                         </div>
@@ -791,25 +791,25 @@ export function EnhancedBeValidation({
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         {control.expectedValue && (
                           <div>
-                            <span className="font-medium text-gray-600">Valeur attendue:</span>
+                            <span className="font-medium text-on-surface-muted">Valeur attendue:</span>
                             <br />
-                            <span className="text-gray-900">{control.expectedValue}</span>
+                            <span className="text-on-surface">{control.expectedValue}</span>
                           </div>
                         )}
                         {control.actualValue && (
                           <div>
-                            <span className="font-medium text-gray-600">Valeur trouvee:</span>
+                            <span className="font-medium text-on-surface-muted">Valeur trouvee:</span>
                             <br />
                             <span className={cn(
                               'font-medium',
-                              control.status === 'failed' ? 'text-red-600' : 'text-gray-900'
+                              control.status === 'failed' ? 'text-error' : 'text-on-surface'
                             )}>{control.actualValue}</span>
                           </div>
                         )}
                       </div>
                     )}
                     
-                    <div className="text-xs text-gray-500 mt-3">
+                    <div className="text-xs text-on-surface-muted mt-3">
                       Controle execute le {control.executedAt.toLocaleDateString()} a {control.executedAt.toLocaleTimeString()}
                     </div>
                   </CardContent>
@@ -839,19 +839,19 @@ export function EnhancedBeValidation({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                   <div className={cn('p-3 rounded-lg', summary.conforme === summary.total ? 'bg-green-100' : 'bg-gray-100')}>
                     <div className="text-2xl font-bold">{summary.conforme}/{summary.total}</div>
-                    <div className="text-sm text-gray-600">Elements conformes</div>
+                    <div className="text-sm text-on-surface-muted">Elements conformes</div>
                   </div>
                   <div className={cn('p-3 rounded-lg', summary.nonConforme > 0 ? 'bg-red-100' : 'bg-gray-100')}>
                     <div className="text-2xl font-bold">{summary.nonConforme}</div>
-                    <div className="text-sm text-gray-600">Non conformites</div>
+                    <div className="text-sm text-on-surface-muted">Non conformites</div>
                   </div>
                   <div className={cn('p-3 rounded-lg', summary.reserve > 0 ? 'bg-orange-100' : 'bg-gray-100')}>
                     <div className="text-2xl font-bold">{summary.reserve}</div>
-                    <div className="text-sm text-gray-600">Reserves</div>
+                    <div className="text-sm text-on-surface-muted">Reserves</div>
                   </div>
                   <div className={cn('p-3 rounded-lg', summary.enCours === 0 ? 'bg-green-100' : 'bg-orange-100')}>
                     <div className="text-2xl font-bold">{summary.enCours}</div>
-                    <div className="text-sm text-gray-600">En cours</div>
+                    <div className="text-sm text-on-surface-muted">En cours</div>
                   </div>
                 </div>
               </div>

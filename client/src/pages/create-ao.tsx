@@ -267,7 +267,7 @@ export default function CreateAO() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-surface-muted">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header 
@@ -310,9 +310,9 @@ export default function CreateAO() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-600">
+                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+                    <Upload className="mx-auto h-12 w-12 text-on-surface-muted" />
+                    <p className="mt-2 text-sm text-on-surface-muted">
                       Glissez-déposez un fichier PDF ou cliquez pour parcourir
                     </p>
                     <input
@@ -333,12 +333,12 @@ export default function CreateAO() {
                   </div>
 
                   {pdfFile && (
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between p-4 bg-surface-muted rounded-lg">
                       <div className="flex items-center space-x-3">
-                        <FileText className="h-8 w-8 text-blue-600" />
+                        <FileText className="h-8 w-8 text-primary" />
                         <div>
                           <p className="font-medium">{pdfFile.name}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-on-surface-muted">
                             {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
@@ -371,14 +371,14 @@ export default function CreateAO() {
                   )}
 
                   {ocrResult && (
-                    <div className="bg-green-50 p-4 rounded-lg">
+                    <div className="bg-success/10 p-4 rounded-lg">
                       <div className="flex">
-                        <CheckCircle className="h-5 w-5 text-green-400 mr-3" />
+                        <CheckCircle className="h-5 w-5 text-success mr-3" />
                         <div className="text-sm">
-                          <p className="font-medium text-green-900">
+                          <p className="font-medium text-success">
                             AO créé avec succès
                           </p>
-                          <ul className="mt-2 space-y-1 text-green-700">
+                          <ul className="mt-2 space-y-1 text-success">
                             <li>• Référence: {ocrResult.ao?.reference}</li>
                             <li>• Client: {ocrResult.ao?.client}</li>
                             <li>• {ocrResult.ao?.lots?.length || 0} lots détectés</li>
@@ -518,12 +518,12 @@ export default function CreateAO() {
                   </div>
                   
                   <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <Label className="text-sm text-gray-600">Date limite de remise</Label>
+                    <Label className="text-sm text-on-surface-muted">Date limite de remise</Label>
                     <div className="flex items-center space-x-2 mt-1">
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                       <p className="font-medium text-blue-700">Calculée automatiquement par le système</p>
                     </div>
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className="text-xs text-primary mt-1">
                       💡 Base : Date sortie AO + 30 jours | Date rendu calculée à J-15
                     </p>
                   </div>
@@ -671,7 +671,7 @@ export default function CreateAO() {
                 {/* Contact spécifique à cet AO (optionnel) */}
                 <div className="border-t pt-4">
                   <h4 className="font-medium mb-3">Contact spécifique pour cet AO (optionnel)</h4>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-on-surface-muted mb-4">
                     Si le contact pour cet AO diffère des fiches principales, vous pouvez le préciser ici.
                   </p>
                   <div className="grid grid-cols-2 gap-4">

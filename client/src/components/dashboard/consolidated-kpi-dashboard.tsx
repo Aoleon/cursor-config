@@ -117,19 +117,19 @@ export default function ConsolidatedKpiDashboard({ className = "" }: Consolidate
     return (
       <div className={`space-y-6 ${className}`} data-testid="consolidated-kpi-dashboard-loading">
         <div className="flex items-center justify-between">
-          <div className="h-8 bg-gray-200 rounded w-64 animate-pulse"></div>
-          <div className="h-10 bg-gray-200 rounded w-32 animate-pulse"></div>
+          <div className="h-8 bg-surface-muted rounded w-64 animate-pulse"></div>
+          <div className="h-10 bg-surface-muted rounded w-32 animate-pulse"></div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-32 bg-gray-200 rounded animate-pulse"></div>
+            <div key={i} className="h-32 bg-surface-muted rounded animate-pulse"></div>
           ))}
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-80 bg-gray-200 rounded animate-pulse"></div>
+            <div key={i} className="h-80 bg-surface-muted rounded animate-pulse"></div>
           ))}
         </div>
       </div>
@@ -142,12 +142,12 @@ export default function ConsolidatedKpiDashboard({ className = "" }: Consolidate
       <Card className={`${className}`} data-testid="consolidated-kpi-dashboard-error">
         <CardContent className="p-6">
           <div className="text-center space-y-4">
-            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto" />
+            <AlertTriangle className="w-16 h-16 text-error mx-auto" />
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-on-surface">
                 Erreur lors du chargement des KPIs
               </h3>
-              <p className="text-gray-600 mt-2">
+              <p className="text-on-surface-muted mt-2">
                 {error instanceof Error ? error.message : 'Une erreur inattendue s\'est produite'}
               </p>
             </div>
@@ -171,10 +171,10 @@ export default function ConsolidatedKpiDashboard({ className = "" }: Consolidate
       {/* Header avec contrôles */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900" data-testid="dashboard-title">
+          <h2 className="text-2xl font-bold text-on-surface" data-testid="dashboard-title">
             Tableau de Bord KPIs Consolidés
           </h2>
-          <p className="text-gray-600 text-sm" data-testid="dashboard-subtitle">
+          <p className="text-on-surface-muted text-sm" data-testid="dashboard-subtitle">
             Métriques de performance temps réel pour le pilotage de l'activité JLM
           </p>
         </div>
@@ -220,8 +220,8 @@ export default function ConsolidatedKpiDashboard({ className = "" }: Consolidate
 
       {/* Indicateur dernière mise à jour */}
       {metadata && (
-        <div className="flex items-center justify-between bg-gray-50 px-4 py-2 rounded-lg">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center justify-between bg-surface-muted px-4 py-2 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-on-surface-muted">
             <Calendar className="w-4 h-4" />
             <span>
               Période: {new Date(metadata.period.from).toLocaleDateString('fr-FR')} - {new Date(metadata.period.to).toLocaleDateString('fr-FR')}
@@ -230,7 +230,7 @@ export default function ConsolidatedKpiDashboard({ className = "" }: Consolidate
               {metadata.dataPoints} points de données
             </Badge>
           </div>
-          <div className="text-sm text-gray-500" data-testid="last-update">
+          <div className="text-sm text-on-surface-muted" data-testid="last-update">
             Dernière mise à jour: {formatLastUpdate(metadata.calculatedAt)}
           </div>
         </div>
@@ -276,7 +276,7 @@ export default function ConsolidatedKpiDashboard({ className = "" }: Consolidate
           threshold={{ warning: 5, critical: 10, reverse: true }}
           subtitle={`${summary?.totalDelayedTasks || 0} tâches en retard`}
           loading={isLoading}
-          className="border-red-100"
+          className="border-error/20"
         />
       </div>
 
@@ -294,25 +294,25 @@ export default function ConsolidatedKpiDashboard({ className = "" }: Consolidate
 
         <Card data-testid="kpi-summary-stats">
           <CardContent className="p-6">
-            <h3 className="font-semibold text-gray-700 mb-4">Résumé de la Période</h3>
+            <h3 className="font-semibold text-on-surface mb-4">Résumé de la Période</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Offres créées:</span>
+                  <span className="text-on-surface-muted">Offres créées:</span>
                   <span className="font-medium" data-testid="total-offers">{summary?.totalOffers || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Offres gagnées:</span>
+                  <span className="text-on-surface-muted">Offres gagnées:</span>
                   <span className="font-medium" data-testid="won-offers">{summary?.totalWonOffers || 0}</span>
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Tâches retard:</span>
-                  <span className="font-medium text-red-600" data-testid="delayed-tasks">{summary?.totalDelayedTasks || 0}</span>
+                  <span className="text-on-surface-muted">Tâches retard:</span>
+                  <span className="font-medium text-error" data-testid="delayed-tasks">{summary?.totalDelayedTasks || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Points données:</span>
+                  <span className="text-on-surface-muted">Points données:</span>
                   <span className="font-medium" data-testid="data-points">{metadata?.dataPoints || 0}</span>
                 </div>
               </div>

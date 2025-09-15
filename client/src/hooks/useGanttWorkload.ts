@@ -25,6 +25,20 @@ export interface WorkloadCalculation {
   [key: string]: WorkloadPeriod;
 }
 
+export interface ItemWorkload {
+  itemId: string;
+  itemName: string;
+  totalHours: number;
+  estimatedPersons: number;
+  dailyDistribution: { [key: string]: number }; // key: date (YYYY-MM-DD), value: hours
+  workloadPercentage: number; // 0-100%
+  priority: 'low' | 'normal' | 'high' | 'critical';
+}
+
+export interface ItemWorkloadCalculation {
+  [itemId: string]: ItemWorkload;
+}
+
 export interface UseGanttWorkloadProps {
   ganttItems: GanttItem[];
   periodInfo: PeriodInfo;
@@ -37,10 +51,13 @@ export interface UseGanttWorkloadProps {
 export interface UseGanttWorkloadReturn {
   // Calculs de charge
   teamWorkload: WorkloadCalculation;
+  itemWorkloads: ItemWorkloadCalculation;
   
   // Utilitaires de présentation
   getWorkloadColor: (estimatedPersons: number) => string;
   getWorkloadTooltip: (workload: WorkloadPeriod) => string;
+  getItemWorkloadColor: (workloadPercentage: number) => string;
+  getItemWorkloadTooltip: (itemWorkload: ItemWorkload) => string;
   
   // Statistiques globales
   totalEstimatedPersons: number;
@@ -273,13 +290,105 @@ export function useGanttWorkload({
     };
   }, [teamWorkload, ganttItems]);
 
+  // Calcul de la charge par élément individuel
+  const itemWorkloads: ItemWorkloadCalculation = useMemo(() => {
+    const workloadByItem: ItemWorkloadCalculation = {};
+    
+    ganttItems.forEach(item => {
+      const estimatedHours = typeof item.estimatedHours === 'string' 
+        ? parseFloat(item.estimatedHours) || 0 
+        : item.estimatedHours || 0;
+      
+      if (estimatedHours > 0) {
+        // Calcul de la durée en jours ouvrables
+        const itemDuration = getWorkingDaysBetween(item.startDate, item.endDate);
+        const hoursPerDay = itemDuration > 0 ? estimatedHours / itemDuration : estimatedHours;
+        
+        // Distribution journalière
+        const dailyDistribution: { [key: string]: number } = {};
+        let current = new Date(item.startDate);
+        
+        while (current <= item.endDate) {
+          const dayOfWeek = current.getDay();
+          if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Jours ouvrables
+            const dateKey = format(current, 'yyyy-MM-dd');
+            dailyDistribution[dateKey] = hoursPerDay;
+          }
+          current = addDays(current, 1);
+        }
+        
+        // Calcul du nombre de personnes estimées
+        const weekDuration = Math.max(1, Math.ceil(itemDuration / 5)); // Nombre de semaines
+        const estimatedPersons = Math.ceil(estimatedHours / (weeklyFteHours * weekDuration));
+        
+        // Calcul du pourcentage de charge (basé sur la capacité équipe)
+        const maxCapacityHours = weeklyFteHours * Math.ceil(estimatedPersons) * weekDuration;
+        const workloadPercentage = Math.min(100, (estimatedHours / maxCapacityHours) * 100);
+        
+        // Détermination de la priorité basée sur la charge
+        let priority: 'low' | 'normal' | 'high' | 'critical' = 'normal';
+        if (workloadPercentage >= 90) {
+          priority = 'critical';
+        } else if (workloadPercentage >= 70) {
+          priority = 'high';
+        } else if (workloadPercentage >= 40) {
+          priority = 'normal';
+        } else {
+          priority = 'low';
+        }
+        
+        workloadByItem[item.id] = {
+          itemId: item.id,
+          itemName: item.name,
+          totalHours: estimatedHours,
+          estimatedPersons,
+          dailyDistribution,
+          workloadPercentage,
+          priority
+        };
+      }
+    });
+    
+    return workloadByItem;
+  }, [ganttItems, weeklyFteHours]);
+
+  // Utilitaire pour colorer la charge par élément
+  const getItemWorkloadColor = (workloadPercentage: number): string => {
+    if (workloadPercentage === 0) return "bg-gray-100 border-gray-300 text-gray-500";
+    if (workloadPercentage <= 40) return "bg-green-100 border-green-400 text-green-700";
+    if (workloadPercentage <= 70) return "bg-yellow-100 border-yellow-400 text-yellow-700";
+    if (workloadPercentage <= 90) return "bg-orange-100 border-orange-400 text-orange-700";
+    return "bg-red-100 border-red-400 text-red-700";
+  };
+
+  // Utilitaire pour le tooltip de charge par élément
+  const getItemWorkloadTooltip = (itemWorkload: ItemWorkload): string => {
+    const { itemName, totalHours, estimatedPersons, workloadPercentage, priority } = itemWorkload;
+    
+    const priorityLabels = {
+      low: 'Faible',
+      normal: 'Normale', 
+      high: 'Élevée',
+      critical: 'Critique'
+    };
+    
+    return `${itemName}\n` +
+           `Charge: ${workloadPercentage.toFixed(1)}% (${priorityLabels[priority]})\n` +
+           `Heures totales: ${totalHours}h\n` +
+           `Personnel estimé: ${estimatedPersons} personne${estimatedPersons > 1 ? 's' : ''}\n` +
+           `Capacité: ${weeklyFteHours}h/semaine par personne`;
+  };
+
   return {
     // Calculs
     teamWorkload,
+    itemWorkloads,
     
     // Utilitaires
     getWorkloadColor,
     getWorkloadTooltip,
+    getItemWorkloadColor,
+    getItemWorkloadTooltip,
     
     // Statistiques
     totalEstimatedPersons,

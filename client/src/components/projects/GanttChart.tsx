@@ -35,9 +35,157 @@ import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useGanttDrag } from "@/hooks/useGanttDrag";
 import { useGanttPeriods } from "@/hooks/useGanttPeriods";
-import { useGanttWorkload } from "@/hooks/useGanttWorkload";
+import { useGanttWorkload, type ItemWorkload } from "@/hooks/useGanttWorkload";
 import type { GanttProject, GanttMilestone, GanttTask } from "@shared/schema";
 import type { GanttItem } from "@/types/gantt";
+
+// Composant mini-histogramme de charge intégré
+interface MiniWorkloadHistogramProps {
+  itemWorkload: ItemWorkload;
+  periodInfo: any;
+  viewMode: 'week' | 'month';
+  className?: string;
+  'data-testid'?: string;
+}
+
+const MiniWorkloadHistogram = ({ 
+  itemWorkload, 
+  periodInfo, 
+  viewMode, 
+  className = '', 
+  'data-testid': dataTestId 
+}: MiniWorkloadHistogramProps) => {
+  // Générer l'histogramme compact pour la période affichée
+  const generateHistogram = () => {
+    const bars: JSX.Element[] = [];
+    const { dailyDistribution } = itemWorkload;
+    
+    if (viewMode === 'week') {
+      // Histogramme par jour de la semaine
+      periodInfo.periodDays.slice(0, 7).forEach((day: Date, index: number) => {
+        const dateKey = format(day, 'yyyy-MM-dd');
+        const hours = dailyDistribution[dateKey] || 0;
+        
+        // Calculer l'intensité (0-100%) basée sur 8h max par jour
+        const intensity = Math.min(100, (hours / 8) * 100);
+        const heightPercent = Math.max(10, intensity); // Min 10% pour visibilité
+        
+        let barColor = 'bg-gray-200';
+        if (intensity > 0) {
+          if (intensity <= 50) barColor = 'bg-green-400';
+          else if (intensity <= 75) barColor = 'bg-yellow-400';
+          else if (intensity <= 90) barColor = 'bg-orange-400';
+          else barColor = 'bg-red-400';
+        }
+        
+        bars.push(
+          <div 
+            key={`bar-${index}`}
+            className={`w-1 ${barColor} transition-all hover:opacity-75`}
+            style={{ height: `${heightPercent}%` }}
+            title={`${format(day, 'EEE', { locale: fr })}: ${hours.toFixed(1)}h`}
+          />
+        );
+      });
+    } else {
+      // Histogramme par semaine du mois
+      const weekCount = Math.min(5, periodInfo.monthWeeksCount || 4);
+      for (let week = 0; week < weekCount; week++) {
+        // Calculer les heures moyennes pour cette semaine
+        const weekStart = addDays(periodInfo.periodStart, week * 7);
+        const weekEnd = addDays(weekStart, 6);
+        
+        let weekHours = 0;
+        let weekDays = 0;
+        
+        for (let d = 0; d < 7; d++) {
+          const day = addDays(weekStart, d);
+          if (day <= weekEnd && day <= periodInfo.periodEnd) {
+            const dateKey = format(day, 'yyyy-MM-dd');
+            const dayHours = dailyDistribution[dateKey] || 0;
+            if (dayHours > 0) {
+              weekHours += dayHours;
+              weekDays++;
+            }
+          }
+        }
+        
+        const avgHours = weekDays > 0 ? weekHours / weekDays : 0;
+        const intensity = Math.min(100, (avgHours / 8) * 100);
+        const heightPercent = Math.max(10, intensity);
+        
+        let barColor = 'bg-gray-200';
+        if (intensity > 0) {
+          if (intensity <= 50) barColor = 'bg-green-400';
+          else if (intensity <= 75) barColor = 'bg-yellow-400';
+          else if (intensity <= 90) barColor = 'bg-orange-400';
+          else barColor = 'bg-red-400';
+        }
+        
+        bars.push(
+          <div 
+            key={`week-bar-${week}`}
+            className={`w-2 ${barColor} transition-all hover:opacity-75`}
+            style={{ height: `${heightPercent}%` }}
+            title={`Semaine ${week + 1}: ${avgHours.toFixed(1)}h/jour en moyenne`}
+          />
+        );
+      }
+    }
+    
+    return bars;
+  };
+  
+  const histogramBars = generateHistogram();
+  
+  return (
+    <div 
+      className={`flex items-end space-x-0.5 h-6 px-1 ${className}`}
+      data-testid={dataTestId}
+      title={`Charge: ${itemWorkload.workloadPercentage.toFixed(1)}% - ${itemWorkload.estimatedPersons} personne(s)`}
+    >
+      {histogramBars}
+    </div>
+  );
+};
+
+// Composant badge de charge
+interface WorkloadBadgeProps {
+  itemWorkload: ItemWorkload;
+  getItemWorkloadColor: (percentage: number) => string;
+  className?: string;
+  'data-testid'?: string;
+}
+
+const WorkloadBadge = ({ 
+  itemWorkload, 
+  getItemWorkloadColor, 
+  className = '', 
+  'data-testid': dataTestId 
+}: WorkloadBadgeProps) => {
+  const { workloadPercentage, estimatedPersons, priority } = itemWorkload;
+  const colorClass = getItemWorkloadColor(workloadPercentage);
+  
+  const priorityIcons = {
+    low: '🟢',
+    normal: '🟡', 
+    high: '🟠',
+    critical: '🔴'
+  };
+  
+  return (
+    <div 
+      className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium ${colorClass} ${className}`}
+      data-testid={dataTestId}
+      title={`Charge ${workloadPercentage.toFixed(1)}% (${priority}) - ${estimatedPersons} personne(s) estimée(s)`}
+    >
+      <span className="text-xs">{priorityIcons[priority]}</span>
+      <span>{workloadPercentage.toFixed(0)}%</span>
+      <Users className="h-3 w-3" />
+      <span>{estimatedPersons}</span>
+    </div>
+  );
+};
 
 interface GanttChartProps {
   projects: GanttProject[];
@@ -156,8 +304,11 @@ export default function GanttChart({
   // Hook pour les calculs de workload
   const {
     teamWorkload,
+    itemWorkloads,
     getWorkloadColor,
     getWorkloadTooltip,
+    getItemWorkloadColor,
+    getItemWorkloadTooltip,
     totalEstimatedPersons,
     totalActiveProjects,
     totalPlannedHours
@@ -400,10 +551,13 @@ export default function GanttChart({
       <CardContent>
         {/* En-tête du calendrier */}
         <div className="grid grid-cols-12 gap-1 mb-4">
-          <div className="col-span-4 text-sm font-medium text-gray-700 p-2">
+          <div className="col-span-3 text-sm font-medium text-gray-700 p-2">
             Projet / Tâche
           </div>
-          <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : `grid-cols-${periodInfo.monthWeeksCount}`}`}>
+          <div 
+            className={`col-span-6 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-none'}`}
+            style={viewMode === 'month' ? { gridTemplateColumns: `repeat(${periodInfo.monthWeeksCount}, minmax(0, 1fr))` } : undefined}
+          >
             {viewMode === 'week' ? (
               periodInfo.periodDays.map((day) => (
                 <div
@@ -428,6 +582,12 @@ export default function GanttChart({
               ))
             )}
           </div>
+          <div className="col-span-2 text-sm font-medium text-gray-700 p-2">
+            Charge
+          </div>
+          <div className="col-span-1 text-sm font-medium text-gray-700 p-2 text-center">
+            Niveau
+          </div>
         </div>
 
         {/* Zone principale du Gantt avec drag/drop */}
@@ -443,11 +603,12 @@ export default function GanttChart({
             const position = getBarPosition(item.startDate, item.endDate);
             const colorClass = getItemColor(item.status, item.type, item.priority, isOverdue(item));
             const isDragged = draggedItem === item.id;
+            const itemWorkload = itemWorkloads[item.id];
             
             return (
               <div key={item.id} className="grid grid-cols-12 gap-1 group">
                 {/* Nom de l'élément */}
-                <div className="col-span-4 flex items-center justify-between p-2">
+                <div className="col-span-3 flex items-center justify-between p-2">
                   <div className="flex items-center space-x-2">
                     <div className={`w-3 h-3 ${colorClass.includes('bg-') ? colorClass.split(' ')[0] : 'bg-gray-400'} rounded border-2 ${colorClass.includes('border-') ? colorClass.split(' ')[1] || 'border-gray-500' : 'border-gray-500'}`} />
                     <span className="text-sm font-medium truncate" title={item.name}>
@@ -465,7 +626,7 @@ export default function GanttChart({
                 </div>
 
                 {/* Barre Gantt avec drag/drop et resize */}
-                <div className="col-span-8 relative h-8 border border-gray-200 rounded bg-gray-50">
+                <div className="col-span-6 relative h-8 border border-gray-200 rounded bg-gray-50">
                   <div
                     className={`absolute top-0 h-full rounded flex items-center justify-between text-xs font-medium border-2 transition-all cursor-move ${colorClass} hover:shadow-md ${isDragged ? 'opacity-60 z-10' : ''} ${item.id === linkFromId ? 'ring-2 ring-blue-400' : ''}`}
                     style={position}
@@ -499,6 +660,37 @@ export default function GanttChart({
                     />
                   </div>
                 </div>
+
+                {/* Mini-histogramme de charge */}
+                <div className="col-span-2 flex items-center justify-center">
+                  {itemWorkload ? (
+                    <MiniWorkloadHistogram
+                      itemWorkload={itemWorkload}
+                      periodInfo={periodInfo}
+                      viewMode={viewMode}
+                      className="border border-gray-200 rounded bg-white"
+                      data-testid={`workload-histogram-${item.id}`}
+                    />
+                  ) : (
+                    <div className="text-xs text-gray-400 p-1">N/A</div>
+                  )}
+                </div>
+
+                {/* Badge de charge */}
+                <div className="col-span-1 flex items-center justify-center">
+                  {itemWorkload ? (
+                    <WorkloadBadge
+                      itemWorkload={itemWorkload}
+                      getItemWorkloadColor={getItemWorkloadColor}
+                      className="text-xs"
+                      data-testid={`workload-badge-${item.id}`}
+                    />
+                  ) : (
+                    <Badge variant="outline" className="text-xs text-gray-400">
+                      0%
+                    </Badge>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -526,7 +718,7 @@ export default function GanttChart({
 
         {/* État vide */}
         {ganttItems.filter(item => isItemVisible(item.startDate, item.endDate)).length === 0 && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-gray-500 col-span-12">
             <CalendarDays className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>Aucun projet ou jalon planifié pour cette période</p>
             <div className="flex justify-center space-x-2 mt-4">
@@ -545,217 +737,6 @@ export default function GanttChart({
           </div>
         )}
 
-        {/* Statistiques */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-3">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-              <span className="text-sm font-medium">Éléments en retard</span>
-            </div>
-            <div className="text-lg font-bold text-red-600 mt-1">
-              {ganttItems.filter(isOverdue).length}
-            </div>
-          </Card>
-          
-          <Card className="p-3">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-4 w-4 text-orange-500" />
-              <span className="text-sm font-medium">Priorité critique</span>
-            </div>
-            <div className="text-lg font-bold text-orange-600 mt-1">
-              {ganttItems.filter(item => item.priority === 'critique').length}
-            </div>
-          </Card>
-          
-          <Card className="p-3">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-blue-500" />
-              <span className="text-sm font-medium">Heures planifiées</span>
-            </div>
-            <div className="text-lg font-bold text-blue-600 mt-1">
-              {totalPlannedHours}h
-            </div>
-          </Card>
-        </div>
-
-        {/* Section Charge d'équipe */}
-        <div className="mt-6">
-          <Separator className="mb-4" />
-          
-          <div className="flex items-center space-x-2 mb-4">
-            <Users className="h-5 w-5 text-purple-600" />
-            <h4 className="text-sm font-medium text-gray-700">Charge d'équipe par période</h4>
-            <Badge variant="outline" className="text-xs">
-              Projets actifs uniquement
-            </Badge>
-          </div>
-
-          {/* En-tête de la charge d'équipe */}
-          <div className="grid grid-cols-12 gap-1 mb-2">
-            <div className="col-span-4 text-sm font-medium text-gray-700 p-2">
-              Charge équipe
-            </div>
-            <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : `grid-cols-${periodInfo.monthWeeksCount}`}`}>
-              {viewMode === 'week' ? (
-                periodInfo.periodDays.map((day) => (
-                  <div
-                    key={`workload-header-${day.toISOString()}`}
-                    className="text-center p-1 text-xs font-medium text-gray-500 bg-gray-50 rounded"
-                  >
-                    {format(day, 'EEE', { locale: fr })}
-                  </div>
-                ))
-              ) : (
-                eachWeekOfInterval({ 
-                  start: periodInfo.periodStart, 
-                  end: periodInfo.periodEnd 
-                }, { weekStartsOn: 1 }).map((week, index) => (
-                  <div
-                    key={`workload-header-${week.toISOString()}`}
-                    className="text-center p-1 text-xs font-medium text-gray-500 bg-gray-50 rounded"
-                  >
-                    S{index + 1}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Ligne de charge d'équipe */}
-          <div className="grid grid-cols-12 gap-1 group">
-            <div className="col-span-4 flex items-center justify-between p-2">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-purple-500 rounded border-2 border-purple-600" />
-                <span className="text-sm font-medium">Besoin en personnel</span>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {totalEstimatedPersons} pers. total
-              </Badge>
-            </div>
-
-            <div className="col-span-8 relative h-8 border border-gray-200 rounded bg-gray-50">
-              {viewMode === 'week' ? (
-                periodInfo.periodDays.map((day, dayIndex) => {
-                  if (dayIndex % 7 === 0) {
-                    const weekKey = format(day, 'yyyy-MM-dd');
-                    const workload = teamWorkload[weekKey];
-                    
-                    if (!workload) return null;
-                    
-                    const position = getBarPosition(workload.periodStart, workload.periodEnd);
-                    const workloadColor = getWorkloadColor(workload.estimatedPersons);
-                    const tooltip = getWorkloadTooltip(workload);
-                    
-                    return (
-                      <div
-                        key={`workload-bar-${weekKey}`}
-                        className={`absolute top-0 h-full rounded flex items-center justify-center text-xs font-medium border-2 transition-all ${workloadColor} hover:shadow-md cursor-help`}
-                        style={position}
-                        title={tooltip}
-                        data-testid={`workload-bar-${weekKey}`}
-                      >
-                        {workload.estimatedPersons > 0 && (
-                          <span className="flex items-center space-x-1">
-                            <Users className="h-3 w-3" />
-                            <span>{workload.estimatedPersons}</span>
-                          </span>
-                        )}
-                      </div>
-                    );
-                  }
-                  return null;
-                })
-              ) : (
-                (() => {
-                  const monthKey = format(periodInfo.periodStart, 'yyyy-MM');
-                  const workload = teamWorkload[monthKey];
-                  
-                  if (!workload) return null;
-                  
-                  const workloadColor = getWorkloadColor(workload.estimatedPersons);
-                  const tooltip = getWorkloadTooltip(workload);
-                  
-                  return (
-                    <div
-                      key={`workload-bar-${monthKey}`}
-                      className={`absolute top-0 left-0 w-full h-full rounded flex items-center justify-center text-sm font-medium border-2 transition-all ${workloadColor} hover:shadow-md cursor-help`}
-                      title={tooltip}
-                      data-testid={`workload-bar-${monthKey}`}
-                    >
-                      {workload.estimatedPersons > 0 && (
-                        <span className="flex items-center space-x-2">
-                          <Users className="h-4 w-4" />
-                          <span>{workload.estimatedPersons} personne{workload.estimatedPersons > 1 ? 's' : ''}</span>
-                          <span className="text-xs opacity-70">({workload.totalHours}h)</span>
-                        </span>
-                      )}
-                    </div>
-                  );
-                })()
-              )}
-            </div>
-          </div>
-
-          {/* Résumé de la charge */}
-          <div className="mt-3 p-3 bg-purple-50 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-400 rounded border border-green-500" />
-                <span>1-2 pers. (Normal)</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-yellow-400 rounded border border-yellow-500" />
-                <span>3-4 pers. (Élevé)</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-orange-400 rounded border border-orange-500" />
-                <span>5-6 pers. (Important)</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-red-400 rounded border border-red-500" />
-                <span>7+ pers. (Critique)</span>
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-gray-600">
-              Estimation basée sur 40h/semaine par personne • Projets en phase planification, approvisionnement et chantier
-            </div>
-          </div>
-        </div>
-
-        {/* Légende améliorée */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Légende et actions</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded border-2 border-blue-600" />
-                <span>Étude / En cours</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-red-500 rounded border-2 border-red-600" />
-                <span>En retard / Critique</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Move className="h-3 w-3 text-gray-500" />
-                <span>Glissez-déposez pour modifier (drag latéral supporté)</span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <ArrowUpDown className="h-3 w-3 text-gray-500" />
-                <span>Redimensionnez par les bords</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-gray-500">Double-clic</span>
-                <span>Créer une nouvelle tâche</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Link className="h-3 w-3 text-blue-500" />
-                <span>Mode liaison pour dépendances</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </CardContent>
 
       {/* Dialog de création de tâche */}

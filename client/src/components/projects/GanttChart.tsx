@@ -47,21 +47,23 @@ import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import type { GanttProject, GanttMilestone, GanttTask, User } from "@shared/schema";
 
-interface GanttTask {
+// Type unifié pour tous les éléments Gantt basé sur les types du schema
+interface GanttItem {
   id: string;
   name: string;
   type: 'project' | 'milestone' | 'task';
   startDate: Date;
   endDate: Date;
   status: string;
+  responsibleUserId?: string | null;
   responsibleUser?: User;
   progress?: number;
-  isJalon?: boolean;
+  isJalon?: boolean | null;
   projectId?: string;
   dependencies?: string[];
   priority?: 'tres_faible' | 'faible' | 'normale' | 'elevee' | 'critique';
-  estimatedHours?: number;
-  actualHours?: number;
+  estimatedHours?: number | string | null;
+  actualHours?: number | string | null;
 }
 
 type ViewMode = 'week' | 'month';
@@ -106,7 +108,7 @@ export default function GanttChart({
   const [newTaskProject, setNewTaskProject] = useState("");
 
   // Calculer les périodes selon le mode de vue - OPTIMISÉ avec useMemo
-  const { periodStart, periodEnd, periodDays, totalDays } = useMemo(() => {
+  const { periodStart, periodEnd, periodDays, totalDays, monthWeeksCount } = useMemo(() => {
     const start = viewMode === 'week' 
       ? startOfWeek(currentPeriod, { weekStartsOn: 1 })
       : startOfMonth(currentPeriod);
@@ -116,25 +118,31 @@ export default function GanttChart({
       : endOfMonth(currentPeriod);
 
     const days = eachDayOfInterval({ start, end });
+    
+    // Calculer le nombre de semaines pour la vue mensuelle
+    const weeksInMonth = viewMode === 'month' 
+      ? eachWeekOfInterval({ start, end }, { weekStartsOn: 1 }).length 
+      : 0;
 
     return {
       periodStart: start,
       periodEnd: end,
       periodDays: days,
-      totalDays: days.length
+      totalDays: days.length,
+      monthWeeksCount: weeksInMonth
     };
   }, [currentPeriod, viewMode]);
 
   // Préparer les éléments Gantt avec dépendances et priorités
-  const ganttItems: GanttTask[] = useMemo(() => [
+  const ganttItems: GanttItem[] = useMemo(() => [
     ...projects.filter(p => p.startDate && p.endDate).map(project => ({
       id: project.id,
       name: project.name,
       type: 'project' as const,
       startDate: new Date(project.startDate!),
       endDate: new Date(project.endDate!),
-      status: project.status,
-      responsibleUser: project.responsibleUser,
+      status: project.status || 'etude',
+      responsibleUserId: project.responsibleUserId,
       progress: project.progressPercentage || 0,
       priority: project.priority || 'normale',
       estimatedHours: project.estimatedHours,
@@ -159,7 +167,7 @@ export default function GanttChart({
       type: 'task' as const,
       startDate: new Date(task.startDate!),
       endDate: new Date(task.endDate!),
-      status: task.status,
+      status: task.status || 'a_faire',
       projectId: task.projectId,
       estimatedHours: task.estimatedHours,
       actualHours: task.actualHours,
@@ -223,7 +231,7 @@ export default function GanttChart({
   }, [periodStart, periodEnd]);
 
   // Vérifier si l'élément est en retard - OPTIMISÉ avec useCallback
-  const isOverdue = useCallback((item: GanttTask) => {
+  const isOverdue = useCallback((item: GanttItem) => {
     const now = new Date();
     if (item.type === 'milestone') {
       return isAfter(now, item.endDate) && item.status !== 'completed';
@@ -382,12 +390,12 @@ export default function GanttChart({
     
     const newTask: Partial<GanttTask> = {
       name: newTaskName,
-      type: newTaskType,
       startDate: taskDate,
       endDate: endDate,
       status: 'a_faire',
       projectId: newTaskProject,
-      priority: 'normale'
+      priority: 'normale',
+      isJalon: newTaskType === 'milestone'
     };
     
     if (onTaskCreate) {
@@ -494,7 +502,9 @@ export default function GanttChart({
               const overlapWorkingDays = getWorkingDaysBetween(projectStart, projectEnd);
               
               if (overlapWorkingDays > 0) {
-                const estimatedHours = project.estimatedHours || 0;
+                const estimatedHours = typeof project.estimatedHours === 'string' 
+                  ? parseFloat(project.estimatedHours) || 0 
+                  : project.estimatedHours || 0;
                 
                 // Répartition proportionnelle : heures par jour ouvrable
                 const hoursPerWorkingDay = projectDurationDays > 0 ? estimatedHours / projectDurationDays : 0;
@@ -558,7 +568,9 @@ export default function GanttChart({
           const overlapWorkingDays = getWorkingDaysBetween(projectStart, projectEnd);
           
           if (overlapWorkingDays > 0) {
-            const estimatedHours = project.estimatedHours || 0;
+            const estimatedHours = typeof project.estimatedHours === 'string' 
+              ? parseFloat(project.estimatedHours) || 0 
+              : project.estimatedHours || 0;
             
             // Répartition proportionnelle : heures par jour ouvrable
             const hoursPerWorkingDay = projectDurationDays > 0 ? estimatedHours / projectDurationDays : 0;
@@ -778,7 +790,7 @@ export default function GanttChart({
           <div className="col-span-4 text-sm font-medium text-gray-700 p-2">
             Éléments de planning
           </div>
-          <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-31'}`}>
+          <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : `grid-cols-${monthWeeksCount}`}`}>
             {viewMode === 'week' ? (
               // Vue hebdomadaire : afficher chaque jour
               periodDays.map((day) => (
@@ -1006,7 +1018,12 @@ export default function GanttChart({
               <span className="text-sm font-medium">Heures planifiées</span>
             </div>
             <div className="text-lg font-bold text-blue-600 mt-1">
-              {ganttItems.reduce((total, item) => total + (item.estimatedHours || 0), 0)}h
+              {ganttItems.reduce((total, item) => {
+                const hours = typeof item.estimatedHours === 'string' 
+                  ? parseFloat(item.estimatedHours) || 0 
+                  : item.estimatedHours || 0;
+                return total + hours;
+              }, 0)}h
             </div>
           </Card>
         </div>
@@ -1028,7 +1045,7 @@ export default function GanttChart({
             <div className="col-span-4 text-sm font-medium text-gray-700 p-2">
               Charge équipe
             </div>
-            <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-31'}`}>
+            <div className={`col-span-8 grid gap-1 ${viewMode === 'week' ? 'grid-cols-7' : `grid-cols-${monthWeeksCount}`}`}>
               {viewMode === 'week' ? (
                 // Vue hebdomadaire : afficher chaque jour
                 periodDays.map((day) => (

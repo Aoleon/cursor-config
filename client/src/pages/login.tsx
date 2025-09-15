@@ -81,7 +81,7 @@ export default function Login() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-on-surface">Saxium</h1>
-              <p className="text-sm text-on-surface-muted">Connexion</p>
+              <p className="text-sm text-[#ffffff]">Connexion</p>
             </div>
           </div>
           <p className="text-on-surface">

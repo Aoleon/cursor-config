@@ -71,7 +71,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-light to-surface flex items-center justify-center p-6">
+    <div className="min-h-screen from-primary-light to-surface flex items-center justify-center p-6 text-[#0c0a09] bg-[#ffffff00]">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">

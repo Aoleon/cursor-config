@@ -375,8 +375,25 @@ export class DatabaseStorage implements IStorage {
         assignedUser = await this.getUser(task.assignedUserId);
       }
 
+      // 🔍 DEBUG - Vérifier les champs DB bruts avant mapping  
+      console.log('🔍 STORAGE getAllTasks - Raw DB task:', {
+        id: task.id,
+        name: task.name,
+        projectId: task.projectId,
+        parentTaskId: task.parentTaskId,
+        hasProjectId: !!task.projectId,
+        hasParentTaskId: !!task.parentTaskId,
+        allKeys: Object.keys(task)
+      });
+
       result.push({ ...task, assignedUser });
     }
+
+    console.log('🔍 STORAGE getAllTasks - Final result summary:', {
+      totalTasks: result.length,
+      tasksWithParentId: result.filter(t => t.parentTaskId).length,
+      tasksWithProjectId: result.filter(t => t.projectId).length
+    });
 
     return result;
   }

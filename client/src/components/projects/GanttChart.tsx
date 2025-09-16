@@ -12,6 +12,7 @@ import {
   CalendarDays, 
   ChevronLeft, 
   ChevronRight, 
+  ChevronDown,
   Move, 
   AlertTriangle, 
   Plus, 
@@ -21,7 +22,9 @@ import {
   Calendar,
   TrendingUp,
   ArrowUpDown,
-  Users
+  Users,
+  Expand,
+  Minimize2
 } from "lucide-react";
 import { 
   format, 
@@ -36,6 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGanttDrag } from "@/hooks/useGanttDrag";
 import { useGanttPeriods } from "@/hooks/useGanttPeriods";
 import { useGanttWorkload, type ItemWorkload } from "@/hooks/useGanttWorkload";
+import { useGanttHierarchy, type HierarchyItem } from "@/hooks/useGanttHierarchy";
 import type { GanttProject, GanttMilestone, GanttTask } from "@shared/schema";
 import type { GanttItem } from "@/types/gantt";
 
@@ -196,6 +200,8 @@ interface GanttChartProps {
   onDependencyCreate?: (fromId: string, toId: string) => void;
   'data-testid'?: string;
   enableRealtime?: boolean;
+  enableHierarchy?: boolean; // Nouvelle prop pour activer/désactiver la hiérarchie
+  defaultExpandedItems?: string[]; // IDs des éléments expanded par défaut
 }
 
 export default function GanttChart({ 
@@ -206,7 +212,9 @@ export default function GanttChart({
   onTaskCreate,
   onDependencyCreate,
   'data-testid': dataTestId,
-  enableRealtime = false
+  enableRealtime = false,
+  enableHierarchy = true,
+  defaultExpandedItems = []
 }: GanttChartProps) {
   // États locaux pour les fonctionnalités non extraites
   const [linkMode, setLinkMode] = useState(false);
@@ -218,6 +226,11 @@ export default function GanttChart({
   const [newTaskProject, setNewTaskProject] = useState("");
   
   const { toast } = useToast();
+
+  // Helper pour la validation des dates (null-safe)
+  const hasValidDates = useCallback((item: GanttItem): item is GanttItem & { startDate: Date; endDate: Date } => {
+    return !!(item.hasValidDates !== false && item.startDate && item.endDate);
+  }, []);
 
   // Hook pour la gestion des périodes et navigation
   const {
@@ -233,49 +246,60 @@ export default function GanttChart({
     getPeriodLabel
   } = useGanttPeriods();
 
-  // Préparer les éléments Gantt
-  const ganttItems: GanttItem[] = useMemo(() => [
-    ...projects.filter(p => p.startDate && p.endDate).map(project => ({
-      id: project.id,
-      name: project.name,
-      type: 'project' as const,
-      startDate: new Date(project.startDate!),
-      endDate: new Date(project.endDate!),
-      status: project.status || 'etude',
-      responsibleUserId: project.responsibleUserId,
-      progress: project.progressPercentage || 0,
-      priority: project.priority || 'normale',
-      estimatedHours: project.estimatedHours,
-      actualHours: project.actualHours,
-      dependencies: project.dependencies || []
-    })),
-    ...milestones.filter(m => m.date).map(milestone => ({
-      id: milestone.id,
-      name: milestone.name,
-      type: 'milestone' as const,
-      startDate: new Date(milestone.date),
-      endDate: new Date(milestone.date),
-      status: milestone.status,
-      isJalon: true,
-      projectId: milestone.project,
-      priority: milestone.priority || 'normale',
-      dependencies: milestone.dependencies || []
-    })),
-    ...tasks.filter(t => t.startDate && t.endDate).map(task => ({
-      id: task.id,
-      name: task.name,
-      type: 'task' as const,
-      startDate: new Date(task.startDate!),
-      endDate: new Date(task.endDate!),
-      status: task.status || 'a_faire',
-      projectId: task.projectId,
-      estimatedHours: task.estimatedHours,
-      actualHours: task.actualHours,
-      isJalon: task.isJalon,
-      priority: task.priority || 'normale',
-      dependencies: task.dependencies || []
-    }))
-  ], [projects, milestones, tasks]);
+  // Préparer TOUS les éléments Gantt (SANS filtrage par date pour construire la hiérarchie complète)
+  const allGanttItems: GanttItem[] = useMemo(() => {
+    const ganttItems: GanttItem[] = [
+      // TOUS les projets, même sans dates (nécessaire pour les relations parent-enfant)
+      ...projects.map(project => ({
+        id: project.id,
+        name: project.name,
+        type: 'project' as const,
+        startDate: project.startDate ? new Date(project.startDate) : undefined,
+        endDate: project.endDate ? new Date(project.endDate) : undefined,
+        status: project.status || 'etude',
+        responsibleUserId: project.responsibleUserId,
+        progress: project.progressPercentage || 0,
+        priority: project.priority || 'normale',
+        estimatedHours: project.estimatedHours,
+        actualHours: project.actualHours,
+        dependencies: project.dependencies || [],
+        hasValidDates: !!(project.startDate && project.endDate)
+      })),
+      // TOUS les jalons, même sans date
+      ...milestones.map(milestone => ({
+        id: milestone.id,
+        name: milestone.name,
+        type: 'milestone' as const,
+        startDate: milestone.date ? new Date(milestone.date) : undefined,
+        endDate: milestone.date ? new Date(milestone.date) : undefined,
+        status: milestone.status,
+        isJalon: true,
+        projectId: milestone.project,
+        priority: milestone.priority || 'normale',
+        dependencies: milestone.dependencies || [],
+        hasValidDates: !!milestone.date
+      })),
+      // TOUTES les tâches, même sans dates
+      ...tasks.map(task => ({
+        id: task.id,
+        name: task.name,
+        type: 'task' as const,
+        startDate: task.startDate ? new Date(task.startDate) : undefined,
+        endDate: task.endDate ? new Date(task.endDate) : undefined,
+        status: task.status || 'a_faire',
+        projectId: task.projectId,
+        parentTaskId: task.parentTaskId,
+        estimatedHours: task.estimatedHours,
+        actualHours: task.actualHours,
+        isJalon: task.isJalon,
+        priority: task.priority || 'normale',
+        dependencies: task.dependencies || [],
+        hasValidDates: !!(task.startDate && task.endDate)
+      }))
+    ];
+    
+    return ganttItems;
+  }, [projects, milestones, tasks]);
 
   // Hook pour la gestion du drag/drop avec navigation automatique
   const {
@@ -290,7 +314,7 @@ export default function GanttChart({
     ganttRef,
     isNavigating
   } = useGanttDrag({
-    ganttItems,
+    ganttItems: allGanttItems, // Utiliser TOUS les éléments pour drag/drop
     periodStart: periodInfo.periodStart,
     periodEnd: periodInfo.periodEnd,
     totalDays: periodInfo.totalDays,
@@ -301,7 +325,37 @@ export default function GanttChart({
     onPeriodChange: goToSpecificPeriod
   });
 
-  // Hook pour les calculs de workload
+  // Hook pour la gestion de la hiérarchie (CRITIQUE : utiliser allGanttItems pour construire la hiérarchie complète)
+  const {
+    expandedItems,
+    toggleExpanded,
+    isExpanded,
+    expandAll,
+    collapseAll,
+    hierarchyItems,
+    visibleItems,
+    getItemLevel,
+    hasChildren,
+    getChildrenCount,
+    totalItems,
+    visibleItemsCount,
+    expandedItemsCount
+  } = useGanttHierarchy({
+    ganttItems: allGanttItems, // TOUS les éléments pour hiérarchie complète (fix critique)
+    defaultExpandedItems
+  });
+
+
+  // Utiliser les éléments visibles ou plats selon le mode hiérarchique
+  // Note: visibleItems sont de type HierarchyItem[] (avec level, hasChildren, etc.)
+  // allGanttItems sont de type GanttItem[] (sans ces propriétés)
+  const displayItems = enableHierarchy ? visibleItems : allGanttItems;
+  
+  // CRITIQUE : Créer des versions filtrées pour les fonctions qui nécessitent des dates valides
+  const safeDisplayItems = displayItems.filter(hasValidDates);
+  const safeAllGanttItems = allGanttItems.filter(hasValidDates);
+
+  // Hook pour les calculs de workload (utiliser displayItems qui peut être hiérarchique ou plat)
   const {
     teamWorkload,
     itemWorkloads,
@@ -313,7 +367,7 @@ export default function GanttChart({
     totalActiveProjects,
     totalPlannedHours
   } = useGanttWorkload({
-    ganttItems,
+    ganttItems: displayItems, // Utiliser les éléments affichés (hiérarchique ou plat)
     periodInfo,
     viewMode,
     currentPeriod
@@ -368,6 +422,9 @@ export default function GanttChart({
   }, [periodInfo.periodStart, periodInfo.periodEnd]);
 
   const isOverdue = useCallback((item: GanttItem) => {
+    // Protection null safety : retourner false si pas de date de fin
+    if (!item.endDate) return false;
+    
     const now = new Date();
     if (item.type === 'milestone') {
       return isAfter(now, item.endDate) && item.status !== 'completed';
@@ -511,6 +568,38 @@ export default function GanttChart({
               {linkMode ? "Annuler liaison" : "Créer liaison"}
             </Button>
             
+            {/* Contrôles de hiérarchie */}
+            {enableHierarchy && (
+              <>
+                <Separator orientation="vertical" className="h-6" />
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={expandAll}
+                    disabled={!hierarchyItems.some((item: HierarchyItem) => item.hasChildren)}
+                    data-testid="button-expand-all"
+                  >
+                    <Expand className="h-4 w-4 mr-1" />
+                    Tout déplier
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={collapseAll}
+                    disabled={expandedItemsCount === 0}
+                    data-testid="button-collapse-all"
+                  >
+                    <Minimize2 className="h-4 w-4 mr-1" />
+                    Tout replier
+                  </Button>
+                  <Badge variant="outline" className="text-xs">
+                    {visibleItemsCount}/{totalItems} éléments
+                  </Badge>
+                </div>
+              </>
+            )}
+            
             <Button
               variant="outline"
               size="sm"
@@ -599,25 +688,76 @@ export default function GanttChart({
           onDoubleClick={handleDoubleClick}
           data-testid="gantt-chart-area"
         >
-          {ganttItems.filter(item => isItemVisible(item.startDate, item.endDate)).map((item) => {
-            const position = getBarPosition(item.startDate, item.endDate);
-            const colorClass = getItemColor(item.status, item.type, item.priority, isOverdue(item));
+          {displayItems.map((item) => {
+            // CRITIQUE : Afficher TOUTES les lignes (pour hiérarchie), filtrer seulement les barres
+            const itemHasValidDates = hasValidDates(item);
+            const shouldRenderBar = itemHasValidDates && isItemVisible(item.startDate, item.endDate);
+            const position = itemHasValidDates ? getBarPosition(item.startDate, item.endDate) : { left: '0%', width: '0%' };
+            const isItemOverdue = itemHasValidDates ? isOverdue(item) : false;
+            const colorClass = getItemColor(item.status, item.type, item.priority, isItemOverdue);
             const isDragged = draggedItem === item.id;
             const itemWorkload = itemWorkloads[item.id];
             
             return (
               <div key={item.id} className="grid grid-cols-12 gap-1 group">
-                {/* Nom de l'élément */}
+                {/* Nom de l'élément avec hiérarchie */}
                 <div className="col-span-3 flex items-center justify-between p-2">
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-3 h-3 ${colorClass.includes('bg-') ? colorClass.split(' ')[0] : 'bg-gray-400'} rounded border-2 ${colorClass.includes('border-') ? colorClass.split(' ')[1] || 'border-gray-500' : 'border-gray-500'}`} />
-                    <span className="text-sm font-medium truncate" title={item.name}>
-                      {item.name}
-                    </span>
-                    {item.priority === 'critique' && (
-                      <AlertTriangle className="h-3 w-3 text-red-500" />
+                  <div className="flex items-center space-x-1">
+                    {/* Indentation hiérarchique */}
+                    {enableHierarchy && (
+                      <div style={{ marginLeft: `${(item as HierarchyItem).level * 16}px` }} className="flex items-center">
+                        {/* Bouton expand/collapse */}
+                        {(item as HierarchyItem).hasChildren ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpanded(item.id);
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            data-testid={`toggle-${item.id}`}
+                          >
+                            {isExpanded(item.id) ? (
+                              <ChevronDown className="h-3 w-3 text-gray-600" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3 text-gray-600" />
+                            )}
+                          </button>
+                        ) : (
+                          /* Espace pour l'alignement */
+                          <div className="w-5 h-5" />
+                        )}
+                      </div>
                     )}
+                    
+                    {/* Indicateur visuel du type */}
+                    <div className={`w-3 h-3 ${colorClass.includes('bg-') ? colorClass.split(' ')[0] : 'bg-gray-400'} rounded border-2 ${colorClass.includes('border-') ? colorClass.split(' ')[1] || 'border-gray-500' : 'border-gray-500'}`} />
+                    
+                    {/* Nom avec badge de niveau si hiérarchie */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium truncate" title={item.name}>
+                        {item.name}
+                      </span>
+                      
+                      {/* Badge de niveau hiérarchique */}
+                      {enableHierarchy && (item as HierarchyItem).level > 0 && (
+                        <Badge variant="outline" className="text-xs px-1 py-0">
+                          L{(item as HierarchyItem).level}
+                        </Badge>
+                      )}
+                      
+                      {/* Badge de nombre d'enfants */}
+                      {enableHierarchy && (item as HierarchyItem).hasChildren && (
+                        <Badge variant="secondary" className="text-xs px-1 py-0">
+                          {getChildrenCount(item.id, false)}
+                        </Badge>
+                      )}
+                      
+                      {item.priority === 'critique' && (
+                        <AlertTriangle className="h-3 w-3 text-red-500" />
+                      )}
+                    </div>
                   </div>
+                  
                   {item.progress !== undefined && (
                     <Badge variant="outline" className="text-xs">
                       {item.progress}%
@@ -625,40 +765,47 @@ export default function GanttChart({
                   )}
                 </div>
 
-                {/* Barre Gantt avec drag/drop et resize */}
+                {/* Zone Barre Gantt : rendu conditionnel selon shouldRenderBar */}
                 <div className="col-span-6 relative h-8 border border-gray-200 rounded bg-gray-50">
-                  <div
-                    className={`absolute top-0 h-full rounded flex items-center justify-between text-xs font-medium border-2 transition-all cursor-move ${colorClass} hover:shadow-md ${isDragged ? 'opacity-60 z-10' : ''} ${item.id === linkFromId ? 'ring-2 ring-blue-400' : ''}`}
-                    style={position}
-                    draggable={!linkMode}
-                    onDragStart={(e) => handleDragStart(e, item.id)}
-                    onDragEnd={handleDragEnd}
-                    onClick={() => handleItemClick(item.id)}
-                    data-testid={`gantt-bar-${item.id}`}
-                  >
-                    {/* Handle de resize début */}
-                    <div 
-                      className="absolute left-0 top-0 w-2 h-full bg-gray-600/30 hover:bg-gray-600/60 cursor-ew-resize opacity-0 group-hover:opacity-100"
-                      onMouseDown={(e) => handleResizeStart(e, item.id, 'start')}
-                      data-testid={`resize-start-${item.id}`}
-                    />
-                    
-                    {/* Contenu de la barre */}
-                    <div className="px-2 flex items-center space-x-1 flex-1 min-w-0">
-                      {item.type === 'milestone' && <div className="w-2 h-2 bg-current rounded-full" />}
-                      <span className="truncate text-xs">{item.name}</span>
-                      {item.dependencies && item.dependencies.length > 0 && (
-                        <Link className="h-3 w-3 text-blue-500" />
-                      )}
+                  {shouldRenderBar ? (
+                    <div
+                      className={`absolute top-0 h-full rounded flex items-center justify-between text-xs font-medium border-2 transition-all cursor-move ${colorClass} hover:shadow-md ${isDragged ? 'opacity-60 z-10' : ''} ${item.id === linkFromId ? 'ring-2 ring-blue-400' : ''}`}
+                      style={position}
+                      draggable={!linkMode}
+                      onDragStart={(e) => handleDragStart(e, item.id)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => handleItemClick(item.id)}
+                      data-testid={`gantt-bar-${item.id}`}
+                    >
+                      {/* Handle de resize début */}
+                      <div 
+                        className="absolute left-0 top-0 w-2 h-full bg-gray-600/30 hover:bg-gray-600/60 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                        onMouseDown={(e) => handleResizeStart(e, item.id, 'start')}
+                        data-testid={`resize-start-${item.id}`}
+                      />
+                      
+                      {/* Contenu de la barre */}
+                      <div className="px-2 flex items-center space-x-1 flex-1 min-w-0">
+                        {item.type === 'milestone' && <div className="w-2 h-2 bg-current rounded-full" />}
+                        <span className="truncate text-xs">{item.name}</span>
+                        {item.dependencies && item.dependencies.length > 0 && (
+                          <Link className="h-3 w-3 text-blue-500" />
+                        )}
+                      </div>
+                      
+                      {/* Handle de resize fin */}
+                      <div 
+                        className="absolute right-0 top-0 w-2 h-full bg-gray-600/30 hover:bg-gray-600/60 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                        onMouseDown={(e) => handleResizeStart(e, item.id, 'end')}
+                        data-testid={`resize-end-${item.id}`}
+                      />
                     </div>
-                    
-                    {/* Handle de resize fin */}
-                    <div 
-                      className="absolute right-0 top-0 w-2 h-full bg-gray-600/30 hover:bg-gray-600/60 cursor-ew-resize opacity-0 group-hover:opacity-100"
-                      onMouseDown={(e) => handleResizeStart(e, item.id, 'end')}
-                      data-testid={`resize-end-${item.id}`}
-                    />
-                  </div>
+                  ) : (
+                    /* Élément sans dates ou hors période : afficher placeholder avec info */
+                    <div className="flex items-center justify-center h-full text-xs text-gray-400">
+                      {item.hasValidDates === false ? "Pas de dates" : "Hors période"}
+                    </div>
+                  )}
                 </div>
 
                 {/* Mini-histogramme de charge */}
@@ -717,7 +864,7 @@ export default function GanttChart({
         )}
 
         {/* État vide */}
-        {ganttItems.filter(item => isItemVisible(item.startDate, item.endDate)).length === 0 && (
+        {safeAllGanttItems.filter((item) => isItemVisible(item.startDate, item.endDate)).length === 0 && (
           <div className="text-center py-12 text-gray-500 col-span-12">
             <CalendarDays className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>Aucun projet ou jalon planifié pour cette période</p>

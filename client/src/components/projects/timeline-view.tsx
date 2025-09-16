@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { ChevronLeft, ChevronRight, Calendar, User, Clock, MapPin, Folder, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, User as UserIcon, Clock, MapPin, Folder, Target } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isWithinInterval, differenceInDays, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import GanttChart from "@/components/projects/GanttChart";
+import type { ProjectTask, User } from "@shared/schema";
 
 interface TimelineViewProps {
   selectedProjectId?: string;
@@ -23,7 +24,7 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
     queryKey: ["/api/projects"],
   });
 
-  const { data: allTasks = [], isLoading: tasksLoading } = useQuery<any[]>({
+  const { data: allTasks = [], isLoading: tasksLoading } = useQuery<(ProjectTask & { assignedUser?: User })[]>({
     queryKey: ["/api/tasks/all"],
     queryFn: async () => {
       const response = await fetch("/api/tasks/all");
@@ -52,14 +53,18 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
     const tasks = getTasksForProject(project.id);
     if (tasks.length === 0) return null;
 
-    const sortedTasks = tasks.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    const sortedTasks = tasks.sort((a, b) => {
+      const aDate = a.startDate ? new Date(a.startDate).getTime() : 0;
+      const bDate = b.startDate ? new Date(b.startDate).getTime() : 0;
+      return aDate - bDate;
+    });
     const firstTask = sortedTasks[0];
     const lastTask = sortedTasks[sortedTasks.length - 1];
 
     return {
-      start: new Date(firstTask.startDate),
-      end: new Date(lastTask.endDate),
-      duration: differenceInDays(new Date(lastTask.endDate), new Date(firstTask.startDate))
+      start: firstTask.startDate ? new Date(firstTask.startDate) : new Date(),
+      end: lastTask.endDate ? new Date(lastTask.endDate) : new Date(),
+      duration: firstTask.startDate && lastTask.endDate ? differenceInDays(new Date(lastTask.endDate), new Date(firstTask.startDate)) : 0
     };
   };
 
@@ -173,7 +178,7 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
                           <span>{project.location}</span>
                         </div>
                         <div className="flex items-center space-x-1">
-                          <User className="h-4 w-4" />
+                          <UserIcon className="h-4 w-4" />
                           <span>{project.responsibleUser?.firstName} {project.responsibleUser?.lastName}</span>
                         </div>
                         {timespan && (
@@ -212,15 +217,19 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
                       
                       <div className="grid gap-3">
                         {projectTasks
-                          .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+                          .sort((a, b) => {
+                            const aDate = a.startDate ? new Date(a.startDate).getTime() : 0;
+                            const bDate = b.startDate ? new Date(b.startDate).getTime() : 0;
+                            return aDate - bDate;
+                          })
                           .map((task) => (
-                          <div key={task.id} className={`p-4 rounded-lg border-l-4 ${getPriorityColor(task.priority)}`}>
+                          <div key={task.id} className={`p-4 rounded-lg border-l-4 ${getPriorityColor('normale')}`}>
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center space-x-3 mb-2">
                                   <h5 className="font-medium text-on-surface">{task.name}</h5>
-                                  <Badge variant="outline" className={`text-xs ${getStatusColor(task.status)}`}>
-                                    {getStatusLabel(task.status)}
+                                  <Badge variant="outline" className={`text-xs ${getStatusColor(task.status || 'a_faire')}`}>
+                                    {getStatusLabel(task.status || 'a_faire')}
                                   </Badge>
                                 </div>
                                 
@@ -232,13 +241,13 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
                                   <div className="flex items-center space-x-1">
                                     <Calendar className="h-3 w-3" />
                                     <span>
-                                      {format(parseISO(task.startDate), 'dd/MM', { locale: fr })} → {format(parseISO(task.endDate), 'dd/MM', { locale: fr })}
+                                      {task.startDate ? (typeof task.startDate === 'string' ? format(parseISO(task.startDate), 'dd/MM', { locale: fr }) : format(task.startDate, 'dd/MM', { locale: fr })) : 'N/A'} → {task.endDate ? (typeof task.endDate === 'string' ? format(parseISO(task.endDate), 'dd/MM', { locale: fr }) : format(task.endDate, 'dd/MM', { locale: fr })) : 'N/A'}
                                     </span>
                                   </div>
                                   
                                   {task.assignedUser && (
                                     <div className="flex items-center space-x-1">
-                                      <User className="h-3 w-3" />
+                                      <UserIcon className="h-3 w-3" />
                                       <span>{task.assignedUser.firstName} {task.assignedUser.lastName}</span>
                                     </div>
                                   )}

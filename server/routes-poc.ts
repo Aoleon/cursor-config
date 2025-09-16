@@ -1272,6 +1272,30 @@ app.patch("/api/tasks/:id", isAuthenticated, async (req, res) => {
 app.get("/api/tasks/all", isAuthenticated, async (req, res) => {
   try {
     const allTasks = await storage.getAllTasks();
+    
+    // 🔍 DEBUG FINAL - Log des données API pour résoudre bug hiérarchique
+    console.log('🔍 API /api/tasks/all - Raw Data:', {
+      totalTasks: allTasks.length,
+      tasksWithParentId: allTasks.filter(t => t.parentTaskId).length,
+      tasksWithProjectId: allTasks.filter(t => t.projectId).length,
+      sampleTasks: allTasks.slice(0, 3).map(t => ({
+        id: t.id,
+        name: t.name,
+        parentTaskId: t.parentTaskId,
+        projectId: t.projectId,
+        parentTaskIdType: typeof t.parentTaskId,
+        projectIdType: typeof t.projectId
+      })),
+      allTasksDetailed: allTasks.map(t => ({
+        id: t.id,
+        name: t.name,
+        parentTaskId: t.parentTaskId,
+        projectId: t.projectId,
+        startDate: t.startDate,
+        endDate: t.endDate
+      }))
+    });
+    
     res.json(allTasks);
   } catch (error) {
     console.error("Error fetching all tasks:", error);

@@ -200,7 +200,7 @@ export default function CreateAO() {
 
     try {
       setOcrProgress(50);
-      const response = await fetch("/api/ocr/create-ao-from-pdf", {
+      const response = await fetch("/api/ocr/process-pdf", {
         method: "POST",
         body: formData,
       });
@@ -215,41 +215,106 @@ export default function CreateAO() {
         setOcrResult(result);
         
         // Pré-remplir le formulaire avec les données extraites
-        if (result.ao) {
-          form.setValue("reference", result.ao.reference || "");
-          form.setValue("client", result.ao.client || "");
-          form.setValue("location", result.ao.location || "");
-          form.setValue("intituleOperation", result.ao.intituleOperation || "");
-          form.setValue("departement", result.ao.departement || "62");
+        if (result.processedFields) {
+          const fields = result.processedFields;
+          
+          // Informations générales
+          if (fields.reference) {
+            form.setValue("reference", fields.reference);
+          }
+          if (fields.client || fields.maitreOuvrageNom) {
+            form.setValue("client", fields.client || fields.maitreOuvrageNom || "");
+          }
+          if (fields.location) {
+            form.setValue("location", fields.location);
+          }
+          if (fields.intituleOperation) {
+            form.setValue("intituleOperation", fields.intituleOperation);
+          }
+          if (fields.departement) {
+            form.setValue("departement", fields.departement);
+          }
+          
+          // Dates
+          if (fields.dateSortieAO) {
+            form.setValue("dateSortieAO", fields.dateSortieAO);
+          }
+          if (fields.dateAcceptationAO) {
+            form.setValue("dateAcceptationAO", fields.dateAcceptationAO);
+          }
+          if (fields.demarragePrevu) {
+            form.setValue("demarragePrevu", fields.demarragePrevu);
+          }
+          
+          // Informations techniques
+          if (fields.menuiserieType) {
+            form.setValue("menuiserieType", fields.menuiserieType as any);
+          }
+          if (fields.montantEstime) {
+            form.setValue("montantEstime", fields.montantEstime);
+          }
+          if (fields.typeMarche) {
+            form.setValue("typeMarche", fields.typeMarche as any);
+          }
+          
+          // Éléments techniques
+          if (fields.bureauEtudes) {
+            form.setValue("bureauEtudes", fields.bureauEtudes);
+          }
+          if (fields.bureauControle) {
+            form.setValue("bureauControle", fields.bureauControle);
+          }
+          if (fields.sps) {
+            form.setValue("sps", fields.sps);
+          }
           
           // Ajouter les lots extraits
-          if (result.ao.lots && result.ao.lots.length > 0) {
-            setLots(result.ao.lots.map((lot: any) => ({
-              numero: lot.numero,
-              designation: lot.designation,
-              menuiserieType: lot.type,
-              montantEstime: lot.montantEstime,
-              isSelected: lot.isJlmEligible,
-              comment: lot.notes,
+          if (fields.lots && fields.lots.length > 0) {
+            setLots(fields.lots.map((lot: any, index: number) => ({
+              numero: lot.numero || `Lot ${index + 1}`,
+              designation: lot.designation || "",
+              menuiserieType: lot.type || undefined,
+              montantEstime: lot.montantEstime || undefined,
+              isSelected: true, // Par défaut sélectionné pour analyse
+              comment: lot.notes || undefined,
             })));
           }
         }
         
+        const lotsCount = result.processedFields?.lots?.length || 0;
         toast({
-          title: "Import réussi",
-          description: `AO créé avec ${result.ao.lots?.length || 0} lots détectés`,
+          title: "Analyse OCR réussie",
+          description: `Données extraites avec ${lotsCount} lot${lotsCount > 1 ? 's' : ''} détecté${lotsCount > 1 ? 's' : ''} (confiance: ${result.confidence}%)`,
         });
         
         // Passer automatiquement à l'onglet de formulaire
         setActiveTab("manual");
         
       } else {
-        throw new Error("Erreur lors de l'import");
+        // Gestion spécifique des erreurs 401 - Authentification requise
+        if (response.status === 401) {
+          toast({
+            title: "Authentification requise",
+            description: "Vous devez être connecté pour utiliser la fonctionnalité OCR. Redirection vers la page de connexion...",
+            variant: "destructive",
+          });
+          
+          // Redirection vers la page de connexion après un court délai
+          setTimeout(() => {
+            setLocation("/login");
+          }, 2000);
+          return;
+        }
+        
+        // Pour les autres erreurs, traiter comme erreur OCR/PDF
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || "Erreur lors du traitement du PDF");
       }
     } catch (error) {
+      console.error("Erreur OCR:", error);
       toast({
-        title: "Erreur",
-        description: "Erreur lors du traitement OCR",
+        title: "Erreur lors du traitement OCR",
+        description: error instanceof Error ? error.message : "Erreur inconnue lors du traitement du PDF",
         variant: "destructive",
       });
     } finally {
@@ -376,16 +441,18 @@ export default function CreateAO() {
                         <CheckCircle className="h-5 w-5 text-success mr-3" />
                         <div className="text-sm">
                           <p className="font-medium text-success">
-                            AO créé avec succès
+                            Analyse OCR réussie
                           </p>
                           <ul className="mt-2 space-y-1 text-success">
-                            <li>• Référence: {ocrResult.ao?.reference}</li>
-                            <li>• Client: {ocrResult.ao?.client}</li>
-                            <li>• {ocrResult.ao?.lots?.length || 0} lots détectés</li>
-                            <li>• Confiance: {ocrResult.confidence}%</li>
+                            <li>• Fichier: {ocrResult.filename}</li>
+                            <li>• Référence: {ocrResult.processedFields?.reference || "Non détectée"}</li>
+                            <li>• Client: {ocrResult.processedFields?.client || ocrResult.processedFields?.maitreOuvrageNom || "Non détecté"}</li>
+                            <li>• {ocrResult.processedFields?.lots?.length || 0} lots détectés</li>
+                            <li>• Confiance: {ocrResult.confidence}% ({ocrResult.confidenceLevel})</li>
+                            <li>• Méthode: {ocrResult.processingMethod}</li>
                           </ul>
                           <p className="mt-2">
-                            Cliquez sur l'onglet "Création manuelle" pour vérifier et compléter les données.
+                            Passez à l'onglet "Création manuelle" pour vérifier et compléter les données avant de créer l'AO.
                           </p>
                         </div>
                       </div>

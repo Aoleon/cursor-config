@@ -24,11 +24,32 @@ const initializeModules = async (): Promise<void> => {
   try {
     isInitializingPdfParse = true;
     console.log('[OCR] Initializing pdf-parse module...');
-    pdfParseModule = (await import('pdf-parse')).default;
+    
+    // Import spécial pour éviter les problèmes de fichiers de test
+    const pdfParseImport = await import('pdf-parse');
+    pdfParseModule = pdfParseImport.default || pdfParseImport;
+    
+    // Test simple pour vérifier que le module fonctionne
+    if (typeof pdfParseModule !== 'function') {
+      throw new Error('pdf-parse module not properly imported');
+    }
+    
     console.log('[OCR] pdf-parse module initialized successfully');
   } catch (error) {
     console.error('[OCR] Failed to initialize pdf-parse:', error);
-    throw new Error(`Failed to initialize pdf-parse: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.log('[OCR] Attempting fallback initialization...');
+    
+    try {
+      // Fallback: essayer d'importer différemment
+      const { default: pdfParse } = await import('pdf-parse');
+      pdfParseModule = pdfParse;
+      console.log('[OCR] pdf-parse fallback initialization successful');
+    } catch (fallbackError) {
+      console.error('[OCR] Fallback initialization also failed:', fallbackError);
+      // Ne pas lever d'erreur ici, continuer avec OCR uniquement
+      pdfParseModule = null;
+      console.log('[OCR] Will continue with OCR-only processing');
+    }
   } finally {
     isInitializingPdfParse = false;
   }
@@ -288,7 +309,8 @@ export class OCRService {
       }
       
       if (!pdfParseModule) {
-        throw new Error('pdf-parse module failed to initialize');
+        console.log('[OCR] pdf-parse module not available, skipping native text extraction');
+        return ''; // Retourner chaîne vide pour déclencher le fallback OCR
       }
       
       console.log('[OCR] Extracting native text from PDF...');

@@ -214,9 +214,12 @@ export default function CreateAO() {
         // Stocker le résultat OCR
         setOcrResult(result);
         
+        // Extraire les données de la structure standardisée du serveur
+        const data = result.data || result;
+        
         // Pré-remplir le formulaire avec les données extraites
-        if (result.processedFields) {
-          const fields = result.processedFields;
+        if (data.processedFields) {
+          const fields = data.processedFields;
           
           // Informations générales
           if (fields.reference) {
@@ -281,10 +284,10 @@ export default function CreateAO() {
           }
         }
         
-        const lotsCount = result.processedFields?.lots?.length || 0;
+        const lotsCount = data.processedFields?.lots?.length || 0;
         toast({
           title: "Analyse OCR réussie",
-          description: `Données extraites avec ${lotsCount} lot${lotsCount > 1 ? 's' : ''} détecté${lotsCount > 1 ? 's' : ''} (confiance: ${result.confidence}%)`,
+          description: `Données extraites avec ${lotsCount} lot${lotsCount > 1 ? 's' : ''} détecté${lotsCount > 1 ? 's' : ''} (confiance: ${data.confidence}%)`,
         });
         
         // Passer automatiquement à l'onglet de formulaire

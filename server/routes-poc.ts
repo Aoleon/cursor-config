@@ -326,6 +326,9 @@ app.post("/api/ocr/process-pdf",
 
     console.log(`Processing PDF: ${req.file.originalname} (${req.file.size} bytes)`);
     
+    // Initialiser le service OCR
+    await ocrService.initialize();
+    
     // Traitement OCR du PDF
     const result = await ocrService.processPDF(req.file.buffer);
     

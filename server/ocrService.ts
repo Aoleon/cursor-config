@@ -1,13 +1,36 @@
 import { createWorker } from 'tesseract.js';
 import sharp from 'sharp';
+// Types pdf-parse importés depuis le fichier de déclaration
+import type pdfParse from 'pdf-parse';
 
 // Imports dynamiques pour éviter les erreurs d'initialisation
-let pdfParse: any;
+let pdfParseModule: typeof pdfParse | null = null;
+let isInitializingPdfParse = false;
 
-// Initialisation dynamique des modules
-const initializeModules = async () => {
-  if (!pdfParse) {
-    pdfParse = (await import('pdf-parse')).default;
+// Initialisation dynamique des modules avec protection contre les race conditions
+const initializeModules = async (): Promise<void> => {
+  if (pdfParseModule) {
+    return; // Déjà initialisé
+  }
+  
+  if (isInitializingPdfParse) {
+    // Attendre que l'initialisation en cours se termine
+    while (isInitializingPdfParse && !pdfParseModule) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    return;
+  }
+  
+  try {
+    isInitializingPdfParse = true;
+    console.log('[OCR] Initializing pdf-parse module...');
+    pdfParseModule = (await import('pdf-parse')).default;
+    console.log('[OCR] pdf-parse module initialized successfully');
+  } catch (error) {
+    console.error('[OCR] Failed to initialize pdf-parse:', error);
+    throw new Error(`Failed to initialize pdf-parse: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } finally {
+    isInitializingPdfParse = false;
   }
 };
 
@@ -167,13 +190,37 @@ const AO_PATTERNS: Record<string, RegExp[]> = {
 
 export class OCRService {
   private tesseractWorker: any = null;
+  private isInitializingTesseract = false;
 
-  async initialize() {
-    if (!this.tesseractWorker) {
+  async initialize(): Promise<void> {
+    if (this.tesseractWorker) {
+      return; // Déjà initialisé
+    }
+    
+    if (this.isInitializingTesseract) {
+      // Protection contre les race conditions - attendre l'initialisation en cours
+      while (this.isInitializingTesseract && !this.tesseractWorker) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      return;
+    }
+    
+    try {
+      this.isInitializingTesseract = true;
+      console.log('[OCR] Initializing Tesseract worker...');
+      
       this.tesseractWorker = await createWorker(['fra', 'eng']);
       await this.tesseractWorker.setParameters({
         tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ.,!?;:()[]{}/@#€$%&*+-=_" ',
       });
+      
+      console.log('[OCR] Tesseract worker initialized successfully');
+    } catch (error) {
+      console.error('[OCR] Failed to initialize Tesseract worker:', error);
+      this.tesseractWorker = null;
+      throw new Error(`Failed to initialize Tesseract: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      this.isInitializingTesseract = false;
     }
   }
 
@@ -187,12 +234,18 @@ export class OCRService {
   // Méthode principale pour traiter un PDF
   async processPDF(pdfBuffer: Buffer): Promise<OCRResult> {
     try {
+      console.log('[OCR] Starting PDF processing...');
+      
+      // Initialiser les modules nécessaires en premier
+      await initializeModules();
+      
       // Étape 1: Essayer d'extraire le texte natif du PDF
+      console.log('[OCR] Attempting native text extraction...');
       const nativeText = await this.extractNativeText(pdfBuffer);
       
       if (nativeText && nativeText.length > 100) {
         // PDF contient du texte natif
-        console.log('PDF with native text detected, using pdf-parse');
+        console.log('[OCR] PDF with native text detected, using pdf-parse');
         const processedFields = this.parseAOFields(nativeText);
         return {
           extractedText: nativeText,
@@ -203,39 +256,72 @@ export class OCRService {
       }
       
       // Étape 2: Fallback vers OCR pour PDFs scannés
-      console.log('Scanned PDF detected, using OCR');
+      console.log('[OCR] Scanned PDF detected, using OCR fallback');
       return await this.processWithOCR(pdfBuffer);
       
     } catch (error) {
-      console.error('Error processing PDF:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`OCR processing failed: ${errorMessage}`);
+      console.error('[OCR] Error processing PDF:', error);
+      
+      // Gestion d'erreur spécifique selon le type d'erreur
+      if (error instanceof Error) {
+        if (error.message.includes('pdf-parse')) {
+          throw new Error(`Erreur lors du traitement OCR - Module PDF non initialisé: ${error.message}`);
+        } else if (error.message.includes('Tesseract')) {
+          throw new Error(`Erreur lors du traitement OCR - Échec initialisation Tesseract: ${error.message}`);
+        } else if (error.message.includes('sharp')) {
+          throw new Error(`Erreur lors du traitement OCR - Échec traitement image: ${error.message}`);
+        } else {
+          throw new Error(`Erreur lors du traitement OCR - Erreur générale: ${error.message}`);
+        }
+      } else {
+        throw new Error(`Erreur lors du traitement OCR - Erreur inconnue: ${String(error)}`);
+      }
     }
   }
 
   // Extraction de texte natif depuis PDF
   private async extractNativeText(pdfBuffer: Buffer): Promise<string> {
     try {
-      const data = await pdfParse(pdfBuffer);
-      return data.text || '';
+      if (!pdfParseModule) {
+        console.log('[OCR] pdf-parse not initialized, calling initializeModules...');
+        await initializeModules();
+      }
+      
+      if (!pdfParseModule) {
+        throw new Error('pdf-parse module failed to initialize');
+      }
+      
+      console.log('[OCR] Extracting native text from PDF...');
+      const data = await pdfParseModule(pdfBuffer);
+      const extractedText = data.text || '';
+      
+      console.log(`[OCR] Native text extraction completed: ${extractedText.length} characters extracted`);
+      return extractedText;
     } catch (error) {
-      console.log('Native text extraction failed, will use OCR');
+      console.log('[OCR] Native text extraction failed, will use OCR fallback:', error instanceof Error ? error.message : 'Unknown error');
       return '';
     }
   }
 
   // OCR pour PDFs scannés - Version POC simplifiée
   private async processWithOCR(pdfBuffer: Buffer): Promise<OCRResult> {
-    await this.initialize();
-    
     try {
+      console.log('[OCR] Initializing Tesseract for OCR processing...');
+      await this.initialize();
+      
+      if (!this.tesseractWorker) {
+        throw new Error('Tesseract worker failed to initialize');
+      }
+      
       // Pour le POC, on simule l'extraction OCR avec des données de test
       // Dans un environnement de production, on utiliserait une vraie conversion PDF->Image->OCR
-      console.log('POC Mode: Using simulated OCR data for scanned PDFs');
+      console.log('[OCR] POC Mode: Using simulated OCR data for scanned PDFs');
       
       // Simuler les données extraites depuis le PDF scanné
       const fullText = this.getSimulatedOCRText();
       const processedFields = this.parseAOFields(fullText);
+      
+      console.log(`[OCR] OCR processing completed: ${fullText.length} characters simulated`);
       
       return {
         extractedText: fullText,
@@ -245,8 +331,16 @@ export class OCRService {
       };
       
     } catch (error) {
+      console.error('[OCR] OCR processing failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`OCR processing failed: ${errorMessage}`);
+      
+      if (errorMessage.includes('Tesseract')) {
+        throw new Error(`Échec initialisation Tesseract - OCR indisponible: ${errorMessage}`);
+      } else if (errorMessage.includes('sharp')) {
+        throw new Error(`Échec preprocessing image pour OCR: ${errorMessage}`);
+      } else {
+        throw new Error(`Erreur OCR non spécifiée: ${errorMessage}`);
+      }
     }
   }
   

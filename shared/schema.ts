@@ -163,6 +163,43 @@ export const finishEnum = pgEnum("finish", [
 ]);
 
 // ========================================
+// ENUMS POUR SYSTÈME INTELLIGENT DE DATES ET ÉCHÉANCES - PHASE 2.1
+// ========================================
+
+// Types d'alertes dates spécialisées
+export const dateAlertTypeEnum = pgEnum("date_alert_type", [
+  "delay_risk",           // Risque de retard détecté
+  "delay_confirmed",      // Retard confirmé
+  "optimization",         // Optimisation possible
+  "resource_conflict",    // Conflit ressources
+  "deadline_critical",    // Échéance critique approche
+  "phase_dependency",     // Dépendance phase non respectée
+  "external_constraint",  // Contrainte externe (météo, livraison, etc.)
+  "quality_gate"         // Point de contrôle qualité
+]);
+
+// Méthodes de calcul durées
+export const calculationMethodEnum = pgEnum("calculation_method", [
+  "automatic",    // Calcul automatique par règles
+  "manual",       // Saisie manuelle utilisateur
+  "hybrid",       // Combinaison auto + ajustements manuels
+  "historical",   // Basé sur historique projets similaires
+  "external"      // Import système externe (Batigest, etc.)
+]);
+
+// Types de contraintes planning
+export const planningConstraintEnum = pgEnum("planning_constraint", [
+  "resource_availability",  // Disponibilité équipe
+  "material_delivery",      // Livraison matériaux
+  "weather_dependent",      // Dépendant météo
+  "client_validation",      // Validation client requise
+  "regulatory_approval",    // Approbation réglementaire
+  "subcontractor_schedule", // Planning sous-traitant
+  "equipment_availability", // Disponibilité équipements
+  "seasonal_restriction"    // Restriction saisonnière
+]);
+
+// ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
 
@@ -503,6 +540,17 @@ export const offers = pgTable("offers", {
   probabilite: decimal("probabilite", { precision: 3, scale: 2 }), // Probabilité 0-100 de signature (optionnel)
   tauxMarge: decimal("taux_marge", { precision: 5, scale: 2 }), // Taux de marge attendu (%) pour fallback
   
+  // ========================================
+  // INTELLIGENCE ÉCHÉANCES - PHASE 2.1 (NOUVEAUX CHAMPS)
+  // ========================================
+  deadlineBuffer: integer("deadline_buffer").default(2), // jours buffer avant deadline
+  autoDeadlineCalc: boolean("auto_deadline_calc").default(true),
+  deadlineRiskLevel: priorityLevelEnum("deadline_risk_level").default("normale"),
+  
+  // Historique versions échéances
+  deadlineHistory: jsonb("deadline_history"), // Historique modifications deadline
+  deadlineSource: calculationMethodEnum("deadline_source").default("automatic"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
@@ -600,6 +648,27 @@ export const projects = pgTable("projects", {
   restantDu: decimal("restant_du", { precision: 12, scale: 2 }), // Restant dû
   retenuGarantie: decimal("retenu_garantie", { precision: 12, scale: 2 }), // Retenue de garantie
   
+  // ========================================
+  // INTELLIGENCE TEMPORELLE - PHASE 2.1 (NOUVEAUX CHAMPS)
+  // ========================================
+  autoScheduling: boolean("auto_scheduling").default(true),
+  optimizationEnabled: boolean("optimization_enabled").default(true),
+  planningSensitivity: priorityLevelEnum("planning_sensitivity").default("normale"),
+  
+  // Métadonnées planning intelligent
+  lastOptimizedAt: timestamp("last_optimized_at"),
+  optimizationScore: decimal("optimization_score", { precision: 3, scale: 2 }),
+  planningNotes: text("planning_notes"),
+  
+  // Contraintes spécifiques projet
+  planningConstraints: text("planning_constraints").array().default(sql`'{}'::text[]`),
+  criticalPath: text("critical_path").array().default(sql`'{}'::text[]`),
+  riskFactors: jsonb("risk_factors"), // Facteurs de risque JSON
+  
+  // Buffer et marges
+  globalBuffer: integer("global_buffer").default(0), // jours buffer global
+  qualityGates: jsonb("quality_gates"), // Points contrôle qualité
+
   // ========================================
   // MÉTADONNÉES (existantes)
   // ========================================
@@ -2275,3 +2344,174 @@ export type TechnicalAlertHistory = typeof technicalAlertHistory.$inferSelect;
 export type InsertTechnicalAlertHistory = z.infer<typeof insertTechnicalAlertHistorySchema>;
 export type BypassTechnicalAlert = z.infer<typeof bypassTechnicalAlertSchema>;
 export type TechnicalAlertsFilter = z.infer<typeof technicalAlertsFilterSchema>;
+
+// ========================================
+// SYSTÈME INTELLIGENT DE DATES ET ÉCHÉANCES - PHASE 2.1
+// ========================================
+
+// Table pour historique et prédictions des timelines projets
+export const projectTimelines = pgTable("project_timelines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`), // Cohérent avec architecture existante
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  phase: projectStatusEnum("phase").notNull(),
+  
+  // Dates planifiées vs réelles pour analyse écarts
+  plannedStartDate: timestamp("planned_start_date"),
+  plannedEndDate: timestamp("planned_end_date"),
+  actualStartDate: timestamp("actual_start_date"),
+  actualEndDate: timestamp("actual_end_date"),
+  
+  // Métadonnées calculs intelligents
+  durationEstimate: integer("duration_estimate").default(0), // en jours
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).default("0.80"), // 0-1
+  calculationMethod: calculationMethodEnum("calculation_method").default("automatic"),
+  
+  // Dépendances et contraintes
+  dependsOn: text("depends_on").array().default(sql`'{}'::text[]`), // IDs phases précédentes
+  riskLevel: priorityLevelEnum("risk_level").default("normale"),
+  bufferDays: integer("buffer_days").default(0),
+  
+  // Métadonnées système
+  autoCalculated: boolean("auto_calculated").default(true),
+  lastCalculatedAt: timestamp("last_calculated_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectTimelinesByProject: index("idx_project_timelines_project_id").on(table.projectId),
+    projectTimelinesByPhase: index("idx_project_timelines_phase").on(table.phase),
+  };
+});
+
+// Table des règles métier intelligentes configurables
+export const dateIntelligenceRules = pgTable("date_intelligence_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  
+  // Ciblage règle
+  phase: projectStatusEnum("phase"), // null = règle globale
+  projectType: varchar("project_type"), // neuf|renovation|maintenance
+  complexity: priorityLevelEnum("complexity"), // simple|normale|elevee
+  
+  // Conditions déclenchement
+  baseConditions: jsonb("base_conditions"), // JSON conditions flexibles
+  triggerEvents: text("trigger_events").array().default(sql`'{}'::text[]`), // évènements déclencheurs
+  
+  // Calculs durées
+  durationFormula: text("duration_formula"), // Formule calcul (JSON ou expression)
+  baseDuration: integer("base_duration").default(0), // durée base en jours
+  multiplierFactor: decimal("multiplier_factor", { precision: 4, scale: 2 }).default("1.00"),
+  bufferPercentage: decimal("buffer_percentage", { precision: 3, scale: 2 }).default("0.15"), // 15% buffer défaut
+  
+  // Contraintes métier
+  minDuration: integer("min_duration").default(1),
+  maxDuration: integer("max_duration").default(365),
+  workingDaysOnly: boolean("working_days_only").default(true),
+  excludeHolidays: boolean("exclude_holidays").default(true),
+  
+  // Gestion configuration
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(100), // ordre application règles
+  validFrom: timestamp("valid_from").defaultNow(),
+  validUntil: timestamp("valid_until"),
+  
+  // Métadonnées
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    activeRulesIndex: index("idx_active_rules").on(table.isActive, table.priority),
+    phaseRulesIndex: index("idx_rules_phase").on(table.phase),
+  };
+});
+
+// Table alertes dates et échéances
+export const dateAlerts = pgTable("date_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Entité concernée (project, offer, ou ao)
+  entityType: varchar("entity_type").notNull(), // project|offer|ao
+  entityId: varchar("entity_id").notNull(),
+  entityReference: varchar("entity_reference"), // Référence affichable
+  
+  // Type et criticité alerte
+  alertType: dateAlertTypeEnum("alert_type").notNull(),
+  severity: varchar("severity").notNull().default("warning"), // info|warning|critical
+  category: varchar("category").default("planning"), // planning|resource|quality
+  
+  // Détails alerte
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  phase: projectStatusEnum("phase"), // Phase concernée si applicable
+  
+  // Données temporelles
+  targetDate: timestamp("target_date"), // Date cible originale
+  predictedDate: timestamp("predicted_date"), // Date prédite
+  delayDays: integer("delay_days").default(0), // Nombre jours de retard
+  impactLevel: priorityLevelEnum("impact_level").default("normale"),
+  
+  // Actions suggérées
+  suggestedActions: jsonb("suggested_actions"), // Actions correctives JSON
+  actionTaken: text("action_taken"), // Action réellement prise
+  actionBy: varchar("action_by").references(() => users.id),
+  
+  // Workflow gestion alerte
+  status: varchar("status").default("pending"), // pending|acknowledged|resolved|dismissed
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  resolvedAt: timestamp("resolved_at"),
+  
+  // Métadonnées
+  detectedAt: timestamp("detected_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    dateAlertsByEntity: index("idx_date_alerts_entity").on(table.entityType, table.entityId),
+    dateAlertsByStatus: index("idx_date_alerts_status").on(table.status),
+    dateAlertsByAssignee: index("idx_date_alerts_assignee").on(table.assignedTo),
+  };
+});
+
+// ========================================
+// SCHEMAS ZOD POUR SYSTÈME INTELLIGENT DE DATES ET ÉCHÉANCES - PHASE 2.1
+// ========================================
+
+// Schemas validation pour nouvelles entités
+export const insertProjectTimelineSchema = createInsertSchema(projectTimelines).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastCalculatedAt: true
+});
+
+export const insertDateIntelligenceRuleSchema = createInsertSchema(dateIntelligenceRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertDateAlertSchema = createInsertSchema(dateAlerts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  detectedAt: true
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR SYSTÈME INTELLIGENT DE DATES ET ÉCHÉANCES - PHASE 2.1
+// ========================================
+
+// Types TypeScript pour utilisation
+export type ProjectTimeline = typeof projectTimelines.$inferSelect;
+export type InsertProjectTimeline = z.infer<typeof insertProjectTimelineSchema>;
+
+export type DateIntelligenceRule = typeof dateIntelligenceRules.$inferSelect;
+export type InsertDateIntelligenceRule = z.infer<typeof insertDateIntelligenceRuleSchema>;
+
+export type DateAlert = typeof dateAlerts.$inferSelect;
+export type InsertDateAlert = z.infer<typeof insertDateAlertSchema>;

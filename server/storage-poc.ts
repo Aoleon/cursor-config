@@ -2,7 +2,7 @@ import { eq, desc, and, sql, gte, lte, count, sum, avg } from "drizzle-orm";
 import { 
   users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
   chiffrageElements, dpgfDocuments, aoLots, maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre,
-  validationMilestones,
+  validationMilestones, visaArchitecte,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -17,7 +17,8 @@ import {
   type MaitreOuvrage, type InsertMaitreOuvrage,
   type MaitreOeuvre, type InsertMaitreOeuvre,
   type ContactMaitreOeuvre, type InsertContactMaitreOeuvre,
-  type ValidationMilestone, type InsertValidationMilestone
+  type ValidationMilestone, type InsertValidationMilestone,
+  type VisaArchitecte, type InsertVisaArchitecte
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -153,11 +154,17 @@ export interface IStorage {
   updateContactMaitreOeuvre(id: string, contact: Partial<InsertContactMaitreOeuvre>): Promise<ContactMaitreOeuvre>;
   deleteContactMaitreOeuvre(id: string): Promise<void>;
   
-  // Validation Milestones operations - Jalons de validation
+  // Validation Milestones operations - Jalons de validation (maintenant "Bouclage")
   getValidationMilestones(offerId: string): Promise<ValidationMilestone[]>;
   createValidationMilestone(milestone: InsertValidationMilestone): Promise<ValidationMilestone>;
   updateValidationMilestone(id: string, milestone: Partial<InsertValidationMilestone>): Promise<ValidationMilestone>;
   deleteValidationMilestone(id: string): Promise<void>;
+  
+  // VISA Architecte operations - Nouveau workflow entre Étude et Planification
+  getVisaArchitecte(projectId: string): Promise<VisaArchitecte[]>;
+  createVisaArchitecte(visa: InsertVisaArchitecte): Promise<VisaArchitecte>;
+  updateVisaArchitecte(id: string, visa: Partial<InsertVisaArchitecte>): Promise<VisaArchitecte>;
+  deleteVisaArchitecte(id: string): Promise<void>;
   
   // Additional helper methods for conversion workflow
   getOfferById(id: string): Promise<Offer | undefined>;
@@ -294,6 +301,71 @@ export class DatabaseStorage implements IStorage {
       .set({ ...offer, updatedAt: new Date() })
       .where(eq(offers.id, id))
       .returning();
+    
+    // AUTOMATISATION BATIGEST : Génération automatique du code chantier lors d'accord AO
+    if (offer.status && (offer.status === 'accord_ao' || offer.status === 'fin_etudes_validee')) {
+      console.log(`[WORKFLOW] 🤖 Accord AO détecté - Déclenchement génération automatique code Batigest pour offre ${id}`);
+      
+      // Génération asynchrone pour ne pas bloquer la réponse
+      setImmediate(async () => {
+        try {
+          // Importer le service Batigest de façon dynamique pour éviter les imports circulaires
+          const { batigestService } = await import('./batigestService');
+          
+          // Rechercher le projet associé à cette offre
+          const projects = await this.getProjects();
+          const relatedProject = projects.find(p => p.offerId === id);
+          
+          if (relatedProject) {
+            console.log(`[BATIGEST] 📋 Projet associé trouvé: ${relatedProject.name} (${relatedProject.id})`);
+            
+            // Vérifier si un code Batigest n'existe pas déjà (idempotence)
+            if (!updatedOffer.batigestRef) {
+              const result = await batigestService.generateChantierCode(relatedProject.id, {
+                reference: updatedOffer.reference,
+                client: updatedOffer.client,
+                intituleOperation: updatedOffer.intituleOperation,
+                montantPropose: updatedOffer.montantPropose?.toString()
+              });
+              
+              if (result.success && result.batigestRef) {
+                // Mettre à jour l'offre avec le code Batigest généré
+                await db
+                  .update(offers)
+                  .set({ 
+                    batigestRef: result.batigestRef,
+                    updatedAt: new Date() 
+                  })
+                  .where(eq(offers.id, id));
+                
+                console.log(`[BATIGEST] ✅ Code chantier automatiquement assigné à l'offre: ${result.batigestRef}`);
+                
+                // Mettre à jour aussi le projet associé si nécessaire
+                await db
+                  .update(projects)
+                  .set({ 
+                    batigestRef: result.batigestRef,
+                    updatedAt: new Date() 
+                  })
+                  .where(eq(projects.id, relatedProject.id));
+                  
+                console.log(`[BATIGEST] ✅ Code chantier automatiquement assigné au projet: ${result.batigestRef}`);
+              } else {
+                console.warn(`[BATIGEST] ⚠️ Échec génération automatique: ${result.message}`);
+              }
+            } else {
+              console.log(`[BATIGEST] ℹ️ Code Batigest déjà existant pour cette offre: ${updatedOffer.batigestRef} (idempotence)`);
+            }
+          } else {
+            console.warn(`[BATIGEST] ⚠️ Aucun projet associé trouvé pour l'offre ${id} - Génération de code chantier reportée`);
+          }
+        } catch (error) {
+          console.error('[BATIGEST] ❌ Erreur lors de la génération automatique du code chantier:', error);
+          // Ne pas faire échouer la mise à jour de l'offre pour autant
+        }
+      });
+    }
+    
     return updatedOffer;
   }
 
@@ -1161,6 +1233,55 @@ export class DatabaseStorage implements IStorage {
   async deleteValidationMilestone(id: string): Promise<void> {
     await db.delete(validationMilestones)
       .where(eq(validationMilestones.id, id));
+  }
+
+  // VISA Architecte operations - Nouveau workflow entre Étude et Planification
+  async getVisaArchitecte(projectId: string): Promise<VisaArchitecte[]> {
+    return await db.select().from(visaArchitecte)
+      .where(eq(visaArchitecte.projectId, projectId))
+      .orderBy(visaArchitecte.demandeLe);
+  }
+
+  async createVisaArchitecte(visaData: InsertVisaArchitecte): Promise<VisaArchitecte> {
+    const [newVisa] = await db.insert(visaArchitecte)
+      .values({
+        ...visaData,
+        documentsSoumis: (visaData.documentsSoumis || []) as string[]
+      })
+      .returning();
+    return newVisa;
+  }
+
+  async updateVisaArchitecte(id: string, visaData: Partial<InsertVisaArchitecte>): Promise<VisaArchitecte> {
+    // Build update object filtering out undefined values
+    const updateFields: any = { updatedAt: new Date() };
+    
+    if (visaData.projectId !== undefined) updateFields.projectId = visaData.projectId;
+    if (visaData.visaType !== undefined) updateFields.visaType = visaData.visaType;
+    if (visaData.status !== undefined) updateFields.status = visaData.status;
+    if (visaData.architecteNom !== undefined) updateFields.architecteNom = visaData.architecteNom;
+    if (visaData.architecteEmail !== undefined) updateFields.architecteEmail = visaData.architecteEmail;
+    if (visaData.architecteTelephone !== undefined) updateFields.architecteTelephone = visaData.architecteTelephone;
+    if (visaData.architecteOrdre !== undefined) updateFields.architecteOrdre = visaData.architecteOrdre;
+    if (visaData.accordeLe !== undefined) updateFields.accordeLe = visaData.accordeLe;
+    if (visaData.expireLe !== undefined) updateFields.expireLe = visaData.expireLe;
+    if (visaData.documentsSoumis !== undefined) updateFields.documentsSoumis = visaData.documentsSoumis;
+    if (visaData.commentaires !== undefined) updateFields.commentaires = visaData.commentaires;
+    if (visaData.raisonRefus !== undefined) updateFields.raisonRefus = visaData.raisonRefus;
+    if (visaData.demandePar !== undefined) updateFields.demandePar = visaData.demandePar;
+    if (visaData.validePar !== undefined) updateFields.validePar = visaData.validePar;
+    
+    const [updatedVisa] = await db
+      .update(visaArchitecte)
+      .set(updateFields)
+      .where(eq(visaArchitecte.id, id))
+      .returning();
+    return updatedVisa;
+  }
+
+  async deleteVisaArchitecte(id: string): Promise<void> {
+    await db.delete(visaArchitecte)
+      .where(eq(visaArchitecte.id, id));
   }
 
   // Additional helper methods for conversion workflow

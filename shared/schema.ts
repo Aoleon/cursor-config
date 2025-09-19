@@ -57,9 +57,11 @@ export const offerStatusEnum = pgEnum("offer_status", [
   "archive"              // Archivé
 ]);
 
-// Statuts des projets (5 étapes POC)
+// Statuts des projets (6 étapes avec nouvelle Passation en premier)
 export const projectStatusEnum = pgEnum("project_status", [
+  "passation",          // Nouvelle première étape - Envoi dossier et obtention VIS (1 mois)
   "etude",              // Phase d'étude
+  "visa_architecte",    // VISA Architecte (entre Étude et Planification)
   "planification",      // Planification
   "approvisionnement",  // Approvisionnement (simple)
   "chantier",           // Phase chantier
@@ -99,10 +101,14 @@ export const documentAccessEnum = pgEnum("document_access", [
   "public", "equipe", "responsables", "prive"
 ]);
 
-// Types de validation BE (enrichi selon audit JLM)
-export const beValidationTypeEnum = pgEnum("be_validation_type", [
-  "etude_technique", "chiffrage", "fin_etudes", "validation_commercial", 
-  "preparation_production", "controle_qualite", "validation_documentaire"
+// Types de bouclage (anciennement validation BE) - Points simplifiés
+export const bouclageTypeEnum = pgEnum("bouclage_type", [
+  "conformite_dtu", "conformite_technique_marche", "coherence_chiffrages"
+]);
+
+// Types de VISA Architecte - Nouveau workflow entre Étude et Planification
+export const visaArchitecteTypeEnum = pgEnum("visa_architecte_type", [
+  "visa_plans", "visa_technique", "visa_conformite"
 ]);
 
 // Types de contrats de travail
@@ -501,7 +507,7 @@ export const projects = pgTable("projects", {
   name: varchar("name").notNull(),
   client: varchar("client").notNull(),
   location: varchar("location").notNull(),
-  status: projectStatusEnum("status").default("etude"), // 5 étapes POC
+  status: projectStatusEnum("status").default("passation"), // 6 étapes POC - Commence par passation (SLA 1 mois)
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   budget: decimal("budget", { precision: 12, scale: 2 }),
@@ -825,12 +831,12 @@ export const beWorkload = pgTable("be_workload", {
   };
 });
 
-// Table des jalons de validation (validation milestones)
+// Table des jalons de validation (validation milestones) - Maintenant "Bouclage" 
 export const validationMilestones = pgTable("validation_milestones", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   offerId: varchar("offer_id").references(() => offers.id),
   projectId: varchar("project_id").references(() => projects.id),
-  milestoneType: varchar("milestone_type").notNull(), // "fin_etudes", "validation_technique", "validation_commercial", "preparation_production"
+  milestoneType: bouclageTypeEnum("milestone_type").notNull(), // Utilise maintenant l'enum bouclage
   isCompleted: boolean("is_completed").default(false),
   completedBy: varchar("completed_by").references(() => users.id),
   completedAt: timestamp("completed_at"),
@@ -1497,7 +1503,7 @@ export const documentCollectionLinks = pgTable("document_collection_links", {
 // Template des checklists de validation BE (configuration système)
 export const beValidationTemplates = pgTable("be_validation_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  validationType: beValidationTypeEnum("validation_type").notNull(),
+  validationType: bouclageTypeEnum("validation_type").notNull(),
   name: varchar("name").notNull(),
   description: text("description"),
   isActive: boolean("is_active").default(true),
@@ -1855,6 +1861,51 @@ export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
 export type Team = typeof teams.$inferSelect;
 export type TeamMember = typeof teamMembers.$inferSelect;
 
+// ========================================
+// SYSTÈME VISA ARCHITECTE - Nouveau workflow entre Étude et Planification
+// ========================================
+
+// Table pour gérer les VISA Architecte - étape obligatoire entre Étude et Planification
+export const visaArchitecte = pgTable("visa_architecte", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+  
+  // Type de VISA demandé
+  visaType: visaArchitecteTypeEnum("visa_type").notNull(),
+  
+  // Statut du VISA
+  status: varchar("status").notNull().default("en_attente"), // en_attente, valide, refuse, expire
+  
+  // Informations sur l'architecte
+  architecteNom: varchar("architecte_nom"),
+  architecteEmail: varchar("architecte_email"),
+  architecteTelephone: varchar("architecte_telephone"),
+  architecteOrdre: varchar("architecte_ordre"), // Numéro d'ordre des architectes
+  
+  // Suivi des dates
+  demandeLe: timestamp("demande_le").defaultNow(),
+  accordeLe: timestamp("accorde_le"),
+  expireLe: timestamp("expire_le"),
+  
+  // Documents et commentaires
+  documentsSoumis: jsonb("documents_soumis").$type<string[]>().default([]), // IDs des documents soumis
+  commentaires: text("commentaires"),
+  raisonRefus: text("raison_refus"),
+  
+  // Suivi utilisateur
+  demandePar: varchar("demande_par").references(() => users.id).notNull(),
+  validePar: varchar("valide_par").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectStatusIdx: index("visa_architecte_project_status_idx").on(table.projectId, table.status),
+    visaTypeIdx: index("visa_architecte_type_idx").on(table.visaType),
+    statusIdx: index("visa_architecte_status_idx").on(table.status),
+  };
+});
+
 // Énumération pour statut de synchronisation Batigest (placé avec les autres enums)
 export const batigestSyncStatusEnum = pgEnum('batigest_sync_status', [
   'pending',
@@ -1913,6 +1964,16 @@ export type InsertBatigestIntegration = z.infer<typeof insertBatigestIntegration
 export type InsertBatigestAnalytics = z.infer<typeof insertBatigestAnalyticsSchema>;
 export type BatigestIntegration = typeof batigestIntegrations.$inferSelect;
 export type BatigestAnalytics = typeof batigestAnalytics.$inferSelect;
+
+// Schémas d'insertion pour VISA Architecte
+export const insertVisaArchitecteSchema = createInsertSchema(visaArchitecte).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertVisaArchitecte = z.infer<typeof insertVisaArchitecteSchema>;
+export type VisaArchitecte = typeof visaArchitecte.$inferSelect;
 
 // Schema d'insertion pour project_priorities
 export const insertProjectPrioritySchema = createInsertSchema(projectPriorities).omit({

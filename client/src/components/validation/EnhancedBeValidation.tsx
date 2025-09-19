@@ -80,7 +80,7 @@ interface BeQualityControl {
 
 interface EnhancedBeValidationProps {
   offerId: string;
-  validationType: 'etude_technique' | 'chiffrage' | 'fin_etudes' | 'validation_commercial';
+  validationType: 'conformite_dtu' | 'conformite_technique_marche' | 'coherence_chiffrages';
   onValidationComplete: (result: any) => void;
   className?: string;
 }

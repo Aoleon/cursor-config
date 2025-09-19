@@ -11,7 +11,7 @@ import { sendSuccess, sendPaginatedSuccess, createError, asyncHandler } from "./
 import { 
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
   insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
-  insertChiffrageElementSchema, insertDpgfDocumentSchema, insertValidationMilestoneSchema
+  insertChiffrageElementSchema, insertDpgfDocumentSchema, insertValidationMilestoneSchema, insertVisaArchitecteSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -1205,10 +1205,72 @@ app.patch("/api/projects/:id", isAuthenticated, async (req, res) => {
     
     console.log('Updating project with data:', JSON.stringify(convertedData, null, 2));
     
+    // RÈGLE CRITIQUE : Vérification VISA Architecte avant passage en planification
+    if (convertedData.status === 'planification') {
+      console.log(`[VISA_GATING] 🔒 Vérification VISA Architecte requise pour projet ${req.params.id}`);
+      
+      try {
+        // Récupérer le projet actuel pour vérifier le statut précédent
+        const currentProject = await storage.getProject(req.params.id);
+        if (!currentProject) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+        
+        // Vérifier seulement si on CHANGE vers planification (pas si on est déjà en planification)
+        if (currentProject.status !== 'planification') {
+          // Vérifier qu'au moins un VISA Architecte valide existe pour ce projet
+          const visaList = await storage.getVisaArchitecte(req.params.id);
+          const validVisa = visaList.find(visa => visa.status === 'valide' && visa.accordeLe);
+          
+          if (!validVisa) {
+            console.log(`[VISA_GATING] ❌ Passage en planification bloqué - Aucun VISA Architecte valide pour projet ${req.params.id}`);
+            return res.status(403).json({
+              message: "Impossible de passer en planification : VISA Architecte requis",
+              error: "VISA_REQUIRED",
+              details: "Un VISA Architecte valide est obligatoire avant de passer en phase de planification",
+              currentVisaCount: visaList.length,
+              validVisaCount: visaList.filter(v => v.status === 'valide').length,
+              requireAction: "Créer et valider un VISA Architecte avant de continuer"
+            });
+          }
+          
+          // Vérifier que le VISA n'est pas expiré
+          if (validVisa.expireLe && new Date(validVisa.expireLe) < new Date()) {
+            console.log(`[VISA_GATING] ❌ Passage en planification bloqué - VISA Architecte expiré pour projet ${req.params.id}`);
+            return res.status(403).json({
+              message: "Impossible de passer en planification : VISA Architecte expiré",
+              error: "VISA_EXPIRED",
+              details: `Le VISA Architecte a expiré le ${new Date(validVisa.expireLe).toLocaleDateString('fr-FR')}`,
+              expiredAt: validVisa.expireLe,
+              requireAction: "Renouveler le VISA Architecte avant de continuer"
+            });
+          }
+          
+          console.log(`[VISA_GATING] ✅ VISA Architecte valide trouvé - Autorisation passage planification pour projet ${req.params.id}`);
+        }
+        
+      } catch (visaError) {
+        console.error('[VISA_GATING] ❌ Erreur lors de la vérification VISA:', visaError);
+        return res.status(500).json({
+          message: "Erreur lors de la vérification du VISA Architecte",
+          error: "VISA_CHECK_FAILED",
+          details: "Impossible de vérifier les VISA Architecte - Contactez l'administrateur"
+        });
+      }
+    }
+    
     const partialData = insertProjectSchema.partial().parse(convertedData);
     const project = await storage.updateProject(req.params.id, partialData);
     
     console.log('Project updated successfully:', project.id);
+    
+    // Log spécial pour changement de statut avec contrôle VISA
+    if (convertedData.status && convertedData.status !== 'planification') {
+      console.log(`[PROJECT_STATUS] ✅ Statut projet ${req.params.id} mis à jour vers: ${convertedData.status}`);
+    } else if (convertedData.status === 'planification') {
+      console.log(`[PROJECT_STATUS] ✅ Statut projet ${req.params.id} mis à jour vers: planification (VISA validé)`);
+    }
+    
     res.json(project);
   } catch (error: any) {
     console.error("Error updating project:", error);
@@ -1902,6 +1964,128 @@ app.post("/api/offers/:offerId/supplier-requests", isAuthenticated, async (req, 
   } catch (error) {
     console.error("Error creating offer supplier request:", error);
     res.status(500).json({ message: "Failed to create supplier request for offer" });
+  }
+});
+
+// ========================================
+// VISA ARCHITECTE ROUTES - Workflow entre Étude et Planification
+// ========================================
+
+// Récupérer tous les VISA d'un projet
+app.get("/api/projects/:projectId/visa-architecte", isAuthenticated, async (req, res) => {
+  try {
+    const visas = await storage.getVisaArchitecte(req.params.projectId);
+    res.json(visas);
+  } catch (error) {
+    console.error("Error fetching VISA Architecte:", error);
+    res.status(500).json({ message: "Failed to fetch VISA Architecte" });
+  }
+});
+
+// Créer une nouvelle demande VISA Architecte
+app.post("/api/projects/:projectId/visa-architecte", isAuthenticated, async (req, res) => {
+  try {
+    const visaData = {
+      ...req.body,
+      projectId: req.params.projectId,
+      demandePar: req.body.demandePar || 'test-user-1' // En mode développement
+    };
+
+    // Validation des données
+    const validatedData = insertVisaArchitecteSchema.parse(visaData);
+    const visa = await storage.createVisaArchitecte(validatedData);
+    
+    console.log(`[VISA] Nouvelle demande VISA Architecte créée pour projet ${req.params.projectId}`);
+    res.status(201).json(visa);
+  } catch (error: any) {
+    console.error("Error creating VISA Architecte:", error);
+    
+    // Gestion des erreurs de validation
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        message: "Données de validation invalides",
+        errors: error.errors
+      });
+    }
+    
+    res.status(500).json({ message: "Failed to create VISA Architecte", error: error.message });
+  }
+});
+
+// Mettre à jour un VISA Architecte (acceptation, refus, expiration)
+app.patch("/api/visa-architecte/:id", isAuthenticated, async (req, res) => {
+  try {
+    const updateData = req.body;
+    
+    // Si VISA accordé, ajouter la date d'accord
+    if (updateData.status === 'valide' && !updateData.accordeLe) {
+      updateData.accordeLe = new Date();
+      updateData.validePar = req.body.validePar || 'test-user-1';
+    }
+    
+    // Si VISA refusé, s'assurer qu'une raison est fournie
+    if (updateData.status === 'refuse' && !updateData.raisonRefus) {
+      return res.status(400).json({ 
+        message: "Une raison de refus est requise pour refuser un VISA" 
+      });
+    }
+    
+    // Validation partielle des données
+    const validatedData = insertVisaArchitecteSchema.partial().parse(updateData);
+    const updatedVisa = await storage.updateVisaArchitecte(req.params.id, validatedData);
+    
+    console.log(`[VISA] VISA Architecte ${req.params.id} mis à jour - Statut: ${updatedVisa.status}`);
+    
+    // Log spécifique pour déblocage workflow
+    if (updatedVisa.status === 'valide') {
+      console.log(`[WORKFLOW] ✅ VISA Architecte accordé - Projet ${updatedVisa.projectId} peut passer en planification`);
+    }
+    
+    res.json(updatedVisa);
+  } catch (error: any) {
+    console.error("Error updating VISA Architecte:", error);
+    
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        message: "Données de mise à jour invalides", 
+        errors: error.errors
+      });
+    }
+    
+    res.status(500).json({ message: "Failed to update VISA Architecte", error: error.message });
+  }
+});
+
+// Supprimer un VISA Architecte
+app.delete("/api/visa-architecte/:id", isAuthenticated, async (req, res) => {
+  try {
+    await storage.deleteVisaArchitecte(req.params.id);
+    console.log(`[VISA] VISA Architecte ${req.params.id} supprimé`);
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting VISA Architecte:", error);
+    res.status(500).json({ message: "Failed to delete VISA Architecte" });
+  }
+});
+
+// Route utilitaire pour vérifier si un projet peut passer en planification
+app.get("/api/projects/:projectId/can-proceed-to-planning", isAuthenticated, async (req, res) => {
+  try {
+    const visas = await storage.getVisaArchitecte(req.params.projectId);
+    const hasValidVisa = visas.some(visa => visa.status === 'valide' && !visa.expireLe || 
+      (visa.expireLe && new Date(visa.expireLe) > new Date()));
+    
+    res.json({
+      canProceed: hasValidVisa,
+      visaCount: visas.length,
+      validVisaCount: visas.filter(v => v.status === 'valide').length,
+      message: hasValidVisa ? 
+        "VISA Architecte valide - Peut passer en planification" : 
+        "VISA Architecte requis avant passage en planification"
+    });
+  } catch (error) {
+    console.error("Error checking planning readiness:", error);
+    res.status(500).json({ message: "Failed to check planning readiness" });
   }
 });
 

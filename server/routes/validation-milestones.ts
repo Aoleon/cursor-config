@@ -32,8 +32,8 @@ router.post('/init', async (req, res) => {
       return res.status(400).json({ message: 'Milestones already exist for this offer' })
     }
 
-    // Créer les jalons par défaut
-    const milestoneTypes = ['fin_etudes', 'validation_technique', 'validation_commercial', 'preparation_production']
+    // Créer les jalons par défaut pour le nouveau "Bouclage" (anciennement Validation BE)
+    const milestoneTypes = ['conformite_dtu', 'conformite_technique_marche', 'coherence_chiffrages']
     const createdMilestones = []
 
     for (const milestoneType of milestoneTypes) {
@@ -73,21 +73,43 @@ router.patch('/:milestoneId', async (req, res) => {
 
     const updatedMilestone = await storage.updateValidationMilestone(milestoneId, validatedData)
     
-    // CORRECTION POC CRITIQUE : Si c'est le jalon "Fin d'études" qui est validé,
-    // mettre à jour automatiquement le statut de l'offre associée
-    if (validatedData.isCompleted && updatedMilestone.milestoneType === 'fin_etudes' && updatedMilestone.offerId) {
-      console.log(`[POC] Validation jalon Fin d'études détectée - Mise à jour automatique statut offre ${updatedMilestone.offerId}`)
+    // CORRECTION WORKFLOW BOUCLAGE : Si un milestone bouclage est complété,
+    // vérifier si tous les milestones bouclage sont terminés pour déclencher la progression
+    if (validatedData.isCompleted && updatedMilestone.offerId) {
+      const requiredBouclageTypes = ['conformite_dtu', 'conformite_technique_marche', 'coherence_chiffrages']
       
-      try {
-        await storage.updateOffer(updatedMilestone.offerId, {
-          status: 'fin_etudes_validee',
-          finEtudesValidatedAt: new Date(),
-          finEtudesValidatedBy: 'test-user-1'
-        })
-        console.log(`[POC] ✅ Statut offre mis à jour: fin_etudes_validee`)
-      } catch (offerUpdateError) {
-        console.error('[POC] ❌ Erreur mise à jour statut offre:', offerUpdateError)
-        // Ne pas faire échouer la requête si la mise à jour de l'offre échoue
+      // Vérifier si c'est un milestone de bouclage
+      if (requiredBouclageTypes.includes(updatedMilestone.milestoneType)) {
+        console.log(`[WORKFLOW] Milestone bouclage complété: ${updatedMilestone.milestoneType} pour offre ${updatedMilestone.offerId}`)
+        
+        try {
+          // Récupérer tous les milestones de cette offre
+          const allMilestones = await storage.getValidationMilestones(updatedMilestone.offerId)
+          
+          // Vérifier si tous les milestones bouclage sont complétés
+          const bouclageComplete = requiredBouclageTypes.every(type => 
+            allMilestones.some(m => m.milestoneType === type && m.isCompleted)
+          )
+          
+          if (bouclageComplete) {
+            console.log(`[WORKFLOW] ✅ Bouclage complet détecté - Mise à jour automatique statut offre ${updatedMilestone.offerId}`)
+            
+            await storage.updateOffer(updatedMilestone.offerId, {
+              status: 'fin_etudes_validee',
+              finEtudesValidatedAt: new Date(),
+              finEtudesValidatedBy: 'test-user-1'
+            })
+            
+            console.log(`[WORKFLOW] ✅ Statut offre mis à jour: fin_etudes_validee`)
+          } else {
+            const completedTypes = allMilestones.filter(m => requiredBouclageTypes.includes(m.milestoneType) && m.isCompleted).map(m => m.milestoneType)
+            const pendingTypes = requiredBouclageTypes.filter(type => !completedTypes.includes(type))
+            console.log(`[WORKFLOW] ⏳ Bouclage partiel - Complétés: [${completedTypes.join(', ')}], En attente: [${pendingTypes.join(', ')}]`)
+          }
+        } catch (offerUpdateError) {
+          console.error('[WORKFLOW] ❌ Erreur vérification bouclage complet:', offerUpdateError)
+          // Ne pas faire échouer la requête si la vérification échoue
+        }
       }
     }
     

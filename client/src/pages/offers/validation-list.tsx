@@ -34,7 +34,7 @@ export default function ValidationList() {
   const getStatusBadge = (status: string) => {
     const statusMap = {
       'chiffrage_termine': { label: 'Chiffrage terminé', variant: 'default' as const, color: 'text-primary' },
-      'en_attente_validation': { label: 'En attente validation', variant: 'secondary' as const, color: 'text-warning' },
+      'en_attente_validation': { label: 'En attente bouclage', variant: 'secondary' as const, color: 'text-warning' },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { 
       label: status, 
@@ -75,7 +75,7 @@ export default function ValidationList() {
       <div className="space-y-6 p-6">
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p>Chargement des offres à valider...</p>
+          <p>Chargement des offres en attente de bouclage...</p>
         </div>
       </div>
     );
@@ -107,9 +107,9 @@ export default function ValidationList() {
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Validation Bureau d'Études</h1>
+          <h1 className="text-2xl font-bold">Bouclage</h1>
           <p className="text-muted-foreground">
-            Offres chiffrées en attente de validation BE
+            Offres chiffrées en attente de bouclage (anciennement Validation BE)
           </p>
         </div>
       </div>
@@ -148,7 +148,7 @@ export default function ValidationList() {
             <div className="text-2xl font-bold text-warning">
               {stats.attente}
             </div>
-            <p className="text-xs text-muted-foreground">Validation en cours</p>
+            <p className="text-xs text-muted-foreground">Bouclage en cours</p>
           </CardContent>
         </Card>
 

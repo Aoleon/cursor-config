@@ -710,6 +710,149 @@ export class BatigestService {
       };
     }
   }
+
+  /**
+   * Génère automatiquement un code chantier Batigest pour un projet
+   * Implémentation avec idempotence et gestion d'erreurs
+   */
+  async generateChantierCode(projectId: string, offerData: {
+    reference?: string;
+    client?: string;
+    intituleOperation?: string;
+    montantPropose?: string;
+  }): Promise<{
+    success: boolean;
+    batigestRef?: string;
+    message: string;
+    alreadyExists?: boolean;
+  }> {
+    try {
+      await this.connect();
+      
+      if (SIMULATION_MODE) {
+        await simulateLatency(200, 400);
+        
+        // Génération déterministe basée sur l'ID du projet pour idempotence
+        const hash = projectId.slice(-6).toUpperCase();
+        const year = new Date().getFullYear();
+        const generatedCode = `CHT-${year}-${hash}`;
+        
+        console.log(`[BATIGEST] 🏗️ Code chantier généré automatiquement: ${generatedCode} pour projet ${projectId}`);
+        
+        // Simuler le cas où un code existe déjà (idempotence)
+        if (Math.random() > 0.8) {
+          return {
+            success: true,
+            batigestRef: generatedCode,
+            message: `Code chantier existant réutilisé: ${generatedCode}`,
+            alreadyExists: true
+          };
+        }
+        
+        return {
+          success: true,
+          batigestRef: generatedCode,
+          message: `Nouveau code chantier généré avec succès: ${generatedCode}`,
+          alreadyExists: false
+        };
+      }
+      
+      // Mode réel avec base de données Batigest
+      const sql = (await import('mssql')).default;
+      
+      // Vérifier si un code existe déjà pour ce projet (idempotence)
+      const checkQuery = `
+        SELECT TOP 1 CODE_CHANTIER 
+        FROM CHANTIERS 
+        WHERE REFERENCE_EXTERNE = @projectId
+      `;
+      
+      const checkRequest = this.pool!.request();
+      checkRequest.input('projectId', sql.VarChar(50), projectId);
+      const checkResult = await checkRequest.query(checkQuery);
+      
+      if (checkResult.recordset.length > 0) {
+        const existingCode = checkResult.recordset[0].CODE_CHANTIER;
+        return {
+          success: true,
+          batigestRef: existingCode,
+          message: `Code chantier existant réutilisé: ${existingCode}`,
+          alreadyExists: true
+        };
+      }
+      
+      // Générer un nouveau code chantier
+      const year = new Date().getFullYear();
+      const sequence = await this.getNextChantierSequence();
+      const generatedCode = `CHT-${year}-${sequence.toString().padStart(4, '0')}`;
+      
+      // Insérer le nouveau chantier dans Batigest
+      const insertQuery = `
+        INSERT INTO CHANTIERS (
+          CODE_CHANTIER, 
+          REFERENCE_EXTERNE, 
+          INTITULE, 
+          CLIENT_NOM, 
+          MONTANT_PREVISIONNEL,
+          DATE_CREATION,
+          STATUT,
+          RESPONSABLE
+        ) VALUES (
+          @codeChantier,
+          @projectId,
+          @intitule,
+          @client,
+          @montant,
+          @dateCreation,
+          'PREPARATION',
+          'SYSTEM_AUTO'
+        )
+      `;
+      
+      const insertRequest = this.pool!.request();
+      insertRequest.input('codeChantier', sql.VarChar(20), generatedCode);
+      insertRequest.input('projectId', sql.VarChar(50), projectId);
+      insertRequest.input('intitule', sql.VarChar(200), offerData.intituleOperation || 'Projet automatique');
+      insertRequest.input('client', sql.VarChar(100), offerData.client || 'Client non spécifié');
+      insertRequest.input('montant', sql.Money, parseFloat(offerData.montantPropose || '0'));
+      insertRequest.input('dateCreation', sql.DateTime, new Date());
+      
+      await insertRequest.query(insertQuery);
+      
+      console.log(`[BATIGEST] ✅ Nouveau code chantier créé dans Batigest: ${generatedCode}`);
+      
+      return {
+        success: true,
+        batigestRef: generatedCode,
+        message: `Nouveau code chantier créé avec succès: ${generatedCode}`,
+        alreadyExists: false
+      };
+      
+    } catch (error) {
+      console.error('[BATIGEST] ❌ Erreur génération code chantier:', error);
+      return {
+        success: false,
+        message: `Erreur lors de la génération automatique du code chantier: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+      };
+    }
+  }
+
+  /**
+   * Obtient le prochain numéro de séquence pour les chantiers (mode réel uniquement)
+   */
+  private async getNextChantierSequence(): Promise<number> {
+    const sql = (await import('mssql')).default;
+    const query = `
+      SELECT ISNULL(MAX(CAST(RIGHT(CODE_CHANTIER, 4) AS INT)), 0) + 1 as NEXT_SEQUENCE
+      FROM CHANTIERS
+      WHERE CODE_CHANTIER LIKE 'CHT-${new Date().getFullYear()}-%'
+    `;
+    
+    const request = this.pool!.request();
+    const result = await request.query(query);
+    
+    return result.recordset[0]?.NEXT_SEQUENCE || 1;
+  }
 }
 
 // Instance singleton du service

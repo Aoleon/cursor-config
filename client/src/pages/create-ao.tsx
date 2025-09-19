@@ -18,9 +18,10 @@ import { LotsManager } from "@/components/ao/LotsManager";
 import { ContactSelector } from "@/components/contacts/ContactSelector";
 import { MaitreOuvrageForm } from "@/components/contacts/MaitreOuvrageForm";
 import { MaitreOeuvreForm } from "@/components/contacts/MaitreOeuvreForm";
-import { FileText, Calendar, MapPin, User, Building, Upload, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { FileText, Calendar, MapPin, User, Building, Upload, AlertCircle, CheckCircle, Loader2, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Schéma de validation pour la création d'AO
 const createAoSchema = z.object({
@@ -87,6 +88,22 @@ export default function CreateAO() {
   const [ocrResult, setOcrResult] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // États pour la gestion des références dupliquées
+  const [duplicateReferenceError, setDuplicateReferenceError] = useState<{
+    originalReference: string;
+    suggestedReference: string;
+    show: boolean;
+    retryCount: number;
+  } | null>(null);
+  
+  // Historique des références proposées pour éviter les répétitions (useRef pour éviter les lectures obsolètes)
+  const proposedReferencesHistory = useRef<Set<string>>(new Set());
+  
+  // Système de retry automatique persistant
+  const retryCountRef = useRef<number>(0);
+  const originalReferenceRef = useRef<string>("");
+  const autoRetryEnabled = useRef<boolean>(false);
+
   // États pour la gestion des contacts
   const [selectedMaitreOuvrage, setSelectedMaitreOuvrage] = useState<any>(null);
   const [selectedMaitreOeuvre, setSelectedMaitreOeuvre] = useState<any>(null);
@@ -148,6 +165,13 @@ export default function CreateAO() {
       return response.json();
     },
     onSuccess: async (newAo: any) => {
+      // Nettoyer tous les états de retry lors du succès
+      autoRetryEnabled.current = false;
+      retryCountRef.current = 0;
+      originalReferenceRef.current = "";
+      setDuplicateReferenceError(null);
+      proposedReferencesHistory.current.clear();
+      
       // Créer les lots associés
       if (lots.length > 0) {
         for (const lot of lots) {
@@ -190,11 +214,36 @@ export default function CreateAO() {
         
         // Gestion spécifique des erreurs 409 (conflit de contrainte d'unicité)
         if (status === 409 && errorData.details?.type === 'DUPLICATE_REFERENCE') {
-          toast({
-            title: "Référence déjà existante",
-            description: errorData.error || `La référence existe déjà. Veuillez choisir une autre référence.`,
-            variant: "destructive",
-          });
+          const originalReference = errorData.details?.value || form.getValues('reference');
+          
+          // Vérifier si on est dans un cycle d'auto-retry
+          if (autoRetryEnabled.current) {
+            // C'est un retry automatique - incrémenter le compteur depuis les refs
+            const newRetryCount = retryCountRef.current + 1;
+            retryCountRef.current = newRetryCount;
+            
+            if (newRetryCount < 5) {
+              // Continuer les retries automatiques avec la référence originale stockée
+              handleDuplicateReference(originalReferenceRef.current, newRetryCount, true);
+            } else {
+              // Limite atteinte, désactiver auto-retry et demander intervention manuelle
+              autoRetryEnabled.current = false;
+              toast({
+                title: "Multiples collisions détectées",
+                description: "5 tentatives automatiques ont échoué. Veuillez modifier manuellement la référence.",
+                variant: "destructive",
+              });
+              setDuplicateReferenceError({
+                originalReference: originalReferenceRef.current,
+                suggestedReference: form.getValues('reference'),
+                show: true,
+                retryCount: newRetryCount
+              });
+            }
+          } else {
+            // Première tentative ou retry manuel - initier les retries automatiques
+            initiateAutoRetry(originalReference);
+          }
           return;
         }
         
@@ -236,7 +285,124 @@ export default function CreateAO() {
     },
   });
 
+  // Fonction pour générer un suffixe aléatoire base36 de 3 caractères pour réduire les collisions
+  const generateRandomSuffix = (): string => {
+    return Math.random().toString(36).substring(2, 5).toUpperCase();
+  };
+
+  // Fonction pour générer une référence alternative unique
+  const generateUniqueReference = (originalReference: string, retryCount: number = 0): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    
+    // Générer un suffixe aléatoire unique
+    let randomSuffix: string;
+    let proposedReference: string;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    do {
+      randomSuffix = generateRandomSuffix();
+      // Si la référence contient déjà un suffixe temporel, la nettoyer
+      const cleanedReference = originalReference.replace(/-\d{8}-\d{6}-[A-Z0-9]{3}$/, '').replace(/-\d{8}-\d{6}-[A-Z0-9]{2}$/, '').replace(/-\d{8}-\d{4}$/, '').replace(/-\d{3}$/, '');
+      proposedReference = `${cleanedReference}-${year}${month}${day}-${hours}${minutes}${seconds}-${randomSuffix}`;
+      attempts++;
+    } while (proposedReferencesHistory.current.has(proposedReference) && attempts < maxAttempts);
+    
+    // Ajouter à l'historique
+    proposedReferencesHistory.current.add(proposedReference);
+    
+    return proposedReference;
+  };
+
+  // Fonction pour gérer automatiquement la proposition de nouvelle référence
+  const handleDuplicateReference = (originalReference: string, retryCount: number = 0, enableAutoRetry: boolean = false) => {
+    const suggestedReference = generateUniqueReference(originalReference, retryCount);
+    
+    // Stocker dans les refs pour persistence
+    retryCountRef.current = retryCount;
+    originalReferenceRef.current = originalReference;
+    autoRetryEnabled.current = enableAutoRetry;
+    
+    setDuplicateReferenceError({
+      originalReference,
+      suggestedReference,
+      show: true,
+      retryCount
+    });
+    
+    // Mettre à jour automatiquement le champ de référence avec la nouvelle valeur
+    form.setValue("reference", suggestedReference, { shouldDirty: true });
+    
+    // Si auto-retry est activé, re-soumettre automatiquement après un court délai
+    if (enableAutoRetry && retryCount < 5) {
+      setTimeout(() => {
+        const formData = form.getValues();
+        createAoMutation.mutate(formData);
+      }, 500); // Délai de 500ms pour éviter la surcharge
+    } else {
+      // Afficher un toast informatif seulement si pas d'auto-retry ou si limite atteinte
+      toast({
+        title: retryCount >= 5 ? "Multiples collisions détectées" : "Référence alternative proposée",
+        description: retryCount >= 5 
+          ? "Plusieurs tentatives automatiques ont échoué. Veuillez modifier manuellement la référence."
+          : `La référence "${originalReference}" existe déjà. Nouvelle référence proposée : "${suggestedReference}". Vous pouvez accepter et créer directement ou la modifier manuellement.`,
+        variant: retryCount >= 5 ? "destructive" : "default"
+      });
+    }
+  };
+  
+  // Fonction pour initier un retry automatique
+  const initiateAutoRetry = (originalReference: string) => {
+    // Reset du compteur pour une nouvelle série de retries automatiques
+    retryCountRef.current = 0;
+    originalReferenceRef.current = originalReference;
+    autoRetryEnabled.current = true;
+    
+    // Commencer le premier retry automatique
+    handleDuplicateReference(originalReference, 0, true);
+  };
+
+  // Fonction pour accepter la référence proposée
+  const acceptSuggestedReference = () => {
+    setDuplicateReferenceError(null);
+    // La référence est déjà mise à jour dans le formulaire
+  };
+
+  // Fonction pour accepter la référence proposée ET re-soumettre automatiquement
+  const acceptSuggestedReferenceAndSubmit = () => {
+    // Désactiver l'auto-retry car l'utilisateur prend le contrôle manuel
+    autoRetryEnabled.current = false;
+    retryCountRef.current = 0;
+    originalReferenceRef.current = "";
+    setDuplicateReferenceError(null);
+    
+    // La référence est déjà mise à jour dans le formulaire, on re-soumet
+    const formData = form.getValues();
+    createAoMutation.mutate(formData);
+  };
+
+  // Fonction pour rejeter et revenir à la référence originale
+  const rejectSuggestedReference = () => {
+    if (duplicateReferenceError) {
+      // Revenir à la référence originale pour permettre l'édition depuis une base connue
+      form.setValue("reference", duplicateReferenceError.originalReference, { shouldDirty: true });
+    }
+    setDuplicateReferenceError(null);
+  };
+
   const onSubmit = (data: CreateAoFormData) => {
+    // Reset du système d'auto-retry pour une nouvelle soumission
+    autoRetryEnabled.current = false;
+    retryCountRef.current = 0;
+    originalReferenceRef.current = "";
+    setDuplicateReferenceError(null);
+    
     createAoMutation.mutate(data);
   };
 
@@ -543,6 +709,85 @@ export default function CreateAO() {
 
             {/* Onglet Création manuelle */}
             <TabsContent value="manual" className="space-y-6">
+              {/* Alerte pour référence dupliquée */}
+              {duplicateReferenceError?.show && (
+                <Alert className="border-amber-200 bg-amber-50" data-testid="alert-duplicate-reference">
+                  {autoRetryEnabled.current ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  <AlertDescription>
+                    <div className="space-y-3">
+                      {autoRetryEnabled.current ? (
+                        // Mode auto-retry : affichage non-interactif
+                        <>
+                          <p className="font-medium text-amber-800">
+                            🔄 Tentative automatique {duplicateReferenceError.retryCount + 1}/5 en cours...
+                          </p>
+                          <p className="text-sm text-amber-700">
+                            La référence "<span className="font-mono bg-white px-1 rounded">{duplicateReferenceError.originalReference}</span>" existe déjà. 
+                            Le système teste automatiquement une nouvelle référence.
+                          </p>
+                          <p className="text-sm text-amber-700">
+                            Référence testée : "<span className="font-mono bg-white px-1 rounded font-medium">{duplicateReferenceError.suggestedReference}</span>"
+                          </p>
+                          <div className="flex items-center space-x-2 pt-2 text-sm text-amber-600">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span>Veuillez patienter, traitement automatique en cours...</span>
+                          </div>
+                        </>
+                      ) : (
+                        // Mode manuel : affichage interactif avec boutons d'action
+                        <>
+                          <p className="font-medium text-amber-800">
+                            Référence dupliquée détectée {duplicateReferenceError.retryCount > 0 && `(après ${duplicateReferenceError.retryCount} tentative${duplicateReferenceError.retryCount > 1 ? 's' : ''} automatique${duplicateReferenceError.retryCount > 1 ? 's' : ''})`}
+                          </p>
+                          <p className="text-sm text-amber-700">
+                            La référence "<span className="font-mono bg-white px-1 rounded">{duplicateReferenceError.originalReference}</span>" existe déjà dans la base de données.
+                          </p>
+                          <p className="text-sm text-amber-700">
+                            Nouvelle référence proposée : "<span className="font-mono bg-white px-1 rounded font-medium">{duplicateReferenceError.suggestedReference}</span>"
+                          </p>
+                          <div className="flex space-x-2 pt-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={acceptSuggestedReferenceAndSubmit}
+                              data-testid="button-accept-and-create"
+                              disabled={createAoMutation.isPending}
+                            >
+                              <CheckCircle className="mr-1 h-3 w-3" />
+                              {createAoMutation.isPending ? "Création..." : "Accepter et créer"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={acceptSuggestedReference}
+                              data-testid="button-accept-suggested-reference"
+                              disabled={createAoMutation.isPending}
+                            >
+                              Accepter seulement
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={rejectSuggestedReference}
+                              data-testid="button-modify-reference"
+                              disabled={createAoMutation.isPending}
+                            >
+                              Modifier manuellement
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* 1. Informations générales */}
             <Card>

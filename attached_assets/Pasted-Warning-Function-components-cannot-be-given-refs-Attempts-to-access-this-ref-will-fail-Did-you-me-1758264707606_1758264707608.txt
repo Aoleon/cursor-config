@@ -1,0 +1,48 @@
+Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at Badge (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/src/components/ui/badge.tsx:35:18)
+    at https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-EVLBUYTV.js?v=8e3892df:79:13
+    at https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-EVLBUYTV.js?v=8e3892df:56:13
+    at https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-BOL2CCOG.js?v=8e3892df:42:13
+    at https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-EVLBUYTV.js?v=8e3892df:79:13
+    at https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-EVLBUYTV.js?v=8e3892df:56:13
+    at https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-BOL2CCOG.js?v=8e3892df:42:13
+    at https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AERWM75F.js?v=8e3892df:1929:13
+    at https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=8e3892df:197:13
+    at Provider (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=8e3892df:38:15)
+    at Provider (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=8e3892df:38:15)
+    at Popper (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AERWM75F.js?v=8e3892df:1921:11)
+    at Tooltip (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=8e3892df:106:5)
+    at WebSocketStatus (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/src/components/ui/websocket-status.tsx:24:35)
+    at div
+    at div
+    at div
+    at Header (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/src/components/layout/header.tsx:28:34)
+    at main
+    at div
+    at Dashboard (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/src/pages/dashboard.tsx:27:37)
+    at ProtectedRoute (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/src/App.tsx?v=mHZY3KzYwtsEEvzfUl9Tt:57:38)
+    at component
+    at Route (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=8e3892df:323:16)
+    at Switch (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=8e3892df:379:17)
+    at Router
+    at WebSocketProvider (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/src/providers/websocket-provider.tsx:22:37)
+    at Provider (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=8e3892df:38:15)
+    at TooltipProvider (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=8e3892df:62:5)
+    at QueryClientProvider (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=8e3892df:2805:3)
+    at ErrorBoundary (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/src/components/ErrorBoundary.tsx:10:5)
+    at App
+WebSocket: Attempting to connect...
+WebSocket: Connected successfully
+WebSocket: Unknown message type 
+Object {type: "auth"}
+WebSocket: Received pong
+WebSocket: Authentication failed Session not found or expired
+Error creating AO: 
+Error {}
+
+at t.value (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://f63aa9b4-254e-40d7-b49f-6ff52ba87278-00-3mhk67w6fd2ex.spock.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

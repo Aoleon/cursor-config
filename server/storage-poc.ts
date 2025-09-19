@@ -205,8 +205,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAo(ao: InsertAo): Promise<Ao> {
-    const [newAo] = await db.insert(aos).values(ao).returning();
-    return newAo;
+    try {
+      const [newAo] = await db.insert(aos).values(ao).returning();
+      return newAo;
+    } catch (error: any) {
+      // Gestion spécifique des erreurs de contrainte d'unicité PostgreSQL
+      if (error.code === '23505' && error.constraint) {
+        if (error.constraint.includes('reference')) {
+          const duplicateError = new Error(`La référence '${ao.reference}' existe déjà. Veuillez choisir une autre référence.`);
+          (duplicateError as any).code = 'DUPLICATE_REFERENCE';
+          (duplicateError as any).field = 'reference';
+          (duplicateError as any).value = ao.reference;
+          throw duplicateError;
+        }
+        // Autres contraintes d'unicité si nécessaire
+        const duplicateError = new Error(`Cette valeur existe déjà dans la base de données.`);
+        (duplicateError as any).code = 'DUPLICATE_VALUE';
+        throw duplicateError;
+      }
+      
+      // Re-lancer l'erreur si ce n'est pas une contrainte d'unicité
+      throw error;
+    }
   }
 
   async updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao> {

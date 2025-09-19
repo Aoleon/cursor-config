@@ -128,7 +128,21 @@ export default function CreateAO() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create AO');
+        // Lire le body une seule fois et tenter de parser en JSON
+        const errorText = await response.text();
+        console.error('AO creation failed:', response.status, errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (parseError) {
+          errorData = { error: errorText };
+        }
+        
+        const error = new Error('Failed to create AO');
+        (error as any).errorData = errorData;
+        (error as any).status = response.status;
+        throw error;
       }
       
       return response.json();
@@ -169,6 +183,51 @@ export default function CreateAO() {
     },
     onError: (error: any) => {
       console.error("Error creating AO:", error);
+      
+      // Utiliser les données d'erreur déjà parsées
+      if (error.errorData) {
+        const { errorData, status } = error;
+        
+        // Gestion spécifique des erreurs 409 (conflit de contrainte d'unicité)
+        if (status === 409 && errorData.details?.type === 'DUPLICATE_REFERENCE') {
+          toast({
+            title: "Référence déjà existante",
+            description: errorData.error || `La référence existe déjà. Veuillez choisir une autre référence.`,
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Autres erreurs de conflit
+        if (status === 409) {
+          toast({
+            title: "Conflit de données",
+            description: errorData.error || "Cette ressource existe déjà.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Erreurs de validation (400)
+        if (status === 400) {
+          toast({
+            title: "Erreur de validation",
+            description: errorData.error || errorData.details?.message || "Certains champs obligatoires sont manquants.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Autres erreurs avec message spécifique
+        toast({
+          title: "Erreur lors de la création",
+          description: errorData.error || "Impossible de créer l'AO. Veuillez réessayer.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Erreur générique en dernier recours
       toast({
         title: "Erreur lors de la création",
         description: "Impossible de créer l'AO. Veuillez réessayer.",

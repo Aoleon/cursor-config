@@ -1,6 +1,13 @@
 import { Request, Response, NextFunction } from "express";
-import { ZodError } from "zod";
+import { ZodError, ZodIssue } from "zod";
 import { fromZodError } from "zod-validation-error";
+
+// Interface pour les erreurs Multer
+interface MulterError extends Error {
+  code: string;
+  field?: string;
+  name: 'MulterError';
+}
 
 // Interface pour les réponses d'erreur standardisées
 export interface ErrorResponse {
@@ -168,14 +175,15 @@ export function errorHandler(
           field: issue.path.join('.'),
           message: issue.message,
           code: issue.code,
-          received: issue.received
+          ...(('received' in issue) && { received: (issue as any).received })
         }))
       },
       timestamp,
       path: req.originalUrl,
       method: req.method
     };
-    return res.status(400).json(errorResponse);
+    res.status(400).json(errorResponse);
+    return;
   }
 
   // Gestion des erreurs personnalisées
@@ -188,15 +196,17 @@ export function errorHandler(
       path: req.originalUrl,
       method: req.method
     };
-    return res.status(err.statusCode).json(errorResponse);
+    res.status(err.statusCode).json(errorResponse);
+    return;
   }
 
   // Gestion des erreurs Multer (upload de fichiers)
   if (err.name === 'MulterError') {
+    const multerErr = err as MulterError;
     let message = 'Erreur lors de l\'upload de fichier';
     let statusCode = 400;
 
-    switch (err.code) {
+    switch (multerErr.code) {
       case 'LIMIT_FILE_SIZE':
         message = 'Fichier trop volumineux';
         break;
@@ -212,14 +222,15 @@ export function errorHandler(
       success: false,
       error: message,
       details: {
-        code: err.code,
-        field: err.field
+        code: multerErr.code,
+        field: multerErr.field
       },
       timestamp,
       path: req.originalUrl,
       method: req.method
     };
-    return res.status(statusCode).json(errorResponse);
+    res.status(statusCode).json(errorResponse);
+    return;
   }
 
   // Gestion des erreurs de base de données communes
@@ -235,7 +246,8 @@ export function errorHandler(
       path: req.originalUrl,
       method: req.method
     };
-    return res.status(409).json(errorResponse);
+    res.status(409).json(errorResponse);
+    return;
   }
 
   // Gestion des erreurs de syntaxe JSON
@@ -251,7 +263,8 @@ export function errorHandler(
       path: req.originalUrl,
       method: req.method
     };
-    return res.status(400).json(errorResponse);
+    res.status(400).json(errorResponse);
+    return;
   }
 
   // Erreur générique non gérée

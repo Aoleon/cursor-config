@@ -246,30 +246,50 @@ app.post("/api/aos",
   rateLimits.creation,
   validateBody(insertAoSchema),
   asyncHandler(async (req, res) => {
-    // Préparer les données avec les champs calculés
-    let aoData: any = { ...req.body };
-    
-    // Si une date de sortie AO est fournie, calculer automatiquement la date limite de remise
-    if (aoData.dateSortieAO) {
-      const dateLimiteCalculee = calculerDateLimiteRemiseAuto(aoData.dateSortieAO, 30);
-      if (dateLimiteCalculee) {
-        aoData.dateLimiteRemise = dateLimiteCalculee;
-        
-        // Calculer la date de rendu AO (J-15)
-        const dateRenduCalculee = calculerDateRemiseJ15(dateLimiteCalculee);
-        if (dateRenduCalculee) {
-          aoData.dateRenduAO = dateRenduCalculee;
+    try {
+      // Préparer les données avec les champs calculés
+      let aoData: any = { ...req.body };
+      
+      // Si une date de sortie AO est fournie, calculer automatiquement la date limite de remise
+      if (aoData.dateSortieAO) {
+        const dateLimiteCalculee = calculerDateLimiteRemiseAuto(aoData.dateSortieAO, 30);
+        if (dateLimiteCalculee) {
+          aoData.dateLimiteRemise = dateLimiteCalculee;
+          
+          // Calculer la date de rendu AO (J-15)
+          const dateRenduCalculee = calculerDateRemiseJ15(dateLimiteCalculee);
+          if (dateRenduCalculee) {
+            aoData.dateRenduAO = dateRenduCalculee;
+          }
+          
+          console.log(`[AO Creation] Dates calculées automatiquement:
+            - Date sortie: ${aoData.dateSortieAO}
+            - Date limite remise: ${dateLimiteCalculee.toISOString()}
+            - Date rendu AO: ${dateRenduCalculee ? dateRenduCalculee.toISOString() : 'N/A'}`);
         }
-        
-        console.log(`[AO Creation] Dates calculées automatiquement:
-          - Date sortie: ${aoData.dateSortieAO}
-          - Date limite remise: ${dateLimiteCalculee.toISOString()}
-          - Date rendu AO: ${dateRenduCalculee ? dateRenduCalculee.toISOString() : 'N/A'}`);
       }
+      
+      const ao = await storage.createAo(aoData);
+      sendSuccess(res, ao, 201);
+    } catch (error: any) {
+      // Gestion spécifique des erreurs de contrainte d'unicité personnalisées
+      if (error.code === 'DUPLICATE_REFERENCE') {
+        throw createError.conflict(error.message, {
+          field: error.field,
+          value: error.value,
+          type: 'DUPLICATE_REFERENCE'
+        });
+      }
+      
+      if (error.code === 'DUPLICATE_VALUE') {
+        throw createError.conflict(error.message, {
+          type: 'DUPLICATE_VALUE'
+        });
+      }
+      
+      // Re-lancer l'erreur pour la gestion générique
+      throw error;
     }
-    
-    const ao = await storage.createAo(aoData);
-    sendSuccess(res, ao, 201);
   })
 );
 

@@ -31,11 +31,11 @@ class MemoryStore {
   // Nettoyage périodique des entrées expirées
   cleanup(): void {
     const now = Date.now();
-    for (const [key, value] of this.hits.entries()) {
+    Array.from(this.hits.entries()).forEach(([key, value]) => {
       if (now > value.resetTime) {
         this.hits.delete(key);
       }
-    }
+    });
   }
 }
 

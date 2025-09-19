@@ -147,6 +147,22 @@ export const priorityFactorEnum = pgEnum("priority_factor", [
 ]);
 
 // ========================================
+// ENUMS MATÉRIAUX ET COULEURS - PATTERNS AVANCÉS OCR
+// ========================================
+
+// Enums matériaux pour détection OCR sophistiquée
+export const materialEnum = pgEnum("material", [
+  "pvc", "bois", "aluminium", "acier", "composite", 
+  "mixte_bois_alu", "inox", "galva"
+]);
+
+// Enums finitions pour liaison matériaux-couleurs
+export const finishEnum = pgEnum("finish", [
+  "mat", "satine", "brillant", "texture", "sable", 
+  "anodise", "thermolaque", "laque", "plaxe", "brosse"
+]);
+
+// ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
 
@@ -2076,6 +2092,98 @@ export const defaultTechnicalScoringConfig: TechnicalScoringConfig = {
   },
   threshold: 5,
 };
+
+// ========================================
+// SCHEMAS MATÉRIAUX ET COULEURS - PATTERNS AVANCÉS OCR
+// ========================================
+
+// Schema couleur avec finition et preuves
+export const colorSpecSchema = z.object({
+  ralCode: z.string().optional(),
+  name: z.string().optional(),
+  finish: z.enum(["mat", "satine", "brillant", "texture", "sable", "anodise", "thermolaque", "laque", "plaxe", "brosse"]).optional(),
+  evidences: z.array(z.string()).default([])
+});
+
+// Schema matériau avec couleur associée et confiance
+export const materialSpecSchema = z.object({
+  material: z.enum(["pvc", "bois", "aluminium", "acier", "composite", "mixte_bois_alu", "inox", "galva"]),
+  color: colorSpecSchema.optional(),
+  evidences: z.array(z.string()).default([]),
+  confidence: z.number().min(0).max(1).default(0.8)
+});
+
+// Schema règles d'alerte matériau-couleur configurables
+export const materialColorAlertRuleSchema = z.object({
+  id: z.string(),
+  materials: z.array(z.enum(["pvc", "bois", "aluminium", "acier", "composite", "mixte_bois_alu", "inox", "galva"])).optional(),
+  ralCodes: z.array(z.string()).optional(),
+  finishes: z.array(z.enum(["mat", "satine", "brillant", "texture", "sable", "anodise", "thermolaque", "laque", "plaxe", "brosse"])).optional(),
+  condition: z.enum(['allOf', 'anyOf']).default('anyOf'),
+  severity: z.enum(['info', 'warning', 'critical']).default('warning'),
+  message: z.string()
+});
+
+// Extension AOFieldsExtracted avec matériaux et couleurs
+export const aoFieldsExtractedSchema = z.object({
+  // Informations générales
+  reference: z.string().optional(),
+  intituleOperation: z.string().optional(),
+  client: z.string().optional(),
+  location: z.string().optional(),
+  
+  // Dates
+  dateRenduAO: z.string().optional(),
+  dateAcceptationAO: z.string().optional(),
+  demarragePrevu: z.string().optional(),
+  deadline: z.string().optional(),
+  dateOS: z.string().optional(),
+  delaiContractuel: z.string().optional(),
+  dateLimiteRemise: z.string().optional(),
+  
+  // Contacts et maîtrise
+  maitreOuvrageNom: z.string().optional(),
+  maitreOuvrageAdresse: z.string().optional(),
+  maitreOuvrageContact: z.string().optional(),
+  maitreOuvrageEmail: z.string().optional(),
+  maitreOuvragePhone: z.string().optional(),
+  maitreOeuvreNom: z.string().optional(),
+  maitreOeuvreContact: z.string().optional(),
+  
+  // Techniques
+  lotConcerne: z.string().optional(),
+  menuiserieType: z.string().optional(),
+  montantEstime: z.string().optional(),
+  typeMarche: z.string().optional(),
+  
+  // Source et contexte
+  plateformeSource: z.string().optional(),
+  departement: z.string().optional(),
+  
+  // Éléments techniques
+  bureauEtudes: z.string().optional(),
+  bureauControle: z.string().optional(),
+  sps: z.string().optional(),
+  
+  // Détection automatique des documents
+  cctpDisponible: z.boolean().optional(),
+  plansDisponibles: z.boolean().optional(),
+  dpgfClientDisponible: z.boolean().optional(),
+  dceDisponible: z.boolean().optional(),
+  
+  // Critères techniques spéciaux existants
+  specialCriteria: specialCriteriaSchema.optional(),
+  
+  // Nouveaux champs matériaux et couleurs
+  materials: z.array(materialSpecSchema).optional(),
+  colors: z.array(colorSpecSchema).optional()
+});
+
+// Types TypeScript dérivés
+export type ColorSpec = z.infer<typeof colorSpecSchema>;
+export type MaterialSpec = z.infer<typeof materialSpecSchema>;
+export type MaterialColorAlertRule = z.infer<typeof materialColorAlertRuleSchema>;
+export type AOFieldsExtracted = z.infer<typeof aoFieldsExtractedSchema>;
 
 // ========================================
 // SYSTÈME D'ALERTES TECHNIQUES POUR JULIEN LAMBOROT

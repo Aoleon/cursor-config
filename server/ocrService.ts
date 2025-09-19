@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import type pdfParse from 'pdf-parse';
 // Import du service de scoring technique
 import { ScoringService } from './services/scoringService';
-import type { TechnicalScoringResult, SpecialCriteria } from '@shared/schema';
+import type { TechnicalScoringResult, SpecialCriteria, ColorSpec, MaterialSpec, MaterialColorAlertRule } from '@shared/schema';
 // Import EventBus pour les alertes techniques
 import { eventBus } from './eventBus';
 // Import storage pour charger la configuration utilisateur
@@ -148,6 +148,10 @@ interface AOFieldsExtracted {
     coupeFeu: boolean;
     evidences?: Record<string, string[]>; // extraits de texte correspondants
   };
+
+  // Nouveaux champs matériaux et couleurs - PATTERNS AVANCÉS OCR
+  materials?: MaterialSpec[];
+  colors?: ColorSpec[];
 }
 
 // Patterns de reconnaissance pour les AO français (paramétrable)
@@ -261,6 +265,29 @@ const AO_PATTERNS: Record<string, RegExp[]> = {
   ],
 };
 
+// ========================================
+// PATTERNS MATÉRIAUX ET COULEURS - EXTRACTION AVANCÉE OCR
+// ========================================
+
+// Patterns matériaux étendus pour détection sophistiquée
+const MATERIAL_PATTERNS: Record<string, RegExp> = {
+  pvc: /\b(?:PVC|P\.?V\.?C\.?|chlorure de polyvinyle)\b/gi,
+  bois: /\b(?:bois|chêne|hêtre|sapin|pin|frêne|érable|noyer|teck|iroko|douglas|mélèze|épicéa|châtaignier|orme|merisier)\b/gi,
+  aluminium: /\b(?:aluminium|alu|dural|alliage d'aluminium)\b/gi,
+  acier: /\b(?:acier|steel|métal|fer|inox|inoxydable|galvanisé|galva)\b/gi,
+  composite: /\b(?:composite|fibre de verre|stratifié|résine|matériau composite|sandwich)\b/gi,
+  mixte_bois_alu: /\b(?:mixte|bois.{0,20}alu|alu.{0,20}bois|hybride|bi-matière)\b/gi,
+  inox: /\b(?:inox|inoxydable|stainless|acier inoxydable)\b/gi,
+  galva: /\b(?:galva|galvanisé|zinc|électro-galvanisé)\b/gi,
+};
+
+// Patterns couleurs sophistiqués avec finitions
+const COLOR_PATTERNS = {
+  ralCodes: /\bRAL[\s-]?(\d{4})\b/gi,
+  colorNames: /\b(?:blanc|noir|gris|anthracite|ivoire|beige|taupe|sable|bordeaux|vert|bleu|rouge|jaune|orange|marron|chêne doré|acajou|noyer|wengé|argent|bronze|cuivre|laiton)\b/gi,
+  finishes: /\b(?:mat|matte?|satiné?|brillant|glossy|texturé?|sablé|anodisé|thermolaqué|laqué|plaxé|brossé|poli|grainé|martelé|structuré|lisse)\b/gi,
+};
+
 export class OCRService {
   private tesseractWorker: any = null;
   private isInitializingTesseract = false;
@@ -319,7 +346,7 @@ export class OCRService {
       if (nativeText && nativeText.length > 100) {
         // PDF contient du texte natif
         console.log('[OCR] PDF with native text detected, using pdf-parse');
-        const processedFields = this.parseAOFields(nativeText);
+        const processedFields = await this.parseAOFields(nativeText);
         
         // Calculer le scoring technique après détection des critères
         const technicalScoring = await this.computeTechnicalScoring(processedFields.specialCriteria, processedFields.reference);
@@ -398,7 +425,7 @@ export class OCRService {
       
       // Simuler les données extraites depuis le PDF scanné
       const fullText = this.getSimulatedOCRText();
-      const processedFields = this.parseAOFields(fullText);
+      const processedFields = await this.parseAOFields(fullText);
       
       // Calculer le scoring technique après détection des critères
       const technicalScoring = await this.computeTechnicalScoring(processedFields.specialCriteria, processedFields.reference);
@@ -750,7 +777,7 @@ Réponses publiées au plus tard le 22/03/2025
     };
   }
 
-  private parseAOFields(text: string): AOFieldsExtracted {
+  private async parseAOFields(text: string): Promise<AOFieldsExtracted> {
     const fields: AOFieldsExtracted = {};
     const normalizedText = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     
@@ -870,6 +897,21 @@ Réponses publiées au plus tard le 22/03/2025
     // Détection des critères techniques spéciaux
     fields.specialCriteria = this.detectSpecialCriteria(text);
     
+    // NOUVEAUTÉ: Extraction matériaux et couleurs avec patterns avancés OCR
+    console.log('[OCR] Extraction matériaux et couleurs...');
+    const { materials, colors } = this.extractMaterialsAndColors(text);
+    fields.materials = materials;
+    fields.colors = colors;
+    
+    console.log(`[OCR] Extraction terminée: ${materials.length} matériaux, ${colors.length} couleurs détectés`);
+    
+    // Évaluation des règles matériaux-couleurs (après tous les champs extraits)
+    try {
+      await this.evaluateMaterialColorRules(fields, text);
+    } catch (error) {
+      console.error('[OCR] Erreur lors de l\'évaluation des règles matériaux-couleurs:', error);
+    }
+    
     return fields;
   }
 
@@ -981,6 +1023,329 @@ Réponses publiées au plus tard le 22/03/2025
       console.error('[OCR] Erreur lors du calcul du scoring technique:', error);
       return undefined;
     }
+  }
+
+  // ========================================
+  // EXTRACTION MATÉRIAUX ET COULEURS - PATTERNS AVANCÉS OCR
+  // ========================================
+
+  /**
+   * Extrait les matériaux et couleurs avec liaison contextuelle sophistiquée
+   */
+  private extractMaterialsAndColors(text: string): { materials: MaterialSpec[]; colors: ColorSpec[] } {
+    console.log('[OCR] Début extraction matériaux et couleurs...');
+    
+    const materials: MaterialSpec[] = [];
+    const colors: ColorSpec[] = [];
+    const lines = text.split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const context = [
+        lines[i-1] || '',
+        line,
+        lines[i+1] || ''
+      ].join(' ');
+      
+      // Détecter matériaux avec contexte couleur
+      for (const [materialKey, pattern] of Object.entries(MATERIAL_PATTERNS)) {
+        const matches = line.match(pattern);
+        if (matches) {
+          // Chercher couleurs dans fenêtre contextuelle (±150 chars)
+          const contextStart = Math.max(0, context.indexOf(line) - 150);
+          const contextEnd = context.indexOf(line) + line.length + 150;
+          const windowText = context.substring(contextStart, contextEnd);
+          
+          const associatedColor = this.extractColorFromWindow(windowText);
+          
+          materials.push({
+            material: materialKey as any,
+            color: associatedColor,
+            evidences: matches,
+            confidence: this.calculateMaterialConfidence(line, matches)
+          });
+          
+          console.log(`[OCR] Matériau détecté: ${materialKey}, preuves: ${matches.join(', ')}`);
+        }
+      }
+      
+      // Détecter couleurs globales RAL
+      const ralMatches = [...line.matchAll(COLOR_PATTERNS.ralCodes)];
+      for (const match of ralMatches) {
+        const ralCode = match[1];
+        const associatedFinish = this.extractFinishFromContext(context);
+        
+        colors.push({
+          ralCode,
+          name: this.getRalColorName(ralCode),
+          finish: associatedFinish,
+          evidences: [match[0]]
+        });
+        
+        console.log(`[OCR] Couleur RAL détectée: ${ralCode}, preuve: ${match[0]}`);
+      }
+      
+      // Détecter couleurs par nom
+      const colorNameMatches = [...line.matchAll(COLOR_PATTERNS.colorNames)];
+      for (const match of colorNameMatches) {
+        const colorName = match[0];
+        const associatedFinish = this.extractFinishFromContext(context);
+        
+        colors.push({
+          name: colorName,
+          finish: associatedFinish,
+          evidences: [match[0]]
+        });
+        
+        console.log(`[OCR] Couleur nommée détectée: ${colorName}, preuve: ${match[0]}`);
+      }
+    }
+    
+    const dedupedMaterials = this.deduplicateMaterials(materials);
+    const dedupedColors = this.deduplicateColors(colors);
+    
+    console.log(`[OCR] Extraction terminée: ${dedupedMaterials.length} matériaux, ${dedupedColors.length} couleurs`);
+    
+    return { materials: dedupedMaterials, colors: dedupedColors };
+  }
+
+  /**
+   * Extrait une couleur potentielle depuis une fenêtre de contexte
+   */
+  private extractColorFromWindow(windowText: string): ColorSpec | undefined {
+    // Chercher RAL dans la fenêtre
+    const ralMatch = windowText.match(COLOR_PATTERNS.ralCodes);
+    if (ralMatch) {
+      const ralCode = ralMatch[0].replace(/\D/g, '');
+      const finish = this.extractFinishFromContext(windowText);
+      return {
+        ralCode,
+        name: this.getRalColorName(ralCode),
+        finish,
+        evidences: [ralMatch[0]]
+      };
+    }
+    
+    // Chercher nom de couleur dans la fenêtre
+    const colorMatch = windowText.match(COLOR_PATTERNS.colorNames);
+    if (colorMatch) {
+      const finish = this.extractFinishFromContext(windowText);
+      return {
+        name: colorMatch[0],
+        finish,
+        evidences: [colorMatch[0]]
+      };
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Extrait une finition depuis le contexte
+   */
+  private extractFinishFromContext(context: string): any {
+    const finishMatch = context.match(COLOR_PATTERNS.finishes);
+    if (finishMatch) {
+      const finish = finishMatch[0].toLowerCase();
+      // Mapper vers les enums valides
+      const finishMapping: Record<string, string> = {
+        'mat': 'mat', 'matte': 'mat',
+        'satiné': 'satine', 'satine': 'satine',
+        'brillant': 'brillant', 'glossy': 'brillant',
+        'texturé': 'texture', 'texture': 'texture',
+        'sablé': 'sable', 'sable': 'sable',
+        'anodisé': 'anodise', 'anodise': 'anodise',
+        'thermolaqué': 'thermolaque', 'thermolaque': 'thermolaque',
+        'laqué': 'laque', 'laque': 'laque',
+        'plaxé': 'plaxe', 'plaxe': 'plaxe',
+        'brossé': 'brosse', 'brosse': 'brosse'
+      };
+      return finishMapping[finish] || undefined;
+    }
+    return undefined;
+  }
+
+  /**
+   * Calcule la confiance de détection d'un matériau
+   */
+  private calculateMaterialConfidence(line: string, matches: RegExpMatchArray): number {
+    let confidence = 0.8; // Base
+    
+    // Augmenter si terme technique présent
+    if (line.match(/\b(?:menuiseries?|châssis|fenêtres?|portes?)\b/i)) {
+      confidence += 0.1;
+    }
+    
+    // Augmenter si spécifications techniques
+    if (line.match(/\b(?:Uw|thermique|isolation|performance)\b/i)) {
+      confidence += 0.05;
+    }
+    
+    // Diminuer si contexte ambigu
+    if (line.match(/\b(?:exemple|à titre|possibilité)\b/i)) {
+      confidence -= 0.2;
+    }
+    
+    return Math.min(Math.max(confidence, 0), 1);
+  }
+
+  /**
+   * Obtient le nom d'une couleur RAL
+   */
+  private getRalColorName(ralCode: string): string {
+    const ralMapping: Record<string, string> = {
+      '9016': 'Blanc de circulation',
+      '7016': 'Gris anthracite',
+      '6005': 'Vert mousse',
+      '3009': 'Rouge oxyde',
+      '5010': 'Bleu gentiane',
+      '8017': 'Brun chocolat',
+      '1015': 'Ivoire clair',
+      '7035': 'Gris clair'
+    };
+    return ralMapping[ralCode] || `RAL ${ralCode}`;
+  }
+
+  /**
+   * Déduplique les matériaux détectés
+   */
+  private deduplicateMaterials(materials: MaterialSpec[]): MaterialSpec[] {
+    const seen = new Set<string>();
+    return materials.filter(material => {
+      const key = `${material.material}_${material.color?.ralCode || material.color?.name || 'no-color'}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+
+  /**
+   * Déduplique les couleurs détectées
+   */
+  private deduplicateColors(colors: ColorSpec[]): ColorSpec[] {
+    const seen = new Set<string>();
+    return colors.filter(color => {
+      const key = `${color.ralCode || color.name}_${color.finish || 'no-finish'}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+
+  /**
+   * Évalue les règles d'alerte matériau-couleur et déclenche les alertes
+   */
+  private async evaluateMaterialColorRules(
+    processedFields: AOFieldsExtracted,
+    fullText: string
+  ): Promise<void> {
+    try {
+      console.log('[OCR] Évaluation des règles matériaux-couleurs...');
+      const rules = await storage.getMaterialColorRules();
+      console.log(`[OCR] ${rules.length} règles à évaluer`);
+      
+      for (const rule of rules) {
+        const triggered = this.evaluateRule(rule, processedFields, fullText);
+        
+        if (triggered) {
+          console.log(`[OCR] 🚨 RÈGLE DÉCLENCHÉE: ${rule.message}`);
+          
+          // Publier alerte technique via EventBus
+          try {
+            eventBus.publish('technical.alert', {
+              category: 'material_color',
+              severity: rule.severity,
+              message: rule.message,
+              aoId: processedFields.reference || 'unknown',
+              aoReference: processedFields.reference || 'unknown',
+              score: rule.severity === 'critical' ? 95 : (rule.severity === 'warning' ? 75 : 50),
+              triggeredCriteria: [`Rule: ${rule.id}`],
+              evidences: this.gatherRuleEvidences(rule, processedFields),
+              affectedQueryKeys: ['/api/aos', '/api/technical-alerts']
+            });
+            
+            console.log(`[OCR] ✅ Alerte matériau-couleur publiée: ${rule.id}`);
+          } catch (eventError) {
+            console.error(`[OCR] ❌ Erreur publication alerte matériau-couleur:`, eventError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[OCR] Erreur lors de l\'évaluation des règles matériaux-couleurs:', error);
+    }
+  }
+
+  /**
+   * Évalue une règle spécifique
+   */
+  private evaluateRule(
+    rule: MaterialColorAlertRule,
+    fields: AOFieldsExtracted,
+    fullText: string
+  ): boolean {
+    console.log(`[OCR] Évaluation règle: ${rule.id}`);
+    
+    // Règle spéciale PVC + coupe-feu
+    if (rule.id === 'pvc-coupe-feu-critical') {
+      const hasPVC = fields.materials?.some(m => m.material === 'pvc') || false;
+      const hasCoupleFeu = /\b(?:EI\s*\d+|coupe.?feu|pare.?flammes?)\b/gi.test(fullText);
+      const result = hasPVC && hasCoupleFeu;
+      
+      console.log(`[OCR] Règle PVC+coupe-feu: PVC=${hasPVC}, CoupleFeu=${hasCoupleFeu}, Résultat=${result}`);
+      return result;
+    }
+    
+    // Règle générique basée sur matériaux
+    if (rule.materials && rule.materials.length > 0) {
+      const detectedMaterials = fields.materials?.map(m => m.material) || [];
+      const hasRequiredMaterial = rule.materials.some(reqMat => detectedMaterials.includes(reqMat));
+      
+      console.log(`[OCR] Règle matériaux: requis=${rule.materials}, détectés=${detectedMaterials}, match=${hasRequiredMaterial}`);
+      return hasRequiredMaterial;
+    }
+    
+    // Règle générique basée sur codes RAL
+    if (rule.ralCodes && rule.ralCodes.length > 0) {
+      const detectedRalCodes = fields.colors?.map(c => c.ralCode).filter(Boolean) || [];
+      const hasRequiredRal = rule.ralCodes.some(reqRal => detectedRalCodes.includes(reqRal));
+      
+      console.log(`[OCR] Règle RAL: requis=${rule.ralCodes}, détectés=${detectedRalCodes}, match=${hasRequiredRal}`);
+      return hasRequiredRal;
+    }
+    
+    console.log(`[OCR] Règle ${rule.id} non implémentée`);
+    return false;
+  }
+
+  /**
+   * Rassemble les preuves pour une règle déclenchée
+   */
+  private gatherRuleEvidences(rule: MaterialColorAlertRule, fields: AOFieldsExtracted): string[] {
+    const evidences: string[] = [];
+    
+    // Ajouter preuves matériaux
+    if (rule.materials && fields.materials) {
+      for (const material of fields.materials) {
+        if (rule.materials.includes(material.material)) {
+          evidences.push(...material.evidences);
+        }
+      }
+    }
+    
+    // Ajouter preuves couleurs
+    if (rule.ralCodes && fields.colors) {
+      for (const color of fields.colors) {
+        if (color.ralCode && rule.ralCodes.includes(color.ralCode)) {
+          evidences.push(...color.evidences);
+        }
+      }
+    }
+    
+    return evidences;
   }
 }
 

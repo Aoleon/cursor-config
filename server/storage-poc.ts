@@ -22,7 +22,8 @@ import {
   type TechnicalScoringConfig,
   type TechnicalAlert, type InsertTechnicalAlert,
   type TechnicalAlertHistory, type InsertTechnicalAlertHistory,
-  type TechnicalAlertsFilter
+  type TechnicalAlertsFilter,
+  type MaterialColorAlertRule
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -201,6 +202,14 @@ export interface IStorage {
   
   // Historique AO-scoped pour suppressions
   listAoSuppressionHistory(aoId: string): Promise<TechnicalAlertHistory[]>;
+  
+  // ========================================
+  // RÈGLES MATÉRIAUX-COULEURS - PATTERNS AVANCÉS OCR
+  // ========================================
+  
+  // Gestion des règles d'alerte matériau-couleur configurables
+  getMaterialColorRules(): Promise<MaterialColorAlertRule[]>;
+  setMaterialColorRules(rules: MaterialColorAlertRule[]): Promise<void>;
 }
 
 // ========================================
@@ -208,6 +217,31 @@ export interface IStorage {
 // ========================================
 
 export class DatabaseStorage implements IStorage {
+  // Stockage en mémoire pour les règles matériaux-couleurs (POC uniquement)
+  private static materialColorRules: MaterialColorAlertRule[] = [
+    {
+      id: 'pvc-coupe-feu-critical',
+      materials: ['pvc'],
+      condition: 'allOf',
+      severity: 'critical',
+      message: 'ALERTE CRITIQUE: PVC détecté avec exigence coupe-feu - Incompatibilité réglementaire'
+    },
+    {
+      id: 'pvc-haute-performance-warning',
+      materials: ['pvc'],
+      condition: 'anyOf',
+      severity: 'warning',
+      message: 'ATTENTION: PVC détecté dans un contexte haute performance thermique - Vérifier compatibilité'
+    },
+    {
+      id: 'composite-exterieur-info',
+      materials: ['composite'],
+      condition: 'anyOf',
+      severity: 'info',
+      message: 'INFO: Matériau composite détecté - Vérifier garanties et maintenance'
+    }
+  ];
+
   // User operations
   async getUsers(): Promise<User[]> {
     return await db.select().from(users);
@@ -1541,6 +1575,43 @@ export class DatabaseStorage implements IStorage {
     
     // Trier par timestamp (plus récent en premier)
     return history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  // ========================================
+  // RÈGLES MATÉRIAUX-COULEURS - PATTERNS AVANCÉS OCR
+  // ========================================
+
+  async getMaterialColorRules(): Promise<MaterialColorAlertRule[]> {
+    console.log(`[Storage] Récupération de ${DatabaseStorage.materialColorRules.length} règles matériaux-couleurs`);
+    // Retourner une copie pour éviter les modifications directes
+    return [...DatabaseStorage.materialColorRules];
+  }
+
+  async setMaterialColorRules(rules: MaterialColorAlertRule[]): Promise<void> {
+    console.log(`[Storage] Mise à jour des règles matériaux-couleurs: ${rules.length} règles`);
+    
+    // Validation basique des règles
+    for (const rule of rules) {
+      if (!rule.id || typeof rule.id !== 'string') {
+        throw new Error(`Règle invalide: l'ID est obligatoire (règle: ${JSON.stringify(rule)})`);
+      }
+      if (!rule.message || typeof rule.message !== 'string') {
+        throw new Error(`Règle invalide: le message est obligatoire (règle ID: ${rule.id})`);
+      }
+    }
+
+    // Vérifier l'unicité des IDs
+    const ids = rules.map(r => r.id);
+    const uniqueIds = new Set(ids);
+    if (ids.length !== uniqueIds.size) {
+      throw new Error(`IDs de règles non uniques détectés dans la configuration`);
+    }
+
+    // Remplacer les règles existantes
+    DatabaseStorage.materialColorRules = [...rules];
+    
+    console.log(`[Storage] ${rules.length} règles matériaux-couleurs mises à jour avec succès`);
+    console.log(`[Storage] IDs des règles: ${rules.map(r => r.id).join(', ')}`);
   }
 }
 

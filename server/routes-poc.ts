@@ -14,7 +14,8 @@ import {
   insertChiffrageElementSchema, insertDpgfDocumentSchema, insertValidationMilestoneSchema, insertVisaArchitecteSchema,
   technicalScoringConfigSchema, type TechnicalScoringConfig, type SpecialCriteria,
   insertTechnicalAlertSchema, bypassTechnicalAlertSchema, technicalAlertsFilterSchema,
-  type TechnicalAlert, type TechnicalAlertHistory
+  type TechnicalAlert, type TechnicalAlertHistory,
+  materialColorAlertRuleSchema, type MaterialColorAlertRule
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -2841,7 +2842,7 @@ app.post("/api/score-preview",
 );
 
 // ========================================
-// ALERTES TECHNIQUES POUR JULIEN LAMBOROT - Queue de validation technique
+// MIDDLEWARE POUR VALIDATION TECHNIQUE (à réutiliser)
 // ========================================
 
 // Middleware pour vérifier les rôles autorisés
@@ -2855,6 +2856,78 @@ const requireTechnicalValidationRole = (req: any, res: any, next: any) => {
   }
   next();
 };
+
+// ========================================
+// ROUTES RÈGLES MATÉRIAUX-COULEURS - PATTERNS AVANCÉS OCR
+// ========================================
+
+// GET /api/settings/material-color-rules - Récupérer les règles matériaux-couleurs
+app.get('/api/settings/material-color-rules', 
+  isAuthenticated, 
+  requireTechnicalValidationRole, // Réutiliser le middleware existant pour admin/responsable_be
+  asyncHandler(async (req, res) => {
+    console.log('[API] GET /api/settings/material-color-rules - Récupération règles matériaux-couleurs');
+    
+    try {
+      const rules = await storage.getMaterialColorRules();
+      console.log(`[API] ${rules.length} règles matériaux-couleurs récupérées`);
+      
+      res.json({
+        success: true,
+        data: rules,
+        total: rules.length
+      });
+    } catch (error) {
+      console.error('[API] Erreur lors de la récupération des règles matériaux-couleurs:', error);
+      throw error; // Sera géré par asyncHandler
+    }
+  })
+);
+
+// PUT /api/settings/material-color-rules - Mettre à jour les règles matériaux-couleurs
+app.put('/api/settings/material-color-rules',
+  isAuthenticated,
+  requireTechnicalValidationRole, // Protection admin/responsable_be
+  validateBody(z.array(materialColorAlertRuleSchema)),
+  asyncHandler(async (req, res) => {
+    console.log('[API] PUT /api/settings/material-color-rules - Mise à jour règles matériaux-couleurs');
+    console.log('[API] Nouvelles règles reçues:', JSON.stringify(req.body, null, 2));
+    
+    try {
+      const newRules: MaterialColorAlertRule[] = req.body;
+      
+      // Validation supplémentaire : vérifier unicité des IDs
+      const ruleIds = newRules.map(rule => rule.id);
+      const uniqueIds = new Set(ruleIds);
+      if (ruleIds.length !== uniqueIds.size) {
+        return res.status(400).json({
+          success: false,
+          message: 'Erreur de validation: Des IDs de règles sont dupliqués'
+        });
+      }
+      
+      // Sauvegarder les nouvelles règles
+      await storage.setMaterialColorRules(newRules);
+      
+      console.log(`[API] ${newRules.length} règles matériaux-couleurs mises à jour avec succès`);
+      
+      res.json({
+        success: true,
+        message: `${newRules.length} règles matériaux-couleurs mises à jour avec succès`,
+        data: newRules
+      });
+    } catch (error) {
+      console.error('[API] Erreur lors de la mise à jour des règles matériaux-couleurs:', error);
+      throw error; // Sera géré par asyncHandler
+    }
+  })
+);
+
+// ========================================
+// ALERTES TECHNIQUES POUR JULIEN LAMBOROT - Queue de validation technique
+// ========================================
+
+// Note: requireTechnicalValidationRole middleware défini plus haut pour éviter les références circulaires
 
 // GET /api/technical-alerts - Liste des alertes techniques avec filtrage
 app.get("/api/technical-alerts",

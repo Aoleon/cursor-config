@@ -27,23 +27,24 @@ import CreateAO from "@/pages/create-ao";
 import AoDetail from "@/pages/ao-detail";
 import Chiffrage from "@/pages/chiffrage";
 // Import des nouvelles pages pour les sous-étapes
-import ImportOCR from "@/pages/offers/import";
 import ProjectPlanning from "@/pages/projects/planning";
-// Import des pages workflow
-import EtudeTechnique from "@/pages/workflow/etude-technique";
-import SuppliersPending from "@/pages/workflow/suppliers-pending";
-import ChiffrageWorkflow from "@/pages/workflow/chiffrage";
-import EnvoiDevis from "@/pages/workflow/envoi-devis";
-import PlanificationWorkflow from "@/pages/workflow/planification";
-import ChantierWorkflow from "@/pages/workflow/chantier";
-import ValidationBE from "@/pages/validation-be";
+// Import des pages workflow - TODO: Create components
+// import EtudeTechnique from "@/pages/workflow/etude-technique";
+// import ChiffrageWorkflow from "@/pages/workflow/chiffrage";
+// import EnvoiDevis from "@/pages/workflow/envoi-devis";
+// import PlanificationWorkflow from "@/pages/workflow/planification";
+// import ChantierWorkflow from "@/pages/workflow/chantier";
+// import ValidationBE from "@/pages/validation-be"; // Not used
 import SupplierRequests from "@/pages/supplier-requests";
-import ChiffrageList from "@/pages/offers/chiffrage-list";
-import ValidationList from "@/pages/offers/validation-list";
-import TransformList from "@/pages/offers/transform-list";
 import BatigestPage from "@/pages/batigest";
 import SettingsScoring from "@/pages/settings-scoring";
 import TechnicalAlerts from "@/pages/technical-alerts";
+// Import des pages Intelligence Temporelle
+import DateIntelligenceDashboard from "@/pages/DateIntelligenceDashboard";
+import AlertsManagementPanel from "@/pages/AlertsManagementPanel";
+import BusinessRulesManager from "@/pages/BusinessRulesManager";
+import InteractiveGanttChart from "@/components/gantt/InteractiveGanttChart";
+import TimelinePerformanceCharts from "@/components/charts/TimelinePerformanceCharts";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType<any> }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -89,14 +90,9 @@ function Router() {
       <Route path="/offers/:id/edit" component={() => <ProtectedRoute component={AoDetail} />} />
       <Route path="/aos/:id" component={() => <ProtectedRoute component={AoDetail} />} />
       <Route path="/offers/:id/chiffrage" component={() => <ProtectedRoute component={Chiffrage} />} />
-      {/* Sous-étapes des Appels d'Offres */}
-      <Route path="/offers/import" component={() => <ProtectedRoute component={ImportOCR} />} />
+      {/* Sous-étapes des Appels d'Offres - TODO: Create missing components */}
       <Route path="/offers/create" component={() => <ProtectedRoute component={CreateAO} />} />
-      <Route path="/offers/suppliers-pending" component={() => <ProtectedRoute component={SuppliersPending} />} />
-      <Route path="/offers/chiffrage" component={() => <ProtectedRoute component={ChiffrageList} />} />
       <Route path="/offers/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
-      <Route path="/offers/validation" component={() => <ProtectedRoute component={ValidationList} />} />
-      <Route path="/offers/transform" component={() => <ProtectedRoute component={TransformList} />} />
       <Route path="/projects" component={() => <ProtectedRoute component={Projects} />} />
       <Route path="/projects/:id" component={() => <ProtectedRoute component={ProjectDetail} />} />
       <Route path="/projects/:id/planning" component={() => <ProtectedRoute component={Planning} />} />
@@ -106,12 +102,12 @@ function Router() {
       <Route path="/projects/supply" component={() => <ProtectedRoute component={Suppliers} />} />
       <Route path="/projects/worksite" component={() => <ProtectedRoute component={Projects} />} />
       <Route path="/projects/support" component={() => <ProtectedRoute component={Projects} />} />
-      {/* Routes du workflow */}
-      <Route path="/workflow/etude-technique" component={() => <ProtectedRoute component={EtudeTechnique} />} />
-      <Route path="/workflow/chiffrage" component={() => <ProtectedRoute component={ChiffrageWorkflow} />} />
-      <Route path="/workflow/envoi-devis" component={() => <ProtectedRoute component={EnvoiDevis} />} />
-      <Route path="/workflow/planification" component={() => <ProtectedRoute component={PlanificationWorkflow} />} />
-      <Route path="/workflow/chantier" component={() => <ProtectedRoute component={ChantierWorkflow} />} />
+      {/* Routes du workflow - TODO: Create missing components */}
+      {/* <Route path="/workflow/etude-technique" component={() => <ProtectedRoute component={EtudeTechnique} />} /> */}
+      {/* <Route path="/workflow/chiffrage" component={() => <ProtectedRoute component={ChiffrageWorkflow} />} /> */}
+      {/* <Route path="/workflow/envoi-devis" component={() => <ProtectedRoute component={EnvoiDevis} />} /> */}
+      {/* <Route path="/workflow/planification" component={() => <ProtectedRoute component={PlanificationWorkflow} />} /> */}
+      {/* <Route path="/workflow/chantier" component={() => <ProtectedRoute component={ChantierWorkflow} />} /> */}
       <Route path="/teams" component={() => <ProtectedRoute component={Teams} />} />
       <Route path="/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
       <Route path="/supplier-requests" component={() => <ProtectedRoute component={SupplierRequests} />} />
@@ -121,6 +117,12 @@ function Router() {
       <Route path="/technical-alerts" component={() => <ProtectedRoute component={TechnicalAlerts} />} />
       {/* Configuration et paramètres */}
       <Route path="/settings/scoring" component={() => <ProtectedRoute component={SettingsScoring} />} />
+      {/* Intelligence Temporelle - Phase 2.4 */}
+      <Route path="/date-intelligence" component={() => <ProtectedRoute component={DateIntelligenceDashboard} />} />
+      <Route path="/date-intelligence/alerts" component={() => <ProtectedRoute component={AlertsManagementPanel} />} />
+      <Route path="/date-intelligence/rules" component={() => <ProtectedRoute component={BusinessRulesManager} />} />
+      <Route path="/date-intelligence/gantt" component={() => <ProtectedRoute component={InteractiveGanttChart} />} />
+      <Route path="/date-intelligence/performance" component={() => <ProtectedRoute component={TimelinePerformanceCharts} />} />
       <Route component={NotFound} />
     </Switch>
   );

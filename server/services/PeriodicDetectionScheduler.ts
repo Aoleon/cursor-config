@@ -70,6 +70,14 @@ export class PeriodicDetectionScheduler {
   // ========================================
 
   async start(): Promise<void> {
+    // Triple protection pour tests - renforcement critique Phase 2.5
+    if (process.env.NODE_ENV === 'test' || 
+        process.env.DISABLE_SCHEDULER === '1' ||
+        process.env.CI === 'true') {
+      console.log('[PeriodicScheduler] Désactivé en mode test/CI');
+      return;
+    }
+
     if (this.isRunning) {
       console.log('[PeriodicScheduler] Système déjà démarré');
       return;

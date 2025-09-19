@@ -1,0 +1,418 @@
+{
+  "scenarios": {
+    "fenetre_pvc_standard": {
+      "name": "Fenêtres PVC Standard",
+      "description": "Projet standard fenêtres PVC été - maison individuelle",
+      "project": {
+        "type": "fenetre_pvc",
+        "surface": 25,
+        "complexity": "normale",
+        "season": "summer",
+        "isExterior": true,
+        "customWork": false,
+        "location": {
+          "weatherZone": "tempere",
+          "accessibility": "facile",
+          "departement": "75"
+        },
+        "resources": {
+          "teamSize": 2,
+          "subcontractors": [],
+          "equipmentNeeded": ["echafaudage"]
+        }
+      },
+      "expectedTimeline": {
+        "passation": {
+          "durationDays": 30,
+          "ruleName": "passation_standard"
+        },
+        "etude": {
+          "durationDays": 5,
+          "ruleName": "etude_fenetre_standard"
+        },
+        "approvisionnement": {
+          "durationDays": 14,
+          "ruleName": "appro_pvc_standard"
+        },
+        "chantier": {
+          "durationDays": 3,
+          "ruleName": "pose_chantier_ete"
+        },
+        "total": 52
+      },
+      "businessRules": [
+        "passation_standard",
+        "appro_pvc_standard", 
+        "pose_chantier_ete",
+        "etude_fenetre_standard"
+      ],
+      "expectedConstraints": [
+        "weather_temperate",
+        "accessibility_easy"
+      ],
+      "expectedAlerts": [],
+      "optimizationOpportunities": [
+        {
+          "type": "parallel_phases",
+          "description": "Commande matériaux pendant étude",
+          "estimatedGainDays": 3
+        }
+      ]
+    },
+
+    "porte_alu_complexe_hiver": {
+      "name": "Porte Aluminium Complexe Hiver",
+      "description": "Projet complexe porte aluminium hiver avec contraintes météo",
+      "project": {
+        "type": "porte_alu",
+        "surface": 45,
+        "complexity": "elevee",
+        "season": "winter",
+        "isExterior": true,
+        "customWork": true,
+        "location": {
+          "weatherZone": "montagne",
+          "accessibility": "difficile",
+          "departement": "74"
+        },
+        "resources": {
+          "teamSize": 3,
+          "subcontractors": ["serrurerie"],
+          "equipmentNeeded": ["grue", "echafaudage_lourd"]
+        }
+      },
+      "expectedTimeline": {
+        "passation": {
+          "durationDays": 35,
+          "ruleName": "passation_complexe"
+        },
+        "etude": {
+          "durationDays": 8,
+          "ruleName": "etude_complexe_sur_mesure"
+        },
+        "approvisionnement": {
+          "durationDays": 21,
+          "ruleName": "appro_alu_sur_mesure"
+        },
+        "chantier": {
+          "durationDays": 7,
+          "ruleName": "pose_chantier_hiver_complexe"
+        },
+        "total": 71
+      },
+      "businessRules": [
+        "passation_complexe",
+        "appro_alu_sur_mesure",
+        "pose_chantier_hiver_complexe",
+        "etude_complexe_sur_mesure",
+        "contrainte_meteo_hiver"
+      ],
+      "expectedConstraints": [
+        "weather_winter_exterior",
+        "accessibility_difficult",
+        "custom_manufacturing"
+      ],
+      "expectedAlerts": [
+        {
+          "type": "external_constraint",
+          "alertType": "weather_risk",
+          "severity": "warning",
+          "message": "Contraintes météo hiver - planifier fenêtre de pose"
+        }
+      ],
+      "optimizationOpportunities": []
+    },
+
+    "batiment_historique_abf": {
+      "name": "Bâtiment Historique ABF",
+      "description": "Restauration château XVII - contraintes patrimoniales ABF",
+      "project": {
+        "type": "fenetre_bois",
+        "surface": 120,
+        "complexity": "elevee",
+        "season": "spring",
+        "isExterior": true,
+        "customWork": true,
+        "location": {
+          "weatherZone": "tempere",
+          "accessibility": "moyenne",
+          "departement": "37",
+          "isHistoricalBuilding": true,
+          "abfClassification": "monuments_historiques"
+        },
+        "resources": {
+          "teamSize": 4,
+          "subcontractors": ["doreur", "restaurateur_bois"],
+          "equipmentNeeded": ["echafaudage_historique", "protection_patrimoine"]
+        }
+      },
+      "expectedTimeline": {
+        "passation": {
+          "durationDays": 45,
+          "ruleName": "passation_monument_historique"
+        },
+        "visa_architecte": {
+          "durationDays": 45,
+          "ruleName": "visa_abf_monuments"
+        },
+        "etude": {
+          "durationDays": 21,
+          "ruleName": "etude_patrimoine_complexe"
+        },
+        "approvisionnement": {
+          "durationDays": 45,
+          "ruleName": "appro_bois_patrimoine"
+        },
+        "chantier": {
+          "durationDays": 15,
+          "ruleName": "pose_patrimoine_monitore"
+        },
+        "total": 171
+      },
+      "businessRules": [
+        "passation_monument_historique",
+        "visa_abf_monuments",
+        "etude_patrimoine_complexe",
+        "appro_bois_patrimoine",
+        "pose_patrimoine_monitore"
+      ],
+      "expectedConstraints": [
+        "abf_approval_required",
+        "heritage_materials_only",
+        "specialized_craftsmanship",
+        "heritage_protection_measures"
+      ],
+      "expectedAlerts": [
+        {
+          "type": "deadline_critical",
+          "alertType": "regulatory_deadline",
+          "severity": "critical",
+          "message": "Échéance VISA ABF dans 15 jours",
+          "targetDate": "2024-12-15"
+        }
+      ],
+      "regulatoryDeadlines": [
+        {
+          "authority": "ABF",
+          "deadline": "2024-12-15",
+          "requiredDocs": ["dossier_technique", "plans_restauration", "echantillons_materiaux"],
+          "typicalDuration": 45
+        }
+      ]
+    },
+
+    "performance_test_standard": {
+      "name": "Test Performance Standard",
+      "description": "Scénario optimisé pour tests de performance",
+      "project": {
+        "type": "fenetre_pvc",
+        "surface": 30,
+        "complexity": "normale",
+        "season": "summer",
+        "isExterior": true,
+        "customWork": false,
+        "location": {
+          "weatherZone": "tempere",
+          "accessibility": "facile",
+          "departement": "33"
+        },
+        "resources": {
+          "teamSize": 2,
+          "subcontractors": [],
+          "equipmentNeeded": ["echafaudage"]
+        }
+      },
+      "expectedTimeline": {
+        "passation": { "durationDays": 30 },
+        "etude": { "durationDays": 5 },
+        "approvisionnement": { "durationDays": 14 },
+        "chantier": { "durationDays": 3 },
+        "total": 52
+      },
+      "performance": {
+        "calculationTimeMs": 150,
+        "detectionTimeMs": 200,
+        "maxMemoryUsageMB": 50
+      }
+    },
+
+    "resource_conflict_scenario": {
+      "name": "Conflit de Ressources",
+      "description": "Deux projets simultanés avec même équipe",
+      "projects": [
+        {
+          "id": "project-1",
+          "type": "fenetre_pvc",
+          "teamRequired": "equipe_pose_1",
+          "startDate": "2024-06-15",
+          "endDate": "2024-06-18"
+        },
+        {
+          "id": "project-2", 
+          "type": "porte_alu",
+          "teamRequired": "equipe_pose_1",
+          "startDate": "2024-06-17",
+          "endDate": "2024-06-20"
+        }
+      ],
+      "expectedConflicts": [
+        {
+          "type": "resource_conflict",
+          "conflictDate": "2024-06-17",
+          "affectedProjects": ["project-1", "project-2"],
+          "severity": "major",
+          "resourceType": "equipe_pose"
+        }
+      ],
+      "suggestedResolutions": [
+        {
+          "strategy": "schedule_shift",
+          "description": "Décaler projet-2 de 2 jours",
+          "effort": "low",
+          "effectiveness": 0.9
+        }
+      ]
+    }
+  },
+
+  "businessRules": [
+    {
+      "id": "passation_standard",
+      "name": "Passation Standard",
+      "phase": "passation",
+      "baseDuration": 30,
+      "multiplierFactor": 1.0,
+      "conditions": {
+        "complexity": "normale",
+        "projectType": "standard"
+      },
+      "description": "Délai standard pour passation marché public"
+    },
+    {
+      "id": "appro_pvc_standard",
+      "name": "Approvisionnement PVC Standard",
+      "phase": "approvisionnement",
+      "baseDuration": 14,
+      "multiplierFactor": 1.0,
+      "conditions": {
+        "materialType": "pvc",
+        "customWork": false
+      },
+      "description": "Délai fournisseur PVC standard été"
+    },
+    {
+      "id": "pose_chantier_ete",
+      "name": "Pose Chantier Été",
+      "phase": "chantier",
+      "baseDuration": 3,
+      "multiplierFactor": 1.0,
+      "conditions": {
+        "season": "summer",
+        "weather": "favorable"
+      },
+      "description": "Pose optimale conditions été"
+    },
+    {
+      "id": "contrainte_meteo_hiver",
+      "name": "Contrainte Météo Hiver",
+      "phase": "chantier",
+      "baseDuration": 5,
+      "multiplierFactor": 1.4,
+      "conditions": {
+        "season": "winter",
+        "isExterior": true
+      },
+      "description": "Majoration hiver travaux extérieurs"
+    },
+    {
+      "id": "visa_abf_monuments",
+      "name": "VISA ABF Monuments Historiques",
+      "phase": "visa_architecte",
+      "baseDuration": 45,
+      "multiplierFactor": 1.0,
+      "conditions": {
+        "abfClassification": "monuments_historiques"
+      },
+      "description": "Délai VISA ABF pour monuments historiques"
+    }
+  ],
+
+  "alerts": {
+    "types": [
+      "delay_risk",
+      "deadline_critical", 
+      "resource_conflict",
+      "external_constraint",
+      "phase_dependency",
+      "optimization"
+    ],
+    "severities": ["info", "warning", "critical"],
+    "templates": {
+      "delay_risk": {
+        "title": "Risque de retard détecté",
+        "message": "Le projet {{projectRef}} présente un risque de retard en phase {{phase}}",
+        "suggestedActions": [
+          "Réaffecter des ressources",
+          "Réorganiser le planning",
+          "Alerter le client"
+        ]
+      },
+      "weather_risk": {
+        "title": "Contrainte météo",
+        "message": "Conditions météo défavorables prévues pour la phase {{phase}}",
+        "suggestedActions": [
+          "Reporter la pose",
+          "Prévoir protections",
+          "Replanifier selon météo"
+        ]
+      }
+    }
+  },
+
+  "performance": {
+    "benchmarks": {
+      "calculation_time_ms": {
+        "single_project": 150,
+        "batch_100_projects": 5000,
+        "complex_project": 300
+      },
+      "detection_time_ms": {
+        "single_project": 200,
+        "batch_500_timelines": 10000,
+        "full_detection_cycle": 15000
+      },
+      "memory_usage_mb": {
+        "base_service": 30,
+        "with_100_projects": 80,
+        "with_500_timelines": 150
+      }
+    },
+    "thresholds": {
+      "calculation_timeout_ms": 30000,
+      "detection_timeout_ms": 60000,
+      "max_memory_mb": 500
+    }
+  },
+
+  "_metadata": {
+    "version": "2.5.0",
+    "description": "Ground truth dataset Phase 2.5 - Système Intelligent Dates et Échéances",
+    "created": "2025-01-20T14:30:00.000Z",
+    "scenarios": 5,
+    "businessRules": 19,
+    "alertTypes": 6,
+    "testCoverage": {
+      "phases": ["passation", "etude", "visa_architecte", "approvisionnement", "chantier"],
+      "materials": ["pvc", "aluminium", "bois"],
+      "complexities": ["normale", "elevee"],
+      "seasons": ["summer", "winter", "spring"],
+      "constraints": ["weather", "abf", "resources", "accessibility"]
+    },
+    "validationCriteria": {
+      "timeline_accuracy": 0.95,
+      "alert_precision": 0.90,
+      "performance_threshold_met": true,
+      "business_rules_coverage": 1.0
+    }
+  }
+}

@@ -6,15 +6,28 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/backend/**/*.test.ts'],
+    include: [
+      'server/**/*.test.ts',
+      'tests/backend/**/*.test.ts',
+      'tests/integration/**/*.test.ts'
+    ],
     setupFiles: ['./tests/backend/setup.ts'],
     coverage: {
+      provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['server/**/*.ts'],
       exclude: [
         'server/index.ts',
         'server/vite.ts'
-      ]
+      ],
+      thresholds: {
+        global: {
+          lines: 86,        // > 85% strict
+          statements: 86,   // > 85% strict
+          functions: 86,    // > 85% strict
+          branches: 81      // > 80% strict
+        }
+      }
     }
   },
   resolve: {

@@ -48,7 +48,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
     env: {
-      NODE_ENV: 'test'
+      NODE_ENV: 'test',
+      DISABLE_SCHEDULER: '1'
     }
   },
 });

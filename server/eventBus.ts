@@ -741,6 +741,326 @@ export class EventBus extends EventEmitter {
     this.publish(event);
   }
 
+  // ========================================
+  // MÉTHODES SPÉCIALISÉES POUR SYSTÈME DE DÉTECTION D'ALERTES - PHASE 2.3
+  // ========================================
+
+  // Nouvelle alerte de détection créée
+  public publishDateAlertCreated(params: {
+    id: string;
+    entity: string;
+    entityId: string;
+    message: string;
+    severity: 'info' | 'warning' | 'critical';
+    metadata: {
+      alertType: string;
+      phase?: string;
+      targetDate?: string;
+      affectedUsers: string[];
+      actionRequired: boolean;
+    };
+  }): void {
+    const severityIcon = {
+      info: 'ℹ️',
+      warning: '⚠️',
+      critical: '🚨'
+    };
+    
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
+      entity: params.entity,
+      entityId: params.entityId,
+      severity: params.severity === 'critical' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
+      title: `${severityIcon[params.severity]} Alerte Détectée`,
+      message: params.message,
+      affectedQueryKeys: [
+        ['/api/date-alerts'],
+        ['/api/date-alerts', params.entityId],
+        ['/api/dashboard/alerts'],
+        ['/api/date-alerts/summary']
+      ],
+      userId: params.metadata.affectedUsers[0], // Premier utilisateur affecté
+      metadata: {
+        alertId: params.id,
+        alertType: params.metadata.alertType,
+        phase: params.metadata.phase,
+        targetDate: params.metadata.targetDate,
+        affectedUsers: params.metadata.affectedUsers,
+        actionRequired: params.metadata.actionRequired,
+        action: 'alert_created'
+      }
+    });
+
+    this.publish(event);
+  }
+
+  // Alerte accusée réception
+  public publishDateAlertAcknowledged(params: {
+    id: string;
+    entity: string;
+    entityId: string;
+    message: string;
+    severity: 'info' | 'warning' | 'error';
+    userId?: string;
+    metadata: {
+      alertId: string;
+      acknowledgedBy: string;
+      acknowledgedAt: string;
+      note?: string;
+    };
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED,
+      entity: params.entity,
+      entityId: params.entityId,
+      severity: 'info',
+      title: '✅ Alerte Accusée Réception',
+      message: params.message,
+      affectedQueryKeys: [
+        ['/api/date-alerts'],
+        ['/api/date-alerts', params.metadata.alertId],
+        ['/api/dashboard/alerts']
+      ],
+      userId: params.userId,
+      metadata: {
+        alertId: params.metadata.alertId,
+        acknowledgedBy: params.metadata.acknowledgedBy,
+        acknowledgedAt: params.metadata.acknowledgedAt,
+        note: params.metadata.note,
+        action: 'alert_acknowledged'
+      }
+    });
+
+    this.publish(event);
+  }
+
+  // Alerte résolue
+  public publishDateAlertResolved(params: {
+    id: string;
+    entity: string;
+    entityId: string;
+    message: string;
+    severity: 'success';
+    userId?: string;
+    metadata: {
+      alertId: string;
+      resolvedBy: string;
+      resolvedAt: string;
+      resolution: string;
+    };
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_RESOLVED,
+      entity: params.entity,
+      entityId: params.entityId,
+      severity: 'success',
+      title: '🎉 Alerte Résolue',
+      message: params.message,
+      affectedQueryKeys: [
+        ['/api/date-alerts'],
+        ['/api/date-alerts', params.metadata.alertId],
+        ['/api/dashboard/alerts']
+      ],
+      userId: params.userId,
+      metadata: {
+        alertId: params.metadata.alertId,
+        resolvedBy: params.metadata.resolvedBy,
+        resolvedAt: params.metadata.resolvedAt,
+        resolution: params.metadata.resolution,
+        action: 'alert_resolved'
+      }
+    });
+
+    this.publish(event);
+  }
+
+  // Escalade d'alerte critique
+  public publishSystemAlert(params: {
+    id: string;
+    entity: string;
+    entityId: string;
+    message: string;
+    severity: 'critical';
+    metadata: {
+      originalAlert: string;
+      escalationLevel: string;
+      immediateAction: boolean;
+    };
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventType.SYSTEM_MAINTENANCE, // Utiliser le type système existant pour escalade
+      entity: params.entity,
+      entityId: params.entityId,
+      severity: 'error',
+      title: '🚨 ESCALADE CRITIQUE',
+      message: params.message,
+      affectedQueryKeys: [
+        ['/api/date-alerts'],
+        ['/api/dashboard/alerts'],
+        ['/api/system/alerts']
+      ],
+      metadata: {
+        originalAlert: params.metadata.originalAlert,
+        escalationLevel: params.metadata.escalationLevel,
+        immediateAction: params.metadata.immediateAction,
+        action: 'critical_escalation'
+      }
+    });
+
+    this.publish(event);
+  }
+
+  // Conflit de ressources détecté
+  public publishResourceConflictDetected(params: {
+    conflictId: string;
+    affectedProjects: string[];
+    conflictDate: Date;
+    severity: 'minor' | 'major' | 'critical';
+    resourceType: string;
+    shortfall: number;
+  }): void {
+    const severityMap = { minor: 'info' as const, major: 'warning' as const, critical: 'error' as const };
+    
+    const event = createRealtimeEvent({
+      type: EventType.DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED,
+      entity: 'date_intelligence',
+      entityId: params.conflictId,
+      severity: severityMap[params.severity],
+      title: '⚡ Conflit de Ressources',
+      message: `Conflit ${params.resourceType} le ${params.conflictDate.toLocaleDateString()}. Déficit: ${params.shortfall} équipe(s).`,
+      affectedQueryKeys: [
+        ['/api/date-alerts'],
+        ['/api/dashboard/conflicts'],
+        ...params.affectedProjects.map(projectId => ['/api/projects', projectId])
+      ],
+      metadata: {
+        conflictType: 'resource_conflict',
+        affectedProjects: params.affectedProjects,
+        conflictDate: params.conflictDate.toISOString(),
+        resourceType: params.resourceType,
+        shortfall: params.shortfall,
+        action: 'resource_conflict_detected'
+      }
+    });
+
+    this.publish(event);
+  }
+
+  // Opportunité d'optimisation détectée
+  public publishOptimizationOpportunityDetected(params: {
+    opportunityId: string;
+    entityType: 'project' | 'offer';
+    entityId: string;
+    opportunityType: string;
+    estimatedGainDays: number;
+    feasibility: 'high' | 'medium' | 'low';
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventType.DATE_INTELLIGENCE_ALERT_CREATED,
+      entity: 'date_intelligence',
+      entityId: params.opportunityId,
+      severity: 'info',
+      title: '💡 Opportunité d\'Optimisation',
+      message: `${params.opportunityType} possible. Gain estimé: ${params.estimatedGainDays} jour(s). Faisabilité: ${params.feasibility}.`,
+      affectedQueryKeys: [
+        ['/api/date-alerts'],
+        ['/api/dashboard/optimizations'],
+        [`/api/${params.entityType}s`, params.entityId]
+      ],
+      metadata: {
+        opportunityType: params.opportunityType,
+        entityType: params.entityType,
+        entityId: params.entityId,
+        estimatedGainDays: params.estimatedGainDays,
+        feasibility: params.feasibility,
+        action: 'optimization_detected'
+      }
+    });
+
+    this.publish(event);
+  }
+
+  // Risque de retard détecté
+  public publishDelayRiskDetected(params: {
+    riskId: string;
+    projectId: string;
+    phase: string;
+    riskLevel: 'low' | 'medium' | 'high';
+    riskFactors: string[];
+    suggestedActions: string[];
+  }): void {
+    const severityMap = { low: 'info' as const, medium: 'warning' as const, high: 'error' as const };
+    const riskIcons = { low: '🟡', medium: '🟠', high: '🔴' };
+    
+    const event = createRealtimeEvent({
+      type: EventType.DATE_INTELLIGENCE_ALERT_CREATED,
+      entity: 'date_intelligence',
+      entityId: params.riskId,
+      severity: severityMap[params.riskLevel],
+      title: `${riskIcons[params.riskLevel]} Risque de Retard - ${params.phase}`,
+      message: `Risque ${params.riskLevel} détecté pour la phase ${params.phase}. ${params.riskFactors.length} facteur(s) identifié(s).`,
+      affectedQueryKeys: [
+        ['/api/date-alerts'],
+        ['/api/projects', params.projectId],
+        ['/api/dashboard/risks']
+      ],
+      projectId: params.projectId,
+      metadata: {
+        riskLevel: params.riskLevel,
+        phase: params.phase,
+        riskFactors: params.riskFactors,
+        suggestedActions: params.suggestedActions,
+        action: 'delay_risk_detected'
+      }
+    });
+
+    this.publish(event);
+  }
+
+  // Échéance critique approche
+  public publishCriticalDeadlineAlert(params: {
+    deadlineId: string;
+    entityType: 'project' | 'offer' | 'ao';
+    entityId: string;
+    entityReference: string;
+    deadline: Date;
+    daysRemaining: number;
+    preparationStatus: string;
+    requiredActions: string[];
+  }): void {
+    const severity = params.daysRemaining <= 1 ? 'error' as const : 
+                    params.daysRemaining <= 3 ? 'warning' as const : 'info' as const;
+    
+    const urgencyIcon = params.daysRemaining <= 1 ? '🚨' : 
+                       params.daysRemaining <= 3 ? '⏰' : '📅';
+    
+    const event = createRealtimeEvent({
+      type: EventType.DATE_INTELLIGENCE_ALERT_CREATED,
+      entity: 'date_intelligence',
+      entityId: params.deadlineId,
+      severity,
+      title: `${urgencyIcon} Échéance Critique - ${params.entityReference}`,
+      message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.preparationStatus}. ${params.requiredActions.length} action(s) requise(s).`,
+      affectedQueryKeys: [
+        ['/api/date-alerts'],
+        [`/api/${params.entityType}s`, params.entityId],
+        ['/api/dashboard/deadlines']
+      ],
+      metadata: {
+        entityType: params.entityType,
+        entityId: params.entityId,
+        entityReference: params.entityReference,
+        deadline: params.deadline.toISOString(),
+        daysRemaining: params.daysRemaining,
+        preparationStatus: params.preparationStatus,
+        requiredActions: params.requiredActions,
+        action: 'critical_deadline_alert'
+      }
+    });
+
+    this.publish(event);
+  }
+
   /**
    * Utilitaires
    */

@@ -62,6 +62,30 @@ const ocrService = new OCRService();
 // Instance unique du service d'intelligence temporelle
 const dateIntelligenceService = new DateIntelligenceService();
 
+// Importation et instances des services de détection d'alertes - Phase 2.3
+import { DateAlertDetectionService, MenuiserieDetectionRules } from "./services/DateAlertDetectionService";
+import { PeriodicDetectionScheduler } from "./services/PeriodicDetectionScheduler";
+import { eventBus } from "./eventBus";
+
+// Instance des règles métier menuiserie
+const menuiserieRules = new MenuiserieDetectionRules(storage);
+
+// Instance du service de détection d'alertes
+const dateAlertDetectionService = new DateAlertDetectionService(
+  storage,
+  eventBus,
+  dateIntelligenceService,
+  menuiserieRules
+);
+
+// Instance du planificateur de détection périodique
+const periodicDetectionScheduler = new PeriodicDetectionScheduler(
+  storage,
+  eventBus,
+  dateAlertDetectionService,
+  dateIntelligenceService
+);
+
 // ========================================
 // SCHÉMAS DE VALIDATION POUR INTELLIGENCE TEMPORELLE
 // ========================================
@@ -3572,6 +3596,505 @@ app.put("/api/date-alerts/:id/resolve",
       throw createError(500, "Erreur lors de la résolution de l'alerte", {
         alertId: req.params.id,
         errorType: 'ALERT_RESOLUTION_FAILED'
+      });
+    }
+  })
+);
+
+// ========================================
+// ROUTES SYSTÈME DE DÉTECTION ET ALERTES - PHASE 2.3
+// ========================================
+
+// GET /api/date-alerts/dashboard - Dashboard alertes utilisateur
+app.get("/api/date-alerts/dashboard",
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      console.log(`[AlertsDashboard] Récupération dashboard pour utilisateur ${userId}`);
+      
+      // Récupérer toutes les alertes actives
+      const activeAlerts = await storage.getDateAlerts({ status: 'pending' });
+      
+      // Récupérer les métriques du scheduler périodique
+      const schedulerMetrics = periodicDetectionScheduler.getMetrics();
+      
+      // Récupérer les profils de risque projets
+      const projectRiskProfiles = periodicDetectionScheduler.getProjectRiskProfiles();
+      
+      // Calcul statistiques dashboard
+      const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical');
+      const warningAlerts = activeAlerts.filter(a => a.severity === 'warning');
+      const infoAlerts = activeAlerts.filter(a => a.severity === 'info');
+      
+      // Alertes par type
+      const alertsByType = activeAlerts.reduce((acc, alert) => {
+        acc[alert.alertType] = (acc[alert.alertType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      // Projets à risque élevé
+      const highRiskProjects = projectRiskProfiles.filter(p => p.riskScore >= 70);
+      const deterioratingProjects = projectRiskProfiles.filter(p => p.trendDirection === 'deteriorating');
+      
+      // Alertes récentes (24h)
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const recentAlerts = activeAlerts.filter(a => new Date(a.createdAt) > yesterday);
+      
+      // Actions requises
+      const actionRequiredAlerts = activeAlerts.filter(a => 
+        a.suggestedActions && Array.isArray(a.suggestedActions) && a.suggestedActions.length > 0
+      );
+      
+      const dashboard = {
+        overview: {
+          totalActiveAlerts: activeAlerts.length,
+          criticalAlertsCount: criticalAlerts.length,
+          warningAlertsCount: warningAlerts.length,
+          infoAlertsCount: infoAlerts.length,
+          actionRequiredCount: actionRequiredAlerts.length,
+          recentAlertsCount: recentAlerts.length
+        },
+        alertsByType,
+        riskProfiles: {
+          totalProjects: projectRiskProfiles.length,
+          highRiskProjects: highRiskProjects.length,
+          deterioratingProjects: deterioratingProjects.length,
+          averageRiskScore: projectRiskProfiles.reduce((sum, p) => sum + p.riskScore, 0) / (projectRiskProfiles.length || 1)
+        },
+        recentAlerts: recentAlerts.slice(0, 10), // 10 plus récentes
+        criticalAlerts: criticalAlerts.slice(0, 5), // 5 plus critiques
+        highRiskProjects: highRiskProjects.slice(0, 5),
+        systemHealth: {
+          detectionSystemRunning: periodicDetectionScheduler.isSystemRunning(),
+          lastDetectionRun: schedulerMetrics.lastRunAt,
+          nextScheduledRun: schedulerMetrics.nextScheduledRun,
+          successRate: schedulerMetrics.totalRuns > 0 ? 
+            (schedulerMetrics.successfulRuns / schedulerMetrics.totalRuns) : 1,
+          averageExecutionTime: schedulerMetrics.averageExecutionTimeMs
+        },
+        recommendations: [] as string[]
+      };
+      
+      // Génération recommandations
+      if (criticalAlerts.length > 0) {
+        dashboard.recommendations.push(`${criticalAlerts.length} alerte(s) critique(s) nécessitent une action immédiate`);
+      }
+      
+      if (highRiskProjects.length > 3) {
+        dashboard.recommendations.push(`${highRiskProjects.length} projets à risque élevé - révision planning recommandée`);
+      }
+      
+      if (deterioratingProjects.length > 2) {
+        dashboard.recommendations.push(`${deterioratingProjects.length} projets en détérioration - surveillance renforcée`);
+      }
+      
+      if (actionRequiredAlerts.length > activeAlerts.length * 0.5) {
+        dashboard.recommendations.push('De nombreuses alertes nécessitent des actions - priorisation conseillée');
+      }
+      
+      sendSuccess(res, dashboard, "Dashboard alertes récupéré avec succès");
+      
+    } catch (error: any) {
+      console.error('[AlertsDashboard] Erreur:', error);
+      throw createError(500, "Erreur lors de la récupération du dashboard", {
+        errorType: 'DASHBOARD_FETCH_FAILED'
+      });
+    }
+  })
+);
+
+// POST /api/date-alerts/run-detection - Déclencher détection manuelle
+app.post("/api/date-alerts/run-detection",
+  isAuthenticated,
+  rateLimits.creation, // Limité car opération coûteuse
+  validateBody(z.object({
+    detectionType: z.enum(['full', 'delays', 'conflicts', 'deadlines', 'optimizations']).default('full'),
+    projectId: z.string().optional(),
+    daysAhead: z.number().min(1).max(90).default(7).optional()
+  })),
+  asyncHandler(async (req, res) => {
+    try {
+      const { detectionType, projectId, daysAhead } = req.body;
+      const userId = (req as any).user?.id;
+      
+      console.log(`[ManualDetection] Détection manuelle '${detectionType}' déclenchée par ${userId}`);
+      
+      let results: any = {};
+      const startTime = Date.now();
+      
+      switch (detectionType) {
+        case 'full':
+          results = await dateAlertDetectionService.runPeriodicDetection();
+          break;
+          
+        case 'delays':
+          const delayAlerts = await dateAlertDetectionService.detectDelayRisks(projectId);
+          results = {
+            totalAlertsGenerated: delayAlerts.length,
+            alertsByType: { delay_risk: delayAlerts.length },
+            alerts: delayAlerts,
+            detectionType: 'delays'
+          };
+          break;
+          
+        case 'conflicts':
+          const timeframe = {
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 jours
+          };
+          const conflictAlerts = await dateAlertDetectionService.detectPlanningConflicts(timeframe);
+          results = {
+            totalAlertsGenerated: conflictAlerts.length,
+            alertsByType: { resource_conflict: conflictAlerts.length },
+            alerts: conflictAlerts,
+            detectionType: 'conflicts'
+          };
+          break;
+          
+        case 'deadlines':
+          const deadlineAlerts = await dateAlertDetectionService.checkCriticalDeadlines(daysAhead);
+          results = {
+            totalAlertsGenerated: deadlineAlerts.length,
+            alertsByType: { deadline_critical: deadlineAlerts.length },
+            alerts: deadlineAlerts,
+            detectionType: 'deadlines'
+          };
+          break;
+          
+        case 'optimizations':
+          const optimizationAlerts = await dateAlertDetectionService.detectOptimizationOpportunities();
+          results = {
+            totalAlertsGenerated: optimizationAlerts.length,
+            alertsByType: { optimization: optimizationAlerts.length },
+            alerts: optimizationAlerts,
+            detectionType: 'optimizations'
+          };
+          break;
+      }
+      
+      const executionTime = Date.now() - startTime;
+      
+      const response = {
+        ...results,
+        executionTime,
+        triggeredBy: userId,
+        triggeredAt: new Date(),
+        detectionType,
+        projectId: projectId || 'all',
+        success: true
+      };
+      
+      console.log(`[ManualDetection] Détection '${detectionType}' terminée: ${results.totalAlertsGenerated} alertes en ${executionTime}ms`);
+      
+      sendSuccess(res, response, `Détection ${detectionType} exécutée avec succès`, 201);
+      
+    } catch (error: any) {
+      console.error('[ManualDetection] Erreur:', error);
+      throw createError(500, "Erreur lors de l'exécution de la détection", {
+        detectionType: req.body.detectionType,
+        errorType: 'MANUAL_DETECTION_FAILED'
+      });
+    }
+  })
+);
+
+// POST /api/date-alerts/:id/escalate - Escalade manuelle d'alerte
+app.post("/api/date-alerts/:id/escalate",
+  isAuthenticated,
+  rateLimits.general,
+  validateParams(commonParamSchemas.id),
+  validateBody(z.object({
+    escalationLevel: z.enum(['manager', 'director', 'critical']).default('manager'),
+    reason: z.string().min(1, "Raison d'escalade requise"),
+    urgency: z.enum(['normal', 'high', 'immediate']).default('high')
+  })),
+  asyncHandler(async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { escalationLevel, reason, urgency } = req.body;
+      const userId = (req as any).user?.id;
+      
+      console.log(`[AlertEscalation] Escalade alerte ${id} niveau ${escalationLevel} par ${userId}`);
+      
+      // Vérifier que l'alerte existe
+      const existingAlert = await storage.getDateAlert(id);
+      if (!existingAlert) {
+        throw createError(404, "Alerte non trouvée", { alertId: id });
+      }
+      
+      // Vérifier que l'alerte peut être escaladée
+      if (existingAlert.status === 'resolved') {
+        throw createError(400, "Impossible d'escalader une alerte résolue", {
+          currentStatus: existingAlert.status,
+          alertId: id
+        });
+      }
+      
+      // Mettre à jour l'alerte avec l'escalade
+      const escalatedAlert = await storage.updateDateAlert(id, {
+        severity: urgency === 'immediate' ? 'critical' : existingAlert.severity,
+        assignedTo: userId,
+        actionTaken: `Escaladée niveau ${escalationLevel} par ${userId}: ${reason}`
+      });
+      
+      // Déclencher la notification d'escalade via EventBus
+      await eventBus.publishSystemAlert({
+        id: `escalation-manual-${id}-${Date.now()}`,
+        entity: 'system',
+        entityId: 'manual-escalation',
+        message: `🚨 ESCALADE MANUELLE - ${existingAlert.title}`,
+        severity: 'critical',
+        metadata: {
+          originalAlert: id,
+          escalationLevel,
+          escalatedBy: userId,
+          reason,
+          urgency,
+          immediateAction: urgency === 'immediate'
+        }
+      });
+      
+      // Notifier selon le niveau d'escalade
+      const escalationTargets = {
+        manager: ['manager-group'],
+        director: ['manager-group', 'director-group'],
+        critical: ['manager-group', 'director-group', 'emergency-group']
+      };
+      
+      const targets = escalationTargets[escalationLevel] || ['manager-group'];
+      
+      // Notification spécialisée escalade
+      eventBus.publish({
+        id: `escalation-notification-${id}-${Date.now()}`,
+        type: 'date_intelligence.alert_escalated',
+        entity: 'date_intelligence',
+        entityId: id,
+        title: `⬆️ Alerte Escaladée - Niveau ${escalationLevel.toUpperCase()}`,
+        message: `Escalade alerte "${existingAlert.title}" - ${reason}`,
+        severity: urgency === 'immediate' ? 'error' : 'warning',
+        timestamp: new Date().toISOString(),
+        userId,
+        metadata: {
+          originalAlert: existingAlert,
+          escalationLevel,
+          reason,
+          urgency,
+          targets,
+          escalatedAt: new Date().toISOString(),
+          action: 'alert_escalated'
+        }
+      });
+      
+      const response = {
+        escalatedAlert,
+        escalation: {
+          level: escalationLevel,
+          reason,
+          urgency,
+          escalatedBy: userId,
+          escalatedAt: new Date(),
+          targets
+        }
+      };
+      
+      console.log(`[AlertEscalation] Alerte ${id} escaladée avec succès niveau ${escalationLevel}`);
+      
+      sendSuccess(res, response, `Alerte escaladée au niveau ${escalationLevel}`, 201);
+      
+    } catch (error: any) {
+      console.error('[AlertEscalation] Erreur:', error);
+      
+      if (error.statusCode) {
+        throw error;
+      }
+      
+      throw createError(500, "Erreur lors de l'escalade de l'alerte", {
+        alertId: req.params.id,
+        errorType: 'ALERT_ESCALATION_FAILED'
+      });
+    }
+  })
+);
+
+// GET /api/date-alerts/summary - Résumé alertes par type/criticité
+app.get("/api/date-alerts/summary",
+  isAuthenticated,
+  validateQuery(z.object({
+    period: z.enum(['today', 'week', 'month']).default('today'),
+    groupBy: z.enum(['type', 'severity', 'status', 'entity']).default('type'),
+    includeResolved: z.boolean().default(false)
+  })),
+  asyncHandler(async (req, res) => {
+    try {
+      const { period, groupBy, includeResolved } = req.query;
+      
+      console.log(`[AlertsSummary] Récupération résumé période ${period} groupé par ${groupBy}`);
+      
+      // Calculer la période
+      let startDate: Date;
+      switch (period) {
+        case 'today':
+          startDate = new Date();
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'week':
+          startDate = new Date();
+          startDate.setDate(startDate.getDate() - 7);
+          break;
+        case 'month':
+          startDate = new Date();
+          startDate.setDate(startDate.getDate() - 30);
+          break;
+      }
+      
+      // Récupérer les alertes dans la période
+      const allAlerts = await storage.getDateAlerts({});
+      const periodAlerts = allAlerts.filter(alert => {
+        const alertDate = new Date(alert.createdAt);
+        const isInPeriod = alertDate >= startDate;
+        const includeAlert = includeResolved || alert.status !== 'resolved';
+        return isInPeriod && includeAlert;
+      });
+      
+      // Grouper selon le critère demandé
+      const grouped = periodAlerts.reduce((acc, alert) => {
+        let key: string;
+        
+        switch (groupBy) {
+          case 'type':
+            key = alert.alertType;
+            break;
+          case 'severity':
+            key = alert.severity;
+            break;
+          case 'status':
+            key = alert.status;
+            break;
+          case 'entity':
+            key = alert.entityType;
+            break;
+          default:
+            key = 'unknown';
+        }
+        
+        if (!acc[key]) {
+          acc[key] = {
+            count: 0,
+            alerts: [],
+            criticalCount: 0,
+            warningCount: 0,
+            infoCount: 0,
+            pendingCount: 0,
+            acknowledgedCount: 0,
+            resolvedCount: 0
+          };
+        }
+        
+        acc[key].count++;
+        acc[key].alerts.push(alert);
+        
+        // Compteurs par sévérité
+        if (alert.severity === 'critical') acc[key].criticalCount++;
+        else if (alert.severity === 'warning') acc[key].warningCount++;
+        else acc[key].infoCount++;
+        
+        // Compteurs par statut
+        if (alert.status === 'pending') acc[key].pendingCount++;
+        else if (alert.status === 'acknowledged') acc[key].acknowledgedCount++;
+        else if (alert.status === 'resolved') acc[key].resolvedCount++;
+        
+        return acc;
+      }, {} as Record<string, any>);
+      
+      // Calculer les statistiques globales
+      const totalAlerts = periodAlerts.length;
+      const criticalCount = periodAlerts.filter(a => a.severity === 'critical').length;
+      const warningCount = periodAlerts.filter(a => a.severity === 'warning').length;
+      const infoCount = periodAlerts.filter(a => a.severity === 'info').length;
+      
+      const pendingCount = periodAlerts.filter(a => a.status === 'pending').length;
+      const acknowledgedCount = periodAlerts.filter(a => a.status === 'acknowledged').length;
+      const resolvedCount = periodAlerts.filter(a => a.status === 'resolved').length;
+      
+      // Top 5 des entités les plus affectées
+      const entitiesSummary = periodAlerts.reduce((acc, alert) => {
+        const key = `${alert.entityType}:${alert.entityId}`;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const topEntities = Object.entries(entitiesSummary)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5)
+        .map(([entity, count]) => ({ entity, count }));
+      
+      // Tendances (comparaison avec période précédente)
+      const previousPeriodStart = new Date(startDate.getTime() - (Date.now() - startDate.getTime()));
+      const previousPeriodAlerts = allAlerts.filter(alert => {
+        const alertDate = new Date(alert.createdAt);
+        return alertDate >= previousPeriodStart && alertDate < startDate;
+      });
+      
+      const trend = totalAlerts - previousPeriodAlerts.length;
+      const trendPercentage = previousPeriodAlerts.length > 0 ? 
+        ((totalAlerts - previousPeriodAlerts.length) / previousPeriodAlerts.length * 100).toFixed(1) : '0';
+      
+      const summary = {
+        period: {
+          name: period,
+          startDate,
+          endDate: new Date(),
+          daysIncluded: Math.ceil((Date.now() - startDate.getTime()) / (24 * 60 * 60 * 1000))
+        },
+        overview: {
+          totalAlerts,
+          criticalCount,
+          warningCount,
+          infoCount,
+          pendingCount,
+          acknowledgedCount,
+          resolvedCount,
+          includeResolved
+        },
+        groupedBy: groupBy,
+        grouped,
+        topEntities,
+        trends: {
+          compared_to_previous_period: {
+            change: trend,
+            percentage: `${trend >= 0 ? '+' : ''}${trendPercentage}%`,
+            direction: trend > 0 ? 'increase' : trend < 0 ? 'decrease' : 'stable'
+          }
+        },
+        insights: [] as string[]
+      };
+      
+      // Génération d'insights automatiques
+      if (criticalCount > totalAlerts * 0.3) {
+        summary.insights.push(`Forte proportion d'alertes critiques (${((criticalCount/totalAlerts)*100).toFixed(1)}%)`);
+      }
+      
+      if (pendingCount > totalAlerts * 0.7) {
+        summary.insights.push(`Beaucoup d'alertes en attente de traitement (${((pendingCount/totalAlerts)*100).toFixed(1)}%)`);
+      }
+      
+      if (trend > 5) {
+        summary.insights.push(`Augmentation significative des alertes (+${trend}) par rapport à la période précédente`);
+      }
+      
+      if (topEntities.length > 0 && topEntities[0].count > 5) {
+        summary.insights.push(`Entité la plus affectée: ${topEntities[0].entity} avec ${topEntities[0].count} alertes`);
+      }
+      
+      console.log(`[AlertsSummary] Résumé généré: ${totalAlerts} alertes, ${Object.keys(grouped).length} groupes`);
+      
+      sendSuccess(res, summary, `Résumé des alertes (${period}) récupéré avec succès`);
+      
+    } catch (error: any) {
+      console.error('[AlertsSummary] Erreur:', error);
+      throw createError(500, "Erreur lors de la génération du résumé", {
+        errorType: 'ALERTS_SUMMARY_FAILED'
       });
     }
   })

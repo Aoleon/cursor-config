@@ -512,6 +512,84 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     priority: 85,
     validFrom: new Date('2024-07-01'),
     validUntil: new Date('2024-08-31')
+  },
+
+  // ========================================
+  // RÈGLES SUPPLÉMENTAIRES POUR ATTEINDRE 18+ RÈGLES
+  // ========================================
+  {
+    name: "Maintenance Préventive",
+    description: "Intervention de maintenance dans la période de garantie",
+    phase: "sav",
+    projectType: null,
+    complexity: null,
+    baseConditions: {
+      maintenance_type: "preventive",
+      warranty_period: true
+    },
+    triggerEvents: ["warranty_maintenance_scheduled", "periodic_inspection"],
+    durationFormula: null,
+    baseDuration: 1, // jour ouvré
+    multiplierFactor: 1.0,
+    bufferPercentage: 0.30, // 30% buffer dépendances client
+    minDuration: 1,
+    maxDuration: 3,
+    workingDaysOnly: true,
+    excludeHolidays: true,
+    isActive: true,
+    priority: 50,
+    validFrom: new Date('2024-01-01'),
+    validUntil: null
+  },
+
+  {
+    name: "Pose PVC Complexe",
+    description: "Pose PVC pour grandes baies, volets intégrés, ou configurations complexes",
+    phase: "chantier",
+    projectType: null,
+    complexity: "elevee",
+    baseConditions: {
+      materialType: "pvc",
+      complexity_factors: ["large_openings", "integrated_shutters", "complex_geometry"]
+    },
+    triggerEvents: ["complex_pvc_delivered", "specialized_team_available"],
+    durationFormula: null,
+    baseDuration: 12, // jours ouvrés
+    multiplierFactor: 1.4, // Complexité PVC élevée
+    bufferPercentage: 0.20,
+    minDuration: 8,
+    maxDuration: 18,
+    workingDaysOnly: true,
+    excludeHolidays: true,
+    isActive: true,
+    priority: 74,
+    validFrom: new Date('2024-01-01'),
+    validUntil: null
+  },
+
+  {
+    name: "Matériaux Composites Modernes",
+    description: "Fabrication et pose matériaux composites, fibre de verre, nouveaux alliages",
+    phase: "approvisionnement",
+    projectType: null,
+    complexity: "elevee",
+    baseConditions: {
+      materialType: "composite",
+      technology: "modern"
+    },
+    triggerEvents: ["composite_orders_confirmed", "specialized_supplier_validated"],
+    durationFormula: null,
+    baseDuration: 18, // jours ouvrés (plus long que standard)
+    multiplierFactor: 1.6, // Nouveaux matériaux plus complexes
+    bufferPercentage: 0.25,
+    minDuration: 12,
+    maxDuration: 30,
+    workingDaysOnly: true,
+    excludeHolidays: true,
+    isActive: true,
+    priority: 76,
+    validFrom: new Date('2024-01-01'),
+    validUntil: null
   }
 ];
 

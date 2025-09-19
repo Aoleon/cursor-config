@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WebSocketProvider } from "@/providers/websocket-provider";
+import { DateAlertsProvider } from "@/components/alerts/DateAlertsProvider";
 import { useAuth } from "@/hooks/useAuth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import NotFound from "@/pages/not-found";
@@ -131,8 +132,10 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WebSocketProvider>
-            <Toaster />
-            <Router />
+            <DateAlertsProvider enableRealtimeToasts={true}>
+              <Toaster />
+              <Router />
+            </DateAlertsProvider>
           </WebSocketProvider>
         </TooltipProvider>
       </QueryClientProvider>

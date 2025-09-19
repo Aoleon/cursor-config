@@ -70,6 +70,43 @@ app.use((req, res, next) => {
   
   // Make eventBus available to routes
   app.set('eventBus', eventBus);
+
+  // ========================================
+  // DÉMARRAGE SYSTÈME DE DÉTECTION ALERTES - PHASE 2.3
+  // ========================================
+  
+  // Import et démarrage du scheduler périodique pour détection d'alertes
+  const { PeriodicDetectionScheduler } = await import('./services/PeriodicDetectionScheduler');
+  const { DateAlertDetectionService } = await import('./services/DateAlertDetectionService');
+  const { DateIntelligenceService } = await import('./services/DateIntelligenceService');
+  const { MenuiserieDetectionRules } = await import('./services/DateAlertDetectionService');
+  
+  // Créer les instances des services
+  console.log('[System] Initialisation du système de détection d\'alertes...');
+  
+  const dateIntelligenceService = new DateIntelligenceService(storage);
+  const menuiserieRules = new MenuiserieDetectionRules(storage);
+  const dateAlertDetectionService = new DateAlertDetectionService(
+    storage,
+    eventBus,
+    dateIntelligenceService,
+    menuiserieRules
+  );
+  
+  const periodicDetectionScheduler = new PeriodicDetectionScheduler(
+    storage,
+    eventBus,
+    dateAlertDetectionService,
+    dateIntelligenceService
+  );
+  
+  // Démarrer la surveillance périodique
+  periodicDetectionScheduler.start();
+  console.log('[System] ✅ Système de détection d\'alertes opérationnel');
+  
+  // Rendre les services disponibles pour les routes
+  app.set('dateAlertDetectionService', dateAlertDetectionService);
+  app.set('periodicDetectionScheduler', periodicDetectionScheduler);
   
   // ========================================
   // ABONNEMENT AUX ALERTES TECHNIQUES POUR JULIEN LAMBOROT

@@ -103,6 +103,7 @@ export default function CreateAO() {
   const retryCountRef = useRef<number>(0);
   const originalReferenceRef = useRef<string>("");
   const autoRetryEnabled = useRef<boolean>(false);
+  const [isAutoRetrying, setIsAutoRetrying] = useState<boolean>(false);
 
   // États pour la gestion des contacts
   const [selectedMaitreOuvrage, setSelectedMaitreOuvrage] = useState<any>(null);
@@ -165,11 +166,13 @@ export default function CreateAO() {
       return response.json();
     },
     onSuccess: async (newAo: any) => {
+      console.log('[DEBUG] AO creation success - cleaning up retry states');
       // Nettoyer tous les états de retry lors du succès
       autoRetryEnabled.current = false;
       retryCountRef.current = 0;
       originalReferenceRef.current = "";
       setDuplicateReferenceError(null);
+      setIsAutoRetrying(false);
       proposedReferencesHistory.current.clear();
       
       // Créer les lots associés
@@ -208,24 +211,45 @@ export default function CreateAO() {
     onError: (error: any) => {
       console.error("Error creating AO:", error);
       
+      // Debugging détaillé
+      console.log('[DEBUG] Full error object:', {
+        error,
+        errorData: error.errorData,
+        status: error.status,
+        hasErrorData: !!error.errorData,
+        detailsType: error.errorData?.details?.type,
+        autoRetryEnabled: autoRetryEnabled.current,
+        retryCount: retryCountRef.current
+      });
+      
       // Utiliser les données d'erreur déjà parsées
       if (error.errorData) {
         const { errorData, status } = error;
         
+        console.log('[DEBUG] Processing error with status:', status, 'and errorData.details:', errorData.details);
+        
         // Gestion spécifique des erreurs 409 (conflit de contrainte d'unicité)
         if (status === 409 && errorData.details?.type === 'DUPLICATE_REFERENCE') {
+          console.log('[DEBUG] DUPLICATE_REFERENCE detected - initiating retry logic');
           const originalReference = errorData.details?.value || form.getValues('reference');
+          
+          console.log('[DEBUG] Original reference:', originalReference, 'Current retry enabled:', autoRetryEnabled.current);
           
           // Vérifier si on est dans un cycle d'auto-retry
           if (autoRetryEnabled.current) {
+            console.log('[DEBUG] Auto-retry cycle - current count:', retryCountRef.current);
             // C'est un retry automatique - incrémenter le compteur depuis les refs
             const newRetryCount = retryCountRef.current + 1;
             retryCountRef.current = newRetryCount;
             
+            console.log('[DEBUG] Incrementing retry count to:', newRetryCount);
+            
             if (newRetryCount < 5) {
+              console.log('[DEBUG] Continuing auto-retry with original reference:', originalReferenceRef.current);
               // Continuer les retries automatiques avec la référence originale stockée
               handleDuplicateReference(originalReferenceRef.current, newRetryCount, true);
             } else {
+              console.log('[DEBUG] Retry limit reached - stopping auto-retry');
               // Limite atteinte, désactiver auto-retry et demander intervention manuelle
               autoRetryEnabled.current = false;
               toast({
@@ -241,6 +265,7 @@ export default function CreateAO() {
               });
             }
           } else {
+            console.log('[DEBUG] First attempt - initiating auto-retry for reference:', originalReference);
             // Première tentative ou retry manuel - initier les retries automatiques
             initiateAutoRetry(originalReference);
           }
@@ -322,12 +347,17 @@ export default function CreateAO() {
 
   // Fonction pour gérer automatiquement la proposition de nouvelle référence
   const handleDuplicateReference = (originalReference: string, retryCount: number = 0, enableAutoRetry: boolean = false) => {
+    console.log('[DEBUG] handleDuplicateReference called with:', {originalReference, retryCount, enableAutoRetry});
+    
     const suggestedReference = generateUniqueReference(originalReference, retryCount);
+    
+    console.log('[DEBUG] Generated suggested reference:', suggestedReference);
     
     // Stocker dans les refs pour persistence
     retryCountRef.current = retryCount;
     originalReferenceRef.current = originalReference;
     autoRetryEnabled.current = enableAutoRetry;
+    setIsAutoRetrying(enableAutoRetry && retryCount < 5);
     
     setDuplicateReferenceError({
       originalReference,
@@ -341,11 +371,15 @@ export default function CreateAO() {
     
     // Si auto-retry est activé, re-soumettre automatiquement après un court délai
     if (enableAutoRetry && retryCount < 5) {
+      console.log('[DEBUG] Auto-retry enabled, scheduling retry in 500ms...');
       setTimeout(() => {
+        console.log('[DEBUG] Executing auto-retry with form data...');
         const formData = form.getValues();
         createAoMutation.mutate(formData);
       }, 500); // Délai de 500ms pour éviter la surcharge
     } else {
+      console.log('[DEBUG] Not auto-retrying - either disabled or limit reached');
+      setIsAutoRetrying(false);
       // Afficher un toast informatif seulement si pas d'auto-retry ou si limite atteinte
       toast({
         title: retryCount >= 5 ? "Multiples collisions détectées" : "Référence alternative proposée",
@@ -359,11 +393,14 @@ export default function CreateAO() {
   
   // Fonction pour initier un retry automatique
   const initiateAutoRetry = (originalReference: string) => {
+    console.log('[DEBUG] initiateAutoRetry called with originalReference:', originalReference);
     // Reset du compteur pour une nouvelle série de retries automatiques
     retryCountRef.current = 0;
     originalReferenceRef.current = originalReference;
     autoRetryEnabled.current = true;
+    setIsAutoRetrying(true);
     
+    console.log('[DEBUG] Starting first auto-retry...');
     // Commencer le premier retry automatique
     handleDuplicateReference(originalReference, 0, true);
   };
@@ -376,14 +413,17 @@ export default function CreateAO() {
 
   // Fonction pour accepter la référence proposée ET re-soumettre automatiquement
   const acceptSuggestedReferenceAndSubmit = () => {
+    console.log('[DEBUG] acceptSuggestedReferenceAndSubmit called');
     // Désactiver l'auto-retry car l'utilisateur prend le contrôle manuel
     autoRetryEnabled.current = false;
     retryCountRef.current = 0;
     originalReferenceRef.current = "";
     setDuplicateReferenceError(null);
+    setIsAutoRetrying(false);
     
     // La référence est déjà mise à jour dans le formulaire, on re-soumet
     const formData = form.getValues();
+    console.log('[DEBUG] Re-submitting with accepted reference:', formData.reference);
     createAoMutation.mutate(formData);
   };
 
@@ -397,12 +437,15 @@ export default function CreateAO() {
   };
 
   const onSubmit = (data: CreateAoFormData) => {
+    console.log('[DEBUG] onSubmit called with data:', data);
     // Reset du système d'auto-retry pour une nouvelle soumission
     autoRetryEnabled.current = false;
     retryCountRef.current = 0;
     originalReferenceRef.current = "";
     setDuplicateReferenceError(null);
+    setIsAutoRetrying(false);
     
+    console.log('[DEBUG] Submitting AO creation with reference:', data.reference);
     createAoMutation.mutate(data);
   };
 
@@ -1108,10 +1151,19 @@ export default function CreateAO() {
               </Button>
               <Button
                 type="submit"
-                disabled={createAoMutation.isPending}
+                disabled={createAoMutation.isPending || isAutoRetrying}
                 data-testid="button-create-ao"
               >
-                {createAoMutation.isPending ? "Création..." : "Créer l'AO"}
+                {isAutoRetrying ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    🔄 Tentative automatique {retryCountRef.current + 1}/5 en cours...
+                  </>
+                ) : createAoMutation.isPending ? (
+                  "Création..."
+                ) : (
+                  "Créer l'AO"
+                )}
               </Button>
             </div>
           </form>

@@ -137,7 +137,9 @@ export default function AoDetail() {
     queryFn: async () => {
       const response = await fetch(`/api/aos/${id}`);
       if (!response.ok) throw new Error('Failed to fetch AO');
-      return response.json();
+      const result = await response.json();
+      // L'API retourne {success: true, data: {...}}, on extrait les données
+      return result.data || result;
     },
     enabled: !!id,
   });

@@ -58,7 +58,16 @@ export enum EventType {
   GANTT_MILESTONE_CREATED = 'gantt.milestone_created',
   
   // Alertes techniques OCR
-  TECHNICAL_ALERT = 'technical.alert'
+  TECHNICAL_ALERT = 'technical.alert',
+  
+  // Intelligence temporelle et planification
+  DATE_INTELLIGENCE_TIMELINE_CALCULATED = 'date_intelligence.timeline_calculated',
+  DATE_INTELLIGENCE_CASCADE_RECALCULATED = 'date_intelligence.cascade_recalculated', 
+  DATE_INTELLIGENCE_RULE_APPLIED = 'date_intelligence.rule_applied',
+  DATE_INTELLIGENCE_ALERT_CREATED = 'date_intelligence.alert_created',
+  DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED = 'date_intelligence.alert_acknowledged',
+  DATE_INTELLIGENCE_ALERT_RESOLVED = 'date_intelligence.alert_resolved',
+  DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED = 'date_intelligence.planning_issue_detected'
 }
 
 // ========================================
@@ -68,7 +77,7 @@ export enum EventType {
 export const realtimeEventSchema = z.object({
   id: z.string().uuid(),
   type: z.nativeEnum(EventType),
-  entity: z.enum(['offer', 'project', 'task', 'validation', 'supplier', 'system', 'technical']),
+  entity: z.enum(['offer', 'project', 'task', 'validation', 'supplier', 'system', 'technical', 'date_intelligence']),
   entityId: z.string(),
   
   // Relations pour navigation et contexte

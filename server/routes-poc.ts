@@ -15,7 +15,9 @@ import {
   technicalScoringConfigSchema, type TechnicalScoringConfig, type SpecialCriteria,
   insertTechnicalAlertSchema, bypassTechnicalAlertSchema, technicalAlertsFilterSchema,
   type TechnicalAlert, type TechnicalAlertHistory,
-  materialColorAlertRuleSchema, type MaterialColorAlertRule
+  materialColorAlertRuleSchema, type MaterialColorAlertRule,
+  insertProjectTimelineSchema, insertDateIntelligenceRuleSchema, insertDateAlertSchema,
+  type ProjectTimeline, type DateIntelligenceRule, type DateAlert, type ProjectStatus
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -30,6 +32,8 @@ import { sql } from "drizzle-orm";
 import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto } from "./dateUtils";
 import type { EventBus } from "./eventBus";
 import { ScoringService } from "./services/scoringService";
+import { DateIntelligenceService } from "./services/DateIntelligenceService";
+import { initializeDefaultRules, DateIntelligenceRulesSeeder } from "./seeders/dateIntelligenceRulesSeeder";
 
 // Extension du type Session pour inclure la propriété user
 declare module 'express-session' {
@@ -55,9 +59,78 @@ const uploadMiddleware = multer({
 // Instance unique du service OCR
 const ocrService = new OCRService();
 
+// Instance unique du service d'intelligence temporelle
+const dateIntelligenceService = new DateIntelligenceService();
+
+// ========================================
+// SCHÉMAS DE VALIDATION POUR INTELLIGENCE TEMPORELLE
+// ========================================
+
+// Schéma pour le calcul de timeline
+const calculateTimelineSchema = z.object({
+  constraints: z.array(z.object({
+    type: z.string(),
+    value: z.any(),
+    priority: z.number().min(1).max(10).default(5)
+  })).optional(),
+  context: z.object({
+    projectType: z.enum(['neuf', 'renovation', 'maintenance']).optional(),
+    complexity: z.enum(['simple', 'normale', 'elevee']).optional(),
+    surface: z.number().positive().optional(),
+    materialTypes: z.array(z.string()).optional(),
+    customWork: z.boolean().optional(),
+    location: z.object({
+      weatherZone: z.string().optional(),
+      accessibility: z.enum(['facile', 'moyenne', 'difficile']).optional()
+    }).optional(),
+    resources: z.object({
+      teamSize: z.number().positive().optional(),
+      subcontractors: z.array(z.string()).optional(),
+      equipmentNeeded: z.array(z.string()).optional()
+    }).optional()
+  }).optional()
+});
+
+// Schéma pour le recalcul cascade
+const recalculateFromPhaseSchema = z.object({
+  newDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "Date invalide"
+  }).transform((date) => new Date(date)),
+  propagateChanges: z.boolean().default(true),
+  context: calculateTimelineSchema.shape.context.optional()
+});
+
+// Schéma pour les filtres de règles
+const rulesFilterSchema = z.object({
+  phase: z.string().optional(),
+  projectType: z.string().optional(),
+  isActive: z.boolean().optional(),
+  priority: z.number().optional()
+});
+
+// Schéma pour les filtres d'alertes
+const alertsFilterSchema = z.object({
+  entityType: z.string().optional(),
+  entityId: z.string().optional(),
+  status: z.enum(['pending', 'acknowledged', 'resolved', 'expired']).optional(),
+  severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).default(50),
+  offset: z.string().regex(/^\d+$/).transform(Number).default(0)
+});
+
+// Schéma pour accusé de réception alerte
+const acknowledgeAlertSchema = z.object({
+  note: z.string().optional()
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+  
+  // Initialiser les règles métier par défaut au démarrage
+  console.log('[App] Initialisation des règles métier menuiserie...');
+  await initializeDefaultRules();
+  console.log('[App] Règles métier initialisées avec succès');
 
   // Basic Auth Login Route
   app.post('/api/login/basic', async (req, res) => {
@@ -146,18 +219,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('[DEBUG] /api/auth/user - Session info:', {
         hasUser: !!user,
         hasSessionUser: !!sessionUser,
-        isBasicAuth: sessionUser?.isBasicAuth,
-        userType: user?.isBasicAuth ? 'basic' : 'oidc'
+        isBasicAuth: sessionUser?.isBasicAuth || user?.isBasicAuth,
+        userType: (sessionUser?.isBasicAuth || user?.isBasicAuth) ? 'basic' : 'oidc'
       });
       
-      // Vérifier si c'est un utilisateur basic auth (maintenant dans req.user grâce au middleware)
-      if (user?.isBasicAuth) {
-        console.log('[DEBUG] Returning basic auth user:', user);
-        return res.json(user);
+      // CORRECTION BLOCKER 3: Vérifier d'abord si c'est un utilisateur basic auth
+      if (user?.isBasicAuth || sessionUser?.isBasicAuth) {
+        console.log('[DEBUG] Returning basic auth user:', user || sessionUser);
+        // Retourner les données utilisateur basic auth
+        const basicAuthUser = user?.isBasicAuth ? user : sessionUser;
+        return res.json(basicAuthUser);
       }
       
+      // Pour les utilisateurs OIDC uniquement - vérifier claims
       if (!user || !user.claims) {
-        console.log('[DEBUG] No valid user or claims found');
+        console.log('[DEBUG] No valid OIDC user or claims found');
         return res.status(401).json({ message: "No user session found" });
       }
 
@@ -3154,6 +3230,588 @@ registerBatigestRoutes(app);
 
 // Enregistrer les routes de gestion des équipes
 registerTeamsRoutes(app);
+
+// ========================================
+// ROUTES INTELLIGENCE TEMPORELLE - PHASE 2.2
+// ========================================
+
+// POST /api/projects/:id/calculate-timeline - Calcul timeline intelligent
+app.post("/api/projects/:id/calculate-timeline",
+  isAuthenticated,
+  rateLimits.general,
+  validateParams(commonParamSchemas.id),
+  validateBody(calculateTimelineSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const { id: projectId } = req.params;
+      const { constraints, context } = req.body;
+      
+      console.log(`[DateIntelligence] Calcul timeline pour projet ${projectId}`);
+      
+      // Générer la timeline intelligente
+      const timeline = await dateIntelligenceService.generateProjectTimeline(
+        projectId,
+        constraints
+      );
+      
+      // Détecter les problèmes potentiels
+      const issues = await dateIntelligenceService.detectPlanningIssues(timeline);
+      
+      const result = {
+        timeline,
+        issues,
+        metadata: {
+          calculatedAt: new Date(),
+          constraintsApplied: constraints?.length || 0,
+          totalPhases: timeline.length,
+          hasWarnings: issues.some(issue => issue.severity === 'warning'),
+          hasErrors: issues.some(issue => issue.severity === 'error')
+        }
+      };
+      
+      sendSuccess(res, result, "Timeline calculée avec succès");
+    } catch (error: any) {
+      console.error('[DateIntelligence] Erreur calcul timeline:', error);
+      throw createError(500, "Erreur lors du calcul de la timeline", {
+        projectId: req.params.id,
+        errorType: 'TIMELINE_CALCULATION_FAILED'
+      });
+    }
+  })
+);
+
+// PUT /api/projects/:id/recalculate-from/:phase - Recalcul cascade
+app.put("/api/projects/:id/recalculate-from/:phase",
+  isAuthenticated,
+  rateLimits.general,
+  validateParams(z.object({
+    id: z.string().uuid('ID projet invalide'),
+    phase: z.string().min(1, 'Phase requise')
+  })),
+  validateBody(recalculateFromPhaseSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const { id: projectId, phase } = req.params;
+      const { newDate, propagateChanges, context } = req.body;
+      
+      console.log(`[DateIntelligence] Recalcul cascade projet ${projectId} depuis ${phase}`);
+      
+      // Effectuer le recalcul en cascade
+      const cascadeResult = await dateIntelligenceService.recalculateFromPhase(
+        projectId,
+        phase as ProjectStatus,
+        newDate
+      );
+      
+      // Si propagation demandée, appliquer les changements
+      if (propagateChanges) {
+        for (const effect of cascadeResult.affectedPhases) {
+          // Mettre à jour les timelines dans le storage
+          const existingTimelines = await storage.getProjectTimelines(projectId);
+          const timelineToUpdate = existingTimelines.find(t => t.phase === effect.phase);
+          
+          if (timelineToUpdate) {
+            await storage.updateProjectTimeline(timelineToUpdate.id, {
+              endDate: effect.newEndDate,
+              lastCalculatedAt: new Date(),
+              calculationMethod: 'cascade_recalculation'
+            });
+          }
+        }
+      }
+      
+      const result = {
+        ...cascadeResult,
+        appliedChanges: propagateChanges,
+        metadata: {
+          recalculatedAt: new Date(),
+          fromPhase: phase,
+          newDate: newDate,
+          affectedPhasesCount: cascadeResult.affectedPhases.length,
+          totalImpactDays: cascadeResult.affectedPhases.reduce((sum, phase) => sum + (phase.impactDays || 0), 0)
+        }
+      };
+      
+      sendSuccess(res, result, "Recalcul en cascade effectué avec succès");
+    } catch (error: any) {
+      console.error('[DateIntelligence] Erreur recalcul cascade:', error);
+      throw createError(500, "Erreur lors du recalcul en cascade", {
+        projectId: req.params.id,
+        phase: req.params.phase,
+        errorType: 'CASCADE_RECALCULATION_FAILED'
+      });
+    }
+  })
+);
+
+// GET /api/intelligence-rules - Récupération règles actives
+app.get("/api/intelligence-rules",
+  isAuthenticated,
+  validateQuery(rulesFilterSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const { phase, projectType, isActive, priority } = req.query;
+      
+      console.log('[DateIntelligence] Récupération règles avec filtres:', req.query);
+      
+      // Construire les filtres pour le storage
+      const filters: any = {};
+      if (phase) filters.phase = phase as ProjectStatus;
+      if (projectType) filters.projectType = projectType;
+      
+      // Récupérer les règles depuis le storage
+      let rules = await storage.getActiveRules(filters);
+      
+      // Appliquer les filtres additionnels
+      if (typeof isActive === 'boolean') {
+        rules = rules.filter(rule => rule.isActive === isActive);
+      }
+      
+      if (priority !== undefined) {
+        rules = rules.filter(rule => (rule.priority || 0) >= priority);
+      }
+      
+      const result = {
+        rules,
+        metadata: {
+          totalRules: rules.length,
+          activeRules: rules.filter(r => r.isActive).length,
+          filtersApplied: Object.keys(req.query).length,
+          retrievedAt: new Date()
+        }
+      };
+      
+      sendSuccess(res, result, "Règles d'intelligence récupérées avec succès");
+    } catch (error: any) {
+      console.error('[DateIntelligence] Erreur récupération règles:', error);
+      throw createError(500, "Erreur lors de la récupération des règles");
+    }
+  })
+);
+
+// POST /api/intelligence-rules - Création règle personnalisée
+app.post("/api/intelligence-rules",
+  isAuthenticated,
+  rateLimits.creation,
+  validateBody(insertDateIntelligenceRuleSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      console.log('[DateIntelligence] Création nouvelle règle:', req.body.name);
+      
+      // Ajouter l'utilisateur créateur
+      const ruleData = {
+        ...req.body,
+        createdBy: (req as any).user?.id || 'system'
+      };
+      
+      // Créer la règle dans le storage
+      const newRule = await storage.createRule(ruleData);
+      
+      console.log(`[DateIntelligence] Règle créée avec succès: ${newRule.id}`);
+      
+      sendSuccess(res, newRule, "Règle d'intelligence créée avec succès", 201);
+    } catch (error: any) {
+      console.error('[DateIntelligence] Erreur création règle:', error);
+      
+      // Gestion d'erreurs spécialisées
+      if (error.message?.includes('nom déjà utilisé')) {
+        throw createError(409, "Une règle avec ce nom existe déjà", {
+          errorType: 'DUPLICATE_RULE_NAME'
+        });
+      }
+      
+      throw createError(500, "Erreur lors de la création de la règle");
+    }
+  })
+);
+
+// GET /api/date-alerts - Récupération alertes
+app.get("/api/date-alerts",
+  isAuthenticated,
+  validateQuery(alertsFilterSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const { entityType, entityId, status, severity, limit, offset } = req.query;
+      
+      console.log('[DateIntelligence] Récupération alertes avec filtres:', req.query);
+      
+      // Construire les filtres pour le storage
+      const filters: any = {};
+      if (entityType) filters.entityType = entityType;
+      if (entityId) filters.entityId = entityId;
+      if (status) filters.status = status;
+      
+      // Récupérer les alertes depuis le storage
+      let alerts = await storage.getDateAlerts(filters);
+      
+      // Appliquer le filtre de sévérité
+      if (severity) {
+        alerts = alerts.filter(alert => alert.severity === severity);
+      }
+      
+      // Pagination
+      const total = alerts.length;
+      alerts = alerts.slice(offset, offset + limit);
+      
+      const result = {
+        alerts,
+        pagination: {
+          total,
+          limit,
+          offset,
+          hasMore: offset + limit < total
+        },
+        metadata: {
+          pendingCount: alerts.filter(a => a.status === 'pending').length,
+          criticalCount: alerts.filter(a => a.severity === 'critical').length,
+          retrievedAt: new Date()
+        }
+      };
+      
+      sendPaginatedSuccess(res, result.alerts, result.pagination, "Alertes de dates récupérées avec succès");
+    } catch (error: any) {
+      console.error('[DateIntelligence] Erreur récupération alertes:', error);
+      throw createError(500, "Erreur lors de la récupération des alertes");
+    }
+  })
+);
+
+// PUT /api/date-alerts/:id/acknowledge - Accusé de réception alerte
+app.put("/api/date-alerts/:id/acknowledge",
+  isAuthenticated,
+  rateLimits.general,
+  validateParams(commonParamSchemas.id),
+  validateBody(acknowledgeAlertSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { note } = req.body;
+      const userId = (req as any).user?.id || 'unknown';
+      
+      console.log(`[DateIntelligence] Acquittement alerte ${id} par ${userId}`);
+      
+      // Vérifier que l'alerte existe
+      const existingAlert = await storage.getDateAlert(id);
+      if (!existingAlert) {
+        throw createError(404, "Alerte non trouvée", { alertId: id });
+      }
+      
+      // Vérifier le statut actuel
+      if (existingAlert.status === 'resolved') {
+        throw createError(400, "Impossible d'acquitter une alerte déjà résolue", {
+          currentStatus: existingAlert.status,
+          alertId: id
+        });
+      }
+      
+      // Acquitter l'alerte
+      const acknowledgedAlert = await storage.acknowledgeAlert(id, userId);
+      
+      // Ajouter une note si fournie
+      if (note) {
+        await storage.updateDateAlert(id, {
+          actionTaken: note
+        });
+      }
+      
+      console.log(`[DateIntelligence] Alerte ${id} acquittée avec succès`);
+      
+      sendSuccess(res, acknowledgedAlert, "Alerte acquittée avec succès");
+    } catch (error: any) {
+      console.error('[DateIntelligence] Erreur acquittement alerte:', error);
+      
+      // Re-lancer les erreurs AppError
+      if (error.statusCode) {
+        throw error;
+      }
+      
+      throw createError(500, "Erreur lors de l'acquittement de l'alerte", {
+        alertId: req.params.id,
+        errorType: 'ALERT_ACKNOWLEDGMENT_FAILED'
+      });
+    }
+  })
+);
+
+// PUT /api/date-alerts/:id/resolve - Résolution d'alerte (bonus)
+app.put("/api/date-alerts/:id/resolve",
+  isAuthenticated,
+  rateLimits.general,
+  validateParams(commonParamSchemas.id),
+  validateBody(z.object({
+    actionTaken: z.string().min(1, "Action prise requise"),
+    resolution: z.string().optional()
+  })),
+  asyncHandler(async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { actionTaken, resolution } = req.body;
+      const userId = (req as any).user?.id || 'unknown';
+      
+      console.log(`[DateIntelligence] Résolution alerte ${id} par ${userId}`);
+      
+      // Vérifier que l'alerte existe
+      const existingAlert = await storage.getDateAlert(id);
+      if (!existingAlert) {
+        throw createError(404, "Alerte non trouvée", { alertId: id });
+      }
+      
+      // Résoudre l'alerte
+      const resolvedAlert = await storage.resolveAlert(id, userId, actionTaken);
+      
+      console.log(`[DateIntelligence] Alerte ${id} résolue avec succès`);
+      
+      sendSuccess(res, resolvedAlert, "Alerte résolue avec succès");
+    } catch (error: any) {
+      console.error('[DateIntelligence] Erreur résolution alerte:', error);
+      
+      if (error.statusCode) {
+        throw error;
+      }
+      
+      throw createError(500, "Erreur lors de la résolution de l'alerte", {
+        alertId: req.params.id,
+        errorType: 'ALERT_RESOLUTION_FAILED'
+      });
+    }
+  })
+);
+
+// ========================================
+// ROUTES D'ADMINISTRATION RÈGLES MÉTIER
+// ========================================
+
+// GET /api/admin/rules/statistics - Statistiques des règles
+app.get("/api/admin/rules/statistics",
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
+    try {
+      console.log('[Admin] Récupération statistiques règles métier');
+      
+      const stats = await DateIntelligenceRulesSeeder.getRulesStatistics();
+      
+      sendSuccess(res, stats, "Statistiques des règles métier récupérées avec succès");
+    } catch (error: any) {
+      console.error('[Admin] Erreur statistiques règles:', error);
+      throw createError(500, "Erreur lors de la récupération des statistiques");
+    }
+  })
+);
+
+// POST /api/admin/rules/seed - Forcer le seeding des règles par défaut
+app.post("/api/admin/rules/seed",
+  isAuthenticated,
+  rateLimits.general,
+  asyncHandler(async (req, res) => {
+    try {
+      console.log('[Admin] Seeding forcé des règles par défaut');
+      
+      await DateIntelligenceRulesSeeder.updateDefaultRules();
+      
+      const stats = await DateIntelligenceRulesSeeder.getRulesStatistics();
+      
+      sendSuccess(res, { 
+        message: "Seeding des règles par défaut effectué",
+        statistics: stats
+      }, "Règles par défaut initialisées avec succès");
+      
+    } catch (error: any) {
+      console.error('[Admin] Erreur seeding règles:', error);
+      throw createError(500, "Erreur lors du seeding des règles par défaut");
+    }
+  })
+);
+
+// POST /api/admin/rules/reset - Reset complet des règles (DESTRUCTIF)
+app.post("/api/admin/rules/reset",
+  isAuthenticated,
+  rateLimits.auth, // Plus restrictif pour opération destructive
+  validateBody(z.object({
+    confirmation: z.literal("RESET_ALL_RULES", {
+      errorMap: () => ({ message: "Confirmation requise: 'RESET_ALL_RULES'" })
+    })
+  })),
+  asyncHandler(async (req, res) => {
+    try {
+      const userId = (req as any).user?.id || 'unknown';
+      console.log(`[Admin] RESET COMPLET des règles initié par ${userId}`);
+      
+      await DateIntelligenceRulesSeeder.resetAllRules();
+      
+      const stats = await DateIntelligenceRulesSeeder.getRulesStatistics();
+      
+      console.log(`[Admin] RESET COMPLET terminé par ${userId}`);
+      
+      sendSuccess(res, { 
+        message: "Reset complet des règles effectué",
+        statistics: stats,
+        resetBy: userId,
+        resetAt: new Date()
+      }, "Reset des règles effectué avec succès");
+      
+    } catch (error: any) {
+      console.error('[Admin] Erreur reset règles:', error);
+      throw createError(500, "Erreur lors du reset des règles");
+    }
+  })
+);
+
+// GET /api/admin/rules/validate - Validation de la cohérence des règles
+app.get("/api/admin/rules/validate",
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
+    try {
+      console.log('[Admin] Validation cohérence règles métier');
+      
+      const validation = await DateIntelligenceRulesSeeder.validateRulesConsistency();
+      
+      const response = {
+        ...validation,
+        validatedAt: new Date(),
+        summary: {
+          isHealthy: validation.isValid && validation.warnings.length === 0,
+          totalIssues: validation.issues.length,
+          totalWarnings: validation.warnings.length,
+          status: validation.isValid ? 
+            (validation.warnings.length > 0 ? 'healthy_with_warnings' : 'healthy') : 
+            'unhealthy'
+        }
+      };
+      
+      // Statut HTTP selon la validation
+      const statusCode = validation.isValid ? 200 : 422;
+      
+      sendSuccess(res, response, "Validation de la cohérence terminée", statusCode);
+      
+    } catch (error: any) {
+      console.error('[Admin] Erreur validation règles:', error);
+      throw createError(500, "Erreur lors de la validation des règles");
+    }
+  })
+);
+
+// GET /api/admin/intelligence/health - Santé générale du système d'intelligence temporelle
+app.get("/api/admin/intelligence/health",
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
+    try {
+      console.log('[Admin] Vérification santé système intelligence temporelle');
+      
+      // Récupérer les statistiques des différents composants
+      const [rulesStats, rulesValidation] = await Promise.all([
+        DateIntelligenceRulesSeeder.getRulesStatistics(),
+        DateIntelligenceRulesSeeder.validateRulesConsistency()
+      ]);
+      
+      // Vérifier les alertes actives
+      const activeAlerts = await storage.getDateAlerts({ status: 'pending' });
+      
+      // Calculer le score de santé général
+      let healthScore = 100;
+      
+      // Déductions pour problèmes
+      if (!rulesValidation.isValid) healthScore -= 30;
+      if (rulesValidation.warnings.length > 0) healthScore -= rulesValidation.warnings.length * 5;
+      if (rulesStats.activeRules === 0) healthScore -= 50;
+      if (activeAlerts.length > 10) healthScore -= 20;
+      
+      healthScore = Math.max(0, healthScore);
+      
+      const healthStatus = healthScore >= 90 ? 'excellent' :
+                          healthScore >= 70 ? 'good' :
+                          healthScore >= 50 ? 'fair' : 'poor';
+      
+      const healthReport = {
+        healthScore,
+        healthStatus,
+        components: {
+          rules: {
+            total: rulesStats.totalRules,
+            active: rulesStats.activeRules,
+            isValid: rulesValidation.isValid,
+            issues: rulesValidation.issues.length,
+            warnings: rulesValidation.warnings.length
+          },
+          alerts: {
+            pending: activeAlerts.filter(a => a.status === 'pending').length,
+            critical: activeAlerts.filter(a => a.severity === 'critical').length,
+            total: activeAlerts.length
+          },
+          system: {
+            serviceAvailable: true, // Le service répond
+            lastCheck: new Date()
+          }
+        },
+        recommendations: [] as string[]
+      };
+      
+      // Recommandations basées sur l'état
+      if (rulesStats.activeRules === 0) {
+        healthReport.recommendations.push("Aucune règle active - Exécuter le seeding des règles par défaut");
+      }
+      
+      if (!rulesValidation.isValid) {
+        healthReport.recommendations.push("Problèmes de cohérence détectés - Vérifier et corriger les règles");
+      }
+      
+      if (activeAlerts.filter(a => a.severity === 'critical').length > 0) {
+        healthReport.recommendations.push("Alertes critiques en attente - Traitement prioritaire requis");
+      }
+      
+      if (rulesValidation.warnings.length > 3) {
+        healthReport.recommendations.push("Nombreux avertissements - Optimisation des règles recommandée");
+      }
+      
+      console.log(`[Admin] Santé système: ${healthStatus} (${healthScore}/100)`);
+      
+      sendSuccess(res, healthReport, "Rapport de santé du système d'intelligence temporelle");
+      
+    } catch (error: any) {
+      console.error('[Admin] Erreur vérification santé:', error);
+      throw createError(500, "Erreur lors de la vérification de santé du système");
+    }
+  })
+);
+
+// ========================================
+// ROUTE DE TEST D'INTÉGRATION INTELLIGENCE TEMPORELLE
+// ========================================
+
+// GET /api/admin/intelligence/test-integration - Test complet d'intégration
+app.get("/api/admin/intelligence/test-integration",
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
+    try {
+      console.log('[Test] Démarrage test d\'intégration intelligence temporelle');
+      
+      // Import dynamique du test pour éviter les dépendances circulaires
+      const { runIntegrationTest } = await import('./test/dateIntelligenceIntegration.test');
+      
+      const testResults = await runIntegrationTest();
+      
+      const response = {
+        ...testResults,
+        testedAt: new Date(),
+        testType: 'full_integration',
+        phase: '2.2_intelligent_date_calculation_engine'
+      };
+      
+      const statusCode = testResults.success ? 200 : 422;
+      
+      sendSuccess(res, response, testResults.success ? 
+        "Test d'intégration réussi - Système opérationnel" : 
+        "Test d'intégration partiel - Problèmes détectés", 
+        statusCode);
+      
+    } catch (error: any) {
+      console.error('[Test] Erreur test d\'intégration:', error);
+      throw createError(500, "Erreur lors du test d'intégration", {
+        errorType: 'INTEGRATION_TEST_FAILED',
+        details: error.message
+      });
+    }
+  })
+);
 
   const httpServer = createServer(app);
   return httpServer;

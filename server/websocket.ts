@@ -108,6 +108,7 @@ export class WebSocketManager {
     try {
       const cookies = request.headers.cookie;
       if (!cookies) {
+        log('WebSocket: No cookies found in request');
         this.sendMessage(ws, {
           type: 'auth_error',
           message: 'No session cookie found'
@@ -116,9 +117,10 @@ export class WebSocketManager {
       }
 
       const parsedCookies = parseCookie(cookies);
-      const sessionId = parsedCookies['connect.sid'];
+      const sessionCookie = parsedCookies['connect.sid'];
       
-      if (!sessionId) {
+      if (!sessionCookie) {
+        log('WebSocket: No connect.sid cookie found');
         this.sendMessage(ws, {
           type: 'auth_error',
           message: 'No session ID found'
@@ -126,9 +128,17 @@ export class WebSocketManager {
         return;
       }
 
-      // Déchiffrer l'ID de session (format connect.sid)
-      const sessionIdWithoutSignature = sessionId.split('.')[0];
-      if (!sessionIdWithoutSignature) {
+      // Déchiffrer l'ID de session (format s:sessionId.signature)
+      let sessionId = sessionCookie;
+      
+      // Si le cookie commence par 's:', c'est un cookie signé
+      if (sessionId.startsWith('s:')) {
+        sessionId = sessionId.slice(2); // Remove 's:'
+        sessionId = sessionId.split('.')[0]; // Remove signature
+      }
+      
+      if (!sessionId) {
+        log('WebSocket: Invalid session format after parsing');
         this.sendMessage(ws, {
           type: 'auth_error',
           message: 'Invalid session format'
@@ -136,9 +146,21 @@ export class WebSocketManager {
         return;
       }
 
+      log(`WebSocket: Looking up session: ${sessionId.substring(0, 8)}...`);
+
       // Récupérer la session depuis le store
-      this.sessionStore.get(sessionIdWithoutSignature, (err: any, sessionData: SessionData) => {
-        if (err || !sessionData) {
+      this.sessionStore.get(sessionId, (err: any, sessionData: SessionData) => {
+        if (err) {
+          log(`WebSocket: Session lookup error: ${err}`);
+          this.sendMessage(ws, {
+            type: 'auth_error',
+            message: 'Session lookup failed'
+          });
+          return;
+        }
+
+        if (!sessionData) {
+          log('WebSocket: Session not found in store');
           this.sendMessage(ws, {
             type: 'auth_error',
             message: 'Session not found or expired'
@@ -146,8 +168,11 @@ export class WebSocketManager {
           return;
         }
 
+        log(`WebSocket: Session found, passport data: ${JSON.stringify(sessionData.passport || {})}`);
+
         const userId = sessionData.passport?.user?.claims?.sub;
         if (!userId) {
+          log('WebSocket: No user ID found in session');
           this.sendMessage(ws, {
             type: 'auth_error',
             message: 'User not authenticated'

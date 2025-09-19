@@ -3,6 +3,7 @@ import {
   users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
   chiffrageElements, dpgfDocuments, aoLots, maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre,
   validationMilestones, visaArchitecte, technicalAlerts, technicalAlertHistory,
+  projectTimelines, dateIntelligenceRules, dateAlerts,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -23,7 +24,11 @@ import {
   type TechnicalAlert, type InsertTechnicalAlert,
   type TechnicalAlertHistory, type InsertTechnicalAlertHistory,
   type TechnicalAlertsFilter,
-  type MaterialColorAlertRule
+  type MaterialColorAlertRule,
+  type ProjectTimeline, type InsertProjectTimeline,
+  type DateIntelligenceRule, type InsertDateIntelligenceRule,
+  type DateAlert, type InsertDateAlert,
+  type ProjectStatus
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -210,6 +215,34 @@ export interface IStorage {
   // Gestion des règles d'alerte matériau-couleur configurables
   getMaterialColorRules(): Promise<MaterialColorAlertRule[]>;
   setMaterialColorRules(rules: MaterialColorAlertRule[]): Promise<void>;
+  
+  // ========================================
+  // SYSTÈME INTELLIGENT DE DATES ET ÉCHÉANCES - PHASE 2.2
+  // ========================================
+  
+  // ProjectTimelines operations - Planification intelligente des projets
+  getProjectTimelines(projectId: string): Promise<ProjectTimeline[]>;
+  getAllProjectTimelines(): Promise<ProjectTimeline[]>;
+  createProjectTimeline(data: InsertProjectTimeline): Promise<ProjectTimeline>;
+  updateProjectTimeline(id: string, data: Partial<InsertProjectTimeline>): Promise<ProjectTimeline>;
+  deleteProjectTimeline(id: string): Promise<void>;
+  
+  // DateIntelligenceRules operations - Gestion des règles métier configurables
+  getActiveRules(filters?: { phase?: ProjectStatus, projectType?: string }): Promise<DateIntelligenceRule[]>;
+  getAllRules(): Promise<DateIntelligenceRule[]>;
+  getRule(id: string): Promise<DateIntelligenceRule | undefined>;
+  createRule(data: InsertDateIntelligenceRule): Promise<DateIntelligenceRule>;
+  updateRule(id: string, data: Partial<InsertDateIntelligenceRule>): Promise<DateIntelligenceRule>;
+  deleteRule(id: string): Promise<void>;
+  
+  // DateAlerts operations - Gestion alertes dates et échéances
+  getDateAlerts(filters?: { entityType?: string, entityId?: string, status?: string }): Promise<DateAlert[]>;
+  getDateAlert(id: string): Promise<DateAlert | undefined>;
+  createDateAlert(data: InsertDateAlert): Promise<DateAlert>;
+  updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert>;
+  deleteDateAlert(id: string): Promise<void>;
+  acknowledgeAlert(id: string, userId: string): Promise<DateAlert>;
+  resolveAlert(id: string, userId: string, actionTaken?: string): Promise<DateAlert>;
 }
 
 // ========================================
@@ -1612,6 +1645,300 @@ export class DatabaseStorage implements IStorage {
     
     console.log(`[Storage] ${rules.length} règles matériaux-couleurs mises à jour avec succès`);
     console.log(`[Storage] IDs des règles: ${rules.map(r => r.id).join(', ')}`);
+  }
+
+  // ========================================
+  // SYSTÈME INTELLIGENT DE DATES ET ÉCHÉANCES - PHASE 2.2
+  // ========================================
+
+  // Stockage en mémoire pour le POC
+  private static projectTimelines = new Map<string, ProjectTimeline>();
+  private static dateIntelligenceRules = new Map<string, DateIntelligenceRule>();  
+  private static dateAlerts = new Map<string, DateAlert>();
+
+  // ========================================
+  // PROJECT TIMELINES OPERATIONS
+  // ========================================
+
+  async getProjectTimelines(projectId: string): Promise<ProjectTimeline[]> {
+    const timelines = Array.from(DatabaseStorage.projectTimelines.values())
+      .filter(timeline => timeline.projectId === projectId)
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    
+    console.log(`[Storage] Récupération de ${timelines.length} timelines pour projet ${projectId}`);
+    return timelines;
+  }
+
+  async getAllProjectTimelines(): Promise<ProjectTimeline[]> {
+    const timelines = Array.from(DatabaseStorage.projectTimelines.values())
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    
+    console.log(`[Storage] Récupération de ${timelines.length} timelines totales`);
+    return timelines;
+  }
+
+  async createProjectTimeline(data: InsertProjectTimeline): Promise<ProjectTimeline> {
+    const id = `timeline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const timeline: ProjectTimeline = {
+      id,
+      ...data,
+      autoCalculated: data.autoCalculated ?? true,
+      lastCalculatedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    DatabaseStorage.projectTimelines.set(id, timeline);
+    console.log(`[Storage] Timeline créée: ${id} pour projet ${data.projectId}, phase ${data.phase}`);
+    
+    return timeline;
+  }
+
+  async updateProjectTimeline(id: string, data: Partial<InsertProjectTimeline>): Promise<ProjectTimeline> {
+    const existing = DatabaseStorage.projectTimelines.get(id);
+    if (!existing) {
+      throw new Error(`Timeline ${id} non trouvée`);
+    }
+
+    const updated: ProjectTimeline = {
+      ...existing,
+      ...data,
+      updatedAt: new Date(),
+      lastCalculatedAt: data.calculationMethod ? new Date() : existing.lastCalculatedAt
+    };
+
+    DatabaseStorage.projectTimelines.set(id, updated);
+    console.log(`[Storage] Timeline mise à jour: ${id}`);
+    
+    return updated;
+  }
+
+  async deleteProjectTimeline(id: string): Promise<void> {
+    const existing = DatabaseStorage.projectTimelines.get(id);
+    if (!existing) {
+      throw new Error(`Timeline ${id} non trouvée`);
+    }
+
+    DatabaseStorage.projectTimelines.delete(id);
+    console.log(`[Storage] Timeline supprimée: ${id}`);
+  }
+
+  // ========================================
+  // DATE INTELLIGENCE RULES OPERATIONS
+  // ========================================
+
+  async getActiveRules(filters?: { phase?: ProjectStatus, projectType?: string }): Promise<DateIntelligenceRule[]> {
+    let rules = Array.from(DatabaseStorage.dateIntelligenceRules.values())
+      .filter(rule => rule.isActive);
+
+    // Appliquer les filtres
+    if (filters?.phase) {
+      rules = rules.filter(rule => !rule.phase || rule.phase === filters.phase);
+    }
+    
+    if (filters?.projectType) {
+      rules = rules.filter(rule => {
+        if (!rule.projectType) return true; // Règle générale
+        return rule.projectType === filters.projectType;
+      });
+    }
+
+    // Vérifier la validité temporelle
+    const now = new Date();
+    rules = rules.filter(rule => {
+      if (rule.validFrom && now < rule.validFrom) return false;
+      if (rule.validUntil && now > rule.validUntil) return false;
+      return true;
+    });
+
+    // Trier par priorité (plus élevée en premier)
+    rules.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    
+    console.log(`[Storage] ${rules.length} règles actives trouvées avec filtres:`, filters);
+    return rules;
+  }
+
+  async getAllRules(): Promise<DateIntelligenceRule[]> {
+    const rules = Array.from(DatabaseStorage.dateIntelligenceRules.values())
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    
+    console.log(`[Storage] ${rules.length} règles totales récupérées`);
+    return rules;
+  }
+
+  async getRule(id: string): Promise<DateIntelligenceRule | undefined> {
+    const rule = DatabaseStorage.dateIntelligenceRules.get(id);
+    console.log(`[Storage] Règle ${id} ${rule ? 'trouvée' : 'non trouvée'}`);
+    return rule;
+  }
+
+  async createRule(data: InsertDateIntelligenceRule): Promise<DateIntelligenceRule> {
+    const id = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const rule: DateIntelligenceRule = {
+      id,
+      ...data,
+      isActive: data.isActive ?? true,
+      priority: data.priority ?? 100,
+      validFrom: data.validFrom ?? new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    DatabaseStorage.dateIntelligenceRules.set(id, rule);
+    console.log(`[Storage] Règle créée: ${id} - ${rule.name}`);
+    
+    return rule;
+  }
+
+  async updateRule(id: string, data: Partial<InsertDateIntelligenceRule>): Promise<DateIntelligenceRule> {
+    const existing = DatabaseStorage.dateIntelligenceRules.get(id);
+    if (!existing) {
+      throw new Error(`Règle ${id} non trouvée`);
+    }
+
+    const updated: DateIntelligenceRule = {
+      ...existing,
+      ...data,
+      updatedAt: new Date()
+    };
+
+    DatabaseStorage.dateIntelligenceRules.set(id, updated);
+    console.log(`[Storage] Règle mise à jour: ${id}`);
+    
+    return updated;
+  }
+
+  async deleteRule(id: string): Promise<void> {
+    const existing = DatabaseStorage.dateIntelligenceRules.get(id);
+    if (!existing) {
+      throw new Error(`Règle ${id} non trouvée`);
+    }
+
+    DatabaseStorage.dateIntelligenceRules.delete(id);
+    console.log(`[Storage] Règle supprimée: ${id}`);
+  }
+
+  // ========================================
+  // DATE ALERTS OPERATIONS
+  // ========================================
+
+  async getDateAlerts(filters?: { entityType?: string, entityId?: string, status?: string }): Promise<DateAlert[]> {
+    let alerts = Array.from(DatabaseStorage.dateAlerts.values());
+
+    // Appliquer les filtres
+    if (filters?.entityType) {
+      alerts = alerts.filter(alert => alert.entityType === filters.entityType);
+    }
+    
+    if (filters?.entityId) {
+      alerts = alerts.filter(alert => alert.entityId === filters.entityId);
+    }
+    
+    if (filters?.status) {
+      alerts = alerts.filter(alert => alert.status === filters.status);
+    }
+
+    // Trier par date de détection (plus récent en premier)
+    alerts.sort((a, b) => b.detectedAt.getTime() - a.detectedAt.getTime());
+    
+    console.log(`[Storage] ${alerts.length} alertes trouvées avec filtres:`, filters);
+    return alerts;
+  }
+
+  async getDateAlert(id: string): Promise<DateAlert | undefined> {
+    const alert = DatabaseStorage.dateAlerts.get(id);
+    console.log(`[Storage] Alerte ${id} ${alert ? 'trouvée' : 'non trouvée'}`);
+    return alert;
+  }
+
+  async createDateAlert(data: InsertDateAlert): Promise<DateAlert> {
+    const id = `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const alert: DateAlert = {
+      id,
+      ...data,
+      status: data.status ?? 'pending',
+      severity: data.severity ?? 'warning',
+      detectedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    DatabaseStorage.dateAlerts.set(id, alert);
+    console.log(`[Storage] Alerte créée: ${id} - ${alert.title}`);
+    
+    return alert;
+  }
+
+  async updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert> {
+    const existing = DatabaseStorage.dateAlerts.get(id);
+    if (!existing) {
+      throw new Error(`Alerte ${id} non trouvée`);
+    }
+
+    const updated: DateAlert = {
+      ...existing,
+      ...data,
+      updatedAt: new Date()
+    };
+
+    DatabaseStorage.dateAlerts.set(id, updated);
+    console.log(`[Storage] Alerte mise à jour: ${id}`);
+    
+    return updated;
+  }
+
+  async deleteDateAlert(id: string): Promise<void> {
+    const existing = DatabaseStorage.dateAlerts.get(id);
+    if (!existing) {
+      throw new Error(`Alerte ${id} non trouvée`);
+    }
+
+    DatabaseStorage.dateAlerts.delete(id);
+    console.log(`[Storage] Alerte supprimée: ${id}`);
+  }
+
+  async acknowledgeAlert(id: string, userId: string): Promise<DateAlert> {
+    const existing = DatabaseStorage.dateAlerts.get(id);
+    if (!existing) {
+      throw new Error(`Alerte ${id} non trouvée`);
+    }
+
+    const updated: DateAlert = {
+      ...existing,
+      status: 'acknowledged',
+      assignedTo: userId,
+      acknowledgedAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    DatabaseStorage.dateAlerts.set(id, updated);
+    console.log(`[Storage] Alerte acquittée: ${id} par ${userId}`);
+    
+    return updated;
+  }
+
+  async resolveAlert(id: string, userId: string, actionTaken?: string): Promise<DateAlert> {
+    const existing = DatabaseStorage.dateAlerts.get(id);
+    if (!existing) {
+      throw new Error(`Alerte ${id} non trouvée`);
+    }
+
+    const updated: DateAlert = {
+      ...existing,
+      status: 'resolved',
+      actionTaken: actionTaken || existing.actionTaken,
+      actionBy: userId,
+      resolvedAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    DatabaseStorage.dateAlerts.set(id, updated);
+    console.log(`[Storage] Alerte résolue: ${id} par ${userId}`);
+    
+    return updated;
   }
 }
 

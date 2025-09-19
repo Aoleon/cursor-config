@@ -159,7 +159,7 @@ export function WebSocketStatus({ className, showLabel = false, variant = 'badge
   );
 }
 
-// Hook variant for programmatic access
+// Hook pour accès programmatique
 export function useWebSocketStatus() {
   const { isConnected, connectionStatus } = useWebSocket();
   const { lastEvent } = useRealtimeNotifications();

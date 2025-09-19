@@ -30,6 +30,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const reconnectAttemptsRef = useRef(0);
   const eventHandlersRef = useRef<((event: RealtimeEvent) => void)[]>([]);
   const isManualDisconnectRef = useRef(false);
+  const connectionAttemptsRef = useRef(0);
+  const maxConnectionAttempts = 5;
+  const maxReconnectAttempts = 10;
 
   // Backoff strategy for reconnection (1s, 2s, 4s, 8s, 16s, then 16s)
   const getReconnectDelay = (attempts: number): number => {
@@ -44,6 +47,13 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
     if (!user) {
       console.log('WebSocket: No user available, skipping connection');
+      setConnectionStatus('disconnected');
+      return;
+    }
+
+    if (connectionAttemptsRef.current >= maxConnectionAttempts) {
+      console.log('WebSocket: Max connection attempts reached, stopping');
+      setConnectionStatus('error');
       return;
     }
 
@@ -62,6 +72,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         setIsConnected(true);
         setConnectionStatus('connected');
         reconnectAttemptsRef.current = 0;
+        connectionAttemptsRef.current = 0;
         
         // Send ping to verify connection
         newSocket.send(JSON.stringify({
@@ -87,9 +98,14 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         setConnectionStatus('disconnected');
         setSocket(null);
         
-        // Only attempt reconnection if not manually disconnected
-        if (!isManualDisconnectRef.current && user) {
+        // Only attempt reconnection if not manually disconnected and within limits
+        if (!isManualDisconnectRef.current && user && 
+            reconnectAttemptsRef.current < maxReconnectAttempts) {
+          connectionAttemptsRef.current++;
           scheduleReconnect();
+        } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+          console.log('WebSocket: Max reconnection attempts reached');
+          setConnectionStatus('error');
         }
       };
 
@@ -180,6 +196,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const reconnect = useCallback(() => {
     isManualDisconnectRef.current = false;
     reconnectAttemptsRef.current = 0;
+    connectionAttemptsRef.current = 0;
     disconnect();
     
     // Wait a bit before reconnecting
@@ -250,8 +267,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     lastEvent,
     subscribe,
     unsubscribe,
-    reconnect
-  };
+    reconnect,
+    addEventHandler
+  } as WebSocketContextValue & { addEventHandler: typeof addEventHandler };
 
   return (
     <WebSocketContext.Provider value={value}>
@@ -260,22 +278,24 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   );
 }
 
-export function useWebSocket(): WebSocketContextValue {
+// Exports compatibles Fast Refresh Vite
+export const useWebSocket = (): WebSocketContextValue => {
   const context = useContext(WebSocketContext);
   if (!context) {
     throw new Error('useWebSocket must be used within a WebSocketProvider');
   }
   return context;
-}
+};
 
-// Hook to register event handlers
-export function useWebSocketEvent(handler: (event: RealtimeEvent) => void) {
+// Hook pour enregistrer les handlers d'événements - compatible Fast Refresh
+export const useWebSocketEvent = (handler: (event: RealtimeEvent) => void) => {
   const context = useContext(WebSocketContext);
   
   useEffect(() => {
     if (!context) return;
     
-    const unregister = (context as any).addEventHandler?.(handler);
+    const contextWithHandler = context as WebSocketContextValue & { addEventHandler?: (handler: (event: RealtimeEvent) => void) => (() => void) };
+    const unregister = contextWithHandler.addEventHandler?.(handler);
     return unregister;
   }, [handler, context]);
-}
+};

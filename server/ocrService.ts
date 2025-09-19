@@ -130,6 +130,16 @@ interface AOFieldsExtracted {
   plansDisponibles?: boolean;
   dpgfClientDisponible?: boolean;
   dceDisponible?: boolean;
+  
+  // Critères techniques spéciaux
+  specialCriteria?: {
+    batimentPassif: boolean;
+    isolationRenforcee: boolean;
+    precadres: boolean;
+    voletsExterieurs: boolean;
+    coupeFeu: boolean;
+    evidences?: Record<string, string[]>; // extraits de texte correspondants
+  };
 }
 
 // Patterns de reconnaissance pour les AO français (paramétrable)
@@ -206,6 +216,40 @@ const AO_PATTERNS: Record<string, RegExp[]> = {
     /(?:lots?\s+concernés?|lots?\s*:)/i,
     /(?:lot\s+n?°?\s*\d+[\.\s:])/i,
     /(?:\d{1,2}[a-z]?\s*[:\-])/i,
+  ],
+  
+  // Critères techniques spéciaux JLM
+  batiment_passif: [
+    /(b[âa]timent|maison|construction)\s+passif\w*/i,
+    /passiv.?haus/i,
+    /(?:norme|standard)\s+passif/i,
+  ],
+
+  isolation_renforcee: [
+    /isolation\s+thermiq\w*\s+renforc\w*/i,
+    /performances?\s+thermiq\w*\s+renforc\w*/i,
+    /haute\s+performance\s+thermique/i,
+    /(?:rt|re)\s*20\d{2}/i,
+  ],
+
+  precadres: [
+    /pr[ée]-?cadres?/i,
+    /pré-?cadre/i,
+    /cadres?\s+d['']attente/i,
+  ],
+
+  volets_exterieurs: [
+    /volets?\s+(ext[ée]rieurs?|roulants?|battants?)/i,
+    /fermetures?\s+extérieures?/i,
+    /brise-soleil\s+orientable|\bBSO\b/i,
+    /persiennes?/i,
+  ],
+
+  coupe_feu: [
+    /coupe[-\s]?feu/i,
+    /\bEI\s?\d{2}\b/i,
+    /pare[-\s]?flammes?/i,
+    /résistance?\s+au\s+feu/i,
   ],
 };
 
@@ -611,6 +655,84 @@ Réponses publiées au plus tard le 22/03/2025
     return lots;
   }
 
+  // Détection des critères techniques spéciaux requis par JLM
+  private detectSpecialCriteria(text: string): { batimentPassif: boolean; isolationRenforcee: boolean; precadres: boolean; voletsExterieurs: boolean; coupeFeu: boolean; evidences?: Record<string, string[]> } {
+    const criteria = {
+      batimentPassif: false,
+      isolationRenforcee: false,
+      precadres: false,
+      voletsExterieurs: false,
+      coupeFeu: false,
+    };
+    
+    const evidences: Record<string, string[]> = {};
+    
+    // Scanner pour bâtiment passif
+    if (AO_PATTERNS.batiment_passif) {
+      for (const pattern of AO_PATTERNS.batiment_passif) {
+        const matches = text.match(pattern);
+        if (matches) {
+          criteria.batimentPassif = true;
+          if (!evidences.batimentPassif) evidences.batimentPassif = [];
+          evidences.batimentPassif.push(matches[0]);
+        }
+      }
+    }
+    
+    // Scanner pour isolation thermique renforcée
+    if (AO_PATTERNS.isolation_renforcee) {
+      for (const pattern of AO_PATTERNS.isolation_renforcee) {
+        const matches = text.match(pattern);
+        if (matches) {
+          criteria.isolationRenforcee = true;
+          if (!evidences.isolationRenforcee) evidences.isolationRenforcee = [];
+          evidences.isolationRenforcee.push(matches[0]);
+        }
+      }
+    }
+    
+    // Scanner pour précadres
+    if (AO_PATTERNS.precadres) {
+      for (const pattern of AO_PATTERNS.precadres) {
+        const matches = text.match(pattern);
+        if (matches) {
+          criteria.precadres = true;
+          if (!evidences.precadres) evidences.precadres = [];
+          evidences.precadres.push(matches[0]);
+        }
+      }
+    }
+    
+    // Scanner pour volets extérieurs
+    if (AO_PATTERNS.volets_exterieurs) {
+      for (const pattern of AO_PATTERNS.volets_exterieurs) {
+        const matches = text.match(pattern);
+        if (matches) {
+          criteria.voletsExterieurs = true;
+          if (!evidences.voletsExterieurs) evidences.voletsExterieurs = [];
+          evidences.voletsExterieurs.push(matches[0]);
+        }
+      }
+    }
+    
+    // Scanner pour coupe-feu
+    if (AO_PATTERNS.coupe_feu) {
+      for (const pattern of AO_PATTERNS.coupe_feu) {
+        const matches = text.match(pattern);
+        if (matches) {
+          criteria.coupeFeu = true;
+          if (!evidences.coupeFeu) evidences.coupeFeu = [];
+          evidences.coupeFeu.push(matches[0]);
+        }
+      }
+    }
+    
+    return {
+      ...criteria,
+      evidences: Object.keys(evidences).length > 0 ? evidences : undefined
+    };
+  }
+
   private parseAOFields(text: string): AOFieldsExtracted {
     const fields: AOFieldsExtracted = {};
     const normalizedText = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -727,6 +849,9 @@ Réponses publiées au plus tard le 22/03/2025
         fields.lotConcerne = `Lots: ${lotNumbers}`;
       }
     }
+    
+    // Détection des critères techniques spéciaux
+    fields.specialCriteria = this.detectSpecialCriteria(text);
     
     return fields;
   }

@@ -11,7 +11,8 @@ import { sendSuccess, sendPaginatedSuccess, createError, asyncHandler } from "./
 import { 
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
   insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
-  insertChiffrageElementSchema, insertDpgfDocumentSchema, insertValidationMilestoneSchema, insertVisaArchitecteSchema
+  insertChiffrageElementSchema, insertDpgfDocumentSchema, insertValidationMilestoneSchema, insertVisaArchitecteSchema,
+  technicalScoringConfigSchema, type TechnicalScoringConfig, type SpecialCriteria
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -25,6 +26,7 @@ import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto } from "./dateUtils";
 import type { EventBus } from "./eventBus";
+import { ScoringService } from "./services/scoringService";
 
 // Extension du type Session pour inclure la propriété user
 declare module 'express-session' {
@@ -2694,6 +2696,147 @@ status: "brouillon" as const,
     });
   }
 });
+
+// ========================================
+// TECHNICAL SCORING ROUTES - Configuration du système de scoring technique
+// ========================================
+
+// Middleware de validation pour les rôles admin/responsable
+const isAdminOrResponsible = (req: any, res: any, next: any) => {
+  const user = req.user || req.session?.user;
+  
+  if (!user) {
+    return res.status(401).json({ 
+      message: "Authentification requise" 
+    });
+  }
+  
+  // Vérifier le rôle (admin ou responsable)
+  if (!user.role || (user.role !== 'admin' && user.role !== 'responsable')) {
+    return res.status(403).json({ 
+      message: "Accès refusé. Rôle admin ou responsable requis." 
+    });
+  }
+  
+  next();
+};
+
+// GET /api/scoring-config - Récupérer la configuration du scoring
+app.get("/api/scoring-config", 
+  isAuthenticated,
+  isAdminOrResponsible,
+  asyncHandler(async (req, res) => {
+    console.log('[API] GET /api/scoring-config - Récupération configuration scoring');
+    
+    try {
+      const config = await storage.getScoringConfig();
+      
+      console.log('[API] Configuration scoring récupérée:', JSON.stringify(config, null, 2));
+      
+      res.json({
+        success: true,
+        data: config
+      });
+    } catch (error) {
+      console.error('[API] Erreur récupération configuration scoring:', error);
+      throw createError(500, "Erreur lors de la récupération de la configuration");
+    }
+  })
+);
+
+// PATCH /api/scoring-config - Mettre à jour la configuration du scoring
+app.patch("/api/scoring-config",
+  isAuthenticated,
+  isAdminOrResponsible,
+  validateBody(technicalScoringConfigSchema),
+  asyncHandler(async (req, res) => {
+    console.log('[API] PATCH /api/scoring-config - Mise à jour configuration scoring');
+    console.log('[API] Données reçues:', JSON.stringify(req.body, null, 2));
+    
+    try {
+      const config: TechnicalScoringConfig = req.body;
+      
+      // Validation supplémentaire métier
+      const totalWeight = Object.values(config.weights).reduce((sum, weight) => sum + weight, 0);
+      if (totalWeight === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Au moins un critère doit avoir un poids supérieur à 0"
+        });
+      }
+      
+      // Sauvegarder la configuration
+      await storage.updateScoringConfig(config);
+      
+      console.log('[API] Configuration scoring mise à jour avec succès');
+      
+      res.json({
+        success: true,
+        message: "Configuration mise à jour avec succès",
+        data: config
+      });
+    } catch (error) {
+      console.error('[API] Erreur mise à jour configuration scoring:', error);
+      
+      if (error instanceof Error && error.message.includes('doit être entre')) {
+        return res.status(400).json({
+          success: false,
+          message: error.message
+        });
+      }
+      
+      throw createError(500, "Erreur lors de la mise à jour de la configuration");
+    }
+  })
+);
+
+// Schema pour validation du score preview
+const scorePreviewSchema = z.object({
+  specialCriteria: z.object({
+    batimentPassif: z.boolean(),
+    isolationRenforcee: z.boolean(),
+    precadres: z.boolean(),
+    voletsExterieurs: z.boolean(),
+    coupeFeu: z.boolean(),
+    evidences: z.record(z.array(z.string())).optional()
+  }),
+  config: technicalScoringConfigSchema.optional() // Configuration optionnelle pour test
+});
+
+// POST /api/score-preview - Calculer score depuis critères fournis (pour UI)
+app.post("/api/score-preview",
+  isAuthenticated,
+  isAdminOrResponsible,
+  validateBody(scorePreviewSchema),
+  asyncHandler(async (req, res) => {
+    console.log('[API] POST /api/score-preview - Calcul aperçu scoring');
+    console.log('[API] Critères reçus:', JSON.stringify(req.body, null, 2));
+    
+    try {
+      const { specialCriteria, config } = req.body;
+      
+      // Utiliser la configuration fournie ou récupérer celle par défaut
+      const scoringConfig = config || await storage.getScoringConfig();
+      
+      // Calculer le scoring
+      const result = ScoringService.compute(specialCriteria, scoringConfig);
+      
+      console.log('[API] Résultat aperçu scoring calculé:', JSON.stringify(result, null, 2));
+      
+      res.json({
+        success: true,
+        data: {
+          result,
+          usedConfig: scoringConfig,
+          inputCriteria: specialCriteria
+        }
+      });
+    } catch (error) {
+      console.error('[API] Erreur calcul aperçu scoring:', error);
+      throw createError(500, "Erreur lors du calcul de l'aperçu du scoring");
+    }
+  })
+);
 
 // ========================================
 // CHIFFRAGE ROUTES - Module de chiffrage et DPGF POC

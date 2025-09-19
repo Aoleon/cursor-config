@@ -2,6 +2,13 @@ import { createWorker } from 'tesseract.js';
 import sharp from 'sharp';
 // Types pdf-parse importés depuis le fichier de déclaration
 import type pdfParse from 'pdf-parse';
+// Import du service de scoring technique
+import { ScoringService } from './services/scoringService';
+import type { TechnicalScoringResult, SpecialCriteria } from '@shared/schema';
+// Import EventBus pour les alertes techniques
+import { eventBus } from './eventBus';
+// Import storage pour charger la configuration utilisateur
+import { storage } from './storage';
 
 // Imports dynamiques pour éviter les erreurs d'initialisation
 let pdfParseModule: typeof pdfParse | null = null;
@@ -59,6 +66,7 @@ interface OCRResult {
   extractedText: string;
   confidence: number;
   processedFields: AOFieldsExtracted;
+  technicalScoring?: TechnicalScoringResult; // Résultat du scoring technique
   rawData: any;
 }
 
@@ -312,10 +320,15 @@ export class OCRService {
         // PDF contient du texte natif
         console.log('[OCR] PDF with native text detected, using pdf-parse');
         const processedFields = this.parseAOFields(nativeText);
+        
+        // Calculer le scoring technique après détection des critères
+        const technicalScoring = await this.computeTechnicalScoring(processedFields.specialCriteria, processedFields.reference);
+        
         return {
           extractedText: nativeText,
           confidence: 95,
           processedFields,
+          technicalScoring,
           rawData: { method: 'native-text' }
         };
       }
@@ -387,12 +400,16 @@ export class OCRService {
       const fullText = this.getSimulatedOCRText();
       const processedFields = this.parseAOFields(fullText);
       
+      // Calculer le scoring technique après détection des critères
+      const technicalScoring = await this.computeTechnicalScoring(processedFields.specialCriteria, processedFields.reference);
+      
       console.log(`[OCR] OCR processing completed: ${fullText.length} characters simulated`);
       
       return {
         extractedText: fullText,
         confidence: 85, // Confiance simulée pour le POC
         processedFields,
+        technicalScoring,
         rawData: { method: 'ocr-poc', note: 'POC simulation for scanned PDFs' }
       };
       
@@ -893,6 +910,77 @@ Réponses publiées au plus tard le 22/03/2025
     if (confidence >= 75) return 'bon';
     if (confidence >= 60) return 'moyen';
     return 'faible';
+  }
+
+  // Calculer le scoring technique à partir des critères spéciaux détectés
+  private async computeTechnicalScoring(specialCriteria?: { 
+    batimentPassif: boolean;
+    isolationRenforcee: boolean;
+    precadres: boolean;
+    voletsExterieurs: boolean;
+    coupeFeu: boolean;
+    evidences?: Record<string, string[]>;
+  }, aoReference?: string): Promise<TechnicalScoringResult | undefined> {
+    // Si aucun critère détecté, pas de scoring
+    if (!specialCriteria) {
+      console.log('[OCR] Aucun critère spécial détecté - pas de scoring technique');
+      return undefined;
+    }
+
+    try {
+      // Convertir les critères au format attendu par le ScoringService
+      const criteriaForScoring: SpecialCriteria = {
+        batimentPassif: specialCriteria.batimentPassif,
+        isolationRenforcee: specialCriteria.isolationRenforcee,
+        precadres: specialCriteria.precadres,
+        voletsExterieurs: specialCriteria.voletsExterieurs,
+        coupeFeu: specialCriteria.coupeFeu,
+        evidences: specialCriteria.evidences
+      };
+
+      // CORRECTION CRITIQUE: Charger la configuration utilisateur depuis storage
+      console.log('[OCR] Chargement de la configuration scoring depuis storage...');
+      const config = await storage.getScoringConfig();
+      console.log('[OCR] Configuration scoring chargée:', config);
+
+      // Calculer le scoring avec la configuration utilisateur (au lieu de la config par défaut)
+      const result = ScoringService.compute(criteriaForScoring, config);
+      
+      console.log(`[OCR] Scoring technique calculé:
+        - Score total: ${result.totalScore}
+        - Critères déclenchés: ${result.triggeredCriteria.join(', ') || 'aucun'}
+        - Alerte: ${result.shouldAlert ? 'OUI 🚨' : 'NON'}
+        - Détails: ${JSON.stringify(result.details)}`);
+
+      // Émettre une alerte technique si le seuil est dépassé
+      if (result.shouldAlert && aoReference) {
+        console.log(`[OCR] 🚨 ALERTE TECHNIQUE déclenchée pour AO ${aoReference} - Score: ${result.totalScore}`);
+        
+        try {
+          eventBus.publishTechnicalAlert({
+            aoReference,
+            score: result.totalScore,
+            triggeredCriteria: result.triggeredCriteria,
+            metadata: {
+              evidences: specialCriteria.evidences,
+              scoreDetails: result.details,
+              timestamp: new Date().toISOString(),
+              source: 'OCR',
+              confidence: 95 // Confiance OCR
+            }
+          });
+          
+          console.log(`[OCR] ✅ Alerte technique publiée via EventBus pour AO ${aoReference}`);
+        } catch (error) {
+          console.error(`[OCR] ❌ Erreur lors de la publication de l'alerte technique:`, error);
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error('[OCR] Erreur lors du calcul du scoring technique:', error);
+      return undefined;
+    }
   }
 }
 

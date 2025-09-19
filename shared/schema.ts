@@ -2016,3 +2016,63 @@ export type InsertProjectPriority = z.infer<typeof insertProjectPrioritySchema>;
 export type ProjectPriority = typeof projectPriorities.$inferSelect;
 export type PriorityWeightsConfig = z.infer<typeof priorityWeightsConfigSchema>;
 export type SearchProjectPriorities = z.infer<typeof searchProjectPrioritiesSchema>;
+
+// ========================================
+// SCHÉMAS SCORING TECHNIQUE - SYSTÈME D'ALERTE JLM
+// ========================================
+
+// Configuration du scoring technique pour alerte automatique
+export const technicalScoringConfigSchema = z.object({
+  weights: z.object({
+    batimentPassif: z.number().min(0).max(10),
+    isolationRenforcee: z.number().min(0).max(10),
+    precadres: z.number().min(0).max(10),
+    voletsExterieurs: z.number().min(0).max(10),
+    coupeFeu: z.number().min(0).max(10),
+  }),
+  threshold: z.number().min(0).max(50),
+});
+
+export type TechnicalScoringConfig = z.infer<typeof technicalScoringConfigSchema>;
+
+// Résultat du scoring technique
+export const technicalScoringResultSchema = z.object({
+  totalScore: z.number(),
+  triggeredCriteria: z.array(z.string()),
+  shouldAlert: z.boolean(),
+  details: z.record(z.string(), z.number()), // critère → contribution au score
+});
+
+export type TechnicalScoringResult = z.infer<typeof technicalScoringResultSchema>;
+
+// Schema pour les critères spéciaux détectés par OCR
+export const specialCriteriaSchema = z.object({
+  batimentPassif: z.boolean().default(false),
+  isolationRenforcee: z.boolean().default(false),
+  precadres: z.boolean().default(false),
+  voletsExterieurs: z.boolean().default(false),
+  coupeFeu: z.boolean().default(false),
+  evidences: z.record(z.string(), z.array(z.string())).optional(), // critère → extraits de texte
+});
+
+export type SpecialCriteria = z.infer<typeof specialCriteriaSchema>;
+
+// Schema pour aperçu de scoring (frontend)
+export const scoringPreviewRequestSchema = z.object({
+  criteria: specialCriteriaSchema,
+  config: technicalScoringConfigSchema.optional(), // Si non fourni, utilise config par défaut
+});
+
+export type ScoringPreviewRequest = z.infer<typeof scoringPreviewRequestSchema>;
+
+// Valeurs par défaut pour le scoring technique
+export const defaultTechnicalScoringConfig: TechnicalScoringConfig = {
+  weights: {
+    batimentPassif: 5,
+    isolationRenforcee: 3,
+    precadres: 2,
+    voletsExterieurs: 1,
+    coupeFeu: 4,
+  },
+  threshold: 5,
+};

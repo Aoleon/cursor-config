@@ -55,7 +55,10 @@ export enum EventType {
   GANTT_TASK_MOVED = 'gantt.task_moved',
   GANTT_TASK_RESIZED = 'gantt.task_resized',
   GANTT_DEPENDENCY_CREATED = 'gantt.dependency_created',
-  GANTT_MILESTONE_CREATED = 'gantt.milestone_created'
+  GANTT_MILESTONE_CREATED = 'gantt.milestone_created',
+  
+  // Alertes techniques OCR
+  TECHNICAL_ALERT = 'technical.alert'
 }
 
 // ========================================
@@ -65,7 +68,7 @@ export enum EventType {
 export const realtimeEventSchema = z.object({
   id: z.string().uuid(),
   type: z.nativeEnum(EventType),
-  entity: z.enum(['offer', 'project', 'task', 'validation', 'supplier', 'system']),
+  entity: z.enum(['offer', 'project', 'task', 'validation', 'supplier', 'system', 'technical']),
   entityId: z.string(),
   
   // Relations pour navigation et contexte

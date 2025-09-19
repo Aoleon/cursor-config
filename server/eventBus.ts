@@ -452,6 +452,40 @@ export class EventBus extends EventEmitter {
     this.publish(event);
   }
 
+  // Événements Alertes Techniques
+  public publishTechnicalAlert(params: {
+    aoReference: string;
+    score: number;
+    triggeredCriteria: string[];
+    aoId?: string;
+    userId?: string;
+    metadata?: Record<string, any>;
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.TECHNICAL_ALERT,
+      entity: 'technical',
+      entityId: params.aoReference,
+      severity: 'warning',
+      title: '🚨 Alerte Technique Détectée',
+      message: `Score technique élevé (${params.score}) détecté pour AO ${params.aoReference}. Critères: ${params.triggeredCriteria.join(', ')}`,
+      affectedQueryKeys: [
+        ['/api/aos'],
+        ['/api/aos', params.aoId || ''],
+        ['/api/dashboard/alerts'],
+        ['/api/technical-alerts'],
+      ],
+      userId: params.userId,
+      metadata: {
+        score: params.score,
+        triggeredCriteria: params.triggeredCriteria,
+        aoReference: params.aoReference,
+        ...params.metadata,
+      },
+    });
+
+    this.publish(event);
+  }
+
   /**
    * Utilitaires
    */

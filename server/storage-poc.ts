@@ -18,7 +18,8 @@ import {
   type MaitreOeuvre, type InsertMaitreOeuvre,
   type ContactMaitreOeuvre, type InsertContactMaitreOeuvre,
   type ValidationMilestone, type InsertValidationMilestone,
-  type VisaArchitecte, type InsertVisaArchitecte
+  type VisaArchitecte, type InsertVisaArchitecte,
+  type TechnicalScoringConfig
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -169,6 +170,10 @@ export interface IStorage {
   // Additional helper methods for conversion workflow
   getOfferById(id: string): Promise<Offer | undefined>;
   getProjectsByOffer(offerId: string): Promise<Project[]>;
+  
+  // Technical scoring configuration operations
+  getScoringConfig(): Promise<TechnicalScoringConfig>;
+  updateScoringConfig(config: TechnicalScoringConfig): Promise<void>;
 }
 
 // ========================================
@@ -1292,6 +1297,48 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectsByOffer(offerId: string): Promise<Project[]> {
     return await db.select().from(projects).where(eq(projects.offerId, offerId));
+  }
+
+  // Technical scoring configuration operations
+  // Stockage en mémoire temporaire pour la configuration (POC sans DB)
+  private static scoringConfig: TechnicalScoringConfig | null = null;
+  
+  async getScoringConfig(): Promise<TechnicalScoringConfig> {
+    // Si pas de configuration en mémoire, retourner la configuration par défaut
+    if (!DatabaseStorage.scoringConfig) {
+      console.log('[Storage] Aucune configuration scoring trouvée, utilisation des valeurs par défaut');
+      DatabaseStorage.scoringConfig = {
+        weights: {
+          batimentPassif: 5,
+          isolationRenforcee: 3,
+          precadres: 2,
+          voletsExterieurs: 1,
+          coupeFeu: 4,
+        },
+        threshold: 5
+      };
+    }
+    
+    return DatabaseStorage.scoringConfig;
+  }
+
+  async updateScoringConfig(config: TechnicalScoringConfig): Promise<void> {
+    console.log('[Storage] Mise à jour configuration scoring:', JSON.stringify(config, null, 2));
+    
+    // Validation des valeurs (sécurité)
+    if (config.threshold < 0 || config.threshold > 50) {
+      throw new Error('Le seuil doit être entre 0 et 50');
+    }
+    
+    for (const [critere, poids] of Object.entries(config.weights)) {
+      if (poids < 0 || poids > 10) {
+        throw new Error(`Le poids pour ${critere} doit être entre 0 et 10`);
+      }
+    }
+    
+    // Sauvegarder en mémoire
+    DatabaseStorage.scoringConfig = { ...config };
+    console.log('[Storage] Configuration scoring mise à jour avec succès');
   }
 }
 

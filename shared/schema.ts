@@ -2119,6 +2119,7 @@ export const materialColorAlertRuleSchema = z.object({
   materials: z.array(z.enum(["pvc", "bois", "aluminium", "acier", "composite", "mixte_bois_alu", "inox", "galva"])).optional(),
   ralCodes: z.array(z.string()).optional(),
   finishes: z.array(z.enum(["mat", "satine", "brillant", "texture", "sable", "anodise", "thermolaque", "laque", "plaxe", "brosse"])).optional(),
+  specialCriteria: z.array(z.enum(["batiment_passif", "isolation_renforcee", "precadres", "volets_exterieurs", "coupe_feu"])).optional(),
   condition: z.enum(['allOf', 'anyOf']).default('anyOf'),
   severity: z.enum(['info', 'warning', 'critical']).default('warning'),
   message: z.string()

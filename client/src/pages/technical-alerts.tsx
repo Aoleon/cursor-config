@@ -403,13 +403,13 @@ export default function TechnicalAlerts() {
       ) : (
         <div className="space-y-4">
           {alerts?.map((alert: TechnicalAlert) => (
-            <Card key={alert.id} data-testid={`alert-card-${alert.id}`}>
+            <Card key={alert.id} data-testid={`alert-card-${alert.aoId}`}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl">
                     {alert.aoReference} - Score: {alert.score}
                   </CardTitle>
-                  <Badge variant={getStatusVariant(alert.status)}>
+                  <Badge variant={getStatusVariant(alert.status)} data-testid={`status-badge-${alert.aoId}`}>
                     {getStatusLabel(alert.status)}
                   </Badge>
                 </div>
@@ -430,7 +430,7 @@ export default function TechnicalAlerts() {
                       <Button
                         onClick={() => handleAcknowledge(alert)}
                         disabled={ackMutation.isPending}
-                        data-testid={`button-ack-${alert.id}`}
+                        data-testid={`button-ack-${alert.aoId}`}
                         variant="outline"
                       >
                         <CheckCircle className="w-4 h-4 mr-2" />
@@ -439,7 +439,7 @@ export default function TechnicalAlerts() {
                       <Button
                         onClick={() => handleValidate(alert)}
                         disabled={validateMutation.isPending}
-                        data-testid={`button-validate-${alert.id}`}
+                        data-testid={`button-validate-${alert.aoId}`}
                       >
                         <ShieldCheck className="w-4 h-4 mr-2" />
                         Valider
@@ -448,7 +448,7 @@ export default function TechnicalAlerts() {
                         onClick={() => handleBypass(alert)}
                         disabled={bypassMutation.isPending}
                         variant="outline"
-                        data-testid={`button-bypass-${alert.id}`}
+                        data-testid={`button-bypass-${alert.aoId}`}
                       >
                         <Clock className="w-4 h-4 mr-2" />
                         Bypass
@@ -459,7 +459,7 @@ export default function TechnicalAlerts() {
                     <Button
                       onClick={() => handleValidate(alert)}
                       disabled={validateMutation.isPending}
-                      data-testid={`button-validate-${alert.id}`}
+                      data-testid={`button-validate-${alert.aoId}`}
                     >
                       <ShieldCheck className="w-4 h-4 mr-2" />
                       Valider
@@ -469,7 +469,7 @@ export default function TechnicalAlerts() {
                     onClick={() => handleShowHistory(alert.id)}
                     variant="ghost"
                     size="sm"
-                    data-testid={`button-history-${alert.id}`}
+                    data-testid={`button-history-${alert.aoId}`}
                   >
                     <History className="w-4 h-4 mr-2" />
                     Historique

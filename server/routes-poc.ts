@@ -3092,6 +3092,50 @@ app.get("/api/technical-alerts/:id/history",
   })
 );
 
+// ========================================  
+// ROUTE SEED POUR TESTS E2E - TEST-ONLY
+// ========================================
+
+// POST /api/technical-alerts/seed - Seeder pour tests E2E (NODE_ENV=test uniquement)
+app.post("/api/technical-alerts/seed",
+  asyncHandler(async (req, res) => {
+    // Sécurité critique : uniquement en environnement de test
+    if (process.env.NODE_ENV !== 'test') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    
+    try {
+      const alertData = req.body;
+      
+      // Valider les données d'entrée basiques
+      if (!alertData.id || !alertData.aoId || !alertData.aoReference) {
+        throw createError.badRequest('Données alerte incomplètes pour seeding');
+      }
+      
+      // CORRECTION BLOCKER 1: Persister dans storage
+      const alert = await storage.enqueueTechnicalAlert({
+        aoId: alertData.aoId,
+        aoReference: alertData.aoReference,
+        score: alertData.score || 75,
+        triggeredCriteria: alertData.triggeredCriteria || ['test-criteria'],
+        status: alertData.status || 'pending',
+        assignedToUserId: alertData.assignedToUserId || 'test-user-id',
+        rawEventData: {
+          source: 'test-seed',
+          ...alertData.metadata
+        }
+      });
+      
+      console.log('[SEED] Alerte technique persistée avec succès:', alert.id);
+      
+      sendSuccess(res, alert, "Alerte technique de test créée et persistée avec succès");
+    } catch (error) {
+      console.error('[SEED] Erreur création alerte test:', error);
+      throw createError.badRequest('Erreur lors du seeding de l\'alerte technique');
+    }
+  })
+);
+
 // ========================================
 // CHIFFRAGE ROUTES - Module de chiffrage et DPGF POC
 // ========================================

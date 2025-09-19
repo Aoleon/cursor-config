@@ -1,0 +1,204 @@
+{
+  "00_RPAO_SCICV_BOULOGNE_SANDETTIE_v2_1756892042095.pdf": {
+    "filename": "00_RPAO_SCICV_BOULOGNE_SANDETTIE_v2_1756892042095.pdf",
+    "expectedReference": "RPAO-SCICV-BOULOGNE-SANDETTIE",
+    "client": "SCICV BOULOGNE-SUR-MER",
+    "location": "BOULOGNE-SUR-MER (62)",
+    "departement": "62",
+    "specialCriteria": {
+      "batiment_passif": {
+        "expected": false,
+        "evidences": []
+      },
+      "isolation_renforcee": {
+        "expected": true,
+        "evidences": ["performance thermique", "isolation renforcée", "RT 2012"]
+      },
+      "precadres": {
+        "expected": true,
+        "evidences": ["précadres", "précadre alu", "système de pose"]
+      },
+      "volets_exterieurs": {
+        "expected": false,
+        "evidences": []
+      },
+      "coupe_feu": {
+        "expected": false,
+        "evidences": []
+      }
+    },
+    "materials": [
+      {
+        "material": "aluminium",
+        "color": {
+          "ralCode": "7016",
+          "name": "Gris anthracite",
+          "finish": "thermolaque"
+        },
+        "evidences": ["menuiseries aluminium", "ALU thermolaqué", "RAL 7016"],
+        "confidence": 0.92
+      },
+      {
+        "material": "pvc",
+        "color": {
+          "ralCode": "9016",
+          "name": "Blanc de circulation",
+          "finish": "mat"
+        },
+        "evidences": ["menuiserie PVC", "PVC blanc"],
+        "confidence": 0.85
+      }
+    ],
+    "colors": [
+      {
+        "ralCode": "7016",
+        "name": "Gris anthracite",
+        "finish": "thermolaque",
+        "evidences": ["RAL 7016 anthracite"]
+      },
+      {
+        "ralCode": "9016", 
+        "name": "Blanc de circulation",
+        "finish": "mat",
+        "evidences": ["RAL 9016 blanc"]
+      }
+    ],
+    "expectedTechnicalScore": 5.0,
+    "shouldTriggerAlert": true,
+    "alertCategory": "material_technical",
+    "alertSeverity": "warning"
+  },
+  "AO-2503-21612025-03-05_08-49-187_1756892042096.pdf": {
+    "filename": "AO-2503-21612025-03-05_08-49-187_1756892042096.pdf",
+    "expectedReference": "AO-2503-216",
+    "client": "BAILLEUR SOCIAL HABITAT 62",
+    "location": "CALAIS (62)",
+    "departement": "62",
+    "specialCriteria": {
+      "batiment_passif": {
+        "expected": false,
+        "evidences": []
+      },
+      "isolation_renforcee": {
+        "expected": true,
+        "evidences": ["réhabilitation énergétique", "isolation thermique", "performance Uw < 1.3"]
+      },
+      "precadres": {
+        "expected": false,
+        "evidences": []
+      },
+      "volets_exterieurs": {
+        "expected": false,
+        "evidences": []
+      },
+      "coupe_feu": {
+        "expected": true,
+        "evidences": ["portes coupe-feu EI30", "EI30", "coupe-feu"]
+      }
+    },
+    "materials": [
+      {
+        "material": "pvc",
+        "color": {
+          "name": "Blanc",
+          "finish": "standard"
+        },
+        "evidences": ["menuiseries PVC", "PVC double vitrage"],
+        "confidence": 0.95
+      },
+      {
+        "material": "aluminium",
+        "color": {
+          "ralCode": "7016",
+          "name": "Anthracite",
+          "finish": "thermolaque"
+        },
+        "evidences": ["menuiseries aluminium", "RAL 7016 Anthracite"],
+        "confidence": 0.88
+      },
+      {
+        "material": "bois",
+        "color": {
+          "name": "Naturel",
+          "finish": "naturel"
+        },
+        "evidences": ["menuiseries intérieures bois", "portes palières"],
+        "confidence": 0.78
+      },
+      {
+        "material": "acier",
+        "color": {
+          "name": "Galvanisé",
+          "finish": "galva"
+        },
+        "evidences": ["serrurerie", "métallerie", "garde-corps"],
+        "confidence": 0.82
+      }
+    ],
+    "colors": [
+      {
+        "ralCode": "7016",
+        "name": "Anthracite",
+        "finish": "thermolaque",
+        "evidences": ["RAL 7016 Anthracite"]
+      }
+    ],
+    "expectedTechnicalScore": 7.0,
+    "shouldTriggerAlert": true,
+    "alertCategory": "high_score_combination",
+    "alertSeverity": "warning",
+    "expectedLots": [
+      {
+        "numero": "02A",
+        "designation": "MENUISERIES EXTÉRIEURES PVC",
+        "material": "pvc",
+        "montantEstime": 320000,
+        "evidences": ["LOT 02A", "MENUISERIES EXTÉRIEURES PVC"]
+      },
+      {
+        "numero": "03",
+        "designation": "MENUISERIES EXTÉRIEURES ALUMINIUM",
+        "material": "aluminium",
+        "montantEstime": 125000,
+        "evidences": ["LOT 03", "MENUISERIES EXTÉRIEURES ALUMINIUM"]
+      },
+      {
+        "numero": "06",
+        "designation": "MENUISERIES INTÉRIEURES BOIS",
+        "material": "bois",
+        "montantEstime": 85000,
+        "evidences": ["LOT 06", "MENUISERIES INTÉRIEURES BOIS"]
+      },
+      {
+        "numero": "07.1",
+        "designation": "SERRURERIE - MÉTALLERIE",
+        "material": "acier",
+        "montantEstime": 95000,
+        "evidences": ["LOT 07.1", "SERRURERIE - MÉTALLERIE"]
+      }
+    ]
+  },
+  "_metadata": {
+    "version": "1.0.0",
+    "description": "Ground truth dataset pour validation Phase 1 OCR Intelligent & Critères Techniques",
+    "created": "2025-01-20T11:02:00.000Z",
+    "totalFiles": 2,
+    "validationCriteria": {
+      "accuracyThreshold": 0.90,
+      "precisionThreshold": 0.95,
+      "recallThreshold": 0.90,
+      "performanceThresholds": {
+        "nativePdfMaxTime": 1500,
+        "ocrMaxTime": 8000,
+        "totalMaxTime": 10000
+      }
+    },
+    "testScenarios": [
+      "material_detection_accuracy",
+      "color_pattern_extraction", 
+      "technical_criteria_scoring",
+      "alert_generation_rules",
+      "performance_benchmarks"
+    ]
+  }
+}

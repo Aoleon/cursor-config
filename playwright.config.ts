@@ -41,10 +41,14 @@ export default defineConfig({
     },
   ],
 
+  // GAP CRITIQUE 2: Configuration webServer avec NODE_ENV=test pour E2E
   webServer: {
-    command: 'npm run dev',
+    command: 'NODE_ENV=test tsx server/index.ts',
     url: 'http://localhost:5000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      NODE_ENV: 'test'
+    }
   },
 });

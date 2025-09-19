@@ -8,7 +8,7 @@ import type { TechnicalScoringResult, SpecialCriteria, ColorSpec, MaterialSpec, 
 // Import EventBus pour les alertes techniques
 import { eventBus } from './eventBus';
 // Import storage pour charger la configuration utilisateur
-import { storage } from './storage';
+import { storage } from './storage-poc';
 
 // Imports dynamiques pour éviter les erreurs d'initialisation
 let pdfParseModule: typeof pdfParse | null = null;
@@ -912,7 +912,174 @@ Réponses publiées au plus tard le 22/03/2025
       console.error('[OCR] Erreur lors de l\'évaluation des règles matériaux-couleurs:', error);
     }
     
-    return fields;
+    // CORRECTION BLOCKER 2: Calculer et inclure technicalScoring
+    const technicalScoring = await this.computeTechnicalScoring(fields.specialCriteria, fields.reference);
+    
+    // GAP CRITIQUE 1: Publication EventBus avec métadonnées complètes pour les tests d'intégration
+    if (technicalScoring?.shouldAlert) {
+      try {
+        const alertData = {
+          aoId: fields.reference || 'unknown',
+          aoReference: fields.reference || 'unknown',
+          score: technicalScoring.score,
+          triggeredCriteria: technicalScoring.triggeredCriteria,
+          category: 'technical_scoring',
+          severity: technicalScoring.score > 80 ? 'critical' : 'warning',
+          affectedQueryKeys: ['/api/technical-alerts', '/api/aos'],
+          metadata: {
+            detectedMaterials: (fields.materials || []).map(m => m.material),
+            alertRules: await this.getTriggeredAlertRules(fields.materials, fields.specialCriteria),
+            evidences: fields.specialCriteria?.evidences,
+            scoreDetails: technicalScoring.details,
+            timestamp: new Date().toISOString(),
+            source: 'OCR-parseAOFields',
+            confidence: 95
+          }
+        };
+        
+        console.log(`[OCR] Publication alerte technique pour ${alertData.aoReference}, score: ${alertData.score}`);
+        eventBus.publishTechnicalAlert(alertData);
+        
+        console.log(`[OCR] ✅ Alerte technique publiée via EventBus depuis parseAOFields pour AO ${fields.reference}`);
+      } catch (error) {
+        console.error(`[OCR] ❌ Erreur lors de la publication de l'alerte technique depuis parseAOFields:`, error);
+      }
+    }
+    
+    return {
+      ...fields,
+      technicalScoring
+    };
+  }
+
+  // Méthode async pour obtenir les règles d'alerte déclenchées depuis storage
+  private async getTriggeredAlertRules(
+    materials: MaterialSpec[] = [],
+    specialCriteria: Record<string, boolean> = {}
+  ): Promise<string[]> {
+    try {
+      const rules = await storage.getMaterialColorRules();
+      const triggeredRules: string[] = [];
+      
+      console.log(`[OCR] Évaluation de ${rules.length} règles d'alerte depuis storage`);
+      
+      for (const rule of rules) {
+        const isTriggered = await this.evaluateAlertRule(rule, materials, specialCriteria);
+        if (isTriggered) {
+          triggeredRules.push(rule.id);
+          console.log(`[OCR] ✅ Règle déclenchée: ${rule.id} (${rule.severity})`);
+        }
+      }
+      
+      console.log(`[OCR] Règles d'alerte déclenchées: ${triggeredRules.join(', ') || 'aucune'}`);
+      return triggeredRules;
+      
+    } catch (error) {
+      console.warn('[OCR] Error fetching material color rules:', error);
+      // Fallback vers règles par défaut
+      return this.getDefaultTriggeredRules(materials, specialCriteria);
+    }
+  }
+
+  // Helper pour évaluer règle individuelle selon conditions
+  private async evaluateAlertRule(
+    rule: MaterialColorAlertRule,
+    materials: MaterialSpec[],
+    specialCriteria: Record<string, boolean>
+  ): Promise<boolean> {
+    try {
+      const materialNames = materials.map(m => m.material);
+      let materialMatch = false;
+      let specialCriteriaMatch = false;
+      
+      // Évaluer correspondance matériaux
+      if (rule.materials && rule.materials.length > 0) {
+        if (rule.condition === 'allOf') {
+          materialMatch = rule.materials.every(material => materialNames.includes(material));
+        } else { // anyOf
+          materialMatch = rule.materials.some(material => materialNames.includes(material));
+        }
+      } else {
+        materialMatch = true; // Pas de contrainte matériau
+      }
+      
+      // Évaluer correspondance critères spéciaux
+      if (rule.specialCriteria && rule.specialCriteria.length > 0) {
+        const criteriaMatches = rule.specialCriteria.map(criterion => {
+          // Mapping des noms de critères
+          const criteriaMap: Record<string, string> = {
+            'batiment_passif': 'batimentPassif',
+            'isolation_renforcee': 'isolationRenforcee',
+            'precadres': 'precadres',
+            'volets_exterieurs': 'voletsExterieurs',
+            'coupe_feu': 'coupeFeu'
+          };
+          const mappedCriterion = criteriaMap[criterion] || criterion;
+          return Boolean(specialCriteria[mappedCriterion]);
+        });
+        
+        if (rule.condition === 'allOf') {
+          specialCriteriaMatch = criteriaMatches.every(match => match);
+        } else { // anyOf
+          specialCriteriaMatch = criteriaMatches.some(match => match);
+        }
+      } else {
+        specialCriteriaMatch = true; // Pas de contrainte critères spéciaux
+      }
+      
+      // Condition globale selon allOf/anyOf de la règle
+      let finalMatch = false;
+      if (rule.condition === 'allOf') {
+        finalMatch = materialMatch && specialCriteriaMatch;
+      } else { // anyOf
+        finalMatch = materialMatch || specialCriteriaMatch;
+      }
+      
+      if (finalMatch) {
+        console.log(`[OCR] Règle ${rule.id} déclenchée:`, {
+          materialMatch,
+          specialCriteriaMatch,
+          condition: rule.condition,
+          severity: rule.severity
+        });
+      }
+      
+      return finalMatch;
+      
+    } catch (error) {
+      console.error(`[OCR] Erreur lors de l'évaluation de la règle ${rule.id}:`, error);
+      return false;
+    }
+  }
+
+  // Méthode fallback pour règles par défaut en cas d'erreur storage
+  private getDefaultTriggeredRules(
+    materials: MaterialSpec[],
+    specialCriteria: Record<string, boolean>
+  ): string[] {
+    const triggeredRules: string[] = [];
+    const materialNames = materials.map(m => m.material);
+    
+    console.log('[OCR] Utilisation des règles par défaut (fallback)');
+    
+    // Règle PVC + coupe-feu = critical
+    if (materialNames.includes('pvc') && specialCriteria.coupeFeu) {
+      triggeredRules.push('default-pvc-coupe-feu');
+    }
+    
+    // Règle bâtiment haute performance
+    if ((materialNames.includes('pvc') || materialNames.includes('aluminium')) && 
+        (specialCriteria.batimentPassif || specialCriteria.isolationRenforcee)) {
+      triggeredRules.push('default-high-performance-building');
+    }
+    
+    // Règle composite thermique
+    if (materialNames.includes('composite')) {
+      triggeredRules.push('custom-composite-thermal');
+    }
+    
+    console.log(`[OCR] Règles par défaut déclenchées: ${triggeredRules.join(', ') || 'aucune'}`);
+    return triggeredRules;
   }
 
   // Convertir les dates en format ISO
@@ -1245,8 +1412,12 @@ Réponses publiées au plus tard le 22/03/2025
   ): Promise<void> {
     try {
       console.log('[OCR] Évaluation des règles matériaux-couleurs...');
+      console.log('[OCR] DEBUG: storage object type:', typeof storage);
+      console.log('[OCR] DEBUG: storage.getMaterialColorRules function exists:', typeof storage.getMaterialColorRules === 'function');
+      
       const rules = await storage.getMaterialColorRules();
-      console.log(`[OCR] ${rules.length} règles à évaluer`);
+      console.log(`[OCR] DEBUG: Rules retrieved:`, rules);
+      console.log(`[OCR] ${rules?.length || 0} règles à évaluer`);
       
       for (const rule of rules) {
         const triggered = this.evaluateRule(rule, processedFields, fullText);
@@ -1256,7 +1427,7 @@ Réponses publiées au plus tard le 22/03/2025
           
           // Publier alerte technique via EventBus
           try {
-            eventBus.publish('technical.alert', {
+            eventBus.publishTechnicalAlert({
               category: 'material_color',
               severity: rule.severity,
               message: rule.message,
@@ -1265,7 +1436,15 @@ Réponses publiées au plus tard le 22/03/2025
               score: rule.severity === 'critical' ? 95 : (rule.severity === 'warning' ? 75 : 50),
               triggeredCriteria: [`Rule: ${rule.id}`],
               evidences: this.gatherRuleEvidences(rule, processedFields),
-              affectedQueryKeys: ['/api/aos', '/api/technical-alerts']
+              affectedQueryKeys: ['/api/aos', '/api/technical-alerts'],
+              metadata: {
+                detectedMaterials: (processedFields.materials || []).map(m => m.material),
+                alertRules: [rule.id],
+                evidences: this.gatherRuleEvidences(rule, processedFields),
+                timestamp: new Date().toISOString(),
+                source: 'OCR-evaluateMaterialColorRules',
+                confidence: 95
+              }
             });
             
             console.log(`[OCR] ✅ Alerte matériau-couleur publiée: ${rule.id}`);
@@ -1280,45 +1459,83 @@ Réponses publiées au plus tard le 22/03/2025
   }
 
   /**
-   * Évalue une règle spécifique
+   * Évalue une règle spécifique avec logique complète (matériaux + specialCriteria + conditions)
    */
   private evaluateRule(
     rule: MaterialColorAlertRule,
     fields: AOFieldsExtracted,
     fullText: string
   ): boolean {
-    console.log(`[OCR] Évaluation règle: ${rule.id}`);
+    console.log(`[OCR] Évaluation règle complète: ${rule.id}`);
     
-    // Règle spéciale PVC + coupe-feu
-    if (rule.id === 'pvc-coupe-feu-critical') {
-      const hasPVC = fields.materials?.some(m => m.material === 'pvc') || false;
-      const hasCoupleFeu = /\b(?:EI\s*\d+|coupe.?feu|pare.?flammes?)\b/gi.test(fullText);
-      const result = hasPVC && hasCoupleFeu;
+    try {
+      const materials = fields.materials || [];
+      const materialNames = materials.map(m => m.material);
       
-      console.log(`[OCR] Règle PVC+coupe-feu: PVC=${hasPVC}, CoupleFeu=${hasCoupleFeu}, Résultat=${result}`);
-      return result;
-    }
-    
-    // Règle générique basée sur matériaux
-    if (rule.materials && rule.materials.length > 0) {
-      const detectedMaterials = fields.materials?.map(m => m.material) || [];
-      const hasRequiredMaterial = rule.materials.some(reqMat => detectedMaterials.includes(reqMat));
+      // Convertir specialCriteria depuis fields en format compatible
+      const specialCriteria: Record<string, boolean> = {
+        batimentPassif: fields.specialCriteria?.batimentPassif || false,
+        isolationRenforcee: fields.specialCriteria?.isolationRenforcee || false,
+        precadres: fields.specialCriteria?.precadres || false,
+        voletsExterieurs: fields.specialCriteria?.voletsExterieurs || false,
+        coupeFeu: fields.specialCriteria?.coupeFeu || false
+      };
       
-      console.log(`[OCR] Règle matériaux: requis=${rule.materials}, détectés=${detectedMaterials}, match=${hasRequiredMaterial}`);
-      return hasRequiredMaterial;
-    }
-    
-    // Règle générique basée sur codes RAL
-    if (rule.ralCodes && rule.ralCodes.length > 0) {
-      const detectedRalCodes = fields.colors?.map(c => c.ralCode).filter(Boolean) || [];
-      const hasRequiredRal = rule.ralCodes.some(reqRal => detectedRalCodes.includes(reqRal));
+      let materialMatch = false;
+      let specialCriteriaMatch = false;
       
-      console.log(`[OCR] Règle RAL: requis=${rule.ralCodes}, détectés=${detectedRalCodes}, match=${hasRequiredRal}`);
-      return hasRequiredRal;
+      // Évaluer correspondance matériaux
+      if (rule.materials && rule.materials.length > 0) {
+        if (rule.condition === 'allOf') {
+          materialMatch = rule.materials.every(material => materialNames.includes(material));
+        } else { // anyOf
+          materialMatch = rule.materials.some(material => materialNames.includes(material));
+        }
+        console.log(`[OCR] Matériaux - requis: ${rule.materials}, détectés: ${materialNames}, match: ${materialMatch}`);
+      } else {
+        materialMatch = true; // Pas de contrainte matériau
+      }
+      
+      // Évaluer correspondance critères spéciaux
+      if (rule.specialCriteria && rule.specialCriteria.length > 0) {
+        const criteriaMatches = rule.specialCriteria.map(criterion => {
+          // Mapping des noms de critères
+          const criteriaMap: Record<string, string> = {
+            'batiment_passif': 'batimentPassif',
+            'isolation_renforcee': 'isolationRenforcee',
+            'precadres': 'precadres',
+            'volets_exterieurs': 'voletsExterieurs',
+            'coupe_feu': 'coupeFeu'
+          };
+          const mappedCriterion = criteriaMap[criterion] || criterion;
+          return Boolean(specialCriteria[mappedCriterion]);
+        });
+        
+        if (rule.condition === 'allOf') {
+          specialCriteriaMatch = criteriaMatches.every(match => match);
+        } else { // anyOf
+          specialCriteriaMatch = criteriaMatches.some(match => match);
+        }
+        console.log(`[OCR] Critères spéciaux - requis: ${rule.specialCriteria}, matches: ${criteriaMatches}, result: ${specialCriteriaMatch}`);
+      } else {
+        specialCriteriaMatch = true; // Pas de contrainte critères spéciaux
+      }
+      
+      // Condition globale selon allOf/anyOf de la règle
+      let finalMatch = false;
+      if (rule.condition === 'allOf') {
+        finalMatch = materialMatch && specialCriteriaMatch;
+      } else { // anyOf
+        finalMatch = materialMatch || specialCriteriaMatch;
+      }
+      
+      console.log(`[OCR] Règle ${rule.id}: matériaux=${materialMatch}, critères=${specialCriteriaMatch}, condition=${rule.condition}, résultat=${finalMatch}`);
+      return finalMatch;
+      
+    } catch (error) {
+      console.error(`[OCR] Erreur lors de l'évaluation de la règle ${rule.id}:`, error);
+      return false;
     }
-    
-    console.log(`[OCR] Règle ${rule.id} non implémentée`);
-    return false;
   }
 
   /**

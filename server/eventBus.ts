@@ -165,6 +165,63 @@ export class EventBus extends EventEmitter {
    * Helpers pour créer et publier des événements communs
    */
 
+  // Événements Alertes Techniques
+  public publishTechnicalAlertActionPerformed(params: {
+    alertId: string;
+    action: 'acknowledged' | 'validated' | 'bypassed';
+    userId?: string;
+    metadata?: Record<string, any>;
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventType.TECHNICAL_ALERT,
+      entity: 'technical',
+      entityId: params.alertId,
+      severity: params.action === 'bypassed' ? 'warning' : 'success',
+      affectedQueryKeys: [
+        ['/api/technical-alerts'],
+        ['/api/technical-alerts', params.alertId],
+        ['/api/technical-alerts', params.alertId, 'history'],
+      ],
+      userId: params.userId,
+      metadata: {
+        action: params.action,
+        ...params.metadata,
+      },
+    });
+
+    this.publish(event);
+  }
+
+  public publishTechnicalAlertCreated(params: {
+    alertId: string;
+    aoId: string;
+    aoReference: string;
+    score: number;
+    triggeredCriteria: string[];
+    assignedToUserId?: string;
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventType.TECHNICAL_ALERT,
+      entity: 'technical',
+      entityId: params.alertId,
+      severity: 'warning',
+      affectedQueryKeys: [
+        ['/api/technical-alerts'],
+        ['/api/technical-alerts', params.alertId],
+      ],
+      userId: params.assignedToUserId,
+      metadata: {
+        aoId: params.aoId,
+        aoReference: params.aoReference,
+        score: params.score,
+        triggeredCriteria: params.triggeredCriteria,
+        action: 'created',
+      },
+    });
+
+    this.publish(event);
+  }
+
   // Événements Offres
   public publishOfferStatusChanged(params: {
     offerId: string;

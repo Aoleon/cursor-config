@@ -12,7 +12,9 @@ import {
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
   insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
   insertChiffrageElementSchema, insertDpgfDocumentSchema, insertValidationMilestoneSchema, insertVisaArchitecteSchema,
-  technicalScoringConfigSchema, type TechnicalScoringConfig, type SpecialCriteria
+  technicalScoringConfigSchema, type TechnicalScoringConfig, type SpecialCriteria,
+  insertTechnicalAlertSchema, bypassTechnicalAlertSchema, technicalAlertsFilterSchema,
+  type TechnicalAlert, type TechnicalAlertHistory
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -2834,6 +2836,185 @@ app.post("/api/score-preview",
     } catch (error) {
       console.error('[API] Erreur calcul aperçu scoring:', error);
       throw createError(500, "Erreur lors du calcul de l'aperçu du scoring");
+    }
+  })
+);
+
+// ========================================
+// ALERTES TECHNIQUES POUR JULIEN LAMBOROT - Queue de validation technique
+// ========================================
+
+// Middleware pour vérifier les rôles autorisés
+const requireTechnicalValidationRole = (req: any, res: any, next: any) => {
+  const userRole = req.session?.user?.role;
+  if (!userRole || !['responsable_be', 'admin'].includes(userRole)) {
+    return res.status(403).json({
+      success: false,
+      message: "Accès refusé. Rôle 'responsable_be' ou 'admin' requis."
+    });
+  }
+  next();
+};
+
+// GET /api/technical-alerts - Liste des alertes techniques avec filtrage
+app.get("/api/technical-alerts",
+  isAuthenticated,
+  requireTechnicalValidationRole,
+  validateQuery(technicalAlertsFilterSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const filter = req.query as any;
+      const alerts = await storage.listTechnicalAlerts(filter);
+      
+      sendSuccess(res, alerts, "Alertes techniques récupérées avec succès");
+    } catch (error) {
+      console.error('[API] Erreur récupération alertes techniques:', error);
+      throw createError(500, "Erreur lors de la récupération des alertes techniques");
+    }
+  })
+);
+
+// GET /api/technical-alerts/:id - Détail d'une alerte technique
+app.get("/api/technical-alerts/:id",
+  isAuthenticated,
+  requireTechnicalValidationRole,
+  validateParams(commonParamSchemas.idParam),
+  asyncHandler(async (req, res) => {
+    try {
+      const { id } = req.params;
+      const alert = await storage.getTechnicalAlert(id);
+      
+      if (!alert) {
+        throw createError(404, "Alerte technique non trouvée");
+      }
+      
+      sendSuccess(res, alert, "Alerte technique récupérée avec succès");
+    } catch (error) {
+      console.error('[API] Erreur récupération alerte technique:', error);
+      throw error;
+    }
+  })
+);
+
+// PATCH /api/technical-alerts/:id/ack - Acknowledgment d'une alerte
+app.patch("/api/technical-alerts/:id/ack",
+  isAuthenticated,
+  requireTechnicalValidationRole,
+  validateParams(commonParamSchemas.idParam),
+  asyncHandler(async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.session?.user?.id;
+      
+      if (!userId) {
+        throw createError(401, "Utilisateur non authentifié");
+      }
+      
+      await storage.acknowledgeTechnicalAlert(id, userId);
+      
+      // Publier événement EventBus
+      const eventBus = app.get('eventBus') as EventBus;
+      if (eventBus) {
+        eventBus.publishTechnicalAlertActionPerformed({
+          alertId: id,
+          action: 'acknowledged',
+          userId: userId,
+        });
+      }
+      
+      sendSuccess(res, { alertId: id }, "Alerte technique acknowledge avec succès");
+    } catch (error) {
+      console.error('[API] Erreur acknowledgment alerte technique:', error);
+      throw error;
+    }
+  })
+);
+
+// PATCH /api/technical-alerts/:id/validate - Validation d'une alerte
+app.patch("/api/technical-alerts/:id/validate",
+  isAuthenticated,
+  requireTechnicalValidationRole,
+  validateParams(commonParamSchemas.idParam),
+  asyncHandler(async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.session?.user?.id;
+      
+      if (!userId) {
+        throw createError(401, "Utilisateur non authentifié");
+      }
+      
+      await storage.validateTechnicalAlert(id, userId);
+      
+      // Publier événement EventBus
+      const eventBus = app.get('eventBus') as EventBus;
+      if (eventBus) {
+        eventBus.publishTechnicalAlertActionPerformed({
+          alertId: id,
+          action: 'validated',
+          userId: userId,
+        });
+      }
+      
+      sendSuccess(res, { alertId: id }, "Alerte technique validée avec succès");
+    } catch (error) {
+      console.error('[API] Erreur validation alerte technique:', error);
+      throw error;
+    }
+  })
+);
+
+// PATCH /api/technical-alerts/:id/bypass - Bypass temporaire d'une alerte
+app.patch("/api/technical-alerts/:id/bypass",
+  isAuthenticated,
+  requireTechnicalValidationRole,
+  validateParams(commonParamSchemas.idParam),
+  validateBody(bypassTechnicalAlertSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { until, reason } = req.body;
+      const userId = req.session?.user?.id;
+      
+      if (!userId) {
+        throw createError(401, "Utilisateur non authentifié");
+      }
+      
+      await storage.bypassTechnicalAlert(id, userId, new Date(until), reason);
+      
+      // Publier événement EventBus
+      const eventBus = app.get('eventBus') as EventBus;
+      if (eventBus) {
+        eventBus.publishTechnicalAlertActionPerformed({
+          alertId: id,
+          action: 'bypassed',
+          userId: userId,
+          metadata: { until, reason }
+        });
+      }
+      
+      sendSuccess(res, { alertId: id, until, reason }, "Alerte technique bypassée avec succès");
+    } catch (error) {
+      console.error('[API] Erreur bypass alerte technique:', error);
+      throw error;
+    }
+  })
+);
+
+// GET /api/technical-alerts/:id/history - Historique des actions sur une alerte
+app.get("/api/technical-alerts/:id/history",
+  isAuthenticated,
+  requireTechnicalValidationRole,
+  validateParams(commonParamSchemas.idParam),
+  asyncHandler(async (req, res) => {
+    try {
+      const { id } = req.params;
+      const history = await storage.listTechnicalAlertHistory(id);
+      
+      sendSuccess(res, history, "Historique de l'alerte technique récupéré avec succès");
+    } catch (error) {
+      console.error('[API] Erreur récupération historique alerte technique:', error);
+      throw createError(500, "Erreur lors de la récupération de l'historique");
     }
   })
 );

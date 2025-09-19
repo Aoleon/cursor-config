@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { WebSocketManager } from "./websocket";
 import { eventBus } from "./eventBus";
+import { storage } from "./storage";
 
 // Import des nouveaux middlewares de robustesse
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
@@ -69,6 +70,86 @@ app.use((req, res, next) => {
   
   // Make eventBus available to routes
   app.set('eventBus', eventBus);
+  
+  // ========================================
+  // ABONNEMENT AUX ALERTES TECHNIQUES POUR JULIEN LAMBOROT
+  // ========================================
+  
+  // Abonnement aux événements TECHNICAL_ALERT
+  eventBus.subscribe(async (event) => {
+    try {
+      // Traiter uniquement les événements de type TECHNICAL_ALERT
+      if (event.type !== 'technical.alert') {
+        return;
+      }
+      
+      log(`[EventBus] Traitement alerte technique: ${event.entityId}`);
+      
+      const { aoId, aoReference, score, triggeredCriteria } = event.metadata || {};
+      
+      if (!aoId || !aoReference || score === undefined || !triggeredCriteria) {
+        log(`[EventBus] Données manquantes pour alerte technique: ${JSON.stringify(event.metadata)}`);
+        return;
+      }
+      
+      // Vérifier bypass actif pour cet AO
+      const activeBypass = await storage.getActiveBypassForAo(aoId);
+      if (activeBypass) {
+        log(`[EventBus] Alerte supprimée - bypass actif jusqu'à ${activeBypass.until}`);
+        // Enregistrer comme supprimée dans l'historique - Option A: AO-scoped avec aoId
+        await storage.addTechnicalAlertHistory(
+          `ao-suppression-${aoId}`, 
+          'suppressed', 
+          null, 
+          `Bypass actif jusqu'à ${activeBypass.until.toISOString()} - AO ${aoReference}`,
+          { 
+            bypassReason: activeBypass.reason,
+            suppressedAt: new Date().toISOString(),
+            aoId,
+            aoReference,
+            score,
+            suppressionType: 'ao-scoped'
+          }
+        );
+        return;
+      }
+      
+      // Trouver Julien LAMBOROT - en dur pour le POC
+      const julienUserId = 'julien-lamborot-user-id'; // TODO: récupérer dynamiquement
+      
+      // Créer alerte en queue
+      const alert = await storage.enqueueTechnicalAlert({
+        aoId,
+        aoReference,
+        score: Number(score),
+        triggeredCriteria: Array.isArray(triggeredCriteria) ? triggeredCriteria : [triggeredCriteria],
+        assignedToUserId: julienUserId,
+        status: 'pending',
+        rawEventData: event.metadata
+      });
+      
+      log(`[EventBus] Alerte technique créée: ${alert.id} pour AO ${aoReference}`);
+      
+      // Publier événement de création d'alerte
+      eventBus.publishTechnicalAlertCreated({
+        alertId: alert.id,
+        aoId,
+        aoReference,
+        score: Number(score),
+        triggeredCriteria: Array.isArray(triggeredCriteria) ? triggeredCriteria : [triggeredCriteria],
+        assignedToUserId: julienUserId
+      });
+      
+    } catch (error) {
+      log(`[EventBus] Erreur traitement alerte technique: ${error}`);
+      console.error('[EventBus] Erreur traitement alerte technique:', error);
+    }
+  }, {
+    eventTypes: ['technical.alert' as any],
+    entities: ['technical']
+  });
+  
+  log('[EventBus] Abonnement aux alertes techniques configuré pour Julien LAMBOROT');
   
   const server = await registerRoutes(app);
 

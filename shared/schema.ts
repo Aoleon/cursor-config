@@ -2076,3 +2076,93 @@ export const defaultTechnicalScoringConfig: TechnicalScoringConfig = {
   },
   threshold: 5,
 };
+
+// ========================================
+// SYSTÈME D'ALERTES TECHNIQUES POUR JULIEN LAMBOROT
+// ========================================
+
+// Statuts des alertes techniques
+export const technicalAlertStatusEnum = pgEnum("technical_alert_status", [
+  "pending", "acknowledged", "validated", "bypassed"
+]);
+
+// Actions historique
+export const technicalAlertActionEnum = pgEnum("technical_alert_action", [
+  "created", "acknowledged", "validated", "bypassed", "auto_expired", "suppressed"
+]);
+
+// Table alertes techniques
+export const technicalAlerts = pgTable("technical_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  aoId: varchar("ao_id").notNull(),
+  aoReference: varchar("ao_reference").notNull(),
+  score: decimal("score", { precision: 5, scale: 2 }).notNull(),
+  triggeredCriteria: text("triggered_criteria").array().default(sql`'{}'::text[]`),
+  status: technicalAlertStatusEnum("status").default("pending"),
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  validatedAt: timestamp("validated_at"),
+  validatedByUserId: varchar("validated_by_user_id").references(() => users.id),
+  
+  // Système bypass
+  bypassUntil: timestamp("bypass_until"),
+  bypassReason: text("bypass_reason"),
+  
+  // Métadonnées
+  rawEventData: jsonb("raw_event_data"),
+});
+
+// Historique actions
+export const technicalAlertHistory = pgTable("technical_alert_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertId: varchar("alert_id").notNull().references(() => technicalAlerts.id, { onDelete: "cascade" }),
+  action: technicalAlertActionEnum("action").notNull(),
+  actorUserId: varchar("actor_user_id").references(() => users.id),
+  timestamp: timestamp("timestamp").defaultNow(),
+  note: text("note"),
+  metadata: jsonb("metadata"),
+});
+
+// ========================================
+// SCHEMAS ZOD POUR ALERTES TECHNIQUES
+// ========================================
+
+// Schema d'insertion pour technicalAlerts
+export const insertTechnicalAlertSchema = createInsertSchema(technicalAlerts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schema d'insertion pour technicalAlertHistory
+export const insertTechnicalAlertHistorySchema = createInsertSchema(technicalAlertHistory).omit({
+  id: true,
+  timestamp: true,
+});
+
+// Schema pour bypass
+export const bypassTechnicalAlertSchema = z.object({
+  until: z.string().datetime(),
+  reason: z.string().min(10, "La raison doit contenir au moins 10 caractères"),
+});
+
+// Schema pour filtrage des alertes
+export const technicalAlertsFilterSchema = z.object({
+  status: z.enum(["pending", "acknowledged", "validated", "bypassed"]).optional(),
+  userId: z.string().optional(),
+  aoId: z.string().optional(),
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR ALERTES TECHNIQUES
+// ========================================
+
+export type TechnicalAlert = typeof technicalAlerts.$inferSelect;
+export type InsertTechnicalAlert = z.infer<typeof insertTechnicalAlertSchema>;
+export type TechnicalAlertHistory = typeof technicalAlertHistory.$inferSelect;
+export type InsertTechnicalAlertHistory = z.infer<typeof insertTechnicalAlertHistorySchema>;
+export type BypassTechnicalAlert = z.infer<typeof bypassTechnicalAlertSchema>;
+export type TechnicalAlertsFilter = z.infer<typeof technicalAlertsFilterSchema>;

@@ -2,7 +2,7 @@ import { eq, desc, and, sql, gte, lte, count, sum, avg } from "drizzle-orm";
 import { 
   users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
   chiffrageElements, dpgfDocuments, aoLots, maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre,
-  validationMilestones, visaArchitecte,
+  validationMilestones, visaArchitecte, technicalAlerts, technicalAlertHistory,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -19,7 +19,10 @@ import {
   type ContactMaitreOeuvre, type InsertContactMaitreOeuvre,
   type ValidationMilestone, type InsertValidationMilestone,
   type VisaArchitecte, type InsertVisaArchitecte,
-  type TechnicalScoringConfig
+  type TechnicalScoringConfig,
+  type TechnicalAlert, type InsertTechnicalAlert,
+  type TechnicalAlertHistory, type InsertTechnicalAlertHistory,
+  type TechnicalAlertsFilter
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -174,6 +177,30 @@ export interface IStorage {
   // Technical scoring configuration operations
   getScoringConfig(): Promise<TechnicalScoringConfig>;
   updateScoringConfig(config: TechnicalScoringConfig): Promise<void>;
+  
+  // ========================================
+  // ALERTES TECHNIQUES POUR JULIEN LAMBOROT
+  // ========================================
+  
+  // Gestion alertes techniques
+  enqueueTechnicalAlert(alert: InsertTechnicalAlert): Promise<TechnicalAlert>;
+  listTechnicalAlerts(filter?: TechnicalAlertsFilter): Promise<TechnicalAlert[]>;
+  getTechnicalAlert(id: string): Promise<TechnicalAlert | null>;
+
+  // Actions sur alertes
+  acknowledgeTechnicalAlert(id: string, userId: string): Promise<void>;
+  validateTechnicalAlert(id: string, userId: string): Promise<void>;
+  bypassTechnicalAlert(id: string, userId: string, until: Date, reason: string): Promise<void>;
+
+  // Système bypass
+  getActiveBypassForAo(aoId: string): Promise<{ until: Date; reason: string } | null>;
+  
+  // Historique des actions
+  listTechnicalAlertHistory(alertId: string): Promise<TechnicalAlertHistory[]>;
+  addTechnicalAlertHistory(alertId: string | null, action: string, actorUserId: string | null, note?: string, metadata?: Record<string, any>): Promise<TechnicalAlertHistory>;
+  
+  // Historique AO-scoped pour suppressions
+  listAoSuppressionHistory(aoId: string): Promise<TechnicalAlertHistory[]>;
 }
 
 // ========================================
@@ -1339,6 +1366,181 @@ export class DatabaseStorage implements IStorage {
     // Sauvegarder en mémoire
     DatabaseStorage.scoringConfig = { ...config };
     console.log('[Storage] Configuration scoring mise à jour avec succès');
+  }
+
+  // ========================================
+  // GESTION ALERTES TECHNIQUES
+  // ========================================
+  
+  // Stockage en mémoire pour les alertes techniques (POC)
+  private static technicalAlerts: Map<string, TechnicalAlert> = new Map();
+  private static technicalAlertHistory: Map<string, TechnicalAlertHistory[]> = new Map();
+
+  async enqueueTechnicalAlert(alert: InsertTechnicalAlert): Promise<TechnicalAlert> {
+    const id = `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+    
+    const technicalAlert: TechnicalAlert = {
+      id,
+      aoId: alert.aoId,
+      aoReference: alert.aoReference,
+      score: alert.score,
+      triggeredCriteria: alert.triggeredCriteria,
+      status: alert.status || 'pending',
+      assignedToUserId: alert.assignedToUserId || null,
+      createdAt: now,
+      updatedAt: now,
+      validatedAt: null,
+      validatedByUserId: null,
+      bypassUntil: null,
+      bypassReason: null,
+      rawEventData: alert.rawEventData || null,
+    };
+
+    DatabaseStorage.technicalAlerts.set(id, technicalAlert);
+    
+    // Ajouter entrée d'historique
+    await this.addTechnicalAlertHistory(id, 'created', alert.assignedToUserId, 'Alerte technique créée');
+    
+    console.log(`[Storage] Alerte technique créée: ${id} pour AO ${alert.aoReference}`);
+    return technicalAlert;
+  }
+
+  async listTechnicalAlerts(filter?: { status?: string; userId?: string }): Promise<TechnicalAlert[]> {
+    let alerts = Array.from(DatabaseStorage.technicalAlerts.values());
+    
+    if (filter?.status) {
+      alerts = alerts.filter(alert => alert.status === filter.status);
+    }
+    
+    if (filter?.userId) {
+      alerts = alerts.filter(alert => alert.assignedToUserId === filter.userId);
+    }
+    
+    // Trier par date de création (plus récent en premier)
+    return alerts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getTechnicalAlert(id: string): Promise<TechnicalAlert | null> {
+    return DatabaseStorage.technicalAlerts.get(id) || null;
+  }
+
+  async acknowledgeTechnicalAlert(id: string, userId: string): Promise<void> {
+    const alert = DatabaseStorage.technicalAlerts.get(id);
+    if (!alert) {
+      throw new Error(`Alerte technique ${id} introuvable`);
+    }
+
+    alert.status = 'acknowledged';
+    alert.updatedAt = new Date().toISOString();
+    
+    DatabaseStorage.technicalAlerts.set(id, alert);
+    
+    await this.addTechnicalAlertHistory(id, 'acknowledged', userId, 'Alerte acknowledged par l\'utilisateur');
+    console.log(`[Storage] Alerte ${id} acknowledged par ${userId}`);
+  }
+
+  async validateTechnicalAlert(id: string, userId: string): Promise<void> {
+    const alert = DatabaseStorage.technicalAlerts.get(id);
+    if (!alert) {
+      throw new Error(`Alerte technique ${id} introuvable`);
+    }
+
+    alert.status = 'validated';
+    alert.updatedAt = new Date().toISOString();
+    alert.validatedAt = new Date().toISOString();
+    alert.validatedByUserId = userId;
+    
+    DatabaseStorage.technicalAlerts.set(id, alert);
+    
+    await this.addTechnicalAlertHistory(id, 'validated', userId, 'Alerte validée par l\'utilisateur');
+    console.log(`[Storage] Alerte ${id} validée par ${userId}`);
+  }
+
+  async bypassTechnicalAlert(id: string, userId: string, until: Date, reason: string): Promise<void> {
+    const alert = DatabaseStorage.technicalAlerts.get(id);
+    if (!alert) {
+      throw new Error(`Alerte technique ${id} introuvable`);
+    }
+
+    alert.status = 'bypassed';
+    alert.updatedAt = new Date().toISOString();
+    alert.bypassUntil = until.toISOString();
+    alert.bypassReason = reason;
+    
+    DatabaseStorage.technicalAlerts.set(id, alert);
+    
+    await this.addTechnicalAlertHistory(
+      id, 
+      'bypassed', 
+      userId, 
+      `Alerte bypassée jusqu'au ${until.toLocaleString('fr-FR')}. Raison: ${reason}`,
+      { bypassUntil: until.toISOString(), bypassReason: reason }
+    );
+    
+    console.log(`[Storage] Alerte ${id} bypassée par ${userId} jusqu'au ${until.toISOString()}`);
+  }
+
+  async getActiveBypassForAo(aoId: string): Promise<{ until: Date; reason: string } | null> {
+    const now = new Date();
+    
+    // Chercher les alertes bypassées pour cet AO qui sont encore actives
+    for (const alert of DatabaseStorage.technicalAlerts.values()) {
+      if (alert.aoId === aoId && 
+          alert.status === 'bypassed' && 
+          alert.bypassUntil && 
+          new Date(alert.bypassUntil) > now) {
+        return {
+          until: new Date(alert.bypassUntil),
+          reason: alert.bypassReason || 'Pas de raison spécifiée'
+        };
+      }
+    }
+    
+    return null;
+  }
+
+  async addTechnicalAlertHistory(
+    alertId: string | null, 
+    action: string, 
+    actorUserId: string | null, 
+    note?: string,
+    metadata?: any
+  ): Promise<void> {
+    const historyId = `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const historyEntry: TechnicalAlertHistory = {
+      id: historyId,
+      alertId: alertId || 'system',
+      action,
+      actorUserId,
+      timestamp: new Date().toISOString(),
+      note: note || null,
+      metadata: metadata || null,
+    };
+
+    const alertHistoryKey = alertId || 'system';
+    const existing = DatabaseStorage.technicalAlertHistory.get(alertHistoryKey) || [];
+    existing.push(historyEntry);
+    DatabaseStorage.technicalAlertHistory.set(alertHistoryKey, existing);
+    
+    console.log(`[Storage] Historique ajouté pour alerte ${alertId}: ${action}`);
+  }
+
+  async listTechnicalAlertHistory(alertId: string): Promise<TechnicalAlertHistory[]> {
+    const history = DatabaseStorage.technicalAlertHistory.get(alertId) || [];
+    
+    // Trier par timestamp (plus récent en premier)
+    return history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  async listAoSuppressionHistory(aoId: string): Promise<TechnicalAlertHistory[]> {
+    // Récupérer l'historique des suppressions pour cet AO
+    const suppressionKey = `ao-suppression-${aoId}`;
+    const history = DatabaseStorage.technicalAlertHistory.get(suppressionKey) || [];
+    
+    // Trier par timestamp (plus récent en premier)
+    return history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 }
 

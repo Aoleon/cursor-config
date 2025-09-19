@@ -42,6 +42,7 @@ import ValidationList from "@/pages/offers/validation-list";
 import TransformList from "@/pages/offers/transform-list";
 import BatigestPage from "@/pages/batigest";
 import SettingsScoring from "@/pages/settings-scoring";
+import TechnicalAlerts from "@/pages/technical-alerts";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType<any> }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -115,6 +116,8 @@ function Router() {
       <Route path="/supplier-requests" component={() => <ProtectedRoute component={SupplierRequests} />} />
       <Route path="/be-dashboard" component={() => <ProtectedRoute component={BEDashboard} />} />
       <Route path="/batigest" component={() => <ProtectedRoute component={BatigestPage} />} />
+      {/* Validation technique pour Julien LAMBOROT */}
+      <Route path="/technical-alerts" component={() => <ProtectedRoute component={TechnicalAlerts} />} />
       {/* Configuration et paramètres */}
       <Route path="/settings/scoring" component={() => <ProtectedRoute component={SettingsScoring} />} />
       <Route component={NotFound} />

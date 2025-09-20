@@ -200,6 +200,39 @@ export const planningConstraintEnum = pgEnum("planning_constraint", [
 ]);
 
 // ========================================
+// ENUMS ANALYTICS POUR DASHBOARD DÉCISIONNEL AVANCÉ - PHASE 3.1.2
+// ========================================
+
+// Types de métriques métier calculées
+export const metricTypeEnum = pgEnum("metric_type", [
+  "conversion_rate_ao_offer",
+  "conversion_rate_offer_project", 
+  "avg_delay_days",
+  "revenue_forecast",
+  "team_load_percentage",
+  "margin_percentage",
+  "project_duration",
+  "supplier_response_time"
+]);
+
+// Types de benchmarks pour comparaisons de performance
+export const benchmarkTypeEnum = pgEnum("benchmark_type", [
+  "user_comparison",
+  "historical_trend",
+  "category_performance",
+  "department_efficiency",
+  "seasonal_analysis"
+]);
+
+// Niveaux de sévérité pour alertes business (nom unique pour éviter conflits)
+export const alertSeverityBusinessEnum = pgEnum("alert_severity_business", [
+  "info",
+  "warning", 
+  "critical",
+  "urgent"
+]);
+
+// ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
 
@@ -2305,6 +2338,130 @@ export const technicalAlertHistory = pgTable("technical_alert_history", {
 });
 
 // ========================================
+// TABLES ANALYTICS POUR DASHBOARD DÉCISIONNEL AVANCÉ - PHASE 3.1.2
+// ========================================
+
+// Table des métriques métier calculées
+export const businessMetrics = pgTable("business_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metricType: metricTypeEnum("metric_type").notNull(),
+  periodType: varchar("period_type", { length: 20 }).notNull(), // 'daily', 'weekly', 'monthly', 'quarterly'
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  value: decimal("value", { precision: 15, scale: 4 }).notNull(),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`), // Contexte additionnel
+  calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
+  userId: varchar("user_id"), // Optionnel pour métriques par utilisateur
+  projectType: varchar("project_type"), // Optionnel pour filtrage par type
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    metricTypePeriodIdx: index("idx_business_metrics_type_period").on(table.metricType, table.periodStart, table.periodEnd),
+    periodStartIdx: index("idx_business_metrics_period_start").on(table.periodStart),
+    userMetricsIdx: index("idx_business_metrics_user").on(table.userId),
+  };
+});
+
+// Table des instantanés consolidés des KPIs
+export const kpiSnapshots = pgTable("kpi_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  snapshotDate: timestamp("snapshot_date").notNull(),
+  periodFrom: timestamp("period_from").notNull(),
+  periodTo: timestamp("period_to").notNull(),
+  
+  // KPIs consolidés
+  totalAos: integer("total_aos").default(0),
+  totalOffers: integer("total_offers").default(0),
+  totalProjects: integer("total_projects").default(0),
+  conversionRateAoToOffer: decimal("conversion_rate_ao_to_offer", { precision: 5, scale: 2 }),
+  conversionRateOfferToProject: decimal("conversion_rate_offer_to_project", { precision: 5, scale: 2 }),
+  avgDelayDays: decimal("avg_delay_days", { precision: 8, scale: 2 }),
+  totalRevenueForecast: decimal("total_revenue_forecast", { precision: 15, scale: 2 }),
+  avgTeamLoadPercentage: decimal("avg_team_load_percentage", { precision: 5, scale: 2 }),
+  criticalDeadlinesCount: integer("critical_deadlines_count").default(0),
+  delayedProjectsCount: integer("delayed_projects_count").default(0),
+  
+  // Breakdown data (JSON pour flexibilité)
+  conversionByUser: jsonb("conversion_by_user").default(sql`'{}'::jsonb`),
+  loadByUser: jsonb("load_by_user").default(sql`'{}'::jsonb`),
+  revenueByCategory: jsonb("revenue_by_category").default(sql`'{}'::jsonb`),
+  marginByCategory: jsonb("margin_by_category").default(sql`'{}'::jsonb`),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    snapshotDateIdx: index("idx_kpi_snapshots_date").on(table.snapshotDate),
+    periodIdx: index("idx_kpi_snapshots_period").on(table.periodFrom, table.periodTo),
+  };
+});
+
+// Table des comparaisons et benchmarks de performance
+export const performanceBenchmarks = pgTable("performance_benchmarks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  benchmarkType: benchmarkTypeEnum("benchmark_type").notNull(),
+  entityId: varchar("entity_id"), // ID utilisateur, projet, ou catégorie
+  entityType: varchar("entity_type", { length: 30 }), // 'user', 'project', 'category', 'department'
+  
+  // Métriques de performance
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }),
+  avgDelay: decimal("avg_delay", { precision: 8, scale: 2 }),
+  avgMargin: decimal("avg_margin", { precision: 5, scale: 2 }),
+  totalRevenue: decimal("total_revenue", { precision: 15, scale: 2 }),
+  workloadEfficiency: decimal("workload_efficiency", { precision: 5, scale: 2 }),
+  
+  // Période et contexte
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  comparisonPeriodStart: timestamp("comparison_period_start"), // Pour comparaisons temporelles
+  comparisonPeriodEnd: timestamp("comparison_period_end"),
+  
+  // Métadonnées et insights
+  performanceScore: decimal("performance_score", { precision: 5, scale: 2 }), // Score global 0-100
+  insights: jsonb("insights").default(sql`'{}'::jsonb`), // Analyses automatiques
+  recommendations: jsonb("recommendations").default(sql`'{}'::jsonb`), // Recommandations IA
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    benchmarkTypeEntityIdx: index("idx_performance_benchmarks_type_entity").on(table.benchmarkType, table.entityType, table.entityId),
+    periodIdx: index("idx_performance_benchmarks_period").on(table.periodStart, table.periodEnd),
+    performanceScoreIdx: index("idx_performance_benchmarks_score").on(table.performanceScore),
+  };
+});
+
+// Table de configuration des alertes métier
+export const businessAlertsConfig = pgTable("business_alerts_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertType: varchar("alert_type", { length: 50 }).notNull(), // 'low_conversion', 'high_delays', 'overload_team', 'revenue_drop'
+  metricName: varchar("metric_name", { length: 50 }).notNull(),
+  thresholdValue: decimal("threshold_value", { precision: 15, scale: 4 }).notNull(),
+  thresholdOperator: varchar("threshold_operator", { length: 10 }).notNull(), // '>', '<', '>=', '<=', '=', '!='
+  severity: alertSeverityBusinessEnum("severity").notNull(),
+  
+  // Configuration
+  isActive: boolean("is_active").default(true),
+  notificationEnabled: boolean("notification_enabled").default(true),
+  emailEnabled: boolean("email_enabled").default(false),
+  checkFrequency: varchar("check_frequency", { length: 20 }).default("hourly"), // 'hourly', 'daily', 'weekly'
+  
+  // Métadonnées
+  description: text("description"),
+  createdBy: varchar("created_by"),
+  assignedTo: varchar("assigned_to"), // Responsable des alertes
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    activeAlertsIdx: index("idx_business_alerts_active").on(table.isActive, table.alertType),
+    metricNameIdx: index("idx_business_alerts_metric").on(table.metricName),
+    assignedToIdx: index("idx_business_alerts_assigned").on(table.assignedTo),
+  };
+});
+
+// ========================================
 // SCHEMAS ZOD POUR ALERTES TECHNIQUES
 // ========================================
 
@@ -2515,3 +2672,49 @@ export type InsertDateIntelligenceRule = z.infer<typeof insertDateIntelligenceRu
 
 export type DateAlert = typeof dateAlerts.$inferSelect;
 export type InsertDateAlert = z.infer<typeof insertDateAlertSchema>;
+
+// ========================================
+// SCHEMAS ZOD POUR DASHBOARD DÉCISIONNEL AVANCÉ - PHASE 3.1.2
+// ========================================
+
+// Schemas d'insertion pour les nouvelles tables analytics
+export const insertBusinessMetricSchema = createInsertSchema(businessMetrics).omit({
+  id: true,
+  calculatedAt: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertKpiSnapshotSchema = createInsertSchema(kpiSnapshots).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertPerformanceBenchmarkSchema = createInsertSchema(performanceBenchmarks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertBusinessAlertConfigSchema = createInsertSchema(businessAlertsConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR DASHBOARD DÉCISIONNEL AVANCÉ - PHASE 3.1.2
+// ========================================
+
+// Types TypeScript pour utilisation
+export type BusinessMetric = typeof businessMetrics.$inferSelect;
+export type InsertBusinessMetric = z.infer<typeof insertBusinessMetricSchema>;
+
+export type KpiSnapshot = typeof kpiSnapshots.$inferSelect;
+export type InsertKpiSnapshot = z.infer<typeof insertKpiSnapshotSchema>;
+
+export type PerformanceBenchmark = typeof performanceBenchmarks.$inferSelect;
+export type InsertPerformanceBenchmark = z.infer<typeof insertPerformanceBenchmarkSchema>;
+
+export type BusinessAlertConfig = typeof businessAlertsConfig.$inferSelect;
+export type InsertBusinessAlertConfig = z.infer<typeof insertBusinessAlertConfigSchema>;

@@ -2768,3 +2768,85 @@ export const benchmarkQuerySchema = z.object({
   metricTypes: z.array(z.string()).optional(),
   period: z.string().optional()
 });
+
+// ========================================
+// SCHEMAS ZOD POUR MOTEUR PRÉDICTIF - PHASE 3.1.6.1
+// ========================================
+
+// 1. Prévisions revenus mensuelle avec confiance
+export const predictiveRevenueForecastSchema = z.object({
+  id: z.string(),                    // forecast_YYYYMMDD_ID
+  forecast_date: z.string(),         // Date génération
+  target_period: z.string(),         // Période ciblée (2025-Q1, 2025-03)
+  revenue_forecast: z.number(),      // CA prévu (€)
+  confidence_level: z.number().min(0).max(100), // % confiance
+  method_used: z.enum(['exp_smoothing', 'moving_average', 'trend_analysis']),
+  underlying_factors: z.array(z.string()), // Facteurs explicatifs
+  created_at: z.string()
+});
+
+// 2. Évaluation risques projet individuel
+export const projectRiskAssessmentSchema = z.object({
+  id: z.string(),                    // risk_YYYYMMDD_ID
+  project_id: z.string(),            // Référence projet
+  risk_score: z.number().min(0).max(100), // Score risque global
+  risk_factors: z.array(z.object({
+    category: z.enum(['budget', 'deadline', 'quality', 'team', 'external']),
+    severity: z.enum(['low', 'medium', 'high', 'critical']),
+    description: z.string(),
+    impact_probability: z.number().min(0).max(100)
+  })),
+  predicted_delay_days: z.number().optional(), // Retard prévu (jours)
+  predicted_budget_overrun: z.number().optional(), // Dépassement budget (€)
+  recommended_actions: z.array(z.string()), // Actions préventives
+  assessment_date: z.string()
+});
+
+// 3. Recommandations actionables dirigeants
+export const businessRecommendationSchema = z.object({
+  id: z.string(),                    // rec_YYYYMMDD_ID
+  category: z.enum(['revenue', 'cost', 'planning', 'team', 'process']),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']),
+  title: z.string(),                 // Titre recommandation
+  description: z.string(),           // Détail contexte
+  expected_impact: z.object({
+    financial: z.number().optional(), // Impact financier (€)
+    timeline: z.string().optional(),  // Délai implémentation
+    roi_percentage: z.number().optional() // ROI estimé
+  }),
+  action_items: z.array(z.string()), // Actions concrètes
+  generated_date: z.string(),
+  expires_at: z.string().optional()  // Date expiration si temporaire
+});
+
+// ========================================
+// QUERY SCHEMAS POUR MOTEUR PRÉDICTIF - PHASE 3.1.6.1
+// ========================================
+
+// 4. Query pour requêtes de prévision avec horizon temporel
+export const predictiveRangeQuerySchema = z.object({
+  start_date: z.string(),            // Date début analyse
+  end_date: z.string(),              // Date fin analyse  
+  forecast_months: z.number().min(1).max(12).default(6), // Horizon prévision
+  method: z.enum(['exp_smoothing', 'moving_average', 'trend_analysis']).optional(),
+  confidence_threshold: z.number().min(70).max(95).default(80)
+});
+
+// 5. Query pour filtrage évaluations risques
+export const riskQueryParamsSchema = z.object({
+  risk_level: z.enum(['all', 'medium', 'high', 'critical']).default('medium'),
+  project_status: z.array(z.enum(['study', 'planning', 'construction', 'delivery'])).optional(),
+  limit: z.number().min(1).max(50).default(20),
+  sort_by: z.enum(['risk_score', 'deadline', 'budget']).default('risk_score')
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR MOTEUR PRÉDICTIF - PHASE 3.1.6.1
+// ========================================
+
+// Types inférés pour TypeScript - Contrats de données moteur prédictif
+export type PredictiveRevenueForecast = z.infer<typeof predictiveRevenueForecastSchema>;
+export type ProjectRiskAssessment = z.infer<typeof projectRiskAssessmentSchema>;
+export type BusinessRecommendation = z.infer<typeof businessRecommendationSchema>;
+export type PredictiveRangeQuery = z.infer<typeof predictiveRangeQuerySchema>;
+export type RiskQueryParams = z.infer<typeof riskQueryParamsSchema>;

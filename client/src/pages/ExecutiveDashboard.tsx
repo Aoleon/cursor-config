@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -27,9 +28,11 @@ import {
   Timer,
   ArrowUp,
   ArrowDown,
-  Minus
+  Minus,
+  Lightbulb,
+  Loader2
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
 import { 
   useExecutiveDashboard, 
   useConversionTrends, 
@@ -38,7 +41,14 @@ import {
   useGenerateSnapshot,
   useExportReport
 } from '@/hooks/useAnalytics';
+import {
+  useRevenueForecast,
+  useProjectRisks,
+  useBusinessRecommendations,
+  useSaveForecastSnapshot
+} from '@/hooks/usePredictive';
 import { formatCurrency, formatPercentage, formatTrend, formatDuration, getProgressColor } from '@/utils/formatters';
+import type { PredictiveRevenueForecast, ProjectRiskAssessment, BusinessRecommendation } from '@shared/schema';
 
 // ========================================
 // INTERFACES ET TYPES
@@ -630,6 +640,338 @@ function AlertsTab() {
 }
 
 // ========================================
+// COMPOSANTS PRÉDICTIFS - NOUVEAUX
+// ========================================
+
+// Skeleton pour risques projets
+const ProjectRisksSkeleton = memo(() => (
+  <div className="space-y-3">
+    {[...Array(5)].map((_, i) => (
+      <div key={i} className="border rounded-lg p-3">
+        <div className="flex justify-between items-start mb-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-6 w-12" />
+        </div>
+        <Skeleton className="h-3 w-full mb-2" />
+        <div className="flex gap-1">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-5 w-12" />
+        </div>
+      </div>
+    ))}
+  </div>
+));
+
+// Skeleton pour recommandations
+const RecommendationsSkeleton = memo(() => (
+  <div className="space-y-3">
+    {[...Array(4)].map((_, i) => (
+      <div key={i} className="border rounded-lg p-3">
+        <div className="flex justify-between items-start mb-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-5 w-16" />
+        </div>
+        <Skeleton className="h-3 w-full mb-2" />
+        <Skeleton className="h-3 w-24 mb-2" />
+        <div className="flex space-x-2">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-6 w-24" />
+        </div>
+      </div>
+    ))}
+  </div>
+));
+
+// Graphique forecasting avec Recharts
+const RevenueForecastChart = memo(({ data, method }: {
+  data: PredictiveRevenueForecast[];
+  method: string;
+}) => {
+  const chartData = data?.map(d => ({
+    month: d.target_period,
+    forecast: d.revenue_forecast,
+    confidence: d.confidence_level
+  })) || [];
+  
+  return (
+    <div className="h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="month" />
+          <YAxis tickFormatter={(value) => formatCurrency(value)} />
+          <Tooltip 
+            formatter={(value, name) => [
+              name === 'forecast' ? formatCurrency(value as number) : `${value}%`,
+              name === 'forecast' ? 'CA Prévu' : 'Confiance'
+            ]}
+          />
+          <Legend />
+          <Line 
+            type="monotone" 
+            dataKey="forecast" 
+            stroke="#2563eb" 
+            strokeWidth={3}
+            name="Prévision CA"
+          />
+          <Line 
+            type="monotone" 
+            dataKey="confidence" 
+            stroke="#16a34a" 
+            strokeWidth={2}
+            strokeDasharray="5 5"
+            name="Niveau Confiance"
+          />
+        </LineChart>
+      </ResponsiveContainer>
+      
+      {/* Footer méthode */}
+      <div className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
+        Méthode: {method === 'exp_smoothing' ? 'Lissage Exponentiel' : 
+                  method === 'moving_average' ? 'Moyenne Mobile' : 'Analyse Tendance'}
+      </div>
+    </div>
+  );
+});
+
+// Table risques projets avec scoring
+const ProjectRisksTable = memo(({ risks }: { risks: ProjectRiskAssessment[] }) => {
+  return (
+    <div className="space-y-3">
+      {risks?.map((risk) => (
+        <div 
+          key={risk.id} 
+          className="border rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-800"
+          data-testid={`risk-item-${risk.project_id}`}
+        >
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <div className="font-medium text-sm">Projet {risk.project_id}</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {risk.predicted_delay_days && `Retard prévu: ${risk.predicted_delay_days}j`}
+                {risk.predicted_budget_overrun && ` • Dépassement: ${formatCurrency(risk.predicted_budget_overrun)}`}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className={`text-lg font-bold ${
+                risk.risk_score >= 90 ? 'text-red-600' :
+                risk.risk_score >= 70 ? 'text-orange-600' :
+                'text-yellow-600'
+              }`}>
+                {risk.risk_score}%
+              </div>
+              <div className="text-xs text-gray-500">Risque</div>
+            </div>
+          </div>
+          
+          {/* Facteurs risque principaux */}
+          <div className="mt-2 flex flex-wrap gap-1">
+            {risk.risk_factors?.slice(0, 3).map((factor, idx) => (
+              <span 
+                key={idx}
+                className={`text-xs px-2 py-1 rounded ${
+                  factor.severity === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
+                  factor.severity === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' :
+                  'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
+                }`}
+              >
+                {factor.category}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+});
+
+// Liste recommandations avec actions
+const RecommendationsList = memo(({ recommendations }: { recommendations: BusinessRecommendation[] }) => {
+  const saveSnapshot = useSaveForecastSnapshot();
+  
+  return (
+    <div className="space-y-3">
+      {recommendations?.map((rec) => (
+        <div 
+          key={rec.id} 
+          className="border rounded-lg p-3"
+          data-testid={`recommendation-${rec.id}`}
+        >
+          <div className="flex justify-between items-start mb-2">
+            <h4 className="font-medium text-sm">{rec.title}</h4>
+            <span className={`text-xs px-2 py-1 rounded ${
+              rec.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
+              rec.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' :
+              'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+            }`}>
+              {rec.priority}
+            </span>
+          </div>
+          
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{rec.description}</p>
+          
+          {/* Impact financier */}
+          {rec.expected_impact?.financial && (
+            <div className="text-xs text-green-600 dark:text-green-400 mb-2">
+              Impact: {formatCurrency(rec.expected_impact.financial)}
+              {rec.expected_impact.roi_percentage && ` (ROI: ${rec.expected_impact.roi_percentage}%)`}
+            </div>
+          )}
+          
+          {/* Actions */}
+          <div className="flex space-x-2">
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="text-xs"
+              data-testid={`btn-implement-${rec.id}`}
+            >
+              Implémenter
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              className="text-xs"
+              onClick={() => saveSnapshot.mutate({
+                forecast_type: 'recommendations',
+                data: rec,
+                params: { priority: rec.priority },
+                notes: `Recommandation ${rec.category}`
+              })}
+              data-testid={`btn-save-${rec.id}`}
+            >
+              Sauvegarder
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+});
+
+// Composant onglet prédictif principal
+function PredictiveTab() {
+  const [forecastMethod, setForecastMethod] = useState<'exp_smoothing' | 'moving_average' | 'trend_analysis'>('exp_smoothing');
+  const [forecastMonths, setForecastMonths] = useState(6);
+  
+  // Hooks données prédictives
+  const { data: revenueForecast, isLoading: isLoadingForecast } = useRevenueForecast({
+    forecast_months: forecastMonths,
+    method: forecastMethod,
+    confidence_threshold: 80
+  });
+  
+  const { data: projectRisks, isLoading: isLoadingRisks } = useProjectRisks({
+    risk_level: 'medium',
+    limit: 10,
+    sort_by: 'risk_score'
+  });
+  
+  const { data: recommendations, isLoading: isLoadingRecs } = useBusinessRecommendations({
+    priority: 'high'
+  });
+  
+  return (
+    <div className="space-y-6" data-testid="tab-predictive">
+      {/* Header contrôles */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Analyse Prédictive
+        </h2>
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+          {/* Sélecteur méthode forecast */}
+          <Select value={forecastMethod} onValueChange={setForecastMethod}>
+            <SelectTrigger className="w-48" data-testid="select-forecast-method">
+              <SelectValue placeholder="Méthode prévision" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="exp_smoothing">Lissage Exponentiel</SelectItem>
+              <SelectItem value="moving_average">Moyenne Mobile</SelectItem>
+              <SelectItem value="trend_analysis">Analyse Tendance</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {/* Sélecteur horizon */}
+          <Select value={forecastMonths.toString()} onValueChange={(v) => setForecastMonths(parseInt(v))}>
+            <SelectTrigger className="w-32" data-testid="select-forecast-months">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3">3 mois</SelectItem>
+              <SelectItem value="6">6 mois</SelectItem>
+              <SelectItem value="12">12 mois</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      {/* Grid sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Section Forecasting CA */}
+        <Card className="col-span-1 lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+              <span>Prévisions Chiffre d'Affaires</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingForecast ? (
+              <div className="h-64 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <RevenueForecastChart 
+                data={revenueForecast || []} 
+                method={forecastMethod}
+              />
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Section Risques Projets */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+              <span>Projets à Risque</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingRisks ? (
+              <ProjectRisksSkeleton />
+            ) : (
+              <ProjectRisksTable 
+                risks={projectRisks || []} 
+              />
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Section Recommandations */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Lightbulb className="w-5 h-5 text-green-600" />
+              <span>Recommandations</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingRecs ? (
+              <RecommendationsSkeleton />
+            ) : (
+              <RecommendationsList 
+                recommendations={recommendations || []}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ========================================
 // COMPOSANT PRINCIPAL DASHBOARD EXÉCUTIF
 // ========================================
 
@@ -643,7 +985,7 @@ export default function ExecutiveDashboard() {
         <KPIOverview />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="performance" data-testid="tab-performance">
               Performance
             </TabsTrigger>
@@ -655,6 +997,10 @@ export default function ExecutiveDashboard() {
             </TabsTrigger>
             <TabsTrigger value="alerts" data-testid="tab-alerts">
               Alertes
+            </TabsTrigger>
+            <TabsTrigger value="predictive" data-testid="tab-predictive">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Prédictif
             </TabsTrigger>
           </TabsList>
           
@@ -669,6 +1015,9 @@ export default function ExecutiveDashboard() {
           </TabsContent>
           <TabsContent value="alerts">
             <AlertsTab />
+          </TabsContent>
+          <TabsContent value="predictive">
+            <PredictiveTab />
           </TabsContent>
         </Tabs>
       </div>

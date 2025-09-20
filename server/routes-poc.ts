@@ -35,6 +35,7 @@ import type { EventBus } from "./eventBus";
 import { ScoringService } from "./services/scoringService";
 import { DateIntelligenceService } from "./services/DateIntelligenceService";
 import { AnalyticsService } from "./services/AnalyticsService";
+import { PredictiveEngineService } from "./services/PredictiveEngineService";
 import { initializeDefaultRules, DateIntelligenceRulesSeeder } from "./seeders/dateIntelligenceRulesSeeder";
 
 // Extension du type Session pour inclure la propriété user
@@ -96,6 +97,13 @@ const periodicDetectionScheduler = new PeriodicDetectionScheduler(
 const analyticsService = new AnalyticsService(storage, eventBus);
 
 // ========================================
+// PREDICTIVE ENGINE SERVICE - PHASE 3.1.6.4
+// ========================================
+
+// Instance du service Moteur Prédictif pour Dashboard Dirigeant
+const predictiveEngineService = new PredictiveEngineService(storage, analyticsService);
+
+// ========================================
 // SCHÉMAS DE VALIDATION POUR INTELLIGENCE TEMPORELLE
 // ========================================
 
@@ -147,13 +155,63 @@ const alertsFilterSchema = z.object({
   entityId: z.string().optional(),
   status: z.enum(['pending', 'acknowledged', 'resolved', 'expired']).optional(),
   severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  limit: z.string().regex(/^\d+$/).transform(Number).default(50),
-  offset: z.string().regex(/^\d+$/).transform(Number).default(0)
+  limit: z.coerce.number().default(50),
+  offset: z.coerce.number().default(0)
 });
 
 // Schéma pour accusé de réception alerte
 const acknowledgeAlertSchema = z.object({
   note: z.string().optional()
+});
+
+// ========================================
+// SCHÉMAS DE VALIDATION POUR MOTEUR PRÉDICTIF - PHASE 3.1.6.4
+// ========================================
+
+// Schéma pour les requêtes de prévision de revenus
+const predictiveRangeQuerySchema = z.object({
+  start_date: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "Date de début invalide"
+  }),
+  end_date: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "Date de fin invalide"
+  }),
+  forecast_months: z.coerce.number().min(3).max(12).optional().default(6),
+  method: z.enum(['exp_smoothing', 'moving_average', 'trend_analysis']).optional().default('exp_smoothing'),
+  granularity: z.enum(['month', 'quarter']).optional().default('month'),
+  segment: z.string().optional(),
+  confidence_threshold: z.coerce.number().min(50).max(95).optional().default(80)
+});
+
+// Schéma pour les paramètres d'analyse de risques
+const riskQueryParamsSchema = z.object({
+  risk_level: z.enum(['low', 'medium', 'high', 'all']).optional().default('all'),
+  project_types: z.string().optional().transform((str) => str ? str.split(',') : undefined),
+  user_ids: z.string().optional().transform((str) => str ? str.split(',') : undefined),
+  limit: z.coerce.number().min(1).max(100).optional().default(20),
+  include_predictions: z.string().optional().transform((str) => str === 'true').default(true)
+});
+
+// Schéma pour les contextes business des recommandations
+const businessContextSchema = z.object({
+  focus_areas: z.string().optional().transform((str) => str ? str.split(',') : ['revenue', 'cost', 'planning']),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  department_filter: z.string().optional()
+});
+
+// Schéma pour la sauvegarde de snapshots
+const snapshotSaveSchema = z.object({
+  forecast_type: z.enum(['revenue', 'risks', 'recommendations']),
+  data: z.any(),
+  params: z.any(),
+  notes: z.string().optional()
+});
+
+// Schéma pour les paramètres de listing des snapshots
+const snapshotListSchema = z.object({
+  limit: z.coerce.number().min(1).max(50).optional().default(10),
+  type: z.enum(['revenue', 'risks', 'recommendations']).optional(),
+  offset: z.coerce.number().min(0).optional().default(0)
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -4976,6 +5034,242 @@ app.post('/api/analytics/export',
     } catch (error: any) {
       console.error('Erreur génération export:', error);
       throw createError(500, 'Erreur lors de la génération du rapport');
+    }
+  })
+);
+
+// ========================================
+// PREDICTIVE ENGINE API ROUTES - PHASE 3.1.6.4
+// ========================================
+
+// Rate limiting pour les endpoints prédictifs
+const predictiveRateLimit = {
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // 50 requêtes par window par IP
+  message: {
+    success: false,
+    message: 'Trop de requêtes prédictives, réessayez plus tard'
+  }
+};
+
+// Middleware de logging et performance pour Predictive API
+const predictiveLogger = (req: any, res: any, next: any) => {
+  const start = Date.now();
+  
+  // Headers cache appropriés
+  res.setHeader('Cache-Control', 'private, max-age=300'); // 5min cache
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`Predictive API: ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+  });
+  
+  next();
+};
+
+// Application du middleware predictive
+app.use('/api/predictive/*', predictiveLogger);
+
+// 1. GET /api/predictive/revenue - Revenue Forecasting
+app.get('/api/predictive/revenue', 
+  isAuthenticated, 
+  validateQuery(predictiveRangeQuerySchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const params = req.query as any;
+      
+      // Appel service predictive
+      const forecasts = await predictiveEngineService.forecastRevenue(params);
+      
+      // Response standardisée
+      res.json({
+        success: true,
+        data: forecasts,
+        metadata: {
+          generated_at: new Date().toISOString(),
+          forecast_horizon_months: params.forecast_months,
+          method_used: params.method || 'exp_smoothing',
+          confidence_threshold: params.confidence_threshold
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error: any) {
+      console.error('Erreur /api/predictive/revenue:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur interne serveur',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  })
+);
+
+// 2. GET /api/predictive/risks - Project Risk Analysis
+app.get('/api/predictive/risks', 
+  isAuthenticated, 
+  validateQuery(riskQueryParamsSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const params = req.query as any;
+      
+      // Appel détection risques
+      const risks = await predictiveEngineService.detectProjectRisks(params);
+      
+      // Métriques agregées
+      const summary = {
+        total_projects_analyzed: risks.length,
+        high_risk_count: risks.filter(r => r.risk_score >= 70).length,
+        critical_risk_count: risks.filter(r => r.risk_score >= 90).length,
+        avg_risk_score: risks.reduce((sum, r) => sum + r.risk_score, 0) / risks.length || 0
+      };
+      
+      // Response avec summary
+      res.json({
+        success: true,
+        data: risks,
+        summary,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error: any) {
+      console.error('Erreur /api/predictive/risks:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur analyse risques'
+      });
+    }
+  })
+);
+
+// 3. GET /api/predictive/recommendations - Business Recommendations
+app.get('/api/predictive/recommendations', 
+  isAuthenticated, 
+  validateQuery(businessContextSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      // Contexte business (à partir session/user)
+      const businessContext = {
+        user_role: req.session?.user?.role || 'user',
+        current_period: new Date().toISOString().split('T')[0],
+        focus_areas: (req.query.focus_areas as string)?.split(',') || ['revenue', 'cost', 'planning']
+      };
+      
+      // Génération recommandations
+      const recommendations = await predictiveEngineService.generateRecommendations(businessContext);
+      
+      // Filtrage par priorité
+      const priority = req.query.priority as string;
+      const filteredRecs = priority 
+        ? recommendations.filter(r => r.priority === priority)
+        : recommendations;
+      
+      // Groupement par catégorie
+      const groupedByCategory = filteredRecs.reduce((acc, rec) => {
+        acc[rec.category] = acc[rec.category] || [];
+        acc[rec.category].push(rec);
+        return acc;
+      }, {} as Record<string, typeof recommendations>);
+      
+      // Response structurée
+      res.json({
+        success: true,
+        data: filteredRecs,
+        grouped_by_category: groupedByCategory,
+        summary: {
+          total_recommendations: filteredRecs.length,
+          by_priority: {
+            urgent: filteredRecs.filter(r => r.priority === 'urgent').length,
+            high: filteredRecs.filter(r => r.priority === 'high').length,
+            medium: filteredRecs.filter(r => r.priority === 'medium').length,
+            low: filteredRecs.filter(r => r.priority === 'low').length
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error: any) {
+      console.error('Erreur /api/predictive/recommendations:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur génération recommandations'
+      });
+    }
+  })
+);
+
+// 4. POST /api/predictive/snapshots - Forecast Snapshots
+app.post('/api/predictive/snapshots', 
+  isAuthenticated, 
+  validateBody(snapshotSaveSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const { forecast_type, data, params, notes } = req.body;
+      
+      // Sauvegarde snapshot
+      const snapshotId = await predictiveEngineService.saveForecastSnapshot({
+        forecast_data: data,
+        generated_at: new Date().toISOString(),
+        params,
+        type: forecast_type,
+        notes,
+        user_id: req.session?.user?.id
+      });
+      
+      // Response success
+      res.status(201).json({
+        success: true,
+        data: {
+          snapshot_id: snapshotId,
+          created_at: new Date().toISOString()
+        },
+        message: 'Snapshot sauvegardé avec succès',
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error: any) {
+      console.error('Erreur /api/predictive/snapshots:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur sauvegarde snapshot'
+      });
+    }
+  })
+);
+
+// 5. GET /api/predictive/snapshots - List Snapshots
+app.get('/api/predictive/snapshots', 
+  isAuthenticated, 
+  validateQuery(snapshotListSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const params = req.query as any;
+      
+      // Récupération snapshots
+      const snapshots = await predictiveEngineService.listForecastSnapshots({
+        limit: params.limit,
+        type: params.type,
+        user_id: req.session?.user?.id
+      });
+      
+      // Response paginée
+      res.json({
+        success: true,
+        data: snapshots,
+        pagination: {
+          limit: params.limit,
+          total: snapshots.length,
+          has_more: snapshots.length === params.limit
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error: any) {
+      console.error('Erreur /api/predictive/snapshots list:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur récupération snapshots'
+      });
     }
   })
 );

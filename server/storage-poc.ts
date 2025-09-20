@@ -280,6 +280,108 @@ export interface IStorage {
   createPerformanceBenchmark(data: InsertPerformanceBenchmark): Promise<PerformanceBenchmark>;
   getBenchmarks(entityType: string, entityId?: string): Promise<PerformanceBenchmark[]>;
   getTopPerformers(metricType: string, limit?: number): Promise<PerformanceBenchmark[]>;
+
+  // ========================================
+  // PREDICTIVE ENGINE METHODS - PHASE 3.1.6.2
+  // ========================================
+  
+  // Revenus mensuels historiques pour forecasting
+  getMonthlyRevenueHistory(range: {
+    start_date: string;    // YYYY-MM-DD  
+    end_date: string;      // YYYY-MM-DD
+  }): Promise<Array<{
+    month: string;         // YYYY-MM
+    total_revenue: number; // CA mensuel (€)
+    projects_count: number; // Nombre projets
+    avg_project_value: number; // Valeur moyenne
+  }>>;
+  
+  // Historique délais projets pour détection risques
+  getProjectDelayHistory(range: {
+    start_date: string;
+    end_date: string;
+  }): Promise<Array<{
+    project_id: string;
+    planned_days: number;   // Durée planifiée
+    actual_days: number;    // Durée réelle
+    delay_days: number;     // Retard (actual - planned)
+    project_type: string;   // Type projet
+    complexity: string;     // Complexité estimée
+  }>>;
+  
+  // Charge équipes historique pour prédictions workload
+  getTeamLoadHistory(range: {
+    start_date: string;
+    end_date: string;
+  }): Promise<Array<{
+    month: string;          // YYYY-MM
+    total_projects: number; // Projets simultanés
+    team_capacity: number;  // Capacité théorique
+    utilization_rate: number; // % utilisation
+    avg_project_duration: number; // Durée moyenne
+  }>>;
+
+  // Sauvegarder snapshots forecasts
+  saveForecastSnapshot(forecast: {
+    forecast_data: any;     // Résultats forecast JSON
+    generated_at: string;   // Timestamp génération
+    params: any;           // Paramètres utilisés
+  }): Promise<string>;     // ID snapshot créé
+
+  // Lister snapshots historiques
+  listForecastSnapshots(limit?: number): Promise<Array<{
+    id: string;
+    generated_at: string;
+    forecast_period: string;
+    confidence: number;
+    method_used: string;
+  }>>;
+
+  // ========================================
+  // MÉTHODES POUR PREDICTIVE ENGINE SERVICE
+  // ========================================
+  
+  // Données historiques revenues par mois pour forecasting
+  getMonthlyRevenueHistory(params: { start_date: string; end_date: string }): Promise<Array<{
+    period: string; // Format YYYY-MM
+    total_revenue: number;
+    offer_count: number;
+    avg_margin: number;
+    conversion_rate: number;
+    project_types: Record<string, number>;
+  }>>;
+
+  // Données historiques délais projets pour détection risques
+  getProjectDelayHistory(params: { start_date: string; end_date: string }): Promise<Array<{
+    project_id: string;
+    project_type: string;
+    planned_days: number;
+    actual_days: number;
+    delay_days: number;
+    completion_date: string;
+    responsible_user_id?: string;
+    complexity_factors: string[];
+  }>>;
+
+  // Historique charge équipe pour analyse et recommandations
+  getTeamLoadHistory(params: { start_date: string; end_date: string }): Promise<Array<{
+    user_id: string;
+    period: string; // Format YYYY-MM
+    utilization_rate: number;
+    hours_assigned: number;
+    hours_capacity: number;
+    efficiency_score: number;
+    project_count: number;
+  }>>;
+
+  // Benchmarks secteur pour comparaisons
+  getSectorBenchmarks(): Promise<{
+    industry_avg_conversion: number;
+    avg_duration_benchmark: number;
+    margin_benchmark: number;
+    quality_benchmark: number;
+    efficiency_benchmark: number;
+  }>;
 }
 
 // ========================================
@@ -2116,6 +2218,1112 @@ export class DatabaseStorage implements IStorage {
 
     console.log(`[Storage] Top ${performers.length} performers trouvés`);
     return performers;
+  }
+
+  // ========================================
+  // PREDICTIVE ENGINE METHODS - PHASE 3.1.6.2
+  // ========================================
+
+  // Stockage en mémoire pour les forecast snapshots (POC)
+  private static forecastSnapshots: Map<string, {
+    id: string;
+    generated_at: string;
+    forecast_period: string;
+    confidence: number;
+    method_used: string;
+    forecast_data: any;
+    params: any;
+  }> = new Map();
+
+  async getMonthlyRevenueHistory(range: {
+    start_date: string;
+    end_date: string;
+  }): Promise<Array<{
+    month: string;
+    total_revenue: number;
+    projects_count: number;
+    avg_project_value: number;
+  }>> {
+    try {
+      console.log(`[Storage] Récupération historique revenus mensuel de ${range.start_date} à ${range.end_date}`);
+      
+      // Requête SQL pour agréger les projets par mois
+      // Utilise les projets signés/terminés avec montant final
+      const results = await db
+        .select({
+          month: sql<string>`DATE_TRUNC('month', ${projects.createdAt})::date`,
+          total_revenue: sql<number>`COALESCE(SUM(CAST(${projects.montantFinal} AS NUMERIC)), 0)`,
+          projects_count: sql<number>`COUNT(*)`,
+          avg_project_value: sql<number>`COALESCE(AVG(CAST(${projects.montantFinal} AS NUMERIC)), 0)`
+        })
+        .from(projects)
+        .where(
+          and(
+            gte(projects.createdAt, new Date(range.start_date)),
+            lte(projects.createdAt, new Date(range.end_date)),
+            sql`${projects.status} IN ('chantier', 'sav')`, // Projets avec revenus confirmés
+            sql`${projects.montantFinal} IS NOT NULL AND ${projects.montantFinal} > 0`
+          )
+        )
+        .groupBy(sql`DATE_TRUNC('month', ${projects.createdAt})`)
+        .orderBy(sql`DATE_TRUNC('month', ${projects.createdAt})`);
+
+      // Formater les résultats
+      const formattedResults = results.map(row => ({
+        month: new Date(row.month).toISOString().substring(0, 7), // YYYY-MM
+        total_revenue: Number(row.total_revenue),
+        projects_count: Number(row.projects_count),
+        avg_project_value: Number(row.avg_project_value)
+      }));
+
+      console.log(`[Storage] ${formattedResults.length} mois d'historique revenus trouvés`);
+      return formattedResults;
+    } catch (error) {
+      console.error('[Storage] Erreur getMonthlyRevenueHistory:', error);
+      throw error;
+    }
+  }
+
+  async getProjectDelayHistory(range: {
+    start_date: string;
+    end_date: string;
+  }): Promise<Array<{
+    project_id: string;
+    planned_days: number;
+    actual_days: number;
+    delay_days: number;
+    project_type: string;
+    complexity: string;
+  }>> {
+    try {
+      console.log(`[Storage] Récupération historique délais projets de ${range.start_date} à ${range.end_date}`);
+      
+      // Requête pour calculer les délais des projets terminés
+      const results = await db
+        .select({
+          project_id: projects.id,
+          planned_days: sql<number>`COALESCE(CAST(${projects.delaiContractuel} AS INTEGER), 90)`, // Délai contractuel ou 90j par défaut
+          actual_days: sql<number>`CASE 
+            WHEN ${projects.startDate} IS NOT NULL AND ${projects.endDate} IS NOT NULL 
+            THEN EXTRACT(DAYS FROM ${projects.endDate} - ${projects.startDate})::INTEGER
+            ELSE 0
+          END`,
+          project_type: projects.menuiserieType,
+          complexity: sql<string>`CASE 
+            WHEN CAST(${projects.montantFinal} AS NUMERIC) > 100000 THEN 'complex'
+            WHEN CAST(${projects.montantFinal} AS NUMERIC) > 50000 THEN 'medium'
+            ELSE 'simple'
+          END`
+        })
+        .from(projects)
+        .where(
+          and(
+            gte(projects.createdAt, new Date(range.start_date)),
+            lte(projects.createdAt, new Date(range.end_date)),
+            sql`${projects.status} IN ('chantier', 'sav')`, // Projets terminés ou en cours avancé
+            sql`${projects.startDate} IS NOT NULL`,
+            sql`${projects.endDate} IS NOT NULL`
+          )
+        )
+        .orderBy(desc(projects.createdAt));
+
+      // Calculer les retards
+      const formattedResults = results.map(row => ({
+        project_id: row.project_id,
+        planned_days: Number(row.planned_days),
+        actual_days: Number(row.actual_days),
+        delay_days: Number(row.actual_days) - Number(row.planned_days),
+        project_type: row.project_type || 'fenetre',
+        complexity: row.complexity
+      }));
+
+      console.log(`[Storage] ${formattedResults.length} projets avec historique délais trouvés`);
+      return formattedResults;
+    } catch (error) {
+      console.error('[Storage] Erreur getProjectDelayHistory:', error);
+      throw error;
+    }
+  }
+
+  async getTeamLoadHistory(range: {
+    start_date: string;
+    end_date: string;
+  }): Promise<Array<{
+    month: string;
+    total_projects: number;
+    team_capacity: number;
+    utilization_rate: number;
+    avg_project_duration: number;
+  }>> {
+    try {
+      console.log(`[Storage] Récupération historique charge équipes de ${range.start_date} à ${range.end_date}`);
+      
+      // Requête pour agréger la charge équipes par mois
+      const results = await db
+        .select({
+          month: sql<string>`DATE_TRUNC('month', ${beWorkload.createdAt})::date`,
+          total_hours: sql<number>`SUM(CAST(${beWorkload.plannedHours} AS NUMERIC))`,
+          capacity_hours: sql<number>`SUM(CAST(${beWorkload.capacityHours} AS NUMERIC))`,
+          projects_count: sql<number>`COUNT(DISTINCT ${beWorkload.userId})`
+        })
+        .from(beWorkload)
+        .where(
+          and(
+            gte(beWorkload.createdAt, new Date(range.start_date)),
+            lte(beWorkload.createdAt, new Date(range.end_date))
+          )
+        )
+        .groupBy(sql`DATE_TRUNC('month', ${beWorkload.createdAt})`)
+        .orderBy(sql`DATE_TRUNC('month', ${beWorkload.createdAt})`);
+
+      // Compléter avec données projets pour durée moyenne
+      const projectDurations = await db
+        .select({
+          month: sql<string>`DATE_TRUNC('month', ${projects.startDate})::date`,
+          avg_duration: sql<number>`AVG(EXTRACT(DAYS FROM ${projects.endDate} - ${projects.startDate}))`
+        })
+        .from(projects)
+        .where(
+          and(
+            gte(projects.startDate, new Date(range.start_date)),
+            lte(projects.startDate, new Date(range.end_date)),
+            sql`${projects.startDate} IS NOT NULL`,
+            sql`${projects.endDate} IS NOT NULL`
+          )
+        )
+        .groupBy(sql`DATE_TRUNC('month', ${projects.startDate})`)
+        .orderBy(sql`DATE_TRUNC('month', ${projects.startDate})`);
+
+      // Créer un map pour les durées par mois
+      const durationMap = new Map(
+        projectDurations.map(d => [d.month, Number(d.avg_duration) || 30])
+      );
+
+      // Formater les résultats
+      const formattedResults = results.map(row => {
+        const monthKey = row.month;
+        const totalHours = Number(row.total_hours) || 0;
+        const capacityHours = Number(row.capacity_hours) || 1;
+        const utilizationRate = capacityHours > 0 ? (totalHours / capacityHours) * 100 : 0;
+        
+        return {
+          month: new Date(row.month).toISOString().substring(0, 7), // YYYY-MM
+          total_projects: Number(row.projects_count),
+          team_capacity: Math.round(capacityHours / 40), // Conversion heures -> personnes (40h/semaine)
+          utilization_rate: Math.round(utilizationRate * 100) / 100,
+          avg_project_duration: durationMap.get(monthKey) || 30
+        };
+      });
+
+      console.log(`[Storage] ${formattedResults.length} mois d'historique charge équipes trouvés`);
+      return formattedResults;
+    } catch (error) {
+      console.error('[Storage] Erreur getTeamLoadHistory:', error);
+      throw error;
+    }
+  }
+
+  async saveForecastSnapshot(forecast: {
+    forecast_data: any;
+    generated_at: string;
+    params: any;
+  }): Promise<string> {
+    try {
+      const id = `forecast-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      
+      // Extraire les métadonnées du forecast pour les champs requis
+      const forecastPeriod = forecast.params?.period || 'unknown';
+      const confidence = forecast.forecast_data?.confidence || 0.85;
+      const methodUsed = forecast.params?.method || 'historical_trend';
+
+      const snapshot = {
+        id,
+        generated_at: forecast.generated_at,
+        forecast_period: forecastPeriod,
+        confidence,
+        method_used: methodUsed,
+        forecast_data: forecast.forecast_data,
+        params: forecast.params
+      };
+
+      DatabaseStorage.forecastSnapshots.set(id, snapshot);
+      
+      console.log(`[Storage] Snapshot forecast sauvegardé: ${id} (période: ${forecastPeriod})`);
+      return id;
+    } catch (error) {
+      console.error('[Storage] Erreur saveForecastSnapshot:', error);
+      throw error;
+    }
+  }
+
+  async listForecastSnapshots(limit: number = 50): Promise<Array<{
+    id: string;
+    generated_at: string;
+    forecast_period: string;
+    confidence: number;
+    method_used: string;
+  }>> {
+    try {
+      const snapshots = Array.from(DatabaseStorage.forecastSnapshots.values())
+        .sort((a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime())
+        .slice(0, limit)
+        .map(snapshot => ({
+          id: snapshot.id,
+          generated_at: snapshot.generated_at,
+          forecast_period: snapshot.forecast_period,
+          confidence: snapshot.confidence,
+          method_used: snapshot.method_used
+        }));
+
+      console.log(`[Storage] ${snapshots.length} snapshots forecast trouvés`);
+      return snapshots;
+    } catch (error) {
+      console.error('[Storage] Erreur listForecastSnapshots:', error);
+      throw error;
+    }
+  }
+}
+
+// ========================================
+// CLASSE MEMSTORAGE AVEC DONNÉES MOCK RÉALISTES - PHASE 3.1.6.2
+// ========================================
+
+export class MemStorage implements IStorage {
+  // Mock data pour les forecast snapshots
+  private static mockForecastSnapshots = [
+    {
+      id: "forecast-mock-1",
+      generated_at: "2024-09-15T10:30:00Z",
+      forecast_period: "2024-Q4",
+      confidence: 0.87,
+      method_used: "historical_trend"
+    },
+    {
+      id: "forecast-mock-2", 
+      generated_at: "2024-09-10T14:20:00Z",
+      forecast_period: "2024-Q3",
+      confidence: 0.92,
+      method_used: "seasonal_analysis"
+    }
+  ];
+
+  // ========================================
+  // PREDICTIVE ENGINE METHODS - DONNÉES MOCK MENUISERIE FRANÇAISE
+  // ========================================
+
+  async getMonthlyRevenueHistory(range: {
+    start_date: string;
+    end_date: string;
+  }): Promise<Array<{
+    month: string;
+    total_revenue: number;
+    projects_count: number;
+    avg_project_value: number;
+  }>> {
+    console.log(`[MemStorage] Mock - Historique revenus de ${range.start_date} à ${range.end_date}`);
+    
+    // Pattern réaliste menuiserie française avec saisonnalité
+    // - Pic printemps/été (rénovations)
+    // - Ralentissement hiver
+    // - Croissance progressive
+    return [
+      { month: "2024-01", total_revenue: 85000, projects_count: 8, avg_project_value: 10625 },
+      { month: "2024-02", total_revenue: 92000, projects_count: 9, avg_project_value: 10222 },
+      { month: "2024-03", total_revenue: 120000, projects_count: 12, avg_project_value: 10000 },
+      { month: "2024-04", total_revenue: 145000, projects_count: 15, avg_project_value: 9667 },
+      { month: "2024-05", total_revenue: 168000, projects_count: 16, avg_project_value: 10500 },
+      { month: "2024-06", total_revenue: 185000, projects_count: 18, avg_project_value: 10278 },
+      { month: "2024-07", total_revenue: 172000, projects_count: 17, avg_project_value: 10118 },
+      { month: "2024-08", total_revenue: 155000, projects_count: 14, avg_project_value: 11071 },
+      { month: "2024-09", total_revenue: 165000, projects_count: 16, avg_project_value: 10313 },
+      { month: "2024-10", total_revenue: 140000, projects_count: 13, avg_project_value: 10769 },
+      { month: "2024-11", total_revenue: 115000, projects_count: 11, avg_project_value: 10455 },
+      { month: "2024-12", total_revenue: 95000, projects_count: 9, avg_project_value: 10556 }
+    ];
+  }
+
+  async getProjectDelayHistory(range: {
+    start_date: string;
+    end_date: string;
+  }): Promise<Array<{
+    project_id: string;
+    planned_days: number;
+    actual_days: number;
+    delay_days: number;
+    project_type: string;
+    complexity: string;
+  }>> {
+    console.log(`[MemStorage] Mock - Historique délais projets de ${range.start_date} à ${range.end_date}`);
+    
+    // Données réalistes basées sur business menuiserie JLM
+    return [
+      {
+        project_id: "proj-mock-1",
+        planned_days: 45,
+        actual_days: 52,
+        delay_days: 7,
+        project_type: "fenetre",
+        complexity: "simple"
+      },
+      {
+        project_id: "proj-mock-2", 
+        planned_days: 60,
+        actual_days: 75,
+        delay_days: 15,
+        project_type: "porte",
+        complexity: "medium"
+      },
+      {
+        project_id: "proj-mock-3",
+        planned_days: 90,
+        actual_days: 85,
+        delay_days: -5,
+        project_type: "verriere",
+        complexity: "complex"
+      },
+      {
+        project_id: "proj-mock-4",
+        planned_days: 30,
+        actual_days: 35,
+        delay_days: 5,
+        project_type: "volet",
+        complexity: "simple"
+      },
+      {
+        project_id: "proj-mock-5",
+        planned_days: 75,
+        actual_days: 90,
+        delay_days: 15,
+        project_type: "portail",
+        complexity: "medium"
+      },
+      {
+        project_id: "proj-mock-6",
+        planned_days: 120,
+        actual_days: 135,
+        delay_days: 15,
+        project_type: "cloison",
+        complexity: "complex"
+      }
+    ];
+  }
+
+  async getTeamLoadHistory(range: {
+    start_date: string;
+    end_date: string;
+  }): Promise<Array<{
+    month: string;
+    total_projects: number;
+    team_capacity: number;
+    utilization_rate: number;
+    avg_project_duration: number;
+  }>> {
+    console.log(`[MemStorage] Mock - Historique charge équipes de ${range.start_date} à ${range.end_date}`);
+    
+    // Pattern charge équipe JLM avec variations saisonnières
+    return [
+      {
+        month: "2024-01",
+        total_projects: 8,
+        team_capacity: 12,
+        utilization_rate: 67,
+        avg_project_duration: 42
+      },
+      {
+        month: "2024-02", 
+        total_projects: 9,
+        team_capacity: 12,
+        utilization_rate: 75,
+        avg_project_duration: 38
+      },
+      {
+        month: "2024-03",
+        total_projects: 12,
+        team_capacity: 12,
+        utilization_rate: 100,
+        avg_project_duration: 35
+      },
+      {
+        month: "2024-04",
+        total_projects: 15,
+        team_capacity: 14,
+        utilization_rate: 107,
+        avg_project_duration: 40
+      },
+      {
+        month: "2024-05",
+        total_projects: 16,
+        team_capacity: 14,
+        utilization_rate: 114,
+        avg_project_duration: 45
+      },
+      {
+        month: "2024-06",
+        total_projects: 18,
+        team_capacity: 16,
+        utilization_rate: 112,
+        avg_project_duration: 42
+      },
+      {
+        month: "2024-07",
+        total_projects: 17,
+        team_capacity: 16,
+        utilization_rate: 106,
+        avg_project_duration: 38
+      },
+      {
+        month: "2024-08",
+        total_projects: 14,
+        team_capacity: 14,
+        utilization_rate: 100,
+        avg_project_duration: 44
+      },
+      {
+        month: "2024-09",
+        total_projects: 16,
+        team_capacity: 14,
+        utilization_rate: 114,
+        avg_project_duration: 41
+      }
+    ];
+  }
+
+  async saveForecastSnapshot(forecast: {
+    forecast_data: any;
+    generated_at: string;
+    params: any;
+  }): Promise<string> {
+    const id = `forecast-mock-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    
+    const newSnapshot = {
+      id,
+      generated_at: forecast.generated_at,
+      forecast_period: forecast.params?.period || "unknown",
+      confidence: forecast.forecast_data?.confidence || 0.85,
+      method_used: forecast.params?.method || "mock_method"
+    };
+
+    MemStorage.mockForecastSnapshots.unshift(newSnapshot);
+    
+    console.log(`[MemStorage] Mock - Snapshot forecast sauvegardé: ${id}`);
+    return id;
+  }
+
+  async listForecastSnapshots(limit: number = 50): Promise<Array<{
+    id: string;
+    generated_at: string;
+    forecast_period: string;
+    confidence: number;
+    method_used: string;
+  }>> {
+    const snapshots = MemStorage.mockForecastSnapshots.slice(0, limit);
+    console.log(`[MemStorage] Mock - ${snapshots.length} snapshots forecast retournés`);
+    return snapshots;
+  }
+
+  // ========================================
+  // TOUTES LES AUTRES MÉTHODES ISTORAGE - MOCK BASIQUE
+  // ========================================
+  
+  // Note: Pour les besoins de ce POC, les autres méthodes retournent des données mock basiques
+  // ou délèguent vers DatabaseStorage selon les besoins
+
+  async getUsers(): Promise<User[]> {
+    return [];
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    return undefined;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    throw new Error("MemStorage: upsertUser not implemented for POC");
+  }
+
+  async getAos(): Promise<Ao[]> {
+    return [];
+  }
+
+  async getAo(id: string): Promise<Ao | undefined> {
+    return undefined;
+  }
+
+  async createAo(ao: InsertAo): Promise<Ao> {
+    throw new Error("MemStorage: createAo not implemented for POC");
+  }
+
+  async updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao> {
+    throw new Error("MemStorage: updateAo not implemented for POC");
+  }
+
+  async getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]> {
+    return [];
+  }
+
+  async getOffer(id: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao }) | undefined> {
+    return undefined;
+  }
+
+  async createOffer(offer: InsertOffer): Promise<Offer> {
+    throw new Error("MemStorage: createOffer not implemented for POC");
+  }
+
+  async updateOffer(id: string, offer: Partial<InsertOffer>): Promise<Offer> {
+    throw new Error("MemStorage: updateOffer not implemented for POC");
+  }
+
+  async deleteOffer(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteOffer not implemented for POC");
+  }
+
+  async getProjects(): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]> {
+    return [];
+  }
+
+  async getProject(id: string): Promise<(Project & { responsibleUser?: User; offer?: Offer }) | undefined> {
+    return undefined;
+  }
+
+  async createProject(project: InsertProject): Promise<Project> {
+    throw new Error("MemStorage: createProject not implemented for POC");
+  }
+
+  async updateProject(id: string, project: Partial<InsertProject>): Promise<Project> {
+    throw new Error("MemStorage: updateProject not implemented for POC");
+  }
+
+  async getProjectTasks(projectId: string): Promise<(ProjectTask & { assignedUser?: User })[]> {
+    return [];
+  }
+
+  async getAllTasks(): Promise<(ProjectTask & { assignedUser?: User })[]> {
+    return [];
+  }
+
+  async createProjectTask(task: InsertProjectTask): Promise<ProjectTask> {
+    throw new Error("MemStorage: createProjectTask not implemented for POC");
+  }
+
+  async updateProjectTask(id: string, task: Partial<InsertProjectTask>): Promise<ProjectTask> {
+    throw new Error("MemStorage: updateProjectTask not implemented for POC");
+  }
+
+  async getSupplierRequests(offerId?: string): Promise<SupplierRequest[]> {
+    return [];
+  }
+
+  async createSupplierRequest(request: InsertSupplierRequest): Promise<SupplierRequest> {
+    throw new Error("MemStorage: createSupplierRequest not implemented for POC");
+  }
+
+  async updateSupplierRequest(id: string, request: Partial<InsertSupplierRequest>): Promise<SupplierRequest> {
+    throw new Error("MemStorage: updateSupplierRequest not implemented for POC");
+  }
+
+  async getTeamResources(projectId?: string): Promise<(TeamResource & { user?: User })[]> {
+    return [];
+  }
+
+  async createTeamResource(resource: InsertTeamResource): Promise<TeamResource> {
+    throw new Error("MemStorage: createTeamResource not implemented for POC");
+  }
+
+  async updateTeamResource(id: string, resource: Partial<InsertTeamResource>): Promise<TeamResource> {
+    throw new Error("MemStorage: updateTeamResource not implemented for POC");
+  }
+
+  async getBeWorkload(weekNumber?: number, year?: number): Promise<(BeWorkload & { user?: User })[]> {
+    return [];
+  }
+
+  async createOrUpdateBeWorkload(workload: InsertBeWorkload): Promise<BeWorkload> {
+    throw new Error("MemStorage: createOrUpdateBeWorkload not implemented for POC");
+  }
+
+  async getDashboardStats(): Promise<{
+    totalOffers: number;
+    offersInPricing: number;
+    offersPendingValidation: number;
+    beLoad: number;
+  }> {
+    return {
+      totalOffers: 42,
+      offersInPricing: 12,
+      offersPendingValidation: 8,
+      beLoad: 85
+    };
+  }
+
+  async getConsolidatedKpis(params: {
+    from: string;
+    to: string;
+    granularity: 'day' | 'week';
+    segment?: string;
+  }): Promise<ConsolidatedKpis> {
+    throw new Error("MemStorage: getConsolidatedKpis not implemented for POC");
+  }
+
+  async getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]> {
+    return [];
+  }
+
+  async createChiffrageElement(element: InsertChiffrageElement): Promise<ChiffrageElement> {
+    throw new Error("MemStorage: createChiffrageElement not implemented for POC");
+  }
+
+  async updateChiffrageElement(id: string, element: Partial<InsertChiffrageElement>): Promise<ChiffrageElement> {
+    throw new Error("MemStorage: updateChiffrageElement not implemented for POC");
+  }
+
+  async deleteChiffrageElement(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteChiffrageElement not implemented for POC");
+  }
+
+  async getDpgfDocumentByOffer(offerId: string): Promise<DpgfDocument | null> {
+    return null;
+  }
+
+  async createDpgfDocument(dpgf: InsertDpgfDocument): Promise<DpgfDocument> {
+    throw new Error("MemStorage: createDpgfDocument not implemented for POC");
+  }
+
+  async updateDpgfDocument(id: string, dpgf: Partial<InsertDpgfDocument>): Promise<DpgfDocument> {
+    throw new Error("MemStorage: updateDpgfDocument not implemented for POC");
+  }
+
+  async deleteDpgfDocument(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteDpgfDocument not implemented for POC");
+  }
+
+  async getAoLots(aoId: string): Promise<AoLot[]> {
+    return [];
+  }
+
+  async createAoLot(lot: InsertAoLot): Promise<AoLot> {
+    throw new Error("MemStorage: createAoLot not implemented for POC");
+  }
+
+  async updateAoLot(id: string, lot: Partial<InsertAoLot>): Promise<AoLot> {
+    throw new Error("MemStorage: updateAoLot not implemented for POC");
+  }
+
+  async deleteAoLot(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteAoLot not implemented for POC");
+  }
+
+  async getMaitresOuvrage(): Promise<MaitreOuvrage[]> {
+    return [];
+  }
+
+  async getMaitreOuvrage(id: string): Promise<MaitreOuvrage | undefined> {
+    return undefined;
+  }
+
+  async createMaitreOuvrage(maitreOuvrage: InsertMaitreOuvrage): Promise<MaitreOuvrage> {
+    throw new Error("MemStorage: createMaitreOuvrage not implemented for POC");
+  }
+
+  async updateMaitreOuvrage(id: string, maitreOuvrage: Partial<InsertMaitreOuvrage>): Promise<MaitreOuvrage> {
+    throw new Error("MemStorage: updateMaitreOuvrage not implemented for POC");
+  }
+
+  async deleteMaitreOuvrage(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteMaitreOuvrage not implemented for POC");
+  }
+
+  async getMaitresOeuvre(): Promise<(MaitreOeuvre & { contacts?: ContactMaitreOeuvre[] })[]> {
+    return [];
+  }
+
+  async getMaitreOeuvre(id: string): Promise<(MaitreOeuvre & { contacts?: ContactMaitreOeuvre[] }) | undefined> {
+    return undefined;
+  }
+
+  async createMaitreOeuvre(maitreOeuvre: InsertMaitreOeuvre): Promise<MaitreOeuvre> {
+    throw new Error("MemStorage: createMaitreOeuvre not implemented for POC");
+  }
+
+  async updateMaitreOeuvre(id: string, maitreOeuvre: Partial<InsertMaitreOeuvre>): Promise<MaitreOeuvre> {
+    throw new Error("MemStorage: updateMaitreOeuvre not implemented for POC");
+  }
+
+  async deleteMaitreOeuvre(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteMaitreOeuvre not implemented for POC");
+  }
+
+  async getContactsMaitreOeuvre(maitreOeuvreId: string): Promise<ContactMaitreOeuvre[]> {
+    return [];
+  }
+
+  async createContactMaitreOeuvre(contact: InsertContactMaitreOeuvre): Promise<ContactMaitreOeuvre> {
+    throw new Error("MemStorage: createContactMaitreOeuvre not implemented for POC");
+  }
+
+  async updateContactMaitreOeuvre(id: string, contact: Partial<InsertContactMaitreOeuvre>): Promise<ContactMaitreOeuvre> {
+    throw new Error("MemStorage: updateContactMaitreOeuvre not implemented for POC");
+  }
+
+  async deleteContactMaitreOeuvre(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteContactMaitreOeuvre not implemented for POC");
+  }
+
+  async getValidationMilestones(offerId: string): Promise<ValidationMilestone[]> {
+    return [];
+  }
+
+  async createValidationMilestone(milestone: InsertValidationMilestone): Promise<ValidationMilestone> {
+    throw new Error("MemStorage: createValidationMilestone not implemented for POC");
+  }
+
+  async updateValidationMilestone(id: string, milestone: Partial<InsertValidationMilestone>): Promise<ValidationMilestone> {
+    throw new Error("MemStorage: updateValidationMilestone not implemented for POC");
+  }
+
+  async deleteValidationMilestone(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteValidationMilestone not implemented for POC");
+  }
+
+  async getVisaArchitecte(projectId: string): Promise<VisaArchitecte[]> {
+    return [];
+  }
+
+  async createVisaArchitecte(visa: InsertVisaArchitecte): Promise<VisaArchitecte> {
+    throw new Error("MemStorage: createVisaArchitecte not implemented for POC");
+  }
+
+  async updateVisaArchitecte(id: string, visa: Partial<InsertVisaArchitecte>): Promise<VisaArchitecte> {
+    throw new Error("MemStorage: updateVisaArchitecte not implemented for POC");
+  }
+
+  async deleteVisaArchitecte(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteVisaArchitecte not implemented for POC");
+  }
+
+  async getOfferById(id: string): Promise<Offer | undefined> {
+    return undefined;
+  }
+
+  async getProjectsByOffer(offerId: string): Promise<Project[]> {
+    return [];
+  }
+
+  async getScoringConfig(): Promise<TechnicalScoringConfig> {
+    throw new Error("MemStorage: getScoringConfig not implemented for POC");
+  }
+
+  async updateScoringConfig(config: TechnicalScoringConfig): Promise<void> {
+    throw new Error("MemStorage: updateScoringConfig not implemented for POC");
+  }
+
+  async enqueueTechnicalAlert(alert: InsertTechnicalAlert): Promise<TechnicalAlert> {
+    throw new Error("MemStorage: enqueueTechnicalAlert not implemented for POC");
+  }
+
+  async listTechnicalAlerts(filter?: TechnicalAlertsFilter): Promise<TechnicalAlert[]> {
+    return [];
+  }
+
+  async getTechnicalAlert(id: string): Promise<TechnicalAlert | null> {
+    return null;
+  }
+
+  async acknowledgeTechnicalAlert(id: string, userId: string): Promise<void> {
+    throw new Error("MemStorage: acknowledgeTechnicalAlert not implemented for POC");
+  }
+
+  async validateTechnicalAlert(id: string, userId: string): Promise<void> {
+    throw new Error("MemStorage: validateTechnicalAlert not implemented for POC");
+  }
+
+  async bypassTechnicalAlert(id: string, userId: string, until: Date, reason: string): Promise<void> {
+    throw new Error("MemStorage: bypassTechnicalAlert not implemented for POC");
+  }
+
+  async getActiveBypassForAo(aoId: string): Promise<{ until: Date; reason: string } | null> {
+    return null;
+  }
+
+  async listTechnicalAlertHistory(alertId: string): Promise<TechnicalAlertHistory[]> {
+    return [];
+  }
+
+  async addTechnicalAlertHistory(alertId: string | null, action: string, actorUserId: string | null, note?: string, metadata?: Record<string, any>): Promise<TechnicalAlertHistory> {
+    throw new Error("MemStorage: addTechnicalAlertHistory not implemented for POC");
+  }
+
+  async listAoSuppressionHistory(aoId: string): Promise<TechnicalAlertHistory[]> {
+    return [];
+  }
+
+  async getMaterialColorRules(): Promise<MaterialColorAlertRule[]> {
+    return [];
+  }
+
+  async setMaterialColorRules(rules: MaterialColorAlertRule[]): Promise<void> {
+    throw new Error("MemStorage: setMaterialColorRules not implemented for POC");
+  }
+
+  async getProjectTimelines(projectId: string): Promise<ProjectTimeline[]> {
+    return [];
+  }
+
+  async getAllProjectTimelines(): Promise<ProjectTimeline[]> {
+    return [];
+  }
+
+  async createProjectTimeline(data: InsertProjectTimeline): Promise<ProjectTimeline> {
+    throw new Error("MemStorage: createProjectTimeline not implemented for POC");
+  }
+
+  async updateProjectTimeline(id: string, data: Partial<InsertProjectTimeline>): Promise<ProjectTimeline> {
+    throw new Error("MemStorage: updateProjectTimeline not implemented for POC");
+  }
+
+  async deleteProjectTimeline(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteProjectTimeline not implemented for POC");
+  }
+
+  async getActiveRules(filters?: { phase?: ProjectStatus, projectType?: string }): Promise<DateIntelligenceRule[]> {
+    return [];
+  }
+
+  async getAllRules(): Promise<DateIntelligenceRule[]> {
+    return [];
+  }
+
+  async getRule(id: string): Promise<DateIntelligenceRule | undefined> {
+    return undefined;
+  }
+
+  async createRule(data: InsertDateIntelligenceRule): Promise<DateIntelligenceRule> {
+    throw new Error("MemStorage: createRule not implemented for POC");
+  }
+
+  async updateRule(id: string, data: Partial<InsertDateIntelligenceRule>): Promise<DateIntelligenceRule> {
+    throw new Error("MemStorage: updateRule not implemented for POC");
+  }
+
+  async deleteRule(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteRule not implemented for POC");
+  }
+
+  async getDateAlerts(filters?: { entityType?: string, entityId?: string, status?: string }): Promise<DateAlert[]> {
+    return [];
+  }
+
+  async getDateAlert(id: string): Promise<DateAlert | undefined> {
+    return undefined;
+  }
+
+  async createDateAlert(data: InsertDateAlert): Promise<DateAlert> {
+    throw new Error("MemStorage: createDateAlert not implemented for POC");
+  }
+
+  async updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert> {
+    throw new Error("MemStorage: updateDateAlert not implemented for POC");
+  }
+
+  async deleteDateAlert(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteDateAlert not implemented for POC");
+  }
+
+  async acknowledgeAlert(id: string, userId: string): Promise<DateAlert> {
+    throw new Error("MemStorage: acknowledgeAlert not implemented for POC");
+  }
+
+  async resolveAlert(id: string, userId: string, actionTaken?: string): Promise<DateAlert> {
+    throw new Error("MemStorage: resolveAlert not implemented for POC");
+  }
+
+  async createKPISnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot> {
+    throw new Error("MemStorage: createKPISnapshot not implemented for POC");
+  }
+
+  async getKPISnapshots(period: DateRange, limit?: number): Promise<KpiSnapshot[]> {
+    return [];
+  }
+
+  async getLatestKPISnapshot(): Promise<KpiSnapshot | null> {
+    return null;
+  }
+
+  async createBusinessMetric(data: InsertBusinessMetric): Promise<BusinessMetric> {
+    throw new Error("MemStorage: createBusinessMetric not implemented for POC");
+  }
+
+  async getBusinessMetrics(filters: MetricFilters): Promise<BusinessMetric[]> {
+    return [];
+  }
+
+  async getMetricTimeSeries(metricType: string, period: DateRange): Promise<BusinessMetric[]> {
+    return [];
+  }
+
+  async createPerformanceBenchmark(data: InsertPerformanceBenchmark): Promise<PerformanceBenchmark> {
+    throw new Error("MemStorage: createPerformanceBenchmark not implemented for POC");
+  }
+
+  async getBenchmarks(entityType: string, entityId?: string): Promise<PerformanceBenchmark[]> {
+    return [];
+  }
+
+  async getTopPerformers(metricType: string, limit?: number): Promise<PerformanceBenchmark[]> {
+    return [];
+  }
+
+  // ========================================
+  // NOUVELLES MÉTHODES POUR PREDICTIVE ENGINE SERVICE
+  // ========================================
+
+  async getMonthlyRevenueHistory(params: { start_date: string; end_date: string }): Promise<Array<{
+    period: string;
+    total_revenue: number;
+    offer_count: number;
+    avg_margin: number;
+    conversion_rate: number;
+    project_types: Record<string, number>;
+  }>> {
+    try {
+      const fromDate = new Date(params.start_date);
+      const toDate = new Date(params.end_date);
+
+      // Génération de données historiques simulées pour le POC
+      const monthlyData = [];
+      const currentDate = new Date(fromDate);
+
+      while (currentDate <= toDate) {
+        const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Simulation de données réalistes
+        const baseRevenue = 250000 + Math.random() * 100000;
+        const seasonalFactor = 1 + 0.2 * Math.sin((currentDate.getMonth() + 1) * Math.PI / 6);
+        
+        monthlyData.push({
+          period,
+          total_revenue: Math.round(baseRevenue * seasonalFactor),
+          offer_count: Math.round(15 + Math.random() * 10),
+          avg_margin: 20 + Math.random() * 10,
+          conversion_rate: 25 + Math.random() * 15,
+          project_types: {
+            fenetre: Math.round(baseRevenue * 0.4),
+            porte: Math.round(baseRevenue * 0.3),
+            volet: Math.round(baseRevenue * 0.2),
+            autre: Math.round(baseRevenue * 0.1)
+          }
+        });
+
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+
+      return monthlyData;
+    } catch (error) {
+      console.error('[DatabaseStorage] Erreur getMonthlyRevenueHistory:', error);
+      return [];
+    }
+  }
+
+  async getProjectDelayHistory(params: { start_date: string; end_date: string }): Promise<Array<{
+    project_id: string;
+    project_type: string;
+    planned_days: number;
+    actual_days: number;
+    delay_days: number;
+    completion_date: string;
+    responsible_user_id?: string;
+    complexity_factors: string[];
+  }>> {
+    try {
+      // Simulation de données historiques de délais pour le POC
+      const delayData = [];
+      const projectTypes = ['fenetre', 'porte', 'volet', 'portail'];
+      
+      for (let i = 0; i < 25; i++) {
+        const projectType = projectTypes[Math.floor(Math.random() * projectTypes.length)];
+        const plannedDays = 30 + Math.random() * 60;
+        const actualDays = plannedDays + (Math.random() - 0.7) * 20; // Tendance retards
+        const delayDays = Math.max(0, actualDays - plannedDays);
+        
+        delayData.push({
+          project_id: `proj_${i}`,
+          project_type: projectType,
+          planned_days: Math.round(plannedDays),
+          actual_days: Math.round(actualDays),
+          delay_days: Math.round(delayDays),
+          completion_date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+          responsible_user_id: `user_${Math.floor(Math.random() * 5)}`,
+          complexity_factors: ['standard']
+        });
+      }
+
+      return delayData;
+    } catch (error) {
+      console.error('[DatabaseStorage] Erreur getProjectDelayHistory:', error);
+      return [];
+    }
+  }
+
+  async getTeamLoadHistory(params: { start_date: string; end_date: string }): Promise<Array<{
+    user_id: string;
+    period: string;
+    utilization_rate: number;
+    hours_assigned: number;
+    hours_capacity: number;
+    efficiency_score: number;
+    project_count: number;
+  }>> {
+    try {
+      // Simulation charge équipe pour le POC
+      const teamData = [];
+      const userIds = ['user_1', 'user_2', 'user_3', 'user_4'];
+      
+      const fromDate = new Date(params.start_date);
+      const toDate = new Date(params.end_date);
+      const currentDate = new Date(fromDate);
+
+      while (currentDate <= toDate) {
+        const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        for (const userId of userIds) {
+          const hoursCapacity = 160; // 4 semaines * 40h
+          const utilizationRate = 60 + Math.random() * 35; // 60-95%
+          const hoursAssigned = Math.round(hoursCapacity * utilizationRate / 100);
+          
+          teamData.push({
+            user_id: userId,
+            period,
+            utilization_rate: Math.round(utilizationRate),
+            hours_assigned: hoursAssigned,
+            hours_capacity: hoursCapacity,
+            efficiency_score: Math.round(75 + Math.random() * 20),
+            project_count: Math.round(3 + Math.random() * 4)
+          });
+        }
+
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+
+      return teamData;
+    } catch (error) {
+      console.error('[DatabaseStorage] Erreur getTeamLoadHistory:', error);
+      return [];
+    }
+  }
+
+  async getSectorBenchmarks(): Promise<{
+    industry_avg_conversion: number;
+    avg_duration_benchmark: number;
+    margin_benchmark: number;
+    quality_benchmark: number;
+    efficiency_benchmark: number;
+  }> {
+    // Benchmarks secteur menuiserie (données réalistes POC)
+    return {
+      industry_avg_conversion: 35,
+      avg_duration_benchmark: 42,
+      margin_benchmark: 25,
+      quality_benchmark: 82,
+      efficiency_benchmark: 78
+    };
   }
 }
 

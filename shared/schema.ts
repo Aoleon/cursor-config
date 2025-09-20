@@ -651,8 +651,8 @@ export const offers = pgTable("offers", {
   deadlineRiskLevel: priorityLevelEnum("deadline_risk_level").default("normale"),
   
   // Historique versions échéances
-  deadlineHistory: jsonb("deadline_history"), // Historique modifications deadline
-  deadlineSource: calculationMethodEnum("deadline_source").default("automatic"),
+  // deadlineHistory: jsonb("deadline_history"), // TEMPORAIREMENT COMMENTÉ - colonne n'existe pas en DB
+  // deadlineSource: calculationMethodEnum("deadline_source").default("automatic"), // AUSSI COMMENTÉ - colonne n'existe pas en DB
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

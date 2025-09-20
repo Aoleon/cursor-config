@@ -17,7 +17,7 @@ import {
   type TechnicalAlert, type TechnicalAlertHistory,
   materialColorAlertRuleSchema, type MaterialColorAlertRule,
   insertProjectTimelineSchema, insertDateIntelligenceRuleSchema, insertDateAlertSchema,
-  type ProjectTimeline, type DateIntelligenceRule, type DateAlert, type ProjectStatus,
+  type ProjectTimeline, type DateIntelligenceRule, type DateAlert, projectStatusEnum,
   analyticsFiltersSchema, snapshotRequestSchema, metricQuerySchema, benchmarkQuerySchema,
   insertAlertThresholdSchema, updateAlertThresholdSchema, alertsQuerySchema,
   type AlertThreshold, type BusinessAlert, type AlertsQuery
@@ -193,7 +193,7 @@ const riskQueryParamsSchema = z.object({
   project_types: z.string().optional().transform((str) => str ? str.split(',') : undefined),
   user_ids: z.string().optional().transform((str) => str ? str.split(',') : undefined),
   limit: z.coerce.number().min(1).max(100).optional().default(20),
-  include_predictions: z.string().optional().transform((str) => str === 'true').default(true)
+  include_predictions: z.string().optional().transform((str) => str === 'true').default('true')
 });
 
 // Schéma pour les contextes business des recommandations
@@ -2913,7 +2913,7 @@ app.get("/api/scoring-config",
       });
     } catch (error) {
       console.error('[API] Erreur récupération configuration scoring:', error);
-      throw createError(500, "Erreur lors de la récupération de la configuration");
+      throw createError.database( "Erreur lors de la récupération de la configuration");
     }
   })
 );
@@ -2959,7 +2959,7 @@ app.patch("/api/scoring-config",
         });
       }
       
-      throw createError(500, "Erreur lors de la mise à jour de la configuration");
+      throw createError.database( "Erreur lors de la mise à jour de la configuration");
     }
   })
 );
@@ -3007,7 +3007,7 @@ app.post("/api/score-preview",
       });
     } catch (error) {
       console.error('[API] Erreur calcul aperçu scoring:', error);
-      throw createError(500, "Erreur lors du calcul de l'aperçu du scoring");
+      throw createError.database( "Erreur lors du calcul de l'aperçu du scoring");
     }
   })
 );
@@ -3113,7 +3113,7 @@ app.get("/api/technical-alerts",
       sendSuccess(res, alerts, "Alertes techniques récupérées avec succès");
     } catch (error) {
       console.error('[API] Erreur récupération alertes techniques:', error);
-      throw createError(500, "Erreur lors de la récupération des alertes techniques");
+      throw createError.database( "Erreur lors de la récupération des alertes techniques");
     }
   })
 );
@@ -3122,14 +3122,14 @@ app.get("/api/technical-alerts",
 app.get("/api/technical-alerts/:id",
   isAuthenticated,
   requireTechnicalValidationRole,
-  validateParams(commonParamSchemas.idParam),
+  validateParams(commonParamSchemas.id),
   asyncHandler(async (req, res) => {
     try {
       const { id } = req.params;
       const alert = await storage.getTechnicalAlert(id);
       
       if (!alert) {
-        throw createError(404, "Alerte technique non trouvée");
+        throw createError.notFound( "Alerte technique non trouvée");
       }
       
       sendSuccess(res, alert, "Alerte technique récupérée avec succès");
@@ -3144,14 +3144,14 @@ app.get("/api/technical-alerts/:id",
 app.patch("/api/technical-alerts/:id/ack",
   isAuthenticated,
   requireTechnicalValidationRole,
-  validateParams(commonParamSchemas.idParam),
+  validateParams(commonParamSchemas.id),
   asyncHandler(async (req, res) => {
     try {
       const { id } = req.params;
       const userId = req.session?.user?.id;
       
       if (!userId) {
-        throw createError(401, "Utilisateur non authentifié");
+        throw createError.unauthorized( "Utilisateur non authentifié");
       }
       
       await storage.acknowledgeTechnicalAlert(id, userId);
@@ -3178,14 +3178,14 @@ app.patch("/api/technical-alerts/:id/ack",
 app.patch("/api/technical-alerts/:id/validate",
   isAuthenticated,
   requireTechnicalValidationRole,
-  validateParams(commonParamSchemas.idParam),
+  validateParams(commonParamSchemas.id),
   asyncHandler(async (req, res) => {
     try {
       const { id } = req.params;
       const userId = req.session?.user?.id;
       
       if (!userId) {
-        throw createError(401, "Utilisateur non authentifié");
+        throw createError.unauthorized( "Utilisateur non authentifié");
       }
       
       await storage.validateTechnicalAlert(id, userId);
@@ -3212,7 +3212,7 @@ app.patch("/api/technical-alerts/:id/validate",
 app.patch("/api/technical-alerts/:id/bypass",
   isAuthenticated,
   requireTechnicalValidationRole,
-  validateParams(commonParamSchemas.idParam),
+  validateParams(commonParamSchemas.id),
   validateBody(bypassTechnicalAlertSchema),
   asyncHandler(async (req, res) => {
     try {
@@ -3221,7 +3221,7 @@ app.patch("/api/technical-alerts/:id/bypass",
       const userId = req.session?.user?.id;
       
       if (!userId) {
-        throw createError(401, "Utilisateur non authentifié");
+        throw createError.unauthorized( "Utilisateur non authentifié");
       }
       
       await storage.bypassTechnicalAlert(id, userId, new Date(until), reason);
@@ -3249,7 +3249,7 @@ app.patch("/api/technical-alerts/:id/bypass",
 app.get("/api/technical-alerts/:id/history",
   isAuthenticated,
   requireTechnicalValidationRole,
-  validateParams(commonParamSchemas.idParam),
+  validateParams(commonParamSchemas.id),
   asyncHandler(async (req, res) => {
     try {
       const { id } = req.params;
@@ -3258,7 +3258,7 @@ app.get("/api/technical-alerts/:id/history",
       sendSuccess(res, history, "Historique de l'alerte technique récupéré avec succès");
     } catch (error) {
       console.error('[API] Erreur récupération historique alerte technique:', error);
-      throw createError(500, "Erreur lors de la récupération de l'historique");
+      throw createError.database( "Erreur lors de la récupération de l'historique");
     }
   })
 );
@@ -3367,7 +3367,7 @@ app.post("/api/projects/:id/calculate-timeline",
       sendSuccess(res, result, "Timeline calculée avec succès");
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur calcul timeline:', error);
-      throw createError(500, "Erreur lors du calcul de la timeline", {
+      throw createError.database( "Erreur lors du calcul de la timeline", {
         projectId: req.params.id,
         errorType: 'TIMELINE_CALCULATION_FAILED'
       });
@@ -3430,7 +3430,7 @@ app.put("/api/projects/:id/recalculate-from/:phase",
       sendSuccess(res, result, "Recalcul en cascade effectué avec succès");
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur recalcul cascade:', error);
-      throw createError(500, "Erreur lors du recalcul en cascade", {
+      throw createError.database( "Erreur lors du recalcul en cascade", {
         projectId: req.params.id,
         phase: req.params.phase,
         errorType: 'CASCADE_RECALCULATION_FAILED'
@@ -3479,7 +3479,7 @@ app.get("/api/intelligence-rules",
       sendSuccess(res, result, "Règles d'intelligence récupérées avec succès");
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur récupération règles:', error);
-      throw createError(500, "Erreur lors de la récupération des règles");
+      throw createError.database( "Erreur lors de la récupération des règles");
     }
   })
 );
@@ -3510,12 +3510,12 @@ app.post("/api/intelligence-rules",
       
       // Gestion d'erreurs spécialisées
       if (error.message?.includes('nom déjà utilisé')) {
-        throw createError(409, "Une règle avec ce nom existe déjà", {
+        throw createError.conflict( "Une règle avec ce nom existe déjà", {
           errorType: 'DUPLICATE_RULE_NAME'
         });
       }
       
-      throw createError(500, "Erreur lors de la création de la règle");
+      throw createError.database( "Erreur lors de la création de la règle");
     }
   })
 );
@@ -3566,7 +3566,7 @@ app.get("/api/date-alerts",
       sendPaginatedSuccess(res, result.alerts, result.pagination, "Alertes de dates récupérées avec succès");
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur récupération alertes:', error);
-      throw createError(500, "Erreur lors de la récupération des alertes");
+      throw createError.database( "Erreur lors de la récupération des alertes");
     }
   })
 );
@@ -3588,12 +3588,12 @@ app.put("/api/date-alerts/:id/acknowledge",
       // Vérifier que l'alerte existe
       const existingAlert = await storage.getDateAlert(id);
       if (!existingAlert) {
-        throw createError(404, "Alerte non trouvée", { alertId: id });
+        throw createError.notFound( "Alerte non trouvée", { alertId: id });
       }
       
       // Vérifier le statut actuel
       if (existingAlert.status === 'resolved') {
-        throw createError(400, "Impossible d'acquitter une alerte déjà résolue", {
+        throw createError.validation(400, "Impossible d'acquitter une alerte déjà résolue", {
           currentStatus: existingAlert.status,
           alertId: id
         });
@@ -3620,7 +3620,7 @@ app.put("/api/date-alerts/:id/acknowledge",
         throw error;
       }
       
-      throw createError(500, "Erreur lors de l'acquittement de l'alerte", {
+      throw createError.database( "Erreur lors de l'acquittement de l'alerte", {
         alertId: req.params.id,
         errorType: 'ALERT_ACKNOWLEDGMENT_FAILED'
       });
@@ -3648,7 +3648,7 @@ app.put("/api/date-alerts/:id/resolve",
       // Vérifier que l'alerte existe
       const existingAlert = await storage.getDateAlert(id);
       if (!existingAlert) {
-        throw createError(404, "Alerte non trouvée", { alertId: id });
+        throw createError.notFound( "Alerte non trouvée", { alertId: id });
       }
       
       // Résoudre l'alerte
@@ -3664,7 +3664,7 @@ app.put("/api/date-alerts/:id/resolve",
         throw error;
       }
       
-      throw createError(500, "Erreur lors de la résolution de l'alerte", {
+      throw createError.database( "Erreur lors de la résolution de l'alerte", {
         alertId: req.params.id,
         errorType: 'ALERT_RESOLUTION_FAILED'
       });
@@ -3768,7 +3768,7 @@ app.get("/api/date-alerts/dashboard",
       
     } catch (error: any) {
       console.error('[AlertsDashboard] Erreur:', error);
-      throw createError(500, "Erreur lors de la récupération du dashboard", {
+      throw createError.database( "Erreur lors de la récupération du dashboard", {
         errorType: 'DASHBOARD_FETCH_FAILED'
       });
     }
@@ -3862,7 +3862,7 @@ app.post("/api/date-alerts/run-detection",
       
     } catch (error: any) {
       console.error('[ManualDetection] Erreur:', error);
-      throw createError(500, "Erreur lors de l'exécution de la détection", {
+      throw createError.database( "Erreur lors de l'exécution de la détection", {
         detectionType: req.body.detectionType,
         errorType: 'MANUAL_DETECTION_FAILED'
       });
@@ -3891,12 +3891,12 @@ app.post("/api/date-alerts/:id/escalate",
       // Vérifier que l'alerte existe
       const existingAlert = await storage.getDateAlert(id);
       if (!existingAlert) {
-        throw createError(404, "Alerte non trouvée", { alertId: id });
+        throw createError.notFound( "Alerte non trouvée", { alertId: id });
       }
       
       // Vérifier que l'alerte peut être escaladée
       if (existingAlert.status === 'resolved') {
-        throw createError(400, "Impossible d'escalader une alerte résolue", {
+        throw createError.validation(400, "Impossible d'escalader une alerte résolue", {
           currentStatus: existingAlert.status,
           alertId: id
         });
@@ -3980,7 +3980,7 @@ app.post("/api/date-alerts/:id/escalate",
         throw error;
       }
       
-      throw createError(500, "Erreur lors de l'escalade de l'alerte", {
+      throw createError.database( "Erreur lors de l'escalade de l'alerte", {
         alertId: req.params.id,
         errorType: 'ALERT_ESCALATION_FAILED'
       });
@@ -4164,7 +4164,7 @@ app.get("/api/date-alerts/summary",
       
     } catch (error: any) {
       console.error('[AlertsSummary] Erreur:', error);
-      throw createError(500, "Erreur lors de la génération du résumé", {
+      throw createError.database( "Erreur lors de la génération du résumé", {
         errorType: 'ALERTS_SUMMARY_FAILED'
       });
     }
@@ -4187,7 +4187,7 @@ app.get("/api/admin/rules/statistics",
       sendSuccess(res, stats, "Statistiques des règles métier récupérées avec succès");
     } catch (error: any) {
       console.error('[Admin] Erreur statistiques règles:', error);
-      throw createError(500, "Erreur lors de la récupération des statistiques");
+      throw createError.database( "Erreur lors de la récupération des statistiques");
     }
   })
 );
@@ -4211,7 +4211,7 @@ app.post("/api/admin/rules/seed",
       
     } catch (error: any) {
       console.error('[Admin] Erreur seeding règles:', error);
-      throw createError(500, "Erreur lors du seeding des règles par défaut");
+      throw createError.database( "Erreur lors du seeding des règles par défaut");
     }
   })
 );
@@ -4245,7 +4245,7 @@ app.post("/api/admin/rules/reset",
       
     } catch (error: any) {
       console.error('[Admin] Erreur reset règles:', error);
-      throw createError(500, "Erreur lors du reset des règles");
+      throw createError.database( "Erreur lors du reset des règles");
     }
   })
 );
@@ -4279,7 +4279,7 @@ app.get("/api/admin/rules/validate",
       
     } catch (error: any) {
       console.error('[Admin] Erreur validation règles:', error);
-      throw createError(500, "Erreur lors de la validation des règles");
+      throw createError.database( "Erreur lors de la validation des règles");
     }
   })
 );
@@ -4362,7 +4362,7 @@ app.get("/api/admin/intelligence/health",
       
     } catch (error: any) {
       console.error('[Admin] Erreur vérification santé:', error);
-      throw createError(500, "Erreur lors de la vérification de santé du système");
+      throw createError.database( "Erreur lors de la vérification de santé du système");
     }
   })
 );
@@ -4399,7 +4399,7 @@ app.get("/api/admin/intelligence/test-integration",
       
     } catch (error: any) {
       console.error('[Test] Erreur test d\'intégration:', error);
-      throw createError(500, "Erreur lors du test d'intégration", {
+      throw createError.database( "Erreur lors du test d'intégration", {
         errorType: 'INTEGRATION_TEST_FAILED',
         details: error.message
       });
@@ -4458,7 +4458,7 @@ app.get("/api/admin/intelligence/test-integration",
         sendSuccess(res, result, "Timelines de projets récupérées avec succès");
       } catch (error: any) {
         console.error('[ProjectTimelines] Erreur récupération timelines:', error);
-        throw createError(500, "Erreur lors de la récupération des timelines de projets");
+        throw createError.database( "Erreur lors de la récupération des timelines de projets");
       }
     })
   );
@@ -4503,7 +4503,7 @@ app.get("/api/admin/intelligence/test-integration",
         sendSuccess(res, updatedTimeline, "Timeline mise à jour avec succès");
       } catch (error: any) {
         console.error(`[ProjectTimelines] Erreur mise à jour timeline ${req.params.id}:`, error);
-        throw createError(500, "Erreur lors de la mise à jour de la timeline");
+        throw createError.database( "Erreur lors de la mise à jour de la timeline");
       }
     })
   );
@@ -4636,7 +4636,7 @@ app.get("/api/admin/intelligence/test-integration",
         sendSuccess(res, result, "Métriques de performance calculées avec succès");
       } catch (error: any) {
         console.error('[PerformanceMetrics] Erreur calcul métriques:', error);
-        throw createError(500, "Erreur lors du calcul des métriques de performance");
+        throw createError.database( "Erreur lors du calcul des métriques de performance");
       }
     })
   );
@@ -4676,7 +4676,7 @@ app.get('/api/analytics/kpis',
       
     } catch (error: any) {
       console.error('Erreur récupération KPIs temps réel:', error);
-      throw createError(500, 'Erreur lors de la récupération des KPIs temps réel');
+      throw createError.database( 'Erreur lors de la récupération des KPIs temps réel');
     }
   })
 );
@@ -4720,7 +4720,7 @@ app.get('/api/analytics/metrics',
       
     } catch (error: any) {
       console.error('Erreur récupération métriques business:', error);
-      throw createError(500, 'Erreur lors de la récupération des métriques business');
+      throw createError.database( 'Erreur lors de la récupération des métriques business');
     }
   })
 );
@@ -4748,7 +4748,7 @@ app.get('/api/analytics/snapshots',
       
     } catch (error: any) {
       console.error('Erreur récupération snapshots:', error);
-      throw createError(500, 'Erreur lors de la récupération des snapshots historiques');
+      throw createError.database( 'Erreur lors de la récupération des snapshots historiques');
     }
   })
 );
@@ -4771,7 +4771,7 @@ app.get('/api/analytics/benchmarks',
       
     } catch (error: any) {
       console.error('Erreur récupération benchmarks:', error);
-      throw createError(500, 'Erreur lors de la récupération des benchmarks de performance');
+      throw createError.database( 'Erreur lors de la récupération des benchmarks de performance');
     }
   })
 );
@@ -4797,7 +4797,7 @@ app.post('/api/analytics/snapshot',
       
     } catch (error: any) {
       console.error('Erreur génération snapshot:', error);
-      throw createError(500, 'Erreur lors de la génération du snapshot analytics');
+      throw createError.database( 'Erreur lors de la génération du snapshot analytics');
     }
   })
 );
@@ -4841,7 +4841,7 @@ app.get('/api/analytics/pipeline',
       
     } catch (error: any) {
       console.error('Erreur récupération pipeline:', error);
-      throw createError(500, 'Erreur lors de la récupération des métriques de pipeline');
+      throw createError.database( 'Erreur lors de la récupération des métriques de pipeline');
     }
   })
 );
@@ -4863,7 +4863,7 @@ app.get('/api/analytics/realtime',
       
     } catch (error: any) {
       console.error('Erreur récupération données temps réel:', error);
-      throw createError(500, 'Erreur lors de la récupération des données temps réel');
+      throw createError.database( 'Erreur lors de la récupération des données temps réel');
     }
   })
 );
@@ -4887,7 +4887,10 @@ app.get('/api/analytics/alerts',
       try {
         dateAlerts = await storage.getDateAlerts();
       } catch (dateError: any) {
-        console.warn('[Analytics/Alerts] Erreur récupération alertes de date (deadline_history?):', dateError.message);
+        // Gater log pollution in test environment
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('[Analytics/Alerts] Erreur récupération alertes de date (deadline_history?):', dateError.message);
+        }
         // Fallback: continuer avec alertes vides pour éviter crash complet
       }
       
@@ -4984,7 +4987,7 @@ app.get('/api/analytics/bottlenecks',
       
     } catch (error: any) {
       console.error('Erreur analyse goulots:', error);
-      throw createError(500, 'Erreur lors de l\'analyse des goulots d\'étranglement');
+      throw createError.database( 'Erreur lors de l\'analyse des goulots d\'étranglement');
     }
   })
 );
@@ -5037,7 +5040,7 @@ app.post('/api/analytics/export',
       
     } catch (error: any) {
       console.error('Erreur génération export:', error);
-      throw createError(500, 'Erreur lors de la génération du rapport');
+      throw createError.database( 'Erreur lors de la génération du rapport');
     }
   })
 );

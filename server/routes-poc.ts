@@ -18,7 +18,9 @@ import {
   materialColorAlertRuleSchema, type MaterialColorAlertRule,
   insertProjectTimelineSchema, insertDateIntelligenceRuleSchema, insertDateAlertSchema,
   type ProjectTimeline, type DateIntelligenceRule, type DateAlert, type ProjectStatus,
-  analyticsFiltersSchema, snapshotRequestSchema, metricQuerySchema, benchmarkQuerySchema
+  analyticsFiltersSchema, snapshotRequestSchema, metricQuerySchema, benchmarkQuerySchema,
+  insertAlertThresholdSchema, updateAlertThresholdSchema, alertsQuerySchema,
+  type AlertThreshold, type BusinessAlert, type AlertsQuery
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -73,22 +75,6 @@ import { eventBus } from "./eventBus";
 // Instance des règles métier menuiserie
 const menuiserieRules = new MenuiserieDetectionRules(storage);
 
-// Instance du service de détection d'alertes
-const dateAlertDetectionService = new DateAlertDetectionService(
-  storage,
-  eventBus,
-  dateIntelligenceService,
-  menuiserieRules
-);
-
-// Instance du planificateur de détection périodique
-const periodicDetectionScheduler = new PeriodicDetectionScheduler(
-  storage,
-  eventBus,
-  dateAlertDetectionService,
-  dateIntelligenceService
-);
-
 // ========================================
 // ANALYTICS SERVICE - PHASE 3.1.4
 // ========================================
@@ -102,6 +88,24 @@ const analyticsService = new AnalyticsService(storage, eventBus);
 
 // Instance du service Moteur Prédictif pour Dashboard Dirigeant
 const predictiveEngineService = new PredictiveEngineService(storage, analyticsService);
+
+// Instance du service de détection d'alertes
+const dateAlertDetectionService = new DateAlertDetectionService(
+  storage,
+  eventBus,
+  dateIntelligenceService,
+  menuiserieRules,
+  analyticsService,           // AJOUTÉ
+  predictiveEngineService     // AJOUTÉ
+);
+
+// Instance du planificateur de détection périodique
+const periodicDetectionScheduler = new PeriodicDetectionScheduler(
+  storage,
+  eventBus,
+  dateAlertDetectionService,
+  dateIntelligenceService
+);
 
 // ========================================
 // SCHÉMAS DE VALIDATION POUR INTELLIGENCE TEMPORELLE
@@ -5273,6 +5277,679 @@ app.get('/api/predictive/snapshots',
     }
   })
 );
+
+// ========================================
+// ENDPOINTS SYSTÈME ALERTES MÉTIER - PHASE 3.1.7.5
+// ========================================
+
+// Fonctions utilitaires pour calculs statistiques
+const calculateAvgResolutionTime = (alerts: BusinessAlert[]) => {
+  const resolvedAlerts = alerts.filter(a => a.status === 'resolved' && a.resolvedAt && a.triggeredAt);
+  if (resolvedAlerts.length === 0) return {};
+  
+  const severityGroups = resolvedAlerts.reduce((acc, alert) => {
+    if (!acc[alert.severity]) acc[alert.severity] = [];
+    const resolutionTime = (new Date(alert.resolvedAt!).getTime() - new Date(alert.triggeredAt).getTime()) / (1000 * 60); // en minutes
+    acc[alert.severity].push(resolutionTime);
+    return acc;
+  }, {} as Record<string, number[]>);
+  
+  return Object.entries(severityGroups).reduce((acc, [severity, times]) => {
+    acc[severity] = Math.round(times.reduce((sum, t) => sum + t, 0) / times.length);
+    return acc;
+  }, {} as Record<string, number>);
+};
+
+const getTopTriggeredThresholds = (alerts: BusinessAlert[]) => {
+  const thresholdCounts = alerts.reduce((acc, alert) => {
+    if (alert.thresholdId) {
+      acc[alert.thresholdId] = (acc[alert.thresholdId] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+  
+  return Object.entries(thresholdCounts)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 5)
+    .map(([thresholdId, count]) => ({ thresholdId, count }));
+};
+
+const calculateTeamPerformance = (alerts: BusinessAlert[]) => {
+  const resolvedAlerts = alerts.filter(a => a.status === 'resolved' && a.resolvedBy);
+  const userStats = resolvedAlerts.reduce((acc, alert) => {
+    const userId = alert.resolvedBy!;
+    if (!acc[userId]) acc[userId] = { resolved: 0, avgTime: 0 };
+    acc[userId].resolved++;
+    
+    if (alert.resolvedAt && alert.triggeredAt) {
+      const resolutionTime = (new Date(alert.resolvedAt).getTime() - new Date(alert.triggeredAt).getTime()) / (1000 * 60);
+      acc[userId].avgTime = (acc[userId].avgTime + resolutionTime) / 2;
+    }
+    return acc;
+  }, {} as Record<string, { resolved: number; avgTime: number }>);
+  
+  return Object.entries(userStats)
+    .sort(([,a], [,b]) => b.resolved - a.resolved)
+    .slice(0, 10);
+};
+
+const calculateAlertsTrends = (alerts: BusinessAlert[]) => {
+  const now = new Date();
+  const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const prev7Days = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  
+  const recentAlerts = alerts.filter(a => new Date(a.triggeredAt) >= last7Days);
+  const previousAlerts = alerts.filter(a => {
+    const triggerDate = new Date(a.triggeredAt);
+    return triggerDate >= prev7Days && triggerDate < last7Days;
+  });
+  
+  return {
+    recent_count: recentAlerts.length,
+    previous_count: previousAlerts.length,
+    change_percentage: previousAlerts.length > 0 
+      ? Math.round(((recentAlerts.length - previousAlerts.length) / previousAlerts.length) * 100)
+      : 0,
+    recent_critical: recentAlerts.filter(a => a.severity === 'critical').length,
+    previous_critical: previousAlerts.filter(a => a.severity === 'critical').length
+  };
+};
+
+// ========================================
+// A. ENDPOINTS GESTION SEUILS
+// ========================================
+
+// 1. GET /api/alerts/thresholds - Liste Seuils
+app.get('/api/alerts/thresholds', isAuthenticated, async (req: any, res) => {
+  try {
+    // 1. VALIDATION QUERY PARAMS
+    const queryValidation = z.object({
+      is_active: z.coerce.boolean().optional(),
+      threshold_key: z.enum([
+        'profitability_margin', 'team_utilization_rate', 'deadline_days_remaining',
+        'predictive_risk_score', 'revenue_forecast_confidence', 'project_delay_days',
+        'budget_overrun_percentage'
+      ]).optional(),
+      scope_type: z.enum(['global', 'project', 'team', 'period']).optional(),
+      created_by: z.string().optional(),
+      limit: z.coerce.number().min(1).max(100).default(20),
+      offset: z.coerce.number().min(0).default(0)
+    }).safeParse(req.query);
+    
+    if (!queryValidation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Paramètres requête invalides',
+        errors: queryValidation.error.format()
+      });
+    }
+    
+    const params = queryValidation.data;
+    
+    // 2. RÉCUPÉRATION SEUILS
+    const result = await storage.listThresholds(params);
+    
+    // 3. RESPONSE PAGINÉE
+    res.json({
+      success: true,
+      data: result.thresholds,
+      pagination: {
+        total: result.total,
+        limit: params.limit,
+        offset: params.offset,
+        has_more: (params.offset + params.limit) < result.total
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Erreur /api/alerts/thresholds:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur récupération seuils'
+    });
+  }
+});
+
+// 2. POST /api/alerts/thresholds - Création Seuil
+app.post('/api/alerts/thresholds', isAuthenticated, async (req: any, res) => {
+  try {
+    // 1. RBAC - Vérification rôle
+    if (!['admin', 'executive'].includes(req.user?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé - Rôle admin ou executive requis'
+      });
+    }
+    
+    // 2. VALIDATION BODY
+    const bodyValidation = insertAlertThresholdSchema.safeParse(req.body);
+    if (!bodyValidation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Données seuil invalides',
+        errors: bodyValidation.error.format()
+      });
+    }
+    
+    const thresholdData = {
+      ...bodyValidation.data,
+      createdBy: req.user.id
+    };
+    
+    // 3. CRÉATION SEUIL
+    const thresholdId = await storage.createThreshold(thresholdData);
+    
+    // 4. RESPONSE SUCCESS
+    res.status(201).json({
+      success: true,
+      data: {
+        threshold_id: thresholdId,
+        created_at: new Date().toISOString()
+      },
+      message: 'Seuil créé avec succès',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Erreur /api/alerts/thresholds POST:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur création seuil'
+    });
+  }
+});
+
+// 3. PATCH /api/alerts/thresholds/:id - Mise à jour Seuil
+app.patch('/api/alerts/thresholds/:id', isAuthenticated, async (req: any, res) => {
+  try {
+    // 1. RBAC
+    if (!['admin', 'executive'].includes(req.user?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé - Rôle admin ou executive requis'
+      });
+    }
+    
+    // 2. VALIDATION PARAMS
+    const thresholdId = req.params.id;
+    if (!thresholdId) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID seuil requis'
+      });
+    }
+    
+    // 3. VALIDATION BODY
+    const bodyValidation = updateAlertThresholdSchema.safeParse(req.body);
+    if (!bodyValidation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Données mise à jour invalides',
+        errors: bodyValidation.error.format()
+      });
+    }
+    
+    // 4. VÉRIFICATION EXISTENCE
+    const existingThreshold = await storage.getThresholdById(thresholdId);
+    if (!existingThreshold) {
+      return res.status(404).json({
+        success: false,
+        message: 'Seuil non trouvé'
+      });
+    }
+    
+    // 5. MISE À JOUR
+    const success = await storage.updateThreshold(thresholdId, bodyValidation.data);
+    
+    if (success) {
+      res.json({
+        success: true,
+        data: {
+          threshold_id: thresholdId,
+          updated_at: new Date().toISOString()
+        },
+        message: 'Seuil mis à jour avec succès',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Échec mise à jour seuil'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Erreur /api/alerts/thresholds PATCH:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur mise à jour seuil'
+    });
+  }
+});
+
+// 4. DELETE /api/alerts/thresholds/:id - Désactivation Seuil
+app.delete('/api/alerts/thresholds/:id', isAuthenticated, async (req: any, res) => {
+  try {
+    // 1. RBAC
+    if (!['admin', 'executive'].includes(req.user?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé - Rôle admin ou executive requis'
+      });
+    }
+    
+    // 2. DÉSACTIVATION (soft delete)
+    const success = await storage.deactivateThreshold(req.params.id);
+    
+    if (success) {
+      res.json({
+        success: true,
+        data: {
+          threshold_id: req.params.id,
+          deactivated_at: new Date().toISOString()
+        },
+        message: 'Seuil désactivé avec succès',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Seuil non trouvé'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Erreur /api/alerts/thresholds DELETE:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur désactivation seuil'
+    });
+  }
+});
+
+// ========================================
+// B. ENDPOINTS GESTION ALERTES
+// ========================================
+
+// 5. GET /api/alerts - Liste Alertes Business
+app.get('/api/alerts', isAuthenticated, async (req: any, res) => {
+  try {
+    // 1. VALIDATION QUERY
+    const queryValidation = alertsQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Paramètres filtres invalides',
+        errors: queryValidation.error.format()
+      });
+    }
+    
+    const query = queryValidation.data;
+    
+    // 2. FILTRAGE PAR RÔLE USER
+    if (req.user?.role === 'user') {
+      // Utilisateurs normaux voient seulement alertes assignées ou scope project
+      query.assignedTo = req.user.id;
+    }
+    
+    // 3. RÉCUPÉRATION ALERTES
+    const result = await storage.listBusinessAlerts(query);
+    
+    // 4. RESPONSE ENRICHIE
+    res.json({
+      success: true,
+      data: result.alerts,
+      summary: result.summary,
+      pagination: {
+        total: result.total,
+        limit: query.limit,
+        offset: query.offset,
+        has_more: (query.offset + query.limit) < result.total
+      },
+      filters_applied: query,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Erreur /api/alerts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur récupération alertes'
+    });
+  }
+});
+
+// 6. POST /api/alerts/:id/acknowledge - Accusé Réception
+app.post('/api/alerts/:id/acknowledge', isAuthenticated, async (req: any, res) => {
+  try {
+    // 1. VALIDATION PARAMS
+    const alertId = req.params.id;
+    const userId = req.user.id;
+    
+    // 2. VALIDATION BODY (optionnel)
+    const bodyValidation = z.object({
+      notes: z.string().max(500).optional()
+    }).safeParse(req.body);
+    
+    if (!bodyValidation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Notes invalides',
+        errors: bodyValidation.error.format()
+      });
+    }
+    
+    // 3. VÉRIFICATION ALERTE EXISTE
+    const alert = await storage.getBusinessAlertById(alertId);
+    if (!alert) {
+      return res.status(404).json({
+        success: false,
+        message: 'Alerte non trouvée'
+      });
+    }
+    
+    // 4. VÉRIFICATION STATUT
+    if (alert.status !== 'open') {
+      return res.status(400).json({
+        success: false,
+        message: `Alerte déjà ${alert.status}`
+      });
+    }
+    
+    // 5. ACKNOWLEDGMENT
+    const success = await storage.acknowledgeAlert(alertId, userId, bodyValidation.data.notes);
+    
+    if (success) {
+      res.json({
+        success: true,
+        data: {
+          alert_id: alertId,
+          acknowledged_by: userId,
+          acknowledged_at: new Date().toISOString(),
+          previous_status: 'open',
+          new_status: 'acknowledged'
+        },
+        message: 'Alerte accusée réception',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Échec accusé réception'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Erreur /api/alerts acknowledge:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur accusé réception alerte'
+    });
+  }
+});
+
+// 7. POST /api/alerts/:id/resolve - Résolution Alerte
+app.post('/api/alerts/:id/resolve', isAuthenticated, async (req: any, res) => {
+  try {
+    // 1. VALIDATION BODY REQUISE
+    const bodyValidation = z.object({
+      resolution_notes: z.string().min(10).max(1000)
+    }).safeParse(req.body);
+    
+    if (!bodyValidation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Notes résolution requises (10-1000 caractères)',
+        errors: bodyValidation.error.format()
+      });
+    }
+    
+    const alertId = req.params.id;
+    const userId = req.user.id;
+    
+    // 2. VÉRIFICATION ALERTE
+    const alert = await storage.getBusinessAlertById(alertId);
+    if (!alert) {
+      return res.status(404).json({
+        success: false,
+        message: 'Alerte non trouvée'
+      });
+    }
+    
+    // 3. VÉRIFICATION STATUT (doit être ack ou in_progress)
+    if (!['acknowledged', 'in_progress'].includes(alert.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Impossible résoudre alerte avec statut ${alert.status}`
+      });
+    }
+    
+    // 4. RÉSOLUTION
+    const success = await storage.resolveAlert(
+      alertId, 
+      userId, 
+      bodyValidation.data.resolution_notes
+    );
+    
+    if (success) {
+      res.json({
+        success: true,
+        data: {
+          alert_id: alertId,
+          resolved_by: userId,
+          resolved_at: new Date().toISOString(),
+          resolution_notes: bodyValidation.data.resolution_notes,
+          previous_status: alert.status,
+          new_status: 'resolved'
+        },
+        message: 'Alerte résolue avec succès',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Échec résolution alerte'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Erreur /api/alerts resolve:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur résolution alerte'
+    });
+  }
+});
+
+// 8. PATCH /api/alerts/:id/assign - Assignation Alerte
+app.patch('/api/alerts/:id/assign', isAuthenticated, async (req: any, res) => {
+  try {
+    // 1. RBAC - Assignation par admin/executive/manager
+    if (!['admin', 'executive', 'manager'].includes(req.user?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé - Rôle manager minimum requis'
+      });
+    }
+    
+    // 2. VALIDATION BODY
+    const bodyValidation = z.object({
+      assigned_to: z.string().min(1)
+    }).safeParse(req.body);
+    
+    if (!bodyValidation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID assignation requis',
+        errors: bodyValidation.error.format()
+      });
+    }
+    
+    const alertId = req.params.id;
+    const assignedTo = bodyValidation.data.assigned_to;
+    const assignedBy = req.user.id;
+    
+    // 3. ASSIGNATION VIA STORAGE
+    const success = await storage.updateBusinessAlertStatus(
+      alertId,
+      { assignedTo },
+      assignedBy
+    );
+    
+    if (success) {
+      res.json({
+        success: true,
+        data: {
+          alert_id: alertId,
+          assigned_to: assignedTo,
+          assigned_by: assignedBy,
+          assigned_at: new Date().toISOString()
+        },
+        message: 'Alerte assignée avec succès',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Alerte non trouvée'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Erreur /api/alerts assign:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur assignation alerte'
+    });
+  }
+});
+
+// ========================================
+// C. ENDPOINTS DASHBOARD
+// ========================================
+
+// 9. GET /api/alerts/dashboard - Résumé Dashboard
+app.get('/api/alerts/dashboard', isAuthenticated, async (req: any, res) => {
+  try {
+    // 1. STATS GLOBALES ALERTES
+    const openAlerts = await storage.listBusinessAlerts({
+      status: 'open',
+      limit: 100,
+      offset: 0
+    });
+    
+    const criticalAlerts = await storage.listBusinessAlerts({
+      severity: 'critical',
+      status: 'open',
+      limit: 10,
+      offset: 0
+    });
+    
+    const myAlerts = await storage.listBusinessAlerts({
+      assignedTo: req.user.id,
+      status: 'open',
+      limit: 20,
+      offset: 0
+    });
+    
+    // 2. MÉTRIQUES RÉSOLUTION (7 derniers jours)
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const resolvedThisWeek = await storage.listBusinessAlerts({
+      status: 'resolved',
+      limit: 100,
+      offset: 0
+    });
+    
+    // 3. RESPONSE DASHBOARD
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          total_open: openAlerts.total,
+          critical_open: criticalAlerts.total,
+          assigned_to_me: myAlerts.total,
+          resolved_this_week: resolvedThisWeek.alerts.filter(a => 
+            new Date(a.resolvedAt || '') >= weekAgo
+          ).length
+        },
+        critical_alerts: criticalAlerts.alerts.slice(0, 5), // Top 5 critiques
+        my_alerts: myAlerts.alerts.slice(0, 10), // Mes 10 alertes
+        alerts_by_type: openAlerts.summary.by_type,
+        alerts_by_severity: openAlerts.summary.by_severity,
+        recent_activity: resolvedThisWeek.alerts
+          .slice(0, 5)
+          .map(alert => ({
+            id: alert.id,
+            title: alert.title,
+            resolved_by: alert.resolvedBy,
+            resolved_at: alert.resolvedAt,
+            type: alert.alertType
+          }))
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Erreur /api/alerts/dashboard:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur résumé dashboard alertes'
+    });
+  }
+});
+
+// 10. GET /api/alerts/stats - Statistiques Alertes
+app.get('/api/alerts/stats', isAuthenticated, async (req: any, res) => {
+  try {
+    // 1. RBAC - Stats détaillées pour admin/executive
+    if (!['admin', 'executive'].includes(req.user?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé - Statistiques admin/executive uniquement'
+      });
+    }
+    
+    // 2. CALCULS STATISTIQUES
+    const allAlerts = await storage.listBusinessAlerts({
+      limit: 1000,
+      offset: 0
+    });
+    
+    // 3. MÉTRIQUES AVANCÉES
+    const stats = {
+      total_alerts: allAlerts.total,
+      distribution: allAlerts.summary,
+      
+      // Temps résolution moyen par sévérité
+      avg_resolution_time: calculateAvgResolutionTime(allAlerts.alerts),
+      
+      // Top seuils déclencheurs
+      top_triggered_thresholds: getTopTriggeredThresholds(allAlerts.alerts),
+      
+      // Performance équipes
+      team_performance: calculateTeamPerformance(allAlerts.alerts),
+      
+      // Tendances (7 derniers jours vs 7 précédents)
+      trends: calculateAlertsTrends(allAlerts.alerts)
+    };
+    
+    // 4. RESPONSE STATS
+    res.json({
+      success: true,
+      data: stats,
+      generated_at: new Date().toISOString(),
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Erreur /api/alerts/stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur statistiques alertes'
+    });
+  }
+});
 
   const httpServer = createServer(app);
   return httpServer;

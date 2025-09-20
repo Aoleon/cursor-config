@@ -1,9 +1,10 @@
-import { eq, desc, and, sql, gte, lte, count, sum, avg } from "drizzle-orm";
+import { eq, desc, and, sql, gte, lte, count, sum, avg, ne } from "drizzle-orm";
 import { 
   users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
   chiffrageElements, dpgfDocuments, aoLots, maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre,
   validationMilestones, visaArchitecte, technicalAlerts, technicalAlertHistory,
   projectTimelines, dateIntelligenceRules, dateAlerts, businessMetrics, kpiSnapshots, performanceBenchmarks,
+  alertThresholds, businessAlerts,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -31,9 +32,20 @@ import {
   type BusinessMetric, type InsertBusinessMetric,
   type KpiSnapshot, type InsertKpiSnapshot,
   type PerformanceBenchmark, type InsertPerformanceBenchmark,
+  type AlertThreshold, type InsertAlertThreshold, type UpdateAlertThreshold,
+  type BusinessAlert, type InsertBusinessAlert, type UpdateBusinessAlert,
+  type AlertsQuery, type ThresholdKey, type AlertSeverity, type AlertStatus, type AlertType,
   type ProjectStatus
 } from "@shared/schema";
 import { db } from "./db";
+import type { EventBus } from "./eventBus";
+
+// Logger simple pour les opérations storage
+const logger = {
+  info: (message: string, metadata?: any) => console.log(`[Storage] ${message}`, metadata || ''),
+  error: (message: string, error?: any) => console.error(`[Storage] ${message}`, error || ''),
+  warn: (message: string, metadata?: any) => console.warn(`[Storage] ${message}`, metadata || '')
+};
 
 // ========================================
 // TYPES POUR KPIs CONSOLIDÉS ET ANALYTICS
@@ -382,6 +394,88 @@ export interface IStorage {
     quality_benchmark: number;
     efficiency_benchmark: number;
   }>;
+
+  // ========================================
+  // ALERT THRESHOLDS MANAGEMENT - PHASE 3.1.7.2
+  // ========================================
+
+  // Récupérer seuils actifs par type/scope
+  getActiveThresholds(filters?: {
+    threshold_key?: ThresholdKey;
+    scope_type?: 'global' | 'project' | 'team' | 'period';
+    scope_entity_id?: string;
+  }): Promise<AlertThreshold[]>;
+
+  // Récupérer seuil par ID
+  getThresholdById(id: string): Promise<AlertThreshold | null>;
+
+  // Créer nouveau seuil
+  createThreshold(data: InsertAlertThreshold): Promise<string>; // Retourne ID créé
+
+  // Mettre à jour seuil existant
+  updateThreshold(id: string, data: UpdateAlertThreshold): Promise<boolean>;
+
+  // Supprimer seuil (soft delete via is_active=false)
+  deactivateThreshold(id: string): Promise<boolean>;
+
+  // Lister tous seuils avec pagination
+  listThresholds(params: {
+    is_active?: boolean;
+    created_by?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    thresholds: AlertThreshold[];
+    total: number;
+  }>;
+
+  // ========================================
+  // BUSINESS ALERTS MANAGEMENT - PHASE 3.1.7.2
+  // ========================================
+
+  // Créer nouvelle alerte business
+  createBusinessAlert(data: InsertBusinessAlert): Promise<string>; // Retourne ID
+
+  // Récupérer alerte par ID
+  getBusinessAlertById(id: string): Promise<BusinessAlert | null>;
+
+  // Lister alertes avec filtres avancés
+  listBusinessAlerts(query: AlertsQuery): Promise<{
+    alerts: BusinessAlert[];
+    total: number;
+    summary: {
+      by_status: Record<AlertStatus, number>;
+      by_severity: Record<AlertSeverity, number>;
+      by_type: Record<AlertType, number>;
+    };
+  }>;
+
+  // Mettre à jour statut alerte (workflow management)
+  updateBusinessAlertStatus(
+    id: string, 
+    update: UpdateBusinessAlert,
+    user_id: string
+  ): Promise<boolean>;
+
+  // Marquer comme accusé réception
+  acknowledgeAlert(id: string, user_id: string, notes?: string): Promise<boolean>;
+
+  // Résoudre alerte
+  resolveAlert(id: string, user_id: string, resolution_notes: string): Promise<boolean>;
+
+  // Rechercher alertes similaires (déduplication)
+  findSimilarAlerts(params: {
+    entity_type: string;
+    entity_id: string;
+    alert_type: AlertType;
+    hours_window?: number; // Fenêtre déduplication (défaut: 24h)
+  }): Promise<BusinessAlert[]>;
+
+  // Récupérer alertes ouvertes pour entité
+  getOpenAlertsForEntity(
+    entity_type: string, 
+    entity_id: string
+  ): Promise<BusinessAlert[]>;
 }
 
 // ========================================
@@ -389,6 +483,13 @@ export interface IStorage {
 // ========================================
 
 export class DatabaseStorage implements IStorage {
+  private eventBus?: EventBus; // Optional EventBus pour auto-publishing
+
+  // INJECTION EVENTBUS - Constructeur optionnel pour tests
+  constructor(eventBus?: EventBus) {
+    this.eventBus = eventBus;
+  }
+
   // Stockage en mémoire pour les règles matériaux-couleurs (POC uniquement)
   private static materialColorRules: MaterialColorAlertRule[] = [
     {
@@ -3324,6 +3425,569 @@ export class MemStorage implements IStorage {
       quality_benchmark: 82,
       efficiency_benchmark: 78
     };
+  }
+
+  // ========================================
+  // ALERT THRESHOLDS IMPLEMENTATION - PHASE 3.1.7.2
+  // ========================================
+
+  async getActiveThresholds(filters?: {
+    threshold_key?: ThresholdKey;
+    scope_type?: 'global' | 'project' | 'team' | 'period';
+    scope_entity_id?: string;
+  }): Promise<AlertThreshold[]> {
+    try {
+      let query = this.db
+        .select()
+        .from(alertThresholds)
+        .where(eq(alertThresholds.isActive, true));
+      
+      // Filtres conditionnels
+      if (filters?.threshold_key) {
+        query = query.where(eq(alertThresholds.thresholdKey, filters.threshold_key));
+      }
+      
+      if (filters?.scope_type) {
+        query = query.where(eq(alertThresholds.scopeType, filters.scope_type));
+      }
+      
+      if (filters?.scope_entity_id) {
+        query = query.where(eq(alertThresholds.scopeEntityId, filters.scope_entity_id));
+      }
+      
+      const results = await query.orderBy(alertThresholds.createdAt);
+      return results;
+      
+    } catch (error) {
+      logger.error('Erreur getActiveThresholds:', error);
+      throw error;
+    }
+  }
+
+  async getThresholdById(id: string): Promise<AlertThreshold | null> {
+    try {
+      const [result] = await this.db
+        .select()
+        .from(alertThresholds)
+        .where(eq(alertThresholds.id, id));
+      
+      return result || null;
+      
+    } catch (error) {
+      logger.error('Erreur getThresholdById:', error);
+      throw error;
+    }
+  }
+
+  async createThreshold(data: InsertAlertThreshold): Promise<string> {
+    try {
+      const [result] = await this.db
+        .insert(alertThresholds)
+        .values({
+          ...data,
+          id: `threshold_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning({ id: alertThresholds.id });
+      
+      const thresholdId = result.id;
+      
+      logger.info(`Seuil créé: ${thresholdId}`, { threshold_key: data.thresholdKey });
+      
+      // AUTO-PUBLISH EVENT si EventBus disponible
+      if (this.eventBus) {
+        await this.eventBus.publishAlertThresholdCreated({
+          threshold_id: thresholdId,
+          threshold_key: data.thresholdKey || 'unknown',
+          operator: data.operator || 'greater_than',
+          threshold_value: Number(data.thresholdValue) || 0,
+          scope_type: data.scopeType || 'global',
+          scope_entity_id: data.scopeEntityId,
+          severity: data.severity || 'warning',
+          created_by: data.createdBy || 'system',
+          is_active: data.isActive ?? true,
+          notification_channels: data.notificationChannels || ['dashboard']
+        });
+      }
+      
+      return thresholdId;
+      
+    } catch (error) {
+      logger.error('Erreur createThreshold:', error);
+      throw error;
+    }
+  }
+
+  async updateThreshold(id: string, data: UpdateAlertThreshold): Promise<boolean> {
+    try {
+      // Récupérer l'état actuel pour auto-publishing
+      const [currentThreshold] = await this.db
+        .select()
+        .from(alertThresholds)
+        .where(eq(alertThresholds.id, id));
+      
+      if (!currentThreshold) {
+        logger.warn(`Seuil ${id} non trouvé pour mise à jour`);
+        return false;
+      }
+      
+      const [result] = await this.db
+        .update(alertThresholds)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(alertThresholds.id, id))
+        .returning({ id: alertThresholds.id });
+      
+      logger.info(`Seuil ${id} mis à jour`, { changes: Object.keys(data) });
+      
+      // AUTO-PUBLISH EVENT si EventBus disponible
+      if (this.eventBus && result) {
+        await this.eventBus.publishAlertThresholdUpdated({
+          threshold_id: id,
+          updated_by: 'system', // TODO: récupérer user_id du contexte
+          updated_at: new Date().toISOString(),
+          changes: data,
+          was_active: currentThreshold.isActive ?? true,
+          is_active: data.isActive ?? currentThreshold.isActive ?? true
+        });
+      }
+      
+      return !!result;
+      
+    } catch (error) {
+      logger.error('Erreur updateThreshold:', error);
+      throw error;
+    }
+  }
+
+  async deactivateThreshold(id: string): Promise<boolean> {
+    try {
+      const [result] = await this.db
+        .update(alertThresholds)
+        .set({
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(eq(alertThresholds.id, id))
+        .returning({ id: alertThresholds.id });
+      
+      logger.info(`Seuil ${id} désactivé`);
+      
+      // AUTO-PUBLISH EVENT si EventBus disponible
+      if (this.eventBus && result) {
+        await this.eventBus.publishAlertThresholdDeactivated({
+          threshold_id: id,
+          deactivated_by: 'system', // TODO: récupérer user_id du contexte
+          deactivated_at: new Date().toISOString(),
+          reason: 'Manual deactivation'
+        });
+      }
+      
+      return !!result;
+      
+    } catch (error) {
+      logger.error('Erreur deactivateThreshold:', error);
+      throw error;
+    }
+  }
+
+  async listThresholds(params: {
+    is_active?: boolean;
+    created_by?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ thresholds: AlertThreshold[]; total: number }> {
+    try {
+      // Query principale avec filtres
+      let query = this.db.select().from(alertThresholds);
+      const conditions = [];
+      
+      if (params.is_active !== undefined) {
+        conditions.push(eq(alertThresholds.isActive, params.is_active));
+      }
+      
+      if (params.created_by) {
+        conditions.push(eq(alertThresholds.createdBy, params.created_by));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+      
+      // Count total avec mêmes conditions
+      const [{ count }] = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(alertThresholds)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+      
+      // Results paginés
+      const thresholds = await query
+        .orderBy(alertThresholds.createdAt)
+        .limit(params.limit || 20)
+        .offset(params.offset || 0);
+      
+      return { thresholds, total: count };
+      
+    } catch (error) {
+      logger.error('Erreur listThresholds:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // BUSINESS ALERTS IMPLEMENTATION - PHASE 3.1.7.2
+  // ========================================
+
+  async createBusinessAlert(data: InsertBusinessAlert): Promise<string> {
+    try {
+      const [result] = await this.db
+        .insert(businessAlerts)
+        .values({
+          ...data,
+          id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          status: 'open',
+          triggeredAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning({ id: businessAlerts.id });
+      
+      const alertId = result.id;
+      
+      logger.info(`Alerte business créée: ${alertId}`, { 
+        type: data.alertType, 
+        entity: `${data.entityType}:${data.entityId}` 
+      });
+      
+      // AUTO-PUBLISH EVENT si EventBus disponible
+      if (this.eventBus) {
+        await this.eventBus.publishBusinessAlertCreated({
+          alert_id: alertId,
+          alert_type: data.alertType || '',
+          entity_type: data.entityType || '',
+          entity_id: data.entityId || '',
+          entity_name: data.entityName || '',
+          severity: data.severity || 'info',
+          title: data.title,
+          message: data.message,
+          threshold_value: data.thresholdValue ? Number(data.thresholdValue) : undefined,
+          actual_value: data.actualValue ? Number(data.actualValue) : undefined,
+          variance: data.variance ? Number(data.variance) : undefined,
+          triggered_at: new Date().toISOString(),
+          threshold_id: data.thresholdId,
+          context_data: data.contextData ? data.contextData as Record<string, any> : undefined
+        });
+      }
+      
+      return alertId;
+      
+    } catch (error) {
+      logger.error('Erreur createBusinessAlert:', error);
+      throw error;
+    }
+  }
+
+  async getBusinessAlertById(id: string): Promise<BusinessAlert | null> {
+    try {
+      const [result] = await this.db
+        .select()
+        .from(businessAlerts)
+        .where(eq(businessAlerts.id, id));
+      
+      return result || null;
+      
+    } catch (error) {
+      logger.error('Erreur getBusinessAlertById:', error);
+      throw error;
+    }
+  }
+
+  async listBusinessAlerts(query: AlertsQuery): Promise<{
+    alerts: BusinessAlert[];
+    total: number;
+    summary: {
+      by_status: Record<AlertStatus, number>;
+      by_severity: Record<AlertSeverity, number>;
+      by_type: Record<AlertType, number>;
+    };
+  }> {
+    try {
+      // Construction query dynamique
+      let alertsQuery = this.db.select().from(businessAlerts);
+      
+      // Filtres conditionnels
+      const conditions = [];
+      
+      if (query.type) {
+        conditions.push(eq(businessAlerts.alertType, query.type));
+      }
+      
+      if (query.status) {
+        conditions.push(eq(businessAlerts.status, query.status));
+      }
+      
+      if (query.severity) {
+        conditions.push(eq(businessAlerts.severity, query.severity));
+      }
+      
+      if (query.entityType) {
+        conditions.push(eq(businessAlerts.entityType, query.entityType));
+      }
+      
+      if (query.assignedTo) {
+        conditions.push(eq(businessAlerts.assignedTo, query.assignedTo));
+      }
+      
+      if (conditions.length > 0) {
+        alertsQuery = alertsQuery.where(and(...conditions));
+      }
+      
+      // Count total avec mêmes conditions
+      const [{ count }] = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(businessAlerts)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+      
+      // Results paginés
+      const alerts = await alertsQuery
+        .orderBy(desc(businessAlerts.triggeredAt))
+        .limit(query.limit || 20)
+        .offset(query.offset || 0);
+      
+      // Calcul summary simplifié (agrégation en mémoire)
+      const allAlerts = await this.db.select().from(businessAlerts);
+      
+      const summary = {
+        by_status: {} as Record<AlertStatus, number>,
+        by_severity: {} as Record<AlertSeverity, number>,
+        by_type: {} as Record<AlertType, number>
+      };
+      
+      // Calcul des statistiques
+      allAlerts.forEach(alert => {
+        summary.by_status[alert.status] = (summary.by_status[alert.status] || 0) + 1;
+        summary.by_severity[alert.severity] = (summary.by_severity[alert.severity] || 0) + 1;
+        summary.by_type[alert.alertType] = (summary.by_type[alert.alertType] || 0) + 1;
+      });
+      
+      return { alerts, total: count, summary };
+      
+    } catch (error) {
+      logger.error('Erreur listBusinessAlerts:', error);
+      throw error;
+    }
+  }
+
+  async updateBusinessAlertStatus(
+    id: string, 
+    update: UpdateBusinessAlert,
+    user_id: string
+  ): Promise<boolean> {
+    try {
+      // Récupérer l'état actuel pour auto-publishing
+      const [currentAlert] = await this.db
+        .select()
+        .from(businessAlerts)
+        .where(eq(businessAlerts.id, id));
+      
+      if (!currentAlert) {
+        logger.warn(`Alerte ${id} non trouvée pour mise à jour`);
+        return false;
+      }
+      
+      const updateData: any = {
+        ...update,
+        updatedAt: new Date()
+      };
+      
+      // Workflow tracking
+      if (update.status === 'acknowledged') {
+        updateData.acknowledgedBy = user_id;
+        updateData.acknowledgedAt = new Date();
+      }
+      
+      if (update.status === 'resolved') {
+        updateData.resolvedBy = user_id;
+        updateData.resolvedAt = new Date();
+      }
+      
+      const [result] = await this.db
+        .update(businessAlerts)
+        .set(updateData)
+        .where(eq(businessAlerts.id, id))
+        .returning({ id: businessAlerts.id });
+      
+      logger.info(`Alerte ${id} mise à jour:`, { status: update.status, user: user_id });
+      
+      // AUTO-PUBLISH EVENTS selon statut si EventBus disponible
+      if (this.eventBus && result) {
+        const previousStatus = currentAlert.status || 'open';
+        
+        if (update.status === 'acknowledged') {
+          await this.eventBus.publishBusinessAlertAcknowledged({
+            alert_id: id,
+            acknowledged_by: user_id,
+            acknowledged_at: new Date().toISOString(),
+            notes: update.resolutionNotes || undefined,
+            previous_status: previousStatus,
+            new_status: 'acknowledged'
+          });
+        }
+        
+        if (update.status === 'resolved') {
+          // Calculer la durée de résolution si possible
+          let resolutionDurationMinutes: number | undefined;
+          if (currentAlert.triggeredAt) {
+            const durationMs = Date.now() - new Date(currentAlert.triggeredAt).getTime();
+            resolutionDurationMinutes = Math.round(durationMs / (1000 * 60));
+          }
+          
+          await this.eventBus.publishBusinessAlertResolved({
+            alert_id: id,
+            resolved_by: user_id,
+            resolved_at: new Date().toISOString(),
+            resolution_notes: update.resolutionNotes || '',
+            previous_status: previousStatus,
+            new_status: 'resolved',
+            resolution_duration_minutes: resolutionDurationMinutes
+          });
+        }
+        
+        if (update.status === 'dismissed') {
+          await this.eventBus.publishBusinessAlertDismissed({
+            alert_id: id,
+            dismissed_by: user_id,
+            dismissed_at: new Date().toISOString(),
+            dismissal_reason: update.resolutionNotes || undefined,
+            previous_status: previousStatus,
+            new_status: 'dismissed'
+          });
+        }
+        
+        if (update.assignedTo && update.assignedTo !== currentAlert.assignedTo) {
+          await this.eventBus.publishBusinessAlertAssigned({
+            alert_id: id,
+            assigned_to: update.assignedTo,
+            assigned_by: user_id,
+            assigned_at: new Date().toISOString(),
+            previous_assigned_to: currentAlert.assignedTo || undefined
+          });
+        }
+      }
+      
+      return !!result;
+      
+    } catch (error) {
+      logger.error('Erreur updateBusinessAlertStatus:', error);
+      throw error;
+    }
+  }
+
+  async acknowledgeAlert(id: string, user_id: string, notes?: string): Promise<boolean> {
+    try {
+      const [result] = await this.db
+        .update(businessAlerts)
+        .set({
+          status: 'acknowledged',
+          acknowledgedBy: user_id,
+          acknowledgedAt: new Date(),
+          resolutionNotes: notes,
+          updatedAt: new Date()
+        })
+        .where(eq(businessAlerts.id, id))
+        .returning({ id: businessAlerts.id });
+      
+      logger.info(`Alerte ${id} accusée réception par ${user_id}`);
+      return !!result;
+      
+    } catch (error) {
+      logger.error('Erreur acknowledgeAlert:', error);
+      throw error;
+    }
+  }
+
+  async resolveAlert(id: string, user_id: string, resolution_notes: string): Promise<boolean> {
+    try {
+      const [result] = await this.db
+        .update(businessAlerts)
+        .set({
+          status: 'resolved',
+          resolvedBy: user_id,
+          resolvedAt: new Date(),
+          resolutionNotes: resolution_notes,
+          updatedAt: new Date()
+        })
+        .where(eq(businessAlerts.id, id))
+        .returning({ id: businessAlerts.id });
+      
+      logger.info(`Alerte ${id} résolue par ${user_id}`);
+      return !!result;
+      
+    } catch (error) {
+      logger.error('Erreur resolveAlert:', error);
+      throw error;
+    }
+  }
+
+  async findSimilarAlerts(params: {
+    entity_type: string;
+    entity_id: string;
+    alert_type: AlertType;
+    hours_window?: number;
+  }): Promise<BusinessAlert[]> {
+    try {
+      const hoursWindow = params.hours_window || 24;
+      const windowStart = new Date(Date.now() - hoursWindow * 60 * 60 * 1000);
+      
+      const results = await this.db
+        .select()
+        .from(businessAlerts)
+        .where(
+          and(
+            eq(businessAlerts.entityType, params.entity_type),
+            eq(businessAlerts.entityId, params.entity_id),
+            eq(businessAlerts.alertType, params.alert_type),
+            gte(businessAlerts.triggeredAt, windowStart),
+            ne(businessAlerts.status, 'dismissed')
+          )
+        )
+        .orderBy(desc(businessAlerts.triggeredAt));
+      
+      return results;
+      
+    } catch (error) {
+      logger.error('Erreur findSimilarAlerts:', error);
+      throw error;
+    }
+  }
+
+  async getOpenAlertsForEntity(
+    entity_type: string, 
+    entity_id: string
+  ): Promise<BusinessAlert[]> {
+    try {
+      const results = await this.db
+        .select()
+        .from(businessAlerts)
+        .where(
+          and(
+            eq(businessAlerts.entityType, entity_type),
+            eq(businessAlerts.entityId, entity_id),
+            ne(businessAlerts.status, 'resolved'),
+            ne(businessAlerts.status, 'dismissed')
+          )
+        )
+        .orderBy(desc(businessAlerts.triggeredAt));
+      
+      return results;
+      
+    } catch (error) {
+      logger.error('Erreur getOpenAlertsForEntity:', error);
+      throw error;
+    }
   }
 }
 

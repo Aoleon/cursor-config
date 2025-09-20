@@ -63,6 +63,7 @@ export class PeriodicDetectionScheduler {
     private dateIntelligenceService: DateIntelligenceService
   ) {
     this.initializeEventListeners();
+    this.setupBusinessThresholdTriggers(); // NOUVEL AJOUT PHASE 3.1.7.4
   }
 
   // ========================================
@@ -96,6 +97,9 @@ export class PeriodicDetectionScheduler {
     
     // Nettoyage hebdomadaire historique
     this.scheduleWeeklyCleanup();
+    
+    // NOUVEAU - Surveillance seuils business toutes les 30 minutes - PHASE 3.1.7.4
+    this.scheduleBusinessThresholdEvaluation();
     
     // Détection initiale au démarrage
     await this.runImmediateDetection('startup');
@@ -395,6 +399,89 @@ export class PeriodicDetectionScheduler {
         this.handleTechnicalAlertImpact(event.entityId, event.metadata);
       }
     });
+  }
+
+  // ========================================
+  // ORCHESTRATION ALERTES MÉTIER - PHASE 3.1.7.4
+  // ========================================
+
+  private setupBusinessThresholdTriggers(): void {
+    console.log('[PeriodicScheduler] Configuration triggers évaluation seuils business');
+    
+    // Trigger évaluation sur calculs analytics
+    this.eventBus.subscribe((event) => {
+      if (event.type.includes('analytics.calculated') && event.metadata?.triggers_evaluation) {
+        console.log('[PeriodicScheduler] Déclenchement évaluation seuils suite calcul analytics');
+        this.dateAlertDetectionService.evaluateBusinessThresholds().catch(error => {
+          console.error('[PeriodicScheduler] Erreur évaluation seuils (analytics trigger):', error);
+        });
+      }
+    });
+    
+    // Trigger évaluation sur changements offres/projets critiques
+    this.eventBus.subscribe((event) => {
+      if ((event.entity === 'offer' || event.entity === 'project') && 
+          event.type.includes('status_changed')) {
+        console.log('[PeriodicScheduler] Déclenchement évaluation seuils suite changement statut');
+        this.dateAlertDetectionService.evaluateBusinessThresholds().catch(error => {
+          console.error('[PeriodicScheduler] Erreur évaluation seuils (statut trigger):', error);
+        });
+      }
+    });
+  }
+
+  private scheduleBusinessThresholdEvaluation(): void {
+    console.log('[PeriodicScheduler] Programmation évaluation seuils business (30min)');
+    
+    // Trigger évaluation périodique (toutes les 30 minutes)
+    const interval = setInterval(async () => {
+      try {
+        console.log('[PeriodicScheduler] Évaluation périodique seuils business (30min)');
+        await this.dateAlertDetectionService.evaluateBusinessThresholds();
+      } catch (error) {
+        console.error('[PeriodicScheduler] Erreur évaluation périodique seuils:', error);
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+    
+    this.activeIntervals.push(interval);
+  }
+
+  // NOUVELLE MÉTHODE - Détection périodique complète avec évaluation business
+  async runPeriodicDetection(): Promise<void> {
+    console.log('[PeriodicScheduler] Démarrage détection périodique complète');
+    const startTime = Date.now();
+    
+    try {
+      // 1. Détections existantes (dates, conflits, échéances, optimisations)
+      console.log('[PeriodicDetection] Étape 1: Détection risques projets');
+      const delayAlerts = await this.dateAlertDetectionService.detectDelayRisks();
+      
+      console.log('[PeriodicDetection] Étape 2: Détection conflits planning');
+      const conflictAlerts = await this.dateAlertDetectionService.detectPlanningConflicts({
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // +60 jours
+      });
+      
+      console.log('[PeriodicDetection] Étape 3: Vérification échéances critiques');
+      const deadlineAlerts = await this.dateAlertDetectionService.checkCriticalDeadlines(7);
+      
+      console.log('[PeriodicDetection] Étape 4: Détection optimisations');
+      const optimizationAlerts = await this.dateAlertDetectionService.detectOptimizationOpportunities();
+      
+      // 2. NOUVELLE ÉTAPE - Évaluation business seuils (PHASE 3.1.7.4)
+      console.log('[PeriodicDetection] Étape 5: Évaluation seuils business');
+      await this.dateAlertDetectionService.evaluateBusinessThresholds();
+      
+      // 3. Rapport final
+      const duration = Date.now() - startTime;
+      const totalAlerts = delayAlerts.length + conflictAlerts.length + deadlineAlerts.length + optimizationAlerts.length;
+      
+      console.log(`[PeriodicDetection] Terminé: ${totalAlerts} alertes générées en ${duration}ms`);
+      
+    } catch (error) {
+      console.error('[PeriodicDetection] Erreur détection périodique complète:', error);
+      throw error;
+    }
   }
 
   private async handleProjectStatusChanged(projectId: string, metadata: any): Promise<void> {

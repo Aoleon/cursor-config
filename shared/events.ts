@@ -70,8 +70,140 @@ export enum EventType {
   DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED = 'date_intelligence.planning_issue_detected',
   
   // Analytics et métriques consolidées
-  ANALYTICS_CALCULATED = 'analytics.calculated'
+  ANALYTICS_CALCULATED = 'analytics.calculated',
+  
+  // === NOUVEAUX TYPES ALERTES MÉTIER ===
+  BUSINESS_ALERT_CREATED = 'business_alert.created',
+  BUSINESS_ALERT_ACKNOWLEDGED = 'business_alert.acknowledged', 
+  BUSINESS_ALERT_RESOLVED = 'business_alert.resolved',
+  BUSINESS_ALERT_DISMISSED = 'business_alert.dismissed',
+  BUSINESS_ALERT_ASSIGNED = 'business_alert.assigned',
+  
+  ALERT_THRESHOLD_CREATED = 'alert_threshold.created',
+  ALERT_THRESHOLD_UPDATED = 'alert_threshold.updated',
+  ALERT_THRESHOLD_DEACTIVATED = 'alert_threshold.deactivated',
+  
+  // Événements déclencheurs évaluation seuils
+  PREDICTIVE_SNAPSHOT_SAVED = 'predictive.snapshot_saved'
 }
+
+// ========================================
+// Interfaces Payloads Événements Alertes Métier
+// ========================================
+
+// Événement création alerte business
+export interface BusinessAlertCreatedPayload {
+  alert_id: string;
+  alert_type: string;        // 'profitability', 'team_overload', etc.
+  entity_type: string;       // 'project', 'team', etc.
+  entity_id: string;
+  entity_name: string;
+  severity: string;          // 'info', 'warning', 'error', 'critical'
+  title: string;
+  message: string;
+  threshold_value?: number;
+  actual_value?: number;
+  variance?: number;
+  triggered_at: string;      // ISO timestamp
+  threshold_id?: string;
+  context_data?: Record<string, any>;
+}
+
+// Événement acknowledgment alerte
+export interface BusinessAlertAcknowledgedPayload {
+  alert_id: string;
+  acknowledged_by: string;   // User ID
+  acknowledged_at: string;   // ISO timestamp
+  notes?: string;
+  previous_status: string;
+  new_status: 'acknowledged';
+}
+
+// Événement résolution alerte
+export interface BusinessAlertResolvedPayload {
+  alert_id: string;
+  resolved_by: string;       // User ID
+  resolved_at: string;       // ISO timestamp
+  resolution_notes: string;
+  previous_status: string;
+  new_status: 'resolved';
+  resolution_duration_minutes?: number; // Temps résolution
+}
+
+// Événement dismissal alerte
+export interface BusinessAlertDismissedPayload {
+  alert_id: string;
+  dismissed_by: string;      // User ID
+  dismissed_at: string;      // ISO timestamp
+  dismissal_reason?: string;
+  previous_status: string;
+  new_status: 'dismissed';
+}
+
+// Événement assignation alerte
+export interface BusinessAlertAssignedPayload {
+  alert_id: string;
+  assigned_to: string;       // User ID assigné
+  assigned_by: string;       // User ID qui assigne
+  assigned_at: string;       // ISO timestamp
+  previous_assigned_to?: string;
+}
+
+// Événement configuration seuil
+export interface AlertThresholdCreatedPayload {
+  threshold_id: string;
+  threshold_key: string;     // 'profitability_margin', etc.
+  operator: string;          // 'less_than', 'greater_than', etc.
+  threshold_value: number;
+  scope_type: string;        // 'global', 'project', etc.
+  scope_entity_id?: string;
+  severity: string;
+  created_by: string;        // User ID
+  is_active: boolean;
+  notification_channels: string[];
+}
+
+export interface AlertThresholdUpdatedPayload {
+  threshold_id: string;
+  updated_by: string;        // User ID
+  updated_at: string;        // ISO timestamp
+  changes: Record<string, any>; // Champs modifiés
+  was_active: boolean;
+  is_active: boolean;
+}
+
+export interface AlertThresholdDeactivatedPayload {
+  threshold_id: string;
+  deactivated_by: string;    // User ID
+  deactivated_at: string;    // ISO timestamp
+  reason?: string;
+}
+
+// Événement déclencheur évaluation prédictive
+export interface PredictiveSnapshotSavedPayload {
+  snapshot_id: string;
+  calculation_type: string;  // 'revenue_forecast', 'risk_analysis', etc.
+  calculated_at: string;
+  values: Record<string, number>;
+  triggers_evaluation: boolean;
+  confidence_score?: number;
+}
+
+// ========================================
+// Union Type EventPayload Extended
+// ========================================
+
+export type EventPayload = 
+  // Payloads alertes métier
+  | BusinessAlertCreatedPayload
+  | BusinessAlertAcknowledgedPayload
+  | BusinessAlertResolvedPayload
+  | BusinessAlertDismissedPayload
+  | BusinessAlertAssignedPayload
+  | AlertThresholdCreatedPayload
+  | AlertThresholdUpdatedPayload
+  | AlertThresholdDeactivatedPayload
+  | PredictiveSnapshotSavedPayload;
 
 // ========================================
 // Schema événement temps réel
@@ -80,7 +212,7 @@ export enum EventType {
 export const realtimeEventSchema = z.object({
   id: z.string().uuid(),
   type: z.nativeEnum(EventType),
-  entity: z.enum(['offer', 'project', 'task', 'validation', 'supplier', 'system', 'technical', 'date_intelligence']),
+  entity: z.enum(['offer', 'project', 'task', 'validation', 'supplier', 'system', 'technical', 'date_intelligence', 'business_alert', 'alert_threshold']),
   entityId: z.string(),
   
   // Relations pour navigation et contexte
@@ -394,6 +526,52 @@ export const eventMessageTemplates: Record<EventType, (event: RealtimeEvent) => 
     title: "Problème de planification détecté",
     message: `🚨 Conflit détecté: ${event.metadata?.issueDescription || event.message}`
   }),
+
+  // === NOUVEAUX TEMPLATES ALERTES MÉTIER ===
+  [EventType.BUSINESS_ALERT_CREATED]: (event) => ({
+    title: "🚨 Nouvelle alerte métier",
+    message: `Alerte ${event.metadata?.alert_type || 'métier'} détectée: ${event.metadata?.title || event.message} (Sévérité: ${event.metadata?.severity || 'N/A'})`
+  }),
+
+  [EventType.BUSINESS_ALERT_ACKNOWLEDGED]: (event) => ({
+    title: "✅ Alerte acquittée",
+    message: `Alerte ${event.entityId} acquittée par ${event.metadata?.acknowledged_by || 'utilisateur'} ${event.metadata?.notes ? '- ' + event.metadata.notes : ''}`
+  }),
+
+  [EventType.BUSINESS_ALERT_RESOLVED]: (event) => ({
+    title: "✅ Alerte résolue",
+    message: `Alerte ${event.entityId} résolue par ${event.metadata?.resolved_by || 'utilisateur'} ${event.metadata?.resolution_duration_minutes ? 'en ' + event.metadata.resolution_duration_minutes + ' min' : ''}`
+  }),
+
+  [EventType.BUSINESS_ALERT_DISMISSED]: (event) => ({
+    title: "❌ Alerte ignorée",
+    message: `Alerte ${event.entityId} ignorée par ${event.metadata?.dismissed_by || 'utilisateur'} ${event.metadata?.dismissal_reason ? '- ' + event.metadata.dismissal_reason : ''}`
+  }),
+
+  [EventType.BUSINESS_ALERT_ASSIGNED]: (event) => ({
+    title: "👤 Alerte assignée",
+    message: `Alerte ${event.entityId} assignée à ${event.metadata?.assigned_to || 'utilisateur'} par ${event.metadata?.assigned_by || 'système'}`
+  }),
+
+  [EventType.ALERT_THRESHOLD_CREATED]: (event) => ({
+    title: "⚙️ Nouveau seuil d'alerte",
+    message: `Seuil ${event.metadata?.threshold_key || 'métier'} créé: ${event.metadata?.threshold_value || 'N/A'} (${event.metadata?.operator || 'condition'}) - Sévérité: ${event.metadata?.severity || 'N/A'}`
+  }),
+
+  [EventType.ALERT_THRESHOLD_UPDATED]: (event) => ({
+    title: "🔧 Seuil d'alerte modifié",
+    message: `Seuil ${event.entityId} mis à jour par ${event.metadata?.updated_by || 'admin'} ${event.metadata?.activation_changed ? '(activation modifiée)' : ''}`
+  }),
+
+  [EventType.ALERT_THRESHOLD_DEACTIVATED]: (event) => ({
+    title: "🔇 Seuil d'alerte désactivé",
+    message: `Seuil ${event.entityId} désactivé par ${event.metadata?.deactivated_by || 'admin'} ${event.metadata?.reason ? '- ' + event.metadata.reason : ''}`
+  }),
+
+  [EventType.PREDICTIVE_SNAPSHOT_SAVED]: (event) => ({
+    title: "📊 Prédiction calculée",
+    message: `Snapshot prédictif ${event.metadata?.calculation_type || 'général'} sauvegardé ${event.metadata?.triggers_evaluation ? '(déclenche évaluation seuils)' : ''}`
+  }),
 };
 
 // ========================================
@@ -464,4 +642,19 @@ export const commonQueryKeys = {
   priorityConfig: () => ['/api/priorities/config'],
   workloadMetrics: (period?: string) => period ? ['/api/workload/performance-history', period] : ['/api/workload/performance-history'],
   projectMetrics: () => ['/api/projects/metrics'],
+  
+  // === NOUVELLES QUERY KEYS ALERTES MÉTIER ===
+  businessAlerts: () => ['/api/alerts', 'business'],
+  businessAlert: (id: string) => ['/api/alerts', id],
+  businessAlertsByStatus: (status: string) => ['/api/alerts', 'status', status],
+  businessAlertsByUser: (userId: string) => ['/api/alerts', 'assigned', userId],
+  alertThresholds: () => ['/api/alerts', 'thresholds'],
+  alertThreshold: (id: string) => ['/api/alerts', 'thresholds', id],
+  alertThresholdsByKey: (key: string) => ['/api/alerts', 'thresholds', key],
+  alertSettings: () => ['/api/alerts', 'settings'],
+  alertEvaluation: () => ['/api/alerts', 'evaluation', 'trigger'],
+  dashboardAlerts: () => ['/api/dashboard', 'alerts'],
+  dashboardSettings: () => ['/api/dashboard', 'settings'],
+  alertNotifications: (userId?: string) => userId ? ['/api/notifications', userId] : ['/api/notifications', 'alerts'],
+  analyticsAlerts: () => ['/api/analytics', 'alerts', 'resolution_metrics'],
 };

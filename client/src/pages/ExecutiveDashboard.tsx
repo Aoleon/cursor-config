@@ -30,7 +30,10 @@ import {
   ArrowDown,
   Minus,
   Lightbulb,
-  Loader2
+  Loader2,
+  Settings,
+  CheckCircle,
+  User
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
 import { 
@@ -49,6 +52,8 @@ import {
 } from '@/hooks/usePredictive';
 import { formatCurrency, formatPercentage, formatTrend, formatDuration, getProgressColor } from '@/utils/formatters';
 import type { PredictiveRevenueForecast, ProjectRiskAssessment, BusinessRecommendation } from '@shared/schema';
+import { BusinessAlertsOverview } from '@/components/BusinessAlertsOverview';
+import { BusinessAlertsList } from '@/components/BusinessAlertsList';
 
 // ========================================
 // INTERFACES ET TYPES
@@ -995,7 +1000,8 @@ export default function ExecutiveDashboard() {
             <TabsTrigger value="operations" data-testid="tab-operations">
               Opérations
             </TabsTrigger>
-            <TabsTrigger value="alerts" data-testid="tab-alerts">
+            <TabsTrigger value="alerts" className="flex items-center gap-2" data-testid="tab-alerts">
+              <AlertTriangle className="h-4 w-4" />
               Alertes
             </TabsTrigger>
             <TabsTrigger value="predictive" data-testid="tab-predictive">
@@ -1013,8 +1019,18 @@ export default function ExecutiveDashboard() {
           <TabsContent value="operations">
             <OperationsTab />
           </TabsContent>
-          <TabsContent value="alerts">
-            <AlertsTab />
+          <TabsContent value="alerts" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Alertes Métier</h2>
+                <p className="text-muted-foreground">Gestion alertes business configurables</p>
+              </div>
+            </div>
+            
+            <div className="grid gap-6">
+              <BusinessAlertsOverview />
+              <BusinessAlertsList />
+            </div>
           </TabsContent>
           <TabsContent value="predictive">
             <PredictiveTab />

@@ -233,6 +233,76 @@ export const alertSeverityBusinessEnum = pgEnum("alert_severity_business", [
 ]);
 
 // ========================================
+// ENUMS SYSTÈME ALERTES MÉTIER - PHASE 3.1.7.1
+// ========================================
+
+// Types de seuils configurables business
+export const thresholdKeyEnum = pgEnum("threshold_key", [
+  "profitability_margin",        // Marge bénéficiaire %
+  "team_utilization_rate",       // Taux utilisation équipes %
+  "deadline_days_remaining",     // Jours restants échéance
+  "predictive_risk_score",       // Score risque prédictif 0-100
+  "revenue_forecast_confidence", // Confiance prévision CA %
+  "project_delay_days",          // Retard projet en jours
+  "budget_overrun_percentage"    // Dépassement budget %
+]);
+
+// Opérateurs de comparaison pour seuils
+export const thresholdOperatorEnum = pgEnum("threshold_operator", [
+  "less_than",           // <
+  "less_than_equal",     // <=
+  "greater_than",        // >
+  "greater_than_equal",  // >=
+  "equals",              // ==
+  "not_equals"           // !=
+]);
+
+// Niveaux de sévérité pour alertes (enum dédié)
+export const alertSeverityEnum = pgEnum("alert_severity", [
+  "info",     // Information
+  "warning",  // Avertissement 
+  "error",    // Erreur
+  "critical"  // Critique
+]);
+
+// Portée d'application des seuils
+export const thresholdScopeEnum = pgEnum("threshold_scope", [
+  "global",      // Applicable globalement
+  "project",     // Spécifique projet
+  "team",        // Spécifique équipe
+  "period"       // Spécifique période
+]);
+
+// Types d'alertes business
+export const businessAlertTypeEnum = pgEnum("business_alert_type", [
+  "profitability",       // Rentabilité
+  "team_overload",       // Surcharge équipe
+  "deadline_critical",   // Échéance critique
+  "predictive_risk",     // Risque prédictif
+  "budget_overrun",      // Dépassement budget
+  "revenue_forecast",    // Prévision CA
+  "project_delay"        // Retard projet
+]);
+
+// Types d'entités concernées par alertes
+export const alertEntityTypeEnum = pgEnum("alert_entity_type", [
+  "project",      // Projet spécifique
+  "offer",        // Offre commerciale
+  "team",         // Équipe
+  "global",       // Global organisation
+  "forecast"      // Prévision
+]);
+
+// Statuts workflow des alertes
+export const alertStatusEnum = pgEnum("alert_status", [
+  "open",        // Nouvelle alerte
+  "acknowledged", // Accusé réception
+  "in_progress", // En cours traitement
+  "resolved",    // Résolue
+  "dismissed"    // Ignorée
+]);
+
+// ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
 
@@ -2635,6 +2705,124 @@ export const dateAlerts = pgTable("date_alerts", {
 });
 
 // ========================================
+// TABLES SYSTÈME ALERTES MÉTIER - PHASE 3.1.7.1
+// ========================================
+
+// Table seuils configurables business
+export const alertThresholds = pgTable('alert_thresholds', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  
+  // TYPE SEUIL
+  thresholdKey: thresholdKeyEnum('threshold_key').notNull(),
+  
+  // CONDITION DÉCLENCHEMENT
+  operator: thresholdOperatorEnum('operator').notNull(),
+  thresholdValue: decimal('threshold_value', { precision: 10, scale: 2 }).notNull(),
+  
+  // MÉTADONNÉES ALERTE
+  severity: alertSeverityEnum('severity').notNull(),
+  alertTitle: varchar('alert_title', { length: 200 }).notNull(),
+  alertMessage: text('alert_message').notNull(),
+  
+  // SCOPE & ACTIVATION
+  scopeType: thresholdScopeEnum('scope_type').notNull(),
+  scopeEntityId: varchar('scope_entity_id', { length: 255 }), // ID entité scope (optionnel)
+  isActive: boolean('is_active').default(true),
+  
+  // CANAUX NOTIFICATION
+  notificationChannels: text('notification_channels')
+    .array()
+    .default(sql`ARRAY['dashboard']`),
+  
+  // MÉTADONNÉES CONFIGURABLES
+  metadata: jsonb('metadata').default(sql`'{}'`),
+  
+  // AUDIT
+  createdBy: varchar('created_by', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+}, (table) => {
+  return {
+    // Index seuils actifs par type
+    activeThresholdsByKey: index('idx_alert_thresholds_active_by_key')
+      .on(table.thresholdKey, table.isActive),
+    
+    // Index scope
+    scopeIndex: index('idx_alert_thresholds_scope_entity')
+      .on(table.scopeType, table.scopeEntityId),
+      
+    // Index créateur
+    createdByIndex: index('idx_alert_thresholds_created_by_user')
+      .on(table.createdBy)
+  };
+});
+
+// Table instances alertes déclenchées
+export const businessAlerts = pgTable('business_alerts', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  
+  // RÉFÉRENCE SEUIL
+  thresholdId: varchar('threshold_id').references(() => alertThresholds.id, {
+    onDelete: 'cascade'
+  }),
+  
+  // CLASSIFICATION ALERTE
+  alertType: businessAlertTypeEnum('alert_type').notNull(),
+  
+  // ENTITÉ CONCERNÉE
+  entityType: alertEntityTypeEnum('entity_type').notNull(),
+  entityId: varchar('entity_id', { length: 255 }).notNull(),
+  entityName: varchar('entity_name', { length: 300 }),
+  
+  // CONTENU ALERTE
+  title: varchar('title', { length: 200 }).notNull(),
+  message: text('message').notNull(),
+  severity: alertSeverityEnum('severity').notNull(),
+  
+  // VALEURS DÉCLENCHEMENT
+  thresholdValue: decimal('threshold_value', { precision: 10, scale: 2 }),
+  actualValue: decimal('actual_value', { precision: 10, scale: 2 }),
+  variance: decimal('variance', { precision: 10, scale: 2 }),
+  
+  // STATUT WORKFLOW
+  status: alertStatusEnum('status').default('open'),
+  
+  // ASSIGNATION & SUIVI
+  assignedTo: varchar('assigned_to', { length: 255 }),
+  acknowledgedBy: varchar('acknowledged_by', { length: 255 }),
+  acknowledgedAt: timestamp('acknowledged_at'),
+  resolvedBy: varchar('resolved_by', { length: 255 }),
+  resolvedAt: timestamp('resolved_at'),
+  
+  // MÉTADONNÉES & CONTEXTE
+  contextData: jsonb('context_data').default(sql`'{}'`),
+  resolutionNotes: text('resolution_notes'),
+  
+  // TIMESTAMPS
+  triggeredAt: timestamp('triggered_at').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+}, (table) => {
+  return {
+    // Index alertes ouvertes par type
+    openAlertsByType: index('idx_business_alerts_instance_open_type')
+      .on(table.status, table.alertType),
+    
+    // Index entité
+    entityIndex: index('idx_business_alerts_instance_entity')
+      .on(table.entityType, table.entityId),
+      
+    // Index assignation
+    assignedIndex: index('idx_business_alerts_instance_assigned')
+      .on(table.assignedTo, table.status),
+      
+    // Index temporal
+    triggeredAtIndex: index('idx_business_alerts_instance_triggered')
+      .on(table.triggeredAt)
+  };
+});
+
+// ========================================
 // SCHEMAS ZOD POUR SYSTÈME INTELLIGENT DE DATES ET ÉCHÉANCES - PHASE 2.1
 // ========================================
 
@@ -2672,6 +2860,80 @@ export type InsertDateIntelligenceRule = z.infer<typeof insertDateIntelligenceRu
 
 export type DateAlert = typeof dateAlerts.$inferSelect;
 export type InsertDateAlert = z.infer<typeof insertDateAlertSchema>;
+
+// ========================================
+// SCHEMAS ZOD POUR SYSTÈME ALERTES MÉTIER - PHASE 3.1.7.1
+// ========================================
+
+// Schema validation seuils
+export const insertAlertThresholdSchema = createInsertSchema(alertThresholds)
+  .omit({ 
+    id: true, 
+    createdAt: true, 
+    updatedAt: true 
+  })
+  .extend({
+    thresholdValue: z.number().min(0),
+    alertTitle: z.string().min(3).max(200),
+    alertMessage: z.string().min(10).max(1000),
+    notificationChannels: z.array(z.enum(['email', 'dashboard', 'websocket'])).default(['dashboard'])
+  });
+
+export const updateAlertThresholdSchema = insertAlertThresholdSchema.partial();
+
+// Schema validation alertes business
+export const insertBusinessAlertSchema = createInsertSchema(businessAlerts)
+  .omit({ 
+    id: true, 
+    createdAt: true, 
+    updatedAt: true,
+    triggeredAt: true 
+  })
+  .extend({
+    title: z.string().min(3).max(200),
+    message: z.string().min(10).max(2000),
+    thresholdValue: z.number().optional(),
+    actualValue: z.number().optional(),
+    variance: z.number().optional()
+  });
+
+export const updateBusinessAlertSchema = z.object({
+  status: z.enum(['acknowledged', 'in_progress', 'resolved', 'dismissed']),
+  assignedTo: z.string().optional(),
+  resolutionNotes: z.string().max(1000).optional()
+});
+
+// Schema query params
+export const alertsQuerySchema = z.object({
+  type: z.enum(['profitability', 'team_overload', 'deadline_critical', 'predictive_risk', 'budget_overrun', 'revenue_forecast', 'project_delay']).optional(),
+  status: z.enum(['open', 'acknowledged', 'in_progress', 'resolved', 'dismissed']).optional(),
+  severity: z.enum(['info', 'warning', 'error', 'critical']).optional(),
+  entityType: z.enum(['project', 'offer', 'team', 'global', 'forecast']).optional(),
+  assignedTo: z.string().optional(),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  offset: z.coerce.number().min(0).default(0)
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR SYSTÈME ALERTES MÉTIER - PHASE 3.1.7.1
+// ========================================
+
+// Types pour application
+export type AlertThreshold = typeof alertThresholds.$inferSelect;
+export type InsertAlertThreshold = z.infer<typeof insertAlertThresholdSchema>;
+export type UpdateAlertThreshold = z.infer<typeof updateAlertThresholdSchema>;
+
+export type BusinessAlert = typeof businessAlerts.$inferSelect;
+export type InsertBusinessAlert = z.infer<typeof insertBusinessAlertSchema>;
+export type UpdateBusinessAlert = z.infer<typeof updateBusinessAlertSchema>;
+
+export type AlertsQuery = z.infer<typeof alertsQuerySchema>;
+
+// Types utilitaires
+export type ThresholdKey = AlertThreshold['thresholdKey'];
+export type AlertSeverity = AlertThreshold['severity'];
+export type AlertStatus = BusinessAlert['status'];
+export type AlertType = BusinessAlert['alertType'];
 
 // ========================================
 // SCHEMAS ZOD POUR DASHBOARD DÉCISIONNEL AVANCÉ - PHASE 3.1.2

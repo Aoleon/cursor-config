@@ -1,10 +1,12 @@
 import { IStorage } from "../storage-poc";
 import { EventBus } from "../eventBus";
 import { DateIntelligenceService } from "./DateIntelligenceService";
+import { AnalyticsService } from "./AnalyticsService";
+import { PredictiveEngineService } from "./PredictiveEngineService";
 import type { 
   ProjectTimeline, DateAlert, InsertDateAlert, 
   Project, ProjectStatus, DateIntelligenceRule,
-  User, Offer, Ao
+  User, Offer, Ao, AlertThreshold, InsertBusinessAlert, ThresholdKey
 } from "@shared/schema";
 
 // ========================================
@@ -132,17 +134,60 @@ export interface DelayRisk {
 }
 
 // ========================================
+// TYPES POUR ORCHESTRATION ALERTES MÉTIER - PHASE 3.1.7.4
+// ========================================
+
+export interface ProfitabilityViolation {
+  entity_type: 'global' | 'project';
+  entity_id: string;
+  entity_name: string;
+  actual_value: number;
+  variance: number;
+  profitability_type: 'global_margin' | 'project_margin';
+}
+
+export interface TeamUtilizationViolation {
+  team_id: string;
+  team_name: string;
+  utilization_rate: number;
+  variance: number;
+  current_projects: number;
+  capacity: number;
+  period: string;
+}
+
+export interface PredictiveRiskViolation {
+  project_id: string;
+  risk_score: number;
+  variance: number;
+  risk_factors: any[];
+  predicted_delay_days?: number;
+  predicted_budget_overrun?: number;
+}
+
+// ========================================
 // SERVICE PRINCIPAL DE DÉTECTION D'ALERTES
 // ========================================
 
 export class DateAlertDetectionService {
+  private logger: any;
   
   constructor(
     private storage: IStorage,
     private eventBus: EventBus,
     private dateIntelligenceService: DateIntelligenceService,
-    private menuiserieRules: MenuiserieDetectionRules
-  ) {}
+    private menuiserieRules: MenuiserieDetectionRules,
+    private analyticsService: AnalyticsService,          // NOUVELLE DÉPENDANCE
+    private predictiveEngineService: PredictiveEngineService // NOUVELLE DÉPENDANCE
+  ) {
+    this.logger = { 
+      info: console.log, 
+      error: console.error, 
+      debug: console.debug, 
+      warn: console.warn,
+      child: () => this.logger 
+    };
+  }
 
   // ========================================
   // DÉTECTION PROACTIVE RETARDS
@@ -1490,5 +1535,436 @@ export class MenuiserieDetectionRules {
 
   private daysBetween(date1: Date, date2: Date): number {
     return Math.ceil((date2.getTime() - date1.getTime()) / (24 * 60 * 60 * 1000));
+  }
+
+  // ========================================
+  // ORCHESTRATION ALERTES MÉTIER - PHASE 3.1.7.4
+  // ========================================
+  
+  /**
+   * NOUVELLE MÉTHODE PRINCIPALE - évaluation seuils métier
+   */
+  async evaluateBusinessThresholds(): Promise<void> {
+    const startTime = Date.now();
+    this.logger.info('Démarrage évaluation seuils business');
+    
+    try {
+      // 1. RÉCUPÉRATION SEUILS ACTIFS
+      const activeThresholds = await this.storage.getActiveThresholds();
+      this.logger.info(`Évaluation ${activeThresholds.length} seuils actifs`);
+      
+      if (activeThresholds.length === 0) {
+        this.logger.info('Aucun seuil actif à évaluer');
+        return;
+      }
+      
+      // 2. GROUPEMENT SEUILS PAR TYPE POUR OPTIMISATION
+      const thresholdsByType = this.groupThresholdsByType(activeThresholds);
+      
+      // 3. ÉVALUATION PAR TYPE
+      const alertsCreated = [];
+      
+      for (const [thresholdKey, thresholds] of Object.entries(thresholdsByType)) {
+        try {
+          const typeAlerts = await this.evaluateThresholdType(thresholdKey as ThresholdKey, thresholds);
+          alertsCreated.push(...typeAlerts);
+          
+        } catch (error) {
+          this.logger.error(`Erreur évaluation seuil type ${thresholdKey}:`, error);
+          // Continue avec autres types
+        }
+      }
+      
+      // 4. RAPPORT FINAL
+      const duration = Date.now() - startTime;
+      this.logger.info(`Évaluation terminée: ${alertsCreated.length} alertes créées en ${duration}ms`);
+      
+      // 5. PUBLISH EVENT ÉVALUATION TERMINÉE (pour stats)
+      await this.eventBus.publish({
+        type: 'business_alert.evaluation_completed' as any,
+        payload: {
+          thresholds_evaluated: activeThresholds.length,
+          alerts_created: alertsCreated.length,
+          duration_ms: duration,
+          evaluated_at: new Date().toISOString()
+        },
+        affectedQueryKeys: [
+          ['/api/alerts', 'evaluation', 'stats']
+        ]
+      });
+      
+    } catch (error) {
+      this.logger.error('Erreur évaluation seuils business:', error);
+      throw error;
+    }
+  }
+
+  private groupThresholdsByType(thresholds: AlertThreshold[]): Record<string, AlertThreshold[]> {
+    return thresholds.reduce((acc, threshold) => {
+      acc[threshold.thresholdKey] = acc[threshold.thresholdKey] || [];
+      acc[threshold.thresholdKey].push(threshold);
+      return acc;
+    }, {} as Record<string, AlertThreshold[]>);
+  }
+
+  private async evaluateThresholdType(
+    thresholdKey: ThresholdKey, 
+    thresholds: AlertThreshold[]
+  ): Promise<string[]> {
+    const alertsCreated: string[] = [];
+    
+    this.logger.debug(`Évaluation type: ${thresholdKey} (${thresholds.length} seuils)`);
+    
+    switch (thresholdKey) {
+      case 'profitability_margin':
+        alertsCreated.push(...await this.evaluateProfitabilityThresholds(thresholds));
+        break;
+        
+      case 'team_utilization_rate':
+        alertsCreated.push(...await this.evaluateTeamUtilizationThresholds(thresholds));
+        break;
+        
+      case 'deadline_days_remaining':
+        alertsCreated.push(...await this.evaluateDeadlineThresholds(thresholds));
+        break;
+        
+      case 'predictive_risk_score':
+        alertsCreated.push(...await this.evaluatePredictiveRiskThresholds(thresholds));
+        break;
+        
+      case 'revenue_forecast_confidence':
+        alertsCreated.push(...await this.evaluateRevenueForecastThresholds(thresholds));
+        break;
+        
+      case 'project_delay_days':
+        alertsCreated.push(...await this.evaluateProjectDelayThresholds(thresholds));
+        break;
+        
+      case 'budget_overrun_percentage':
+        alertsCreated.push(...await this.evaluateBudgetOverrunThresholds(thresholds));
+        break;
+        
+      default:
+        this.logger.warn(`Type seuil non supporté: ${thresholdKey}`);
+    }
+    
+    return alertsCreated;
+  }
+
+  // ========================================
+  // ÉVALUATEURS SPÉCIALISÉS
+  // ========================================
+
+  private async evaluateProfitabilityThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
+    const alertsCreated: string[] = [];
+    
+    try {
+      // 1. RÉCUPÉRER MÉTRIQUES RENTABILITÉ VIA ANALYTICS
+      const profitabilityData = await this.analyticsService.calculateProfitabilityMetrics();
+      
+      // 2. ÉVALUER CHAQUE SEUIL
+      for (const threshold of thresholds) {
+        const violations = this.findProfitabilityViolations(threshold, profitabilityData);
+        
+        for (const violation of violations) {
+          // 3. DÉDUPLICATION
+          const existingAlerts = await this.storage.findSimilarAlerts({
+            entity_type: violation.entity_type,
+            entity_id: violation.entity_id,
+            alert_type: 'profitability',
+            hours_window: 24
+          });
+          
+          if (existingAlerts.length === 0) {
+            // 4. CRÉER ALERTE
+            const alertId = await this.createBusinessAlert({
+              thresholdId: threshold.id,
+              alertType: 'profitability',
+              entityType: violation.entity_type,
+              entityId: violation.entity_id,
+              entityName: violation.entity_name,
+              title: threshold.alertTitle,
+              message: this.buildProfitabilityMessage(threshold, violation),
+              severity: threshold.severity,
+              thresholdValue: Number(threshold.thresholdValue),
+              actualValue: violation.actual_value,
+              variance: violation.variance,
+              contextData: {
+                profitability_type: violation.profitability_type,
+                calculation_date: new Date().toISOString()
+              }
+            });
+            
+            alertsCreated.push(alertId);
+            this.logger.info(`Alerte rentabilité créée: ${alertId}`, violation);
+          } else {
+            this.logger.debug(`Alerte rentabilité dédupliquée pour ${violation.entity_id}`);
+          }
+        }
+      }
+      
+    } catch (error) {
+      this.logger.error('Erreur évaluation seuils rentabilité:', error);
+      throw error;
+    }
+    
+    return alertsCreated;
+  }
+
+  private async evaluateTeamUtilizationThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
+    const alertsCreated: string[] = [];
+    
+    try {
+      // 1. RÉCUPÉRER CHARGE ÉQUIPES VIA ANALYTICS
+      const teamLoadData = await this.analyticsService.calculateTeamWorkloadMetrics();
+      
+      // 2. ÉVALUER SEUILS UTILISATION
+      for (const threshold of thresholds) {
+        const violations = this.findTeamUtilizationViolations(threshold, teamLoadData);
+        
+        for (const violation of violations) {
+          // Déduplication + création alerte similaire à profitability
+          const existingAlerts = await this.storage.findSimilarAlerts({
+            entity_type: 'team',
+            entity_id: violation.team_id,
+            alert_type: 'team_overload',
+            hours_window: 12 // Fenêtre plus courte pour surcharge équipe
+          });
+          
+          if (existingAlerts.length === 0) {
+            const alertId = await this.createBusinessAlert({
+              thresholdId: threshold.id,
+              alertType: 'team_overload',
+              entityType: 'team',
+              entityId: violation.team_id,
+              entityName: violation.team_name,
+              title: threshold.alertTitle,
+              message: this.buildTeamUtilizationMessage(threshold, violation),
+              severity: threshold.severity,
+              thresholdValue: Number(threshold.thresholdValue),
+              actualValue: violation.utilization_rate,
+              variance: violation.variance,
+              contextData: {
+                current_projects: violation.current_projects,
+                capacity: violation.capacity,
+                period: violation.period
+              }
+            });
+            
+            alertsCreated.push(alertId);
+            this.logger.info(`Alerte surcharge équipe créée: ${alertId}`, violation);
+          }
+        }
+      }
+      
+    } catch (error) {
+      this.logger.error('Erreur évaluation seuils utilisation équipe:', error);
+      throw error;
+    }
+    
+    return alertsCreated;
+  }
+
+  private async evaluatePredictiveRiskThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
+    const alertsCreated: string[] = [];
+    
+    try {
+      // 1. RÉCUPÉRER RISQUES PRÉDICTIFS
+      const predictiveRisks = await this.predictiveEngineService.detectProjectRisks({
+        risk_level: 'all',
+        limit: 50
+      });
+      
+      // 2. ÉVALUER SEUILS RISQUE
+      for (const threshold of thresholds) {
+        const violations = this.findPredictiveRiskViolations(threshold, predictiveRisks);
+        
+        for (const violation of violations) {
+          const existingAlerts = await this.storage.findSimilarAlerts({
+            entity_type: 'project',
+            entity_id: violation.project_id,
+            alert_type: 'predictive_risk',
+            hours_window: 48 // Fenêtre plus large pour risques prédictifs
+          });
+          
+          if (existingAlerts.length === 0) {
+            const alertId = await this.createBusinessAlert({
+              thresholdId: threshold.id,
+              alertType: 'predictive_risk',
+              entityType: 'project',
+              entityId: violation.project_id,
+              entityName: `Projet ${violation.project_id}`,
+              title: threshold.alertTitle,
+              message: this.buildPredictiveRiskMessage(threshold, violation),
+              severity: threshold.severity,
+              thresholdValue: Number(threshold.thresholdValue),
+              actualValue: violation.risk_score,
+              variance: violation.variance,
+              contextData: {
+                risk_factors: violation.risk_factors,
+                predicted_delay_days: violation.predicted_delay_days,
+                predicted_budget_overrun: violation.predicted_budget_overrun
+              }
+            });
+            
+            alertsCreated.push(alertId);
+            this.logger.info(`Alerte risque prédictif créée: ${alertId}`, violation);
+          }
+        }
+      }
+      
+    } catch (error) {
+      this.logger.error('Erreur évaluation seuils risque prédictif:', error);
+      throw error;
+    }
+    
+    return alertsCreated;
+  }
+
+  // Stubs pour les autres évaluateurs (pour compilation)
+  private async evaluateDeadlineThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
+    // TODO: Implémenter évaluation échéances
+    return [];
+  }
+
+  private async evaluateRevenueForecastThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
+    // TODO: Implémenter évaluation prévisions revenus
+    return [];
+  }
+
+  private async evaluateProjectDelayThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
+    // TODO: Implémenter évaluation retards projets
+    return [];
+  }
+
+  private async evaluateBudgetOverrunThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
+    // TODO: Implémenter évaluation dépassements budget
+    return [];
+  }
+
+  // ========================================
+  // HELPERS DÉTECTION VIOLATIONS
+  // ========================================
+
+  private findProfitabilityViolations(
+    threshold: AlertThreshold, 
+    profitabilityData: any
+  ): ProfitabilityViolation[] {
+    const violations: ProfitabilityViolation[] = [];
+    
+    // Selon scope du seuil
+    if (threshold.scopeType === 'global') {
+      // Évaluer marge globale
+      const globalMargin = profitabilityData.global_margin_percentage;
+      if (this.evaluateCondition(globalMargin, threshold.operator, Number(threshold.thresholdValue))) {
+        violations.push({
+          entity_type: 'global',
+          entity_id: 'global',
+          entity_name: 'Global',
+          actual_value: globalMargin,
+          variance: globalMargin - Number(threshold.thresholdValue),
+          profitability_type: 'global_margin'
+        });
+      }
+    } else if (threshold.scopeType === 'project') {
+      // Évaluer chaque projet
+      for (const project of profitabilityData.projects_margins || []) {
+        if (this.evaluateCondition(project.margin_percentage, threshold.operator, Number(threshold.thresholdValue))) {
+          violations.push({
+            entity_type: 'project',
+            entity_id: project.project_id,
+            entity_name: project.project_name,
+            actual_value: project.margin_percentage,
+            variance: project.margin_percentage - Number(threshold.thresholdValue),
+            profitability_type: 'project_margin'
+          });
+        }
+      }
+    }
+    
+    return violations;
+  }
+
+  private findTeamUtilizationViolations(
+    threshold: AlertThreshold, 
+    teamLoadData: any
+  ): TeamUtilizationViolation[] {
+    const violations: TeamUtilizationViolation[] = [];
+    
+    for (const team of teamLoadData.teams || []) {
+      if (this.evaluateCondition(team.utilization_rate, threshold.operator, Number(threshold.thresholdValue))) {
+        violations.push({
+          team_id: team.team_id,
+          team_name: team.team_name,
+          utilization_rate: team.utilization_rate,
+          variance: team.utilization_rate - Number(threshold.thresholdValue),
+          current_projects: team.current_projects,
+          capacity: team.capacity,
+          period: team.period
+        });
+      }
+    }
+    
+    return violations;
+  }
+
+  private findPredictiveRiskViolations(
+    threshold: AlertThreshold, 
+    predictiveRisks: any
+  ): PredictiveRiskViolation[] {
+    const violations: PredictiveRiskViolation[] = [];
+    
+    for (const risk of predictiveRisks.detected_risks || []) {
+      if (this.evaluateCondition(risk.risk_score, threshold.operator, Number(threshold.thresholdValue))) {
+        violations.push({
+          project_id: risk.project_id,
+          risk_score: risk.risk_score,
+          variance: risk.risk_score - Number(threshold.thresholdValue),
+          risk_factors: risk.risk_factors,
+          predicted_delay_days: risk.predicted_delay_days,
+          predicted_budget_overrun: risk.predicted_budget_overrun
+        });
+      }
+    }
+    
+    return violations;
+  }
+
+  private evaluateCondition(actualValue: number, operator: string, thresholdValue: number): boolean {
+    switch (operator) {
+      case 'less_than':
+        return actualValue < thresholdValue;
+      case 'less_than_equal':
+        return actualValue <= thresholdValue;
+      case 'greater_than':
+        return actualValue > thresholdValue;
+      case 'greater_than_equal':
+        return actualValue >= thresholdValue;
+      case 'equals':
+        return Math.abs(actualValue - thresholdValue) < 0.01; // Tolérance float
+      case 'not_equals':
+        return Math.abs(actualValue - thresholdValue) >= 0.01;
+      default:
+        this.logger.warn(`Opérateur non supporté: ${operator}`);
+        return false;
+    }
+  }
+
+  private buildProfitabilityMessage(threshold: AlertThreshold, violation: ProfitabilityViolation): string {
+    return `${threshold.alertMessage} - Marge actuelle: ${violation.actual_value.toFixed(1)}% (seuil: ${threshold.thresholdValue}%)`;
+  }
+
+  private buildTeamUtilizationMessage(threshold: AlertThreshold, violation: TeamUtilizationViolation): string {
+    return `${threshold.alertMessage} - Utilisation actuelle: ${violation.utilization_rate.toFixed(1)}% (seuil: ${threshold.thresholdValue}%)`;
+  }
+
+  private buildPredictiveRiskMessage(threshold: AlertThreshold, violation: PredictiveRiskViolation): string {
+    return `${threshold.alertMessage} - Score risque: ${violation.risk_score}/100 (seuil: ${threshold.thresholdValue})`;
+  }
+
+  // Helper création alerte avec EventBus auto-publishing
+  private async createBusinessAlert(data: Omit<InsertBusinessAlert, 'id' | 'createdAt' | 'updatedAt' | 'triggeredAt'>): Promise<string> {
+    // Utilise storage qui auto-publish via EventBus
+    return await this.storage.createBusinessAlert(data);
   }
 }

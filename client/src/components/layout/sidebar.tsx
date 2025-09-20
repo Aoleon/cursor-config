@@ -32,7 +32,8 @@ import {
   Headphones,
   Database,
   Settings,
-  CalendarDays
+  CalendarDays,
+  BarChart3
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -51,6 +52,7 @@ interface NavigationItem {
 
 const navigation: NavigationItem[] = [
   { name: "Tableau de Bord", href: "/", icon: TrendingUp },
+  { name: "Dashboard Dirigeant", href: "/dashboard/executive", icon: BarChart3 },
   { 
     name: "Appels d'Offre", 
     href: "/aos", 

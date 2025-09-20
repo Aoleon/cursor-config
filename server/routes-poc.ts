@@ -4740,6 +4740,246 @@ app.post('/api/analytics/snapshot',
   })
 );
 
+// 6. Pipeline Metrics (mapping existing functionality)
+app.get('/api/analytics/pipeline', 
+  isAuthenticated,
+  validateQuery(analyticsFiltersSchema.partial()),
+  asyncHandler(async (req, res) => {
+    try {
+      const filters = req.query;
+      const dateRange = filters.timeRange ? 
+        { startDate: new Date(filters.timeRange.startDate), endDate: new Date(filters.timeRange.endDate) } :
+        getDefaultPeriod();
+      
+      // Calculer les métriques de pipeline en utilisant les services existants
+      const [conversionData, revenueData] = await Promise.all([
+        analyticsService.conversionCalculatorAPI.calculateAOToOfferConversion(dateRange),
+        analyticsService.revenueCalculatorAPI.calculateRevenueForecast(dateRange)
+      ]);
+      
+      // Agréger les données depuis storage
+      const aos = await storage.getAllAos();
+      const offers = await storage.getAllOffers();
+      const projects = await storage.getAllProjects();
+      
+      const pipeline = {
+        ao_count: aos.length,
+        ao_total_value: aos.reduce((sum, ao) => sum + (ao.estimatedValue || 0), 0),
+        offer_count: offers.length,
+        offer_total_value: offers.reduce((sum, offer) => sum + (offer.totalPrice || 0), 0),
+        project_count: projects.length,
+        project_total_value: projects.reduce((sum, project) => sum + (project.estimatedValue || 0), 0),
+        ao_to_offer_rate: offers.length / Math.max(aos.length, 1) * 100,
+        offer_to_project_rate: projects.length / Math.max(offers.length, 1) * 100,
+        global_conversion_rate: projects.length / Math.max(aos.length, 1) * 100,
+        forecast_3_months: revenueData.forecast || []
+      };
+      
+      sendSuccess(res, pipeline, "Métriques de pipeline récupérées avec succès");
+      
+    } catch (error: any) {
+      console.error('Erreur récupération pipeline:', error);
+      throw createError(500, 'Erreur lors de la récupération des métriques de pipeline');
+    }
+  })
+);
+
+// 7. Realtime Data (mapping existing KPIs)
+app.get('/api/analytics/realtime', 
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
+    try {
+      // Réutiliser les KPIs temps réel existants
+      const kpis = await analyticsService.getRealtimeKPIs({});
+      
+      sendSuccess(res, {
+        ...kpis,
+        timestamp: new Date(),
+        refresh_interval: 2 * 60 * 1000, // 2 minutes
+        data_freshness: 'realtime'
+      }, "Données temps réel récupérées avec succès");
+      
+    } catch (error: any) {
+      console.error('Erreur récupération données temps réel:', error);
+      throw createError(500, 'Erreur lors de la récupération des données temps réel');
+    }
+  })
+);
+
+// 8. Executive Alerts (mapping existing alerts) - CORRECTION STABILITÉ
+app.get('/api/analytics/alerts', 
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
+    try {
+      // Récupération sécurisée des alertes techniques
+      let technicalAlerts = [];
+      let dateAlerts = [];
+      
+      try {
+        technicalAlerts = await storage.getTechnicalAlerts();
+      } catch (technicalError: any) {
+        console.warn('[Analytics/Alerts] Erreur récupération alertes techniques:', technicalError.message);
+        // Fallback: continuer avec alertes vides pour éviter crash complet
+      }
+      
+      try {
+        dateAlerts = await storage.getDateAlerts();
+      } catch (dateError: any) {
+        console.warn('[Analytics/Alerts] Erreur récupération alertes de date (deadline_history?):', dateError.message);
+        // Fallback: continuer avec alertes vides pour éviter crash complet
+      }
+      
+      // Transformer en format executive alerts avec données disponibles
+      const executiveAlerts = {
+        total_alerts: technicalAlerts.length + dateAlerts.length,
+        critical_count: technicalAlerts.filter(a => a.priority === 'critique').length,
+        warning_count: technicalAlerts.filter(a => a.priority === 'moyenne').length,
+        resolved_count: technicalAlerts.filter(a => a.status === 'resolved').length,
+        avg_resolution_time: 2.5, // Valeur simulée
+        trend: 5.2, // Tendance positive simulée
+        recent_alerts: [...technicalAlerts, ...dateAlerts]
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 10)
+          .map(alert => ({
+            id: alert.id,
+            title: alert.title || `Alerte ${alert.type || 'Technique'}`,
+            message: alert.message || alert.description || 'Alerte détectée',
+            severity: alert.priority === 'critique' ? 'critical' : 
+                     alert.priority === 'moyenne' ? 'warning' : 'info',
+            status: alert.status || 'pending',
+            created_at: alert.createdAt
+          })),
+        // Ajouter flag de warning si certaines données sont indisponibles
+        data_warnings: [
+          ...(technicalAlerts.length === 0 ? ['Alertes techniques temporairement indisponibles'] : []),
+          ...(dateAlerts.length === 0 ? ['Alertes de dates temporairement indisponibles'] : [])
+        ].filter(w => w.length > 0)
+      };
+      
+      sendSuccess(res, executiveAlerts, "Alertes exécutives récupérées avec succès");
+      
+    } catch (error: any) {
+      console.error('Erreur critique récupération alertes exécutives:', error);
+      // Fallback gracieux avec données minimales
+      sendSuccess(res, {
+        total_alerts: 0,
+        critical_count: 0,
+        warning_count: 0,
+        resolved_count: 0,
+        avg_resolution_time: 0,
+        trend: 0,
+        recent_alerts: [],
+        data_warnings: ['Service d\'alertes temporairement indisponible']
+      }, "Alertes exécutives en mode dégradé");
+    }
+  })
+);
+
+// 9. Bottleneck Analysis
+app.get('/api/analytics/bottlenecks', 
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
+    try {
+      // Analyser les goulots d'étranglement en regardant les délais et charges
+      const [projects, offers, tasks] = await Promise.all([
+        storage.getAllProjects(),
+        storage.getAllOffers(),
+        storage.getAllProjectTasks()
+      ]);
+      
+      // Identifier les phases qui prennent le plus de temps
+      const phaseDelays = tasks.reduce((acc, task) => {
+        const phase = task.name || 'Inconnu';
+        const delay = task.endDate && task.startDate ? 
+          (new Date(task.endDate).getTime() - new Date(task.startDate).getTime()) / (1000 * 60 * 60 * 24) : 0;
+        
+        if (!acc[phase]) acc[phase] = { total: 0, count: 0 };
+        acc[phase].total += delay;
+        acc[phase].count += 1;
+        return acc;
+      }, {} as Record<string, { total: number; count: number }>);
+      
+      const bottlenecks = Object.entries(phaseDelays).map(([phase, data]) => ({
+        phase,
+        avg_delay: data.total / data.count,
+        frequency: data.count,
+        impact_score: (data.total / data.count) * data.count,
+        recommendations: [
+          'Réviser la planification',
+          'Allouer plus de ressources',
+          'Automatiser certaines tâches'
+        ]
+      })).sort((a, b) => b.impact_score - a.impact_score).slice(0, 5);
+      
+      sendSuccess(res, {
+        bottlenecks,
+        summary: {
+          total_analyzed: tasks.length,
+          critical_phases: bottlenecks.filter(b => b.impact_score > 10).length,
+          avg_overall_delay: Object.values(phaseDelays).reduce((sum, p) => sum + p.total, 0) / tasks.length || 0
+        }
+      }, "Analyse des goulots d'étranglement terminée");
+      
+    } catch (error: any) {
+      console.error('Erreur analyse goulots:', error);
+      throw createError(500, 'Erreur lors de l\'analyse des goulots d\'étranglement');
+    }
+  })
+);
+
+// 10. Export Report (PDF generation)
+app.post('/api/analytics/export', 
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
+    try {
+      const { format = 'pdf' } = req.body;
+      
+      if (format === 'pdf') {
+        // Générer un PDF simple avec jsPDF
+        const jsPDF = require('jspdf');
+        const doc = new jsPDF();
+        
+        // En-tête
+        doc.setFontSize(20);
+        doc.text('Rapport Dashboard Dirigeant', 20, 30);
+        
+        doc.setFontSize(12);
+        doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 20, 50);
+        
+        // Récupérer les KPIs actuels
+        const kpis = await analyticsService.getRealtimeKPIs({});
+        
+        // Ajouter les KPIs au PDF
+        let yPos = 70;
+        doc.text('KPIs Principaux:', 20, yPos);
+        yPos += 20;
+        
+        doc.text(`• Taux de conversion: ${kpis.conversion_rate_offer_to_project || 'N/A'}%`, 30, yPos);
+        yPos += 15;
+        doc.text(`• CA prévisionnel: ${kpis.total_revenue_forecast || 'N/A'} €`, 30, yPos);
+        yPos += 15;
+        doc.text(`• Délai moyen: ${kpis.avg_delay_days || 'N/A'} jours`, 30, yPos);
+        yPos += 15;
+        doc.text(`• Charge équipes: ${kpis.avg_team_load_percentage || 'N/A'}%`, 30, yPos);
+        
+        // Convertir en buffer
+        const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=rapport-dirigeant.pdf');
+        res.send(pdfBuffer);
+        
+      } else {
+        throw createError.badRequest('Format non supporté. Utilisez "pdf".');
+      }
+      
+    } catch (error: any) {
+      console.error('Erreur génération export:', error);
+      throw createError(500, 'Erreur lors de la génération du rapport');
+    }
+  })
+);
+
   const httpServer = createServer(app);
   return httpServer;
 }

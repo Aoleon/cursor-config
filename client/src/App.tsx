@@ -45,6 +45,8 @@ import AlertsManagementPanel from "@/pages/AlertsManagementPanel";
 import BusinessRulesManager from "@/pages/BusinessRulesManager";
 import InteractiveGanttChart from "@/components/gantt/InteractiveGanttChart";
 import TimelinePerformanceCharts from "@/components/charts/TimelinePerformanceCharts";
+// Import du Dashboard Dirigeant
+import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType<any> }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -81,6 +83,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/dashboard/executive" component={() => <ProtectedRoute component={ExecutiveDashboard} />} />
+      <Route path="/dashboard/date-intelligence" component={() => <ProtectedRoute component={DateIntelligenceDashboard} />} />
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/offers" component={() => <ProtectedRoute component={Offers} />} />
       <Route path="/aos" component={() => <ProtectedRoute component={AOsPage} />} />

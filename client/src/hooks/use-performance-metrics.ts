@@ -123,7 +123,7 @@ export function usePerformanceMetrics(filters?: MetricsFilters) {
 
       // Top phases problématiques
       mostDelayedPhases: data.averageDelaysByPhase
-        .sort((a, b) => b.averageDelay - a.averageDelay)
+        .sort((a, b) => b.averageDays - a.averageDays)
         .slice(0, 3),
 
       // Efficacité des règles
@@ -137,7 +137,7 @@ export function usePerformanceMetrics(filters?: MetricsFilters) {
           acc + (opt.implementationCount * opt.averageGainDays), 0),
         averageSuccessRate: data.optimizationImpact.reduce((acc, opt) => 
           acc + opt.successRate, 0) / Math.max(data.optimizationImpact.length, 1),
-        mostEffectiveType: data.optimizationImpact.reduce((best, current) => 
+        mostEffectiveType: data.optimizationImpact.reduce<OptimizationImpactMetric | null>((best, current) => 
           current.averageGainDays > (best?.averageGainDays || 0) ? current : best, null),
       },
 
@@ -200,7 +200,7 @@ export function usePerformanceMetrics(filters?: MetricsFilters) {
 
   return {
     // Données brutes
-    performanceData: performanceData?.data,
+    performanceData: performanceData as PerformanceMetrics | undefined,
     isLoading,
     error,
     
@@ -208,8 +208,8 @@ export function usePerformanceMetrics(filters?: MetricsFilters) {
     refreshMetrics: refetch,
     
     // Données calculées
-    dashboardStats: getDashboardStats(performanceData?.data),
-    chartData: getChartData(performanceData?.data),
+    dashboardStats: getDashboardStats(performanceData as PerformanceMetrics | undefined),
+    chartData: getChartData(performanceData as PerformanceMetrics | undefined),
   };
 }
 
@@ -226,12 +226,12 @@ export function useRealtimeMetrics() {
   });
 
   return {
-    currentAlerts: realtimeData?.data?.currentAlerts || 0,
-    criticalAlerts: realtimeData?.data?.criticalAlerts || 0,
-    projectsAtRisk: realtimeData?.data?.projectsAtRisk || 0,
-    activeOptimizations: realtimeData?.data?.activeOptimizations || 0,
-    systemLoad: realtimeData?.data?.systemLoad || 0,
-    lastDetectionRun: realtimeData?.data?.lastDetectionRun,
+    currentAlerts: (realtimeData as any)?.currentAlerts || 0,
+    criticalAlerts: (realtimeData as any)?.criticalAlerts || 0,
+    projectsAtRisk: (realtimeData as any)?.projectsAtRisk || 0,
+    activeOptimizations: (realtimeData as any)?.activeOptimizations || 0,
+    systemLoad: (realtimeData as any)?.systemLoad || 0,
+    lastDetectionRun: (realtimeData as any)?.lastDetectionRun,
     isLoading,
     error,
   };
@@ -245,9 +245,9 @@ export function usePhaseMetrics(phase: string) {
     return { phaseMetrics: null, isLoading };
   }
 
-  const phaseData = performanceData.averageDelaysByPhase.find(p => p.phase === phase);
-  const phaseRules = performanceData.ruleEffectiveness.filter(r => r.phase === phase);
-  const phaseTrends = performanceData.trendsOverTime.map(trend => ({
+  const phaseData = performanceData.averageDelaysByPhase.find((p: any) => p.phase === phase);
+  const phaseRules = performanceData.ruleEffectiveness.filter((r: any) => r.phase === phase);
+  const phaseTrends = performanceData.trendsOverTime.map((trend: any) => ({
     ...trend,
     phaseSpecificData: `${trend.month} ${trend.year}` // Placeholder pour données phase-spécifiques
   }));
@@ -261,7 +261,7 @@ export function usePhaseMetrics(phase: string) {
         averageDelay: phaseData?.averageDays || 0,
         successRate: phaseData?.onTimePercentage || 0,
         rulesCount: phaseRules.length,
-        avgRuleAccuracy: phaseRules.reduce((acc, r) => acc + r.accuracyRate, 0) / Math.max(phaseRules.length, 1),
+        avgRuleAccuracy: phaseRules.reduce((acc: any, r: any) => acc + r.accuracyRate, 0) / Math.max(phaseRules.length, 1),
       }
     },
     isLoading: false,

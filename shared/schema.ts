@@ -2718,3 +2718,53 @@ export type InsertPerformanceBenchmark = z.infer<typeof insertPerformanceBenchma
 
 export type BusinessAlertConfig = typeof businessAlertsConfig.$inferSelect;
 export type InsertBusinessAlertConfig = z.infer<typeof insertBusinessAlertConfigSchema>;
+
+// ========================================
+// SCHEMAS ZOD POUR API ANALYTICS - PHASE 3.1.4
+// ========================================
+
+// Schemas validation API Analytics pour Dashboard Décisionnel
+
+export const analyticsFiltersSchema = z.object({
+  period: z.enum(['week', 'month', 'quarter', 'year']).optional(),
+  department: z.string().optional(),
+  userId: z.string().optional(),
+  projectType: z.string().optional(),
+  dateFrom: z.string().transform(str => new Date(str))
+    .refine(date => !isNaN(date.getTime()), {
+      message: "Date de début invalide"
+    }).optional(),
+  dateTo: z.string().transform(str => new Date(str))
+    .refine(date => !isNaN(date.getTime()), {
+      message: "Date de fin invalide"
+    }).optional()
+});
+
+export const snapshotRequestSchema = z.object({
+  period: z.object({
+    from: z.string().transform(str => new Date(str))
+      .refine(date => !isNaN(date.getTime()), {
+        message: "Date de début invalide"
+      }),
+    to: z.string().transform(str => new Date(str))
+      .refine(date => !isNaN(date.getTime()), {
+        message: "Date de fin invalide"
+      })
+  }),
+  includeForecasting: z.boolean().default(true),
+  includeBenchmarks: z.boolean().default(true)
+});
+
+export const metricQuerySchema = z.object({
+  metricType: z.enum(['conversion', 'delay', 'revenue', 'team_load', 'margin']),
+  groupBy: z.enum(['user', 'department', 'project_type', 'month', 'phase']).optional(),
+  limit: z.number().min(1).max(100).default(20),
+  offset: z.number().min(0).default(0)
+});
+
+export const benchmarkQuerySchema = z.object({
+  entityType: z.enum(['user', 'team', 'department']),
+  entityId: z.string().optional(),
+  metricTypes: z.array(z.string()).optional(),
+  period: z.string().optional()
+});

@@ -17,7 +17,8 @@ import {
   type TechnicalAlert, type TechnicalAlertHistory,
   materialColorAlertRuleSchema, type MaterialColorAlertRule,
   insertProjectTimelineSchema, insertDateIntelligenceRuleSchema, insertDateAlertSchema,
-  type ProjectTimeline, type DateIntelligenceRule, type DateAlert, type ProjectStatus
+  type ProjectTimeline, type DateIntelligenceRule, type DateAlert, type ProjectStatus,
+  analyticsFiltersSchema, snapshotRequestSchema, metricQuerySchema, benchmarkQuerySchema
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -29,10 +30,11 @@ import { registerBatigestRoutes } from "./routes-batigest";
 import { registerTeamsRoutes } from "./routes-teams";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto } from "./dateUtils";
+import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto, parsePeriod, getDefaultPeriod, getLastMonths, type DateRange } from "./dateUtils";
 import type { EventBus } from "./eventBus";
 import { ScoringService } from "./services/scoringService";
 import { DateIntelligenceService } from "./services/DateIntelligenceService";
+import { AnalyticsService } from "./services/AnalyticsService";
 import { initializeDefaultRules, DateIntelligenceRulesSeeder } from "./seeders/dateIntelligenceRulesSeeder";
 
 // Extension du type Session pour inclure la propriété user
@@ -85,6 +87,13 @@ const periodicDetectionScheduler = new PeriodicDetectionScheduler(
   dateAlertDetectionService,
   dateIntelligenceService
 );
+
+// ========================================
+// ANALYTICS SERVICE - PHASE 3.1.4
+// ========================================
+
+// Instance du service Analytics pour Dashboard Décisionnel
+const analyticsService = new AnalyticsService(storage, eventBus);
 
 // ========================================
 // SCHÉMAS DE VALIDATION POUR INTELLIGENCE TEMPORELLE
@@ -4569,6 +4578,167 @@ app.get("/api/admin/intelligence/test-integration",
       }
     })
   );
+
+// ========================================
+// API ANALYTICS ROUTES - PHASE 3.1.4
+// Routes pour Dashboard Décisionnel Avancé
+// ========================================
+
+// Middleware logging analytics
+const analyticsLogger = (req: any, res: any, next: any) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`Analytics API: ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+  });
+  next();
+};
+
+// Application du middleware analytics
+app.use('/api/analytics/*', analyticsLogger);
+
+// 1. KPIs Temps Réel
+app.get('/api/analytics/kpis', 
+  isAuthenticated, 
+  validateQuery(analyticsFiltersSchema.partial()),
+  asyncHandler(async (req, res) => {
+    try {
+      const filters = req.query;
+      const kpis = await analyticsService.getRealtimeKPIs(filters);
+      
+      sendSuccess(res, {
+        ...kpis,
+        timestamp: new Date(),
+        cacheStatus: 'fresh'
+      }, "KPIs temps réel récupérés avec succès");
+      
+    } catch (error: any) {
+      console.error('Erreur récupération KPIs temps réel:', error);
+      throw createError(500, 'Erreur lors de la récupération des KPIs temps réel');
+    }
+  })
+);
+
+// 2. Métriques Business Détaillées 
+app.get('/api/analytics/metrics', 
+  isAuthenticated, 
+  validateQuery(metricQuerySchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const query = req.query as any;
+      const dateRange = query.period ? parsePeriod(query.period) : getDefaultPeriod();
+      
+      let metrics;
+      switch (query.metricType) {
+        case 'conversion':
+          metrics = await analyticsService.conversionCalculatorAPI.calculateAOToOfferConversion(dateRange);
+          break;
+        case 'delay': 
+          metrics = await analyticsService.delayCalculatorAPI.calculateAverageDelays(dateRange, query.groupBy || 'phase');
+          break;
+        case 'revenue':
+          metrics = await analyticsService.revenueCalculatorAPI.calculateRevenueForecast(dateRange);
+          break;
+        case 'team_load':
+          metrics = await analyticsService.teamLoadCalculatorAPI.calculateTeamLoad(dateRange);
+          break;
+        case 'margin':
+          metrics = await analyticsService.marginCalculatorAPI.calculateMarginAnalysis(dateRange);
+          break;
+        default:
+          throw createError.badRequest('Type de métrique non supporté');
+      }
+      
+      sendSuccess(res, {
+        metrics,
+        query,
+        dateRange,
+        total: Array.isArray(metrics) ? metrics.length : 1
+      }, "Métriques business récupérées avec succès");
+      
+    } catch (error: any) {
+      console.error('Erreur récupération métriques business:', error);
+      throw createError(500, 'Erreur lors de la récupération des métriques business');
+    }
+  })
+);
+
+// 3. Snapshots Historiques
+app.get('/api/analytics/snapshots', 
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
+    try {
+      const { period, limit = 10, offset = 0 } = req.query;
+      const dateRange = period ? parsePeriod(period as string) : getLastMonths(3);
+      
+      const snapshots = await storage.getKPISnapshots(dateRange, Number(limit));
+      const latest = await storage.getLatestKPISnapshot();
+      
+      sendSuccess(res, {
+        snapshots: snapshots.slice(Number(offset)),
+        latest: latest,
+        pagination: {
+          total: snapshots.length,
+          limit: Number(limit),
+          offset: Number(offset)
+        }
+      }, "Snapshots historiques récupérés avec succès");
+      
+    } catch (error: any) {
+      console.error('Erreur récupération snapshots:', error);
+      throw createError(500, 'Erreur lors de la récupération des snapshots historiques');
+    }
+  })
+);
+
+// 4. Benchmarks Performance
+app.get('/api/analytics/benchmarks', 
+  isAuthenticated,
+  validateQuery(benchmarkQuerySchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const query = req.query as any;
+      const benchmarks = await storage.getBenchmarks(query.entityType, query.entityId);
+      const topPerformers = await storage.getTopPerformers('conversion_rate', 5);
+      
+      sendSuccess(res, {
+        benchmarks,
+        topPerformers,
+        entityType: query.entityType
+      }, "Benchmarks de performance récupérés avec succès");
+      
+    } catch (error: any) {
+      console.error('Erreur récupération benchmarks:', error);
+      throw createError(500, 'Erreur lors de la récupération des benchmarks de performance');
+    }
+  })
+);
+
+// 5. Génération Rapport Analytics
+app.post('/api/analytics/snapshot', 
+  isAuthenticated,
+  validateBody(snapshotRequestSchema),
+  asyncHandler(async (req, res) => {
+    try {
+      const request = req.body;
+      const snapshot = await analyticsService.generateKPISnapshot(request.period);
+      
+      // Publication événement analytics calculés
+      eventBus.publishAnalyticsCalculated({
+        snapshotId: snapshot.id,
+        period: request.period,
+        userId: (req as any).user.id,
+        kpiCount: Object.keys(snapshot).length - 3 // Exclure metadata
+      });
+      
+      sendSuccess(res, snapshot, 'Snapshot généré avec succès', 201);
+      
+    } catch (error: any) {
+      console.error('Erreur génération snapshot:', error);
+      throw createError(500, 'Erreur lors de la génération du snapshot analytics');
+    }
+  })
+);
 
   const httpServer = createServer(app);
   return httpServer;

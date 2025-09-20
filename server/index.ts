@@ -158,7 +158,7 @@ app.use((req, res, next) => {
       const alert = await storage.enqueueTechnicalAlert({
         aoId,
         aoReference,
-        score: Number(score),
+        score: String(score),
         triggeredCriteria: Array.isArray(triggeredCriteria) ? triggeredCriteria : [triggeredCriteria],
         assignedToUserId: julienUserId,
         status: 'pending',

@@ -1610,7 +1610,7 @@ export class DatabaseStorage implements IStorage {
     actorUserId: string | null, 
     note?: string,
     metadata?: any
-  ): Promise<void> {
+  ): Promise<TechnicalAlertHistory> {
     const historyId = `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     const historyEntry: TechnicalAlertHistory = {
@@ -1629,6 +1629,7 @@ export class DatabaseStorage implements IStorage {
     DatabaseStorage.technicalAlertHistory.set(alertHistoryKey, existing);
     
     console.log(`[Storage] Historique ajouté pour alerte ${alertId}: ${action}`);
+    return historyEntry;
   }
 
   async listTechnicalAlertHistory(alertId: string): Promise<TechnicalAlertHistory[]> {

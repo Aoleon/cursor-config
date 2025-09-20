@@ -321,11 +321,11 @@ export class EventBus extends EventEmitter {
       severity: 'info',
       message: "Analytics KPIs calculés et mis à jour",
       affectedQueryKeys: [
-        ['query', '/api/analytics/kpis'],
-        ['query', '/api/analytics/metrics'], 
-        ['query', '/api/analytics/snapshots'],
-        ['query', '/api/dashboard/kpis']
-      ], // QueryKeys cohérents avec frontend hooks
+        ['/api/analytics/kpis'],
+        ['/api/analytics/metrics'], 
+        ['/api/analytics/snapshots'],
+        ['/api/dashboard/kpis']
+      ], // QueryKeys cohérents avec frontend TanStack Query
       metadata,
     });
 

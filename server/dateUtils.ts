@@ -1,6 +1,9 @@
 /**
  * Utilitaires pour la gestion des dates importantes dans les dossiers d'AO
+ * Extension : Fonctions pour Analytics API - Phase 3.1.4
  */
+
+import { subWeeks, subMonths, subYears } from 'date-fns';
 
 /**
  * Calcule automatiquement la date de remise à J-15 de la date limite
@@ -208,4 +211,71 @@ export function estDateUrgente(date?: Date | string | null): boolean {
   } catch (error) {
     return false;
   }
+}
+
+// ========================================
+// FONCTIONS ANALYTICS DATE HELPERS - PHASE 3.1.4
+// ========================================
+
+export interface DateRange {
+  from: Date;
+  to: Date;
+}
+
+/**
+ * Parse une période textuelle vers un DateRange pour Analytics API
+ * @param period - Période ('week', 'month', 'quarter', 'year')
+ * @returns DateRange correspondant
+ */
+export function parsePeriod(period: string): DateRange {
+  const now = new Date();
+  switch (period) {
+    case 'week':
+      return {
+        from: subWeeks(now, 1),
+        to: now
+      };
+    case 'month':
+      return {
+        from: subMonths(now, 1),
+        to: now
+      };
+    case 'quarter':
+      return {
+        from: subMonths(now, 3),
+        to: now
+      };
+    case 'year':
+      return {
+        from: subYears(now, 1),
+        to: now
+      };
+    default:
+      return getDefaultPeriod();
+  }
+}
+
+/**
+ * Retourne la période par défaut pour les analytics (1 mois)
+ * @returns DateRange pour le mois précédent
+ */
+export function getDefaultPeriod(): DateRange {
+  const now = new Date();
+  return {
+    from: subMonths(now, 1),
+    to: now
+  };
+}
+
+/**
+ * Retourne une période des N derniers mois
+ * @param count - Nombre de mois à récupérer
+ * @returns DateRange pour les N derniers mois
+ */
+export function getLastMonths(count: number): DateRange {
+  const now = new Date();
+  return {
+    from: subMonths(now, count),
+    to: now
+  };
 }

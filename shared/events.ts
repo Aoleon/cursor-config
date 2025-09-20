@@ -67,7 +67,10 @@ export enum EventType {
   DATE_INTELLIGENCE_ALERT_CREATED = 'date_intelligence.alert_created',
   DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED = 'date_intelligence.alert_acknowledged',
   DATE_INTELLIGENCE_ALERT_RESOLVED = 'date_intelligence.alert_resolved',
-  DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED = 'date_intelligence.planning_issue_detected'
+  DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED = 'date_intelligence.planning_issue_detected',
+  
+  // Analytics et métriques consolidées
+  ANALYTICS_CALCULATED = 'analytics.calculated'
 }
 
 // ========================================
@@ -342,6 +345,54 @@ export const eventMessageTemplates: Record<EventType, (event: RealtimeEvent) => 
   [EventType.GANTT_MILESTONE_CREATED]: (event) => ({
     title: "Nouveau jalon créé",
     message: `🎯 Jalon "${event.metadata?.milestoneName || 'Nouveau jalon'}" créé le ${event.metadata?.date || 'N/A'}`
+  }),
+
+  // Analytics et métriques
+  [EventType.ANALYTICS_CALCULATED]: (event) => ({
+    title: "Métriques mises à jour",
+    message: `📊 ${event.message}`
+  }),
+
+  // Alertes techniques OCR
+  [EventType.TECHNICAL_ALERT]: (event) => ({
+    title: "Alerte technique",
+    message: `🔧 ${event.message}`
+  }),
+
+  // Intelligence temporelle et planification
+  [EventType.DATE_INTELLIGENCE_TIMELINE_CALCULATED]: (event) => ({
+    title: "Planning calculé",
+    message: `📅 Timeline calculée pour ${event.metadata?.projectName || event.entityId} (${event.metadata?.duration || 'N/A'} jours)`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_CASCADE_RECALCULATED]: (event) => ({
+    title: "Cascade planning recalculée",
+    message: `🔄 Recalcul en cascade effectué pour ${event.metadata?.projectName || event.entityId} suite à ${event.metadata?.trigger || 'modification'}`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_RULE_APPLIED]: (event) => ({
+    title: "Règle métier appliquée",
+    message: `📋 Règle "${event.metadata?.ruleName || 'métier'}" appliquée à ${event.metadata?.projectName || event.entityId}`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_ALERT_CREATED]: (event) => ({
+    title: "Alerte planning créée",
+    message: `⚠️ ${event.metadata?.alertType || 'Alerte'} détectée: ${event.message}`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED]: (event) => ({
+    title: "Alerte acquittée",
+    message: `✅ Alerte "${event.metadata?.alertType || 'planning'}" acquittée par ${event.metadata?.acknowledgedBy || 'utilisateur'}`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_ALERT_RESOLVED]: (event) => ({
+    title: "Alerte résolue",
+    message: `✅ Alerte "${event.metadata?.alertType || 'planning'}" résolue: ${event.metadata?.resolutionNote || 'problème corrigé'}`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED]: (event) => ({
+    title: "Problème de planification détecté",
+    message: `🚨 Conflit détecté: ${event.metadata?.issueDescription || event.message}`
   }),
 };
 

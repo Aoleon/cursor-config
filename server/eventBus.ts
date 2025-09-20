@@ -312,6 +312,26 @@ export class EventBus extends EventEmitter {
     this.publish(event);
   }
 
+  // Événements Analytics
+  public publishAnalyticsCalculated(metadata: any): void {
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.ANALYTICS_CALCULATED, // Type strict 
+      entity: "analytics",
+      entityId: "analytics-system", 
+      severity: 'info',
+      message: "Analytics KPIs calculés et mis à jour",
+      affectedQueryKeys: [
+        ['query', '/api/analytics/kpis'],
+        ['query', '/api/analytics/metrics'], 
+        ['query', '/api/analytics/snapshots'],
+        ['query', '/api/dashboard/kpis']
+      ], // QueryKeys cohérents avec frontend hooks
+      metadata,
+    });
+
+    this.publish(event);
+  }
+
   // Événements Projets
   public publishProjectCreated(params: {
     projectId: string;
@@ -1098,6 +1118,7 @@ export class EventBus extends EventEmitter {
     this.eventHistory = [];
     this.removeAllListeners();
   }
+
 }
 
 // Instance singleton

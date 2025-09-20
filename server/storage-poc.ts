@@ -3,7 +3,7 @@ import {
   users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
   chiffrageElements, dpgfDocuments, aoLots, maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre,
   validationMilestones, visaArchitecte, technicalAlerts, technicalAlertHistory,
-  projectTimelines, dateIntelligenceRules, dateAlerts,
+  projectTimelines, dateIntelligenceRules, dateAlerts, businessMetrics, kpiSnapshots, performanceBenchmarks,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -28,12 +28,15 @@ import {
   type ProjectTimeline, type InsertProjectTimeline,
   type DateIntelligenceRule, type InsertDateIntelligenceRule,
   type DateAlert, type InsertDateAlert,
+  type BusinessMetric, type InsertBusinessMetric,
+  type KpiSnapshot, type InsertKpiSnapshot,
+  type PerformanceBenchmark, type InsertPerformanceBenchmark,
   type ProjectStatus
 } from "@shared/schema";
 import { db } from "./db";
 
 // ========================================
-// TYPES POUR KPIs CONSOLIDÉS
+// TYPES POUR KPIs CONSOLIDÉS ET ANALYTICS
 // ========================================
 
 export interface ConsolidatedKpis {
@@ -59,6 +62,21 @@ export interface ConsolidatedKpis {
     forecastRevenue: number;
     teamLoadHours: number;
   }>;
+}
+
+// Types pour les filtres et périodes Analytics
+export interface DateRange {
+  from: Date;
+  to: Date;
+}
+
+export interface MetricFilters {
+  metricType?: string;
+  periodType?: string;
+  userId?: string;
+  projectType?: string;
+  periodStart?: Date;
+  periodEnd?: Date;
 }
 
 // ========================================
@@ -243,6 +261,25 @@ export interface IStorage {
   deleteDateAlert(id: string): Promise<void>;
   acknowledgeAlert(id: string, userId: string): Promise<DateAlert>;
   resolveAlert(id: string, userId: string, actionTaken?: string): Promise<DateAlert>;
+
+  // ========================================
+  // ANALYTICS SERVICE OPERATIONS - PHASE 3.1.3
+  // ========================================
+
+  // KPI Snapshots operations
+  createKPISnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot>;
+  getKPISnapshots(period: DateRange, limit?: number): Promise<KpiSnapshot[]>;
+  getLatestKPISnapshot(): Promise<KpiSnapshot | null>;
+
+  // Business Metrics operations  
+  createBusinessMetric(data: InsertBusinessMetric): Promise<BusinessMetric>;
+  getBusinessMetrics(filters: MetricFilters): Promise<BusinessMetric[]>;
+  getMetricTimeSeries(metricType: string, period: DateRange): Promise<BusinessMetric[]>;
+
+  // Performance Benchmarks operations
+  createPerformanceBenchmark(data: InsertPerformanceBenchmark): Promise<PerformanceBenchmark>;
+  getBenchmarks(entityType: string, entityId?: string): Promise<PerformanceBenchmark[]>;
+  getTopPerformers(metricType: string, limit?: number): Promise<PerformanceBenchmark[]>;
 }
 
 // ========================================
@@ -1939,6 +1976,145 @@ export class DatabaseStorage implements IStorage {
     console.log(`[Storage] Alerte résolue: ${id} par ${userId}`);
     
     return updated;
+  }
+
+  // ========================================
+  // ANALYTICS SERVICE OPERATIONS - PHASE 3.1.3
+  // ========================================
+
+  // KPI Snapshots operations
+  async createKPISnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot> {
+    const [snapshot] = await db.insert(kpiSnapshots).values(data).returning();
+    console.log(`[Storage] KPI Snapshot créé pour période ${data.periodFrom} → ${data.periodTo}`);
+    return snapshot;
+  }
+
+  async getKPISnapshots(period: DateRange, limit?: number): Promise<KpiSnapshot[]> {
+    let query = db.select()
+      .from(kpiSnapshots)
+      .where(
+        and(
+          gte(kpiSnapshots.periodFrom, period.from),
+          lte(kpiSnapshots.periodTo, period.to)
+        )
+      )
+      .orderBy(desc(kpiSnapshots.snapshotDate));
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const snapshots = await query;
+    console.log(`[Storage] ${snapshots.length} KPI snapshots trouvés pour la période`);
+    return snapshots;
+  }
+
+  async getLatestKPISnapshot(): Promise<KpiSnapshot | null> {
+    const [latest] = await db.select()
+      .from(kpiSnapshots)
+      .orderBy(desc(kpiSnapshots.snapshotDate))
+      .limit(1);
+    
+    console.log(`[Storage] Dernier KPI snapshot: ${latest ? latest.id : 'aucun'}`);
+    return latest || null;
+  }
+
+  // Business Metrics operations  
+  async createBusinessMetric(data: InsertBusinessMetric): Promise<BusinessMetric> {
+    const [metric] = await db.insert(businessMetrics).values(data).returning();
+    console.log(`[Storage] Métrique business créée: ${data.metricType} pour période ${data.periodStart} → ${data.periodEnd}`);
+    return metric;
+  }
+
+  async getBusinessMetrics(filters: MetricFilters): Promise<BusinessMetric[]> {
+    let query = db.select().from(businessMetrics);
+    
+    const conditions = [];
+    
+    if (filters.metricType) {
+      conditions.push(eq(businessMetrics.metricType, filters.metricType as any));
+    }
+    
+    if (filters.periodType) {
+      conditions.push(eq(businessMetrics.periodType, filters.periodType));
+    }
+    
+    if (filters.userId) {
+      conditions.push(eq(businessMetrics.userId, filters.userId));
+    }
+    
+    if (filters.projectType) {
+      conditions.push(eq(businessMetrics.projectType, filters.projectType));
+    }
+    
+    if (filters.periodStart) {
+      conditions.push(gte(businessMetrics.periodStart, filters.periodStart));
+    }
+    
+    if (filters.periodEnd) {
+      conditions.push(lte(businessMetrics.periodEnd, filters.periodEnd));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const metrics = await query.orderBy(desc(businessMetrics.calculatedAt));
+    console.log(`[Storage] ${metrics.length} métriques business trouvées avec filtres`);
+    return metrics;
+  }
+
+  async getMetricTimeSeries(metricType: string, period: DateRange): Promise<BusinessMetric[]> {
+    const metrics = await db.select()
+      .from(businessMetrics)
+      .where(
+        and(
+          eq(businessMetrics.metricType, metricType as any),
+          gte(businessMetrics.periodStart, period.from),
+          lte(businessMetrics.periodEnd, period.to)
+        )
+      )
+      .orderBy(businessMetrics.periodStart);
+
+    console.log(`[Storage] ${metrics.length} métriques ${metricType} trouvées en série temporelle`);
+    return metrics;
+  }
+
+  // Performance Benchmarks operations
+  async createPerformanceBenchmark(data: InsertPerformanceBenchmark): Promise<PerformanceBenchmark> {
+    const [benchmark] = await db.insert(performanceBenchmarks).values(data).returning();
+    console.log(`[Storage] Benchmark performance créé: ${data.benchmarkType} pour ${data.entityType}:${data.entityId}`);
+    return benchmark;
+  }
+
+  async getBenchmarks(entityType: string, entityId?: string): Promise<PerformanceBenchmark[]> {
+    let query = db.select()
+      .from(performanceBenchmarks)
+      .where(eq(performanceBenchmarks.entityType, entityType));
+
+    if (entityId) {
+      query = query.where(
+        and(
+          eq(performanceBenchmarks.entityType, entityType),
+          eq(performanceBenchmarks.entityId, entityId)
+        )
+      );
+    }
+
+    const benchmarks = await query.orderBy(desc(performanceBenchmarks.createdAt));
+    console.log(`[Storage] ${benchmarks.length} benchmarks trouvés pour ${entityType}${entityId ? `:${entityId}` : ''}`);
+    return benchmarks;
+  }
+
+  async getTopPerformers(metricType: string, limit: number = 10): Promise<PerformanceBenchmark[]> {
+    // Pour simplifier, on utilise le score de performance global
+    const performers = await db.select()
+      .from(performanceBenchmarks)
+      .orderBy(desc(performanceBenchmarks.performanceScore))
+      .limit(limit);
+
+    console.log(`[Storage] Top ${performers.length} performers trouvés`);
+    return performers;
   }
 }
 

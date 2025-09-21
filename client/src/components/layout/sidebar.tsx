@@ -79,18 +79,6 @@ const navigation: NavigationItem[] = [
   },
   { name: "Équipes", href: "/teams", icon: Users },
   { name: "Fournisseurs", href: "/suppliers", icon: Truck },
-  { 
-    name: "Intelligence Temporelle", 
-    href: "/date-intelligence", 
-    icon: Calendar,
-    subItems: [
-      { name: "Dashboard", href: "/date-intelligence", icon: TrendingUp, description: "Vue d'ensemble échéances et métriques" },
-      { name: "Alertes", href: "/date-intelligence/alerts", icon: AlertTriangle, description: "Gestion des alertes critiques" },
-      { name: "Planning Gantt", href: "/date-intelligence/gantt", icon: CalendarDays, description: "Timeline interactive des projets" },
-      { name: "Règles Métier", href: "/date-intelligence/rules", icon: Settings, description: "Configuration règles menuiserie" },
-      { name: "Performance", href: "/date-intelligence/performance", icon: TrendingUp, description: "Analyses et graphiques" },
-    ]
-  },
   { name: "Batigest", href: "/batigest", icon: Database },
 ];
 

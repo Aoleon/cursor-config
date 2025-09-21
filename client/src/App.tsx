@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
-import { useLocation } from "wouter";
+import { useLocation, Redirect } from "wouter";
 import { useEffect } from "react";
 import Dashboard from "@/pages/dashboard";
 import Offers from "@/pages/offers";
@@ -48,8 +48,7 @@ import SupplierRequests from "@/pages/supplier-requests";
 import BatigestPage from "@/pages/batigest";
 import SettingsScoring from "@/pages/settings-scoring";
 import TechnicalAlerts from "@/pages/technical-alerts";
-// Import des pages Intelligence Temporelle
-import DateIntelligenceDashboard from "@/pages/DateIntelligenceDashboard";
+// Import des pages Intelligence Temporelle - (DateIntelligenceDashboard maintenant intégré dans ExecutiveDashboard)
 import AlertsManagementPanel from "@/pages/AlertsManagementPanel";
 import BusinessRulesManager from "@/pages/BusinessRulesManager";
 import InteractiveGanttChart from "@/components/gantt/InteractiveGanttChart";
@@ -93,7 +92,10 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/dashboard/executive" component={() => <ProtectedRoute component={ExecutiveDashboard} />} />
-      <Route path="/dashboard/date-intelligence" component={() => <ProtectedRoute component={DateIntelligenceDashboard} />} />
+      {/* REDIRECTION: DateIntelligenceDashboard maintenant intégré dans ExecutiveDashboard */}
+      <Route path="/dashboard/date-intelligence">
+        <Redirect to="/dashboard/executive?tab=intelligence" />
+      </Route>
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/offers" component={() => <ProtectedRoute component={Offers} />} />
       <Route path="/aos" component={() => <ProtectedRoute component={AOsPage} />} />
@@ -133,12 +135,22 @@ function Router() {
       <Route path="/technical-alerts" component={() => <ProtectedRoute component={TechnicalAlerts} />} />
       {/* Configuration et paramètres */}
       <Route path="/settings/scoring" component={() => <ProtectedRoute component={SettingsScoring} />} />
-      {/* Intelligence Temporelle - Phase 2.4 */}
-      <Route path="/date-intelligence" component={() => <ProtectedRoute component={DateIntelligenceDashboard} />} />
-      <Route path="/date-intelligence/alerts" component={() => <ProtectedRoute component={AlertsManagementPanel} />} />
-      <Route path="/date-intelligence/rules" component={() => <ProtectedRoute component={BusinessRulesManager} />} />
-      <Route path="/date-intelligence/gantt" component={() => <ProtectedRoute component={InteractiveGanttChart} />} />
-      <Route path="/date-intelligence/performance" component={() => <ProtectedRoute component={TimelinePerformanceCharts} />} />
+      {/* REDIRECTIONS GRACIEUSES: Intelligence Temporelle maintenant intégrée dans Executive Dashboard */}
+      <Route path="/date-intelligence">
+        <Redirect to="/dashboard/executive?tab=intelligence" />
+      </Route>
+      <Route path="/date-intelligence/alerts">
+        <Redirect to="/dashboard/executive?tab=intelligence" />
+      </Route>
+      <Route path="/date-intelligence/rules">
+        <Redirect to="/dashboard/executive?tab=intelligence" />
+      </Route>
+      <Route path="/date-intelligence/gantt">
+        <Redirect to="/dashboard/executive?tab=intelligence" />
+      </Route>
+      <Route path="/date-intelligence/performance">
+        <Redirect to="/dashboard/executive?tab=intelligence" />
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

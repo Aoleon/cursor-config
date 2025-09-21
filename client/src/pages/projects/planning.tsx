@@ -135,6 +135,20 @@ export default function ProjectPlanningPage() {
     }
   }, [updateProjectMutation, updateTaskMutation]);
 
+  // Fonction de mapping des statuts vers GanttMilestone valides
+  const mapStatusToGantt = useCallback((status: string): 'completed' | 'in-progress' | 'pending' | 'overdue' => {
+    switch (status) {
+      case 'termine':
+        return 'completed';
+      case 'en_cours':
+        return 'in-progress';
+      case 'en_retard':
+        return 'overdue';
+      default:
+        return 'pending';
+    }
+  }, []);
+
   // Préparer les jalons depuis les tâches - OPTIMISÉ avec useMemo
   const milestones = useMemo(() => allTasks
     .filter(task => task.isJalon || task.status === 'termine')
@@ -142,11 +156,10 @@ export default function ProjectPlanningPage() {
       id: task.id,
       name: task.name || `Tâche ${task.id?.slice(0,8)}`,
       date: task.startDate || new Date(),
-      status: task.status === 'termine' ? 'completed' : 
-              task.status === 'en_cours' ? 'in-progress' : 'pending',
+      status: mapStatusToGantt(task.status || 'a_faire'),
       project: projects.find(p => p.id === task.projectId)?.name || 'Projet inconnu',
       projectId: task.projectId,
-    })), [allTasks, projects]);
+    })), [allTasks, projects, mapStatusToGantt]);
 
   const getStatusColor = useCallback((status: string) => {
     switch (status) {

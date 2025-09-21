@@ -28,6 +28,11 @@ import AoDetail from "@/pages/ao-detail";
 import Chiffrage from "@/pages/chiffrage";
 // Import des nouvelles pages pour les sous-étapes
 import ProjectPlanning from "@/pages/projects/planning";
+// Import des composants spécialisés par phase projet
+import ProjectStudy from "@/pages/projects/study";
+import ProjectSupply from "@/pages/projects/supply";
+import ProjectWorksite from "@/pages/projects/worksite";
+import ProjectSupport from "@/pages/projects/support";
 // Import des pages offers
 import ValidationList from "@/pages/offers/validation-list";
 import TransformList from "@/pages/offers/transform-list";
@@ -107,12 +112,12 @@ function Router() {
       <Route path="/projects" component={() => <ProtectedRoute component={Projects} />} />
       <Route path="/projects/:id" component={() => <ProtectedRoute component={ProjectDetail} />} />
       <Route path="/projects/:id/planning" component={() => <ProtectedRoute component={Planning} />} />
-      {/* Sous-étapes des Projets */}
-      <Route path="/projects/study" component={() => <ProtectedRoute component={ProjectPlanning} />} />
+      {/* Sous-étapes des Projets - Composants Spécialisés par Phase */}
+      <Route path="/projects/study" component={() => <ProtectedRoute component={ProjectStudy} />} />
       <Route path="/projects/planning" component={() => <ProtectedRoute component={ProjectPlanning} />} />
-      <Route path="/projects/supply" component={() => <ProtectedRoute component={Projects} />} />
-      <Route path="/projects/worksite" component={() => <ProtectedRoute component={ProjectPlanning} />} />
-      <Route path="/projects/support" component={() => <ProtectedRoute component={Projects} />} />
+      <Route path="/projects/supply" component={() => <ProtectedRoute component={ProjectSupply} />} />
+      <Route path="/projects/worksite" component={() => <ProtectedRoute component={ProjectWorksite} />} />
+      <Route path="/projects/support" component={() => <ProtectedRoute component={ProjectSupport} />} />
       {/* Routes du workflow - TODO: Create missing components */}
       <Route path="/workflow/etude-technique" component={() => <ProtectedRoute component={EtudeTechnique} />} />
       {/* <Route path="/workflow/chiffrage" component={() => <ProtectedRoute component={ChiffrageWorkflow} />} /> */}

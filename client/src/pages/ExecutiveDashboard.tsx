@@ -59,6 +59,18 @@ import { BusinessAlertsList } from '@/components/BusinessAlertsList';
 // INTERFACES ET TYPES
 // ========================================
 
+interface TopPerformer {
+  name: string;
+  score: number;
+}
+
+interface AlertItem {
+  severity: 'critical' | 'warning' | 'info';
+  title: string;
+  message: string;
+  created_at: string;
+}
+
 interface KPICardProps {
   title: string;
   value: string | number;
@@ -396,7 +408,7 @@ function PerformanceTab() {
             </div>
           ) : (
             <div className="space-y-3">
-              {(benchmarks.data?.topPerformers || []).slice(0, 5).map((performer, index: number) => (
+              {(benchmarks.data?.topPerformers || []).slice(0, 5).map((performer: TopPerformer, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-3">
                     <Badge variant="outline">{index + 1}</Badge>
@@ -484,7 +496,7 @@ function PipelineTab() {
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip 
-                  formatter={(value) => [formatCurrency(value), 'Prévision']}
+                  formatter={(value) => [formatCurrency(Number(value)), 'Prévision']}
                 />
                 <Line 
                   type="monotone" 
@@ -613,7 +625,7 @@ function AlertsTab() {
             </div>
           ) : (
             <div className="space-y-3">
-              {(alerts.data?.recent_alerts || []).slice(0, 10).map((alert, index: number) => (
+              {(alerts.data?.recent_alerts || []).slice(0, 10).map((alert: AlertItem, index: number) => (
                 <div key={index} className="flex items-start gap-3 p-3 rounded-lg border">
                   <div className={`p-1 rounded-full ${
                     alert.severity === 'critical' ? 'bg-red-100 text-red-600' :
@@ -885,7 +897,7 @@ function PredictiveTab() {
         </h2>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
           {/* Sélecteur méthode forecast */}
-          <Select value={forecastMethod} onValueChange={setForecastMethod}>
+          <Select value={forecastMethod} onValueChange={(value: string) => setForecastMethod(value as 'exp_smoothing' | 'moving_average' | 'trend_analysis')}>
             <SelectTrigger className="w-48" data-testid="select-forecast-method">
               <SelectValue placeholder="Méthode prévision" />
             </SelectTrigger>

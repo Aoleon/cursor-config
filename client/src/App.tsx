@@ -49,6 +49,8 @@ import TechnicalAlerts from "@/pages/technical-alerts";
 // Import des pages Intelligence Temporelle - (DateIntelligenceDashboard maintenant intégré dans ExecutiveDashboard)
 // Import du Dashboard Dirigeant
 import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
+// Import de la navigation intelligente
+import SmartLanding from "@/components/navigation/SmartLanding";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType<any> }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -84,13 +86,24 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={Login} />
+      {/* REDIRECTION AVEC RETURN URL: Support pour authentification */}
+      <Route path="/login">
+        {() => {
+          const searchParams = new URLSearchParams(window.location.search);
+          const returnUrl = searchParams.get('returnUrl');
+          if (returnUrl) {
+            // Si returnUrl fourni mais utilisateur déjà connecté, rediriger
+            return <SmartLanding returnUrl={returnUrl} />;
+          }
+          return <Login />;
+        }}
+      </Route>
       {/* ============= DASHBOARDS STANDARDISÉS - Pattern cohérent /dashboard/* ============= */}
       <Route path="/dashboard/executive" component={() => <ProtectedRoute component={ExecutiveDashboard} />} />
       <Route path="/dashboard/be" component={() => <ProtectedRoute component={BEDashboard} />} />
-      {/* REDIRECTION: Page d'accueil vers dashboard executive pour cohérence */}
+      {/* REDIRECTION INTELLIGENTE: Page d'accueil avec détection de rôle */}
       <Route path="/">
-        <Redirect to="/dashboard/executive" />
+        <SmartLanding />
       </Route>
       {/* COMPATIBILITÉ: Ancien dashboard principal maintenu temporairement */}
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />

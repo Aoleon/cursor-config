@@ -1,5 +1,6 @@
-import { useState, memo, lazy, Suspense } from 'react';
+import { useState, memo, lazy, Suspense, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -1042,7 +1043,45 @@ function PredictiveTab() {
 // ========================================
 
 export default function ExecutiveDashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [location, setLocation] = useLocation();
+  
+  // ========================================
+  // DEEP-LINKING SUPPORT POUR ONGLETS
+  // ========================================
+  
+  // Extraire le paramètre tab de l'URL
+  const getTabFromURL = (): string => {
+    const searchParams = new URLSearchParams(location.split('?')[1] || '');
+    const tabParam = searchParams.get('tab');
+    
+    // Valider que le tab existe
+    const validTabs = ['overview', 'intelligence', 'analytics', 'configuration'];
+    return validTabs.includes(tabParam || '') ? tabParam! : 'overview';
+  };
+  
+  const [activeTab, setActiveTab] = useState<string>(getTabFromURL());
+  
+  // Synchroniser l'onglet actif avec l'URL au chargement
+  useEffect(() => {
+    const urlTab = getTabFromURL();
+    if (urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+  }, [location]);
+  
+  // Mettre à jour l'URL quand l'onglet change
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    
+    // Mettre à jour l'URL avec le nouveau paramètre tab
+    const currentPath = location.split('?')[0];
+    const newURL = newTab === 'overview' 
+      ? currentPath // Ne pas ajouter ?tab=overview pour l'onglet par défaut
+      : `${currentPath}?tab=${newTab}`;
+    
+    // Utiliser wouter API pour maintenir la synchronisation avec le router
+    setLocation(newURL);
+  };
 
   return (
     <DateAlertsProvider>
@@ -1050,7 +1089,7 @@ export default function ExecutiveDashboard() {
         <div className="p-6 space-y-6" data-testid="executive-dashboard">
           <DashboardHeader />
           
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview" className="flex items-center gap-2" data-testid="tab-overview">
                 <Activity className="h-4 w-4" />

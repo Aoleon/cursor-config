@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { LucideIcon } from "lucide-react";
 import { 
   Wrench, 
@@ -48,6 +48,7 @@ interface NavigationItem {
   href: string;
   icon: LucideIcon;
   subItems?: SubMenuItem[];
+  relatedPaths?: string[]; // Chemins associés qui doivent activer ce parent
 }
 
 const navigation: NavigationItem[] = [
@@ -60,6 +61,7 @@ const navigation: NavigationItem[] = [
     name: "Workflow AO", 
     href: "/workflow/etude-technique", 
     icon: FolderOpen,
+    relatedPaths: ["/workflow", "/offers/chiffrage", "/offers/validation", "/offers/transform", "/supplier-requests"],
     subItems: [
       { name: "Étude technique", href: "/workflow/etude-technique", icon: FileText, description: "Analyse AO et faisabilité" },
       { name: "Demandes fournisseurs", href: "/supplier-requests", icon: Send, description: "Sollicitation prix fournisseurs" },
@@ -70,13 +72,14 @@ const navigation: NavigationItem[] = [
   },
   
   // ============= GESTION OFFRES ============= //
-  { name: "Gestion Offres", href: "/offers", icon: ClipboardList },
+  { name: "Gestion Offres", href: "/offers", icon: ClipboardList, relatedPaths: ["/offers"] },
   
   // ============= PROJETS POST-SIGNATURE ============= //
   { 
     name: "Projets", 
     href: "/projects", 
     icon: Projector,
+    relatedPaths: ["/projects"],
     subItems: [
       { name: "Étude", href: "/projects/study", icon: Search, description: "Phase d'étude technique détaillée" },
       { name: "Planification", href: "/projects/planning", icon: Calendar, description: "Planning exécution et jalons" },
@@ -97,6 +100,55 @@ export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
+  // ========================================
+  // LOGIQUE INTELLIGENTE ÉTATS ACTIFS
+  // ========================================
+  
+  const isDirectlyActive = (href: string): boolean => {
+    return location === href;
+  };
+  
+  const isPathRelated = (item: NavigationItem): boolean => {
+    // Vérifier si la route courante correspond au href principal
+    if (location === item.href || location.startsWith(item.href + "/")) {
+      return true;
+    }
+    
+    // Vérifier les chemins associés (relatedPaths)
+    if (item.relatedPaths) {
+      return item.relatedPaths.some(path => 
+        location === path || location.startsWith(path + "/")
+      );
+    }
+    
+    return false;
+  };
+  
+  const hasActiveSubItem = (item: NavigationItem): boolean => {
+    if (!item.subItems) return false;
+    return item.subItems.some(subItem => 
+      location === subItem.href || location.startsWith(subItem.href + "/")
+    );
+  };
+  
+  const isParentActive = (item: NavigationItem): boolean => {
+    return isPathRelated(item) || hasActiveSubItem(item);
+  };
+
+  // ========================================
+  // AUTO-EXPANSION GROUPES AVEC ENFANTS ACTIFS
+  // ========================================
+  
+  useEffect(() => {
+    navigation.forEach((item) => {
+      if (item.subItems && isParentActive(item)) {
+        setExpandedItems(prev => 
+          prev.includes(item.name) ? prev : [...prev, item.name]
+        );
+      }
+    });
+  }, [location]);
 
   const toggleExpanded = (itemName: string) => {
     setExpandedItems(prev => 
@@ -124,22 +176,38 @@ export default function Sidebar() {
         <div className="px-3">
           <div className="space-y-1">
             {navigation.map((item) => {
-              const isActive = location === item.href || location.startsWith(item.href + "/");
+              const isDirectActive = isDirectlyActive(item.href);
+              const isParentActiveState = isParentActive(item);
               const isExpanded = expandedItems.includes(item.name);
               const hasSubItems = item.subItems && item.subItems.length > 0;
+              const hasActiveChild = hasActiveSubItem(item);
 
               return (
                 <div key={item.name}>
                   <div
                     className={cn(
-                      "group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer",
-                      isActive
-                        ? "bg-secondary text-on-secondary"
-                        : "text-on-surface hover:bg-surface-muted"
+                      "group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                      isDirectActive
+                        ? "bg-secondary text-on-secondary shadow-sm"
+                        : isParentActiveState && hasActiveChild
+                        ? "bg-secondary/30 text-on-secondary border-l-2 border-secondary"
+                        : "text-on-surface hover:bg-surface-muted hover:shadow-sm"
                     )}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={hasSubItems ? isExpanded : undefined}
+                    aria-label={`${item.name}${hasSubItems ? (isExpanded ? ' (développé)' : ' (réduit)') : ''}`}
                     onClick={() => {
                       if (hasSubItems) {
                         toggleExpanded(item.name);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (hasSubItems) {
+                          toggleExpanded(item.name);
+                        }
                       }
                     }}
                     data-testid={`nav-item-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
@@ -149,7 +217,9 @@ export default function Sidebar() {
                         <item.icon
                           className={cn(
                             "mr-3 text-base",
-                            isActive ? "text-on-secondary" : "text-muted-foreground"
+                            isDirectActive ? "text-on-secondary" : 
+                            isParentActiveState && hasActiveChild ? "text-on-secondary" : 
+                            "text-muted-foreground"
                           )}
                         />
                         {item.name}
@@ -173,21 +243,38 @@ export default function Sidebar() {
                     )}
                   </div>
                   
-                  {hasSubItems && isExpanded && (
-                    <div className="mt-1 ml-4 space-y-1" data-testid={`nav-subitems-${item.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                  {hasSubItems && (
+                    <div 
+                      className={cn(
+                        "mt-1 ml-4 space-y-1 overflow-hidden transition-all duration-300 ease-in-out",
+                        isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                      )}
+                      data-testid={`nav-subitems-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      role="group"
+                      aria-label={`Sous-éléments de ${item.name}`}
+                    >
                       {item.subItems?.map((subItem) => {
-                        const isSubActive = location === subItem.href;
+                        const isSubActive = location === subItem.href || location.startsWith(subItem.href + "/");
                         return (
                           <Link key={subItem.name} href={subItem.href} data-testid={`nav-sublink-${subItem.name.toLowerCase().replace(/\s+/g, '-')}`}>
                             <div
                               className={cn(
-                                "group flex items-center px-3 py-2 text-xs rounded-md transition-colors cursor-pointer",
+                                "group flex items-center px-3 py-2 text-xs rounded-md transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                                 isSubActive
-                                  ? "bg-secondary/50 text-on-secondary"
-                                  : "text-on-surface-muted hover:bg-surface-muted"
+                                  ? "bg-secondary text-on-secondary border-l-2 border-secondary ml-2 shadow-sm"
+                                  : "text-on-surface-muted hover:bg-surface-muted hover:shadow-sm"
                               )}
                               title={subItem.description}
                               data-testid={`nav-subitem-${subItem.name.toLowerCase().replace(/\s+/g, '-')}`}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`${subItem.name} - ${subItem.description}`}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  window.location.href = subItem.href;
+                                }
+                              }}
                             >
                               <subItem.icon
                                 className={cn(
@@ -196,8 +283,14 @@ export default function Sidebar() {
                                 )}
                               />
                               <div className="flex flex-col">
-                                <span className="font-medium">{subItem.name}</span>
-                                <span className="text-xs text-muted-foreground mt-0.5">
+                                <span className={cn(
+                                  "font-medium",
+                                  isSubActive ? "text-on-secondary" : "text-on-surface"
+                                )}>{subItem.name}</span>
+                                <span className={cn(
+                                  "text-xs mt-0.5",
+                                  isSubActive ? "text-on-secondary/70" : "text-muted-foreground"
+                                )}>
                                   {subItem.description}
                                 </span>
                               </div>

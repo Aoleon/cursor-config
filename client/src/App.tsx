@@ -13,8 +13,6 @@ import { useLocation, Redirect } from "wouter";
 import { useEffect } from "react";
 import Dashboard from "@/pages/dashboard";
 import Offers from "@/pages/offers";
-import AOsPage from "@/pages/aos";
-import Pricing from "@/pages/pricing";
 import Projects from "@/pages/projects";
 import ProjectDetail from "@/pages/project-detail";
 import Planning from "@/pages/planning";
@@ -49,10 +47,6 @@ import BatigestPage from "@/pages/batigest";
 import SettingsScoring from "@/pages/settings-scoring";
 import TechnicalAlerts from "@/pages/technical-alerts";
 // Import des pages Intelligence Temporelle - (DateIntelligenceDashboard maintenant intégré dans ExecutiveDashboard)
-import AlertsManagementPanel from "@/pages/AlertsManagementPanel";
-import BusinessRulesManager from "@/pages/BusinessRulesManager";
-import InteractiveGanttChart from "@/components/gantt/InteractiveGanttChart";
-import TimelinePerformanceCharts from "@/components/charts/TimelinePerformanceCharts";
 // Import du Dashboard Dirigeant
 import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
 
@@ -91,19 +85,38 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      {/* ============= DASHBOARDS STANDARDISÉS - Pattern cohérent /dashboard/* ============= */}
       <Route path="/dashboard/executive" component={() => <ProtectedRoute component={ExecutiveDashboard} />} />
+      <Route path="/dashboard/be" component={() => <ProtectedRoute component={BEDashboard} />} />
+      {/* REDIRECTION: Page d'accueil vers dashboard executive pour cohérence */}
+      <Route path="/">
+        <Redirect to="/dashboard/executive" />
+      </Route>
+      {/* COMPATIBILITÉ: Ancien dashboard principal maintenu temporairement */}
+      <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
       {/* REDIRECTION: DateIntelligenceDashboard maintenant intégré dans ExecutiveDashboard */}
       <Route path="/dashboard/date-intelligence">
         <Redirect to="/dashboard/executive?tab=intelligence" />
       </Route>
-      <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
+      {/* ============= WORKFLOW - Processus avant-vente AO → Offre ============= */}
+      <Route path="/workflow/etude-technique" component={() => <ProtectedRoute component={EtudeTechnique} />} />
+      {/* Routes workflow supplémentaires à implémenter en Phase 3.2 */}
+      {/* <Route path="/workflow/chiffrage" component={() => <ProtectedRoute component={ChiffrageWorkflow} />} /> */}
+      {/* <Route path="/workflow/envoi-devis" component={() => <ProtectedRoute component={EnvoiDevis} />} /> */}
+      {/* <Route path="/workflow/planification" component={() => <ProtectedRoute component={PlanificationWorkflow} />} /> */}
+      
+      {/* ============= APPELS D'OFFRE - Redirections vers workflow cohérent ============= */}
+      <Route path="/aos">
+        <Redirect to="/workflow/etude-technique" />
+      </Route>
+      <Route path="/aos/:id" component={() => <ProtectedRoute component={AoDetail} />} />
+      
+      {/* ============= OFFERS - Gestion lifecycle offres ============= */}
       <Route path="/offers" component={() => <ProtectedRoute component={Offers} />} />
-      <Route path="/aos" component={() => <ProtectedRoute component={AOsPage} />} />
       <Route path="/create-offer" component={() => <ProtectedRoute component={CreateOffer} />} />
       <Route path="/create-ao" component={() => <ProtectedRoute component={CreateAO} />} />
       <Route path="/offers/:id" component={() => <ProtectedRoute component={OfferDetail} />} />
       <Route path="/offers/:id/edit" component={() => <ProtectedRoute component={AoDetail} />} />
-      <Route path="/aos/:id" component={() => <ProtectedRoute component={AoDetail} />} />
       <Route path="/offers/:id/chiffrage" component={() => <ProtectedRoute component={Chiffrage} />} />
       {/* Sous-étapes des Appels d'Offres */}
       <Route path="/offers/validation" component={() => <ProtectedRoute component={ValidationList} />} />
@@ -114,27 +127,29 @@ function Router() {
       <Route path="/projects" component={() => <ProtectedRoute component={Projects} />} />
       <Route path="/projects/:id" component={() => <ProtectedRoute component={ProjectDetail} />} />
       <Route path="/projects/:id/planning" component={() => <ProtectedRoute component={Planning} />} />
-      {/* Sous-étapes des Projets - Composants Spécialisés par Phase */}
+      {/* Phases projets - Composants spécialisés par phase chronologique */}
       <Route path="/projects/study" component={() => <ProtectedRoute component={ProjectStudy} />} />
       <Route path="/projects/planning" component={() => <ProtectedRoute component={ProjectPlanning} />} />
       <Route path="/projects/supply" component={() => <ProtectedRoute component={ProjectSupply} />} />
       <Route path="/projects/worksite" component={() => <ProtectedRoute component={ProjectWorksite} />} />
       <Route path="/projects/support" component={() => <ProtectedRoute component={ProjectSupport} />} />
-      {/* Routes du workflow - TODO: Create missing components */}
-      <Route path="/workflow/etude-technique" component={() => <ProtectedRoute component={EtudeTechnique} />} />
-      {/* <Route path="/workflow/chiffrage" component={() => <ProtectedRoute component={ChiffrageWorkflow} />} /> */}
-      {/* <Route path="/workflow/envoi-devis" component={() => <ProtectedRoute component={EnvoiDevis} />} /> */}
-      {/* <Route path="/workflow/planification" component={() => <ProtectedRoute component={PlanificationWorkflow} />} /> */}
-      {/* <Route path="/workflow/chantier" component={() => <ProtectedRoute component={ChantierWorkflow} />} /> */}
+      
+      {/* ============= ENTITÉS TRANSVERSALES ============= */}
+      {/* ============= PROJETS - Phases post-signature chronologiques ============= */}
       <Route path="/teams" component={() => <ProtectedRoute component={Teams} />} />
       <Route path="/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
       <Route path="/supplier-requests" component={() => <ProtectedRoute component={SupplierRequests} />} />
-      <Route path="/be-dashboard" component={() => <ProtectedRoute component={BEDashboard} />} />
+      {/* REDIRECTION: BE Dashboard standardisé vers pattern /dashboard/* */}
+      <Route path="/be-dashboard">
+        <Redirect to="/dashboard/be" />
+      </Route>
       <Route path="/batigest" component={() => <ProtectedRoute component={BatigestPage} />} />
       {/* Validation technique pour Julien LAMBOROT */}
       <Route path="/technical-alerts" component={() => <ProtectedRoute component={TechnicalAlerts} />} />
       {/* Configuration et paramètres */}
       <Route path="/settings/scoring" component={() => <ProtectedRoute component={SettingsScoring} />} />
+      
+      {/* ============= REDIRECTIONS GRACIEUSES - Intelligence Temporelle ============= */}
       {/* REDIRECTIONS GRACIEUSES: Intelligence Temporelle maintenant intégrée dans Executive Dashboard */}
       <Route path="/date-intelligence">
         <Redirect to="/dashboard/executive?tab=intelligence" />

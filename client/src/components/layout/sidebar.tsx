@@ -51,32 +51,42 @@ interface NavigationItem {
 }
 
 const navigation: NavigationItem[] = [
-  { name: "Tableau de Bord", href: "/", icon: TrendingUp },
+  // ============= DASHBOARDS STANDARDISÉS ============= //
   { name: "Dashboard Dirigeant", href: "/dashboard/executive", icon: BarChart3 },
+  { name: "Dashboard BE", href: "/dashboard/be", icon: Settings },
+  
+  // ============= WORKFLOW AVANT-VENTE ============= //
   { 
-    name: "Appels d'Offre", 
-    href: "/aos", 
+    name: "Workflow AO", 
+    href: "/workflow/etude-technique", 
     icon: FolderOpen,
     subItems: [
-      { name: "Étude technique", href: "/workflow/etude-technique", icon: FileText, description: "Études préliminaires" },
-      { name: "Demandes fournisseurs", href: "/supplier-requests", icon: Send, description: "Prix d'achat nécessaires" },
-      { name: "Chiffrage", href: "/offers/chiffrage", icon: Calculator, description: "Calcul marges avec prix fournisseurs" },
-      { name: "Validation BE", href: "/offers/validation", icon: CheckCircle, description: "Validation fin d'études" },
-      { name: "Transformation", href: "/offers/transform", icon: ArrowRight, description: "Passage en projet" },
+      { name: "Étude technique", href: "/workflow/etude-technique", icon: FileText, description: "Analyse AO et faisabilité" },
+      { name: "Demandes fournisseurs", href: "/supplier-requests", icon: Send, description: "Sollicitation prix fournisseurs" },
+      { name: "Chiffrage", href: "/offers/chiffrage", icon: Calculator, description: "Calcul coûts et marges" },
+      { name: "Validation BE", href: "/offers/validation", icon: CheckCircle, description: "Validation technique finale" },
+      { name: "Transformation", href: "/offers/transform", icon: ArrowRight, description: "Conversion en projet" },
     ]
   },
+  
+  // ============= GESTION OFFRES ============= //
+  { name: "Gestion Offres", href: "/offers", icon: ClipboardList },
+  
+  // ============= PROJETS POST-SIGNATURE ============= //
   { 
     name: "Projets", 
     href: "/projects", 
     icon: Projector,
     subItems: [
-      { name: "Étude", href: "/projects/study", icon: Search, description: "Phase d'étude technique" },
-      { name: "Planification", href: "/projects/planning", icon: Calendar, description: "Planning et jalons" },
-      { name: "Approvisionnement", href: "/projects/supply", icon: Package, description: "Commandes et logistique" },
-      { name: "Chantier", href: "/projects/worksite", icon: HardHat, description: "Suivi chantier" },
-      { name: "SAV", href: "/projects/support", icon: Headphones, description: "Service après-vente" },
+      { name: "Étude", href: "/projects/study", icon: Search, description: "Phase d'étude technique détaillée" },
+      { name: "Planification", href: "/projects/planning", icon: Calendar, description: "Planning exécution et jalons" },
+      { name: "Approvisionnement", href: "/projects/supply", icon: Package, description: "Commandes matières et logistique" },
+      { name: "Chantier", href: "/projects/worksite", icon: HardHat, description: "Suivi installation chantier" },
+      { name: "SAV", href: "/projects/support", icon: Headphones, description: "Support et service après-vente" },
     ]
   },
+  
+  // ============= RESSOURCES TRANSVERSALES ============= //
   { name: "Équipes", href: "/teams", icon: Users },
   { name: "Fournisseurs", href: "/suppliers", icon: Truck },
   { name: "Batigest", href: "/batigest", icon: Database },

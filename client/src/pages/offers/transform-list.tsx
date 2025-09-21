@@ -1,12 +1,47 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, ArrowRight, Eye, FolderOpen, CheckCircle } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function TransformList() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Mutation pour transformer une offre en projet
+  const transformToProjectMutation = useMutation({
+    mutationFn: async (offerId: string) => {
+      const response = await apiRequest(
+        "POST",
+        `/api/offers/${offerId}/transform-to-project`,
+        {
+          transformedBy: "current-user",
+          transformedAt: new Date()
+        }
+      );
+      return response.json();
+    },
+    onSuccess: (data, offerId) => {
+      // Invalider les queries reliées
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", "transform"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      
+      toast({
+        title: "Offre transformée en projet",
+        description: "Le projet a été créé avec succès et les tâches de base ajoutées",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur de transformation",
+        description: error instanceof Error ? error.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    }
+  });
 
   // Récupérer les offres prêtes à transformer
   const { data: offers = [], isLoading, error } = useQuery({
@@ -14,7 +49,7 @@ export default function TransformList() {
     queryFn: async () => {
       console.log("🔍 Chargement des offres prêtes à transformer...");
       try {
-        const response = await fetch("/api/offers?status=fin_etudes_validee,valide");
+        const response = await fetch("/api/offers?status=fin_etudes_validee,valide,signe");
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
@@ -303,11 +338,12 @@ export default function TransformList() {
                       ) : (
                         <Button 
                           size="sm"
-                          onClick={() => window.location.href = `/create-offer?fromOffer=${offer.id}`}
+                          onClick={() => transformToProjectMutation.mutate(offer.id)}
+                          disabled={transformToProjectMutation.isPending}
                           data-testid={`button-transform-${offer.id}`}
                         >
                           <ArrowRight className="h-4 w-4 mr-2" />
-                          Transformer
+                          {transformToProjectMutation.isPending ? 'Transformation...' : 'Transformer en projet'}
                         </Button>
                       )}
                     </div>

@@ -25,43 +25,50 @@ export default function EtudeTechnique() {
   const [selectedAO, setSelectedAO] = useState<string | null>(null);
 
   // Récupérer les AOs en étude technique
-  const { data: aos, isLoading } = useQuery({
+  const { data: aos, isLoading, error } = useQuery({
     queryKey: ["/api/aos/etude"],
     queryFn: async () => {
-      const response = await fetch("/api/aos?status=etude");
-      const result = await response.json();
-      
-      // Extraire le tableau data si la réponse est encapsulée
-      if (result && typeof result === 'object' && 'data' in result) {
-        return result.data; // Retourner directement le tableau
+      const response = await fetch("/api/aos/etude");
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
       }
-      
-      // Fallback si c'est déjà un tableau 
+      const result = await response.json();
       return Array.isArray(result) ? result : [];
-    }
+    },
+    retry: 1,
+    staleTime: 30000,
   });
 
   // Mutation pour valider l'étude technique
   const validateEtudeMutation = useMutation({
     mutationFn: async (aoId: string) => {
-      const response = await fetch(`/api/aos/${aoId}/validate-etude`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
+      const response = await apiRequest(
+        "POST",
+        `/api/aos/${aoId}/validate-etude`,
+        { 
           status: "chiffrage",
           validatedBy: "current-user",
           validatedAt: new Date()
-        })
-      });
+        }
+      );
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, aoId) => {
+      // Invalider les queries reliées
+      queryClient.invalidateQueries({ queryKey: ["/api/aos/etude"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos/chiffrage"] });
       queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
+      
       toast({
         title: "Étude technique validée",
         description: "Le dossier passe en phase de chiffrage",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur de validation",
+        description: error instanceof Error ? error.message : "Erreur inconnue",
+        variant: "destructive",
       });
     }
   });
@@ -106,9 +113,11 @@ export default function EtudeTechnique() {
           key="validate"
           size="sm"
           onClick={() => validateEtudeMutation.mutate(ao.id)}
+          disabled={validateEtudeMutation.isPending}
+          data-testid={`button-validate-etude-${ao.id}`}
         >
           <CheckCircle className="h-4 w-4 mr-2" />
-          Valider et passer au chiffrage
+          {validateEtudeMutation.isPending ? 'Validation...' : 'Valider et passer au chiffrage'}
         </Button>
       );
     } else {
@@ -213,7 +222,24 @@ export default function EtudeTechnique() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8">Chargement...</div>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p>Chargement des AOs en étude technique...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-500">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                  <p className="font-semibold">Erreur lors du chargement</p>
+                  <p className="text-sm mt-1">{error instanceof Error ? error.message : 'Erreur inconnue'}</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => window.location.reload()}
+                  >
+                    Réessayer
+                  </Button>
+                </div>
               ) : aos?.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   Aucun dossier en étude technique actuellement

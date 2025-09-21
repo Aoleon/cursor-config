@@ -1,25 +1,61 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Calculator, Eye, FolderOpen, Euro } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function ChiffrageList() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Récupérer les offres en attente de chiffrage
+  // Mutation pour démarrer le chiffrage d'une offre
+  const startChiffrageMutation = useMutation({
+    mutationFn: async (offerId: string) => {
+      const response = await apiRequest(
+        "POST",
+        `/api/offers/${offerId}/start-chiffrage`,
+        {
+          startedBy: "current-user",
+          startedAt: new Date()
+        }
+      );
+      return response.json();
+    },
+    onSuccess: (data, offerId) => {
+      // Invalider les queries reliées
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", "chiffrage"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos/chiffrage"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      
+      toast({
+        title: "Chiffrage démarré",
+        description: "Vous pouvez maintenant procéder au chiffrage détaillé",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur de démarrage",
+        description: error instanceof Error ? error.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Récupérer les offres prêtes pour chiffrage et en cours de chiffrage
   const { data: offers = [], isLoading, error } = useQuery({
     queryKey: ["/api/offers", "chiffrage"],
     queryFn: async () => {
-      console.log("🔍 Chargement des offres en attente de chiffrage...");
+      console.log("🔍 Chargement des offres pour chiffrage...");
       try {
-        const response = await fetch("/api/offers?status=en_attente_chiffrage,brouillon");
+        // Récupérer les offres avec les statuts appropriés pour le workflow chiffrage
+        const response = await fetch("/api/offers?status=en_attente_fournisseurs,en_cours_chiffrage");
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
         const data = await response.json();
-        console.log("✅ Données reçues:", data?.length, "offres à chiffrer");
+        console.log("✅ Données reçues:", data?.length, "offres pour chiffrage");
         return data || [];
       } catch (err) {
         console.error("❌ Erreur lors de la récupération des offres:", err);
@@ -33,8 +69,8 @@ export default function ChiffrageList() {
   // Fonction pour obtenir le badge de statut
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      'brouillon': { label: 'Brouillon', variant: 'secondary' as const, color: 'text-gray-600' },
-      'en_attente_chiffrage': { label: 'À chiffrer', variant: 'default' as const, color: 'text-orange-600' },
+      'en_attente_fournisseurs': { label: 'Prêt à chiffrer', variant: 'default' as const, color: 'text-blue-600' },
+      'en_cours_chiffrage': { label: 'En cours de chiffrage', variant: 'secondary' as const, color: 'text-orange-600' },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { 
       label: status, 
@@ -62,8 +98,8 @@ export default function ChiffrageList() {
   // Calcul des statistiques
   const stats = {
     total: offers.length,
-    brouillon: offers.filter((offer: any) => offer.status === 'brouillon').length,
-    attente: offers.filter((offer: any) => offer.status === 'en_attente_chiffrage').length,
+    pretAChiffrer: offers.filter((offer: any) => offer.status === 'en_attente_fournisseurs').length,
+    enCoursChiffrage: offers.filter((offer: any) => offer.status === 'en_cours_chiffrage').length,
     montantTotal: offers.reduce((sum: number, offer: any) => sum + (offer.estimatedAmount || 0), 0),
   };
 
@@ -131,25 +167,25 @@ export default function ChiffrageList() {
         
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Brouillons</CardTitle>
+            <CardTitle className="text-sm font-medium">Prêts à chiffrer</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">
-              {stats.brouillon}
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.pretAChiffrer}
             </div>
-            <p className="text-xs text-muted-foreground">À finaliser</p>
+            <p className="text-xs text-muted-foreground">Prix fournisseurs reçus</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">En attente</CardTitle>
+            <CardTitle className="text-sm font-medium">En cours</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {stats.attente}
+              {stats.enCoursChiffrage}
             </div>
-            <p className="text-xs text-muted-foreground">À chiffrer</p>
+            <p className="text-xs text-muted-foreground">Chiffrage actif</p>
           </CardContent>
         </Card>
 
@@ -256,6 +292,20 @@ export default function ChiffrageList() {
                       <Calculator className="h-4 w-4 mr-2" />
                       Chiffrer
                     </Button>
+                    
+                    {/* Bouton pour démarrer le chiffrage - CORRECTION CRITIQUE */}
+                    {offer.status === 'en_attente_fournisseurs' && (
+                      <Button 
+                        variant="default"
+                        size="sm"
+                        onClick={() => startChiffrageMutation.mutate(offer.id)}
+                        disabled={startChiffrageMutation.isPending}
+                        data-testid={`button-start-chiffrage-${offer.id}`}
+                      >
+                        <Calculator className="h-4 w-4 mr-2" />
+                        {startChiffrageMutation.isPending ? 'Démarrage...' : 'Démarrer chiffrage'}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

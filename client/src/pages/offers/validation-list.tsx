@@ -1,12 +1,47 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, CheckCircle, Eye, FolderOpen, Clock } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function ValidationList() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Mutation pour valider les études d'une offre
+  const validateStudiesMutation = useMutation({
+    mutationFn: async (offerId: string) => {
+      const response = await apiRequest(
+        "POST",
+        `/api/offers/${offerId}/validate-studies`,
+        {
+          validatedBy: "current-user",
+          validatedAt: new Date()
+        }
+      );
+      return response.json();
+    },
+    onSuccess: (data, offerId) => {
+      // Invalider les queries reliées
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", "validation"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", "transform"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      
+      toast({
+        title: "Fin d'études validée",
+        description: "L'offre peut maintenant être transformée en projet",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur de validation",
+        description: error instanceof Error ? error.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    }
+  });
 
   // Récupérer les offres en attente de validation
   const { data: offers = [], isLoading, error } = useQuery({
@@ -14,7 +49,7 @@ export default function ValidationList() {
     queryFn: async () => {
       console.log("🔍 Chargement des offres en attente de validation...");
       try {
-        const response = await fetch("/api/offers?status=chiffrage_termine,en_attente_validation");
+        const response = await fetch("/api/offers?status=en_cours_chiffrage,en_attente_validation");
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
@@ -33,8 +68,8 @@ export default function ValidationList() {
   // Fonction pour obtenir le badge de statut
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      'chiffrage_termine': { label: 'Chiffrage terminé', variant: 'default' as const, color: 'text-primary' },
-      'en_attente_validation': { label: 'En attente bouclage', variant: 'secondary' as const, color: 'text-warning' },
+      'en_cours_chiffrage': { label: 'Chiffrage terminé', variant: 'default' as const, color: 'text-blue-600' },
+      'en_attente_validation': { label: 'En attente bouclage', variant: 'secondary' as const, color: 'text-orange-600' },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { 
       label: status, 
@@ -62,8 +97,8 @@ export default function ValidationList() {
   // Calcul des statistiques
   const stats = {
     total: offers.length,
-    chiffrageTermine: offers.filter((offer: any) => offer.status === 'chiffrage_termine').length,
-    attente: offers.filter((offer: any) => offer.status === 'en_attente_validation').length,
+    chiffrageTermine: offers.filter((offer: any) => offer.status === 'en_cours_chiffrage').length,
+    enAttenteValidation: offers.filter((offer: any) => offer.status === 'en_attente_validation').length,
     retard: offers.filter((offer: any) => {
       if (!offer.deadlineDate) return false;
       return new Date(offer.deadlineDate) < new Date();
@@ -133,20 +168,20 @@ export default function ValidationList() {
             <CardTitle className="text-sm font-medium">Chiffrage terminé</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">
+            <div className="text-2xl font-bold text-blue-600">
               {stats.chiffrageTermine}
             </div>
-            <p className="text-xs text-muted-foreground">Prêtes à valider</p>
+            <p className="text-xs text-muted-foreground">Prêts à valider</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">En attente</CardTitle>
+            <CardTitle className="text-sm font-medium">En attente validation</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">
-              {stats.attente}
+            <div className="text-2xl font-bold text-orange-600">
+              {stats.enAttenteValidation}
             </div>
             <p className="text-xs text-muted-foreground">Bouclage en cours</p>
           </CardContent>
@@ -267,15 +302,23 @@ export default function ValidationList() {
                         Voir détails
                       </Button>
                       
-                      {offer.status === 'chiffrage_termine' && (
+                      {(offer.status === 'fin_etudes' || offer.status === 'chiffrage_termine') && !offer.finEtudesValidatedAt && (
                         <Button 
                           size="sm"
-                          onClick={() => window.location.href = `/offers/${offer.id}?validate=true`}
+                          onClick={() => validateStudiesMutation.mutate(offer.id)}
+                          disabled={validateStudiesMutation.isPending}
                           data-testid={`button-validate-${offer.id}`}
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
-                          Valider BE
+                          {validateStudiesMutation.isPending ? 'Validation...' : 'Valider fin d\'études'}
                         </Button>
+                      )}
+                      
+                      {offer.finEtudesValidatedAt && (
+                        <Badge variant="outline" className="text-green-600">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Validée
+                        </Badge>
                       )}
                     </div>
                   </CardContent>

@@ -76,17 +76,17 @@ const ROUTE_CONFIG: Record<string, RouteConfig> = {
   "/offers/chiffrage-list": {
     path: "/offers/chiffrage-list",
     label: "Liste Chiffrage",
-    parent: "/offers"
+    parent: "/workflow"
   },
   "/offers/validation-list": {
     path: "/offers/validation-list",
     label: "Liste Validation",
-    parent: "/offers"
+    parent: "/workflow"
   },
   "/offers/transform-list": {
     path: "/offers/transform-list",
     label: "Liste Transformation", 
-    parent: "/offers"
+    parent: "/workflow"
   },
 
   // ============= PROJETS ============= //
@@ -167,6 +167,13 @@ export function useBreadcrumbs(): BreadcrumbItem[] {
     const [currentPath, queryString] = location.split('?');
     const searchParams = new URLSearchParams(queryString || '');
 
+    // Debugging temporaire pour synchronisation Executive Dashboard
+    if (currentPath === '/dashboard/executive') {
+      // Forcer re-évaluation pour éviter race condition
+      const tabValue = searchParams.get('tab');
+      console.log('Executive breadcrumbs sync:', { currentPath, queryString, tabValue });
+    }
+
     // Trouver la configuration de route correspondante
     let routeConfig = ROUTE_CONFIG[currentPath];
     
@@ -231,6 +238,7 @@ export function useBreadcrumbs(): BreadcrumbItem[] {
         
         // Ajouter l'onglet comme dernier élément
         breadcrumbs.push({ label: tabLabel });
+        console.log('Tab breadcrumb ajouté:', tabLabel);
       }
     }
 

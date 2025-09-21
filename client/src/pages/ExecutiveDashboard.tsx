@@ -58,6 +58,7 @@ import type { PredictiveRevenueForecast, ProjectRiskAssessment, BusinessRecommen
 import { BusinessAlertsOverview } from '@/components/BusinessAlertsOverview';
 import { BusinessAlertsList } from '@/components/BusinessAlertsList';
 import { DateAlertsProvider } from '@/components/alerts/DateAlertsProvider';
+import IntelligentHeader from '@/components/navigation/IntelligentHeader';
 
 // Lazy loading des composants spécialisés pour optimiser les performances
 const DateIntelligenceDashboard = lazy(() => import('@/pages/DateIntelligenceDashboard'));
@@ -214,11 +215,10 @@ const ExecutiveKPICard = memo(({ title, value, trend, icon: Icon, variant = 'def
 });
 
 // ========================================
-// COMPOSANT EN-TÊTE DASHBOARD
+// HOOK POUR ACTIONS HEADER DASHBOARD
 // ========================================
 
-function DashboardHeader() {
-  const { data: user } = useQuery({ queryKey: ['/api/auth/user'] });
+function useDashboardHeaderActions() {
   const generateSnapshot = useGenerateSnapshot();
   const exportReport = useExportReport();
 
@@ -250,37 +250,22 @@ function DashboardHeader() {
     }
   };
 
-  return (
-    <div className="flex justify-between items-center" data-testid="dashboard-header">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Dashboard Dirigeant
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Vue d'ensemble opérationnelle • {new Date().toLocaleDateString('fr-FR')}
-        </p>
-      </div>
-      <div className="flex gap-3">
-        <Button 
-          variant="outline" 
-          onClick={handleExportReport}
-          disabled={exportReport.isPending}
-          data-testid="button-export-report"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          {exportReport.isPending ? 'Export...' : 'Exporter Rapport'}
-        </Button>
-        <Button 
-          onClick={handleGenerateSnapshot}
-          disabled={generateSnapshot.isPending}
-          data-testid="button-generate-snapshot"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${generateSnapshot.isPending ? 'animate-spin' : ''}`} />
-          {generateSnapshot.isPending ? 'Génération...' : 'Générer Snapshot'}
-        </Button>
-      </div>
-    </div>
-  );
+  return {
+    actions: [
+      {
+        label: exportReport.isPending ? 'Export...' : 'Exporter Rapport',
+        icon: 'download',
+        variant: 'outline' as const,
+        onClick: handleExportReport
+      },
+      {
+        label: generateSnapshot.isPending ? 'Génération...' : 'Générer Snapshot', 
+        icon: generateSnapshot.isPending ? 'refresh' : 'plus',
+        variant: 'default' as const,
+        onClick: handleGenerateSnapshot
+      }
+    ]
+  };
 }
 
 // ========================================
@@ -1044,6 +1029,7 @@ function PredictiveTab() {
 
 export default function ExecutiveDashboard() {
   const [location, setLocation] = useLocation();
+  const { actions } = useDashboardHeaderActions();
   
   // ========================================
   // DEEP-LINKING SUPPORT POUR ONGLETS
@@ -1086,8 +1072,11 @@ export default function ExecutiveDashboard() {
   return (
     <DateAlertsProvider>
       <div className="min-h-screen bg-background">
+        <IntelligentHeader 
+          title="Dashboard Dirigeant"
+          actions={actions}
+        />
         <div className="p-6 space-y-6" data-testid="executive-dashboard">
-          <DashboardHeader />
           
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-4">

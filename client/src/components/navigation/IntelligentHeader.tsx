@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Download, Plus, FileText, Settings, Home } from "lucide-react";
 import { useBreadcrumbs, usePageTitle } from "@/hooks/useBreadcrumbs";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 // ========================================
 // INTERFACE HEADER INTELLIGENT
@@ -56,8 +56,58 @@ export default function IntelligentHeader({
   const autoBreadcrumbs = useBreadcrumbs();
   const autoTitle = usePageTitle();
   
-  // Utiliser breadcrumbs personnalisés ou automatiques
-  const effectiveBreadcrumbs = customBreadcrumbs || autoBreadcrumbs;
+  // ========================================
+  // FIX EXECUTIVE DASHBOARD BREADCRUMBS
+  // ========================================
+  
+  const [location] = useLocation();
+  const isExecutiveDashboard = location.startsWith('/dashboard/executive');
+  
+  // Force-override pour Executive Dashboard avec tabs
+  const getExecutiveBreadcrumbs = () => {
+    if (!isExecutiveDashboard) return null;
+    
+    const breadcrumbs = [
+      { label: "Accueil", href: "/" }
+    ];
+    
+    // Détecter l'onglet actif depuis URL
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const activeTab = urlParams.get('tab');
+    
+    // DEBUG: Ajouter logging pour diagnostiquer
+    console.log('Executive Dashboard Override:', { location, activeTab, urlParams: Object.fromEntries(urlParams) });
+    
+    if (activeTab) {
+      // Si onglet actif, Dashboard Dirigeant devient un lien vers la page principale
+      breadcrumbs.push({ label: "Dashboard Dirigeant", href: "/dashboard/executive" });
+      
+      // Ajouter le segment tab spécifique
+      const tabLabels: Record<string, string> = {
+        "intelligence": "Intelligence Temporelle",
+        "analytics": "Analytics",  
+        "configuration": "Configuration"
+      };
+      
+      const tabLabel = tabLabels[activeTab];
+      if (tabLabel) {
+        breadcrumbs.push({ label: tabLabel });
+        console.log('Executive tab breadcrumb ajouté:', tabLabel);
+      } else {
+        console.log('Aucun label trouvé pour tab:', activeTab);
+      }
+    } else {
+      // Pas d'onglet, Dashboard Dirigeant est la page courante
+      breadcrumbs.push({ label: "Dashboard Dirigeant" });
+    }
+    
+    console.log('Final Executive breadcrumbs:', breadcrumbs);
+    return breadcrumbs;
+  };
+  
+  // Utiliser breadcrumbs personnalisés, Executive fix, ou automatiques
+  const executiveBreadcrumbs = getExecutiveBreadcrumbs();
+  const effectiveBreadcrumbs = customBreadcrumbs || executiveBreadcrumbs || autoBreadcrumbs;
   const effectiveTitle = customTitle || autoTitle;
 
   // ========================================

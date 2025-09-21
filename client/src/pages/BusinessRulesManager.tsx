@@ -597,7 +597,7 @@ function RulesByPhaseTable({
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Switch
-                            checked={rule.isActive}
+                            checked={rule.isActive ?? false}
                             onCheckedChange={(checked) => onToggle(rule.id, checked)}
                             data-testid={`toggle-rule-${rule.id}`}
                           />
@@ -660,6 +660,21 @@ export default function BusinessRulesManager() {
   const handleEditRule = (rule: DateIntelligenceRule) => {
     setEditingRule({
       ...rule,
+      isActive: rule.isActive ?? false,
+      priority: rule.priority ?? 50,
+      phase: rule.phase ?? 'etude',
+      baseDuration: typeof rule.baseDuration === 'string' ? Number(rule.baseDuration) : (rule.baseDuration ?? 5),
+      multiplierFactor: typeof rule.multiplierFactor === 'string' ? Number(rule.multiplierFactor) : (rule.multiplierFactor ?? 1.0),
+      bufferPercentage: typeof rule.bufferPercentage === 'string' ? Number(rule.bufferPercentage) : (rule.bufferPercentage ?? 10),
+      workingDaysOnly: rule.workingDaysOnly ?? true,
+      excludeHolidays: rule.excludeHolidays ?? true,
+      triggerEvents: rule.triggerEvents ?? [],
+      description: rule.description ?? undefined,
+      projectType: rule.projectType && ['neuf', 'renovation', 'maintenance'].includes(rule.projectType) ? rule.projectType as 'neuf' | 'renovation' | 'maintenance' : undefined,
+      complexity: rule.complexity && ['simple', 'normale', 'elevee'].includes(rule.complexity) ? rule.complexity as 'simple' | 'normale' | 'elevee' : undefined,
+      minDuration: rule.minDuration ?? undefined,
+      maxDuration: rule.maxDuration ?? undefined,
+      baseConditions: rule.baseConditions ? rule.baseConditions as Record<string, any> : undefined,
       validFrom: rule.validFrom ? new Date(rule.validFrom) : new Date(),
       validUntil: rule.validUntil ? new Date(rule.validUntil) : undefined,
     });
@@ -678,14 +693,31 @@ export default function BusinessRulesManager() {
     // Exclure les propriétés auto-générées
     const { id, createdAt, updatedAt, ...ruleData } = duplicatedRule;
     
-    setEditingRule(ruleData);
+    setEditingRule({
+      ...ruleData,
+      isActive: ruleData.isActive ?? false,
+      priority: ruleData.priority ?? 50,
+      phase: ruleData.phase ?? 'etude',
+      baseDuration: typeof ruleData.baseDuration === 'string' ? Number(ruleData.baseDuration) : (ruleData.baseDuration ?? 5),
+      multiplierFactor: typeof ruleData.multiplierFactor === 'string' ? Number(ruleData.multiplierFactor) : (ruleData.multiplierFactor ?? 1.0),
+      bufferPercentage: typeof ruleData.bufferPercentage === 'string' ? Number(ruleData.bufferPercentage) : (ruleData.bufferPercentage ?? 10),
+      workingDaysOnly: ruleData.workingDaysOnly ?? true,
+      excludeHolidays: ruleData.excludeHolidays ?? true,
+      triggerEvents: ruleData.triggerEvents ?? [],
+      description: ruleData.description ?? undefined,
+      projectType: ruleData.projectType && ['neuf', 'renovation', 'maintenance'].includes(ruleData.projectType) ? ruleData.projectType as 'neuf' | 'renovation' | 'maintenance' : undefined,
+      complexity: ruleData.complexity && ['simple', 'normale', 'elevee'].includes(ruleData.complexity) ? ruleData.complexity as 'simple' | 'normale' | 'elevee' : undefined,
+      minDuration: ruleData.minDuration ?? undefined,
+      maxDuration: ruleData.maxDuration ?? undefined,
+      baseConditions: ruleData.baseConditions ? ruleData.baseConditions as Record<string, any> : undefined,
+    });
     setIsEditorOpen(true);
   };
 
   const handleSaveRule = (data: CreateRuleData) => {
     if (editingRule && 'id' in editingRule && editingRule.id) {
       // Mise à jour
-      updateRule({ ruleId: editingRule.id, updates: data });
+      updateRule({ ruleId: editingRule.id as string, updates: data });
     } else {
       // Création
       createRule(data);

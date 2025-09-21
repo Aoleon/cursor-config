@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, memo, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +33,9 @@ import {
   Loader2,
   Settings,
   CheckCircle,
-  User
+  User,
+  Brain,
+  Wrench
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
 import { 
@@ -54,6 +56,53 @@ import { formatCurrency, formatPercentage, formatTrend, formatDuration, getProgr
 import type { PredictiveRevenueForecast, ProjectRiskAssessment, BusinessRecommendation } from '@shared/schema';
 import { BusinessAlertsOverview } from '@/components/BusinessAlertsOverview';
 import { BusinessAlertsList } from '@/components/BusinessAlertsList';
+import { DateAlertsProvider } from '@/components/alerts/DateAlertsProvider';
+
+// Lazy loading des composants spécialisés pour optimiser les performances
+const DateIntelligenceDashboard = lazy(() => import('@/pages/DateIntelligenceDashboard'));
+const AlertsManagementPanel = lazy(() => import('@/pages/AlertsManagementPanel'));
+const BusinessRulesManager = lazy(() => import('@/pages/BusinessRulesManager'));
+const InteractiveGanttChart = lazy(() => import('@/components/gantt/InteractiveGanttChart'));
+
+// ========================================
+// COMPOSANT SKELETON POUR LAZY LOADING
+// ========================================
+
+const TabLoadingSkeleton = memo(() => (
+  <div className="space-y-6 p-6">
+    <div className="flex items-center justify-between">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-96" />
+      </div>
+      <Skeleton className="h-10 w-32" />
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {[...Array(4)].map((_, i) => (
+        <Card key={i}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-8 w-8 rounded-full" />
+            </div>
+            <Skeleton className="h-8 w-16 mb-2" />
+            <Skeleton className="h-3 w-12" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+    
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-48" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-64 w-full" />
+      </CardContent>
+    </Card>
+  </div>
+));
 
 // ========================================
 // INTERFACES ET TYPES
@@ -993,62 +1042,148 @@ function PredictiveTab() {
 // ========================================
 
 export default function ExecutiveDashboard() {
-  const [activeTab, setActiveTab] = useState('performance');
+  const [activeTab, setActiveTab] = useState('overview');
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="p-6 space-y-6" data-testid="executive-dashboard">
-        <DashboardHeader />
-        <KPIOverview />
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="performance" data-testid="tab-performance">
-              Performance
-            </TabsTrigger>
-            <TabsTrigger value="pipeline" data-testid="tab-pipeline">
-              Pipeline
-            </TabsTrigger>
-            <TabsTrigger value="operations" data-testid="tab-operations">
-              Opérations
-            </TabsTrigger>
-            <TabsTrigger value="alerts" className="flex items-center gap-2" data-testid="tab-alerts">
-              <AlertTriangle className="h-4 w-4" />
-              Alertes
-            </TabsTrigger>
-            <TabsTrigger value="predictive" data-testid="tab-predictive">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Prédictif
-            </TabsTrigger>
-          </TabsList>
+    <DateAlertsProvider>
+      <div className="min-h-screen bg-background">
+        <div className="p-6 space-y-6" data-testid="executive-dashboard">
+          <DashboardHeader />
           
-          <TabsContent value="performance">
-            <PerformanceTab />
-          </TabsContent>
-          <TabsContent value="pipeline">
-            <PipelineTab />
-          </TabsContent>
-          <TabsContent value="operations">
-            <OperationsTab />
-          </TabsContent>
-          <TabsContent value="alerts" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight">Alertes Métier</h2>
-                <p className="text-muted-foreground">Gestion alertes business configurables</p>
-              </div>
-            </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview" className="flex items-center gap-2" data-testid="tab-overview">
+                <Activity className="h-4 w-4" />
+                Vue d'ensemble
+              </TabsTrigger>
+              <TabsTrigger value="intelligence" className="flex items-center gap-2" data-testid="tab-intelligence">
+                <Brain className="h-4 w-4" />
+                Intelligence Temporelle
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-2" data-testid="tab-analytics">
+                <BarChart3 className="h-4 w-4" />
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger value="configuration" className="flex items-center gap-2" data-testid="tab-configuration">
+                <Wrench className="h-4 w-4" />
+                Configuration
+              </TabsTrigger>
+            </TabsList>
             
-            <div className="grid gap-6">
-              <BusinessAlertsOverview />
-              <BusinessAlertsList />
-            </div>
-          </TabsContent>
-          <TabsContent value="predictive">
-            <PredictiveTab />
-          </TabsContent>
-        </Tabs>
+            {/* ONGLET VUE D'ENSEMBLE - Contenu Executive Dashboard EXISTANT */}
+            <TabsContent value="overview" className="space-y-6">
+              <KPIOverview />
+              
+              <Tabs defaultValue="performance" className="w-full">
+                <TabsList className="grid w-full grid-cols-5">
+                  <TabsTrigger value="performance" data-testid="tab-performance">
+                    Performance
+                  </TabsTrigger>
+                  <TabsTrigger value="pipeline" data-testid="tab-pipeline">
+                    Pipeline
+                  </TabsTrigger>
+                  <TabsTrigger value="operations" data-testid="tab-operations">
+                    Opérations
+                  </TabsTrigger>
+                  <TabsTrigger value="alerts" className="flex items-center gap-2" data-testid="tab-alerts">
+                    <AlertTriangle className="h-4 w-4" />
+                    Alertes
+                  </TabsTrigger>
+                  <TabsTrigger value="predictive" data-testid="tab-predictive">
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Prédictif
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="performance">
+                  <PerformanceTab />
+                </TabsContent>
+                <TabsContent value="pipeline">
+                  <PipelineTab />
+                </TabsContent>
+                <TabsContent value="operations">
+                  <OperationsTab />
+                </TabsContent>
+                <TabsContent value="alerts" className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold tracking-tight">Alertes Métier</h2>
+                      <p className="text-muted-foreground">Gestion alertes business configurables</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-6">
+                    <BusinessAlertsOverview />
+                    <BusinessAlertsList />
+                  </div>
+                </TabsContent>
+                <TabsContent value="predictive">
+                  <PredictiveTab />
+                </TabsContent>
+              </Tabs>
+            </TabsContent>
+            
+            {/* ONGLET INTELLIGENCE TEMPORELLE */}
+            <TabsContent value="intelligence" className="space-y-6">
+              <Suspense fallback={<TabLoadingSkeleton />}>
+                <DateIntelligenceDashboard />
+              </Suspense>
+            </TabsContent>
+            
+            {/* ONGLET ANALYTICS */}
+            <TabsContent value="analytics" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Analytics Avancées</h2>
+                  <p className="text-muted-foreground">
+                    Planning interactif et métriques avancées de performance
+                  </p>
+                </div>
+              </div>
+              
+              <Suspense fallback={<TabLoadingSkeleton />}>
+                <InteractiveGanttChart />
+              </Suspense>
+              
+              {/* Section métriques avancées intégrée */}
+              <div className="grid gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gestion des Alertes Avancées</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Alert className="mb-4">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Section critique du panel de gestion des alertes pour vue dirigeant
+                      </AlertDescription>
+                    </Alert>
+                    <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                      <AlertsManagementPanel />
+                    </Suspense>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            {/* ONGLET CONFIGURATION */}
+            <TabsContent value="configuration" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Configuration Dirigeant</h2>
+                  <p className="text-muted-foreground">
+                    Gestion des règles métier et paramètres intelligence temporelle
+                  </p>
+                </div>
+              </div>
+              
+              <Suspense fallback={<TabLoadingSkeleton />}>
+                <BusinessRulesManager />
+              </Suspense>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </div>
+    </DateAlertsProvider>
   );
 }

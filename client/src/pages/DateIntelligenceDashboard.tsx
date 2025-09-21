@@ -127,7 +127,7 @@ function PriorityAlertsPanel() {
         const severityOrder = { critical: 3, high: 2, warning: 1, info: 0 };
         return (severityOrder[b.severity as keyof typeof severityOrder] || 0) - (severityOrder[a.severity as keyof typeof severityOrder] || 0);
       }
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     })
     .slice(0, 5); // Top 5 alertes
 
@@ -303,7 +303,7 @@ function QuickActionsPanel() {
               key={action.title}
               variant={action.variant}
               className="h-auto p-4 flex flex-col items-center text-center"
-              onClick={action.action}
+              onClick={() => action.action()}
               disabled={isDetecting}
               data-testid={action.testId}
             >
@@ -324,7 +324,7 @@ function QuickActionsPanel() {
 
 // Composant principal du dashboard
 export default function DateIntelligenceDashboard() {
-  const { isLoading: alertsLoading } = useDateAlertsContext();
+  const { loading: alertsLoading } = useDateAlertsContext();
   
   if (alertsLoading) {
     return (

@@ -468,7 +468,7 @@ function AlertsTable({
                 </TableCell>
                 <TableCell>
                   <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(alert.createdAt), { locale: fr, addSuffix: true })}
+                    {alert.createdAt ? formatDistanceToNow(new Date(alert.createdAt), { locale: fr, addSuffix: true }) : 'N/A'}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
@@ -596,7 +596,7 @@ export default function AlertsManagementPanel() {
       }
       
       // Filtre par statut
-      if (filters.status.length > 0 && !filters.status.includes(alert.status)) {
+      if (filters.status.length > 0 && alert.status && !filters.status.includes(alert.status)) {
         return false;
       }
       
@@ -606,9 +606,9 @@ export default function AlertsManagementPanel() {
         const searchableText = [
           alert.title,
           alert.message,
-          alert.phase,
-          alert.entityId,
-        ].join(' ').toLowerCase();
+          alert.phase || '',
+          alert.entityId || '',
+        ].filter(Boolean).join(' ').toLowerCase();
         
         if (!searchableText.includes(searchTerm)) {
           return false;

@@ -20,7 +20,7 @@ import {
   CheckCircle2,
   Calendar as CalendarIcon
 } from 'lucide-react';
-import { DragDropContext, Droppable, Draggable, type DragResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, type DropResult } from 'react-beautiful-dnd';
 import type { ProjectTimeline } from '@shared/schema';
 
 // Composant pour les contrôles du Gantt
@@ -178,10 +178,10 @@ function GanttVisualization({
 
   // Génération des barres de timeline
   const getTimelineBar = (timeline: ProjectTimeline) => {
-    if (!timeline.startDate || !timeline.endDate) return null;
+    if (!timeline.plannedStartDate || !timeline.plannedEndDate) return null;
 
-    const start = new Date(timeline.startDate);
-    const end = new Date(timeline.endDate);
+    const start = new Date(timeline.plannedStartDate);
+    const end = new Date(timeline.plannedEndDate);
     const today = new Date();
 
     // Calculer la position et la largeur
@@ -289,7 +289,7 @@ function GanttVisualization({
                           )}
                           <div>
                             <p className="font-medium text-sm truncate">
-                              {timeline.project?.name || 'Projet sans nom'}
+                              {`Projet ${timeline.projectId}` || 'Projet sans nom'}
                             </p>
                             <p className="text-xs text-muted-foreground capitalize">
                               {timeline.phase?.replace('_', ' ')}
@@ -329,11 +329,11 @@ function GanttVisualization({
                         </TooltipTrigger>
                         <TooltipContent>
                           <div className="text-sm">
-                            <p className="font-medium">{timeline.project?.name}</p>
+                            <p className="font-medium">{`Projet ${timeline.projectId}`}</p>
                             <p className="capitalize">{timeline.phase?.replace('_', ' ')}</p>
                             <p>Durée: {barData.duration} jours</p>
-                            <p>Début: {timeline.startDate ? new Date(timeline.startDate).toLocaleDateString('fr-FR') : 'N/A'}</p>
-                            <p>Fin: {timeline.endDate ? new Date(timeline.endDate).toLocaleDateString('fr-FR') : 'N/A'}</p>
+                            <p>Début: {timeline.plannedStartDate ? new Date(timeline.plannedStartDate).toLocaleDateString('fr-FR') : 'N/A'}</p>
+                            <p>Fin: {timeline.plannedEndDate ? new Date(timeline.plannedEndDate).toLocaleDateString('fr-FR') : 'N/A'}</p>
                             {barData.isOverdue && <p className="text-red-500 font-medium">⚠️ En retard</p>}
                             {barData.isAtRisk && !barData.isOverdue && <p className="text-orange-500 font-medium">⏰ À risque</p>}
                           </div>
@@ -415,7 +415,7 @@ export default function InteractiveGanttChart({ className }: InteractiveGanttCha
   };
 
   // Handler pour drag & drop - FONCTIONNALITÉ CRITIQUE
-  const handleDragEnd = async (result: DragResult) => {
+  const handleDragEnd = async (result: DropResult) => {
     if (!result.destination) return;
     
     const { draggableId, destination } = result;
@@ -446,9 +446,9 @@ export default function InteractiveGanttChart({ className }: InteractiveGanttCha
       });
       
       // Recalcul cascade si nécessaire
-      if (timelineToUpdate.project?.id) {
+      if (timelineToUpdate.projectId) {
         await recalculateFromPhase({ 
-          projectId: timelineToUpdate.project.id, 
+          projectId: timelineToUpdate.projectId, 
           fromPhase: phaseType,
           newDate 
         });

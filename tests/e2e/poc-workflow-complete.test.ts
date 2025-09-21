@@ -129,7 +129,7 @@ test.describe('Workflow POC Complet - JLM Menuiserie', () => {
     
     // Compléter les informations de l'offre
     await page.fill('[data-testid="input-montant-propose"]', testData.offer.montantPropose);
-    await page.fill('[data-testid="input-delai-realisation"]', testData.offer.delaiRealisation);
+    await page.fill('[data-testid="input-delai-chantier"]', testData.offer.delaiRealisation);
     await page.fill('[data-testid="input-marge-commerciale"]', testData.offer.margeCommerciale);
     
     // Sauvegarder l'offre

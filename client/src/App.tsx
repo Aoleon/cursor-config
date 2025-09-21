@@ -28,8 +28,12 @@ import AoDetail from "@/pages/ao-detail";
 import Chiffrage from "@/pages/chiffrage";
 // Import des nouvelles pages pour les sous-étapes
 import ProjectPlanning from "@/pages/projects/planning";
+// Import des pages offers
+import ValidationList from "@/pages/offers/validation-list";
+import TransformList from "@/pages/offers/transform-list";
+import ChiffrageList from "@/pages/offers/chiffrage-list";
 // Import des pages workflow - TODO: Create components
-// import EtudeTechnique from "@/pages/workflow/etude-technique";
+import EtudeTechnique from "@/pages/workflow/etude-technique";
 // import ChiffrageWorkflow from "@/pages/workflow/chiffrage";
 // import EnvoiDevis from "@/pages/workflow/envoi-devis";
 // import PlanificationWorkflow from "@/pages/workflow/planification";
@@ -94,20 +98,23 @@ function Router() {
       <Route path="/offers/:id/edit" component={() => <ProtectedRoute component={AoDetail} />} />
       <Route path="/aos/:id" component={() => <ProtectedRoute component={AoDetail} />} />
       <Route path="/offers/:id/chiffrage" component={() => <ProtectedRoute component={Chiffrage} />} />
-      {/* Sous-étapes des Appels d'Offres - TODO: Create missing components */}
+      {/* Sous-étapes des Appels d'Offres */}
+      <Route path="/offers/validation" component={() => <ProtectedRoute component={ValidationList} />} />
+      <Route path="/offers/transform" component={() => <ProtectedRoute component={TransformList} />} />
+      <Route path="/offers/chiffrage" component={() => <ProtectedRoute component={ChiffrageList} />} />
       <Route path="/offers/create" component={() => <ProtectedRoute component={CreateAO} />} />
       <Route path="/offers/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
       <Route path="/projects" component={() => <ProtectedRoute component={Projects} />} />
       <Route path="/projects/:id" component={() => <ProtectedRoute component={ProjectDetail} />} />
       <Route path="/projects/:id/planning" component={() => <ProtectedRoute component={Planning} />} />
       {/* Sous-étapes des Projets */}
-      <Route path="/projects/study" component={() => <ProtectedRoute component={Projects} />} />
+      <Route path="/projects/study" component={() => <ProtectedRoute component={ProjectPlanning} />} />
       <Route path="/projects/planning" component={() => <ProtectedRoute component={ProjectPlanning} />} />
-      <Route path="/projects/supply" component={() => <ProtectedRoute component={Suppliers} />} />
-      <Route path="/projects/worksite" component={() => <ProtectedRoute component={Projects} />} />
+      <Route path="/projects/supply" component={() => <ProtectedRoute component={Projects} />} />
+      <Route path="/projects/worksite" component={() => <ProtectedRoute component={ProjectPlanning} />} />
       <Route path="/projects/support" component={() => <ProtectedRoute component={Projects} />} />
       {/* Routes du workflow - TODO: Create missing components */}
-      {/* <Route path="/workflow/etude-technique" component={() => <ProtectedRoute component={EtudeTechnique} />} /> */}
+      <Route path="/workflow/etude-technique" component={() => <ProtectedRoute component={EtudeTechnique} />} />
       {/* <Route path="/workflow/chiffrage" component={() => <ProtectedRoute component={ChiffrageWorkflow} />} /> */}
       {/* <Route path="/workflow/envoi-devis" component={() => <ProtectedRoute component={EnvoiDevis} />} /> */}
       {/* <Route path="/workflow/planification" component={() => <ProtectedRoute component={PlanificationWorkflow} />} /> */}

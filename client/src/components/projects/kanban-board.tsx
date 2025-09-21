@@ -16,7 +16,7 @@ import {
   GripVertical
 } from 'lucide-react'
 
-type ProjectStatus = 'etude' | 'planification' | 'approvisionnement' | 'realisation' | 'sav'
+type ProjectStatus = 'etude' | 'planification' | 'approvisionnement' | 'chantier' | 'sav'
 
 interface KanbanColumn {
   id: ProjectStatus
@@ -45,8 +45,8 @@ const columns: KanbanColumn[] = [
     icon: <Users className="h-4 w-4 text-accent" />
   },
   {
-    id: 'realisation',
-    title: 'Réalisation',
+    id: 'chantier',
+    title: 'Chantier',
     color: 'bg-success/10 border-success/20', 
     icon: <CheckCircle2 className="h-4 w-4 text-success" />
   },
@@ -81,7 +81,7 @@ function ProjectCard({ project, onStatusChange }: ProjectCardProps) {
       case 'etude': return 'bg-primary'
       case 'planification': return 'bg-warning'
       case 'approvisionnement': return 'bg-accent'
-      case 'realisation': return 'bg-success' 
+      case 'chantier': return 'bg-success' 
       case 'sav': return 'bg-secondary'
       default: return 'bg-surface-muted'
     }

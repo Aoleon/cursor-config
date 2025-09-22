@@ -3597,3 +3597,73 @@ export interface ModelSelectionResult {
   appliedRules: string[];
   fallbackAvailable: boolean;
 }
+
+// ========================================
+// SCHEMAS ZOD POUR MOTEUR SQL SÉCURISÉ - CHATBOT SAXIUM
+// ========================================
+
+// Schéma pour requête SQL en langage naturel
+export const sqlQueryRequestSchema = z.object({
+  naturalLanguageQuery: z.string()
+    .min(1, "La requête ne peut pas être vide")
+    .max(5000, "La requête ne peut pas dépasser 5000 caractères"),
+  context: z.string().max(10000).optional(),
+  dryRun: z.boolean().default(false).optional(),
+  maxResults: z.number().min(1).max(10000).optional(),
+  timeoutMs: z.number().min(1000).max(120000).optional() // 1s à 2 minutes
+});
+
+// Schéma pour validation SQL directe
+export const sqlValidationRequestSchema = z.object({
+  sql: z.string()
+    .min(1, "Le SQL ne peut pas être vide")
+    .max(50000, "Le SQL ne peut pas dépasser 50000 caractères"),
+  parameters: z.array(z.any()).optional()
+});
+
+// Types pour les réponses du moteur SQL
+export interface SQLQueryResult {
+  success: boolean;
+  sql?: string;
+  parameters?: any[];
+  results?: any[];
+  executionTime?: number;
+  rbacFiltersApplied?: string[];
+  confidence?: number;
+  warnings?: string[];
+  error?: {
+    type: "validation" | "security" | "rbac" | "execution" | "parsing" | "timeout";
+    message: string;
+    details?: any;
+  };
+  metadata?: {
+    tablesAccessed: string[];
+    columnsAccessed: string[];
+    securityChecks: string[];
+    aiModelUsed: string;
+    cacheHit: boolean;
+  };
+}
+
+export interface SQLValidationResult {
+  isValid: boolean;
+  isSecure: boolean;
+  allowedTables: string[];
+  deniedTables: string[];
+  allowedColumns: string[];
+  deniedColumns: string[];
+  securityViolations: string[];
+  rbacViolations: string[];
+  suggestions?: string[];
+}
+
+// Types pour requêtes
+export type SQLQueryRequest = z.infer<typeof sqlQueryRequestSchema> & {
+  userId: string;
+  userRole: string;
+};
+
+export type SQLValidationRequest = z.infer<typeof sqlValidationRequestSchema> & {
+  userId: string;
+  userRole: string;
+};

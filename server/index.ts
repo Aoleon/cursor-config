@@ -3,7 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { WebSocketManager } from "./websocket";
 import { eventBus } from "./eventBus";
-import { storage } from "./storage";
+import { storage, type IStorage } from "./storage-poc";
 
 // Import des nouveaux middlewares de robustesse
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
@@ -80,21 +80,30 @@ app.use((req, res, next) => {
   const { DateAlertDetectionService } = await import('./services/DateAlertDetectionService');
   const { DateIntelligenceService } = await import('./services/DateIntelligenceService');
   const { MenuiserieDetectionRules } = await import('./services/DateAlertDetectionService');
+  const { AnalyticsService } = await import('./services/AnalyticsService');
+  const { PredictiveEngineService } = await import('./services/PredictiveEngineService');
   
   // Créer les instances des services
   console.log('[System] Initialisation du système de détection d\'alertes...');
   
-  const dateIntelligenceService = new DateIntelligenceService(storage);
-  const menuiserieRules = new MenuiserieDetectionRules(storage);
+  // Cast storage to IStorage to resolve TypeScript interface compatibility issues
+  const storageInterface = storage as IStorage;
+  
+  const dateIntelligenceService = new DateIntelligenceService(storageInterface);
+  const menuiserieRules = new MenuiserieDetectionRules(storageInterface);
+  const analyticsService = new AnalyticsService(storageInterface, eventBus);
+  const predictiveEngineService = new PredictiveEngineService(storageInterface, analyticsService);
   const dateAlertDetectionService = new DateAlertDetectionService(
-    storage,
+    storageInterface,
     eventBus,
     dateIntelligenceService,
-    menuiserieRules
+    menuiserieRules,
+    analyticsService,
+    predictiveEngineService
   );
   
   const periodicDetectionScheduler = new PeriodicDetectionScheduler(
-    storage,
+    storageInterface,
     eventBus,
     dateAlertDetectionService,
     dateIntelligenceService
@@ -130,11 +139,11 @@ app.use((req, res, next) => {
       }
       
       // Vérifier bypass actif pour cet AO
-      const activeBypass = await storage.getActiveBypassForAo(aoId);
+      const activeBypass = await storageInterface.getActiveBypassForAo(aoId);
       if (activeBypass) {
         log(`[EventBus] Alerte supprimée - bypass actif jusqu'à ${activeBypass.until}`);
         // Enregistrer comme supprimée dans l'historique - Option A: AO-scoped avec aoId
-        await storage.addTechnicalAlertHistory(
+        await storageInterface.addTechnicalAlertHistory(
           `ao-suppression-${aoId}`, 
           'suppressed', 
           null, 
@@ -155,7 +164,7 @@ app.use((req, res, next) => {
       const julienUserId = 'julien-lamborot-user-id'; // TODO: récupérer dynamiquement
       
       // Créer alerte en queue
-      const alert = await storage.enqueueTechnicalAlert({
+      const alert = await storageInterface.enqueueTechnicalAlert({
         aoId,
         aoReference,
         score: String(score),

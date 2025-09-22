@@ -20,7 +20,9 @@ import {
   type ProjectTimeline, type DateIntelligenceRule, type DateAlert, projectStatusEnum,
   analyticsFiltersSchema, snapshotRequestSchema, metricQuerySchema, benchmarkQuerySchema,
   insertAlertThresholdSchema, updateAlertThresholdSchema, alertsQuerySchema,
-  type AlertThreshold, type BusinessAlert, type AlertsQuery
+  type AlertThreshold, type BusinessAlert, type AlertsQuery,
+  sqlQueryRequestSchema, sqlValidationRequestSchema, 
+  type SQLQueryRequest, type SQLValidationRequest, type SQLQueryResult, type SQLValidationResult
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -96,8 +98,25 @@ const predictiveEngineService = new PredictiveEngineService(storage, analyticsSe
 // Instance du service IA multi-modèles pour génération SQL intelligente
 import { getAIService } from "./services/AIService";
 import aiServiceRoutes from "./routes/ai-service";
+import { RBACService } from "./services/RBACService";
+import { SQLEngineService } from "./services/SQLEngineService";
 
 const aiService = getAIService(storage);
+
+// ========================================
+// SERVICE RBAC ET MOTEUR SQL SÉCURISÉ - CHATBOT SAXIUM 
+// ========================================
+
+// Instance du service RBAC pour contrôle d'accès
+const rbacService = new RBACService(storage);
+
+// Instance du moteur SQL sécurisé avec IA + RBAC
+const sqlEngineService = new SQLEngineService(
+  aiService,
+  rbacService, 
+  eventBus,
+  storage
+);
 
 // Instance du service de détection d'alertes
 const dateAlertDetectionService = new DateAlertDetectionService(
@@ -5967,6 +5986,118 @@ app.get('/api/alerts/stats', isAuthenticated, async (req: any, res) => {
     });
   }
 });
+
+// ========================================
+// ROUTES MOTEUR SQL SÉCURISÉ - CHATBOT SAXIUM
+// ========================================
+
+// POST /api/sql/query - Exécution requête natural language to SQL
+app.post("/api/sql/query", 
+  isAuthenticated,
+  rateLimits.processing,
+  validateBody(sqlQueryRequestSchema),
+  asyncHandler(async (req: any, res) => {
+    const { naturalLanguageQuery, context, dryRun, maxResults, timeoutMs } = req.body;
+    
+    // Construction de la requête SQL avec métadonnées utilisateur
+    const sqlRequest: SQLQueryRequest = {
+      naturalLanguageQuery,
+      userId: req.session.user?.id || req.user?.id,
+      userRole: req.session.user?.role || req.user?.role || 'user',
+      context,
+      dryRun,
+      maxResults,
+      timeoutMs
+    };
+
+    console.log(`[SQL Engine] Requête NL reçue de ${sqlRequest.userRole}:`, naturalLanguageQuery);
+
+    // Exécution via le moteur SQL sécurisé
+    const result = await sqlEngineService.executeNaturalLanguageQuery(sqlRequest);
+
+    // Réponse standardisée
+    if (result.success) {
+      sendSuccess(res, {
+        sql: result.sql,
+        parameters: result.parameters,
+        results: result.results,
+        executionTime: result.executionTime,
+        rbacFiltersApplied: result.rbacFiltersApplied,
+        confidence: result.confidence,
+        warnings: result.warnings,
+        metadata: result.metadata
+      });
+    } else {
+      // Gestion des erreurs sécurisées (ne pas exposer les détails internes)
+      const statusCode = result.error?.type === 'rbac' ? 403 : 
+                        result.error?.type === 'validation' ? 400 : 500;
+      
+      res.status(statusCode).json({
+        success: false,
+        error: result.error?.message || 'Erreur lors de l\'exécution de la requête',
+        type: result.error?.type || 'internal',
+        warnings: result.warnings
+      });
+    }
+  })
+);
+
+// POST /api/sql/validate - Validation SQL sans exécution  
+app.post("/api/sql/validate",
+  isAuthenticated,
+  rateLimits.general,
+  validateBody(sqlValidationRequestSchema),
+  asyncHandler(async (req: any, res) => {
+    const { sql, parameters } = req.body;
+    
+    // Construction de la requête de validation
+    const validationRequest: SQLValidationRequest = {
+      sql,
+      parameters,
+      userId: req.session.user?.id || req.user?.id,
+      userRole: req.session.user?.role || req.user?.role || 'user'
+    };
+
+    console.log(`[SQL Engine] Validation SQL demandée par ${validationRequest.userRole}`);
+
+    // Validation via le moteur SQL
+    const validationResult = await sqlEngineService.validateSQL(validationRequest);
+
+    sendSuccess(res, {
+      isValid: validationResult.isValid,
+      isSecure: validationResult.isSecure,
+      allowedTables: validationResult.allowedTables,
+      deniedTables: validationResult.deniedTables,
+      allowedColumns: validationResult.allowedColumns,
+      deniedColumns: validationResult.deniedColumns,
+      securityViolations: validationResult.securityViolations,
+      rbacViolations: validationResult.rbacViolations,
+      suggestions: validationResult.suggestions
+    });
+  })
+);
+
+// GET /api/sql/context - Récupération contexte base de données pour IA
+app.get("/api/sql/context",
+  isAuthenticated,
+  rateLimits.general,
+  asyncHandler(async (req: any, res) => {
+    const userId = req.session.user?.id || req.user?.id;
+    const userRole = req.session.user?.role || req.user?.role || 'user';
+
+    console.log(`[SQL Engine] Contexte DB demandé par ${userRole}`);
+
+    // Récupération du contexte filtré par RBAC
+    const contextResult = await sqlEngineService.buildDatabaseContext(userId, userRole);
+
+    sendSuccess(res, {
+      context: contextResult.context,
+      availableTables: contextResult.availableTables,
+      rbacFiltersInfo: contextResult.rbacFiltersInfo,
+      exampleQueries: contextResult.exampleQueries
+    });
+  })
+);
 
   const httpServer = createServer(app);
   return httpServer;

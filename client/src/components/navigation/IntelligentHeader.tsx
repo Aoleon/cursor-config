@@ -16,6 +16,12 @@ import { Link, useLocation } from "wouter";
 // INTERFACE HEADER INTELLIGENT
 // ========================================
 
+// Type local pour éviter les conflits avec UI components
+interface BreadcrumbItemType {
+  label: string;
+  href?: string;
+}
+
 interface IntelligentHeaderProps {
   // Override automatique si besoin
   title?: string;
@@ -63,51 +69,8 @@ export default function IntelligentHeader({
   const [location] = useLocation();
   const isExecutiveDashboard = location.startsWith('/dashboard/executive');
   
-  // Force-override pour Executive Dashboard avec tabs
-  const getExecutiveBreadcrumbs = () => {
-    if (!isExecutiveDashboard) return null;
-    
-    const breadcrumbs = [
-      { label: "Accueil", href: "/" }
-    ];
-    
-    // Détecter l'onglet actif depuis URL
-    const urlParams = new URLSearchParams(location.split('?')[1] || '');
-    const activeTab = urlParams.get('tab');
-    
-    // DEBUG: Ajouter logging pour diagnostiquer
-    console.log('Executive Dashboard Override:', { location, activeTab, urlParams: Object.fromEntries(urlParams) });
-    
-    if (activeTab) {
-      // Si onglet actif, Dashboard Dirigeant devient un lien vers la page principale
-      breadcrumbs.push({ label: "Dashboard Dirigeant", href: "/dashboard/executive" });
-      
-      // Ajouter le segment tab spécifique
-      const tabLabels: Record<string, string> = {
-        "intelligence": "Intelligence Temporelle",
-        "analytics": "Analytics",  
-        "configuration": "Configuration"
-      };
-      
-      const tabLabel = tabLabels[activeTab];
-      if (tabLabel) {
-        breadcrumbs.push({ label: tabLabel });
-        console.log('Executive tab breadcrumb ajouté:', tabLabel);
-      } else {
-        console.log('Aucun label trouvé pour tab:', activeTab);
-      }
-    } else {
-      // Pas d'onglet, Dashboard Dirigeant est la page courante
-      breadcrumbs.push({ label: "Dashboard Dirigeant" });
-    }
-    
-    console.log('Final Executive breadcrumbs:', breadcrumbs);
-    return breadcrumbs;
-  };
-  
-  // Utiliser breadcrumbs personnalisés, Executive fix, ou automatiques
-  const executiveBreadcrumbs = getExecutiveBreadcrumbs();
-  const effectiveBreadcrumbs = customBreadcrumbs || executiveBreadcrumbs || autoBreadcrumbs;
+  // Utiliser breadcrumbs personnalisés ou automatiques
+  const effectiveBreadcrumbs = customBreadcrumbs || autoBreadcrumbs;
   const effectiveTitle = customTitle || autoTitle;
 
   // ========================================
@@ -139,6 +102,48 @@ export default function IntelligentHeader({
   // ========================================
   
   const renderBreadcrumbs = () => {
+    // SOLUTION ULTRA-SIMPLE POUR EXECUTIVE DASHBOARD AVEC ONGLETS
+    if (location.startsWith('/dashboard/executive?tab=')) {
+      // Parser le paramètre tab directement
+      const tabParam = location.match(/[?&]tab=([^&]+)/)?.[1];
+      let tabSegment = "";
+      
+      if (tabParam === 'intelligence') {
+        tabSegment = "Intelligence Temporelle";
+      } else if (tabParam === 'analytics') {
+        tabSegment = "Analytics";
+      } else if (tabParam === 'configuration') {
+        tabSegment = "Configuration";
+      }
+      
+      if (tabSegment) {
+        return (
+          <Breadcrumb className="mt-1" data-testid="intelligent-breadcrumbs">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/">Accueil</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/dashboard/executive">Dashboard Dirigeant</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage data-testid={`breadcrumb-page-${tabSegment.toLowerCase().replace(/\s+/g, '-')}`}>
+                  {tabSegment}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        );
+      }
+    }
+    
+    // LOGIQUE NORMALE POUR AUTRES PAGES
     if (hideBreadcrumbs || effectiveBreadcrumbs.length <= 1) {
       return null;
     }

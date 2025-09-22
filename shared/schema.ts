@@ -3667,3 +3667,319 @@ export type SQLValidationRequest = z.infer<typeof sqlValidationRequestSchema> & 
   userId: string;
   userRole: string;
 };
+
+// ========================================
+// TYPES POUR BUSINESS CONTEXT SERVICE - CONSTRUCTEUR CONTEXTE MÉTIER INTELLIGENT SAXIUM
+// ========================================
+
+// Types de base pour la base de connaissances menuiserie
+export interface MenuiserieMaterial {
+  name: string;
+  aliases: string[];
+  properties: {
+    thermal: number; // Coefficient thermique
+    durability: number; // Durabilité (1-10)
+    cost_category: "economique" | "standard" | "premium";
+    installation_complexity: "simple" | "moyenne" | "complexe";
+  };
+  suppliers: string[];
+  seasonal_constraints?: string[];
+  technical_specs: Record<string, any>;
+}
+
+export interface MenuiserieProcess {
+  phase: "passation" | "etude" | "visa_architecte" | "planification" | "approvisionnement" | "chantier" | "sav";
+  name: string;
+  description: string;
+  typical_duration_days: {
+    min: number;
+    max: number;
+    average: number;
+  };
+  critical_checkpoints: string[];
+  required_roles: string[];
+  dependencies: string[];
+  seasonal_factors?: Record<string, number>; // Facteurs saisonniers (multiplicateurs)
+}
+
+export interface MenuiserieNorm {
+  name: string;
+  code: string;
+  description: string;
+  applicable_materials: string[];
+  applicable_types: string[];
+  mandatory: boolean;
+  check_points: string[];
+  compliance_requirements: string[];
+}
+
+export interface MenuiserieDomain {
+  materials: MenuiserieMaterial[];
+  processes: MenuiserieProcess[];
+  norms: MenuiserieNorm[];
+  seasonal_calendar: {
+    btp_holidays: { start: string; end: string; impact: string }[];
+    weather_constraints: { months: number[]; affected_phases: string[]; impact_factor: number }[];
+    peak_seasons: { months: number[]; demand_factor: number; lead_time_factor: number }[];
+  };
+  terminology: {
+    technical_terms: Record<string, string[]>; // terme -> synonymes
+    sql_to_business: Record<string, string>; // colonne SQL -> terme métier
+    business_to_sql: Record<string, string>; // terme métier -> colonne SQL
+  };
+}
+
+// Types pour les schémas de base de données enrichis
+export interface SchemaWithDescriptions {
+  tableName: string;
+  businessName: string;
+  description: string;
+  columns: {
+    name: string;
+    businessName: string;
+    type: string;
+    description: string;
+    isSensitive: boolean;
+    businessExamples?: string[];
+  }[];
+  relationships: {
+    table: string;
+    type: "one_to_many" | "many_to_one" | "many_to_many";
+    description: string;
+  }[];
+  common_queries: string[];
+  access_patterns: {
+    role: string;
+    typical_queries: string[];
+    restrictions: string[];
+  }[];
+}
+
+// Types pour les exemples de requêtes métier
+export interface QueryExample {
+  id: string;
+  category: "planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes";
+  user_query: string;
+  sql_example: string;
+  explanation: string;
+  applicable_roles: string[];
+  complexity: "simple" | "complex" | "expert";
+  business_value: string;
+  typical_results: string;
+  variations?: string[];
+}
+
+// Types pour le contexte RBAC spécialisé
+export interface RBACContext {
+  user_role: string;
+  accessible_tables: string[];
+  restricted_columns: string[];
+  row_level_filters: Record<string, string>; // table -> condition SQL
+  data_scope: {
+    projects: "own" | "team" | "all";
+    offers: "own" | "team" | "all";
+    financial_data: boolean;
+    sensitive_data: boolean;
+  };
+  context_variables: Record<string, any>; // Variables pour filtres dynamiques
+}
+
+// Interface principale du contexte métier
+export interface BusinessContext {
+  databaseSchemas: SchemaWithDescriptions[];
+  businessExamples: QueryExample[];
+  domainKnowledge: MenuiserieDomain;
+  roleSpecificConstraints: RBACContext;
+  suggestedQueries: string[];
+  temporal_context: {
+    current_season: string;
+    active_constraints: string[];
+    upcoming_deadlines: { type: string; date: Date; impact: string }[];
+    peak_periods: { start: Date; end: Date; factor: number }[];
+  };
+  cache_metadata: {
+    generated_at: Date;
+    expires_at: Date;
+    cache_key: string;
+    version: string;
+  };
+}
+
+// Schémas Zod pour validation
+
+export const businessContextRequestSchema = z.object({
+  user_role: z.string(),
+  query_hint: z.string().optional(),
+  complexity_preference: z.enum(["simple", "complex", "expert"]).optional(),
+  focus_areas: z.array(z.enum(["planning", "finances", "ressources", "qualite", "performance", "alertes"])).optional(),
+  include_temporal: z.boolean().default(true),
+  cache_duration_minutes: z.number().min(1).max(120).default(60),
+  personalization_level: z.enum(["basic", "advanced", "expert"]).default("basic")
+});
+
+export const contextEnrichmentRequestSchema = z.object({
+  original_query: z.string(),
+  user_role: z.string(),
+  current_context: z.string().optional(),
+  enhancement_mode: z.enum(["schema_only", "examples_only", "full", "adaptive"]).default("adaptive"),
+  max_examples: z.number().min(1).max(20).default(5),
+  include_explanations: z.boolean().default(true),
+  domain_focus: z.array(z.string()).optional()
+});
+
+export const adaptiveLearningUpdateSchema = z.object({
+  user_role: z.string(),
+  query_pattern: z.string(),
+  success_rating: z.number().min(0).max(5),
+  execution_time_ms: z.number(),
+  result_relevance: z.number().min(0).max(1),
+  feedback_notes: z.string().optional(),
+  improvement_suggestions: z.array(z.string()).optional()
+});
+
+// Types TypeScript pour les requêtes/réponses
+
+export type BusinessContextRequest = z.infer<typeof businessContextRequestSchema> & {
+  userId: string;
+  sessionId?: string;
+};
+
+export type ContextEnrichmentRequest = z.infer<typeof contextEnrichmentRequestSchema> & {
+  userId: string;
+};
+
+export type AdaptiveLearningUpdate = z.infer<typeof adaptiveLearningUpdateSchema> & {
+  userId: string;
+  timestamp: Date;
+};
+
+// Types pour les réponses du service
+export interface BusinessContextResponse {
+  success: boolean;
+  context?: BusinessContext;
+  enriched_query?: string;
+  performance_metrics: {
+    generation_time_ms: number;
+    cache_hit: boolean;
+    schemas_loaded: number;
+    examples_included: number;
+  };
+  error?: {
+    type: "validation" | "rbac" | "cache" | "domain_knowledge" | "unknown";
+    message: string;
+    details?: any;
+  };
+}
+
+export interface ContextEnrichmentResponse {
+  success: boolean;
+  enriched_context?: string;
+  suggested_refinements?: string[];
+  confidence_score?: number;
+  performance_metrics: {
+    enrichment_time_ms: number;
+    tokens_added: number;
+    complexity_increased: boolean;
+  };
+  error?: {
+    type: "validation" | "enrichment" | "domain_matching" | "unknown";
+    message: string;
+    details?: any;
+  };
+}
+
+export interface AdaptiveLearningResponse {
+  success: boolean;
+  learning_applied: boolean;
+  updated_patterns: string[];
+  optimization_suggestions?: string[];
+  error?: {
+    type: "validation" | "learning" | "persistence" | "unknown";
+    message: string;
+    details?: any;
+  };
+}
+
+// Types pour les métriques et analytics du service contexte métier
+export interface BusinessContextMetrics {
+  total_requests: number;
+  cache_hit_rate: number;
+  avg_generation_time_ms: number;
+  role_distribution: Record<string, number>;
+  most_requested_domains: Record<string, number>;
+  context_effectiveness: {
+    avg_confidence_score: number;
+    user_satisfaction_rate: number;
+    query_success_rate: number;
+  };
+  adaptive_learning_stats: {
+    patterns_learned: number;
+    improvements_applied: number;
+    personalization_level: Record<string, number>;
+  };
+}
+
+// ========================================
+// TABLES POUR STOCKAGE ET CACHE DU BUSINESS CONTEXT SERVICE
+// ========================================
+
+// Table pour cache du contexte métier
+export const businessContextCache = pgTable("business_context_cache", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  userRole: varchar("user_role", { length: 50 }).notNull(),
+  contextKey: varchar("context_key", { length: 500 }).notNull(),
+  contextData: jsonb("context_data").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  accessCount: integer("access_count").default(0).notNull(),
+  lastAccessed: timestamp("last_accessed").defaultNow().notNull()
+});
+
+// Table pour les patterns d'apprentissage adaptatif
+export const adaptiveLearningPatterns = pgTable("adaptive_learning_patterns", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  userRole: varchar("user_role", { length: 50 }).notNull(),
+  queryPattern: text("query_pattern").notNull(),
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }).notNull(),
+  avgExecutionTime: integer("avg_execution_time_ms").notNull(),
+  usageCount: integer("usage_count").default(1).notNull(),
+  lastUsed: timestamp("last_used").defaultNow().notNull(),
+  optimizationSuggestions: jsonb("optimization_suggestions"),
+  contextEnhancements: jsonb("context_enhancements"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// Table pour métriques du service contexte métier
+export const businessContextMetricsLog = pgTable("business_context_metrics_log", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  userRole: varchar("user_role", { length: 50 }).notNull(),
+  requestType: varchar("request_type", { length: 100 }).notNull(),
+  generationTimeMs: integer("generation_time_ms").notNull(),
+  cacheHit: boolean("cache_hit").notNull(),
+  schemasLoaded: integer("schemas_loaded").notNull(),
+  examplesIncluded: integer("examples_included").notNull(),
+  confidenceScore: decimal("confidence_score", { precision: 3, scale: 2 }),
+  contextSize: integer("context_size_chars").notNull(),
+  domainFocus: jsonb("domain_focus"),
+  queryComplexity: varchar("query_complexity", { length: 20 }),
+  timestamp: timestamp("timestamp").defaultNow().notNull()
+});
+
+// Schémas Zod pour les tables
+export const insertBusinessContextCacheSchema = createInsertSchema(businessContextCache);
+export const insertAdaptiveLearningPatternsSchema = createInsertSchema(adaptiveLearningPatterns);
+export const insertBusinessContextMetricsLogSchema = createInsertSchema(businessContextMetricsLog);
+
+// Types TypeScript pour les tables
+export type BusinessContextCache = typeof businessContextCache.$inferSelect;
+export type InsertBusinessContextCache = z.infer<typeof insertBusinessContextCacheSchema>;
+
+export type AdaptiveLearningPatterns = typeof adaptiveLearningPatterns.$inferSelect;
+export type InsertAdaptiveLearningPatterns = z.infer<typeof insertAdaptiveLearningPatternsSchema>;
+
+export type BusinessContextMetricsLog = typeof businessContextMetricsLog.$inferSelect;
+export type InsertBusinessContextMetricsLog = z.infer<typeof insertBusinessContextMetricsLogSchema>;

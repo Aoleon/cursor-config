@@ -1,12 +1,13 @@
 import { AIService } from "./AIService";
 import { RBACService } from "./RBACService";
+import { BusinessContextService } from "./BusinessContextService";
 import { EventBus } from "../eventBus";
 import { IStorage } from "../storage";
 import { db } from "../db";
 import { sql } from "drizzle-orm";
 import crypto from "crypto";
 import { z } from "zod";
-import sqlParserModule from "node-sql-parser";
+import sqlParserModule from 'node-sql-parser';
 import type {
   AiQueryRequest,
   AiQueryResponse,
@@ -66,17 +67,20 @@ const SENSITIVE_COLUMNS = {
 export class SQLEngineService {
   private aiService: AIService;
   private rbacService: RBACService;
+  private businessContextService: BusinessContextService;
   private eventBus: EventBus;
   private storage: IStorage;
 
   constructor(
     aiService: AIService, 
     rbacService: RBACService, 
+    businessContextService: BusinessContextService,
     eventBus: EventBus,
     storage: IStorage
   ) {
     this.aiService = aiService;
     this.rbacService = rbacService;
+    this.businessContextService = businessContextService;
     this.eventBus = eventBus;
     this.storage = storage;
   }
@@ -295,78 +299,70 @@ export class SQLEngineService {
   // ========================================
 
   /**
-   * Injecte automatiquement le schéma DB + exemples métier menuiserie
+   * Utilise BusinessContextService pour générer un contexte métier intelligent et adaptatif
    */
   private async buildIntelligentContext(request: SQLQueryRequest): Promise<string> {
-    let context = request.context || "";
+    try {
+      console.log(`[SQLEngine] Génération contexte intelligent pour ${request.userId} (${request.userRole})`);
+      
+      // Utilisation du BusinessContextService pour un contexte complet et adaptatif
+      const enrichedContext = await this.businessContextService.buildIntelligentContextForSQL(
+        request.userId,
+        request.userRole,
+        request.naturalLanguageQuery
+      );
 
-    // 1. Schéma de base métier Saxium/Menuiserie
-    const baseSchema = `
-SCHÉMA BASE DE DONNÉES SAXIUM (Menuiserie JLM):
+      // Ajout du contexte utilisateur s'il existe
+      const userContext = request.context ? `\nCONTEXTE UTILISATEUR:\n${request.context}\n` : "";
 
--- Tables principales --
-PROJECTS: Projets de menuiserie (id, nom, status, responsableUserId, montantTotal, dateEcheance, departement)
-  Status: passation, etude, visa_architecte, planification, approvisionnement, chantier, sav
+      // Instructions techniques pour génération SQL
+      const sqlInstructions = `
+INSTRUCTIONS TECHNIQUES SQL:
+- Générer UNIQUEMENT du SQL SELECT (read-only strict)
+- Utiliser paramètres ($1, $2...) pour valeurs dynamiques 
+- Limiter résultats avec LIMIT ${request.userRole === 'admin' ? MAX_RESULTS_ADMIN : MAX_RESULTS_DEFAULT}
+- Format de sortie: PostgreSQL standard
+- Gestion des erreurs: SQL syntaxiquement correct obligatoire
+- Optimisation: INDEX sur colonnes de filtrage principales
 
-OFFERS: Offres commerciales (id, nom, status, userId, montantEstime, dateEcheance, clientNom)
-  Status: brouillon, etude_technique, en_cours_chiffrage, valide, signe, transforme_en_projet
-
-AOS: Appels d'offres (id, reference, titre, description, dateReception, dateRemise, montantEstime)
-
-CHIFFRAGE_ELEMENTS: Éléments de chiffrage (id, offerId, designation, quantite, prixUnitaire, materialType)
-  MaterialType: pvc, bois, aluminium, acier, composite, mixte_bois_alu
-
-TEAM_RESOURCES: Équipe (id, nom, role, competences, chargeActuelle, capaciteMax)
-  Roles: chef_projet, be_senior, be_junior, technicien
-
-PROJECT_TASKS: Tâches projet (id, projectId, nom, dateDebut, dateFin, status, assigneeUserId)
-  Status: a_faire, en_cours, termine, en_retard
-
--- Colonnes de filtrage RBAC communes --
-- Projects/Offers/Tasks: responsableUserId, assigneeUserId (filtre automatique sauf admin)
-- Tous: departement (si contexte géographique)
+SÉCURITÉ ET RBAC:
+- Appliquer filtres user_id automatiques sauf admin
+- Respecter contraintes de rôle définies dans le contexte métier
+- Éviter exposition données sensibles selon rôle
+- Validation types et contraintes métier avant exécution
 `;
 
-    // 2. Exemples de requêtes métier courantes
-    const businessExamples = `
-EXEMPLES REQUÊTES MÉTIER COURANTES:
+      return `${userContext}
 
-Chef de projet:
-- "Mes projets en retard" → SELECT * FROM projects WHERE responsableUserId = $userId AND status IN ('planification', 'chantier') AND dateEcheance < NOW()
-- "Charge équipe cette semaine" → SELECT tr.nom, tr.chargeActuelle FROM team_resources tr WHERE tr.competences LIKE '%' || $userRole || '%'
+${enrichedContext}
 
-Admin/Manager:
-- "Rentabilité par matériau" → SELECT ce.materialType, AVG(ce.prixUnitaire), COUNT(*) FROM chiffrage_elements ce GROUP BY materialType
-- "Projets par département" → SELECT departement, COUNT(*), AVG(montantTotal) FROM projects GROUP BY departement
+${sqlInstructions}`;
 
-Analyses temporelles:
-- "Évolution CA mensuel" → SELECT DATE_TRUNC('month', dateSignature), SUM(montantTotal) FROM offers WHERE status = 'signe' GROUP BY 1
-`;
+    } catch (error) {
+      console.error(`[SQLEngine] Erreur génération contexte intelligent:`, error);
+      
+      // Fallback vers contexte basique en cas d'erreur
+      return this.buildFallbackContext(request);
+    }
+  }
 
-    // 3. Contraintes métier spécifiques
-    const businessConstraints = `
-CONTRAINTES MÉTIER IMPORTANTES:
-- Montants toujours en EUR (colonne montantTotal, montantEstime, prixUnitaire)
-- Dates au format ISO (dateEcheance, dateDebut, dateFin, dateSignature)
-- Départements codés sur 2 chiffres ('01' à '95')
-- Status enum stricts (voir valeurs ci-dessus)
-- User IDs format UUID
-`;
+  /**
+   * Contexte de fallback en cas d'erreur du BusinessContextService
+   */
+  private buildFallbackContext(request: SQLQueryRequest): string {
+    const userContext = request.context ? `\nCONTEXTE UTILISATEUR:\n${request.context}\n` : "";
+    
+    return `${userContext}
 
-    // 4. Assemblage du contexte final
-    return `${context}
+SCHÉMA BASIQUE SAXIUM (Mode dégradé):
+Tables principales: projects, offers, aos, team_resources, project_tasks
+Colonnes courantes: id, nom, status, responsableUserId, dateEcheance, montantTotal
 
-${baseSchema}
-
-${businessExamples}
-
-${businessConstraints}
-
-INSTRUCTIONS SPÉCIALES:
-- Générer UNIQUEMENT du SQL SELECT (read-only)
-- Appliquer WHERE user_id = $1 pour données personnelles sauf admin
-- Limiter résultats (LIMIT ${request.userRole === 'admin' ? MAX_RESULTS_ADMIN : MAX_RESULTS_DEFAULT})
-- Utiliser paramètres ($1, $2...) pour valeurs dynamiques
+INSTRUCTIONS DE BASE:
+- SQL SELECT uniquement
+- LIMIT ${request.userRole === 'admin' ? MAX_RESULTS_ADMIN : MAX_RESULTS_DEFAULT}
+- Filtres RBAC: WHERE responsableUserId = $1 (sauf admin)
+- Format PostgreSQL standard
 - Préférer JOINs explicites aux sous-requêtes
 - Gérer NULL/dates invalides avec COALESCE/CASE WHEN
 `;

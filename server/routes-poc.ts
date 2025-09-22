@@ -22,7 +22,9 @@ import {
   insertAlertThresholdSchema, updateAlertThresholdSchema, alertsQuerySchema,
   type AlertThreshold, type BusinessAlert, type AlertsQuery,
   sqlQueryRequestSchema, sqlValidationRequestSchema, 
-  type SQLQueryRequest, type SQLValidationRequest, type SQLQueryResult, type SQLValidationResult
+  type SQLQueryRequest, type SQLValidationRequest, type SQLQueryResult, type SQLValidationResult,
+  businessContextRequestSchema, contextEnrichmentRequestSchema, adaptiveLearningUpdateSchema,
+  type BusinessContextRequest, type ContextEnrichmentRequest, type AdaptiveLearningUpdate
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -110,10 +112,15 @@ const aiService = getAIService(storage);
 // Instance du service RBAC pour contrôle d'accès
 const rbacService = new RBACService(storage);
 
-// Instance du moteur SQL sécurisé avec IA + RBAC
+// Instance du service de contexte métier intelligent
+import { BusinessContextService } from "./services/BusinessContextService";
+const businessContextService = new BusinessContextService(storage, rbacService, eventBus);
+
+// Instance du moteur SQL sécurisé avec IA + RBAC + Contexte métier
 const sqlEngineService = new SQLEngineService(
   aiService,
-  rbacService, 
+  rbacService,
+  businessContextService,
   eventBus,
   storage
 );
@@ -6096,6 +6103,216 @@ app.get("/api/sql/context",
       rbacFiltersInfo: contextResult.rbacFiltersInfo,
       exampleQueries: contextResult.exampleQueries
     });
+  })
+);
+
+// ========================================
+// ROUTES BUSINESS CONTEXT SERVICE - CONSTRUCTEUR CONTEXTE MÉTIER INTELLIGENT
+// ========================================
+
+// POST /api/business-context/generate - Génération contexte métier complet
+app.post("/api/business-context/generate",
+  isAuthenticated,
+  rateLimits.processing,
+  validateBody(businessContextRequestSchema),
+  asyncHandler(async (req: any, res) => {
+    const requestBody = req.body;
+    
+    // Construction de la requête avec métadonnées utilisateur
+    const contextRequest: BusinessContextRequest = {
+      ...requestBody,
+      userId: req.session.user?.id || req.user?.id,
+      sessionId: req.sessionID
+    };
+
+    console.log(`[BusinessContext] Génération contexte pour ${contextRequest.userId} (${contextRequest.user_role})`);
+
+    // Génération du contexte via BusinessContextService
+    const result = await businessContextService.generateBusinessContext(contextRequest);
+
+    if (result.success && result.context) {
+      sendSuccess(res, {
+        context: result.context,
+        performance_metrics: result.performance_metrics,
+        cache_hit: result.performance_metrics.cache_hit,
+        generation_time_ms: result.performance_metrics.generation_time_ms,
+        schemas_loaded: result.performance_metrics.schemas_loaded,
+        examples_included: result.performance_metrics.examples_included
+      });
+    } else {
+      const statusCode = result.error?.type === 'rbac' ? 403 : 
+                        result.error?.type === 'validation' ? 400 : 500;
+      
+      res.status(statusCode).json({
+        success: false,
+        error: result.error?.message || 'Erreur lors de la génération du contexte métier',
+        type: result.error?.type || 'internal',
+        performance_metrics: result.performance_metrics
+      });
+    }
+  })
+);
+
+// POST /api/business-context/enrich - Enrichissement contexte existant
+app.post("/api/business-context/enrich",
+  isAuthenticated,
+  rateLimits.general,
+  validateBody(contextEnrichmentRequestSchema),
+  asyncHandler(async (req: any, res) => {
+    const requestBody = req.body;
+    
+    // Construction de la requête d'enrichissement
+    const enrichmentRequest: ContextEnrichmentRequest = {
+      ...requestBody,
+      userId: req.session.user?.id || req.user?.id
+    };
+
+    console.log(`[BusinessContext] Enrichissement contexte pour ${enrichmentRequest.userId}`);
+
+    // Enrichissement via BusinessContextService
+    const result = await businessContextService.enrichContext(enrichmentRequest);
+
+    if (result.success) {
+      sendSuccess(res, {
+        enriched_context: result.enriched_context,
+        suggested_refinements: result.suggested_refinements,
+        confidence_score: result.confidence_score,
+        performance_metrics: result.performance_metrics
+      });
+    } else {
+      const statusCode = result.error?.type === 'validation' ? 400 : 500;
+      
+      res.status(statusCode).json({
+        success: false,
+        error: result.error?.message || 'Erreur lors de l\'enrichissement du contexte',
+        type: result.error?.type || 'internal',
+        performance_metrics: result.performance_metrics
+      });
+    }
+  })
+);
+
+// POST /api/business-context/learning/update - Mise à jour apprentissage adaptatif
+app.post("/api/business-context/learning/update",
+  isAuthenticated,
+  rateLimits.general,
+  validateBody(adaptiveLearningUpdateSchema),
+  asyncHandler(async (req: any, res) => {
+    const requestBody = req.body;
+    
+    // Construction de la mise à jour d'apprentissage
+    const learningUpdate: AdaptiveLearningUpdate = {
+      ...requestBody,
+      userId: req.session.user?.id || req.user?.id,
+      timestamp: new Date()
+    };
+
+    console.log(`[BusinessContext] Mise à jour apprentissage pour ${learningUpdate.userId} (${learningUpdate.user_role})`);
+
+    // Mise à jour via BusinessContextService
+    const result = await businessContextService.updateAdaptiveLearning(learningUpdate);
+
+    if (result.success) {
+      sendSuccess(res, {
+        learning_applied: result.learning_applied,
+        updated_patterns: result.updated_patterns,
+        optimization_suggestions: result.optimization_suggestions
+      });
+    } else {
+      const statusCode = result.error?.type === 'validation' ? 400 : 500;
+      
+      res.status(statusCode).json({
+        success: false,
+        error: result.error?.message || 'Erreur lors de la mise à jour de l\'apprentissage',
+        type: result.error?.type || 'internal'
+      });
+    }
+  })
+);
+
+// GET /api/business-context/metrics - Métriques du service
+app.get("/api/business-context/metrics",
+  isAuthenticated,
+  rateLimits.analytics,
+  asyncHandler(async (req: any, res) => {
+    // Vérification permission admin/manager pour métriques
+    const userRole = req.session.user?.role || req.user?.role || 'user';
+    if (!['admin', 'chef_projet'].includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès aux métriques réservé aux administrateurs et chefs de projet'
+      });
+    }
+
+    console.log(`[BusinessContext] Récupération métriques demandée par ${userRole}`);
+
+    try {
+      // Récupération des métriques via BusinessContextService
+      const metrics = await businessContextService.getServiceMetrics();
+
+      sendSuccess(res, {
+        metrics,
+        generated_at: new Date().toISOString(),
+        user_role: userRole
+      });
+
+    } catch (error) {
+      console.error('[BusinessContext] Erreur récupération métriques:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la récupération des métriques'
+      });
+    }
+  })
+);
+
+// GET /api/business-context/knowledge/materials - Recherche matériaux menuiserie
+app.get("/api/business-context/knowledge/materials",
+  isAuthenticated,
+  rateLimits.general,
+  validateQuery(z.object({
+    search: z.string().optional(),
+    type: z.enum(['PVC', 'Aluminium', 'Bois', 'Composites', 'Acier']).optional(),
+    category: z.enum(['economique', 'standard', 'premium']).optional()
+  })),
+  asyncHandler(async (req: any, res) => {
+    const { search, type, category } = req.query;
+    
+    try {
+      // Import de la base de connaissances
+      const { MENUISERIE_KNOWLEDGE_BASE, findMaterialByName } = await import('./services/MenuiserieKnowledgeBase');
+      
+      let materials = MENUISERIE_KNOWLEDGE_BASE.materials;
+      
+      // Filtrage par recherche
+      if (search) {
+        const material = findMaterialByName(search);
+        materials = material ? [material] : [];
+      }
+      
+      // Filtrage par type
+      if (type) {
+        materials = materials.filter(m => m.name === type);
+      }
+      
+      // Filtrage par catégorie
+      if (category) {
+        materials = materials.filter(m => m.properties.cost_category === category);
+      }
+      
+      sendSuccess(res, {
+        materials: materials.slice(0, 20), // Limite à 20 résultats
+        total: materials.length,
+        filters_applied: { search, type, category }
+      });
+      
+    } catch (error) {
+      console.error('[BusinessContext] Erreur recherche matériaux:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la recherche de matériaux'
+      });
+    }
   })
 );
 

@@ -7,9 +7,10 @@ import { DateIntelligenceService } from '../services/DateIntelligenceService';
 import { eventBus } from '../eventBus';
 import { storage } from '../storage-poc';
 import { initializeDefaultRules } from '../seeders/dateIntelligenceRulesSeeder';
+import type { IStorage } from '../storage-poc';
 
 // Test d'intégration complet du système d'intelligence temporelle
-export async function runIntegrationTest() {
+async function runIntegrationTest() {
   console.log('\n========================================');
   console.log('🧪 TEST INTÉGRATION INTELLIGENCE TEMPORELLE');
   console.log('========================================\n');
@@ -26,7 +27,7 @@ export async function runIntegrationTest() {
 
     // 2. Créer instance du service avec EventBus
     console.log('\n2️⃣ Création service DateIntelligenceService...');
-    const dateService = new DateIntelligenceService();
+    const dateService = new DateIntelligenceService(storage as IStorage);
     console.log('   ✅ Service créé avec intégration EventBus');
 
     // 3. Souscrire aux événements d'intelligence temporelle pour test
@@ -68,7 +69,7 @@ export async function runIntegrationTest() {
       const timeline = await dateService.generateProjectTimeline(testProjectId);
       console.log(`   ✅ Timeline générée: ${timeline.length} phases`);
     } catch (error) {
-      console.log(`   ℹ️  Timeline: ${error.message} (normal pour projet test)`);
+      console.log(`   ℹ️  Timeline: ${(error as Error).message} (normal pour projet test)`);
     }
 
     // 5. Test détection d'issues avec événements
@@ -79,11 +80,18 @@ export async function runIntegrationTest() {
         id: 'test1',
         projectId: testProjectId,
         phase: 'etude' as const,
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // +5 jours
-        duration: 5,
+        createdBy: 'test-user',
+        plannedStartDate: new Date(),
+        plannedEndDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // +5 jours
+        actualStartDate: new Date(),
+        actualEndDate: null,
+        durationEstimate: 5,
+        confidence: '0.80',
+        calculationMethod: 'automatic' as const,
+        dependsOn: [],
+        riskLevel: 'normale' as const,
+        bufferDays: 0,
         autoCalculated: true,
-        calculationMethod: 'test',
         lastCalculatedAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date()
@@ -98,11 +106,13 @@ export async function runIntegrationTest() {
     
     const testAlert = await storage.createDateAlert({
       title: 'Test Alerte Intelligence Temporelle',
-      description: 'Alerte de test pour validation EventBus',
+      message: 'Alerte de test pour validation EventBus',
+      alertType: 'delay_risk',
       entityType: 'project',
       entityId: testProjectId,
       severity: 'warning',
-      dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // +1 jour
+      status: 'active',
+      targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // +1 jour
     });
 
     // Publier événement d'alerte créée
@@ -111,7 +121,7 @@ export async function runIntegrationTest() {
       alertTitle: testAlert.title,
       entityType: testAlert.entityType,
       entityId: testAlert.entityId,
-      severity: testAlert.severity,
+      severity: testAlert.severity as 'info' | 'warning' | 'error',
       projectId: testProjectId
     });
     
@@ -186,10 +196,10 @@ export async function runIntegrationTest() {
 
   } catch (error) {
     console.error('\n❌ ÉCHEC TEST D\'INTÉGRATION:', error);
-    console.error('   Détails:', error.message);
+    console.error('   Détails:', (error as Error).message);
     return {
       success: false,
-      error: error.message,
+      error: (error as Error).message,
       healthScore: 0
     };
   }

@@ -4,7 +4,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,23 +47,21 @@ export default function Projects() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <Header 
-          title="Gestion de Projets"
-          breadcrumbs={[
-            { label: "Accueil", href: "/" },
-            { label: "Projets" }
-          ]}
-          actions={[
-            {
-              label: "Nouveau Projet",
-              variant: "default",
-              icon: "plus"
-            }
-          ]}
-        />
+    <>
+      <Header 
+        title="Gestion de Projets"
+        breadcrumbs={[
+          { label: "Accueil", href: "/" },
+          { label: "Projets" }
+        ]}
+        actions={[
+          {
+            label: "Nouveau Projet",
+            variant: "default",
+            icon: "plus"
+          }
+        ]}
+      />
         
         <div className="px-6 py-6">
           <Tabs defaultValue="timeline" className="space-y-6">
@@ -190,7 +187,6 @@ export default function Projects() {
             </TabsContent>
           </Tabs>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

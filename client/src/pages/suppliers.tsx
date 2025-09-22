@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Truck, Plus, Phone, Mail, MapPin, Clock, Star } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import {
   Dialog,
@@ -242,18 +241,16 @@ export default function Suppliers() {
   };
 
   return (
-    <div className="min-h-screen flex bg-surface">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <Header 
-          title="Fournisseurs"
-          breadcrumbs={[
-            { label: "Accueil", href: "/" },
-            { label: "Fournisseurs" }
-          ]}
-        />
-        
-        <div className="px-6 py-6 space-y-6">
+    <>
+      <Header 
+        title="Fournisseurs"
+        breadcrumbs={[
+          { label: "Accueil", href: "/" },
+          { label: "Fournisseurs" }
+        ]}
+      />
+      
+      <div className="px-6 py-6 space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-on-surface">Fournisseurs</h1>
@@ -513,7 +510,6 @@ export default function Suppliers() {
         </CardContent>
       </Card>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

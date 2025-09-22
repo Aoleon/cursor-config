@@ -639,7 +639,7 @@ export default function GanttChart({
 
       <CardContent>
         {/* En-tête du calendrier */}
-        <div className="grid grid-cols-12 gap-1 mb-4">
+        <div className="grid grid-cols-10 gap-1 mb-4">
           <div className="col-span-3 text-sm font-medium text-gray-700 p-2">
             Projet / Tâche
           </div>
@@ -671,9 +671,6 @@ export default function GanttChart({
               ))
             )}
           </div>
-          <div className="col-span-2 text-sm font-medium text-gray-700 p-2">
-            Charge
-          </div>
           <div className="col-span-1 text-sm font-medium text-gray-700 p-2 text-center">
             Niveau
           </div>
@@ -699,7 +696,7 @@ export default function GanttChart({
             const itemWorkload = itemWorkloads[item.id];
             
             return (
-              <div key={item.id} className="grid grid-cols-12 gap-1 group">
+              <div key={item.id} className="grid grid-cols-10 gap-1 group">
                 {/* Nom de l'élément avec hiérarchie */}
                 <div className="col-span-3 flex items-center justify-between p-2">
                   <div className="flex items-center space-x-1">
@@ -808,39 +805,144 @@ export default function GanttChart({
                   )}
                 </div>
 
-                {/* Mini-histogramme de charge */}
-                <div className="col-span-2 flex items-center justify-center">
-                  {itemWorkload ? (
-                    <MiniWorkloadHistogram
-                      itemWorkload={itemWorkload}
-                      periodInfo={periodInfo}
-                      viewMode={viewMode}
-                      className="border border-gray-200 rounded bg-white"
-                      data-testid={`workload-histogram-${item.id}`}
-                    />
-                  ) : (
-                    <div className="text-xs text-gray-400 p-1">N/A</div>
-                  )}
-                </div>
-
-                {/* Badge de charge */}
+                {/* Niveau hiérarchique ou statut */}
                 <div className="col-span-1 flex items-center justify-center">
-                  {itemWorkload ? (
-                    <WorkloadBadge
-                      itemWorkload={itemWorkload}
-                      getItemWorkloadColor={getItemWorkloadColor}
-                      className="text-xs"
-                      data-testid={`workload-badge-${item.id}`}
-                    />
+                  {enableHierarchy && (item as HierarchyItem).level > 0 ? (
+                    <Badge variant="outline" className="text-xs px-1 py-0">
+                      L{(item as HierarchyItem).level}
+                    </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-xs text-gray-400">
-                      0%
+                    <Badge variant="outline" className="text-xs">
+                      {item.progress !== undefined ? `${item.progress}%` : '-'}
                     </Badge>
                   )}
                 </div>
               </div>
             );
           })}
+        </div>
+
+        {/* Ligne de charge cumulée pour tous les projets */}
+        <div className="mt-6 border-t border-gray-300 pt-4">
+          <div className="grid grid-cols-10 gap-1 mb-2">
+            <div className="col-span-3 text-sm font-medium text-gray-700 p-2">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+                <span>Charge Cumulée (tous projets)</span>
+              </div>
+            </div>
+            <div className="col-span-6 relative">
+              {/* Graphique de charge cumulée */}
+              <div className="h-16 bg-gray-50 border border-gray-200 rounded relative overflow-hidden">
+                {(() => {
+                  // Calculer la charge cumulée par jour/période
+                  const cumulativeWorkload: { [key: string]: number } = {};
+                  let maxCumulativeLoad = 0;
+
+                  // Parcourir tous les jours de la période
+                  periodInfo.periodDays.forEach((day) => {
+                    const dateKey = format(day, 'yyyy-MM-dd');
+                    let dailyLoad = 0;
+
+                    // Sommer les charges de tous les items pour cette date
+                    Object.values(itemWorkloads).forEach((workload) => {
+                      if (workload.dailyDistribution[dateKey]) {
+                        dailyLoad += workload.dailyDistribution[dateKey];
+                      }
+                    });
+
+                    cumulativeWorkload[dateKey] = dailyLoad;
+                    maxCumulativeLoad = Math.max(maxCumulativeLoad, dailyLoad);
+                  });
+
+                  // Générer les barres du graphique
+                  return periodInfo.periodDays.map((day, index) => {
+                    const dateKey = format(day, 'yyyy-MM-dd');
+                    const dayLoad = cumulativeWorkload[dateKey] || 0;
+                    const heightPercent = maxCumulativeLoad > 0 ? (dayLoad / maxCumulativeLoad) * 100 : 0;
+                    
+                    // Couleur basée sur la charge (seuils adaptatifs)
+                    let barColor = 'bg-gray-300';
+                    if (dayLoad > 0) {
+                      const loadIntensity = maxCumulativeLoad > 0 ? (dayLoad / maxCumulativeLoad) : 0;
+                      if (loadIntensity <= 0.4) barColor = 'bg-green-500';
+                      else if (loadIntensity <= 0.7) barColor = 'bg-yellow-500';
+                      else if (loadIntensity <= 0.9) barColor = 'bg-orange-500';
+                      else barColor = 'bg-red-500';
+                    }
+
+                    const dayWidth = 100 / periodInfo.totalDays;
+                    
+                    return (
+                      <div
+                        key={index}
+                        className={`absolute bottom-0 ${barColor} border-r border-white transition-all hover:opacity-75`}
+                        style={{
+                          left: `${index * dayWidth}%`,
+                          width: `${dayWidth}%`,
+                          height: `${Math.max(2, heightPercent)}%`
+                        }}
+                        title={`${format(day, 'dd/MM', { locale: fr })}: ${dayLoad.toFixed(1)}h cumulées`}
+                      />
+                    );
+                  });
+                })()}
+                
+                {/* Ligne de référence à 100% */}
+                <div className="absolute top-0 left-0 w-full h-px bg-red-300 opacity-50" />
+                
+                {/* Étiquettes de valeurs */}
+                <div className="absolute top-1 left-2 text-xs text-gray-600 font-medium">
+                  Max: {(() => {
+                    const maxLoad = Math.max(...periodInfo.periodDays.map(day => {
+                      const dateKey = format(day, 'yyyy-MM-dd');
+                      return Object.values(itemWorkloads).reduce((sum, workload) => 
+                        sum + (workload.dailyDistribution[dateKey] || 0), 0
+                      );
+                    }));
+                    return maxLoad.toFixed(1);
+                  })()}h
+                </div>
+                
+                <div className="absolute bottom-1 right-2 text-xs text-gray-600">
+                  Total période: {(() => {
+                    const totalLoad = periodInfo.periodDays.reduce((sum, day) => {
+                      const dateKey = format(day, 'yyyy-MM-dd');
+                      return sum + Object.values(itemWorkloads).reduce((daySum, workload) => 
+                        daySum + (workload.dailyDistribution[dateKey] || 0), 0
+                      );
+                    }, 0);
+                    return totalLoad.toFixed(1);
+                  })()}h
+                </div>
+              </div>
+            </div>
+            <div className="col-span-1 flex items-center justify-center">
+              <Badge variant="secondary" className="text-xs">
+                {totalEstimatedPersons} ETP
+              </Badge>
+            </div>
+          </div>
+          
+          {/* Légende */}
+          <div className="flex items-center justify-center space-x-4 text-xs text-gray-600 mt-2">
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-3 bg-green-500 rounded" />
+              <span>Charge faible</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-3 bg-yellow-500 rounded" />
+              <span>Charge modérée</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-3 bg-orange-500 rounded" />
+              <span>Charge élevée</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-3 bg-red-500 rounded" />
+              <span>Surcharge</span>
+            </div>
+          </div>
         </div>
 
         {/* Preview pendant le drag */}

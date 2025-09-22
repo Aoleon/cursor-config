@@ -153,23 +153,36 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return next();
   }
   
-  // Debug logging au début du middleware
-  console.log('[DEBUG] isAuthenticated middleware - Initial state:', {
-    path: req.path,
-    method: req.method,
-    hasUser: !!user,
-    hasSession: !!session,
-    sessionId: session?.id,
-    sessionUser: session?.user,
-    isBasicAuthSession: session?.user?.isBasicAuth,
-    isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
-  });
+  // CORRECTIF SÉCURITÉ : Logs DEBUG supprimés pour éviter fuites sessionId/PII
+  // Log uniquement en mode développement avec informations non-sensibles
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[DEBUG] isAuthenticated middleware:', {
+      path: req.path,
+      method: req.method,
+      hasUser: !!user,
+      hasSession: !!session,
+      userType: session?.user?.isBasicAuth ? 'basic_auth' : (user ? 'oidc' : 'none'),
+      timestamp: new Date().toISOString()
+    });
+  }
 
-  // Vérifier d'abord si c'est un utilisateur basic auth
+  // CORRECTIF URGENT - Vérifier d'abord si c'est un utilisateur basic auth
   if (session?.user?.isBasicAuth) {
-    console.log('[DEBUG] Found basic auth session, setting req.user');
+    // CORRECTIF SÉCURITÉ : Log supprimé pour éviter exposition données session
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DEBUG] Found basic auth session, setting req.user');
+    }
     // Pour l'auth basique, utiliser les données de session
     (req as any).user = session.user;
+    return next();
+  }
+  
+  // CORRECTIF URGENT - Vérifier aussi req.user.isBasicAuth pour session persistée
+  if (user?.isBasicAuth) {
+    // CORRECTIF SÉCURITÉ : Log supprimé pour éviter exposition données user
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DEBUG] Found basic auth user in req.user, proceeding');
+    }
     return next();
   }
 

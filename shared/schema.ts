@@ -4328,3 +4328,490 @@ export type InsertChatbotSuggestion = z.infer<typeof insertChatbotSuggestionSche
 
 export type ChatbotUsageMetrics = typeof chatbotUsageMetrics.$inferSelect;
 export type InsertChatbotUsageMetrics = z.infer<typeof insertChatbotUsageMetricsSchema>;
+
+// ========================================
+// SYSTÈME D'AUDIT ET MONITORING SÉCURITÉ SAXIUM - SUPERVISION COMPLÈTE
+// ========================================
+
+// ========================================
+// ENUMS POUR SYSTÈME D'AUDIT COMPLET
+// ========================================
+
+// Types d'événements d'audit
+export const auditEventTypeEnum = pgEnum("audit_event_type", [
+  "login",                      // Connexion utilisateur
+  "logout",                     // Déconnexion utilisateur
+  "chatbot.query",              // Requête chatbot
+  "chatbot.feedback",           // Feedback chatbot
+  "rbac.access_granted",        // Accès RBAC accordé
+  "rbac.access_denied",         // Accès RBAC refusé
+  "rbac.violation",             // Violation RBAC détectée
+  "sql.query_executed",         // Requête SQL exécutée
+  "sql.query_blocked",          // Requête SQL bloquée
+  "security.alert",             // Alerte sécurité
+  "security.rate_limit",        // Rate limiting déclenché
+  "admin.action",               // Action admin sensible
+  "data.export",                // Export de données
+  "data.modification",          // Modification de données
+  "session.expired",            // Session expirée
+  "session.hijack_attempt",     // Tentative de hijack de session
+  "api.unauthorized_access",    // Tentative d'accès non autorisé API
+  "system.error",               // Erreur système
+  "system.performance"          // Événement de performance
+]);
+
+// Sévérité des événements d'audit
+export const auditSeverityEnum = pgEnum("audit_severity", [
+  "low",        // Information normale
+  "medium",     // Événement notable
+  "high",       // Événement important
+  "critical"    // Événement critique nécessitant attention immédiate
+]);
+
+// Résultat de l'événement audité
+export const auditResultEnum = pgEnum("audit_result", [
+  "success",    // Opération réussie
+  "error",      // Erreur lors de l'opération
+  "blocked",    // Opération bloquée par sécurité/RBAC
+  "timeout",    // Timeout de l'opération
+  "partial"     // Opération partiellement réussie
+]);
+
+// Types d'alertes de sécurité automatisées
+export const securityAlertTypeEnum = pgEnum("security_alert_type", [
+  "rbac_violation",             // Violation RBAC détectée
+  "sql_injection_attempt",     // Tentative d'injection SQL
+  "rate_limit_exceeded",       // Dépassement de limite de taux
+  "suspicious_query",          // Requête suspecte détectée
+  "multiple_failed_logins",    // Multiples tentatives de connexion échouées
+  "unusual_activity_pattern",  // Pattern d'activité inhabituel
+  "unauthorized_admin_access", // Tentative d'accès admin non autorisé
+  "data_exfiltration_risk",   // Risque d'exfiltration de données
+  "session_anomaly",          // Anomalie de session
+  "performance_degradation",  // Dégradation de performance
+  "system_overload",          // Surcharge système
+  "security_configuration_change" // Changement de configuration sécurité
+]);
+
+// Sévérité des alertes de sécurité
+export const securitySeverityEnum = pgEnum("security_severity", [
+  "low",        // Alerte informative
+  "medium",     // Alerte modérée
+  "high",       // Alerte importante
+  "critical"    // Alerte critique nécessitant action immédiate
+]);
+
+// Statut des alertes de sécurité
+export const securityAlertStatusEnum = pgEnum("security_alert_status", [
+  "open",           // Alerte ouverte
+  "acknowledged",   // Alerte prise en compte
+  "investigating",  // Investigation en cours
+  "resolved",       // Alerte résolue
+  "false_positive", // Faux positif
+  "suppressed"      // Alerte supprimée
+]);
+
+// ========================================
+// TABLES D'AUDIT ET SÉCURITÉ
+// ========================================
+
+// Table principale des logs d'audit - Centralise tous les événements système
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Identification de l'utilisateur et contexte
+  userId: varchar("user_id").notNull(), // ID utilisateur (peut être 'system' pour événements automatiques)
+  userRole: varchar("user_role").notNull(), // Rôle de l'utilisateur au moment de l'événement
+  sessionId: varchar("session_id"), // ID de session si applicable
+  
+  // Type et classification de l'événement
+  eventType: auditEventTypeEnum("event_type").notNull(),
+  severity: auditSeverityEnum("severity").default("low").notNull(),
+  result: auditResultEnum("result").notNull(),
+  
+  // Détails de l'événement
+  resource: varchar("resource"), // Table/endpoint/ressource accédée
+  action: varchar("action"), // Action effectuée (SELECT/INSERT/UPDATE/DELETE/GET/POST...)
+  entityType: varchar("entity_type"), // Type d'entité concernée (project, offer, user...)
+  entityId: varchar("entity_id"), // ID de l'entité concernée
+  
+  // Contexte technique et métadonnées
+  ipAddress: varchar("ip_address"), // Adresse IP de l'utilisateur
+  userAgent: text("user_agent"), // User agent du navigateur
+  requestPath: varchar("request_path"), // Chemin de la requête HTTP
+  requestMethod: varchar("request_method"), // Méthode HTTP (GET, POST, etc.)
+  
+  // Données de performance
+  executionTimeMs: integer("execution_time_ms"), // Temps d'exécution en millisecondes
+  responseSize: integer("response_size"), // Taille de la réponse en bytes
+  
+  // Détails spécifiques et traces
+  payload: jsonb("payload"), // Données sanitisées de la requête
+  response: jsonb("response"), // Données sanitisées de la réponse
+  errorDetails: jsonb("error_details"), // Détails d'erreur si applicable
+  
+  // Traçabilité et métadonnées
+  tags: text("tags").array().default(sql`'{}'::text[]`), // Tags pour catégorisation
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`), // Métadonnées additionnelles flexibles
+  
+  // Gestion de la rétention
+  isArchived: boolean("is_archived").default(false), // Marquage pour archivage
+  archiveDate: timestamp("archive_date"), // Date d'archivage prévue
+  
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    // Index principaux pour performance des requêtes
+    userEventIdx: index("audit_logs_user_event_idx").on(table.userId, table.eventType, table.timestamp),
+    severityIdx: index("audit_logs_severity_idx").on(table.severity, table.timestamp),
+    resourceActionIdx: index("audit_logs_resource_action_idx").on(table.resource, table.action),
+    timestampIdx: index("audit_logs_timestamp_idx").on(table.timestamp),
+    sessionIdx: index("audit_logs_session_idx").on(table.sessionId),
+    entityIdx: index("audit_logs_entity_idx").on(table.entityType, table.entityId),
+    performanceIdx: index("audit_logs_performance_idx").on(table.executionTimeMs),
+    archiveIdx: index("audit_logs_archive_idx").on(table.isArchived, table.archiveDate),
+  };
+});
+
+// Table des alertes de sécurité - Alertes automatisées et notifications
+export const securityAlerts = pgTable("security_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Classification de l'alerte
+  type: securityAlertTypeEnum("type").notNull(),
+  severity: securitySeverityEnum("severity").notNull(),
+  status: securityAlertStatusEnum("status").default("open").notNull(),
+  
+  // Entité concernée par l'alerte
+  userId: varchar("user_id"), // Utilisateur concerné (peut être null pour alertes système)
+  entityType: varchar("entity_type"), // Type d'entité (user, session, query, system...)
+  entityId: varchar("entity_id"), // ID de l'entité concernée
+  
+  // Détails de l'alerte
+  title: varchar("title").notNull(), // Titre court de l'alerte
+  description: text("description").notNull(), // Description détaillée
+  recommendation: text("recommendation"), // Recommandation d'action
+  
+  // Contexte technique
+  sourceComponent: varchar("source_component"), // Composant source (chatbot, rbac, sql_engine...)
+  ruleId: varchar("rule_id"), // ID de la règle qui a déclenché l'alerte
+  triggerData: jsonb("trigger_data"), // Données qui ont déclenché l'alerte
+  
+  // Données de détection
+  detectionMethod: varchar("detection_method"), // Méthode de détection (pattern, threshold, ml...)
+  confidence: decimal("confidence", { precision: 3, scale: 2 }), // Niveau de confiance 0.00-1.00
+  falsePositiveRisk: decimal("false_positive_risk", { precision: 3, scale: 2 }), // Risque de faux positif
+  
+  // Seuils et métriques
+  thresholdValue: decimal("threshold_value", { precision: 15, scale: 4 }), // Valeur seuil déclenchée
+  currentValue: decimal("current_value", { precision: 15, scale: 4 }), // Valeur actuelle mesurée
+  historicalBaseline: decimal("historical_baseline", { precision: 15, scale: 4 }), // Ligne de base historique
+  
+  // Gestion et résolution
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id), // Assigné à quel admin
+  investigatedByUserId: varchar("investigated_by_user_id").references(() => users.id), // Investigué par quel admin
+  resolutionNote: text("resolution_note"), // Note de résolution
+  resolutionAction: varchar("resolution_action"), // Action prise pour résoudre
+  
+  // Auto-suppression et gestion
+  autoResolveAt: timestamp("auto_resolve_at"), // Date de résolution automatique
+  suppressUntil: timestamp("suppress_until"), // Suppression temporaire jusqu'à cette date
+  suppressReason: text("suppress_reason"), // Raison de la suppression
+  
+  // Impact et criticité
+  impactLevel: varchar("impact_level"), // Impact estimé (low, medium, high, critical)
+  affectedUsers: integer("affected_users").default(0), // Nombre d'utilisateurs affectés
+  affectedSystems: text("affected_systems").array().default(sql`'{}'::text[]`), // Systèmes affectés
+  
+  // Métadonnées et traçabilité
+  correlationId: varchar("correlation_id"), // ID de corrélation pour grouper les alertes liées
+  parentAlertId: varchar("parent_alert_id").references(() => securityAlerts.id), // Alerte parente si cascade
+  tags: text("tags").array().default(sql`'{}'::text[]`), // Tags pour catégorisation
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`), // Métadonnées flexibles
+  
+  // Timestamps
+  firstDetectedAt: timestamp("first_detected_at").defaultNow().notNull(),
+  lastDetectedAt: timestamp("last_detected_at").defaultNow().notNull(),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  investigatedAt: timestamp("investigated_at"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    // Index pour performance et recherche
+    typeStatusIdx: index("security_alerts_type_status_idx").on(table.type, table.status),
+    severityStatusIdx: index("security_alerts_severity_status_idx").on(table.severity, table.status),
+    userAlertsIdx: index("security_alerts_user_idx").on(table.userId),
+    assignedIdx: index("security_alerts_assigned_idx").on(table.assignedToUserId),
+    createdAtIdx: index("security_alerts_created_at_idx").on(table.createdAt),
+    entityIdx: index("security_alerts_entity_idx").on(table.entityType, table.entityId),
+    correlationIdx: index("security_alerts_correlation_idx").on(table.correlationId),
+    detectionTimeIdx: index("security_alerts_detection_time_idx").on(table.firstDetectedAt, table.lastDetectedAt),
+    autoResolveIdx: index("security_alerts_auto_resolve_idx").on(table.autoResolveAt),
+    parentChildIdx: index("security_alerts_parent_child_idx").on(table.parentAlertId),
+  };
+});
+
+// Table des règles d'alerte configurables - Configuration dynamique des seuils
+export const alertRules = pgTable("alert_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Identification de la règle
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: varchar("category").notNull(), // security, performance, business...
+  
+  // Configuration de détection
+  alertType: securityAlertTypeEnum("alert_type").notNull(),
+  severity: securitySeverityEnum("severity").notNull(),
+  detectionMethod: varchar("detection_method").notNull(), // threshold, pattern, ml, statistical
+  
+  // Seuils et conditions
+  conditions: jsonb("conditions").notNull(), // Conditions de déclenchement flexibles
+  thresholdValue: decimal("threshold_value", { precision: 15, scale: 4 }),
+  thresholdOperator: varchar("threshold_operator"), // >, <, >=, <=, =, !=
+  timeWindow: integer("time_window"), // Fenêtre temporelle en secondes
+  minimumOccurrences: integer("minimum_occurrences").default(1), // Nombre minimum d'occurrences
+  
+  // Gestion et contrôle
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(5), // Priorité 1-10
+  cooldownPeriod: integer("cooldown_period").default(300), // Période de refroidissement en secondes
+  maxAlertsPerDay: integer("max_alerts_per_day").default(100), // Limite quotidienne
+  
+  // Actions automatiques
+  autoAssignTo: varchar("auto_assign_to").references(() => users.id), // Auto-assignation
+  autoActions: jsonb("auto_actions").default(sql`'{}'::jsonb`), // Actions automatiques à déclencher
+  notificationChannels: text("notification_channels").array().default(sql`'{}'::text[]`), // Canaux de notification
+  
+  // Suppression et exceptions
+  suppressionRules: jsonb("suppression_rules").default(sql`'{}'::jsonb`), // Règles de suppression
+  whitelistConditions: jsonb("whitelist_conditions").default(sql`'{}'::jsonb`), // Conditions de liste blanche
+  
+  // Métadonnées et audit
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  lastModifiedBy: varchar("last_modified_by").references(() => users.id),
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  triggerCount: integer("trigger_count").default(0),
+  falsePositiveCount: integer("false_positive_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    categoryActiveIdx: index("alert_rules_category_active_idx").on(table.category, table.isActive),
+    typeActiveIdx: index("alert_rules_type_active_idx").on(table.alertType, table.isActive),
+    priorityIdx: index("alert_rules_priority_idx").on(table.priority),
+    lastTriggeredIdx: index("alert_rules_last_triggered_idx").on(table.lastTriggeredAt),
+    createdByIdx: index("alert_rules_created_by_idx").on(table.createdBy),
+  };
+});
+
+// ========================================
+// SCHÉMAS ZOD POUR VALIDATION
+// ========================================
+
+// Schéma pour insertion d'événement d'audit
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  timestamp: true,
+  createdAt: true,
+});
+
+// Schéma pour insertion d'alerte de sécurité
+export const insertSecurityAlertSchema = createInsertSchema(securityAlerts).omit({
+  id: true,
+  firstDetectedAt: true,
+  lastDetectedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schéma pour insertion de règle d'alerte
+export const insertAlertRuleSchema = createInsertSchema(alertRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  triggerCount: true,
+  falsePositiveCount: true,
+  lastTriggeredAt: true,
+});
+
+// Schémas pour mise à jour
+export const updateSecurityAlertSchema = createInsertSchema(securityAlerts).omit({
+  id: true,
+  firstDetectedAt: true,
+  createdAt: true,
+}).partial();
+
+export const updateAlertRuleSchema = createInsertSchema(alertRules).omit({
+  id: true,
+  createdAt: true,
+  createdBy: true,
+  triggerCount: true,
+  falsePositiveCount: true,
+  lastTriggeredAt: true,
+}).partial();
+
+// Schémas pour requêtes et filtres
+export const auditLogsQuerySchema = z.object({
+  userId: z.string().optional(),
+  userRole: z.string().optional(),
+  eventType: z.string().optional(),
+  severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+  result: z.enum(["success", "error", "blocked", "timeout", "partial"]).optional(),
+  resource: z.string().optional(),
+  action: z.string().optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  ipAddress: z.string().optional(),
+  sessionId: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  limit: z.number().min(1).max(1000).default(50),
+  offset: z.number().min(0).default(0),
+  sortBy: z.enum(["timestamp", "severity", "eventType", "userId"]).default("timestamp"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  includeArchived: z.boolean().default(false),
+});
+
+export const securityAlertsQuerySchema = z.object({
+  type: z.string().optional(),
+  severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+  status: z.enum(["open", "acknowledged", "investigating", "resolved", "false_positive", "suppressed"]).optional(),
+  userId: z.string().optional(),
+  assignedToUserId: z.string().optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  correlationId: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  limit: z.number().min(1).max(1000).default(50),
+  offset: z.number().min(0).default(0),
+  sortBy: z.enum(["createdAt", "severity", "type", "status"]).default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  includeResolved: z.boolean().default(false),
+});
+
+// Schéma pour création d'événement d'audit (API)
+export const createAuditEventSchema = z.object({
+  eventType: z.enum([
+    "login", "logout", "chatbot.query", "chatbot.feedback", "rbac.access_granted",
+    "rbac.access_denied", "rbac.violation", "sql.query_executed", "sql.query_blocked",
+    "security.alert", "security.rate_limit", "admin.action", "data.export",
+    "data.modification", "session.expired", "session.hijack_attempt",
+    "api.unauthorized_access", "system.error", "system.performance"
+  ]),
+  severity: z.enum(["low", "medium", "high", "critical"]).default("low"),
+  result: z.enum(["success", "error", "blocked", "timeout", "partial"]),
+  resource: z.string().optional(),
+  action: z.string().optional(),
+  entityType: z.string().optional(),
+  entityId: z.string().optional(),
+  payload: z.any().optional(),
+  response: z.any().optional(),
+  errorDetails: z.any().optional(),
+  executionTimeMs: z.number().optional(),
+  responseSize: z.number().optional(),
+  tags: z.array(z.string()).optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+// Schéma pour création d'alerte de sécurité (API)
+export const createSecurityAlertSchema = z.object({
+  type: z.enum([
+    "rbac_violation", "sql_injection_attempt", "rate_limit_exceeded", "suspicious_query",
+    "multiple_failed_logins", "unusual_activity_pattern", "unauthorized_admin_access",
+    "data_exfiltration_risk", "session_anomaly", "performance_degradation",
+    "system_overload", "security_configuration_change"
+  ]),
+  severity: z.enum(["low", "medium", "high", "critical"]),
+  title: z.string().min(1).max(200),
+  description: z.string().min(1),
+  recommendation: z.string().optional(),
+  userId: z.string().optional(),
+  entityType: z.string().optional(),
+  entityId: z.string().optional(),
+  sourceComponent: z.string().optional(),
+  ruleId: z.string().optional(),
+  triggerData: z.any().optional(),
+  detectionMethod: z.string().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  thresholdValue: z.number().optional(),
+  currentValue: z.number().optional(),
+  assignedToUserId: z.string().optional(),
+  correlationId: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+// ========================================
+// TYPES TYPESCRIPT
+// ========================================
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLogsQuery = z.infer<typeof auditLogsQuerySchema>;
+export type CreateAuditEvent = z.infer<typeof createAuditEventSchema>;
+
+export type SecurityAlert = typeof securityAlerts.$inferSelect;
+export type InsertSecurityAlert = z.infer<typeof insertSecurityAlertSchema>;
+export type UpdateSecurityAlert = z.infer<typeof updateSecurityAlertSchema>;
+export type SecurityAlertsQuery = z.infer<typeof securityAlertsQuerySchema>;
+export type CreateSecurityAlert = z.infer<typeof createSecurityAlertSchema>;
+
+export type AlertRule = typeof alertRules.$inferSelect;
+export type InsertAlertRule = z.infer<typeof insertAlertRuleSchema>;
+export type UpdateAlertRule = z.infer<typeof updateAlertRuleSchema>;
+
+// Interface pour les événements d'audit (utilisée par AuditService)
+export interface AuditEvent {
+  id?: string;
+  userId: string;
+  userRole: string;
+  sessionId?: string;
+  eventType: 'login' | 'logout' | 'chatbot.query' | 'chatbot.feedback' | 'rbac.access_granted' | 
+             'rbac.access_denied' | 'rbac.violation' | 'sql.query_executed' | 'sql.query_blocked' |
+             'security.alert' | 'security.rate_limit' | 'admin.action' | 'data.export' |
+             'data.modification' | 'session.expired' | 'session.hijack_attempt' |
+             'api.unauthorized_access' | 'system.error' | 'system.performance';
+  resource?: string;
+  action?: string;
+  entityType?: string;
+  entityId?: string;
+  result: 'success' | 'error' | 'blocked' | 'timeout' | 'partial';
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  payload?: any;
+  response?: any;
+  errorDetails?: any;
+  metadata?: {
+    ip?: string;
+    userAgent?: string;
+    executionTimeMs?: number;
+    responseSize?: number;
+    [key: string]: any;
+  };
+  tags?: string[];
+  timestamp?: Date;
+}
+
+// Interface pour les alertes de sécurité (utilisée par SecurityNotificationService)
+export interface SecurityAlertEvent {
+  id?: string;
+  type: 'rbac_violation' | 'sql_injection_attempt' | 'rate_limit_exceeded' | 'suspicious_query' |
+        'multiple_failed_logins' | 'unusual_activity_pattern' | 'unauthorized_admin_access' |
+        'data_exfiltration_risk' | 'session_anomaly' | 'performance_degradation' |
+        'system_overload' | 'security_configuration_change';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  recommendation?: string;
+  userId?: string;
+  entityType?: string;
+  entityId?: string;
+  sourceComponent?: string;
+  detectionMethod?: string;
+  confidence?: number;
+  metadata?: Record<string, any>;
+  timestamp?: Date;
+}

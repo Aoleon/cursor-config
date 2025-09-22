@@ -49,6 +49,8 @@ import TechnicalAlerts from "@/pages/technical-alerts";
 // Import des pages Intelligence Temporelle - (DateIntelligenceDashboard maintenant intégré dans ExecutiveDashboard)
 // Import du Dashboard Dirigeant
 import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
+// Import du Dashboard Admin Sécurité
+import AdminSecurityDashboard from "@/pages/AdminSecurityDashboard";
 // Import de la navigation intelligente
 import SmartLanding from "@/components/navigation/SmartLanding";
 import AppLayout from "@/components/layout/AppLayout";
@@ -106,6 +108,7 @@ function Router() {
       {/* ============= DASHBOARDS STANDARDISÉS - Pattern cohérent /dashboard/* ============= */}
       <Route path="/dashboard/executive" component={() => <ProtectedRoute component={ExecutiveDashboard} />} />
       <Route path="/dashboard/be" component={() => <ProtectedRoute component={BEDashboard} />} />
+      <Route path="/dashboard/admin-security" component={() => <ProtectedRoute component={AdminSecurityDashboard} />} />
       {/* REDIRECTION INTELLIGENTE: Page d'accueil avec détection de rôle */}
       <Route path="/">
         <SmartLanding />

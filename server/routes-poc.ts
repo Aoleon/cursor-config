@@ -38,6 +38,7 @@ import validationMilestonesRouter from "./routes/validation-milestones";
 import { registerWorkflowRoutes } from "./routes-workflow";
 import { registerBatigestRoutes } from "./routes-batigest";
 import { registerTeamsRoutes } from "./routes-teams";
+import { createAdminRoutes } from "./routes-admin";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto, parsePeriod, getDefaultPeriod, getLastMonths, type DateRange } from "./dateUtils";
@@ -292,11 +293,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = req.body;
 
-      console.log('[DEBUG] /api/login/basic - Login attempt:', {
-        username,
-        hasSession: !!req.session,
-        sessionId: req.session?.id
-      });
+      // CORRECTIF SÉCURITÉ : Log sans exposition sessionId
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[DEBUG] /api/login/basic - Login attempt:', {
+          username,
+          hasSession: !!req.session
+          // sessionId supprimé pour sécurité
+        });
+      }
 
       // Validation basique pour le développement
       if (username === 'admin' && password === 'admin') {
@@ -316,10 +320,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Stocker dans la session
         req.session.user = adminUser;
         
-        console.log('[DEBUG] /api/login/basic - Before session save:', {
-          sessionUser: req.session.user,
-          sessionId: req.session.id
-        });
+        // CORRECTIF SÉCURITÉ : Log sans exposition sessionId/données user
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[DEBUG] /api/login/basic - Before session save: session ready');
+        }
 
         await new Promise<void>((resolve, reject) => {
           req.session.save((err: any) => {
@@ -333,10 +337,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         });
 
-        console.log('[DEBUG] /api/login/basic - After session save:', {
-          sessionUser: req.session.user,
-          sessionId: req.session.id
-        });
+        // CORRECTIF SÉCURITÉ : Log sans exposition sessionId/données user  
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[DEBUG] /api/login/basic - After session save: success');
+        }
 
         res.json({
           success: true,
@@ -359,23 +363,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========================================
+  // CORRECTIFS CRITIQUES URGENTS - AUTHENTICATION
+  // ========================================
+
+  // ========================================
+  // MIDDLEWARE ADMIN SECURITY POUR /api/auth/health
+  // ========================================
+  
+  /**
+   * Middleware pour vérifier permissions administrateur (version simplifiée)
+   */
+  const requireAdminForHealth = async (req: any, res: any, next: any) => {
+    try {
+      const user = req.user;
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentification requise pour diagnostic health'
+        });
+      }
+
+      const userRole = user.role;
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+      
+      if (!isAdmin) {
+        return res.status(403).json({
+          success: false,
+          error: 'Permissions administrateur requises pour health check'
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error('[requireAdminForHealth] Erreur:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur de vérification des permissions'
+      });
+    }
+  };
+
+  // CORRECTIF SÉCURITÉ CRITIQUE : Health check PROTÉGÉ admin uniquement 
+  app.get('/api/auth/health', isAuthenticated, requireAdminForHealth, async (req: any, res) => {
+    try {
+      const sessionExists = !!req.session;
+      const sessionUser = req.session?.user;
+      const passportUser = req.user;
+      
+      const healthStatus = {
+        timestamp: new Date().toISOString(),
+        session: {
+          exists: sessionExists,
+          // CORRECTIF SÉCURITÉ : sessionId supprimé pour éviter exposition
+          hasUser: !!sessionUser,
+          userType: sessionUser?.isBasicAuth ? 'basic_auth' : (passportUser ? 'oidc' : 'none')
+        },
+        auth: {
+          isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+          hasPassportUser: !!passportUser,
+          middlewareReady: true
+        },
+        services: {
+          auditService: !!req.app.get('auditService'),
+          eventBus: !!req.app.get('eventBus'),
+          storage: true
+        }
+      };
+      
+      res.json({
+        success: true,
+        healthy: sessionExists,
+        data: healthStatus
+      });
+    } catch (error) {
+      console.error('[AUTH HEALTH] Erreur:', error);
+      res.status(500).json({
+        success: false,
+        healthy: false,
+        error: 'Health check failed'
+      });
+    }
+  });
+
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const user = req.user;
       const sessionUser = req.session?.user;
       
-      // Debug logging
-      console.log('[DEBUG] /api/auth/user - Session info:', {
-        hasUser: !!user,
-        hasSessionUser: !!sessionUser,
-        isBasicAuth: sessionUser?.isBasicAuth || user?.isBasicAuth,
-        userType: (sessionUser?.isBasicAuth || user?.isBasicAuth) ? 'basic' : 'oidc'
-      });
+      // CORRECTIF SÉCURITÉ : Logs DEBUG sécurisés (development uniquement)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[DEBUG] /api/auth/user - user type check:', {
+          hasUser: !!user,
+          hasSessionUser: !!sessionUser,
+          userType: (sessionUser?.isBasicAuth || user?.isBasicAuth) ? 'basic' : 'oidc',
+          isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
+          // sessionId supprimé pour sécurité
+        });
+      }
       
       // CORRECTION BLOCKER 3: Vérifier d'abord si c'est un utilisateur basic auth
       if (user?.isBasicAuth || sessionUser?.isBasicAuth) {
-        console.log('[DEBUG] Returning basic auth user:', user || sessionUser);
+        // CORRECTIF SÉCURITÉ : Log sans exposition des données user
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[DEBUG] Returning basic auth user type');
+        }
         // Retourner les données utilisateur basic auth
         const basicAuthUser = user?.isBasicAuth ? user : sessionUser;
         return res.json(basicAuthUser);
@@ -6632,6 +6726,33 @@ app.get("/api/chatbot/health",
   })
 );
 
+  // ========================================
+  // CORRECTIF CRITIQUE URGENT - ROUTES ADMIN
+  // ========================================
+  
+  console.log('[System] Montage des routes administrateur...');
+  
+  // Récupérer les services depuis l'app
+  const auditService = app.get('auditService');
+  const eventBus = app.get('eventBus');
+  
+  if (!auditService) {
+    console.error('[CRITICAL] AuditService non trouvé dans app.get!');
+    throw new Error('AuditService manquant - impossible de monter routes admin');
+  }
+  
+  if (!eventBus) {
+    console.error('[CRITICAL] EventBus non trouvé dans app.get!');
+    throw new Error('EventBus manquant - impossible de monter routes admin');
+  }
+  
+  // Créer et monter les routes admin
+  const adminRouter = createAdminRoutes(storage, auditService, eventBus);
+  app.use('/api/admin', adminRouter);
+  
+  console.log('[System] ✅ Routes administrateur montées sur /api/admin');
+  console.log('[System] Services disponibles : AuditService ✅, EventBus ✅, Storage ✅');
+  
   const httpServer = createServer(app);
   return httpServer;
 }

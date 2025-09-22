@@ -89,6 +89,38 @@ app.use((req, res, next) => {
   // Cast storage to IStorage to resolve TypeScript interface compatibility issues
   const storageInterface = storage as IStorage;
   
+  // ========================================
+  // INITIALISATION SERVICE D'AUDIT SAXIUM - SINGLETON SÉCURISÉ
+  // ========================================
+  
+  console.log('[System] Initialisation du service d\'audit Saxium...');
+  
+  // CORRECTIF SÉCURITÉ : Vérifier qu'aucune instance n'existe déjà
+  const existingAuditService = app.get('auditService');
+  if (existingAuditService) {
+    console.error('[SECURITY ERROR] AuditService déjà initialisé - tentative de ré-initialisation bloquée');
+    throw new Error('SINGLETON VIOLATION: AuditService already initialized');
+  }
+  
+  const { AuditService } = await import('./services/AuditService');
+  
+  // SINGLETON STRICT : Une seule instance au startup
+  const auditService = new AuditService(eventBus, storageInterface, {
+    retentionDays: 365,
+    archiveAfterDays: 90,
+    enableAutoArchive: true,
+    enableRealTimeAlerts: true,
+    performanceThresholdMs: 10000,
+    alertCooldownMs: 300000
+  });
+  
+  // Marqueur de sécurité pour éviter les ré-initialisations
+  Object.freeze(auditService);
+  
+  // Rendre le service d'audit disponible pour les routes
+  app.set('auditService', auditService);
+  console.log('[System] ✅ Service d\'audit Saxium opérationnel (SINGLETON SÉCURISÉ)');
+  
   const dateIntelligenceService = new DateIntelligenceService(storageInterface);
   const menuiserieRules = new MenuiserieDetectionRules(storageInterface);
   const analyticsService = new AnalyticsService(storageInterface, eventBus);

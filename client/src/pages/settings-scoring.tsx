@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -263,27 +262,19 @@ export default function SettingsScoring() {
 
   if (isLoadingConfig) {
     return (
-      <div className="min-h-screen flex">
-        <Sidebar />
-        <div className="flex-1 flex flex-col">
+      <>
           <Header />
-          <main className="flex-1 p-6">
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          </main>
-        </div>
-      </div>
+      </>
     );
   }
 
   if (configError && isUnauthorizedError(configError)) {
     return (
-      <div className="min-h-screen flex">
-        <Sidebar />
-        <div className="flex-1 flex flex-col">
+      <>
           <Header />
-          <main className="flex-1 p-6">
             <Card>
               <CardContent className="p-6">
                 <div className="text-center">
@@ -296,18 +287,14 @@ export default function SettingsScoring() {
                 </div>
               </CardContent>
             </Card>
-          </main>
-        </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar />
+    <>
       <div className="flex-1 flex flex-col">
         <Header />
-        <main className="flex-1 p-6">
           <div className="max-w-6xl mx-auto space-y-6">
             {/* En-tête */}
             <div className="flex items-center justify-between">
@@ -550,8 +537,7 @@ export default function SettingsScoring() {
               </CardContent>
             </Card>
           </div>
-        </main>
       </div>
-    </div>
+    </>
   );
 }

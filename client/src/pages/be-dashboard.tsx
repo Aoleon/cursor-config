@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,9 +41,7 @@ export default function BEDashboard() {
   };
 
   return (
-    <div className="min-h-screen flex bg-surface">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <>
         <Header 
           title="Tableau de Bord Bureau d'Études"
           breadcrumbs={[
@@ -192,7 +189,6 @@ export default function BEDashboard() {
             </TabsContent>
           </Tabs>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

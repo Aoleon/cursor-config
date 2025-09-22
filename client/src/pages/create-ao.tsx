@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { LotsManager } from "@/components/ao/LotsManager";
 import { ContactSelector } from "@/components/contacts/ContactSelector";
@@ -603,9 +602,7 @@ export default function CreateAO() {
   };
 
   return (
-    <div className="min-h-screen flex bg-surface-muted">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <>
         <Header 
           title="Création Appel d'Offres"
           breadcrumbs={[
@@ -1170,7 +1167,6 @@ export default function CreateAO() {
             </TabsContent>
           </Tabs>
         </div>
-      </main>
 
       {/* Formulaires de création de contacts */}
       <MaitreOuvrageForm
@@ -1190,6 +1186,6 @@ export default function CreateAO() {
           form.setValue("maitreOeuvreId", newMaitreOeuvre.id);
         }}
       />
-    </div>
+    </>
   );
 }

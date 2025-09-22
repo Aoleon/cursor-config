@@ -5,7 +5,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useKpiInvalidation } from "@/hooks/use-kpi-invalidation";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -275,25 +274,20 @@ export default function OfferDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex bg-surface-muted">
-        <Sidebar />
-        <main className="flex-1 overflow-auto">
+      <>
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p>Chargement de l'appel d'offre...</p>
             </div>
           </div>
-        </main>
-      </div>
+      </>
     );
   }
 
   if (error || !offer) {
     return (
-      <div className="min-h-screen flex bg-surface-muted">
-        <Sidebar />
-        <main className="flex-1 overflow-auto">
+      <>
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <AlertCircle className="h-8 w-8 text-error mx-auto mb-4" />
@@ -308,8 +302,7 @@ export default function OfferDetail() {
               </Button>
             </div>
           </div>
-        </main>
-      </div>
+      </>
     );
   }
 
@@ -371,9 +364,7 @@ export default function OfferDetail() {
   };
 
   return (
-    <div className="min-h-screen flex bg-surface-muted">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <>
         <Header 
           title={`Appel d'Offre ${offer.reference}`}
           breadcrumbs={[
@@ -863,7 +854,6 @@ export default function OfferDetail() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

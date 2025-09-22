@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
 export default function ImportOCRPage() {
@@ -72,9 +71,7 @@ export default function ImportOCRPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <>
         <Header
           title="Import OCR - Appels d'Offres"
           breadcrumbs={[
@@ -160,7 +157,6 @@ export default function ImportOCRPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

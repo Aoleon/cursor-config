@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Calculator, Plus, Euro, Clock, User, Building } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import {
   Dialog,
@@ -134,9 +133,7 @@ export default function Pricing() {
   const totalQuotations = quotations.reduce((sum, q) => sum + parseFloat(q.totalPrice), 0);
 
   return (
-    <div className="min-h-screen flex bg-surface">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <>
         <Header 
           title="Chiffrage"
           breadcrumbs={[
@@ -421,7 +418,6 @@ export default function Pricing() {
         </Card>
           </div>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

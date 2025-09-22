@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { 
   Calendar,
@@ -176,16 +175,13 @@ export default function Planification() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar />
-      
-      <main className="flex-1">
-        <Header 
-          title="Planification"
-          breadcrumbs={[
-            { label: "Tableau de bord", href: "/dashboard" },
-            { label: "Planification", href: "/workflow/planification" }
-          ]}
+    <>
+      <Header 
+        title="Planification"
+        breadcrumbs={[
+          { label: "Tableau de bord", href: "/dashboard" },
+          { label: "Planification", href: "/workflow/planification" }
+        ]}
         />
         
         <div className="px-6 py-6">
@@ -353,7 +349,6 @@ export default function Planification() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -168,9 +167,7 @@ export default function ProjectSupply() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <>
         <Header
           title="Projets - Approvisionnement"
           breadcrumbs={[
@@ -562,7 +559,6 @@ export default function ProjectSupply() {
             </TabsContent>
           </Tabs>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { 
   FileText, 
@@ -152,16 +151,13 @@ export default function EtudeTechnique() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      
-      <main className="flex-1">
-        <Header 
-          title="Étude Technique"
-          breadcrumbs={[
-            { label: "Tableau de bord", href: "/dashboard" },
-            { label: "Étude technique", href: "/workflow/etude-technique" }
-          ]}
+    <>
+      <Header 
+        title="Étude Technique"
+        breadcrumbs={[
+          { label: "Tableau de bord", href: "/dashboard" },
+          { label: "Étude technique", href: "/workflow/etude-technique" }
+        ]}
         />
         
         <div className="px-6 py-6">
@@ -298,7 +294,6 @@ export default function EtudeTechnique() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { 
   Calculator, 
@@ -219,16 +218,13 @@ export default function Chiffrage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      
-      <main className="flex-1">
-        <Header 
-          title="Chiffrage"
-          breadcrumbs={[
-            { label: "Tableau de bord", href: "/dashboard" },
-            { label: "Chiffrage", href: "/workflow/chiffrage" }
-          ]}
+    <>
+      <Header 
+        title="Chiffrage"
+        breadcrumbs={[
+          { label: "Tableau de bord", href: "/dashboard" },
+          { label: "Chiffrage", href: "/workflow/chiffrage" }
+        ]}
         />
         
         <div className="px-4 sm:px-6 py-6">
@@ -394,7 +390,6 @@ export default function Chiffrage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

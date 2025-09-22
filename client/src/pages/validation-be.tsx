@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { 
   CheckCircle,
@@ -123,9 +122,7 @@ export default function ValidationBE() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex bg-surface">
-        <Sidebar />
-        <main className="flex-1">
+      <>
           <Header 
             title="Validation Bureau d'Études"
             breadcrumbs={[
@@ -139,16 +136,13 @@ export default function ValidationBE() {
               <p>Chargement des offres en attente de validation...</p>
             </div>
           </div>
-        </main>
-      </div>
+      </>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex bg-surface">
-        <Sidebar />
-        <main className="flex-1">
+      <>
           <Header 
             title="Validation Bureau d'Études"
             breadcrumbs={[
@@ -173,15 +167,12 @@ export default function ValidationBE() {
               </Button>
             </div>
           </div>
-        </main>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-surface">
-      <Sidebar />
-      <main className="flex-1">
+    <>
         <Header 
           title="Validation Bureau d'Études"
           breadcrumbs={[
@@ -362,7 +353,6 @@ export default function ValidationBE() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

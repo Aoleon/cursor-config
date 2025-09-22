@@ -3,7 +3,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,9 +59,7 @@ export default function Planning() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <>
         <Header 
           title="Planning Projet"
           breadcrumbs={[
@@ -196,7 +193,6 @@ export default function Planning() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

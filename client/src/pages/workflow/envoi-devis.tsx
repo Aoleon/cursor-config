@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { 
   Send,
@@ -196,16 +195,13 @@ export default function EnvoiDevis() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar />
-      
-      <main className="flex-1">
-        <Header 
-          title="Envoi des Devis"
-          breadcrumbs={[
-            { label: "Tableau de bord", href: "/dashboard" },
-            { label: "Envoi devis", href: "/workflow/envoi-devis" }
-          ]}
+    <>
+      <Header 
+        title="Envoi des Devis"
+        breadcrumbs={[
+          { label: "Tableau de bord", href: "/dashboard" },
+          { label: "Envoi devis", href: "/workflow/envoi-devis" }
+        ]}
         />
         
         <div className="px-6 py-6">
@@ -406,7 +402,6 @@ export default function EnvoiDevis() {
             </div>
           </div>
         )}
-      </main>
-    </div>
+    </>
   );
 }

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import GanttChart from "@/components/projects/GanttChart";
 import SmartPrioritization from "@/components/projects/SmartPrioritization";
@@ -177,9 +176,7 @@ export default function ProjectPlanningPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <>
         <Header
           title="Planification - Projets"
           breadcrumbs={[
@@ -490,7 +487,6 @@ export default function ProjectPlanningPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

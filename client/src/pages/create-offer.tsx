@@ -8,7 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { OCRUploader } from "@/components/OCRUploader";
@@ -584,9 +583,7 @@ export default function CreateOffer() {
   const completeness = getFormCompleteness();
 
   return (
-    <div className="min-h-screen flex bg-surface-muted">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <>
         <Header 
           title="Création Dossier d'Offre"
           breadcrumbs={[
@@ -1252,7 +1249,6 @@ export default function CreateOffer() {
             </div>
           </form>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

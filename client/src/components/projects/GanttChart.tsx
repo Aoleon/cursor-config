@@ -822,125 +822,286 @@ export default function GanttChart({
           })}
         </div>
 
-        {/* Ligne de charge cumulée pour tous les projets */}
+        {/* Ligne des effectifs nécessaires selon typologie des tâches */}
         <div className="mt-6 border-t border-gray-300 pt-4">
           <div className="grid grid-cols-10 gap-1 mb-2">
             <div className="col-span-3 text-sm font-medium text-gray-700 p-2">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-blue-600" />
-                <span>Charge Cumulée (tous projets)</span>
+                <Users className="h-4 w-4 text-blue-600" />
+                <span>Effectifs Nécessaires</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Par typologie de tâches
               </div>
             </div>
             <div className="col-span-6 relative">
-              {/* Graphique de charge cumulée */}
-              <div className="h-16 bg-gray-50 border border-gray-200 rounded relative overflow-hidden">
+              {/* Graphique des effectifs nécessaires */}
+              <div className="h-20 bg-gray-50 border border-gray-200 rounded relative overflow-hidden">
                 {(() => {
-                  // Calculer la charge cumulée par jour/période
-                  const cumulativeWorkload: { [key: string]: number } = {};
-                  let maxCumulativeLoad = 0;
+                  // Calculer les effectifs nécessaires par jour selon la typologie
+                  const dailyStaffNeeds: { [key: string]: { total: number, byType: { [key: string]: number } } } = {};
+                  let maxStaffNeeded = 0;
 
                   // Parcourir tous les jours de la période
                   periodInfo.periodDays.forEach((day) => {
                     const dateKey = format(day, 'yyyy-MM-dd');
-                    let dailyLoad = 0;
+                    let totalStaff = 0;
+                    const byType: { [key: string]: number } = {
+                      'Menuisiers Senior': 0,
+                      'Menuisiers Junior': 0,
+                      'Poseurs': 0,
+                      'Encadrement': 0
+                    };
 
-                    // Sommer les charges de tous les items pour cette date
-                    Object.values(itemWorkloads).forEach((workload) => {
-                      if (workload.dailyDistribution[dateKey]) {
-                        dailyLoad += workload.dailyDistribution[dateKey];
+                    // Calculer les besoins en personnel selon la typologie des tâches
+                    Object.entries(itemWorkloads).forEach(([itemId, workload]) => {
+                      const item = allGanttItems.find(i => i.id === itemId);
+                      if (item && workload.dailyDistribution[dateKey]) {
+                        const dailyHours = workload.dailyDistribution[dateKey];
+                        
+                        // Calcul des effectifs selon le type de tâche et sa complexité
+                        let staffMultiplier = 1;
+                        let typeCategory = 'Menuisiers Junior';
+                        
+                        // Déterminer la typologie selon le type et statut du projet
+                        if (item.type === 'project') {
+                          switch (item.status) {
+                            case 'etude':
+                              typeCategory = 'Encadrement';
+                              staffMultiplier = 0.5; // 1 responsable pour 2 projets
+                              break;
+                            case 'planification':
+                              typeCategory = 'Encadrement';
+                              staffMultiplier = 0.3;
+                              break;
+                            case 'approvisionnement':
+                              typeCategory = 'Menuisiers Junior';
+                              staffMultiplier = 0.8;
+                              break;
+                            case 'chantier':
+                              // Différencier selon la complexité estimée
+                              if (item.priority === 'critique' || item.estimatedHours && item.estimatedHours > 100) {
+                                typeCategory = 'Menuisiers Senior';
+                                staffMultiplier = 1.2;
+                              } else {
+                                typeCategory = 'Poseurs';
+                                staffMultiplier = 1;
+                              }
+                              break;
+                            case 'sav':
+                              typeCategory = 'Menuisiers Senior';
+                              staffMultiplier = 0.6;
+                              break;
+                            default:
+                              typeCategory = 'Menuisiers Junior';
+                              staffMultiplier = 1;
+                          }
+                        } else if (item.type === 'task') {
+                          // Logique pour les tâches spécifiques
+                          if (item.isJalon) {
+                            typeCategory = 'Encadrement';
+                            staffMultiplier = 0.2;
+                          } else if (item.priority === 'critique') {
+                            typeCategory = 'Menuisiers Senior';
+                            staffMultiplier = 1.1;
+                          } else {
+                            typeCategory = 'Poseurs';
+                            staffMultiplier = 0.9;
+                          }
+                        }
+                        
+                        // Calculer le nombre de personnes nécessaires (8h = 1 personne)
+                        const personsNeeded = Math.ceil((dailyHours / 8) * staffMultiplier);
+                        byType[typeCategory] += personsNeeded;
+                        totalStaff += personsNeeded;
                       }
                     });
 
-                    cumulativeWorkload[dateKey] = dailyLoad;
-                    maxCumulativeLoad = Math.max(maxCumulativeLoad, dailyLoad);
+                    dailyStaffNeeds[dateKey] = { total: totalStaff, byType };
+                    maxStaffNeeded = Math.max(maxStaffNeeded, totalStaff);
                   });
 
-                  // Générer les barres du graphique
+                  // Générer les barres empilées par type de personnel
                   return periodInfo.periodDays.map((day, index) => {
                     const dateKey = format(day, 'yyyy-MM-dd');
-                    const dayLoad = cumulativeWorkload[dateKey] || 0;
-                    const heightPercent = maxCumulativeLoad > 0 ? (dayLoad / maxCumulativeLoad) * 100 : 0;
+                    const dayStaff = dailyStaffNeeds[dateKey] || { total: 0, byType: {} };
                     
-                    // Couleur basée sur la charge (seuils adaptatifs)
-                    let barColor = 'bg-gray-300';
-                    if (dayLoad > 0) {
-                      const loadIntensity = maxCumulativeLoad > 0 ? (dayLoad / maxCumulativeLoad) : 0;
-                      if (loadIntensity <= 0.4) barColor = 'bg-green-500';
-                      else if (loadIntensity <= 0.7) barColor = 'bg-yellow-500';
-                      else if (loadIntensity <= 0.9) barColor = 'bg-orange-500';
-                      else barColor = 'bg-red-500';
-                    }
-
                     const dayWidth = 100 / periodInfo.totalDays;
+                    let currentHeight = 0;
                     
-                    return (
-                      <div
-                        key={index}
-                        className={`absolute bottom-0 ${barColor} border-r border-white transition-all hover:opacity-75`}
-                        style={{
-                          left: `${index * dayWidth}%`,
-                          width: `${dayWidth}%`,
-                          height: `${Math.max(2, heightPercent)}%`
-                        }}
-                        title={`${format(day, 'dd/MM', { locale: fr })}: ${dayLoad.toFixed(1)}h cumulées`}
-                      />
-                    );
-                  });
+                    // Couleurs par type de personnel
+                    const typeColors = {
+                      'Encadrement': 'bg-purple-500',
+                      'Menuisiers Senior': 'bg-blue-500',
+                      'Menuisiers Junior': 'bg-green-500',
+                      'Poseurs': 'bg-yellow-500'
+                    };
+                    
+                    const segments = Object.entries(dayStaff.byType).map(([type, count]) => {
+                      if (count === 0) return null;
+                      
+                      const segmentHeight = maxStaffNeeded > 0 ? (count / maxStaffNeeded) * 100 : 0;
+                      const segment = (
+                        <div
+                          key={`${index}-${type}`}
+                          className={`absolute ${typeColors[type] || 'bg-gray-400'} border-r border-white transition-all hover:opacity-75`}
+                          style={{
+                            left: `${index * dayWidth}%`,
+                            width: `${dayWidth}%`,
+                            bottom: `${currentHeight}%`,
+                            height: `${segmentHeight}%`
+                          }}
+                          title={`${format(day, 'dd/MM', { locale: fr })}: ${count} ${type}`}
+                        />
+                      );
+                      currentHeight += segmentHeight;
+                      return segment;
+                    }).filter(Boolean);
+                    
+                    return segments;
+                  }).flat();
                 })()}
                 
-                {/* Ligne de référence à 100% */}
-                <div className="absolute top-0 left-0 w-full h-px bg-red-300 opacity-50" />
+                {/* Ligne de référence capacité équipe */}
+                <div className="absolute top-4 left-0 w-full h-px bg-orange-400 opacity-60" />
+                <div className="absolute top-1 left-2 text-xs text-orange-600 font-medium">
+                  Capacité équipe actuelle
+                </div>
                 
                 {/* Étiquettes de valeurs */}
-                <div className="absolute top-1 left-2 text-xs text-gray-600 font-medium">
+                <div className="absolute top-1 right-2 text-xs text-gray-600 font-medium">
                   Max: {(() => {
-                    const maxLoad = Math.max(...periodInfo.periodDays.map(day => {
+                    const maxStaff = Math.max(...periodInfo.periodDays.map(day => {
                       const dateKey = format(day, 'yyyy-MM-dd');
-                      return Object.values(itemWorkloads).reduce((sum, workload) => 
-                        sum + (workload.dailyDistribution[dateKey] || 0), 0
-                      );
+                      return Object.values(itemWorkloads).reduce((sum, workload, index) => {
+                        const item = allGanttItems[index];
+                        const dailyHours = workload.dailyDistribution[dateKey] || 0;
+                        const personsNeeded = Math.ceil(dailyHours / 8);
+                        return sum + personsNeeded;
+                      }, 0);
                     }));
-                    return maxLoad.toFixed(1);
-                  })()}h
+                    return maxStaff;
+                  })()} pers.
                 </div>
                 
                 <div className="absolute bottom-1 right-2 text-xs text-gray-600">
-                  Total période: {(() => {
-                    const totalLoad = periodInfo.periodDays.reduce((sum, day) => {
+                  Moyenne: {(() => {
+                    const totalDays = periodInfo.periodDays.length;
+                    if (totalDays === 0) return '0';
+                    const avgStaff = periodInfo.periodDays.reduce((sum, day) => {
                       const dateKey = format(day, 'yyyy-MM-dd');
-                      return sum + Object.values(itemWorkloads).reduce((daySum, workload) => 
-                        daySum + (workload.dailyDistribution[dateKey] || 0), 0
-                      );
-                    }, 0);
-                    return totalLoad.toFixed(1);
-                  })()}h
+                      return sum + Object.values(itemWorkloads).reduce((daySum, workload, index) => {
+                        const dailyHours = workload.dailyDistribution[dateKey] || 0;
+                        return daySum + Math.ceil(dailyHours / 8);
+                      }, 0);
+                    }, 0) / totalDays;
+                    return avgStaff.toFixed(1);
+                  })()} pers.
                 </div>
               </div>
             </div>
-            <div className="col-span-1 flex items-center justify-center">
+            <div className="col-span-1 flex flex-col items-center justify-center space-y-1">
               <Badge variant="secondary" className="text-xs">
                 {totalEstimatedPersons} ETP
               </Badge>
+              <div className="text-xs text-gray-500 text-center">
+                Total requis
+              </div>
             </div>
           </div>
           
-          {/* Légende */}
+          {/* Légende par type de personnel */}
           <div className="flex items-center justify-center space-x-4 text-xs text-gray-600 mt-2">
             <div className="flex items-center space-x-1">
+              <div className="w-3 h-3 bg-purple-500 rounded" />
+              <span>Encadrement</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-3 bg-blue-500 rounded" />
+              <span>Menuisiers Senior</span>
+            </div>
+            <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-green-500 rounded" />
-              <span>Charge faible</span>
+              <span>Menuisiers Junior</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-yellow-500 rounded" />
-              <span>Charge modérée</span>
+              <span>Poseurs</span>
             </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-orange-500 rounded" />
-              <span>Charge élevée</span>
+          </div>
+          
+          {/* Indicateurs de gestion des effectifs */}
+          <div className="grid grid-cols-4 gap-2 mt-4 text-xs">
+            <div className="bg-blue-50 p-2 rounded border">
+              <div className="font-medium text-blue-700">Pic d'activité</div>
+              <div className="text-blue-600">
+                {(() => {
+                  const peakDay = periodInfo.periodDays.reduce((peak, day) => {
+                    const dateKey = format(day, 'yyyy-MM-dd');
+                    const dayStaff = Object.values(itemWorkloads).reduce((sum, workload) => 
+                      sum + Math.ceil((workload.dailyDistribution[dateKey] || 0) / 8), 0
+                    );
+                    return dayStaff > peak.staff ? { day, staff: dayStaff } : peak;
+                  }, { day: periodInfo.periodDays[0], staff: 0 });
+                  
+                  return `${format(peakDay.day, 'dd/MM', { locale: fr })} (${peakDay.staff} pers.)`;
+                })()}
+              </div>
             </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-red-500 rounded" />
-              <span>Surcharge</span>
+            
+            <div className="bg-green-50 p-2 rounded border">
+              <div className="font-medium text-green-700">Période creuse</div>
+              <div className="text-green-600">
+                {(() => {
+                  const lowDay = periodInfo.periodDays.reduce((low, day) => {
+                    const dateKey = format(day, 'yyyy-MM-dd');
+                    const dayStaff = Object.values(itemWorkloads).reduce((sum, workload) => 
+                      sum + Math.ceil((workload.dailyDistribution[dateKey] || 0) / 8), 0
+                    );
+                    return dayStaff < low.staff ? { day, staff: dayStaff } : low;
+                  }, { day: periodInfo.periodDays[0], staff: 999 });
+                  
+                  return `${format(lowDay.day, 'dd/MM', { locale: fr })} (${lowDay.staff} pers.)`;
+                })()}
+              </div>
+            </div>
+            
+            <div className="bg-orange-50 p-2 rounded border">
+              <div className="font-medium text-orange-700">Besoins critiques</div>
+              <div className="text-orange-600">
+                {(() => {
+                  const criticalDays = periodInfo.periodDays.filter(day => {
+                    const dateKey = format(day, 'yyyy-MM-dd');
+                    const dayStaff = Object.values(itemWorkloads).reduce((sum, workload) => 
+                      sum + Math.ceil((workload.dailyDistribution[dateKey] || 0) / 8), 0
+                    );
+                    return dayStaff > 12; // Seuil critique à définir
+                  }).length;
+                  
+                  return `${criticalDays} jour${criticalDays > 1 ? 's' : ''}`;
+                })()}
+              </div>
+            </div>
+            
+            <div className="bg-purple-50 p-2 rounded border">
+              <div className="font-medium text-purple-700">Optimisation</div>
+              <div className="text-purple-600">
+                {(() => {
+                  const variance = (() => {
+                    const staffPerDay = periodInfo.periodDays.map(day => {
+                      const dateKey = format(day, 'yyyy-MM-dd');
+                      return Object.values(itemWorkloads).reduce((sum, workload) => 
+                        sum + Math.ceil((workload.dailyDistribution[dateKey] || 0) / 8), 0
+                      );
+                    });
+                    const avg = staffPerDay.reduce((a, b) => a + b, 0) / staffPerDay.length;
+                    const variance = staffPerDay.reduce((sum, staff) => sum + Math.pow(staff - avg, 2), 0) / staffPerDay.length;
+                    return Math.sqrt(variance);
+                  })();
+                  
+                  return variance < 2 ? 'Lissée' : variance < 4 ? 'Modérée' : 'À lisser';
+                })()}
+              </div>
             </div>
           </div>
         </div>

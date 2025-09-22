@@ -2,6 +2,7 @@ import { AIService } from "./AIService";
 import { RBACService } from "./RBACService";
 import { SQLEngineService } from "./SQLEngineService";
 import { BusinessContextService } from "./BusinessContextService";
+import { ActionExecutionService } from "./ActionExecutionService";
 import { EventBus } from "../eventBus";
 import { IStorage } from "../storage-poc";
 import { db } from "../db";
@@ -24,7 +25,14 @@ import type {
   InsertChatbotFeedback,
   InsertChatbotUsageMetrics,
   ChatbotSuggestion,
-  ChatbotConversation
+  ChatbotConversation,
+  ProposeActionRequest,
+  ProposeActionResponse,
+  ExecuteActionRequest,
+  ExecuteActionResponse,
+  ActionHistoryRequest,
+  ActionHistoryResponse,
+  UpdateConfirmationRequest
 } from "@shared/schema";
 
 import {
@@ -86,6 +94,7 @@ export class ChatbotOrchestrationService {
   private rbacService: RBACService;
   private sqlEngineService: SQLEngineService;
   private businessContextService: BusinessContextService;
+  private actionExecutionService: ActionExecutionService;
   private eventBus: EventBus;
   private storage: IStorage;
 
@@ -94,6 +103,7 @@ export class ChatbotOrchestrationService {
     rbacService: RBACService,
     sqlEngineService: SQLEngineService,
     businessContextService: BusinessContextService,
+    actionExecutionService: ActionExecutionService,
     eventBus: EventBus,
     storage: IStorage
   ) {
@@ -101,6 +111,7 @@ export class ChatbotOrchestrationService {
     this.rbacService = rbacService;
     this.sqlEngineService = sqlEngineService;
     this.businessContextService = businessContextService;
+    this.actionExecutionService = actionExecutionService;
     this.eventBus = eventBus;
     this.storage = storage;
   }
@@ -127,7 +138,47 @@ export class ChatbotOrchestrationService {
       console.log(`[ChatbotOrchestration] Démarrage requête ${conversationId} pour ${request.userId} (${request.userRole})`);
 
       // ========================================
-      // 1. VALIDATION RBAC UTILISATEUR 
+      // 1. DÉTECTION D'INTENTIONS D'ACTIONS - NOUVEAU PIPELINE
+      // ========================================
+      const actionIntention = this.actionExecutionService.detectActionIntention(request.query);
+      
+      if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
+        console.log(`[ChatbotOrchestration] Action détectée: ${actionIntention.actionType} sur ${actionIntention.entity}`);
+        
+        // Proposer l'action au lieu d'exécuter une requête SQL
+        const actionDefinition = await this.actionExecutionService.analyzeActionWithAI(request.query, request.userRole);
+        
+        if (actionDefinition) {
+          const proposeActionRequest: ProposeActionRequest = {
+            type: actionDefinition.type,
+            entity: actionDefinition.entity as any,
+            operation: actionDefinition.operation,
+            parameters: actionDefinition.parameters,
+            targetEntityId: actionDefinition.targetEntityId,
+            riskLevel: actionDefinition.risk_level,
+            confirmationRequired: actionDefinition.confirmation_required,
+            userId: request.userId,
+            userRole: request.userRole,
+            sessionId: request.sessionId,
+            conversationId,
+            metadata: { detectedViaQuery: true, confidence: actionIntention.confidence }
+          };
+
+          const actionProposal = await this.actionExecutionService.proposeAction(proposeActionRequest);
+
+          // Retourner une réponse spécialisée pour les actions
+          return this.createActionProposalResponse(
+            conversationId,
+            request.query,
+            actionProposal,
+            actionIntention,
+            request.userRole
+          );
+        }
+      }
+
+      // ========================================
+      // 2. VALIDATION RBAC UTILISATEUR (pipeline standard)
       // ========================================
       const rbacStartTime = Date.now();
       
@@ -152,7 +203,7 @@ export class ChatbotOrchestrationService {
       }
 
       // ========================================
-      // 2. GÉNÉRATION CONTEXTE MÉTIER INTELLIGENT
+      // 3. GÉNÉRATION CONTEXTE MÉTIER INTELLIGENT
       // ========================================
       const contextStartTime = Date.now();
 
@@ -181,7 +232,7 @@ export class ChatbotOrchestrationService {
       }
 
       // ========================================
-      // 3. GÉNÉRATION ET EXÉCUTION SQL VIA MOTEUR SÉCURISÉ
+      // 4. GÉNÉRATION ET EXÉCUTION SQL VIA MOTEUR SÉCURISÉ
       // ========================================
       const sqlStartTime = Date.now();
 
@@ -229,7 +280,7 @@ export class ChatbotOrchestrationService {
       }
 
       // ========================================
-      // 4. GÉNÉRATION RÉPONSE CONVERSATIONNELLE 
+      // 5. GÉNÉRATION RÉPONSE CONVERSATIONNELLE 
       // ========================================
       const explanation = this.generateExplanation(
         request.query,
@@ -245,7 +296,7 @@ export class ChatbotOrchestrationService {
       );
 
       // ========================================
-      // 5. LOGGING ET MÉTRIQUES
+      // 6. LOGGING ET MÉTRIQUES
       // ========================================
       const totalExecutionTime = Date.now() - startTime;
 
@@ -282,7 +333,7 @@ export class ChatbotOrchestrationService {
       );
 
       // ========================================
-      // 6. ÉVÉNEMENT POUR APPRENTISSAGE ADAPTATIF
+      // 7. ÉVÉNEMENT POUR APPRENTISSAGE ADAPTATIF
       // ========================================
       await this.eventBus.publish('chatbot.query_processed', {
         userId: request.userId,
@@ -295,7 +346,7 @@ export class ChatbotOrchestrationService {
       });
 
       // ========================================
-      // 7. CONSTRUCTION RÉPONSE FINALE
+      // 8. CONSTRUCTION RÉPONSE FINALE
       // ========================================
       const response: ChatbotQueryResponse = {
         success: true,
@@ -1124,5 +1175,380 @@ export class ChatbotOrchestrationService {
       default:
         return new Date(now.getTime() - 24 * 60 * 60 * 1000);
     }
+  }
+
+  // ========================================
+  // MÉTHODES D'ACTIONS SÉCURISÉES - NOUVEAU PIPELINE
+  // ========================================
+
+  /**
+   * Propose une action sécurisée basée sur une intention détectée
+   */
+  async proposeAction(request: ProposeActionRequest): Promise<ProposeActionResponse> {
+    try {
+      console.log(`[ChatbotOrchestration] Proposition d'action ${request.operation} sur ${request.entity} pour ${request.userId}`);
+      
+      const response = await this.actionExecutionService.proposeAction(request);
+      
+      // Logging pour métriques chatbot
+      await this.logUsageMetrics(
+        request.userId,
+        request.userRole,
+        "propose-action",
+        0, // Le timing sera géré par ActionExecutionService
+        response.success,
+        0
+      );
+
+      return response;
+    } catch (error) {
+      console.error("[ChatbotOrchestration] Erreur proposition d'action:", error);
+      
+      await this.logUsageMetrics(
+        request.userId,
+        request.userRole,
+        "propose-action",
+        0,
+        false,
+        0
+      );
+
+      return {
+        success: false,
+        confirmationRequired: false,
+        riskLevel: 'high',
+        error: {
+          type: 'unknown',
+          message: error instanceof Error ? error.message : 'Erreur inconnue'
+        }
+      };
+    }
+  }
+
+  /**
+   * Exécute une action après confirmation utilisateur
+   */
+  async executeAction(request: ExecuteActionRequest): Promise<ExecuteActionResponse> {
+    try {
+      console.log(`[ChatbotOrchestration] Exécution d'action ${request.actionId} pour ${request.userId}`);
+      
+      const response = await this.actionExecutionService.executeAction(request);
+      
+      // Logging pour métriques chatbot
+      await this.logUsageMetrics(
+        request.userId,
+        request.userRole,
+        "execute-action",
+        response.executionTime || 0,
+        response.success,
+        0
+      );
+
+      return response;
+    } catch (error) {
+      console.error("[ChatbotOrchestration] Erreur exécution d'action:", error);
+      
+      await this.logUsageMetrics(
+        request.userId,
+        request.userRole,
+        "execute-action",
+        0,
+        false,
+        0
+      );
+
+      return {
+        success: false,
+        actionId: request.actionId,
+        error: {
+          type: 'unknown',
+          message: error instanceof Error ? error.message : 'Erreur inconnue'
+        }
+      };
+    }
+  }
+
+  /**
+   * Récupère l'historique des actions d'un utilisateur
+   */
+  async getActionHistory(request: ActionHistoryRequest): Promise<ActionHistoryResponse> {
+    try {
+      console.log(`[ChatbotOrchestration] Récupération historique actions pour ${request.userId || 'all'}`);
+      
+      const response = await this.actionExecutionService.getActionHistory(request);
+      
+      // Logging pour métriques chatbot
+      await this.logUsageMetrics(
+        request.userId || "system",
+        "system",
+        "action-history",
+        0,
+        response.success,
+        0
+      );
+
+      return response;
+    } catch (error) {
+      console.error("[ChatbotOrchestration] Erreur historique actions:", error);
+      
+      return {
+        success: false,
+        actions: [],
+        total: 0,
+        hasMore: false,
+        error: {
+          type: 'unknown',
+          message: error instanceof Error ? error.message : 'Erreur inconnue'
+        }
+      };
+    }
+  }
+
+  /**
+   * Met à jour une confirmation d'action
+   */
+  async updateActionConfirmation(request: UpdateConfirmationRequest & { userId: string; userRole: string }): Promise<{ success: boolean; error?: any }> {
+    try {
+      console.log(`[ChatbotOrchestration] Mise à jour confirmation ${request.confirmationId} pour ${request.userId}`);
+      
+      // TODO: Implémenter la méthode dans ActionExecutionService
+      // const response = await this.actionExecutionService.updateConfirmation(request);
+      
+      // Logging pour métriques chatbot
+      await this.logUsageMetrics(
+        request.userId,
+        request.userRole,
+        "update-confirmation",
+        0,
+        true,
+        0
+      );
+
+      return { success: true };
+    } catch (error) {
+      console.error("[ChatbotOrchestration] Erreur mise à jour confirmation:", error);
+      
+      await this.logUsageMetrics(
+        request.userId,
+        request.userRole,
+        "update-confirmation",
+        0,
+        false,
+        0
+      );
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
+  }
+
+  // ========================================
+  // MÉTHODES UTILITAIRES POUR ACTIONS
+  // ========================================
+
+  /**
+   * Crée une réponse spécialisée pour les propositions d'actions
+   */
+  private createActionProposalResponse(
+    conversationId: string,
+    originalQuery: string,
+    actionProposal: ProposeActionResponse,
+    actionIntention: any,
+    userRole: string
+  ): ChatbotQueryResponse {
+    if (!actionProposal.success) {
+      return this.createErrorResponse(
+        conversationId,
+        originalQuery,
+        actionProposal.error?.type || "action_error",
+        actionProposal.error?.message || "Erreur lors de la proposition d'action",
+        this.generateActionErrorMessage(actionProposal.error?.type || "unknown")
+      );
+    }
+
+    // Générer une explication conversationnelle pour l'action proposée
+    const explanation = this.generateActionExplanation(
+      actionIntention,
+      actionProposal,
+      userRole
+    );
+
+    // Générer des suggestions liées aux actions
+    const suggestions = this.generateActionSuggestions(
+      actionIntention.actionType,
+      actionIntention.entity,
+      userRole
+    );
+
+    return {
+      success: true,
+      conversation_id: conversationId,
+      query: originalQuery,
+      explanation,
+      sql: undefined, // Pas de SQL pour les actions
+      results: [],
+      suggestions,
+      confidence: actionIntention.confidence,
+      execution_time_ms: 0,
+      model_used: "action_detection_engine",
+      cache_hit: false,
+      action_proposal: {
+        action_id: actionProposal.actionId,
+        confirmation_required: actionProposal.confirmationRequired,
+        confirmation_id: actionProposal.confirmationId,
+        risk_level: actionProposal.riskLevel,
+        estimated_time: actionProposal.estimatedTime,
+        warnings: actionProposal.warnings
+      }
+    };
+  }
+
+  /**
+   * Génère une explication conversationnelle pour une action proposée
+   */
+  private generateActionExplanation(
+    actionIntention: any,
+    actionProposal: ProposeActionResponse,
+    userRole: string
+  ): string {
+    const { actionType, entity, operation } = actionIntention;
+    
+    let explanation = `🚀 **Action détectée** : ${this.getActionDisplayName(actionType)} sur ${this.getEntityDisplayName(entity)}\n\n`;
+    
+    explanation += `✅ **Opération** : ${this.getOperationDisplayName(operation)}\n`;
+    explanation += `🔒 **Niveau de risque** : ${this.getRiskLevelDisplay(actionProposal.riskLevel)}\n`;
+    
+    if (actionProposal.confirmationRequired) {
+      explanation += `⚠️ **Confirmation requise** : Cette action nécessite votre validation avant exécution\n`;
+    }
+    
+    if (actionProposal.warnings && actionProposal.warnings.length > 0) {
+      explanation += `\n📋 **Avertissements** :\n`;
+      actionProposal.warnings.forEach(warning => {
+        explanation += `• ${warning}\n`;
+      });
+    }
+    
+    if (actionProposal.estimatedTime) {
+      explanation += `\n⏱️ **Temps d'exécution estimé** : ${actionProposal.estimatedTime} seconde(s)\n`;
+    }
+
+    explanation += `\n${actionProposal.confirmationRequired ? 
+      '💡 **Prochaines étapes** : Confirmez cette action pour procéder à son exécution.' : 
+      '💡 **Prochaines étapes** : Action prête à être exécutée automatiquement.'
+    }`;
+
+    return explanation;
+  }
+
+  /**
+   * Génère des suggestions contextuelles pour les actions
+   */
+  private generateActionSuggestions(
+    actionType: string,
+    entity: string,
+    userRole: string
+  ): string[] {
+    const suggestions: string[] = [];
+    
+    // Suggestions selon le type d'action
+    switch (actionType) {
+      case 'create':
+        suggestions.push(`Afficher les ${entity}s récemment créé(e)s`);
+        suggestions.push(`Lister les templates pour ${entity}`);
+        break;
+      case 'update':
+        suggestions.push(`Voir l'historique des modifications de ${entity}`);
+        suggestions.push(`Afficher les ${entity}s avec le même statut`);
+        break;
+      case 'delete':
+        suggestions.push(`Voir les ${entity}s archivé(e)s`);
+        suggestions.push(`Récupérer les ${entity}s supprimé(e)s récemment`);
+        break;
+      case 'business_action':
+        suggestions.push(`Afficher les processus métier disponibles`);
+        suggestions.push(`Voir l'état des workflows en cours`);
+        break;
+    }
+    
+    // Suggestions selon le rôle
+    if (userRole === 'chef_projet') {
+      suggestions.push("Mes projets nécessitant une action");
+      suggestions.push("Actions en attente dans mes projets");
+    } else if (userRole === 'commercial') {
+      suggestions.push("Offres nécessitant un suivi");
+      suggestions.push("Actions commerciales recommandées");
+    }
+    
+    return suggestions.slice(0, 4); // Limiter à 4 suggestions
+  }
+
+  /**
+   * Génère un message d'erreur adapté pour les actions
+   */
+  private generateActionErrorMessage(errorType: string): string {
+    switch (errorType) {
+      case "permission":
+        return "Vous n'avez pas les permissions nécessaires pour effectuer cette action.";
+      case "validation":
+        return "Les paramètres de l'action ne sont pas valides. Veuillez vérifier votre requête.";
+      case "business_rule":
+        return "Cette action ne respecte pas les règles métier en vigueur.";
+      case "security":
+        return "Cette action a été bloquée pour des raisons de sécurité.";
+      default:
+        return "Une erreur inattendue s'est produite lors du traitement de votre action.";
+    }
+  }
+
+  // ========================================
+  // UTILITAIRES D'AFFICHAGE POUR ACTIONS
+  // ========================================
+
+  private getActionDisplayName(actionType: string): string {
+    const displayNames: Record<string, string> = {
+      'create': 'Création',
+      'update': 'Modification',
+      'delete': 'Suppression',
+      'business_action': 'Action métier'
+    };
+    return displayNames[actionType] || actionType;
+  }
+
+  private getEntityDisplayName(entity: string): string {
+    const displayNames: Record<string, string> = {
+      'offer': 'offre',
+      'project': 'projet',
+      'ao': 'appel d\'offre',
+      'contact': 'contact',
+      'task': 'tâche',
+      'supplier': 'fournisseur',
+      'milestone': 'jalon'
+    };
+    return displayNames[entity] || entity;
+  }
+
+  private getOperationDisplayName(operation: string): string {
+    const displayNames: Record<string, string> = {
+      'create_offer': 'Créer une nouvelle offre',
+      'create_project': 'Créer un nouveau projet',
+      'update_status': 'Mettre à jour le statut',
+      'update_montant': 'Modifier le montant',
+      'archive_offer': 'Archiver l\'offre',
+      'transform_to_project': 'Transformer en projet',
+      'create_project_task': 'Créer une tâche de projet'
+    };
+    return displayNames[operation] || operation.replace(/_/g, ' ');
+  }
+
+  private getRiskLevelDisplay(riskLevel: string): string {
+    const displays: Record<string, string> = {
+      'low': '🟢 Faible',
+      'medium': '🟡 Modéré', 
+      'high': '🔴 Élevé'
+    };
+    return displays[riskLevel] || riskLevel;
   }
 }

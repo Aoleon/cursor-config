@@ -102,6 +102,99 @@ export interface ChatbotHistoryItem {
 }
 
 // ========================================
+// INTERFACES ACTIONS SÉCURISÉES - NOUVEAU SYSTÈME
+// ========================================
+
+export interface ActionProposal {
+  action_id: string;
+  confirmation_required: boolean;
+  confirmation_id?: string;
+  risk_level: 'low' | 'medium' | 'high';
+  estimated_time?: number;
+  warnings?: string[];
+}
+
+export interface ChatbotQueryResponseWithAction extends ChatbotQueryResponse {
+  action_proposal?: ActionProposal;
+}
+
+export interface ProposeActionRequest {
+  type: 'create' | 'update' | 'delete' | 'business_action';
+  entity: 'offer' | 'project' | 'ao' | 'contact' | 'task' | 'supplier' | 'milestone';
+  operation: string;
+  parameters: Record<string, any>;
+  targetEntityId?: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  confirmationRequired: boolean;
+  sessionId?: string;
+  conversationId?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface ProposeActionResponse {
+  success: boolean;
+  actionId?: string;
+  confirmationRequired: boolean;
+  confirmationId?: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  estimatedTime?: number;
+  warnings?: string[];
+  error?: {
+    type: string;
+    message: string;
+  };
+}
+
+export interface ExecuteActionRequest {
+  actionId: string;
+  confirmationId?: string;
+  parameters?: Record<string, any>;
+}
+
+export interface ExecuteActionResponse {
+  success: boolean;
+  actionId: string;
+  executionTime?: number;
+  result?: any;
+  error?: {
+    type: string;
+    message: string;
+  };
+}
+
+export interface ActionHistoryItem {
+  id: string;
+  actionId: string;
+  type: string;
+  entity: string;
+  operation: string;
+  status: 'pending' | 'confirmed' | 'executed' | 'failed' | 'cancelled';
+  executedAt?: string;
+  parameters: Record<string, any>;
+  result?: any;
+}
+
+export interface ActionHistoryRequest {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  entity?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface ActionHistoryResponse {
+  success: boolean;
+  actions: ActionHistoryItem[];
+  total: number;
+  hasMore: boolean;
+  error?: {
+    type: string;
+    message: string;
+  };
+}
+
+// ========================================
 // HOOK PRINCIPAL POUR REQUÊTES CHATBOT
 // ========================================
 
@@ -382,4 +475,149 @@ export function useChatbotState() {
     userId: user?.id,
     userName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Utilisateur'
   };
+}
+
+// ========================================
+// HOOKS ACTIONS SÉCURISÉES - NOUVEAU SYSTÈME
+// ========================================
+
+export function useProposeAction() {
+  const { user } = useAuth() as { user: User | null };
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (request: ProposeActionRequest): Promise<ProposeActionResponse> => {
+      const payload = {
+        ...request,
+        userId: user?.id,
+        userRole: user?.role || 'technicien_be'
+      };
+
+      const response = await apiRequest('POST', '/api/chatbot/propose-action', payload);
+      return await response.json();
+    },
+    onError: () => {
+      toast({
+        title: "Erreur de proposition d'action",
+        description: "Impossible de proposer cette action pour le moment.",
+        variant: "destructive"
+      });
+    }
+  });
+}
+
+export function useExecuteAction() {
+  const { user } = useAuth() as { user: User | null };
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (request: ExecuteActionRequest): Promise<ExecuteActionResponse> => {
+      const payload = {
+        ...request,
+        userId: user?.id,
+        userRole: user?.role || 'technicien_be'
+      };
+
+      const response = await apiRequest('POST', '/api/chatbot/execute-action', payload);
+      return await response.json();
+    },
+    onSuccess: (result) => {
+      if (result.success) {
+        toast({
+          title: "Action exécutée avec succès",
+          description: "L'action a été réalisée dans le système.",
+          variant: "default"
+        });
+        // Invalider les caches pertinents
+        queryClient.invalidateQueries({ queryKey: ['/api/chatbot/action-history'] });
+      } else {
+        toast({
+          title: "Erreur d'exécution",
+          description: result.error?.message || "L'action n'a pas pu être exécutée.",
+          variant: "destructive"
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Erreur d'exécution d'action",
+        description: "Impossible d'exécuter cette action pour le moment.",
+        variant: "destructive"
+      });
+    }
+  });
+}
+
+export function useActionHistory(request: ActionHistoryRequest = {}) {
+  const { user } = useAuth() as { user: User | null };
+
+  return useQuery({
+    queryKey: ['/api/chatbot/action-history', request],
+    queryFn: async (): Promise<ActionHistoryResponse> => {
+      const params = new URLSearchParams();
+      if (request.limit) params.append('limit', request.limit.toString());
+      if (request.offset) params.append('offset', request.offset.toString());
+      if (request.status) params.append('status', request.status);
+      if (request.entity) params.append('entity', request.entity);
+      if (request.dateFrom) params.append('dateFrom', request.dateFrom);
+      if (request.dateTo) params.append('dateTo', request.dateTo);
+
+      const response = await fetch(`/api/chatbot/action-history?${params.toString()}`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement de l\'historique');
+      }
+
+      return await response.json();
+    },
+    enabled: !!user?.id,
+    staleTime: 30000, // 30s
+    retry: 1
+  });
+}
+
+export function useUpdateActionConfirmation() {
+  const { user } = useAuth() as { user: User | null };
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ confirmationId, status, comment }: { 
+      confirmationId: string; 
+      status: 'confirmed' | 'rejected'; 
+      comment?: string; 
+    }) => {
+      const response = await apiRequest('PUT', `/api/chatbot/action-confirmation/${confirmationId}`, {
+        status,
+        comment,
+        userId: user?.id,
+        userRole: user?.role || 'technicien_be'
+      });
+      return await response.json();
+    },
+    onSuccess: (result, variables) => {
+      const message = variables.status === 'confirmed' ? 
+        "Action confirmée et en cours d'exécution" : 
+        "Action annulée";
+      
+      toast({
+        title: message,
+        description: variables.status === 'confirmed' ? 
+          "L'action va être exécutée dans quelques instants." :
+          "L'action a été annulée et ne sera pas exécutée.",
+        variant: "default"
+      });
+
+      // Invalider les caches pertinents
+      queryClient.invalidateQueries({ queryKey: ['/api/chatbot/action-history'] });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur de confirmation",
+        description: "Impossible de traiter la confirmation pour le moment.",
+        variant: "destructive"
+      });
+    }
+  });
 }

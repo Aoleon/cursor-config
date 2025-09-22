@@ -1,4 +1,4 @@
-import { pgTable, varchar, text, timestamp, decimal, boolean, integer, jsonb, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, timestamp, decimal, boolean, integer, jsonb, pgEnum, index, type PgColumn } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -4526,7 +4526,7 @@ export const securityAlerts = pgTable("security_alerts", {
   
   // Métadonnées et traçabilité
   correlationId: varchar("correlation_id"), // ID de corrélation pour grouper les alertes liées
-  parentAlertId: varchar("parent_alert_id").references(() => securityAlerts.id), // Alerte parente si cascade
+  parentAlertId: varchar("parent_alert_id").references((): PgColumn => securityAlerts.id), // Alerte parente si cascade
   tags: text("tags").array().default(sql`'{}'::text[]`), // Tags pour catégorisation
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`), // Métadonnées flexibles
   
@@ -4814,4 +4814,390 @@ export interface SecurityAlertEvent {
   confidence?: number;
   metadata?: Record<string, any>;
   timestamp?: Date;
+}
+
+// ========================================
+// SYSTÈME D'ACTIONS SÉCURISÉES POUR CHATBOT IA SAXIUM
+// ========================================
+
+// Types d'actions supportées par le système
+export const actionTypeEnum = pgEnum("action_type", [
+  "create",          // Création d'entités
+  "update",          // Mise à jour d'entités
+  "delete",          // Suppression/archivage
+  "business_action"  // Actions métier spécialisées
+]);
+
+// Entités sur lesquelles les actions peuvent être effectuées
+export const actionEntityEnum = pgEnum("action_entity", [
+  "offer",           // Offres commerciales
+  "project",         // Projets
+  "ao",              // Appels d'offres
+  "contact",         // Contacts (maîtres d'ouvrage/œuvre)
+  "task",            // Tâches de projet
+  "supplier",        // Fournisseurs
+  "team_member",     // Membres d'équipe
+  "document",        // Documents
+  "validation",      // Validations BE
+  "milestone"        // Jalons
+]);
+
+// Niveaux de risque des actions
+export const actionRiskLevelEnum = pgEnum("action_risk_level", [
+  "low",             // Faible risque - Confirmation optionnelle
+  "medium",          // Risque modéré - Confirmation recommandée
+  "high"             // Haut risque - Confirmation obligatoire
+]);
+
+// Statuts des actions
+export const actionStatusEnum = pgEnum("action_status", [
+  "proposed",        // Action proposée à l'utilisateur
+  "confirmed",       // Action confirmée par l'utilisateur
+  "executing",       // Action en cours d'exécution
+  "completed",       // Action exécutée avec succès
+  "failed",          // Action échouée
+  "cancelled",       // Action annulée
+  "timeout"          // Action expirée
+]);
+
+// Statuts des confirmations d'actions
+export const confirmationStatusEnum = pgEnum("confirmation_status", [
+  "pending",         // En attente de confirmation
+  "confirmed",       // Confirmé par l'utilisateur
+  "rejected",        // Rejeté par l'utilisateur
+  "expired"          // Demande expirée
+]);
+
+// Table principale des actions sécurisées
+export const actions = pgTable("actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Classification de l'action
+  type: actionTypeEnum("type").notNull(),
+  entity: actionEntityEnum("entity").notNull(),
+  operation: varchar("operation").notNull(), // create_offer, update_status, delete_project, etc.
+  
+  // Utilisateur et session
+  userId: varchar("user_id").notNull().references(() => users.id),
+  userRole: varchar("user_role").notNull(),
+  sessionId: varchar("session_id"),
+  conversationId: varchar("conversation_id").references(() => chatbotConversations.id),
+  
+  // Paramètres de l'action
+  parameters: jsonb("parameters").notNull(), // Paramètres de l'action (valeurs, IDs, etc.)
+  targetEntityId: varchar("target_entity_id"), // ID de l'entité cible (si applicable)
+  
+  // Validation et sécurité
+  riskLevel: actionRiskLevelEnum("risk_level").notNull(),
+  confirmationRequired: boolean("confirmation_required").default(true).notNull(),
+  rbacValidated: boolean("rbac_validated").default(false).notNull(),
+  
+  // État d'exécution
+  status: actionStatusEnum("status").default("proposed").notNull(),
+  executionResult: jsonb("execution_result"), // Résultat de l'exécution
+  errorDetails: text("error_details"), // Détails d'erreur si échec
+  
+  // Métadonnées de sécurité
+  requiredPermissions: jsonb("required_permissions"), // Permissions requises
+  securityContext: jsonb("security_context"), // Contexte de sécurité au moment de l'action
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  
+  // Timing et expiration
+  proposedAt: timestamp("proposed_at").defaultNow().notNull(),
+  confirmedAt: timestamp("confirmed_at"),
+  executedAt: timestamp("executed_at"),
+  completedAt: timestamp("completed_at"),
+  expiresAt: timestamp("expires_at"), // Expiration de la demande de confirmation
+  
+  // Performance et audit
+  executionTimeMs: integer("execution_time_ms"),
+  retryCount: integer("retry_count").default(0).notNull(),
+  maxRetries: integer("max_retries").default(3).notNull(),
+  
+  // Relations et dépendances
+  parentActionId: varchar("parent_action_id").references((): PgColumn => actions.id), // Action parente (batch)
+  dependsOnActionId: varchar("depends_on_action_id").references((): PgColumn => actions.id), // Dépendance
+  
+  // Métadonnées et tags
+  tags: text("tags").array().default(sql`'{}'::text[]`),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    // Index pour performance
+    userStatusIdx: index("actions_user_status_idx").on(table.userId, table.status),
+    typeEntityIdx: index("actions_type_entity_idx").on(table.type, table.entity),
+    statusIdx: index("actions_status_idx").on(table.status),
+    proposedAtIdx: index("actions_proposed_at_idx").on(table.proposedAt),
+    riskLevelIdx: index("actions_risk_level_idx").on(table.riskLevel),
+    conversationIdx: index("actions_conversation_idx").on(table.conversationId),
+    expiresAtIdx: index("actions_expires_at_idx").on(table.expiresAt),
+    parentActionIdx: index("actions_parent_action_idx").on(table.parentActionId),
+    targetEntityIdx: index("actions_target_entity_idx").on(table.entity, table.targetEntityId),
+  };
+});
+
+// Table d'historique des actions pour audit complet
+export const actionHistory = pgTable("action_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  actionId: varchar("action_id").notNull().references(() => actions.id, { onDelete: "cascade" }),
+  
+  // État de transition
+  fromStatus: actionStatusEnum("from_status"),
+  toStatus: actionStatusEnum("to_status").notNull(),
+  changeReason: text("change_reason"), // Raison du changement d'état
+  
+  // Contexte de changement
+  changedBy: varchar("changed_by").references(() => users.id), // Qui a fait le changement
+  changeType: varchar("change_type").notNull(), // automatic, user_action, system_timeout, etc.
+  
+  // Détails du changement
+  oldValues: jsonb("old_values"), // Valeurs avant changement
+  newValues: jsonb("new_values"), // Valeurs après changement
+  changeMetadata: jsonb("change_metadata"), // Métadonnées du changement
+  
+  // Performance et résultats
+  executionTimeMs: integer("execution_time_ms"),
+  success: boolean("success").notNull(),
+  errorMessage: text("error_message"),
+  
+  // Audit et traçabilité
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  securityContext: jsonb("security_context"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    actionIdIdx: index("action_history_action_id_idx").on(table.actionId),
+    statusTransitionIdx: index("action_history_status_transition_idx").on(table.fromStatus, table.toStatus),
+    changedByIdx: index("action_history_changed_by_idx").on(table.changedBy),
+    createdAtIdx: index("action_history_created_at_idx").on(table.createdAt),
+    successIdx: index("action_history_success_idx").on(table.success),
+  };
+});
+
+// Table des confirmations d'actions utilisateur
+export const actionConfirmations = pgTable("action_confirmations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  actionId: varchar("action_id").notNull().references(() => actions.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // État de la confirmation
+  status: confirmationStatusEnum("status").default("pending").notNull(),
+  
+  // Détails de confirmation
+  confirmationMessage: text("confirmation_message").notNull(), // Message affiché à l'utilisateur
+  warningMessage: text("warning_message"), // Avertissements sur les risques
+  recommendedActions: jsonb("recommended_actions"), // Actions recommandées avant confirmation
+  
+  // Réponse utilisateur
+  userDecision: boolean("user_decision"), // true = confirmé, false = rejeté, null = en attente
+  userComment: text("user_comment"), // Commentaire optionnel de l'utilisateur
+  rejectionReason: text("rejection_reason"), // Raison du rejet si applicable
+  
+  // Contexte de présentation
+  presentationMode: varchar("presentation_mode").default("chatbot"), // chatbot, modal, email, etc.
+  uiContext: jsonb("ui_context"), // Contexte d'interface utilisateur
+  
+  // Timing
+  presentedAt: timestamp("presented_at").defaultNow().notNull(),
+  respondedAt: timestamp("responded_at"),
+  expiresAt: timestamp("expires_at").notNull(), // Expiration de la demande
+  remindersSent: integer("reminders_sent").default(0).notNull(),
+  
+  // Audit
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    actionUserIdx: index("action_confirmations_action_user_idx").on(table.actionId, table.userId),
+    statusIdx: index("action_confirmations_status_idx").on(table.status),
+    expiresAtIdx: index("action_confirmations_expires_at_idx").on(table.expiresAt),
+    presentedAtIdx: index("action_confirmations_presented_at_idx").on(table.presentedAt),
+    userDecisionIdx: index("action_confirmations_user_decision_idx").on(table.userDecision),
+  };
+});
+
+// ========================================
+// SCHÉMAS ZOD POUR VALIDATION DES ACTIONS
+// ========================================
+
+// Schéma pour proposer une action
+export const proposeActionSchema = z.object({
+  type: z.enum(["create", "update", "delete", "business_action"]),
+  entity: z.enum(["offer", "project", "ao", "contact", "task", "supplier", "team_member", "document", "validation", "milestone"]),
+  operation: z.string().min(1).max(100),
+  parameters: z.record(z.any()),
+  targetEntityId: z.string().optional(),
+  riskLevel: z.enum(["low", "medium", "high"]).optional(),
+  confirmationRequired: z.boolean().default(true),
+  expirationMinutes: z.number().min(1).max(1440).default(30), // 1 minute à 24 heures
+  metadata: z.record(z.any()).optional(),
+});
+
+// Schéma pour exécuter une action
+export const executeActionSchema = z.object({
+  actionId: z.string(),
+  userConfirmation: z.boolean().default(false),
+  userComment: z.string().optional(),
+  overrideRiskCheck: z.boolean().default(false), // Pour les admins seulement
+});
+
+// Schéma pour requête d'historique d'actions
+export const actionHistoryRequestSchema = z.object({
+  userId: z.string().optional(),
+  actionType: z.enum(["create", "update", "delete", "business_action"]).optional(),
+  entity: z.enum(["offer", "project", "ao", "contact", "task", "supplier", "team_member", "document", "validation", "milestone"]).optional(),
+  status: z.enum(["proposed", "confirmed", "executing", "completed", "failed", "cancelled", "timeout"]).optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  riskLevel: z.enum(["low", "medium", "high"]).optional(),
+  limit: z.number().min(1).max(100).default(20),
+  offset: z.number().min(0).default(0),
+  includeParameters: z.boolean().default(false),
+  includeResults: z.boolean().default(false),
+});
+
+// Schéma pour mise à jour de confirmation
+export const updateConfirmationSchema = z.object({
+  confirmationId: z.string(),
+  decision: z.boolean(), // true = confirmé, false = rejeté
+  comment: z.string().optional(),
+  rejectionReason: z.string().optional(),
+});
+
+// ========================================
+// SCHÉMAS D'INSERTION POUR LES TABLES
+// ========================================
+
+export const insertActionSchema = createInsertSchema(actions).omit({
+  id: true,
+  proposedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertActionHistorySchema = createInsertSchema(actionHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertActionConfirmationSchema = createInsertSchema(actionConfirmations).omit({
+  id: true,
+  presentedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR LES ACTIONS
+// ========================================
+
+export type Action = typeof actions.$inferSelect;
+export type InsertAction = z.infer<typeof insertActionSchema>;
+
+export type ActionHistory = typeof actionHistory.$inferSelect;
+export type InsertActionHistory = z.infer<typeof insertActionHistorySchema>;
+
+export type ActionConfirmation = typeof actionConfirmations.$inferSelect;
+export type InsertActionConfirmation = z.infer<typeof insertActionConfirmationSchema>;
+
+// Types pour les requêtes API
+export type ProposeActionRequest = z.infer<typeof proposeActionSchema> & {
+  userId: string;
+  userRole: string;
+  sessionId?: string;
+  conversationId?: string;
+};
+
+export type ExecuteActionRequest = z.infer<typeof executeActionSchema> & {
+  userId: string;
+  userRole: string;
+};
+
+export type ActionHistoryRequest = z.infer<typeof actionHistoryRequestSchema>;
+export type UpdateConfirmationRequest = z.infer<typeof updateConfirmationSchema>;
+
+// Interface pour définition d'action
+export interface ActionDefinition {
+  type: 'create' | 'update' | 'delete' | 'business_action';
+  entity: string;
+  operation: string;
+  parameters: Record<string, any>;
+  targetEntityId?: string;
+  confirmation_required: boolean;
+  risk_level: 'low' | 'medium' | 'high';
+  estimated_execution_time?: number;
+  required_permissions?: string[];
+  validation_rules?: string[];
+  rollback_possible?: boolean;
+  side_effects?: string[];
+}
+
+// Interface pour résultats d'action
+export interface ActionExecutionResult {
+  success: boolean;
+  entityId?: string;
+  affectedRows?: number;
+  executionTime?: number;
+  warnings?: string[];
+  sideEffects?: {
+    entity: string;
+    action: string;
+    details: any;
+  }[];
+  error?: {
+    type: 'validation' | 'permission' | 'execution' | 'rollback';
+    message: string;
+    details?: any;
+  };
+}
+
+// Interface pour réponses API
+export interface ProposeActionResponse {
+  success: boolean;
+  actionId?: string;
+  confirmationRequired: boolean;
+  confirmationId?: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  estimatedTime?: number;
+  warnings?: string[];
+  error?: {
+    type: 'validation' | 'permission' | 'security' | 'business_rule';
+    message: string;
+    details?: any;
+  };
+}
+
+export interface ExecuteActionResponse {
+  success: boolean;
+  result?: ActionExecutionResult;
+  actionId: string;
+  executionTime?: number;
+  error?: {
+    type: 'confirmation' | 'permission' | 'execution' | 'timeout';
+    message: string;
+    details?: any;
+  };
+}
+
+export interface ActionHistoryResponse {
+  success: boolean;
+  actions: Action[];
+  total: number;
+  hasMore: boolean;
+  error?: {
+    type: 'validation' | 'permission' | 'query';
+    message: string;
+    details?: any;
+  };
 }

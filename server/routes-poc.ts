@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage-poc";
+import { storage, type IStorage } from "./storage-poc";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { OCRService } from "./ocrService";
 import multer from "multer";
@@ -27,8 +27,10 @@ import {
   type BusinessContextRequest, type ContextEnrichmentRequest, type AdaptiveLearningUpdate,
   chatbotQueryRequestSchema, chatbotSuggestionsRequestSchema, chatbotValidateRequestSchema,
   chatbotHistoryRequestSchema, chatbotFeedbackRequestSchema, chatbotStatsRequestSchema,
+  proposeActionSchema, executeActionSchema, actionHistoryRequestSchema, updateConfirmationSchema,
   type ChatbotQueryRequest, type ChatbotSuggestionsRequest, type ChatbotValidateRequest,
-  type ChatbotHistoryRequest, type ChatbotFeedbackRequest, type ChatbotStatsRequest
+  type ChatbotHistoryRequest, type ChatbotFeedbackRequest, type ChatbotStatsRequest,
+  type ProposeActionRequest, type ExecuteActionRequest, type ActionHistoryRequest, type UpdateConfirmationRequest
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -74,7 +76,7 @@ const uploadMiddleware = multer({
 const ocrService = new OCRService();
 
 // Instance unique du service d'intelligence temporelle
-const dateIntelligenceService = new DateIntelligenceService();
+const dateIntelligenceService = new DateIntelligenceService(storage as IStorage);
 
 // Importation et instances des services de détection d'alertes - Phase 2.3
 import { DateAlertDetectionService, MenuiserieDetectionRules } from "./services/DateAlertDetectionService";
@@ -82,21 +84,21 @@ import { PeriodicDetectionScheduler } from "./services/PeriodicDetectionSchedule
 import { eventBus } from "./eventBus";
 
 // Instance des règles métier menuiserie
-const menuiserieRules = new MenuiserieDetectionRules(storage);
+const menuiserieRules = new MenuiserieDetectionRules(storage as IStorage);
 
 // ========================================
 // ANALYTICS SERVICE - PHASE 3.1.4
 // ========================================
 
 // Instance du service Analytics pour Dashboard Décisionnel
-const analyticsService = new AnalyticsService(storage, eventBus);
+const analyticsService = new AnalyticsService(storage as IStorage, eventBus);
 
 // ========================================
 // PREDICTIVE ENGINE SERVICE - PHASE 3.1.6.4
 // ========================================
 
 // Instance du service Moteur Prédictif pour Dashboard Dirigeant
-const predictiveEngineService = new PredictiveEngineService(storage, analyticsService);
+const predictiveEngineService = new PredictiveEngineService(storage as IStorage, analyticsService);
 
 // ========================================
 // SERVICE IA MULTI-MODÈLES - CHATBOT TEXT-TO-SQL SAXIUM
@@ -108,18 +110,18 @@ import aiServiceRoutes from "./routes/ai-service";
 import { RBACService } from "./services/RBACService";
 import { SQLEngineService } from "./services/SQLEngineService";
 
-const aiService = getAIService(storage);
+const aiService = getAIService(storage as IStorage);
 
 // ========================================
 // SERVICE RBAC ET MOTEUR SQL SÉCURISÉ - CHATBOT SAXIUM 
 // ========================================
 
 // Instance du service RBAC pour contrôle d'accès
-const rbacService = new RBACService(storage);
+const rbacService = new RBACService(storage as IStorage);
 
 // Instance du service de contexte métier intelligent
 import { BusinessContextService } from "./services/BusinessContextService";
-const businessContextService = new BusinessContextService(storage, rbacService, eventBus);
+const businessContextService = new BusinessContextService(storage as IStorage, rbacService, eventBus);
 
 // Instance du moteur SQL sécurisé avec IA + RBAC + Contexte métier
 const sqlEngineService = new SQLEngineService(
@@ -127,7 +129,7 @@ const sqlEngineService = new SQLEngineService(
   rbacService,
   businessContextService,
   eventBus,
-  storage
+  storage as IStorage
 );
 
 // ========================================
@@ -136,18 +138,33 @@ const sqlEngineService = new SQLEngineService(
 
 // Instance du service d'orchestration chatbot qui combine tous les services
 import { ChatbotOrchestrationService } from "./services/ChatbotOrchestrationService";
+
+// Instance du service d'exécution d'actions sécurisées - NOUVEAU SYSTÈME D'ACTIONS
+import { ActionExecutionService } from "./services/ActionExecutionService";
+import { AuditService } from "./services/AuditService";
+
+const auditService = new AuditService(eventBus, storage as IStorage);
+const actionExecutionService = new ActionExecutionService(
+  aiService,
+  rbacService,
+  auditService,
+  eventBus,
+  storage as IStorage
+);
+
 const chatbotOrchestrationService = new ChatbotOrchestrationService(
   aiService,
   rbacService,
   sqlEngineService,
   businessContextService,
+  actionExecutionService,
   eventBus,
-  storage
+  storage as IStorage
 );
 
 // Instance du service de détection d'alertes
 const dateAlertDetectionService = new DateAlertDetectionService(
-  storage,
+  storage as IStorage,
   eventBus,
   dateIntelligenceService,
   menuiserieRules,
@@ -157,7 +174,7 @@ const dateAlertDetectionService = new DateAlertDetectionService(
 
 // Instance du planificateur de détection périodique
 const periodicDetectionScheduler = new PeriodicDetectionScheduler(
-  storage,
+  storage as IStorage,
   eventBus,
   dateAlertDetectionService,
   dateIntelligenceService
@@ -6722,6 +6739,136 @@ app.get("/api/chatbot/health",
         error: 'Un ou plusieurs services critiques sont indisponibles',
         timestamp: new Date().toISOString()
       });
+    }
+  })
+);
+
+// ========================================
+// ENDPOINTS ACTIONS SÉCURISÉES CHATBOT - NOUVEAU SYSTÈME
+// ========================================
+
+// POST /api/chatbot/propose-action - Propose une action basée sur l'intention détectée
+app.post("/api/chatbot/propose-action",
+  isAuthenticated,
+  rateLimits.processing, // Rate limiting strict pour les actions
+  validateBody(proposeActionSchema),
+  asyncHandler(async (req: any, res) => {
+    const requestBody = req.body;
+    const userId = req.session.user?.id || req.user?.id;
+    const userRole = req.session.user?.role || req.user?.role || 'user';
+    const sessionId = req.session.id;
+
+    console.log(`[ChatbotAction] Proposition d'action ${requestBody.operation} sur ${requestBody.entity} pour ${userId} (${userRole})`);
+
+    // Construction de la requête de proposition d'action complète
+    const proposeRequest: ProposeActionRequest = {
+      ...requestBody,
+      userId,
+      userRole,
+      sessionId
+    };
+
+    const result = await chatbotOrchestrationService.proposeAction(proposeRequest);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      const statusCode = result.error?.type === 'permission' ? 403 :
+                        result.error?.type === 'validation' ? 400 : 500;
+      res.status(statusCode).json(result);
+    }
+  })
+);
+
+// POST /api/chatbot/execute-action - Exécute une action après confirmation utilisateur
+app.post("/api/chatbot/execute-action",
+  isAuthenticated,
+  rateLimits.processing, // Rate limiting strict pour les actions critiques
+  validateBody(executeActionSchema),
+  asyncHandler(async (req: any, res) => {
+    const requestBody = req.body;
+    const userId = req.session.user?.id || req.user?.id;
+    const userRole = req.session.user?.role || req.user?.role || 'user';
+
+    console.log(`[ChatbotAction] Exécution d'action ${requestBody.actionId} pour ${userId} (${userRole})`);
+
+    // Construction de la requête d'exécution d'action complète
+    const executeRequest: ExecuteActionRequest = {
+      ...requestBody,
+      userId,
+      userRole
+    };
+
+    const result = await chatbotOrchestrationService.executeAction(executeRequest);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      const statusCode = result.error?.type === 'permission' ? 403 :
+                        result.error?.type === 'validation' ? 400 :
+                        result.error?.type === 'business_rule' ? 422 : 500;
+      res.status(statusCode).json(result);
+    }
+  })
+);
+
+// GET /api/chatbot/action-history - Historique des actions utilisateur
+app.get("/api/chatbot/action-history",
+  isAuthenticated,
+  rateLimits.general,
+  validateQuery(actionHistoryRequestSchema),
+  asyncHandler(async (req: any, res) => {
+    const queryParams = req.query;
+    const userId = req.session.user?.id || req.user?.id;
+    const userRole = req.session.user?.role || req.user?.role || 'user';
+
+    console.log(`[ChatbotAction] Historique des actions demandé par ${userId} (${userRole})`);
+
+    // Construction de la requête d'historique d'actions
+    const historyRequest: ActionHistoryRequest = {
+      ...queryParams,
+      userId: queryParams.userId || userId, // Permet aux admins de voir l'historique d'autres utilisateurs
+      userRole
+    };
+
+    const result = await chatbotOrchestrationService.getActionHistory(historyRequest);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  })
+);
+
+// PUT /api/chatbot/action-confirmation/:confirmationId - Met à jour une confirmation d'action
+app.put("/api/chatbot/action-confirmation/:confirmationId",
+  isAuthenticated,
+  rateLimits.general,
+  validateParams(z.object({ confirmationId: z.string().uuid() })),
+  validateBody(updateConfirmationSchema),
+  asyncHandler(async (req: any, res) => {
+    const { confirmationId } = req.params;
+    const requestBody = req.body;
+    const userId = req.session.user?.id || req.user?.id;
+    const userRole = req.session.user?.role || req.user?.role || 'user';
+
+    console.log(`[ChatbotAction] Mise à jour confirmation ${confirmationId} par ${userId} (${userRole}): ${requestBody.status}`);
+
+    // Construction de la requête de mise à jour de confirmation
+    const updateRequest = {
+      ...requestBody,
+      confirmationId,
+      userId,
+      userRole
+    };
+
+    const result = await chatbotOrchestrationService.updateActionConfirmation(updateRequest);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(500).json(result);
     }
   })
 );

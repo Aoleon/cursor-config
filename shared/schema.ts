@@ -3112,3 +3112,259 @@ export type ProjectRiskAssessment = z.infer<typeof projectRiskAssessmentSchema>;
 export type BusinessRecommendation = z.infer<typeof businessRecommendationSchema>;
 export type PredictiveRangeQuery = z.infer<typeof predictiveRangeQuerySchema>;
 export type RiskQueryParams = z.infer<typeof riskQueryParamsSchema>;
+
+// ========================================
+// ENUMS POUR SYSTÈME RBAC GRANULAIRE - CHATBOT IA SAXIUM
+// ========================================
+
+// Rôles utilisateurs pour permissions granulaires
+export const rbacRoleEnum = pgEnum("rbac_role", [
+  "admin", 
+  "chef_projet", 
+  "technicien_be", 
+  "responsable_be", 
+  "chef_travaux",
+  "commercial",
+  "financier",
+  "direction"
+]);
+
+// Actions possibles sur les données
+export const rbacActionEnum = pgEnum("rbac_action", [
+  "read",
+  "write", 
+  "delete",
+  "create",
+  "export"
+]);
+
+// Contextes d'accès dynamiques
+export const permissionContextEnum = pgEnum("permission_context", [
+  "all",                    // Accès global
+  "own_only",              // Ses propres données seulement
+  "team_projects",         // Projets de son équipe
+  "assigned_projects",     // Projets assignés
+  "department_data",       // Données de son département
+  "financial_restricted",  // Données financières restreintes
+  "current_month",         // Données du mois courant seulement
+  "public_data"           // Données publiques seulement
+]);
+
+// Niveaux de sensibilité des données
+export const dataSensitivityEnum = pgEnum("data_sensitivity", [
+  "public",      // Données publiques
+  "internal",    // Données internes
+  "confidential", // Données confidentielles
+  "restricted"   // Données très sensibles
+]);
+
+// ========================================
+// TABLES RBAC GRANULAIRE - CHATBOT IA SAXIUM
+// ========================================
+
+// Table principale des permissions granulaires
+export const permissions = pgTable("permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  role: rbacRoleEnum("role").notNull(),
+  tableName: varchar("table_name").notNull(),
+  allowedColumns: text("allowed_columns").array().default(sql`'{}'::text[]`),
+  deniedColumns: text("denied_columns").array().default(sql`'{}'::text[]`),
+  conditions: jsonb("conditions"), // WHERE conditions JSON
+  canRead: boolean("can_read").default(false),
+  canWrite: boolean("can_write").default(false),
+  canDelete: boolean("can_delete").default(false),
+  canCreate: boolean("can_create").default(false),
+  canExport: boolean("can_export").default(false),
+  contextRequired: permissionContextEnum("context_required").default("all"),
+  dataSensitivity: dataSensitivityEnum("data_sensitivity").default("internal"),
+  priority: integer("priority").default(100), // Priorité pour résolution conflits
+  isActive: boolean("is_active").default(true),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Index composite pour performance
+  roleTableIndex: index("idx_permissions_role_table").on(table.role, table.tableName),
+  activePermissionsIndex: index("idx_permissions_active").on(table.isActive, table.priority),
+}));
+
+// Table des contextes de permissions dynamiques
+export const permissionContexts = pgTable("permission_contexts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contextName: varchar("context_name").notNull().unique(),
+  description: text("description").notNull(),
+  sqlCondition: text("sql_condition").notNull(), // Template SQL avec placeholders
+  requiredParameters: text("required_parameters").array().default(sql`'{}'::text[]`),
+  appliesTo: text("applies_to").array().default(sql`'{}'::text[]`), // Tables concernées
+  isSystemContext: boolean("is_system_context").default(false),
+  isActive: boolean("is_active").default(true),
+  examples: jsonb("examples"), // Exemples d'utilisation
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  contextNameIndex: index("idx_permission_contexts_name").on(table.contextName),
+  activeContextsIndex: index("idx_permission_contexts_active").on(table.isActive),
+}));
+
+// Table de mappage utilisateur-contexte dynamique
+export const userPermissionContexts = pgTable("user_permission_contexts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  contextName: varchar("context_name").notNull(),
+  contextValues: jsonb("context_values").notNull(), // Valeurs spécifiques pour ce contexte
+  validFrom: timestamp("valid_from").defaultNow(),
+  validUntil: timestamp("valid_until"),
+  isActive: boolean("is_active").default(true),
+  grantedBy: varchar("granted_by").references(() => users.id),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userContextIndex: index("idx_user_permission_contexts_user").on(table.userId, table.contextName),
+  activeUserContextsIndex: index("idx_user_permission_contexts_active").on(table.isActive, table.validUntil),
+}));
+
+// Table d'audit des accès aux données sensibles
+export const rbacAuditLog = pgTable("rbac_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  userRole: rbacRoleEnum("user_role").notNull(),
+  action: rbacActionEnum("action").notNull(),
+  tableName: varchar("table_name").notNull(),
+  recordId: varchar("record_id"),
+  accessedColumns: text("accessed_columns").array(),
+  success: boolean("success").notNull(),
+  denialReason: text("denial_reason"),
+  contextUsed: varchar("context_used"),
+  sensitivityLevel: dataSensitivityEnum("sensitivity_level"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  sessionId: varchar("session_id"),
+  timestamp: timestamp("timestamp").defaultNow(),
+}, (table) => ({
+  userActionIndex: index("idx_rbac_audit_user_action").on(table.userId, table.action, table.timestamp),
+  tableAccessIndex: index("idx_rbac_audit_table").on(table.tableName, table.timestamp),
+  sensitivityIndex: index("idx_rbac_audit_sensitivity").on(table.sensitivityLevel, table.timestamp),
+}));
+
+// ========================================
+// SCHÉMAS ZOD POUR RBAC - CHATBOT IA SAXIUM  
+// ========================================
+
+// Schema pour validation des permissions
+export const insertPermissionSchema = createInsertSchema(permissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPermissionContextSchema = createInsertSchema(permissionContexts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserPermissionContextSchema = createInsertSchema(userPermissionContexts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRbacAuditLogSchema = createInsertSchema(rbacAuditLog).omit({
+  id: true,
+  timestamp: true,
+});
+
+// Schema pour requête de permissions utilisateur
+export const userPermissionsQuerySchema = z.object({
+  userId: z.string(),
+  tableName: z.string().optional(),
+  action: z.enum(["read", "write", "delete", "create", "export"]).optional(),
+  includeInactive: z.boolean().default(false),
+});
+
+// Schema pour validation d'accès
+export const accessValidationRequestSchema = z.object({
+  userId: z.string(),
+  role: z.enum(["admin", "chef_projet", "technicien_be", "responsable_be", "chef_travaux", "commercial", "financier", "direction"]),
+  tableName: z.string(),
+  action: z.enum(["read", "write", "delete", "create", "export"]),
+  columns: z.array(z.string()).optional(),
+  recordId: z.string().optional(),
+  contextValues: z.record(z.any()).optional(),
+});
+
+// Schema pour requête d'audit
+export const auditQuerySchema = z.object({
+  userId: z.string().optional(),
+  tableName: z.string().optional(),
+  action: z.enum(["read", "write", "delete", "create", "export"]).optional(),
+  dateFrom: z.string().transform(str => new Date(str))
+    .refine(date => !isNaN(date.getTime()), {
+      message: "Date de début invalide"
+    }).optional(),
+  dateTo: z.string().transform(str => new Date(str))
+    .refine(date => !isNaN(date.getTime()), {
+      message: "Date de fin invalide"
+    }).optional(),
+  sensitivityLevel: z.enum(["public", "internal", "confidential", "restricted"]).optional(),
+  successOnly: z.boolean().default(false),
+  limit: z.number().min(1).max(1000).default(100),
+  offset: z.number().min(0).default(0),
+});
+
+// Schema pour création de contexte dynamique
+export const createContextSchema = z.object({
+  contextName: z.string().min(3).max(50),
+  description: z.string().min(10).max(500),
+  sqlCondition: z.string().min(10),
+  requiredParameters: z.array(z.string()).default([]),
+  appliesTo: z.array(z.string()).default([]),
+  examples: z.record(z.any()).optional(),
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR RBAC - CHATBOT IA SAXIUM
+// ========================================
+
+export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+
+export type PermissionContext = typeof permissionContexts.$inferSelect;
+export type InsertPermissionContext = z.infer<typeof insertPermissionContextSchema>;
+
+export type UserPermissionContext = typeof userPermissionContexts.$inferSelect;
+export type InsertUserPermissionContext = z.infer<typeof insertUserPermissionContextSchema>;
+
+export type RbacAuditLog = typeof rbacAuditLog.$inferSelect;
+export type InsertRbacAuditLog = z.infer<typeof insertRbacAuditLogSchema>;
+
+export type UserPermissionsQuery = z.infer<typeof userPermissionsQuerySchema>;
+export type AccessValidationRequest = z.infer<typeof accessValidationRequestSchema>;
+export type AuditQuery = z.infer<typeof auditQuerySchema>;
+export type CreateContext = z.infer<typeof createContextSchema>;
+
+// Types pour réponses API
+export type PermissionCheckResult = {
+  allowed: boolean;
+  denialReason?: string;
+  allowedColumns?: string[];
+  deniedColumns?: string[];
+  conditions?: any;
+  contextRequired?: string;
+  auditRequired?: boolean;
+};
+
+export type UserPermissionsResponse = {
+  userId: string;
+  role: string;
+  permissions: {
+    [tableName: string]: {
+      read: PermissionCheckResult;
+      write: PermissionCheckResult;
+      delete: PermissionCheckResult;
+      create: PermissionCheckResult;
+      export: PermissionCheckResult;
+    };
+  };
+  contexts: UserPermissionContext[];
+  lastUpdated: Date;
+};

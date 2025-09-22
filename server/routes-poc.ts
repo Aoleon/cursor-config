@@ -3336,8 +3336,9 @@ registerBatigestRoutes(app);
 // Enregistrer les routes de gestion des équipes
 registerTeamsRoutes(app);
 
-// Enregistrer les routes du service IA multi-modèles Text-to-SQL
-app.use("/api/ai", aiServiceRoutes);
+// Enregistrer les routes du service IA multi-modèles Text-to-SQL - SÉCURISÉES
+// Rate limiting spécial pour IA : 100 requêtes par heure par utilisateur (utilise le middleware existant)
+app.use("/api/ai", isAuthenticated, rateLimits.creation, aiServiceRoutes);
 
 // ========================================
 // ROUTES INTELLIGENCE TEMPORELLE - PHASE 2.2

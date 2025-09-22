@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from "openai";
-import { IStorage } from "../storage-poc";
+import { IStorage } from "../storage";
 import { db } from "../db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
@@ -61,6 +61,12 @@ export class AIService {
   private anthropic: Anthropic;
   private openai: OpenAI;
   private storage: IStorage;
+  // Cache in-memory en fallback si DB échoue
+  private memoryCache: Map<string, {
+    data: any;
+    expiresAt: Date;
+    tokensUsed: number;
+  }> = new Map();
 
   constructor(storage: IStorage) {
     // Initialisation Anthropic Claude
@@ -360,12 +366,18 @@ export class AIService {
     const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql");
     const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole);
 
-    const response = await this.anthropic.messages.create({
-      model: DEFAULT_CLAUDE_MODEL,
-      max_tokens: request.maxTokens || 2048,
-      messages: [{ role: 'user', content: userPrompt }],
-      system: systemPrompt,
-    });
+    // Timeout explicite pour Anthropic Claude
+    const response = await Promise.race([
+      this.anthropic.messages.create({
+        model: DEFAULT_CLAUDE_MODEL,
+        max_tokens: request.maxTokens || 2048,
+        messages: [{ role: 'user', content: userPrompt }],
+        system: systemPrompt,
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`Timeout Claude après ${REQUEST_TIMEOUT_MS}ms`)), REQUEST_TIMEOUT_MS)
+      )
+    ]) as any;
 
     const responseTime = Date.now() - startTime;
     const tokensUsed = this.estimateTokens(userPrompt + systemPrompt, response.content[0]?.text || "");
@@ -402,15 +414,21 @@ export class AIService {
     const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql");
     const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole);
 
-    const response = await this.openai.chat.completions.create({
-      model: DEFAULT_GPT_MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      response_format: { type: "json_object" },
-      max_completion_tokens: request.maxTokens || 2048,
-    });
+    // Timeout explicite pour OpenAI GPT
+    const response = await Promise.race([
+      this.openai.chat.completions.create({
+        model: DEFAULT_GPT_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: request.maxTokens || 2048,
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`Timeout OpenAI après ${REQUEST_TIMEOUT_MS}ms`)), REQUEST_TIMEOUT_MS)
+      )
+    ]) as any;
 
     const responseTime = Date.now() - startTime;
     const tokensUsed = response.usage?.total_tokens || this.estimateTokens(userPrompt, response.choices[0].message.content || "");
@@ -442,9 +460,17 @@ export class AIService {
    * Récupère une réponse du cache si disponible
    */
   private async getCachedResponse(request: AiQueryRequest): Promise<any | null> {
+    const queryHash = this.generateQueryHash(request);
+    
+    // Fallback 1: Essayer le cache in-memory d'abord (plus rapide)
+    const memoryEntry = this.memoryCache.get(queryHash);
+    if (memoryEntry && memoryEntry.expiresAt > new Date()) {
+      console.log(`[AIService] Cache hit in-memory pour ${queryHash.substring(0, 8)}`);
+      return memoryEntry.data;
+    }
+    
+    // Fallback 2: Essayer la base de données
     try {
-      const queryHash = this.generateQueryHash(request);
-      
       const cached = await db
         .select()
         .from(aiQueryCache)
@@ -464,12 +490,29 @@ export class AIService {
           })
           .where(eq(aiQueryCache.queryHash, queryHash));
 
-        return JSON.parse(cached[0].response);
+        const data = JSON.parse(cached[0].response);
+        
+        // Sauvegarder en cache in-memory pour accès plus rapide
+        this.memoryCache.set(queryHash, {
+          data,
+          expiresAt: cached[0].expiresAt,
+          tokensUsed: cached[0].tokensUsed
+        });
+        
+        console.log(`[AIService] Cache hit DB pour ${queryHash.substring(0, 8)}`);
+        return data;
       }
 
       return null;
     } catch (error) {
-      console.warn(`[AIService] Erreur cache lookup:`, error);
+      console.warn(`[AIService] Erreur cache DB, fallback in-memory:`, error);
+      
+      // Fallback 3: Si DB échoue, vérifier encore le cache in-memory même expiré comme derniere chance
+      if (memoryEntry) {
+        console.log(`[AIService] Utilisation cache in-memory expiré comme fallback final`);
+        return memoryEntry.data;
+      }
+      
       return null;
     }
   }
@@ -478,10 +521,23 @@ export class AIService {
    * Met en cache une réponse réussie
    */
   private async cacheResponse(request: AiQueryRequest, responseData: any): Promise<void> {
+    const queryHash = this.generateQueryHash(request);
+    const expiresAt = new Date(Date.now() + CACHE_EXPIRY_HOURS * 60 * 60 * 1000);
+    
+    // Cache in-memory d'abord (toujours disponible)
+    this.memoryCache.set(queryHash, {
+      data: responseData,
+      expiresAt,
+      tokensUsed: responseData.tokensUsed
+    });
+    
+    // Nettoyage périodique du cache in-memory (éviter la fuite mémoire)
+    if (this.memoryCache.size > 1000) {
+      this.cleanMemoryCache();
+    }
+    
+    // Tentative de mise en cache DB (peut échouer gracieusement)
     try {
-      const queryHash = this.generateQueryHash(request);
-      const expiresAt = new Date(Date.now() + CACHE_EXPIRY_HOURS * 60 * 60 * 1000);
-
       const cacheEntry: InsertAiQueryCache = {
         queryHash,
         query: request.query,
@@ -504,10 +560,30 @@ export class AIService {
           lastAccessedAt: new Date()
         }
       });
+      
+      console.log(`[AIService] Cache sauvé DB+memory pour ${queryHash.substring(0, 8)}`);
 
     } catch (error) {
-      console.warn(`[AIService] Erreur mise en cache:`, error);
+      console.warn(`[AIService] Erreur cache DB, utilisation memory uniquement:`, error);
+      // Le cache in-memory est déjà sauvé, donc pas d'impact sur l'utilisateur
     }
+  }
+  
+  /**
+   * Nettoie le cache in-memory des entrées expirées
+   */
+  private cleanMemoryCache(): void {
+    const now = new Date();
+    let cleaned = 0;
+    
+    for (const [key, value] of this.memoryCache.entries()) {
+      if (value.expiresAt <= now) {
+        this.memoryCache.delete(key);
+        cleaned++;
+      }
+    }
+    
+    console.log(`[AIService] Cache in-memory nettoyé: ${cleaned} entrées expirées supprimées`);
   }
 
   /**

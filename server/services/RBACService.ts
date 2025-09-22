@@ -14,7 +14,7 @@ import {
   users
 } from "@shared/schema";
 import type { IStorage } from "../storage";
-import { eq, and, or, desc, asc, gt, gte, lte, inArray, sql } from "drizzle-orm";
+import { eq, and, or, desc, asc, gt, gte, lte, inArray, sql, isNull } from "drizzle-orm";
 import { db } from "../db";
 
 export class RBACService {
@@ -53,8 +53,8 @@ export class RBACService {
           eq(userPermissionContexts.userId, userId),
           eq(userPermissionContexts.isActive, true),
           or(
-            eq(userPermissionContexts.validUntil, null),
-            sql`${userPermissionContexts.validUntil} >= ${new Date()}`
+            isNull(userPermissionContexts.validUntil),
+            gte(userPermissionContexts.validUntil, new Date())
           )
         ));
 
@@ -285,24 +285,25 @@ export class RBACService {
       if (filters.dateFrom) conditions.push(gte(rbacAuditLog.timestamp, filters.dateFrom));
       if (filters.dateTo) conditions.push(lte(rbacAuditLog.timestamp, filters.dateTo));
 
+      // Construire la requête complète d'un coup pour éviter les problèmes de type
       const baseQuery = db
         .select()
-        .from(rbacAuditLog);
-      
-      let query = conditions.length > 0 
+        .from(rbacAuditLog)
+        .orderBy(desc(rbacAuditLog.timestamp));
+
+      let finalQuery = conditions.length > 0 
         ? baseQuery.where(and(...conditions))
         : baseQuery;
-      
-      query = query.orderBy(desc(rbacAuditLog.timestamp));
 
-      if (filters.limit) {
-        query = query.limit(filters.limit);
+      if (filters.limit && filters.offset) {
+        return await finalQuery.limit(filters.limit).offset(filters.offset);
+      } else if (filters.limit) {
+        return await finalQuery.limit(filters.limit);
+      } else if (filters.offset) {
+        return await finalQuery.offset(filters.offset);
+      } else {
+        return await finalQuery;
       }
-      if (filters.offset) {
-        query = query.offset(filters.offset);
-      }
-
-      return await query;
     } catch (error) {
       console.error('[RBACService.getAuditHistory] Erreur:', error);
       throw new Error('Erreur lors de la récupération de l\'audit');

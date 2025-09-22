@@ -3322,6 +3322,166 @@ export const createContextSchema = z.object({
 });
 
 // ========================================
+// ENUMS POUR SERVICE IA MULTI-MODÈLES - CHATBOT TEXT-TO-SQL SAXIUM
+// ========================================
+
+// Modèles IA disponibles
+export const aiModelEnum = pgEnum("ai_model", [
+  "claude_sonnet_4", "gpt_5"
+]);
+
+// Types de complexité pour routing intelligent
+export const queryComplexityEnum = pgEnum("query_complexity", [
+  "simple", "complex", "expert"
+]);
+
+// Statuts de cache IA
+export const cacheStatusEnum = pgEnum("cache_status", [
+  "hit", "miss", "expired", "invalid"
+]);
+
+// Types de requêtes IA
+export const aiQueryTypeEnum = pgEnum("ai_query_type", [
+  "text_to_sql", "data_analysis", "business_insight", "validation", "optimization"
+]);
+
+// ========================================
+// TABLES POUR SERVICE IA MULTI-MODÈLES
+// ========================================
+
+// Cache intelligent pour requêtes IA
+export const aiQueryCache = pgTable("ai_query_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  queryHash: varchar("query_hash").notNull().unique(), // Hash de la requête + contexte
+  query: text("query").notNull(),
+  context: text("context").notNull(),
+  userRole: varchar("user_role").notNull(),
+  modelUsed: aiModelEnum("model_used").notNull(),
+  response: text("response").notNull(),
+  tokensUsed: integer("tokens_used").default(0),
+  responseTimeMs: integer("response_time_ms").default(0),
+  cacheHits: integer("cache_hits").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  lastAccessedAt: timestamp("last_accessed_at").defaultNow(),
+});
+
+// Métriques d'usage par modèle IA
+export const aiModelMetrics = pgTable("ai_model_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  userRole: varchar("user_role").notNull(),
+  modelUsed: aiModelEnum("model_used").notNull(),
+  queryType: aiQueryTypeEnum("query_type").notNull(),
+  complexity: queryComplexityEnum("complexity").notNull(),
+  tokensUsed: integer("tokens_used").default(0),
+  responseTimeMs: integer("response_time_ms").default(0),
+  success: boolean("success").default(true),
+  errorType: varchar("error_type"),
+  cacheStatus: cacheStatusEnum("cache_status").notNull(),
+  timestamp: timestamp("timestamp").defaultNow(),
+  costEstimate: decimal("cost_estimate", { precision: 10, scale: 6 }).default("0"), // En euros
+});
+
+// Logs des requêtes IA pour audit et debug
+export const aiQueryLogs = pgTable("ai_query_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  sessionId: varchar("session_id"),
+  queryHash: varchar("query_hash").notNull(),
+  originalQuery: text("original_query").notNull(),
+  processedQuery: text("processed_query"),
+  modelSelected: aiModelEnum("model_selected").notNull(),
+  fallbackUsed: boolean("fallback_used").default(false),
+  fallbackReason: varchar("fallback_reason"),
+  contextSize: integer("context_size").default(0),
+  validationPassed: boolean("validation_passed").default(true),
+  sanitizedInput: boolean("sanitized_input").default(false),
+  timestamp: timestamp("timestamp").defaultNow(),
+  ipAddress: varchar("ip_address"),
+});
+
+// Configuration des seuils et règles de routing IA
+export const aiRoutingRules = pgTable("ai_routing_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleName: varchar("rule_name").notNull(),
+  description: text("description"),
+  priority: integer("priority").default(100),
+  conditions: jsonb("conditions").notNull(), // Conditions pour appliquer la règle
+  targetModel: aiModelEnum("target_model").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ========================================
+// INDEXES POUR PERFORMANCE IA
+// ========================================
+
+// Note: Les index seront créés directement dans les tables pour éviter les erreurs de référence
+
+// ========================================
+// SCHEMAS ZOD POUR VALIDATION IA
+// ========================================
+
+export const insertAiQueryCacheSchema = createInsertSchema(aiQueryCache).omit({
+  id: true,
+  createdAt: true,
+  lastAccessedAt: true,
+});
+
+export const insertAiModelMetricsSchema = createInsertSchema(aiModelMetrics).omit({
+  id: true,
+  timestamp: true,
+});
+
+export const insertAiQueryLogsSchema = createInsertSchema(aiQueryLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export const insertAiRoutingRulesSchema = createInsertSchema(aiRoutingRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schema pour requête IA unifiée
+export const aiQueryRequestSchema = z.object({
+  query: z.string().min(1).max(8000),
+  context: z.string().max(32000).optional().default(""),
+  userRole: z.string().min(1),
+  complexity: queryComplexityEnum.enumValues[0] ? z.enum(queryComplexityEnum.enumValues as [string, ...string[]]) : z.enum(["simple", "complex", "expert"]),
+  forceModel: aiModelEnum.enumValues[0] ? z.enum(aiModelEnum.enumValues as [string, ...string[]]) : z.enum(["claude_sonnet_4", "gpt_5"]),
+  queryType: aiQueryTypeEnum.enumValues[0] ? z.enum(aiQueryTypeEnum.enumValues as [string, ...string[]]) : z.enum(["text_to_sql", "data_analysis", "business_insight", "validation", "optimization"]),
+  useCache: z.boolean().default(true),
+  maxTokens: z.number().min(100).max(8192).default(2048),
+}).partial({
+  forceModel: true,
+  complexity: true,
+  queryType: true,  // Rendre queryType optionnel
+});
+
+// Schema pour configuration de routing
+export const aiRoutingConfigSchema = z.object({
+  ruleName: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+  priority: z.number().min(1).max(1000).default(100),
+  conditions: z.object({
+    queryLength: z.object({
+      min: z.number().optional(),
+      max: z.number().optional(),
+    }).optional(),
+    complexity: z.array(z.enum(["simple", "complex", "expert"])).optional(),
+    userRoles: z.array(z.string()).optional(),
+    queryTypes: z.array(z.enum(["text_to_sql", "data_analysis", "business_insight", "validation", "optimization"])).optional(),
+    keywordMatches: z.array(z.string()).optional(),
+  }),
+  targetModel: z.enum(["claude_sonnet_4", "gpt_5"]),
+});
+
+// ========================================
 // TYPES TYPESCRIPT POUR RBAC - CHATBOT IA SAXIUM
 // ========================================
 
@@ -3368,3 +3528,72 @@ export type UserPermissionsResponse = {
   contexts: UserPermissionContext[];
   lastUpdated: Date;
 };
+
+// ========================================
+// TYPES TYPESCRIPT POUR SERVICE IA MULTI-MODÈLES
+// ========================================
+
+export type AiQueryCache = typeof aiQueryCache.$inferSelect;
+export type InsertAiQueryCache = z.infer<typeof insertAiQueryCacheSchema>;
+
+export type AiModelMetrics = typeof aiModelMetrics.$inferSelect;
+export type InsertAiModelMetrics = z.infer<typeof insertAiModelMetricsSchema>;
+
+export type AiQueryLogs = typeof aiQueryLogs.$inferSelect;
+export type InsertAiQueryLogs = z.infer<typeof insertAiQueryLogsSchema>;
+
+export type AiRoutingRules = typeof aiRoutingRules.$inferSelect;
+export type InsertAiRoutingRules = z.infer<typeof insertAiRoutingRulesSchema>;
+
+export type AiQueryRequest = z.infer<typeof aiQueryRequestSchema>;
+export type AiRoutingConfig = z.infer<typeof aiRoutingConfigSchema>;
+
+// Types pour réponses du service IA
+export interface AiQueryResponse {
+  success: boolean;
+  data?: {
+    query: string;
+    sqlGenerated?: string;
+    explanation?: string;
+    modelUsed: "claude_sonnet_4" | "gpt_5";
+    tokensUsed: number;
+    responseTimeMs: number;
+    fromCache: boolean;
+    confidence?: number;
+    warnings?: string[];
+  };
+  error?: {
+    type: "validation_error" | "model_error" | "rate_limit" | "timeout" | "unknown";
+    message: string;
+    details?: any;
+    fallbackAttempted: boolean;
+  };
+}
+
+// Types pour métriques et analytics IA
+export interface AiUsageStats {
+  totalRequests: number;
+  successRate: number;
+  avgResponseTime: number;
+  totalTokensUsed: number;
+  estimatedCost: number;
+  cacheHitRate: number;
+  modelDistribution: {
+    claude_sonnet_4: number;
+    gpt_5: number;
+  };
+  complexityDistribution: {
+    simple: number;
+    complex: number;
+    expert: number;
+  };
+}
+
+// Types pour configuration et routing
+export interface ModelSelectionResult {
+  selectedModel: "claude_sonnet_4" | "gpt_5";
+  reason: string;
+  confidence: number;
+  appliedRules: string[];
+  fallbackAvailable: boolean;
+}

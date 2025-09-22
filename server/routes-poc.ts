@@ -89,6 +89,16 @@ const analyticsService = new AnalyticsService(storage, eventBus);
 // Instance du service Moteur Prédictif pour Dashboard Dirigeant
 const predictiveEngineService = new PredictiveEngineService(storage, analyticsService);
 
+// ========================================
+// SERVICE IA MULTI-MODÈLES - CHATBOT TEXT-TO-SQL SAXIUM
+// ========================================
+
+// Instance du service IA multi-modèles pour génération SQL intelligente
+import { getAIService } from "./services/AIService";
+import aiServiceRoutes from "./routes/ai-service";
+
+const aiService = getAIService(storage);
+
 // Instance du service de détection d'alertes
 const dateAlertDetectionService = new DateAlertDetectionService(
   storage,
@@ -3325,6 +3335,9 @@ registerBatigestRoutes(app);
 
 // Enregistrer les routes de gestion des équipes
 registerTeamsRoutes(app);
+
+// Enregistrer les routes du service IA multi-modèles Text-to-SQL
+app.use("/api/ai", aiServiceRoutes);
 
 // ========================================
 // ROUTES INTELLIGENCE TEMPORELLE - PHASE 2.2

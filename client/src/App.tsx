@@ -51,8 +51,9 @@ import TechnicalAlerts from "@/pages/technical-alerts";
 import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
 // Import de la navigation intelligente
 import SmartLanding from "@/components/navigation/SmartLanding";
+import AppLayout from "@/components/layout/AppLayout";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType<any> }) {
+function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   
@@ -80,7 +81,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     );
   }
   
-  return <Component />;
+  return (
+    <AppLayout showSidebar={showSidebar}>
+      <Component />
+    </AppLayout>
+  );
 }
 
 function Router() {

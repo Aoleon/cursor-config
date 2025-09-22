@@ -3983,3 +3983,348 @@ export type InsertAdaptiveLearningPatterns = z.infer<typeof insertAdaptiveLearni
 
 export type BusinessContextMetricsLog = typeof businessContextMetricsLog.$inferSelect;
 export type InsertBusinessContextMetricsLog = z.infer<typeof insertBusinessContextMetricsLogSchema>;
+
+// ========================================
+// SCHEMAS ET TYPES POUR ENDPOINTS CHATBOT ORCHESTRÉS - SAXIUM
+// ========================================
+
+// ========================================
+// TABLES POUR HISTORIQUE ET MÉTRIQUES CHATBOT
+// ========================================
+
+// Table pour l'historique des conversations chatbot
+export const chatbotConversations = pgTable("chatbot_conversations", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  userRole: varchar("user_role", { length: 50 }).notNull(),
+  sessionId: varchar("session_id", { length: 255 }),
+  query: text("query").notNull(),
+  response: jsonb("response").notNull(),
+  sql: text("sql"),
+  results: jsonb("results"),
+  executionTimeMs: integer("execution_time_ms").notNull(),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }),
+  modelUsed: varchar("model_used", { length: 50 }),
+  cacheHit: boolean("cache_hit").default(false),
+  errorOccurred: boolean("error_occurred").default(false),
+  errorType: varchar("error_type", { length: 100 }),
+  dryRun: boolean("dry_run").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+// Table pour le feedback utilisateur sur les réponses chatbot
+export const chatbotFeedback = pgTable("chatbot_feedback", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  conversationId: varchar("conversation_id", { length: 255 }).notNull().references(() => chatbotConversations.id),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  rating: integer("rating").notNull(), // 1-5 ou simple 1/-1 pour like/dislike
+  feedbackType: varchar("feedback_type", { length: 50 }).notNull(), // "thumbs_up", "thumbs_down", "detailed"
+  feedbackText: text("feedback_text"),
+  improvementSuggestions: jsonb("improvement_suggestions"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+// Table pour les suggestions intelligentes par rôle
+export const chatbotSuggestions = pgTable("chatbot_suggestions", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  userRole: varchar("user_role", { length: 50 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(), // "planning", "finances", "ressources", etc.
+  suggestionText: text("suggestion_text").notNull(),
+  priority: integer("priority").default(0).notNull(),
+  usageCount: integer("usage_count").default(0).notNull(),
+  successRate: decimal("success_rate", { precision: 3, scale: 2 }).default("0.00"),
+  contextConditions: jsonb("context_conditions"), // Conditions pour afficher la suggestion
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// Table pour les métriques d'usage du chatbot
+export const chatbotUsageMetrics = pgTable("chatbot_usage_metrics", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  userRole: varchar("user_role", { length: 50 }).notNull(),
+  endpoint: varchar("endpoint", { length: 100 }).notNull(), // "query", "suggestions", "validate", etc.
+  date: timestamp("date").defaultNow().notNull(),
+  requestCount: integer("request_count").default(1).notNull(),
+  successCount: integer("success_count").default(0).notNull(),
+  errorCount: integer("error_count").default(0).notNull(),
+  avgResponseTimeMs: integer("avg_response_time_ms").notNull(),
+  totalTokensUsed: integer("total_tokens_used").default(0).notNull(),
+  estimatedCost: decimal("estimated_cost", { precision: 8, scale: 4 }).default("0.0000").notNull()
+});
+
+// ========================================
+// SCHEMAS ZOD POUR VALIDATION DES ENDPOINTS CHATBOT
+// ========================================
+
+// Schéma pour POST /api/chatbot/query
+export const chatbotQueryRequestSchema = z.object({
+  query: z.string()
+    .min(1, "La requête ne peut pas être vide")
+    .max(5000, "La requête ne peut pas dépasser 5000 caractères"),
+  context: z.string().max(10000).optional(),
+  options: z.object({
+    dryRun: z.boolean().default(false),
+    explainQuery: z.boolean().default(true),
+    includeDebugInfo: z.boolean().default(false),
+    maxResults: z.number().min(1).max(10000).optional(),
+    timeoutMs: z.number().min(1000).max(120000).optional()
+  }).optional()
+});
+
+// Schéma pour GET /api/chatbot/suggestions
+export const chatbotSuggestionsRequestSchema = z.object({
+  userRole: z.string().optional(), // Optionnel car peut être extrait de la session
+  recentQueries: z.array(z.string()).max(10).optional(),
+  currentContext: z.string().max(1000).optional(),
+  category: z.enum(["planning", "finances", "ressources", "qualite", "performance", "alertes", "all"]).default("all"),
+  limit: z.number().min(1).max(50).default(10)
+});
+
+// Schéma pour POST /api/chatbot/validate
+export const chatbotValidateRequestSchema = z.object({
+  query: z.string()
+    .min(1, "La requête ne peut pas être vide")
+    .max(5000, "La requête ne peut pas dépasser 5000 caractères"),
+  context: z.string().max(10000).optional(),
+  checkSecurity: z.boolean().default(true),
+  checkRBAC: z.boolean().default(true),
+  generateSQL: z.boolean().default(true)
+});
+
+// Schéma pour GET /api/chatbot/history  
+export const chatbotHistoryRequestSchema = z.object({
+  limit: z.number().min(1).max(100).default(20),
+  offset: z.number().min(0).default(0),
+  sessionId: z.string().optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  includeErrors: z.boolean().default(false),
+  includeSQL: z.boolean().default(false)
+});
+
+// Schéma pour POST /api/chatbot/feedback
+export const chatbotFeedbackRequestSchema = z.object({
+  conversationId: z.string().min(1, "ID de conversation requis"),
+  rating: z.number().min(1).max(5), // 1-5 rating ou 1/-1 pour like/dislike
+  feedbackType: z.enum(["thumbs_up", "thumbs_down", "detailed", "bug_report"]),
+  feedbackText: z.string().max(2000).optional(),
+  improvementSuggestions: z.array(z.string()).max(10).optional(),
+  categories: z.array(z.enum(["accuracy", "speed", "relevance", "usability", "completeness"])).optional()
+});
+
+// Schéma pour GET /api/chatbot/stats (admin uniquement)
+export const chatbotStatsRequestSchema = z.object({
+  period: z.enum(["1h", "24h", "7d", "30d", "90d", "1y"]).default("24h"),
+  groupBy: z.enum(["hour", "day", "week", "month", "user", "role"]).default("day"),
+  includeDetails: z.boolean().default(false),
+  userRole: z.string().optional(),
+  breakdown: z.array(z.enum(["success_rate", "response_time", "token_usage", "cost", "errors", "feedback"])).optional()
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR LES ENDPOINTS CHATBOT
+// ========================================
+
+// Types pour requêtes
+export type ChatbotQueryRequest = z.infer<typeof chatbotQueryRequestSchema> & {
+  userId: string;
+  userRole: string;
+  sessionId?: string;
+};
+
+export type ChatbotSuggestionsRequest = z.infer<typeof chatbotSuggestionsRequestSchema> & {
+  userId: string;
+  userRole: string;
+};
+
+export type ChatbotValidateRequest = z.infer<typeof chatbotValidateRequestSchema> & {
+  userId: string;
+  userRole: string;
+};
+
+export type ChatbotHistoryRequest = z.infer<typeof chatbotHistoryRequestSchema> & {
+  userId: string;
+};
+
+export type ChatbotFeedbackRequest = z.infer<typeof chatbotFeedbackRequestSchema> & {
+  userId: string;
+};
+
+export type ChatbotStatsRequest = z.infer<typeof chatbotStatsRequestSchema>;
+
+// ========================================
+// INTERFACES POUR LES RÉPONSES CHATBOT
+// ========================================
+
+// Réponse principale du chatbot 
+export interface ChatbotQueryResponse {
+  success: boolean;
+  conversation_id: string;
+  query: string;
+  explanation: string;
+  sql?: string; // Masqué selon les permissions
+  results: any[];
+  suggestions: string[];
+  confidence: number;
+  execution_time_ms: number;
+  model_used?: string;
+  cache_hit: boolean;
+  debug_info?: {
+    rbac_filters_applied: string[];
+    business_context_loaded: boolean;
+    ai_routing_decision: string;
+    security_checks_passed: string[];
+    performance_metrics: {
+      context_generation_ms: number;
+      sql_generation_ms: number;
+      query_execution_ms: number;
+      total_orchestration_ms: number;
+    };
+  };
+  error?: {
+    type: "validation" | "security" | "rbac" | "execution" | "ai_error" | "timeout" | "unknown";
+    message: string;
+    user_friendly_message: string;
+    suggestions?: string[];
+  };
+}
+
+// Réponse pour les suggestions intelligentes
+export interface ChatbotSuggestionsResponse {
+  success: boolean;
+  suggestions: {
+    id: string;
+    text: string;
+    category: string;
+    priority: number;
+    success_rate: number;
+    estimated_complexity: "simple" | "complex" | "expert";
+    context_dependent: boolean;
+  }[];
+  personalized: boolean;
+  total_available: number;
+  context_info: {
+    current_role: string;
+    temporal_context: string[];
+    recent_patterns: string[];
+  };
+}
+
+// Réponse pour la validation de requête
+export interface ChatbotValidateResponse {
+  success: boolean;
+  validation_results: {
+    query_valid: boolean;
+    security_passed: boolean;
+    rbac_passed: boolean;
+    sql_generatable: boolean;
+    estimated_complexity: "simple" | "complex" | "expert";
+    estimated_execution_time_ms: number;
+    warnings: string[];
+    suggestions: string[];
+  };
+  preview_sql?: string;
+  accessible_tables: string[];
+  restricted_columns: string[];
+  error?: {
+    type: "validation" | "security" | "rbac" | "ai_error";
+    message: string;
+    details: any;
+  };
+}
+
+// Réponse pour l'historique
+export interface ChatbotHistoryResponse {
+  success: boolean;
+  conversations: {
+    id: string;
+    query: string;
+    summary: string;
+    success: boolean;
+    execution_time_ms: number;
+    confidence?: number;
+    created_at: Date;
+    has_feedback: boolean;
+  }[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    has_more: boolean;
+  };
+}
+
+// Réponse pour le feedback
+export interface ChatbotFeedbackResponse {
+  success: boolean;
+  feedback_id: string;
+  learning_applied: boolean;
+  improvements_suggested: string[];
+  thank_you_message: string;
+}
+
+// Réponse pour les statistiques (admin)
+export interface ChatbotStatsResponse {
+  success: boolean;
+  period: string;
+  overall_metrics: {
+    total_queries: number;
+    success_rate: number;
+    avg_response_time_ms: number;
+    total_tokens_used: number;
+    estimated_total_cost: number;
+    unique_users: number;
+    avg_queries_per_user: number;
+  };
+  breakdown_data: {
+    timestamp: Date;
+    queries: number;
+    success_rate: number;
+    avg_response_time_ms: number;
+    error_rate: number;
+  }[];
+  top_queries: {
+    query: string;
+    count: number;
+    avg_success_rate: number;
+  }[];
+  role_distribution: Record<string, number>;
+  error_analysis: {
+    type: string;
+    count: number;
+    percentage: number;
+  }[];
+  feedback_summary: {
+    total_feedback: number;
+    avg_rating: number;
+    satisfaction_rate: number;
+    top_improvement_areas: string[];
+  };
+}
+
+// ========================================
+// SCHEMAS ZOD POUR LES TABLES CHATBOT
+// ========================================
+
+export const insertChatbotConversationSchema = createInsertSchema(chatbotConversations);
+export const insertChatbotFeedbackSchema = createInsertSchema(chatbotFeedback);
+export const insertChatbotSuggestionSchema = createInsertSchema(chatbotSuggestions);
+export const insertChatbotUsageMetricsSchema = createInsertSchema(chatbotUsageMetrics);
+
+// ========================================
+// TYPES TYPESCRIPT POUR LES TABLES CHATBOT
+// ========================================
+
+export type ChatbotConversation = typeof chatbotConversations.$inferSelect;
+export type InsertChatbotConversation = z.infer<typeof insertChatbotConversationSchema>;
+
+export type ChatbotFeedback = typeof chatbotFeedback.$inferSelect;
+export type InsertChatbotFeedback = z.infer<typeof insertChatbotFeedbackSchema>;
+
+export type ChatbotSuggestion = typeof chatbotSuggestions.$inferSelect;
+export type InsertChatbotSuggestion = z.infer<typeof insertChatbotSuggestionSchema>;
+
+export type ChatbotUsageMetrics = typeof chatbotUsageMetrics.$inferSelect;
+export type InsertChatbotUsageMetrics = z.infer<typeof insertChatbotUsageMetricsSchema>;

@@ -74,7 +74,7 @@ export default defineConfig({
     hookTimeout: 10000, // 10s pour setup/teardown
     
     // Reporters pour CI/CD
-    reporter: [
+    reporters: [
       'verbose',
       'json'
     ],

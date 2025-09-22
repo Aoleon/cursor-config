@@ -13,7 +13,7 @@ import {
   rbacAuditLog,
   users
 } from "@shared/schema";
-import type { IStorage } from "../storage";
+import type { IStorage } from "../storage-poc";
 import { eq, and, or, desc, asc, gt, gte, lte, inArray, sql, isNull } from "drizzle-orm";
 import { db } from "../db";
 

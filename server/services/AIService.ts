@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from "openai";
-import { IStorage } from "../storage";
+import { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";

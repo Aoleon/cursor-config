@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import { insertChiffrageElementSchema, insertDpgfDocumentSchema } from "../../shared/schema";
-import type { IStorage } from "../storage";
+import type { IStorage } from "../storage-poc";
 import { isAuthenticated } from "../replitAuth";
 import { DpgfComputeService } from "../services/dpgfComputeService";
 import { PdfGeneratorService } from "../services/pdfGeneratorService";

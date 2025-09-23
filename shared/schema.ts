@@ -509,6 +509,54 @@ export const contactLinkTypeEnum = pgEnum("contact_link_type", [
 ]);
 
 // ========================================
+// NOUVEAUX ENUMS EXTENSIONS MONDAY.COM - MODULES RH ET MÉTIER
+// ========================================
+
+// Département type (Bureau vs Chantier)
+export const departmentTypeEnum = pgEnum("department_type", [
+  "BUREAU", "CHANTIER", "DIRECTION", "COMMERCIAL"
+]);
+
+// Compétences métier menuiserie JLM
+export const competencyEnum = pgEnum("competency", [
+  "MEXT", "MINT", "BARDAGE", "HALL", "SERRURERIE", 
+  "CACES", "TRAVAIL_HAUTEUR", "SOUDURE", "GENERAL"
+]);
+
+// Types formation
+export const trainingTypeEnum = pgEnum("training_type", [
+  "formation_initiale", "perfectionnement", "habilitation_securite", 
+  "certification_metier", "recyclage_obligatoire"
+]);
+
+// Statuts formation
+export const trainingStatusEnum = pgEnum("training_status", [
+  "planifie", "en_cours", "complete", "expire", "reporte", "annule"
+]);
+
+// Statuts équipement
+export const equipmentStatusEnum = pgEnum("equipment_status", [
+  "disponible", "assigne", "maintenance", "perdu", "reforme", "en_reparation"
+]);
+
+// Types équipement
+export const equipmentTypeEnum = pgEnum("equipment_type", [
+  "outillage_main", "electroportatif", "vehicule", "echafaudage", "autre"
+]);
+
+// Types document RH
+export const documentTypeEnum = pgEnum("document_type", [
+  "contrat_travail", "visite_medicale", "habilitation_caces", 
+  "certification_hauteur", "formation_securite", "attestation_competence",
+  "permis_conduire", "carte_identite", "attestation_assurance"
+]);
+
+// Statuts document RH
+export const documentStatusEnum = pgEnum("document_status", [
+  "valide", "expire", "a_renouveler", "en_attente", "non_fourni"
+]);
+
+// ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
 
@@ -787,6 +835,16 @@ export const users = pgTable("users", {
   role: varchar("role").default("technicien_be"), // POC : BE ou terrain
   isActive: boolean("is_active").default(true),
   chargeStatus: chargeStatusEnum("charge_status").default("disponible"),
+  
+  // ========================================
+  // EXTENSIONS MONDAY.COM - MODULE RH
+  // ========================================
+  departmentType: departmentTypeEnum("department_type"),      // BUREAU, CHANTIER
+  competencies: competencyEnum("competencies").array(),       // [MEXT, MINT, BARDAGE]
+  vehicleAssigned: varchar("vehicle_assigned"),               // "COFFIN CAMION", "TRISTRAM CAMION"
+  mondayPersonnelId: varchar("monday_personnel_id"),          // Migration Monday.com
+  certificationExpiry: timestamp("certification_expiry"),     // Suivi habilitations
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -854,6 +912,14 @@ export const aos = pgTable("aos", {
   priority: priorityLevelEnum("priority"),
   mondayItemId: varchar("monday_item_id"),
   tags: varchar("tags").array(),
+  
+  // ========================================
+  // EXTENSIONS MONDAY.COM - AO PLANNING
+  // ========================================
+  projectSize: varchar("project_size"),              // "60 lgts", "85 lgts", "102 lgts"
+  specificLocation: text("specific_location"),       // "Quartier des Ilot des Peintres"
+  estimatedDelay: varchar("estimated_delay"),        // "->01/10/25" format parsing
+  clientRecurrency: boolean("client_recurrency"),    // NEXITY/COGEDIM récurrents
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1258,6 +1324,14 @@ export const projects = pgTable("projects", {
   contractAmount: decimal("contract_amount", { precision: 12, scale: 2 }),
   lotCount: integer("lot_count"),
   mondayItemId: varchar("monday_item_id"),
+  
+  // ========================================
+  // EXTENSIONS MONDAY.COM - CHANTIERS
+  // ========================================
+  mondayProjectId: varchar("monday_project_id"),     // Migration Monday.com
+  projectSubtype: varchar("project_subtype"),        // "men_ext", "men_int", "bardage"
+  geographicZone: varchar("geographic_zone"),        // "BOULOGNE", "ETAPLES", "LONGUENESSE"
+  buildingCount: integer("building_count"),          // Bât A/B/C organisation
 
   // ========================================
   // MÉTADONNÉES (existantes)
@@ -2869,6 +2943,7 @@ export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
 
 // Schémas d'insertion pour les équipes
 export const insertTeamSchema = createInsertSchema(teams).omit({
@@ -6339,6 +6414,147 @@ export const actionConfirmations = pgTable("action_confirmations", {
 });
 
 // ========================================
+// NOUVELLES TABLES EXTENSIONS MONDAY.COM - MODULES RH ET MÉTIER
+// ========================================
+
+// P1 - Table Formation Employés (Priority P1)
+export const employeeTraining = pgTable("employee_training", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").references(() => users.id).notNull(),
+  trainingType: trainingTypeEnum("training_type").notNull(),
+  competencyType: competencyEnum("competency_type"),
+  plannedDate: timestamp("planned_date"),
+  completedDate: timestamp("completed_date"),
+  certificationExpiry: timestamp("certification_expiry"),
+  status: trainingStatusEnum("status").default("planifie"),
+  trainingProvider: varchar("training_provider"),
+  cost: decimal("cost", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  mondayItemId: varchar("monday_item_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => {
+  return {
+    trainingEmployeeIdx: index("employee_training_employee_idx").on(table.employeeId),
+    trainingDateIdx: index("employee_training_date_idx").on(table.plannedDate),
+    trainingStatusIdx: index("employee_training_status_idx").on(table.status),
+    mondayItemIdx: index("employee_training_monday_idx").on(table.mondayItemId),
+  };
+});
+
+// P2 - Table Inventaire Équipements (Priority P2)
+export const equipmentInventory = pgTable("equipment_inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  equipmentName: varchar("equipment_name").notNull(),
+  equipmentType: equipmentTypeEnum("equipment_type").notNull(),
+  brand: varchar("brand").default("MAKITA"),
+  model: varchar("model"),
+  serialNumber: varchar("serial_number"),
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id),
+  assignedToTeam: varchar("assigned_to_team").references(() => teams.id),
+  vehicleAssignment: varchar("vehicle_assignment"), // "COFFIN CAMION"
+  status: equipmentStatusEnum("status").default("disponible"),
+  purchaseDate: timestamp("purchase_date"),
+  purchasePrice: decimal("purchase_price", { precision: 10, scale: 2 }),
+  lastMaintenanceDate: timestamp("last_maintenance_date"),
+  nextMaintenanceDate: timestamp("next_maintenance_date"),
+  warrantyExpiry: timestamp("warranty_expiry"),
+  location: varchar("location"),
+  notes: text("notes"),
+  mondayItemId: varchar("monday_item_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => {
+  return {
+    equipmentStatusIdx: index("equipment_inventory_status_idx").on(table.status),
+    assignedUserIdx: index("equipment_inventory_assigned_user_idx").on(table.assignedToUserId),
+    assignedTeamIdx: index("equipment_inventory_assigned_team_idx").on(table.assignedToTeam),
+    nextMaintenanceIdx: index("equipment_inventory_next_maintenance_idx").on(table.nextMaintenanceDate),
+    mondayItemIdx: index("equipment_inventory_monday_idx").on(table.mondayItemId),
+  };
+});
+
+// P3 - Table Documents Employés (Priority P3)
+export const employeeDocuments = pgTable("employee_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").references(() => users.id).notNull(),
+  documentType: documentTypeEnum("document_type").notNull(),
+  documentName: varchar("document_name").notNull(),
+  documentNumber: varchar("document_number"),
+  issuedDate: timestamp("issued_date"),
+  expiryDate: timestamp("expiry_date"),
+  issuingAuthority: varchar("issuing_authority"),
+  status: documentStatusEnum("status").default("valide"),
+  filePath: varchar("file_path"),
+  reminderDays: integer("reminder_days").default(30), // Alerte avant expiration
+  isRequired: boolean("is_required").default(false),
+  notes: text("notes"),
+  mondayItemId: varchar("monday_item_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => {
+  return {
+    documentEmployeeIdx: index("employee_documents_employee_idx").on(table.employeeId),
+    documentExpiryIdx: index("employee_documents_expiry_idx").on(table.expiryDate),
+    documentStatusIdx: index("employee_documents_status_idx").on(table.status),
+    mondayItemIdx: index("employee_documents_monday_idx").on(table.mondayItemId),
+  };
+});
+
+// P4 - Table Migration Monday.com (Priority P4)
+export const mondayMigrationLog = pgTable("monday_migration_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mondayBoardId: varchar("monday_board_id").notNull(),
+  mondayItemId: varchar("monday_item_id").notNull(),
+  saxiumTableName: varchar("saxium_table_name").notNull(),
+  saxiumRecordId: varchar("saxium_record_id").notNull(),
+  migrationDate: timestamp("migration_date").defaultNow(),
+  migrationStatus: varchar("migration_status").default("completed"), // completed, error, pending
+  errorMessage: text("error_message"),
+  sourceData: jsonb("source_data"), // Données Monday.com originales
+  createdAt: timestamp("created_at").defaultNow()
+}, (table) => {
+  return {
+    mondayBoardIdx: index("monday_migration_board_idx").on(table.mondayBoardId),
+    mondayItemIdx: index("monday_migration_item_idx").on(table.mondayItemId),
+    saxiumTableIdx: index("monday_migration_saxium_table_idx").on(table.saxiumTableName),
+    migrationStatusIdx: index("monday_migration_status_idx").on(table.migrationStatus),
+  };
+});
+
+// ========================================
+// RELATIONS POUR NOUVELLES TABLES MONDAY.COM 
+// ========================================
+
+// Relations employeeTraining
+export const employeeTrainingRelations = relations(employeeTraining, ({ one }) => ({
+  employee: one(users, { 
+    fields: [employeeTraining.employeeId], 
+    references: [users.id] 
+  })
+}));
+
+// Relations equipmentInventory
+export const equipmentInventoryRelations = relations(equipmentInventory, ({ one }) => ({
+  assignedUser: one(users, { 
+    fields: [equipmentInventory.assignedToUserId], 
+    references: [users.id] 
+  }),
+  assignedTeam: one(teams, { 
+    fields: [equipmentInventory.assignedToTeam], 
+    references: [teams.id] 
+  })
+}));
+
+// Relations employeeDocuments
+export const employeeDocumentsRelations = relations(employeeDocuments, ({ one }) => ({
+  employee: one(users, { 
+    fields: [employeeDocuments.employeeId], 
+    references: [users.id] 
+  })
+}));
+
+// ========================================
 // SCHÉMAS ZOD POUR VALIDATION DES ACTIONS
 // ========================================
 
@@ -6420,6 +6636,37 @@ export const insertSupplierSpecializationsSchema = createInsertSchema(supplierSp
 });
 
 // ========================================
+// SCHÉMAS D'INSERTION POUR LES NOUVELLES TABLES MONDAY.COM  
+// ========================================
+
+// Schema formation employés
+export const insertEmployeeTrainingSchema = createInsertSchema(employeeTraining).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// Schema inventaire équipements
+export const insertEquipmentInventorySchema = createInsertSchema(equipmentInventory).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// Schema documents employés
+export const insertEmployeeDocumentSchema = createInsertSchema(employeeDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// Schema migration Monday.com
+export const insertMondayMigrationLogSchema = createInsertSchema(mondayMigrationLog).omit({
+  id: true,
+  createdAt: true
+});
+
+// ========================================
 // SCHÉMAS D'INSERTION POUR LES AUTRES TABLES
 // ========================================
 
@@ -6464,6 +6711,26 @@ export type InsertMetricsBusiness = z.infer<typeof insertMetricsBusinessSchema>;
 
 export type TempsPose = typeof tempsPose.$inferSelect;
 export type InsertTempsPose = z.infer<typeof insertTempsPoseSchema>;
+
+// ========================================
+// TYPES TYPESCRIPT POUR NOUVELLES TABLES MONDAY.COM
+// ========================================
+
+// Types formation employés
+export type EmployeeTraining = typeof employeeTraining.$inferSelect;
+export type InsertEmployeeTraining = z.infer<typeof insertEmployeeTrainingSchema>;
+
+// Types inventaire équipements  
+export type EquipmentInventory = typeof equipmentInventory.$inferSelect;
+export type InsertEquipmentInventory = z.infer<typeof insertEquipmentInventorySchema>;
+
+// Types documents employés
+export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
+export type InsertEmployeeDocument = z.infer<typeof insertEmployeeDocumentSchema>;
+
+// Types migration Monday.com
+export type MondayMigrationLog = typeof mondayMigrationLog.$inferSelect;
+export type InsertMondayMigrationLog = z.infer<typeof insertMondayMigrationLogSchema>;
 
 export type AoContacts = typeof aoContacts.$inferSelect;
 export type InsertAoContacts = z.infer<typeof insertAoContactsSchema>;

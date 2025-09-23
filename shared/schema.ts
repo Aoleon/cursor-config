@@ -410,6 +410,85 @@ export const validationStatusEnum = pgEnum("validation_status", [
 ]);
 
 // ========================================
+// ENUMS PHASE 4 - SYSTÈME DE GESTION DES RÉSERVES ET SAV
+// ========================================
+
+// Catégories de réserves pour classification fine
+export const reserveCategoryEnum = pgEnum("reserve_category", [
+  "structural",        // Défauts structurels
+  "finishing",         // Défauts de finition
+  "equipment",         // Problèmes équipements
+  "safety",            // Questions de sécurité
+  "compliance",        // Non-conformité réglementaire
+  "aesthetic",         // Défauts esthétiques
+  "functional"         // Défauts fonctionnels
+]);
+
+// Niveaux de sévérité des réserves
+export const reserveSeverityEnum = pgEnum("reserve_severity", [
+  "critical",          // Critique - travaux arrêtés
+  "major",             // Majeur - impact significatif
+  "minor",             // Mineur - peu d'impact
+  "cosmetic"           // Cosmétique - défaut visible uniquement
+]);
+
+// Statuts workflow des réserves
+export const reserveStatusEnum = pgEnum("reserve_status", [
+  "detected",          // Détectée
+  "acknowledged",      // Accusé réception
+  "in_progress",       // En cours de résolution
+  "resolved",          // Résolue
+  "verified",          // Vérifiée/approuvée
+  "closed"             // Fermée définitivement
+]);
+
+// Niveaux d'impact pour évaluation priorité
+export const impactLevelEnum = pgEnum("impact_level", [
+  "blocking",          // Bloquant - arrêt travaux
+  "major",             // Majeur - retard projet
+  "minor",             // Mineur - ajustement planning
+  "negligible"         // Négligeable - aucun impact
+]);
+
+// Types d'interventions SAV
+export const savInterventionTypeEnum = pgEnum("sav_intervention_type", [
+  "maintenance",       // Maintenance préventive
+  "repair",            // Réparation corrective
+  "warranty",          // Intervention sous garantie
+  "upgrade",           // Mise à niveau / amélioration
+  "inspection",        // Inspection / contrôle
+  "emergency"          // Intervention d'urgence
+]);
+
+// Statuts workflow des interventions SAV
+export const savStatusEnum = pgEnum("sav_status", [
+  "requested",         // Demandée
+  "scheduled",         // Planifiée
+  "in_progress",       // En cours
+  "completed",         // Terminée
+  "cancelled",         // Annulée
+  "follow_up_required" // Suivi requis
+]);
+
+// Types de garanties applicables
+export const warrantyTypeEnum = pgEnum("warranty_type", [
+  "decennial",         // Garantie décennale
+  "perfect_completion", // Garantie de parfait achèvement
+  "good_functioning",  // Garantie de bon fonctionnement
+  "materials",         // Garantie matériaux
+  "workmanship"        // Garantie main d'œuvre
+]);
+
+// Statuts des réclamations garantie
+export const warrantyStatusEnum = pgEnum("warranty_status", [
+  "submitted",         // Soumise
+  "under_review",      // En cours d'examen
+  "approved",          // Approuvée
+  "rejected",          // Rejetée
+  "paid"               // Payée/réglée
+]);
+
+// ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
 
@@ -2278,6 +2357,7 @@ export type InsertProjectResourceAllocation = z.infer<typeof insertProjectResour
 // Types pour les contraintes de planning
 export type PlanningConstraint = typeof planningConstraints.$inferSelect;
 export type InsertPlanningConstraint = z.infer<typeof insertPlanningConstraintSchema>;
+
 
 // ========================================
 // SYSTÈME DOCUMENTAIRE OPTIMISÉ
@@ -4912,6 +4992,206 @@ export const chatbotUsageMetrics = pgTable("chatbot_usage_metrics", {
   totalTokensUsed: integer("total_tokens_used").default(0).notNull(),
   estimatedCost: decimal("estimated_cost", { precision: 8, scale: 4 }).default("0.0000").notNull()
 });
+
+// ========================================
+// TABLES PHASE 4 - GESTION DES RÉSERVES ET SAV
+// ========================================
+
+// Table des réserves par projet - Gestion structurée des défauts/non-conformités
+export const projectReserves = pgTable("project_reserves", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  // Identification et numérotation unique
+  reserveNumber: varchar("reserve_number").notNull().unique(), // Format: RES-2024-001
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  
+  // Catégorisation et criticité
+  category: reserveCategoryEnum("category").notNull(), // structural, finishing, equipment, safety, compliance, aesthetic, functional
+  severity: reserveSeverityEnum("severity").notNull(), // critical, major, minor, cosmetic  
+  status: reserveStatusEnum("status").default("detected"), // detected, acknowledged, in_progress, resolved, verified, closed
+  impact: impactLevelEnum("impact").default("minor"), // blocking, major, minor, negligible
+  
+  // Dates et échéances
+  detectedDate: timestamp("detected_date").notNull(),
+  expectedResolutionDate: timestamp("expected_resolution_date").notNull(),
+  actualResolutionDate: timestamp("actual_resolution_date"), // nullable
+  
+  // Responsabilités et validation
+  detectedBy: varchar("detected_by").notNull(), // Référence utilisateur qui a détecté
+  assignedTo: varchar("assigned_to").notNull(), // Responsable de la résolution
+  validatedBy: varchar("validated_by"), // Approbateur (nullable)
+  
+  // Coûts et localisation  
+  estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }).default("0.00"),
+  actualCost: decimal("actual_cost", { precision: 10, scale: 2 }), // nullable
+  location: varchar("location"), // Localisation précise sur chantier
+  
+  // Documentation et photos
+  photos: jsonb("photos").$type<string[]>().default(sql`'[]'::jsonb`), // URLs des photos
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectReservesIdx: index("project_reserves_project_id_idx").on(table.projectId),
+    reserveNumberIdx: uniqueIndex("project_reserves_number_idx").on(table.reserveNumber),
+    categoryStatusIdx: index("project_reserves_category_status_idx").on(table.category, table.status),
+    severityIdx: index("project_reserves_severity_idx").on(table.severity),
+    detectedDateIdx: index("project_reserves_detected_date_idx").on(table.detectedDate),
+    assignedToIdx: index("project_reserves_assigned_to_idx").on(table.assignedTo),
+    impactIdx: index("project_reserves_impact_idx").on(table.impact),
+  };
+});
+
+// Table des interventions SAV - Gestion complète du service après-vente
+export const savInterventions = pgTable("sav_interventions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }), // Projet d'origine
+  reserveId: varchar("reserve_id").references(() => projectReserves.id, { onDelete: "set null" }), // Lié à une réserve (optionnel)
+  
+  // Identification et numérotation unique
+  interventionNumber: varchar("intervention_number").notNull().unique(), // Format: SAV-2024-001
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  
+  // Type et priorité
+  interventionType: savInterventionTypeEnum("intervention_type").notNull(), // maintenance, repair, warranty, upgrade, inspection, emergency
+  priority: priorityLevelEnum("priority").default("normale"), // Réutilise enum existant
+  status: savStatusEnum("status").default("requested"), // requested, scheduled, in_progress, completed, cancelled, follow_up_required
+  
+  // Dates et planning
+  requestDate: timestamp("request_date").notNull(),
+  plannedDate: timestamp("planned_date").notNull(),
+  completedDate: timestamp("completed_date"), // nullable
+  
+  // Responsabilités
+  requestedBy: varchar("requested_by").notNull(), // Client/utilisateur demandeur
+  assignedTechnician: varchar("assigned_technician").notNull(), // Technicien assigné
+  
+  // Durées et matériaux
+  estimatedDuration: integer("estimated_duration").notNull(), // Heures estimées
+  actualDuration: integer("actual_duration"), // Heures réelles (nullable)
+  materials: jsonb("materials").$type<Record<string, any>[]>().default(sql`'[]'::jsonb`), // Matériaux utilisés
+  
+  // Coût et satisfaction
+  cost: decimal("cost", { precision: 10, scale: 2 }).default("0.00"),
+  customerSatisfaction: integer("customer_satisfaction"), // 1-5, nullable
+  followUpRequired: boolean("follow_up_required").default(false),
+  
+  // Notes et documentation
+  notes: text("notes"),
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectInterventionsIdx: index("sav_interventions_project_id_idx").on(table.projectId),
+    reserveInterventionsIdx: index("sav_interventions_reserve_id_idx").on(table.reserveId),
+    interventionNumberIdx: uniqueIndex("sav_interventions_number_idx").on(table.interventionNumber),
+    typeStatusIdx: index("sav_interventions_type_status_idx").on(table.interventionType, table.status),
+    priorityIdx: index("sav_interventions_priority_idx").on(table.priority),
+    plannedDateIdx: index("sav_interventions_planned_date_idx").on(table.plannedDate),
+    assignedTechnicianIdx: index("sav_interventions_technician_idx").on(table.assignedTechnician),
+    requestDateIdx: index("sav_interventions_request_date_idx").on(table.requestDate),
+  };
+});
+
+// Table des réclamations garantie - Suivi des demandes d'indemnisation
+export const savWarrantyClaims = pgTable("sav_warranty_claims", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  interventionId: varchar("intervention_id").notNull().references(() => savInterventions.id, { onDelete: "cascade" }),
+  
+  // Identification unique de la réclamation
+  claimNumber: varchar("claim_number").notNull().unique(), // Format: GARAN-2024-001
+  warrantyType: warrantyTypeEnum("warranty_type").notNull(), // decennial, perfect_completion, good_functioning, materials, workmanship
+  
+  // Dates et description
+  claimDate: timestamp("claim_date").notNull(),
+  claimDescription: text("claim_description").notNull(),
+  
+  // Statut et résolution
+  status: warrantyStatusEnum("status").default("submitted"), // submitted, under_review, approved, rejected, paid
+  resolution: text("resolution"), // nullable
+  
+  // Montants et traitement
+  approvedAmount: decimal("approved_amount", { precision: 10, scale: 2 }).default("0.00"),
+  processedBy: varchar("processed_by"), // Responsable traitement (nullable)
+  processedDate: timestamp("processed_date"), // nullable
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    interventionClaimsIdx: index("sav_warranty_claims_intervention_id_idx").on(table.interventionId),
+    claimNumberIdx: uniqueIndex("sav_warranty_claims_number_idx").on(table.claimNumber),
+    warrantyTypeIdx: index("sav_warranty_claims_warranty_type_idx").on(table.warrantyType),
+    statusIdx: index("sav_warranty_claims_status_idx").on(table.status),
+    claimDateIdx: index("sav_warranty_claims_claim_date_idx").on(table.claimDate),
+    processedByIdx: index("sav_warranty_claims_processed_by_idx").on(table.processedBy),
+  };
+});
+
+// ========================================
+// SCHÉMAS ZOD PHASE 4 - GESTION DES RÉSERVES ET SAV
+// ========================================
+
+// Schéma d'insertion pour les réserves de projet
+export const insertProjectReserveSchema = createInsertSchema(projectReserves).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  // Transform string dates from frontend to Date objects
+  detectedDate: z.string().transform((val) => new Date(val)),
+  expectedResolutionDate: z.string().transform((val) => new Date(val)),
+  actualResolutionDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+});
+
+// Schéma d'insertion pour les interventions SAV
+export const insertSavInterventionSchema = createInsertSchema(savInterventions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  // Transform string dates from frontend to Date objects
+  requestDate: z.string().transform((val) => new Date(val)),
+  plannedDate: z.string().transform((val) => new Date(val)),
+  completedDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  // Validation customer satisfaction range
+  customerSatisfaction: z.number().min(1).max(5).optional(),
+});
+
+// Schéma d'insertion pour les réclamations garantie
+export const insertSavWarrantyClaimSchema = createInsertSchema(savWarrantyClaims).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  // Transform string dates from frontend to Date objects
+  claimDate: z.string().transform((val) => new Date(val)),
+  processedDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+});
+
+// ========================================
+// TYPES TYPESCRIPT PHASE 4 - GESTION DES RÉSERVES ET SAV
+// ========================================
+
+// Types pour les réserves de projet
+export type ProjectReserve = typeof projectReserves.$inferSelect;
+export type InsertProjectReserve = z.infer<typeof insertProjectReserveSchema>;
+
+// Types pour les interventions SAV
+export type SavIntervention = typeof savInterventions.$inferSelect;
+export type InsertSavIntervention = z.infer<typeof insertSavInterventionSchema>;
+
+// Types pour les réclamations garantie
+export type SavWarrantyClaim = typeof savWarrantyClaims.$inferSelect;
+export type InsertSavWarrantyClaim = z.infer<typeof insertSavWarrantyClaimSchema>;
 
 // ========================================
 // SCHEMAS ZOD POUR VALIDATION DES ENDPOINTS CHATBOT

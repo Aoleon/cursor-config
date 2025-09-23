@@ -5,6 +5,7 @@ import {
   validationMilestones, visaArchitecte, technicalAlerts, technicalAlertHistory,
   projectTimelines, dateIntelligenceRules, dateAlerts, businessMetrics, kpiSnapshots, performanceBenchmarks,
   alertThresholds, businessAlerts,
+  projectReserves, savInterventions, savWarrantyClaims,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -35,7 +36,10 @@ import {
   type AlertThreshold, type InsertAlertThreshold, type UpdateAlertThreshold,
   type BusinessAlert, type InsertBusinessAlert, type UpdateBusinessAlert,
   type AlertsQuery, type ThresholdKey, type AlertSeverity, type AlertStatus, type AlertType,
-  type ProjectStatus
+  projectStatusEnum,
+  type ProjectReserve, type InsertProjectReserve,
+  type SavIntervention, type InsertSavIntervention,
+  type SavWarrantyClaim, type InsertSavWarrantyClaim
 } from "@shared/schema";
 import { db } from "./db";
 import type { EventBus } from "./eventBus";
@@ -258,7 +262,7 @@ export interface IStorage {
   deleteProjectTimeline(id: string): Promise<void>;
   
   // DateIntelligenceRules operations - Gestion des règles métier configurables
-  getActiveRules(filters?: { phase?: ProjectStatus, projectType?: string }): Promise<DateIntelligenceRule[]>;
+  getActiveRules(filters?: { phase?: typeof projectStatusEnum.enumValues[number], projectType?: string }): Promise<DateIntelligenceRule[]>;
   getAllRules(): Promise<DateIntelligenceRule[]>;
   getRule(id: string): Promise<DateIntelligenceRule | undefined>;
   createRule(data: InsertDateIntelligenceRule): Promise<DateIntelligenceRule>;
@@ -271,8 +275,8 @@ export interface IStorage {
   createDateAlert(data: InsertDateAlert): Promise<DateAlert>;
   updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert>;
   deleteDateAlert(id: string): Promise<void>;
-  acknowledgeAlert(id: string, userId: string): Promise<DateAlert>;
-  resolveAlert(id: string, userId: string, actionTaken?: string): Promise<DateAlert>;
+  acknowledgeAlert(id: string, userId: string): Promise<boolean>;
+  resolveAlert(id: string, userId: string, actionTaken?: string): Promise<boolean>;
 
   // ========================================
   // ANALYTICS SERVICE OPERATIONS - PHASE 3.1.3
@@ -347,43 +351,6 @@ export interface IStorage {
     forecast_period: string;
     confidence: number;
     method_used: string;
-  }>>;
-
-  // ========================================
-  // MÉTHODES POUR PREDICTIVE ENGINE SERVICE
-  // ========================================
-  
-  // Données historiques revenues par mois pour forecasting
-  getMonthlyRevenueHistory(params: { start_date: string; end_date: string }): Promise<Array<{
-    period: string; // Format YYYY-MM
-    total_revenue: number;
-    offer_count: number;
-    avg_margin: number;
-    conversion_rate: number;
-    project_types: Record<string, number>;
-  }>>;
-
-  // Données historiques délais projets pour détection risques
-  getProjectDelayHistory(params: { start_date: string; end_date: string }): Promise<Array<{
-    project_id: string;
-    project_type: string;
-    planned_days: number;
-    actual_days: number;
-    delay_days: number;
-    completion_date: string;
-    responsible_user_id?: string;
-    complexity_factors: string[];
-  }>>;
-
-  // Historique charge équipe pour analyse et recommandations
-  getTeamLoadHistory(params: { start_date: string; end_date: string }): Promise<Array<{
-    user_id: string;
-    period: string; // Format YYYY-MM
-    utilization_rate: number;
-    hours_assigned: number;
-    hours_capacity: number;
-    efficiency_score: number;
-    project_count: number;
   }>>;
 
   // Benchmarks secteur pour comparaisons
@@ -476,6 +443,31 @@ export interface IStorage {
     entity_type: string, 
     entity_id: string
   ): Promise<BusinessAlert[]>;
+
+  // ========================================
+  // PHASE 4 - Système de gestion des réserves et SAV
+  // ========================================
+
+  // Project Reserves operations - Gestion des réserves projet
+  getProjectReserves(projectId: string): Promise<ProjectReserve[]>;
+  getProjectReserve(id: string): Promise<ProjectReserve | undefined>;
+  createProjectReserve(reserve: InsertProjectReserve): Promise<ProjectReserve>;
+  updateProjectReserve(id: string, reserve: Partial<InsertProjectReserve>): Promise<ProjectReserve>;
+  deleteProjectReserve(id: string): Promise<void>;
+
+  // SAV Interventions operations - Gestion des interventions SAV
+  getSavInterventions(projectId: string): Promise<SavIntervention[]>;
+  getSavIntervention(id: string): Promise<SavIntervention | undefined>;
+  createSavIntervention(intervention: InsertSavIntervention): Promise<SavIntervention>;
+  updateSavIntervention(id: string, intervention: Partial<InsertSavIntervention>): Promise<SavIntervention>;
+  deleteSavIntervention(id: string): Promise<void>;
+
+  // SAV Warranty Claims operations - Gestion des réclamations garantie
+  getSavWarrantyClaims(interventionId: string): Promise<SavWarrantyClaim[]>;
+  getSavWarrantyClaim(id: string): Promise<SavWarrantyClaim | undefined>;
+  createSavWarrantyClaim(claim: InsertSavWarrantyClaim): Promise<SavWarrantyClaim>;
+  updateSavWarrantyClaim(id: string, claim: Partial<InsertSavWarrantyClaim>): Promise<SavWarrantyClaim>;
+  deleteSavWarrantyClaim(id: string): Promise<void>;
 }
 
 // ========================================
@@ -1704,16 +1696,16 @@ export class DatabaseStorage implements IStorage {
 
   async enqueueTechnicalAlert(alert: InsertTechnicalAlert): Promise<TechnicalAlert> {
     const id = `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const now = new Date().toISOString();
+    const now = new Date();
     
     const technicalAlert: TechnicalAlert = {
       id,
       aoId: alert.aoId,
       aoReference: alert.aoReference,
       score: alert.score,
-      triggeredCriteria: alert.triggeredCriteria,
+      triggeredCriteria: alert.triggeredCriteria ?? null,
       status: alert.status || 'pending',
-      assignedToUserId: alert.assignedToUserId || null,
+      assignedToUserId: alert.assignedToUserId ?? null,
       createdAt: now,
       updatedAt: now,
       validatedAt: null,
@@ -1726,7 +1718,7 @@ export class DatabaseStorage implements IStorage {
     DatabaseStorage.technicalAlerts.set(id, technicalAlert);
     
     // Ajouter entrée d'historique
-    await this.addTechnicalAlertHistory(id, 'created', alert.assignedToUserId, 'Alerte technique créée');
+    await this.addTechnicalAlertHistory(id, 'created', alert.assignedToUserId ?? null, 'Alerte technique créée');
     
     console.log(`[Storage] Alerte technique créée: ${id} pour AO ${alert.aoReference}`);
     return technicalAlert;
@@ -1758,7 +1750,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     alert.status = 'acknowledged';
-    alert.updatedAt = new Date().toISOString();
+    alert.updatedAt = new Date();
     
     DatabaseStorage.technicalAlerts.set(id, alert);
     
@@ -1773,8 +1765,8 @@ export class DatabaseStorage implements IStorage {
     }
 
     alert.status = 'validated';
-    alert.updatedAt = new Date().toISOString();
-    alert.validatedAt = new Date().toISOString();
+    alert.updatedAt = new Date();
+    alert.validatedAt = new Date();
     alert.validatedByUserId = userId;
     
     DatabaseStorage.technicalAlerts.set(id, alert);
@@ -1790,8 +1782,8 @@ export class DatabaseStorage implements IStorage {
     }
 
     alert.status = 'bypassed';
-    alert.updatedAt = new Date().toISOString();
-    alert.bypassUntil = until.toISOString();
+    alert.updatedAt = new Date();
+    alert.bypassUntil = until;
     alert.bypassReason = reason;
     
     DatabaseStorage.technicalAlerts.set(id, alert);
@@ -1838,9 +1830,9 @@ export class DatabaseStorage implements IStorage {
     const historyEntry: TechnicalAlertHistory = {
       id: historyId,
       alertId: alertId || 'system',
-      action,
+      action: action as 'acknowledged' | 'validated' | 'bypassed' | 'created' | 'auto_expired' | 'suppressed',
       actorUserId,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
       note: note || null,
       metadata: metadata || null,
     };
@@ -1858,7 +1850,11 @@ export class DatabaseStorage implements IStorage {
     const history = DatabaseStorage.technicalAlertHistory.get(alertId) || [];
     
     // Trier par timestamp (plus récent en premier)
-    return history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return history.sort((a, b) => {
+      const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      return dateB - dateA;
+    });
   }
 
   async listAoSuppressionHistory(aoId: string): Promise<TechnicalAlertHistory[]> {
@@ -1867,7 +1863,11 @@ export class DatabaseStorage implements IStorage {
     const history = DatabaseStorage.technicalAlertHistory.get(suppressionKey) || [];
     
     // Trier par timestamp (plus récent en premier)
-    return history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return history.sort((a, b) => {
+      const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      return dateB - dateA;
+    });
   }
 
   // ========================================
@@ -1988,7 +1988,7 @@ export class DatabaseStorage implements IStorage {
   // DATE INTELLIGENCE RULES OPERATIONS
   // ========================================
 
-  async getActiveRules(filters?: { phase?: ProjectStatus, projectType?: string }): Promise<DateIntelligenceRule[]> {
+  async getActiveRules(filters?: { phase?: typeof projectStatusEnum.enumValues[number], projectType?: string }): Promise<DateIntelligenceRule[]> {
     let rules = Array.from(DatabaseStorage.dateIntelligenceRules.values())
       .filter(rule => rule.isActive);
 
@@ -2160,7 +2160,7 @@ export class DatabaseStorage implements IStorage {
     console.log(`[Storage] Alerte supprimée: ${id}`);
   }
 
-  async acknowledgeAlert(id: string, userId: string): Promise<DateAlert> {
+  async acknowledgeAlert(id: string, userId: string): Promise<boolean> {
     const existing = DatabaseStorage.dateAlerts.get(id);
     if (!existing) {
       throw new Error(`Alerte ${id} non trouvée`);
@@ -2177,10 +2177,10 @@ export class DatabaseStorage implements IStorage {
     DatabaseStorage.dateAlerts.set(id, updated);
     console.log(`[Storage] Alerte acquittée: ${id} par ${userId}`);
     
-    return updated;
+    return true;
   }
 
-  async resolveAlert(id: string, userId: string, actionTaken?: string): Promise<DateAlert> {
+  async resolveAlert(id: string, userId: string, actionTaken?: string): Promise<boolean> {
     const existing = DatabaseStorage.dateAlerts.get(id);
     if (!existing) {
       throw new Error(`Alerte ${id} non trouvée`);
@@ -2198,7 +2198,7 @@ export class DatabaseStorage implements IStorage {
     DatabaseStorage.dateAlerts.set(id, updated);
     console.log(`[Storage] Alerte résolue: ${id} par ${userId}`);
     
-    return updated;
+    return true;
   }
 
   // ========================================
@@ -2311,20 +2311,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBenchmarks(entityType: string, entityId?: string): Promise<PerformanceBenchmark[]> {
-    let query = db.select()
-      .from(performanceBenchmarks)
-      .where(eq(performanceBenchmarks.entityType, entityType));
-
+    let whereConditions = [eq(performanceBenchmarks.entityType, entityType)];
+    
     if (entityId) {
-      query = query.where(
-        and(
-          eq(performanceBenchmarks.entityType, entityType),
-          eq(performanceBenchmarks.entityId, entityId)
-        )
-      );
+      whereConditions.push(eq(performanceBenchmarks.entityId, entityId));
     }
 
-    const benchmarks = await query.orderBy(desc(performanceBenchmarks.createdAt));
+    const benchmarks = await db.select()
+      .from(performanceBenchmarks)
+      .where(and(...whereConditions))
+      .orderBy(desc(performanceBenchmarks.createdAt));
+      
     console.log(`[Storage] ${benchmarks.length} benchmarks trouvés pour ${entityType}${entityId ? `:${entityId}` : ''}`);
     return benchmarks;
   }
@@ -2609,6 +2606,15 @@ export class DatabaseStorage implements IStorage {
 // ========================================
 
 export class MemStorage implements IStorage {
+  // Propriétés requises pour interface IStorage
+  private db: any = null; // Mock database reference
+  private eventBus?: EventBus; // Optional EventBus pour auto-publishing
+
+  // INJECTION EVENTBUS - Constructeur optionnel pour tests
+  constructor(eventBus?: EventBus) {
+    this.eventBus = eventBus;
+  }
+
   // Mock data pour les forecast snapshots
   private static mockForecastSnapshots = [
     {
@@ -2631,36 +2637,7 @@ export class MemStorage implements IStorage {
   // PREDICTIVE ENGINE METHODS - DONNÉES MOCK MENUISERIE FRANÇAISE
   // ========================================
 
-  async getMonthlyRevenueHistory(range: {
-    start_date: string;
-    end_date: string;
-  }): Promise<Array<{
-    month: string;
-    total_revenue: number;
-    projects_count: number;
-    avg_project_value: number;
-  }>> {
-    console.log(`[MemStorage] Mock - Historique revenus de ${range.start_date} à ${range.end_date}`);
-    
-    // Pattern réaliste menuiserie française avec saisonnalité
-    // - Pic printemps/été (rénovations)
-    // - Ralentissement hiver
-    // - Croissance progressive
-    return [
-      { month: "2024-01", total_revenue: 85000, projects_count: 8, avg_project_value: 10625 },
-      { month: "2024-02", total_revenue: 92000, projects_count: 9, avg_project_value: 10222 },
-      { month: "2024-03", total_revenue: 120000, projects_count: 12, avg_project_value: 10000 },
-      { month: "2024-04", total_revenue: 145000, projects_count: 15, avg_project_value: 9667 },
-      { month: "2024-05", total_revenue: 168000, projects_count: 16, avg_project_value: 10500 },
-      { month: "2024-06", total_revenue: 185000, projects_count: 18, avg_project_value: 10278 },
-      { month: "2024-07", total_revenue: 172000, projects_count: 17, avg_project_value: 10118 },
-      { month: "2024-08", total_revenue: 155000, projects_count: 14, avg_project_value: 11071 },
-      { month: "2024-09", total_revenue: 165000, projects_count: 16, avg_project_value: 10313 },
-      { month: "2024-10", total_revenue: 140000, projects_count: 13, avg_project_value: 10769 },
-      { month: "2024-11", total_revenue: 115000, projects_count: 11, avg_project_value: 10455 },
-      { month: "2024-12", total_revenue: 95000, projects_count: 9, avg_project_value: 10556 }
-    ];
-  }
+  // getMonthlyRevenueHistory implemented in Predictive Engine section below
 
   async getProjectDelayHistory(range: {
     start_date: string;
@@ -2848,17 +2825,7 @@ export class MemStorage implements IStorage {
   // Note: Pour les besoins de ce POC, les autres méthodes retournent des données mock basiques
   // ou délèguent vers DatabaseStorage selon les besoins
 
-  async getUsers(): Promise<User[]> {
-    return [];
-  }
-
-  async getUser(id: string): Promise<User | undefined> {
-    return undefined;
-  }
-
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    throw new Error("MemStorage: upsertUser not implemented for POC");
-  }
+  // User methods implemented in DatabaseStorage class
 
   async getAos(): Promise<Ao[]> {
     return [];
@@ -3203,7 +3170,7 @@ export class MemStorage implements IStorage {
     throw new Error("MemStorage: deleteProjectTimeline not implemented for POC");
   }
 
-  async getActiveRules(filters?: { phase?: ProjectStatus, projectType?: string }): Promise<DateIntelligenceRule[]> {
+  async getActiveRules(filters?: { phase?: typeof projectStatusEnum.enumValues[number], projectType?: string }): Promise<DateIntelligenceRule[]> {
     return [];
   }
 
@@ -3247,13 +3214,7 @@ export class MemStorage implements IStorage {
     throw new Error("MemStorage: deleteDateAlert not implemented for POC");
   }
 
-  async acknowledgeAlert(id: string, userId: string): Promise<DateAlert> {
-    throw new Error("MemStorage: acknowledgeAlert not implemented for POC");
-  }
-
-  async resolveAlert(id: string, userId: string, actionTaken?: string): Promise<DateAlert> {
-    throw new Error("MemStorage: resolveAlert not implemented for POC");
-  }
+  // acknowledgeAlert et resolveAlert sont implémentées dans la section business alerts
 
   async createKPISnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot> {
     throw new Error("MemStorage: createKPISnapshot not implemented for POC");
@@ -3907,7 +3868,7 @@ export class MemStorage implements IStorage {
 
   async acknowledgeAlert(id: string, user_id: string, notes?: string): Promise<boolean> {
     try {
-      const [result] = await this.db
+      const [result] = await db
         .update(businessAlerts)
         .set({
           status: 'acknowledged',
@@ -3930,7 +3891,7 @@ export class MemStorage implements IStorage {
 
   async resolveAlert(id: string, user_id: string, resolution_notes: string): Promise<boolean> {
     try {
-      const [result] = await this.db
+      const [result] = await db
         .update(businessAlerts)
         .set({
           status: 'resolved',
@@ -4005,6 +3966,271 @@ export class MemStorage implements IStorage {
       
     } catch (error) {
       logger.error('Erreur getOpenAlertsForEntity:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // IMPLÉMENTATION PHASE 4 - Système de gestion des réserves et SAV
+  // ========================================
+
+  // Project Reserves operations - Gestion des réserves projet
+  async getProjectReserves(projectId: string): Promise<ProjectReserve[]> {
+    try {
+      const results = await this.db
+        .select()
+        .from(projectReserves)
+        .where(eq(projectReserves.projectId, projectId))
+        .orderBy(desc(projectReserves.detectedDate));
+      
+      logger.info(`Récupération de ${results.length} réserves pour le projet ${projectId}`);
+      return results;
+      
+    } catch (error) {
+      logger.error('Erreur getProjectReserves:', error);
+      throw error;
+    }
+  }
+
+  async getProjectReserve(id: string): Promise<ProjectReserve | undefined> {
+    try {
+      const [result] = await this.db
+        .select()
+        .from(projectReserves)
+        .where(eq(projectReserves.id, id));
+      
+      return result;
+      
+    } catch (error) {
+      logger.error('Erreur getProjectReserve:', error);
+      throw error;
+    }
+  }
+
+  async createProjectReserve(reserve: InsertProjectReserve): Promise<ProjectReserve> {
+    try {
+      const [result] = await this.db
+        .insert(projectReserves)
+        .values({
+          ...reserve,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      logger.info(`Réserve créée avec ID: ${result.id}`);
+      return result;
+      
+    } catch (error) {
+      logger.error('Erreur createProjectReserve:', error);
+      throw error;
+    }
+  }
+
+  async updateProjectReserve(id: string, reserve: Partial<InsertProjectReserve>): Promise<ProjectReserve> {
+    try {
+      const [result] = await this.db
+        .update(projectReserves)
+        .set({
+          ...reserve,
+          updatedAt: new Date()
+        })
+        .where(eq(projectReserves.id, id))
+        .returning();
+      
+      logger.info(`Réserve ${id} mise à jour`);
+      return result;
+      
+    } catch (error) {
+      logger.error('Erreur updateProjectReserve:', error);
+      throw error;
+    }
+  }
+
+  async deleteProjectReserve(id: string): Promise<void> {
+    try {
+      await this.db
+        .delete(projectReserves)
+        .where(eq(projectReserves.id, id));
+      
+      logger.info(`Réserve ${id} supprimée`);
+      
+    } catch (error) {
+      logger.error('Erreur deleteProjectReserve:', error);
+      throw error;
+    }
+  }
+
+  // SAV Interventions operations - Gestion des interventions SAV
+  async getSavInterventions(projectId: string): Promise<SavIntervention[]> {
+    try {
+      const results = await this.db
+        .select()
+        .from(savInterventions)
+        .where(eq(savInterventions.projectId, projectId))
+        .orderBy(desc(savInterventions.requestDate));
+      
+      logger.info(`Récupération de ${results.length} interventions SAV pour le projet ${projectId}`);
+      return results;
+      
+    } catch (error) {
+      logger.error('Erreur getSavInterventions:', error);
+      throw error;
+    }
+  }
+
+  async getSavIntervention(id: string): Promise<SavIntervention | undefined> {
+    try {
+      const [result] = await this.db
+        .select()
+        .from(savInterventions)
+        .where(eq(savInterventions.id, id));
+      
+      return result;
+      
+    } catch (error) {
+      logger.error('Erreur getSavIntervention:', error);
+      throw error;
+    }
+  }
+
+  async createSavIntervention(intervention: InsertSavIntervention): Promise<SavIntervention> {
+    try {
+      const [result] = await this.db
+        .insert(savInterventions)
+        .values({
+          ...intervention,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      logger.info(`Intervention SAV créée avec ID: ${result.id}`);
+      return result;
+      
+    } catch (error) {
+      logger.error('Erreur createSavIntervention:', error);
+      throw error;
+    }
+  }
+
+  async updateSavIntervention(id: string, intervention: Partial<InsertSavIntervention>): Promise<SavIntervention> {
+    try {
+      const [result] = await this.db
+        .update(savInterventions)
+        .set({
+          ...intervention,
+          updatedAt: new Date()
+        })
+        .where(eq(savInterventions.id, id))
+        .returning();
+      
+      logger.info(`Intervention SAV ${id} mise à jour`);
+      return result;
+      
+    } catch (error) {
+      logger.error('Erreur updateSavIntervention:', error);
+      throw error;
+    }
+  }
+
+  async deleteSavIntervention(id: string): Promise<void> {
+    try {
+      await this.db
+        .delete(savInterventions)
+        .where(eq(savInterventions.id, id));
+      
+      logger.info(`Intervention SAV ${id} supprimée`);
+      
+    } catch (error) {
+      logger.error('Erreur deleteSavIntervention:', error);
+      throw error;
+    }
+  }
+
+  // SAV Warranty Claims operations - Gestion des réclamations garantie
+  async getSavWarrantyClaims(interventionId: string): Promise<SavWarrantyClaim[]> {
+    try {
+      const results = await this.db
+        .select()
+        .from(savWarrantyClaims)
+        .where(eq(savWarrantyClaims.interventionId, interventionId))
+        .orderBy(desc(savWarrantyClaims.claimDate));
+      
+      logger.info(`Récupération de ${results.length} réclamations garantie pour l'intervention ${interventionId}`);
+      return results;
+      
+    } catch (error) {
+      logger.error('Erreur getSavWarrantyClaims:', error);
+      throw error;
+    }
+  }
+
+  async getSavWarrantyClaim(id: string): Promise<SavWarrantyClaim | undefined> {
+    try {
+      const [result] = await this.db
+        .select()
+        .from(savWarrantyClaims)
+        .where(eq(savWarrantyClaims.id, id));
+      
+      return result;
+      
+    } catch (error) {
+      logger.error('Erreur getSavWarrantyClaim:', error);
+      throw error;
+    }
+  }
+
+  async createSavWarrantyClaim(claim: InsertSavWarrantyClaim): Promise<SavWarrantyClaim> {
+    try {
+      const [result] = await this.db
+        .insert(savWarrantyClaims)
+        .values({
+          ...claim,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      logger.info(`Réclamation garantie créée avec ID: ${result.id}`);
+      return result;
+      
+    } catch (error) {
+      logger.error('Erreur createSavWarrantyClaim:', error);
+      throw error;
+    }
+  }
+
+  async updateSavWarrantyClaim(id: string, claim: Partial<InsertSavWarrantyClaim>): Promise<SavWarrantyClaim> {
+    try {
+      const [result] = await this.db
+        .update(savWarrantyClaims)
+        .set({
+          ...claim,
+          updatedAt: new Date()
+        })
+        .where(eq(savWarrantyClaims.id, id))
+        .returning();
+      
+      logger.info(`Réclamation garantie ${id} mise à jour`);
+      return result;
+      
+    } catch (error) {
+      logger.error('Erreur updateSavWarrantyClaim:', error);
+      throw error;
+    }
+  }
+
+  async deleteSavWarrantyClaim(id: string): Promise<void> {
+    try {
+      await this.db
+        .delete(savWarrantyClaims)
+        .where(eq(savWarrantyClaims.id, id));
+      
+      logger.info(`Réclamation garantie ${id} supprimée`);
+      
+    } catch (error) {
+      logger.error('Erreur deleteSavWarrantyClaim:', error);
       throw error;
     }
   }

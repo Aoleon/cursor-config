@@ -30,7 +30,9 @@ import {
   proposeActionSchema, executeActionSchema, actionHistoryRequestSchema, updateConfirmationSchema,
   type ChatbotQueryRequest, type ChatbotSuggestionsRequest, type ChatbotValidateRequest,
   type ChatbotHistoryRequest, type ChatbotFeedbackRequest, type ChatbotStatsRequest,
-  type ProposeActionRequest, type ExecuteActionRequest, type ActionHistoryRequest, type UpdateConfirmationRequest
+  type ProposeActionRequest, type ExecuteActionRequest, type ActionHistoryRequest, type UpdateConfirmationRequest,
+  insertProjectReserveSchema, insertSavInterventionSchema, insertSavWarrantyClaimSchema,
+  type ProjectReserve, type SavIntervention, type SavWarrantyClaim
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -3564,7 +3566,7 @@ app.put("/api/projects/:id/recalculate-from/:phase",
       // Effectuer le recalcul en cascade
       const cascadeResult = await dateIntelligenceService.recalculateFromPhase(
         projectId,
-        phase as ProjectStatus,
+        phase as typeof projectStatusEnum.enumValues[number],
         newDate
       );
       
@@ -3621,7 +3623,7 @@ app.get("/api/intelligence-rules",
       
       // Construire les filtres pour le storage
       const filters: any = {};
-      if (phase) filters.phase = phase as ProjectStatus;
+      if (phase) filters.phase = phase as typeof projectStatusEnum.enumValues[number];
       if (projectType) filters.projectType = projectType;
       
       // Récupérer les règles depuis le storage
@@ -6872,6 +6874,65 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
     }
   })
 );
+
+  // ========================================
+  // PHASE 4 - Routes API réserves et SAV
+  // ========================================
+
+  // GET /api/reserves/:projectId - Lister réserves projet
+  app.get("/api/reserves/:projectId", 
+    isAuthenticated,
+    validateParams(commonParamSchemas.projectId),
+    asyncHandler(async (req: any, res) => {
+      const { projectId } = req.params;
+      const reserves = await storage.getProjectReserves(projectId);
+      res.json(sendSuccess(reserves));
+    })
+  );
+
+  // POST /api/reserves - Créer nouvelle réserve
+  app.post("/api/reserves", 
+    isAuthenticated,
+    validateBody(insertProjectReserveSchema),
+    asyncHandler(async (req: any, res) => {
+      const reserveData = req.body;
+      const newReserve = await storage.createProjectReserve(reserveData);
+      res.status(201).json(sendSuccess(newReserve));
+    })
+  );
+
+  // GET /api/sav-interventions/:projectId - Lister interventions SAV
+  app.get("/api/sav-interventions/:projectId", 
+    isAuthenticated,
+    validateParams(commonParamSchemas.projectId),
+    asyncHandler(async (req: any, res) => {
+      const { projectId } = req.params;
+      const interventions = await storage.getSavInterventions(projectId);
+      res.json(sendSuccess(interventions));
+    })
+  );
+
+  // POST /api/sav-interventions - Créer intervention SAV
+  app.post("/api/sav-interventions", 
+    isAuthenticated,
+    validateBody(insertSavInterventionSchema),
+    asyncHandler(async (req: any, res) => {
+      const interventionData = req.body;
+      const newIntervention = await storage.createSavIntervention(interventionData);
+      res.status(201).json(sendSuccess(newIntervention));
+    })
+  );
+
+  // GET /api/warranty-claims/:interventionId - Lister réclamations garantie
+  app.get("/api/warranty-claims/:interventionId", 
+    isAuthenticated,
+    validateParams(z.object({ interventionId: z.string().uuid() })),
+    asyncHandler(async (req: any, res) => {
+      const { interventionId } = req.params;
+      const claims = await storage.getSavWarrantyClaims(interventionId);
+      res.json(sendSuccess(claims));
+    })
+  );
 
   // ========================================
   // CORRECTIF CRITIQUE URGENT - ROUTES ADMIN

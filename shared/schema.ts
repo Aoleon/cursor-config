@@ -489,6 +489,26 @@ export const warrantyStatusEnum = pgEnum("warranty_status", [
 ]);
 
 // ========================================
+// NOUVEAUX ENUMS PHASE SAXIUM - EXTENSIONS MONDAY.COM
+// ========================================
+
+// Catégories d'AO identifiées dans Monday.com (MEXT, MINT, etc.)
+export const aoCategoryEnum = pgEnum("ao_category", [
+  "MEXT", "MINT", "HALL", "SERRURERIE", "AUTRE"
+]);
+
+// Statuts opérationnels AO identifiés dans Monday.com 
+export const aoOperationalStatusEnum = pgEnum("ao_operational_status", [
+  "en_cours", "a_relancer", "gagne", "perdu", "abandonne", "en_attente"
+]);
+
+// Types de liaisons contacts-projets/AO
+export const contactLinkTypeEnum = pgEnum("contact_link_type", [
+  "maitre_ouvrage", "maitre_oeuvre", "architecte", "controleur_technique", 
+  "bureau_etudes", "client", "fournisseur", "sous_traitant"
+]);
+
+// ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
 
@@ -512,6 +532,15 @@ export const suppliers = pgTable("suppliers", {
   deliveryDelay: integer("delivery_delay").default(15),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
   totalOrders: integer("total_orders").default(0),
+  
+  // ========================================
+  // EXTENSIONS SAXIUM - MONDAY.COM
+  // ========================================
+  coverageDepartements: departementEnum("coverage_departements").array(),
+  responseTimeAvgDays: integer("response_time_avg_days"),
+  mondayItemId: varchar("monday_item_id"),
+  notes: text("notes"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -812,6 +841,19 @@ export const aos = pgTable("aos", {
   // Sélection
   isSelected: boolean("is_selected").default(false),
   selectionComment: text("selection_comment"),
+  
+  // ========================================
+  // EXTENSIONS SAXIUM - MONDAY.COM
+  // ========================================
+  clientName: varchar("client_name"),
+  city: varchar("city"),
+  aoCategory: aoCategoryEnum("ao_category"),
+  operationalStatus: aoOperationalStatusEnum("operational_status"),
+  dueDate: timestamp("due_date"),
+  amountEstimate: decimal("amount_estimate", { precision: 12, scale: 2 }),
+  priority: priorityLevelEnum("priority"),
+  mondayItemId: varchar("monday_item_id"),
+  tags: varchar("tags").array(),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1205,6 +1247,17 @@ export const projects = pgTable("projects", {
   // Buffer et marges
   globalBuffer: integer("global_buffer").default(0), // jours buffer global
   qualityGates: jsonb("quality_gates"), // Points contrôle qualité
+
+  // ========================================
+  // EXTENSIONS SAXIUM - MONDAY.COM
+  // ========================================
+  siteAddress: varchar("site_address"),
+  city: varchar("city"),
+  startDatePlanned: timestamp("start_date_planned"),
+  endDatePlanned: timestamp("end_date_planned"),
+  contractAmount: decimal("contract_amount", { precision: 12, scale: 2 }),
+  lotCount: integer("lot_count"),
+  mondayItemId: varchar("monday_item_id"),
 
   // ========================================
   // MÉTADONNÉES (existantes)
@@ -4994,6 +5047,125 @@ export const chatbotUsageMetrics = pgTable("chatbot_usage_metrics", {
 });
 
 // ========================================
+// NOUVELLES TABLES PHASE SAXIUM - EXTENSIONS MONDAY.COM
+// ========================================
+
+// Table des contacts - Nécessaire pour les tables de liaison
+export const contacts = pgTable("contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  company: varchar("company"),
+  poste: posteTypeEnum("poste"),
+  address: text("address"),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => {
+  return {
+    emailIdx: index("contacts_email_idx").on(table.email),
+    companyIdx: index("contacts_company_idx").on(table.company),
+  };
+});
+
+// Table temps_pose (support planning automatique)
+export const tempsPose = pgTable("temps_pose", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  work_scope: aoCategoryEnum("work_scope").notNull(),
+  component_type: menuiserieTypeEnum("component_type").notNull(),
+  unit: varchar("unit").notNull(), // "m2", "ml", "unité"
+  time_per_unit_min: integer("time_per_unit_min").notNull(),
+  calculation_method: calculationMethodEnum("calculation_method").notNull(),
+  conditions: jsonb("conditions").default(sql`'{}'::jsonb`),
+  notes: text("notes"),
+  is_active: boolean("is_active").default(true),
+  monday_item_id: varchar("monday_item_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => {
+  return {
+    workScopeComponentIdx: index("temps_pose_work_scope_component_idx").on(table.work_scope, table.component_type),
+    isActiveIdx: index("temps_pose_is_active_idx").on(table.is_active),
+    mondayItemIdx: index("temps_pose_monday_item_idx").on(table.monday_item_id),
+  };
+});
+
+// Table metrics_business (tableau de bord)
+export const metricsBusiness = pgTable("metrics_business", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metric_type: metricTypeEnum("metric_type").notNull(),
+  entity_type: alertEntityTypeEnum("entity_type").notNull(),
+  entity_id: varchar("entity_id").notNull(),
+  period_start: timestamp("period_start").notNull(),
+  period_end: timestamp("period_end"),
+  value: decimal("value", { precision: 12, scale: 2 }).notNull(),
+  severity: alertSeverityBusinessEnum("severity"),
+  benchmark_type: benchmarkTypeEnum("benchmark_type"),
+  calculation_method: calculationMethodEnum("calculation_method").notNull(),
+  context: jsonb("context").default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => {
+  return {
+    metricTypeEntityIdx: index("metrics_business_metric_type_entity_idx").on(table.metric_type, table.entity_type),
+    entityIdIdx: index("metrics_business_entity_id_idx").on(table.entity_id),
+    periodIdx: index("metrics_business_period_idx").on(table.period_start, table.period_end),
+    severityIdx: index("metrics_business_severity_idx").on(table.severity),
+  };
+});
+
+// ========================================
+// TABLES DE LIAISON PHASE SAXIUM - EXTENSIONS MONDAY.COM
+// ========================================
+
+// Table de liaison AO-Contacts
+export const aoContacts = pgTable("ao_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ao_id: varchar("ao_id").notNull().references(() => aos.id, { onDelete: "cascade" }),
+  contact_id: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
+  link_type: contactLinkTypeEnum("link_type").notNull(),
+  createdAt: timestamp("created_at").defaultNow()
+}, (table) => ({
+  uniqueAoContact: uniqueIndex("unique_ao_contact").on(table.ao_id, table.contact_id, table.link_type),
+  aoIdIdx: index("ao_contacts_ao_id_idx").on(table.ao_id),
+  contactIdIdx: index("ao_contacts_contact_id_idx").on(table.contact_id),
+  linkTypeIdx: index("ao_contacts_link_type_idx").on(table.link_type),
+}));
+
+// Table de liaison Project-Contacts
+export const projectContacts = pgTable("project_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  project_id: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  contact_id: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
+  link_type: contactLinkTypeEnum("link_type").notNull(),
+  createdAt: timestamp("created_at").defaultNow()
+}, (table) => ({
+  uniqueProjectContact: uniqueIndex("unique_project_contact").on(table.project_id, table.contact_id, table.link_type),
+  projectIdIdx: index("project_contacts_project_id_idx").on(table.project_id),
+  contactIdIdx: index("project_contacts_contact_id_idx").on(table.contact_id),
+  linkTypeIdx: index("project_contacts_link_type_idx").on(table.link_type),
+}));
+
+// Table de liaison Supplier-Spécialisations
+export const supplierSpecializations = pgTable("supplier_specializations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supplier_id: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  component_type: menuiserieTypeEnum("component_type").notNull(),
+  capacity_per_week: integer("capacity_per_week"),
+  lead_time_days: integer("lead_time_days"),
+  coverage_departements: departementEnum("coverage_departements").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => ({
+  uniqueSupplierComponent: uniqueIndex("unique_supplier_component").on(table.supplier_id, table.component_type),
+  supplierIdIdx: index("supplier_specializations_supplier_id_idx").on(table.supplier_id),
+  componentTypeIdx: index("supplier_specializations_component_type_idx").on(table.component_type),
+}));
+
+// ========================================
 // TABLES PHASE 4 - GESTION DES RÉSERVES ET SAV
 // ========================================
 
@@ -5968,7 +6140,7 @@ export const actionTypeEnum = pgEnum("action_type", [
 ]);
 
 // Entités sur lesquelles les actions peuvent être effectuées
-export const actionEntityEnum = pgEnum("action_entity", [
+export const actionEntityEnum = pgEnum("chatbot_action_entity", [
   "offer",           // Offres commerciales
   "project",         // Projets
   "ao",              // Appels d'offres
@@ -6215,7 +6387,40 @@ export const updateConfirmationSchema = z.object({
 });
 
 // ========================================
-// SCHÉMAS D'INSERTION POUR LES TABLES
+// SCHÉMAS D'INSERTION POUR LES TABLES MONDAY.COM (CRITIQUE)
+// ========================================
+
+// Schémas Zod pour les tables Monday.com - intégration critique
+export const insertMetricsBusinessSchema = createInsertSchema(metricsBusiness).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTempsPoseSchema = createInsertSchema(tempsPose).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAoContactsSchema = createInsertSchema(aoContacts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProjectContactsSchema = createInsertSchema(projectContacts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSupplierSpecializationsSchema = createInsertSchema(supplierSpecializations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ========================================
+// SCHÉMAS D'INSERTION POUR LES AUTRES TABLES
 // ========================================
 
 export const insertActionSchema = createInsertSchema(actions).omit({
@@ -6249,6 +6454,25 @@ export type InsertActionHistory = z.infer<typeof insertActionHistorySchema>;
 
 export type ActionConfirmation = typeof actionConfirmations.$inferSelect;
 export type InsertActionConfirmation = z.infer<typeof insertActionConfirmationSchema>;
+
+// ========================================
+// TYPES TYPESCRIPT POUR TABLES MONDAY.COM (CRITIQUE)
+// ========================================
+
+export type MetricsBusiness = typeof metricsBusiness.$inferSelect;
+export type InsertMetricsBusiness = z.infer<typeof insertMetricsBusinessSchema>;
+
+export type TempsPose = typeof tempsPose.$inferSelect;
+export type InsertTempsPose = z.infer<typeof insertTempsPoseSchema>;
+
+export type AoContacts = typeof aoContacts.$inferSelect;
+export type InsertAoContacts = z.infer<typeof insertAoContactsSchema>;
+
+export type ProjectContacts = typeof projectContacts.$inferSelect;
+export type InsertProjectContacts = z.infer<typeof insertProjectContactsSchema>;
+
+export type SupplierSpecializations = typeof supplierSpecializations.$inferSelect;
+export type InsertSupplierSpecializations = z.infer<typeof insertSupplierSpecializationsSchema>;
 
 // Types pour les requêtes API
 export type ProposeActionRequest = z.infer<typeof proposeActionSchema> & {

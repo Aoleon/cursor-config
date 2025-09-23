@@ -6,6 +6,7 @@ import {
   projectTimelines, dateIntelligenceRules, dateAlerts, businessMetrics, kpiSnapshots, performanceBenchmarks,
   alertThresholds, businessAlerts,
   projectReserves, savInterventions, savWarrantyClaims,
+  metricsBusiness, tempsPose, aoContacts, projectContacts, supplierSpecializations,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -39,7 +40,12 @@ import {
   projectStatusEnum,
   type ProjectReserve, type InsertProjectReserve,
   type SavIntervention, type InsertSavIntervention,
-  type SavWarrantyClaim, type InsertSavWarrantyClaim
+  type SavWarrantyClaim, type InsertSavWarrantyClaim,
+  type MetricsBusiness, type InsertMetricsBusiness,
+  type TempsPose, type InsertTempsPose,
+  type AoContacts, type InsertAoContacts,
+  type ProjectContacts, type InsertProjectContacts,
+  type SupplierSpecializations, type InsertSupplierSpecializations
 } from "@shared/schema";
 import { db } from "./db";
 import type { EventBus } from "./eventBus";
@@ -213,6 +219,38 @@ export interface IStorage {
   // Additional helper methods for conversion workflow
   getOfferById(id: string): Promise<Offer | undefined>;
   getProjectsByOffer(offerId: string): Promise<Project[]>;
+
+  // ========================================
+  // MÉTHODES CRUD TABLES MONDAY.COM (CRITIQUE)
+  // ========================================
+  
+  // Métriques Business operations
+  getMetricsBusiness(entityType?: string, entityId?: string): Promise<MetricsBusiness[]>;
+  createMetricsBusiness(metric: InsertMetricsBusiness): Promise<MetricsBusiness>;
+  updateMetricsBusiness(id: string, metric: Partial<InsertMetricsBusiness>): Promise<MetricsBusiness>;
+  deleteMetricsBusiness(id: string): Promise<void>;
+  
+  // Temps Pose operations
+  getTempsPose(workScope?: string, componentType?: string): Promise<TempsPose[]>;
+  createTempsPose(temps: InsertTempsPose): Promise<TempsPose>;
+  updateTempsPose(id: string, temps: Partial<InsertTempsPose>): Promise<TempsPose>;
+  deleteTempsPose(id: string): Promise<void>;
+  
+  // AO-Contacts liaison operations
+  getAoContacts(aoId: string): Promise<AoContacts[]>;
+  createAoContact(contact: InsertAoContacts): Promise<AoContacts>;
+  deleteAoContact(id: string): Promise<void>;
+  
+  // Project-Contacts liaison operations
+  getProjectContacts(projectId: string): Promise<ProjectContacts[]>;
+  createProjectContact(contact: InsertProjectContacts): Promise<ProjectContacts>;
+  deleteProjectContact(id: string): Promise<void>;
+  
+  // Supplier Specializations operations
+  getSupplierSpecializations(supplierId?: string): Promise<SupplierSpecializations[]>;
+  createSupplierSpecialization(spec: InsertSupplierSpecializations): Promise<SupplierSpecializations>;
+  updateSupplierSpecialization(id: string, spec: Partial<InsertSupplierSpecializations>): Promise<SupplierSpecializations>;
+  deleteSupplierSpecialization(id: string): Promise<void>;
   
   // Technical scoring configuration operations
   getScoringConfig(): Promise<TechnicalScoringConfig>;
@@ -4231,6 +4269,302 @@ export class MemStorage implements IStorage {
       
     } catch (error) {
       logger.error('Erreur deleteSavWarrantyClaim:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // IMPLÉMENTATION MÉTHODES CRUD TABLES MONDAY.COM (CRITIQUE)
+  // ========================================
+
+  // Métriques Business operations
+  async getMetricsBusiness(entityType?: string, entityId?: string): Promise<MetricsBusiness[]> {
+    try {
+      let query = this.db.select().from(metricsBusiness).orderBy(desc(metricsBusiness.createdAt));
+      
+      if (entityType) {
+        query = query.where(eq(metricsBusiness.entity_type, entityType as any));
+      }
+      if (entityId) {
+        query = query.where(eq(metricsBusiness.entity_id, entityId));
+      }
+      
+      const results = await query;
+      logger.info(`Récupération de ${results.length} métriques business`);
+      return results;
+    } catch (error) {
+      logger.error('Erreur getMetricsBusiness:', error);
+      throw error;
+    }
+  }
+
+  async createMetricsBusiness(metric: InsertMetricsBusiness): Promise<MetricsBusiness> {
+    try {
+      const [result] = await this.db
+        .insert(metricsBusiness)
+        .values({
+          ...metric,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      logger.info(`Métrique business créée avec ID: ${result.id}`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur createMetricsBusiness:', error);
+      throw error;
+    }
+  }
+
+  async updateMetricsBusiness(id: string, metric: Partial<InsertMetricsBusiness>): Promise<MetricsBusiness> {
+    try {
+      const [result] = await this.db
+        .update(metricsBusiness)
+        .set({
+          ...metric,
+          updatedAt: new Date()
+        })
+        .where(eq(metricsBusiness.id, id))
+        .returning();
+      
+      logger.info(`Métrique business ${id} mise à jour`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur updateMetricsBusiness:', error);
+      throw error;
+    }
+  }
+
+  async deleteMetricsBusiness(id: string): Promise<void> {
+    try {
+      await this.db.delete(metricsBusiness).where(eq(metricsBusiness.id, id));
+      logger.info(`Métrique business ${id} supprimée`);
+    } catch (error) {
+      logger.error('Erreur deleteMetricsBusiness:', error);
+      throw error;
+    }
+  }
+
+  // Temps Pose operations
+  async getTempsPose(workScope?: string, componentType?: string): Promise<TempsPose[]> {
+    try {
+      let query = this.db.select().from(tempsPose).where(eq(tempsPose.is_active, true));
+      
+      if (workScope) {
+        query = query.where(eq(tempsPose.work_scope, workScope as any));
+      }
+      if (componentType) {
+        query = query.where(eq(tempsPose.component_type, componentType as any));
+      }
+      
+      const results = await query;
+      logger.info(`Récupération de ${results.length} temps de pose`);
+      return results;
+    } catch (error) {
+      logger.error('Erreur getTempsPose:', error);
+      throw error;
+    }
+  }
+
+  async createTempsPose(temps: InsertTempsPose): Promise<TempsPose> {
+    try {
+      const [result] = await this.db
+        .insert(tempsPose)
+        .values({
+          ...temps,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      logger.info(`Temps de pose créé avec ID: ${result.id}`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur createTempsPose:', error);
+      throw error;
+    }
+  }
+
+  async updateTempsPose(id: string, temps: Partial<InsertTempsPose>): Promise<TempsPose> {
+    try {
+      const [result] = await this.db
+        .update(tempsPose)
+        .set({
+          ...temps,
+          updatedAt: new Date()
+        })
+        .where(eq(tempsPose.id, id))
+        .returning();
+      
+      logger.info(`Temps de pose ${id} mis à jour`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur updateTempsPose:', error);
+      throw error;
+    }
+  }
+
+  async deleteTempsPose(id: string): Promise<void> {
+    try {
+      await this.db.delete(tempsPose).where(eq(tempsPose.id, id));
+      logger.info(`Temps de pose ${id} supprimé`);
+    } catch (error) {
+      logger.error('Erreur deleteTempsPose:', error);
+      throw error;
+    }
+  }
+
+  // AO-Contacts liaison operations
+  async getAoContacts(aoId: string): Promise<AoContacts[]> {
+    try {
+      const results = await this.db
+        .select()
+        .from(aoContacts)
+        .where(eq(aoContacts.ao_id, aoId));
+      
+      logger.info(`Récupération de ${results.length} contacts pour AO ${aoId}`);
+      return results;
+    } catch (error) {
+      logger.error('Erreur getAoContacts:', error);
+      throw error;
+    }
+  }
+
+  async createAoContact(contact: InsertAoContacts): Promise<AoContacts> {
+    try {
+      const [result] = await this.db
+        .insert(aoContacts)
+        .values({
+          ...contact,
+          createdAt: new Date()
+        })
+        .returning();
+      
+      logger.info(`Contact AO créé avec ID: ${result.id}`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur createAoContact:', error);
+      throw error;
+    }
+  }
+
+  async deleteAoContact(id: string): Promise<void> {
+    try {
+      await this.db.delete(aoContacts).where(eq(aoContacts.id, id));
+      logger.info(`Contact AO ${id} supprimé`);
+    } catch (error) {
+      logger.error('Erreur deleteAoContact:', error);
+      throw error;
+    }
+  }
+
+  // Project-Contacts liaison operations
+  async getProjectContacts(projectId: string): Promise<ProjectContacts[]> {
+    try {
+      const results = await this.db
+        .select()
+        .from(projectContacts)
+        .where(eq(projectContacts.project_id, projectId));
+      
+      logger.info(`Récupération de ${results.length} contacts pour projet ${projectId}`);
+      return results;
+    } catch (error) {
+      logger.error('Erreur getProjectContacts:', error);
+      throw error;
+    }
+  }
+
+  async createProjectContact(contact: InsertProjectContacts): Promise<ProjectContacts> {
+    try {
+      const [result] = await this.db
+        .insert(projectContacts)
+        .values({
+          ...contact,
+          createdAt: new Date()
+        })
+        .returning();
+      
+      logger.info(`Contact projet créé avec ID: ${result.id}`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur createProjectContact:', error);
+      throw error;
+    }
+  }
+
+  async deleteProjectContact(id: string): Promise<void> {
+    try {
+      await this.db.delete(projectContacts).where(eq(projectContacts.id, id));
+      logger.info(`Contact projet ${id} supprimé`);
+    } catch (error) {
+      logger.error('Erreur deleteProjectContact:', error);
+      throw error;
+    }
+  }
+
+  // Supplier Specializations operations
+  async getSupplierSpecializations(supplierId?: string): Promise<SupplierSpecializations[]> {
+    try {
+      let query = this.db.select().from(supplierSpecializations);
+      
+      if (supplierId) {
+        query = query.where(eq(supplierSpecializations.supplier_id, supplierId));
+      }
+      
+      const results = await query;
+      logger.info(`Récupération de ${results.length} spécialisations fournisseurs`);
+      return results;
+    } catch (error) {
+      logger.error('Erreur getSupplierSpecializations:', error);
+      throw error;
+    }
+  }
+
+  async createSupplierSpecialization(spec: InsertSupplierSpecializations): Promise<SupplierSpecializations> {
+    try {
+      const [result] = await this.db
+        .insert(supplierSpecializations)
+        .values({
+          ...spec,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      logger.info(`Spécialisation fournisseur créée avec ID: ${result.id}`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur createSupplierSpecialization:', error);
+      throw error;
+    }
+  }
+
+  async updateSupplierSpecialization(id: string, spec: Partial<InsertSupplierSpecializations>): Promise<SupplierSpecializations> {
+    try {
+      const [result] = await this.db
+        .update(supplierSpecializations)
+        .set({
+          ...spec,
+          updatedAt: new Date()
+        })
+        .where(eq(supplierSpecializations.id, id))
+        .returning();
+      
+      logger.info(`Spécialisation fournisseur ${id} mise à jour`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur updateSupplierSpecialization:', error);
+      throw error;
+    }
+  }
+
+  async deleteSupplierSpecialization(id: string): Promise<void> {
+    try {
+      await this.db.delete(supplierSpecializations).where(eq(supplierSpecializations.id, id));
+      logger.info(`Spécialisation fournisseur ${id} supprimée`);
+    } catch (error) {
+      logger.error('Erreur deleteSupplierSpecialization:', error);
       throw error;
     }
   }

@@ -178,6 +178,33 @@ export const finishEnum = pgEnum("finish", [
 ]);
 
 // ========================================
+// NOUVEAUX ENUMS PHASE 2 - SYSTÈME DE PLANNING AVANCÉ
+// ========================================
+
+// Types de ressources pour allocations quotidiennes
+export const resourceTypeEnum = pgEnum("resource_type", [
+  "team", "employee", "equipment", "subcontractor"
+]);
+
+// Niveaux de sévérité pour contraintes planning
+export const constraintSeverityEnum = pgEnum("constraint_severity", [
+  "blocking", "warning", "info"
+]);
+
+// Statuts des contraintes planning
+export const constraintStatusEnum = pgEnum("constraint_status", [
+  "active", "resolved", "cancelled", "monitoring"
+]);
+
+// Types de dépendances entre tâches pour table de jonction - Phase 2
+export const dependencyTypeEnum = pgEnum("dependency_type", [
+  "finish_to_start",    // La tâche dépendante commence quand la tâche prérequise finit
+  "start_to_start",     // La tâche dépendante commence quand la tâche prérequise commence
+  "finish_to_finish",   // La tâche dépendante finit quand la tâche prérequise finit
+  "start_to_finish"     // La tâche dépendante finit quand la tâche prérequise commence
+]);
+
+// ========================================
 // ENUMS POUR SYSTÈME INTELLIGENT DE DATES ET ÉCHÉANCES - PHASE 2.1
 // ========================================
 
@@ -211,7 +238,10 @@ export const planningConstraintEnum = pgEnum("planning_constraint", [
   "regulatory_approval",    // Approbation réglementaire
   "subcontractor_schedule", // Planning sous-traitant
   "equipment_availability", // Disponibilité équipements
-  "seasonal_restriction"    // Restriction saisonnière
+  "seasonal_restriction",   // Restriction saisonnière
+  "budget_constraint",      // Contrainte budgétaire
+  "quality_checkpoint",     // Point de contrôle qualité obligatoire
+  "external_dependency"     // Dépendance externe générique
 ]);
 
 // ========================================
@@ -369,6 +399,150 @@ export const projectMilestones = pgTable("project_milestones", {
     projectMilestoneIdx: index("project_milestones_project_id_idx").on(table.projectId),
     typeStatusIdx: index("project_milestones_type_status_idx").on(table.type, table.status),
     dueAtIdx: index("project_milestones_due_at_idx").on(table.dueAt),
+  };
+});
+
+// ========================================
+// NOUVELLES TABLES PHASE 2 - SYSTÈME DE PLANNING AVANCÉ
+// ========================================
+
+// Table des tâches de planning détaillé avec hiérarchie et dépendances - Phase 2
+export const projectScheduleTasks = pgTable("project_schedule_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  parentTaskId: varchar("parent_task_id").references((): PgColumn => projectScheduleTasks.id, { onDelete: "set null" }), // Auto-référence pour hiérarchie de tâches
+  
+  // Informations de base de la tâche
+  name: varchar("name").notNull(),
+  description: text("description"),
+  
+  // Statut et avancement
+  status: taskStatusEnum("status").default("a_faire"), // a_faire, en_cours, termine, en_retard
+  percentComplete: integer("percent_complete").default(0), // Pourcentage d'avancement 0-100
+  
+  // Dates de planning
+  plannedStartDate: timestamp("planned_start_date").notNull(), // Date début plannifiée
+  plannedEndDate: timestamp("planned_end_date").notNull(), // Date fin plannifiée
+  actualStartDate: timestamp("actual_start_date"), // Date début réelle
+  actualEndDate: timestamp("actual_end_date"), // Date fin réelle
+  
+  // Heures et estimation
+  estimatedHours: decimal("estimated_hours", { precision: 8, scale: 2 }).notNull(), // Heures estimées
+  actualHours: decimal("actual_hours", { precision: 8, scale: 2 }).default("0"), // Heures réalisées
+  
+  // Contraintes et méthodes
+  constraint: planningConstraintEnum("constraint"), // resource_availability, material_delivery, weather_dependent, etc.
+  calculationMethod: calculationMethodEnum("calculation_method").default("manual"), // automatic, manual, historical
+  
+  // Priorité (les dépendances sont gérées dans la table task_dependencies)
+  priority: priorityLevelEnum("priority").default("normale"), // tres_faible, faible, normale, elevee, critique
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectTaskIdx: index("project_schedule_tasks_project_id_idx").on(table.projectId),
+    parentTaskIdx: index("project_schedule_tasks_parent_task_idx").on(table.parentTaskId),
+    statusIdx: index("project_schedule_tasks_status_idx").on(table.status),
+    plannedDatesIdx: index("project_schedule_tasks_planned_dates_idx").on(table.plannedStartDate, table.plannedEndDate),
+    actualDatesIdx: index("project_schedule_tasks_actual_dates_idx").on(table.actualStartDate, table.actualEndDate),
+    priorityIdx: index("project_schedule_tasks_priority_idx").on(table.priority),
+    constraintIdx: index("project_schedule_tasks_constraint_idx").on(table.constraint),
+  };
+});
+
+// Table des allocations quotidiennes de ressources sur tâches - Phase 2
+export const projectResourceAllocations = pgTable("project_resource_allocations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }), // Ajout pour performance index composite
+  scheduleTaskId: varchar("schedule_task_id").notNull().references(() => projectScheduleTasks.id, { onDelete: "cascade" }),
+  
+  // Type et identifiant de la ressource
+  resourceType: resourceTypeEnum("resource_type").notNull(), // team, employee, equipment, subcontractor
+  resourceId: varchar("resource_id").notNull(), // ID de l'équipe, employé ou équipement
+  
+  // Date et heures d'allocation
+  allocationDate: timestamp("allocation_date").notNull(), // Date spécifique d'allocation
+  plannedHours: decimal("planned_hours", { precision: 6, scale: 2 }).notNull(), // Heures planifiées
+  actualHours: decimal("actual_hours", { precision: 6, scale: 2 }).default("0"), // Heures réalisées
+  
+  // Taux d'utilisation et notes
+  utilizationRate: decimal("utilization_rate", { precision: 5, scale: 2 }), // Taux d'utilisation en %
+  notes: text("notes"), // Commentaires sur l'allocation
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    scheduleTaskIdx: index("project_resource_allocations_schedule_task_idx").on(table.scheduleTaskId),
+    resourceTypeIdx: index("project_resource_allocations_resource_type_idx").on(table.resourceType),
+    resourceIdIdx: index("project_resource_allocations_resource_id_idx").on(table.resourceId),
+    allocationDateIdx: index("project_resource_allocations_allocation_date_idx").on(table.allocationDate),
+    typeResourceDateIdx: index("project_resource_allocations_type_resource_date_idx").on(table.resourceType, table.resourceId, table.allocationDate),
+    // Index composite unique critique pour performance - Architecture Phase 2
+    projectResourceAllocationUnique: uniqueIndex("project_resource_allocations_unique_idx").on(table.projectId, table.resourceType, table.resourceId, table.allocationDate),
+  };
+});
+
+// Table des contraintes externes de planning - Phase 2
+export const planningConstraints = pgTable("planning_constraints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  scheduleTaskId: varchar("schedule_task_id").notNull().references(() => projectScheduleTasks.id, { onDelete: "cascade" }),
+  
+  // Type et description de la contrainte
+  constraintType: planningConstraintEnum("constraint_type").notNull(), // resource_availability, material_delivery, weather_dependent, etc.
+  description: text("description").notNull(), // Détail de la contrainte
+  
+  // Période d'effet de la contrainte
+  effectiveFrom: timestamp("effective_from").notNull(), // Date début d'effet
+  effectiveTo: timestamp("effective_to"), // Date fin d'effet (optionnelle pour contraintes permanentes)
+  
+  // Sévérité et statut
+  severity: constraintSeverityEnum("severity").notNull(), // blocking, warning, info
+  status: constraintStatusEnum("status").default("active"), // active, resolved, cancelled, monitoring
+  
+  // Informations spécifiques selon le type de contrainte
+  weatherCondition: varchar("weather_condition"), // Condition météo si contrainte météo
+  supplierReference: varchar("supplier_reference"), // Référence fournisseur si contrainte livraison
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    scheduleTaskIdx: index("planning_constraints_schedule_task_idx").on(table.scheduleTaskId),
+    constraintTypeIdx: index("planning_constraints_constraint_type_idx").on(table.constraintType),
+    severityIdx: index("planning_constraints_severity_idx").on(table.severity),
+    statusIdx: index("planning_constraints_status_idx").on(table.status),
+    effectivePeriodIdx: index("planning_constraints_effective_period_idx").on(table.effectiveFrom, table.effectiveTo),
+    typeStatusIdx: index("planning_constraints_type_status_idx").on(table.constraintType, table.status),
+  };
+});
+
+// Table de jonction pour dépendances entre tâches - Phase 2 (Performance optimisée)
+export const taskDependencies = pgTable("task_dependencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => projectScheduleTasks.id, { onDelete: "cascade" }),
+  dependsOnTaskId: varchar("depends_on_task_id").notNull().references(() => projectScheduleTasks.id, { onDelete: "cascade" }),
+  
+  // Type de dépendance et délai
+  dependencyType: dependencyTypeEnum("dependency_type").notNull().default("finish_to_start"), // finish_to_start, start_to_start, finish_to_finish, start_to_finish
+  lagDays: integer("lag_days").default(0), // Délai en jours (peut être négatif pour avance)
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    taskDependencyIdx: index("task_dependencies_task_id_idx").on(table.taskId),
+    dependsOnTaskIdx: index("task_dependencies_depends_on_task_idx").on(table.dependsOnTaskId),
+    dependencyTypeIdx: index("task_dependencies_dependency_type_idx").on(table.dependencyType),
+    // Index composite pour requêtes de dépendances
+    taskDependsOnIdx: index("task_dependencies_task_depends_on_idx").on(table.taskId, table.dependsOnTaskId),
+    // Contrainte d'unicité pour éviter doublons
+    taskDependencyUnique: uniqueIndex("task_dependencies_unique_idx").on(table.taskId, table.dependsOnTaskId),
   };
 });
 
@@ -1770,6 +1944,47 @@ export const insertProjectSupplierSchema = createInsertSchema(projectSuppliers).
 });
 
 // ========================================
+// SCHÉMAS ZOD PHASE 2 - SYSTÈME DE PLANNING AVANCÉ
+// ========================================
+
+// Schéma d'insertion pour les tâches de planning détaillé
+export const insertProjectScheduleTaskSchema = createInsertSchema(projectScheduleTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schéma d'insertion pour les allocations de ressources
+export const insertProjectResourceAllocationSchema = createInsertSchema(projectResourceAllocations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schéma d'insertion pour les contraintes de planning
+export const insertPlanningConstraintSchema = createInsertSchema(planningConstraints).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ========================================
+// TYPES TYPESCRIPT PHASE 2
+// ========================================
+
+// Types pour les tâches de planning détaillé
+export type ProjectScheduleTask = typeof projectScheduleTasks.$inferSelect;
+export type InsertProjectScheduleTask = z.infer<typeof insertProjectScheduleTaskSchema>;
+
+// Types pour les allocations de ressources
+export type ProjectResourceAllocation = typeof projectResourceAllocations.$inferSelect;
+export type InsertProjectResourceAllocation = z.infer<typeof insertProjectResourceAllocationSchema>;
+
+// Types pour les contraintes de planning
+export type PlanningConstraint = typeof planningConstraints.$inferSelect;
+export type InsertPlanningConstraint = z.infer<typeof insertPlanningConstraintSchema>;
+
+// ========================================
 // SYSTÈME DOCUMENTAIRE OPTIMISÉ
 // ========================================
 
@@ -1794,8 +2009,8 @@ export const documents = pgTable("documents", {
   accessLevel: documentAccessEnum("access_level").default("equipe"),
   
   // Tags pour recherche et organisation
-  tags: jsonb("tags").$type<string[]>().default([]), // Tags libres
-  metadata: jsonb("metadata").$type<Record<string, any>>().default({}), // Métadonnées flexibles
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`), // Tags libres
+  metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Métadonnées flexibles
   
   // Informations utilisateur
   uploadedBy: varchar("uploaded_by").references(() => users.id).notNull(),
@@ -1839,7 +2054,7 @@ export const documentLinks = pgTable("document_links", {
   lotId: varchar("lot_id").references(() => aoLots.id),
   
   // Métadonnées spécifiques au lien
-  linkMetadata: jsonb("link_metadata").$type<Record<string, any>>().default({}),
+  linkMetadata: jsonb("link_metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
   isPrimary: boolean("is_primary").default(false), // Lien principal pour cet espace
   displayOrder: integer("display_order").default(0), // Ordre d'affichage
   
@@ -1874,7 +2089,7 @@ export const documentCollections = pgTable("document_collections", {
   
   // Paramètres de la collection
   isSystemCollection: boolean("is_system_collection").default(false), // Collections créées automatiquement
-  settings: jsonb("settings").$type<Record<string, any>>().default({}),
+  settings: jsonb("settings").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
   
   createdBy: varchar("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1915,7 +2130,7 @@ export const beValidationTemplates = pgTable("be_validation_templates", {
   
   // Métadonnées
   estimatedDuration: integer("estimated_duration"), // en minutes
-  prerequisites: jsonb("prerequisites").$type<string[]>().default([]),
+  prerequisites: jsonb("prerequisites").$type<string[]>().default(sql`'[]'::jsonb`),
   
   createdBy: varchar("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1953,7 +2168,7 @@ export const beChecklistItems = pgTable("be_checklist_items", {
   commonErrors: text("common_errors"), // Erreurs fréquentes à éviter
   
   // Liens vers documentation
-  referenceDocuments: jsonb("reference_documents").$type<string[]>().default([]),
+  referenceDocuments: jsonb("reference_documents").$type<string[]>().default(sql`'[]'::jsonb`),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -2030,7 +2245,7 @@ export const beValidationMeetings = pgTable("be_validation_meetings", {
   agenda: text("agenda"),
   meetingNotes: text("meeting_notes"),
   decisions: text("decisions"),
-  actionItems: jsonb("action_items").$type<Array<{task: string, assignee: string, deadline: string}>>().default([]),
+  actionItems: jsonb("action_items").$type<Array<{task: string, assignee: string, deadline: string}>>().default(sql`'[]'::jsonb`),
   
   // Résultats
   validationResult: varchar("validation_result"), // valide, rejete, reserve, reporte
@@ -2082,7 +2297,7 @@ export const beChecklistResults = pgTable("be_checklist_results", {
   
   // Détails du contrôle
   comment: text("comment"),
-  evidenceDocuments: jsonb("evidence_documents").$type<string[]>().default([]), // IDs des documents de preuve
+  evidenceDocuments: jsonb("evidence_documents").$type<string[]>().default(sql`'[]'::jsonb`), // IDs des documents de preuve
   nonConformityReason: text("non_conformity_reason"),
   correctiveActions: text("corrective_actions"),
   
@@ -2126,7 +2341,7 @@ export const beQualityControls = pgTable("be_quality_controls", {
   warningMessage: text("warning_message"),
   
   // Données de contrôle (JSON flexible)
-  controlData: jsonb("control_data").$type<Record<string, any>>().default({}),
+  controlData: jsonb("control_data").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
   
   // Override manuel si nécessaire
   manualOverride: boolean("manual_override").default(false),
@@ -2287,7 +2502,7 @@ export const visaArchitecte = pgTable("visa_architecte", {
   expireLe: timestamp("expire_le"),
   
   // Documents et commentaires
-  documentsSoumis: jsonb("documents_soumis").$type<string[]>().default([]), // IDs des documents soumis
+  documentsSoumis: jsonb("documents_soumis").$type<string[]>().default(sql`'[]'::jsonb`), // IDs des documents soumis
   commentaires: text("commentaires"),
   raisonRefus: text("raison_refus"),
   
@@ -2946,7 +3161,7 @@ export const alertThresholds = pgTable('alert_thresholds', {
     .default(sql`ARRAY['dashboard']`),
   
   // MÉTADONNÉES CONFIGURABLES
-  metadata: jsonb('metadata').default(sql`'{}'`),
+  metadata: jsonb('metadata').default(sql`'{}'::jsonb`),
   
   // AUDIT
   createdBy: varchar('created_by', { length: 255 }),
@@ -3006,7 +3221,7 @@ export const businessAlerts = pgTable('business_alerts', {
   resolvedAt: timestamp('resolved_at'),
   
   // MÉTADONNÉES & CONTEXTE
-  contextData: jsonb('context_data').default(sql`'{}'`),
+  contextData: jsonb('context_data').default(sql`'{}'::jsonb`),
   resolutionNotes: text('resolution_notes'),
   
   // TIMESTAMPS

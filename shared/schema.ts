@@ -1,4 +1,4 @@
-import { pgTable, varchar, text, timestamp, decimal, boolean, integer, jsonb, pgEnum, index, type PgColumn } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, timestamp, decimal, boolean, integer, jsonb, pgEnum, index, uniqueIndex, type PgColumn } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -109,6 +109,21 @@ export const bouclageTypeEnum = pgEnum("bouclage_type", [
 // Types de VISA Architecte - Nouveau workflow entre Étude et Planification
 export const visaArchitecteTypeEnum = pgEnum("visa_architecte_type", [
   "visa_plans", "visa_technique", "visa_conformite"
+]);
+
+// Types de milestones pour projets - Jalons formels Phase 1
+export const projectMilestoneTypeEnum = pgEnum("project_milestone_type", [
+  "passation", "visa_architecte", "fin_etudes", "reception"
+]);
+
+// Statuts des milestones projet
+export const milestoneStatusEnum = pgEnum("milestone_status", [
+  "pending", "in_progress", "completed", "overdue", "cancelled"
+]);
+
+// Rôles des fournisseurs dans les projets - Phase 1
+export const supplierRoleEnum = pgEnum("supplier_role", [
+  "principal", "secondaire", "sous_traitant", "consultant"
 ]);
 
 // Types de contrats de travail
@@ -317,12 +332,105 @@ export const suppliers = pgTable("suppliers", {
   siret: varchar("siret"),
   specialties: text("specialties").array().default(sql`'{}'::text[]`),
   status: supplierStatusEnum("status").default("actif"),
+  
+  // Extension Phase 1 : Capacités et performances
+  capacities: jsonb("capacities").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Types menuiserie + délais
+  avgResponseTime: integer("avg_response_time").default(0), // Temps de réponse moyen en heures
+  
   paymentTerms: integer("payment_terms").default(30),
   deliveryDelay: integer("delivery_delay").default(15),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
   totalOrders: integer("total_orders").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Table des jalons formels de projet - Phase 1
+export const projectMilestones = pgTable("project_milestones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  type: projectMilestoneTypeEnum("type").notNull(), // passation, visa_architecte, fin_etudes, reception
+  status: milestoneStatusEnum("status").default("pending"), // pending, in_progress, completed, overdue, cancelled
+  
+  // Dates et suivi
+  dueAt: timestamp("due_at").notNull(), // Date d'échéance prévue
+  completedAt: timestamp("completed_at"), // Date de completion effective
+  
+  // Validation et approbation
+  approverId: varchar("approver_id").references(() => users.id), // Responsable approbation
+  requiredDocuments: jsonb("required_documents").$type<string[]>().default(sql`'[]'::jsonb`), // Documents requis pour validation
+  validationNotes: text("validation_notes"), // Notes de validation
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectMilestoneIdx: index("project_milestones_project_id_idx").on(table.projectId),
+    typeStatusIdx: index("project_milestones_type_status_idx").on(table.type, table.status),
+    dueAtIdx: index("project_milestones_due_at_idx").on(table.dueAt),
+  };
+});
+
+// Table de liaison lot-fournisseur pour devis - Phase 1
+export const lotSupplierQuotes = pgTable("lot_supplier_quotes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  aoLotId: varchar("ao_lot_id").notNull().references(() => aoLots.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  
+  // Informations de devis
+  priceQuoted: decimal("price_quoted", { precision: 12, scale: 2 }), // Prix proposé par le fournisseur
+  responseDate: timestamp("response_date"), // Date de réponse du fournisseur
+  
+  // Détails du devis
+  unitPrice: decimal("unit_price", { precision: 12, scale: 2 }), // Prix unitaire proposé
+  deliveryDelay: integer("delivery_delay"), // Délai livraison proposé (jours)
+  validUntil: timestamp("valid_until"), // Date validité du devis
+  
+  // Statut et notes
+  isSelected: boolean("is_selected").default(false), // Devis sélectionné
+  notes: text("notes"), // Notes sur le devis
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    lotSupplierIdx: index("lot_supplier_quotes_lot_supplier_idx").on(table.aoLotId, table.supplierId),
+    supplierIdx: index("lot_supplier_quotes_supplier_idx").on(table.supplierId),
+    responseDateIdx: index("lot_supplier_quotes_response_date_idx").on(table.responseDate),
+    // Contrainte d'unicité pour éviter doublons
+    lotSupplierUnique: uniqueIndex("lot_supplier_quotes_unique_idx").on(table.aoLotId, table.supplierId),
+  };
+});
+
+// Table de liaison projet-fournisseur - Phase 1
+export const projectSuppliers = pgTable("project_suppliers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  
+  // Rôle et responsabilités
+  role: supplierRoleEnum("role").default("principal"), // principal, secondaire, sous_traitant, consultant
+  
+  // Dates d'engagement
+  startDate: timestamp("start_date"), // Date début collaboration
+  endDate: timestamp("end_date"), // Date fin prévue
+  
+  // Contractuel et financier
+  contractAmount: decimal("contract_amount", { precision: 12, scale: 2 }), // Montant contractuel
+  
+  // Statut et suivi
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectSupplierIdx: index("project_suppliers_project_supplier_idx").on(table.projectId, table.supplierId),
+    supplierIdx: index("project_suppliers_supplier_idx").on(table.supplierId),
+    roleIdx: index("project_suppliers_role_idx").on(table.role),
+  };
 });
 
 // Table des utilisateurs (simplifiée pour POC)
@@ -516,6 +624,17 @@ export const aoLots = pgTable("ao_lots", {
   // Infos contractuelles
   delaiLivraison: varchar("delai_livraison"), // Délai de livraison spécifique au lot
   uniteOeuvre: varchar("unite_oeuvre"), // Unité d'œuvre (ex: "à l'unité", "au m²")
+  
+  // Extension Phase 1 : Gestion workflow fournisseurs et pricing
+  supplierChosenId: varchar("supplier_chosen_id").references(() => suppliers.id), // Fournisseur sélectionné pour ce lot
+  unitPrice: decimal("unit_price", { precision: 12, scale: 2 }), // Prix unitaire négocié
+  totalPrice: decimal("total_price", { precision: 12, scale: 2 }), // Prix total calculé
+  supplierQuotes: jsonb("supplier_quotes").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Devis fournisseurs reçus
+  
+  // Extension Phase 1 : Validations workflow
+  technicalValidation: boolean("technical_validation").default(false), // Validation technique effectuée
+  priceValidation: boolean("price_validation").default(false), // Validation prix effectuée  
+  finalValidation: boolean("final_validation").default(false), // Validation finale effectuée
   
   comment: text("comment"), // Commentaire spécifique au lot
   createdAt: timestamp("created_at").defaultNow(),
@@ -1118,6 +1237,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   validatedDpgf: many(dpgfDocuments, { relationName: "dpgf_validator" }),
   ledTeams: many(teams, { relationName: "team_leader" }),
   teamMemberships: many(teamMembers),
+  // Extension Phase 1 : Nouvelles relations
+  approvedMilestones: many(projectMilestones, { relationName: "milestone_approver" }),
 }));
 
 export const aosRelations = relations(aos, ({ one, many }) => ({
@@ -1151,11 +1272,18 @@ export const contactsMaitreOeuvreRelations = relations(contactsMaitreOeuvre, ({ 
   }),
 }));
 
-export const aoLotsRelations = relations(aoLots, ({ one }) => ({
+export const aoLotsRelations = relations(aoLots, ({ one, many }) => ({
   ao: one(aos, {
     fields: [aoLots.aoId],
     references: [aos.id],
   }),
+  // Extension Phase 1 : Nouvelles relations
+  supplierChosen: one(suppliers, {
+    fields: [aoLots.supplierChosenId],
+    references: [suppliers.id],
+    relationName: "lot_chosen_supplier",
+  }),
+  supplierQuotes: many(lotSupplierQuotes),
 }));
 
 export const offersRelations = relations(offers, ({ one, many }) => ({
@@ -1274,6 +1402,54 @@ export const beWorkloadRelations = relations(beWorkload, ({ one }) => ({
   user: one(users, {
     fields: [beWorkload.userId],
     references: [users.id],
+  }),
+}));
+
+// ========================================
+// RELATIONS PHASE 1 - NOUVELLES TABLES
+// ========================================
+
+// Relations pour suppliers
+export const suppliersRelations = relations(suppliers, ({ many }) => ({
+  chosenForLots: many(aoLots, { relationName: "lot_chosen_supplier" }),
+  quotes: many(lotSupplierQuotes),
+  projectCollaborations: many(projectSuppliers),
+}));
+
+// Relations pour project_milestones  
+export const projectMilestonesRelations = relations(projectMilestones, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectMilestones.projectId],
+    references: [projects.id],
+  }),
+  approver: one(users, {
+    fields: [projectMilestones.approverId],
+    references: [users.id],
+    relationName: "milestone_approver",
+  }),
+}));
+
+// Relations pour lot_supplier_quotes
+export const lotSupplierQuotesRelations = relations(lotSupplierQuotes, ({ one }) => ({
+  aoLot: one(aoLots, {
+    fields: [lotSupplierQuotes.aoLotId],
+    references: [aoLots.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [lotSupplierQuotes.supplierId],
+    references: [suppliers.id],
+  }),
+}));
+
+// Relations pour project_suppliers
+export const projectSuppliersRelations = relations(projectSuppliers, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectSuppliers.projectId],
+    references: [projects.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [projectSuppliers.supplierId],
+    references: [suppliers.id],
   }),
 }));
 
@@ -1450,6 +1626,19 @@ export type BeQualityControl = typeof beQualityControls.$inferSelect;
 export type InsertBeQualityControl = typeof beQualityControls.$inferInsert;
 
 // ========================================
+// TYPES TYPESCRIPT PHASE 1 - NOUVELLES TABLES
+// ========================================
+
+export type ProjectMilestone = typeof projectMilestones.$inferSelect;
+export type InsertProjectMilestone = typeof insertProjectMilestoneSchema._type;
+
+export type LotSupplierQuote = typeof lotSupplierQuotes.$inferSelect;
+export type InsertLotSupplierQuote = typeof insertLotSupplierQuoteSchema._type;
+
+export type ProjectSupplier = typeof projectSuppliers.$inferSelect;
+export type InsertProjectSupplier = typeof insertProjectSupplierSchema._type;
+
+// ========================================
 // SCHÉMAS ZOD POUR VALIDATION POC
 // ========================================
 
@@ -1553,6 +1742,28 @@ export const insertChiffrageElementSchema = createInsertSchema(chiffrageElements
 });
 
 export const insertDpgfDocumentSchema = createInsertSchema(dpgfDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ========================================
+// SCHÉMAS ZOD PHASE 1 - NOUVELLES TABLES
+// ========================================
+
+export const insertProjectMilestoneSchema = createInsertSchema(projectMilestones).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLotSupplierQuoteSchema = createInsertSchema(lotSupplierQuotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProjectSupplierSchema = createInsertSchema(projectSuppliers).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

@@ -32,6 +32,8 @@ import {
   type ChatbotHistoryRequest, type ChatbotFeedbackRequest, type ChatbotStatsRequest,
   type ProposeActionRequest, type ExecuteActionRequest, type ActionHistoryRequest, type UpdateConfirmationRequest,
   insertProjectReserveSchema, insertSavInterventionSchema, insertSavWarrantyClaimSchema,
+  insertTempsPoseSchema, insertMetricsBusinessSchema, insertAoContactsSchema,
+  insertProjectContactsSchema, insertSupplierSpecializationsSchema,
   type ProjectReserve, type SavIntervention, type SavWarrantyClaim
 } from "@shared/schema";
 import { z } from "zod";
@@ -3278,7 +3280,7 @@ app.get("/api/technical-alerts",
       const filter = req.query as any;
       const alerts = await storage.listTechnicalAlerts(filter);
       
-      sendSuccess(res, alerts, "Alertes techniques récupérées avec succès");
+      sendSuccess(res, alerts);
     } catch (error) {
       console.error('[API] Erreur récupération alertes techniques:', error);
       throw createError.database( "Erreur lors de la récupération des alertes techniques");
@@ -3300,7 +3302,7 @@ app.get("/api/technical-alerts/:id",
         throw createError.notFound( "Alerte technique non trouvée");
       }
       
-      sendSuccess(res, alert, "Alerte technique récupérée avec succès");
+      sendSuccess(res, alert);
     } catch (error) {
       console.error('[API] Erreur récupération alerte technique:', error);
       throw error;
@@ -3334,7 +3336,7 @@ app.patch("/api/technical-alerts/:id/ack",
         });
       }
       
-      sendSuccess(res, { alertId: id }, "Alerte technique acknowledge avec succès");
+      sendSuccess(res, { alertId: id });
     } catch (error) {
       console.error('[API] Erreur acknowledgment alerte technique:', error);
       throw error;
@@ -3368,7 +3370,7 @@ app.patch("/api/technical-alerts/:id/validate",
         });
       }
       
-      sendSuccess(res, { alertId: id }, "Alerte technique validée avec succès");
+      sendSuccess(res, { alertId: id });
     } catch (error) {
       console.error('[API] Erreur validation alerte technique:', error);
       throw error;
@@ -3405,7 +3407,7 @@ app.patch("/api/technical-alerts/:id/bypass",
         });
       }
       
-      sendSuccess(res, { alertId: id, until, reason }, "Alerte technique bypassée avec succès");
+      sendSuccess(res, { alertId: id, until, reason });
     } catch (error) {
       console.error('[API] Erreur bypass alerte technique:', error);
       throw error;
@@ -3423,7 +3425,7 @@ app.get("/api/technical-alerts/:id/history",
       const { id } = req.params;
       const history = await storage.listTechnicalAlertHistory(id);
       
-      sendSuccess(res, history, "Historique de l'alerte technique récupéré avec succès");
+      sendSuccess(res, history);
     } catch (error) {
       console.error('[API] Erreur récupération historique alerte technique:', error);
       throw createError.database( "Erreur lors de la récupération de l'historique");
@@ -3467,7 +3469,7 @@ app.post("/api/technical-alerts/seed",
       
       console.log('[SEED] Alerte technique persistée avec succès:', alert.id);
       
-      sendSuccess(res, alert, "Alerte technique de test créée et persistée avec succès");
+      sendSuccess(res, alert);
     } catch (error) {
       console.error('[SEED] Erreur création alerte test:', error);
       throw createError.badRequest('Erreur lors du seeding de l\'alerte technique');
@@ -3536,7 +3538,7 @@ app.post("/api/projects/:id/calculate-timeline",
         }
       };
       
-      sendSuccess(res, result, "Timeline calculée avec succès");
+      sendSuccess(res, result);
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur calcul timeline:', error);
       throw createError.database( "Erreur lors du calcul de la timeline", {
@@ -3599,7 +3601,7 @@ app.put("/api/projects/:id/recalculate-from/:phase",
         }
       };
       
-      sendSuccess(res, result, "Recalcul en cascade effectué avec succès");
+      sendSuccess(res, result);
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur recalcul cascade:', error);
       throw createError.database( "Erreur lors du recalcul en cascade", {
@@ -3635,7 +3637,8 @@ app.get("/api/intelligence-rules",
       }
       
       if (priority !== undefined) {
-        rules = rules.filter(rule => (rule.priority || 0) >= priority);
+        const numPriority = Number(priority);
+        rules = rules.filter(rule => (rule.priority || 0) >= numPriority);
       }
       
       const result = {
@@ -3648,7 +3651,7 @@ app.get("/api/intelligence-rules",
         }
       };
       
-      sendSuccess(res, result, "Règles d'intelligence récupérées avec succès");
+      sendSuccess(res, result);
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur récupération règles:', error);
       throw createError.database( "Erreur lors de la récupération des règles");
@@ -3676,7 +3679,7 @@ app.post("/api/intelligence-rules",
       
       console.log(`[DateIntelligence] Règle créée avec succès: ${newRule.id}`);
       
-      sendSuccess(res, newRule, "Règle d'intelligence créée avec succès", 201);
+      sendSuccess(res, newRule, 201);
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur création règle:', error);
       
@@ -3717,16 +3720,18 @@ app.get("/api/date-alerts",
       }
       
       // Pagination
+      const numLimit = Number(limit) || 50;
+      const numOffset = Number(offset) || 0;
       const total = alerts.length;
-      alerts = alerts.slice(offset, offset + limit);
+      alerts = alerts.slice(numOffset, numOffset + numLimit);
       
       const result = {
         alerts,
         pagination: {
           total,
-          limit,
-          offset,
-          hasMore: offset + limit < total
+          limit: numLimit,
+          offset: numOffset,
+          hasMore: numOffset + numLimit < total
         },
         metadata: {
           pendingCount: alerts.filter(a => a.status === 'pending').length,
@@ -3735,7 +3740,7 @@ app.get("/api/date-alerts",
         }
       };
       
-      sendPaginatedSuccess(res, result.alerts, result.pagination, "Alertes de dates récupérées avec succès");
+      sendPaginatedSuccess(res, result.alerts, { page: Math.floor(numOffset / numLimit) + 1, limit: numLimit, total });
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur récupération alertes:', error);
       throw createError.database( "Erreur lors de la récupération des alertes");
@@ -3783,7 +3788,7 @@ app.put("/api/date-alerts/:id/acknowledge",
       
       console.log(`[DateIntelligence] Alerte ${id} acquittée avec succès`);
       
-      sendSuccess(res, acknowledgedAlert, "Alerte acquittée avec succès");
+      sendSuccess(res, acknowledgedAlert);
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur acquittement alerte:', error);
       
@@ -3828,7 +3833,7 @@ app.put("/api/date-alerts/:id/resolve",
       
       console.log(`[DateIntelligence] Alerte ${id} résolue avec succès`);
       
-      sendSuccess(res, resolvedAlert, "Alerte résolue avec succès");
+      sendSuccess(res, resolvedAlert);
     } catch (error: any) {
       console.error('[DateIntelligence] Erreur résolution alerte:', error);
       
@@ -3936,7 +3941,7 @@ app.get("/api/date-alerts/dashboard",
         dashboard.recommendations.push('De nombreuses alertes nécessitent des actions - priorisation conseillée');
       }
       
-      sendSuccess(res, dashboard, "Dashboard alertes récupéré avec succès");
+      sendSuccess(res, dashboard);
       
     } catch (error: any) {
       console.error('[AlertsDashboard] Erreur:', error);
@@ -4030,7 +4035,7 @@ app.post("/api/date-alerts/run-detection",
       
       console.log(`[ManualDetection] Détection '${detectionType}' terminée: ${results.totalAlertsGenerated} alertes en ${executionTime}ms`);
       
-      sendSuccess(res, response, `Détection ${detectionType} exécutée avec succès`, 201);
+      sendSuccess(res, response, 201);
       
     } catch (error: any) {
       console.error('[ManualDetection] Erreur:', error);
@@ -4332,7 +4337,7 @@ app.get("/api/date-alerts/summary",
       
       console.log(`[AlertsSummary] Résumé généré: ${totalAlerts} alertes, ${Object.keys(grouped).length} groupes`);
       
-      sendSuccess(res, summary, `Résumé des alertes (${period}) récupéré avec succès`);
+      sendSuccess(res, summary);
       
     } catch (error: any) {
       console.error('[AlertsSummary] Erreur:', error);
@@ -4356,7 +4361,7 @@ app.get("/api/admin/rules/statistics",
       
       const stats = await DateIntelligenceRulesSeeder.getRulesStatistics();
       
-      sendSuccess(res, stats, "Statistiques des règles métier récupérées avec succès");
+      sendSuccess(res, stats);
     } catch (error: any) {
       console.error('[Admin] Erreur statistiques règles:', error);
       throw createError.database( "Erreur lors de la récupération des statistiques");
@@ -4627,7 +4632,7 @@ app.get("/api/admin/intelligence/test-integration",
           }
         };
         
-        sendSuccess(res, result, "Timelines de projets récupérées avec succès");
+        sendSuccess(res, result);
       } catch (error: any) {
         console.error('[ProjectTimelines] Erreur récupération timelines:', error);
         throw createError.database( "Erreur lors de la récupération des timelines de projets");
@@ -4672,7 +4677,7 @@ app.get("/api/admin/intelligence/test-integration",
         
         console.log(`[ProjectTimelines] Timeline ${id} mise à jour avec succès`);
         
-        sendSuccess(res, updatedTimeline, "Timeline mise à jour avec succès");
+        sendSuccess(res, updatedTimeline);
       } catch (error: any) {
         console.error(`[ProjectTimelines] Erreur mise à jour timeline ${req.params.id}:`, error);
         throw createError.database( "Erreur lors de la mise à jour de la timeline");
@@ -4805,7 +4810,7 @@ app.get("/api/admin/intelligence/test-integration",
           }
         };
         
-        sendSuccess(res, result, "Métriques de performance calculées avec succès");
+        sendSuccess(res, result);
       } catch (error: any) {
         console.error('[PerformanceMetrics] Erreur calcul métriques:', error);
         throw createError.database( "Erreur lors du calcul des métriques de performance");
@@ -4965,7 +4970,7 @@ app.post('/api/analytics/snapshot',
         kpiCount: Object.keys(snapshot).length - 3 // Exclure metadata
       });
       
-      sendSuccess(res, snapshot, 'Snapshot généré avec succès', 201);
+      sendSuccess(res, snapshot, 201);
       
     } catch (error: any) {
       console.error('Erreur génération snapshot:', error);
@@ -5009,7 +5014,7 @@ app.get('/api/analytics/pipeline',
         forecast_3_months: revenueData.forecast || []
       };
       
-      sendSuccess(res, pipeline, "Métriques de pipeline récupérées avec succès");
+      sendSuccess(res, pipeline);
       
     } catch (error: any) {
       console.error('Erreur récupération pipeline:', error);
@@ -5093,7 +5098,7 @@ app.get('/api/analytics/alerts',
         ].filter(w => w.length > 0)
       };
       
-      sendSuccess(res, executiveAlerts, "Alertes exécutives récupérées avec succès");
+      sendSuccess(res, executiveAlerts);
       
     } catch (error: any) {
       console.error('Erreur critique récupération alertes exécutives:', error);
@@ -6931,6 +6936,375 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
       const { interventionId } = req.params;
       const claims = await storage.getSavWarrantyClaims(interventionId);
       res.json(sendSuccess(claims));
+    })
+  );
+
+  // ========================================
+  // ROUTES API MONDAY.COM - ENTITÉS CRITIQUES
+  // ========================================
+  
+  // =====================
+  // TEMPS POSE ENDPOINTS
+  // =====================
+  
+  // GET /api/temps-pose - Liste des temps de pose avec filtres
+  app.get("/api/temps-pose",
+    isAuthenticated,
+    rateLimits.general,
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { work_scope, component_type } = req.query;
+        const tempsData = await storage.getTempsPose(work_scope, component_type);
+        sendSuccess(res, tempsData);
+      } catch (error) {
+        console.error('[API] Erreur getTempsPose:', error);
+        throw createError.database("Erreur lors de la récupération des temps de pose");
+      }
+    })
+  );
+
+  // POST /api/temps-pose - Créer nouvelle entrée temps de pose
+  app.post("/api/temps-pose",
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(insertTempsPoseSchema),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const tempsData = req.body;
+        const newTemps = await storage.createTempsPose(tempsData);
+        sendSuccess(res, newTemps, 201);
+      } catch (error) {
+        console.error('[API] Erreur createTempsPose:', error);
+        throw createError.database("Erreur lors de la création du temps de pose");
+      }
+    })
+  );
+
+  // GET /api/temps-pose/:id - Récupérer temps de pose par ID
+  app.get("/api/temps-pose/:id",
+    isAuthenticated,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const temps = await storage.getTempsPoseById(id);
+        if (!temps) {
+          throw createError.notFound("Temps de pose non trouvé");
+        }
+        sendSuccess(res, temps, "Temps de pose récupéré avec succès");
+      } catch (error) {
+        console.error('[API] Erreur getTempsPoseById:', error);
+        throw error;
+      }
+    })
+  );
+
+  // PUT /api/temps-pose/:id - Mettre à jour temps de pose
+  app.put("/api/temps-pose/:id",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateBody(insertTempsPoseSchema.partial()),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const updateData = req.body;
+        const updatedTemps = await storage.updateTempsPose(id, updateData);
+        sendSuccess(res, updatedTemps, "Temps de pose mis à jour avec succès");
+      } catch (error) {
+        console.error('[API] Erreur updateTempsPose:', error);
+        throw createError.database("Erreur lors de la mise à jour du temps de pose");
+      }
+    })
+  );
+
+  // DELETE /api/temps-pose/:id - Supprimer temps de pose
+  app.delete("/api/temps-pose/:id",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteTempsPose(id);
+        sendSuccess(res, null, "Temps de pose supprimé avec succès");
+      } catch (error) {
+        console.error('[API] Erreur deleteTempsPose:', error);
+        throw createError.database("Erreur lors de la suppression du temps de pose");
+      }
+    })
+  );
+
+  // ========================
+  // METRICS BUSINESS ENDPOINTS
+  // ========================
+  
+  // GET /api/metrics-business - Liste des métriques business avec filtres
+  app.get("/api/metrics-business",
+    isAuthenticated,
+    rateLimits.general,
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { entity_type, entity_id } = req.query;
+        const metrics = await storage.getMetricsBusiness(entity_type, entity_id);
+        sendSuccess(res, metrics, "Métriques business récupérées avec succès");
+      } catch (error) {
+        console.error('[API] Erreur getMetricsBusiness:', error);
+        throw createError.database("Erreur lors de la récupération des métriques business");
+      }
+    })
+  );
+
+  // POST /api/metrics-business - Créer nouvelle métrique business
+  app.post("/api/metrics-business",
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(insertMetricsBusinessSchema),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const metricData = req.body;
+        const newMetric = await storage.createMetricsBusiness(metricData);
+        sendSuccess(res, newMetric, "Métrique business créée avec succès", 201);
+      } catch (error) {
+        console.error('[API] Erreur createMetricsBusiness:', error);
+        throw createError.database("Erreur lors de la création de la métrique business");
+      }
+    })
+  );
+
+  // GET /api/metrics-business/:id - Récupérer métrique business par ID
+  app.get("/api/metrics-business/:id",
+    isAuthenticated,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const metric = await storage.getMetricsBusinessById(id);
+        if (!metric) {
+          throw createError.notFound("Métrique business non trouvée");
+        }
+        sendSuccess(res, metric, "Métrique business récupérée avec succès");
+      } catch (error) {
+        console.error('[API] Erreur getMetricsBusinessById:', error);
+        throw error;
+      }
+    })
+  );
+
+  // PUT /api/metrics-business/:id - Mettre à jour métrique business
+  app.put("/api/metrics-business/:id",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateBody(insertMetricsBusinessSchema.partial()),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const updateData = req.body;
+        const updatedMetric = await storage.updateMetricsBusiness(id, updateData);
+        sendSuccess(res, updatedMetric, "Métrique business mise à jour avec succès");
+      } catch (error) {
+        console.error('[API] Erreur updateMetricsBusiness:', error);
+        throw createError.database("Erreur lors de la mise à jour de la métrique business");
+      }
+    })
+  );
+
+  // DELETE /api/metrics-business/:id - Supprimer métrique business
+  app.delete("/api/metrics-business/:id",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteMetricsBusiness(id);
+        sendSuccess(res, null, "Métrique business supprimée avec succès");
+      } catch (error) {
+        console.error('[API] Erreur deleteMetricsBusiness:', error);
+        throw createError.database("Erreur lors de la suppression de la métrique business");
+      }
+    })
+  );
+
+  // ===================
+  // AO CONTACTS ENDPOINTS - Table de liaison AO ↔ Contacts
+  // ===================
+  
+  // GET /api/ao-contacts/:aoId - Lister contacts liés à un AO
+  app.get("/api/ao-contacts/:aoId",
+    isAuthenticated,
+    validateParams(z.object({ aoId: z.string().uuid("ID AO invalide") })),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { aoId } = req.params;
+        const contacts = await storage.getAoContacts(aoId);
+        sendSuccess(res, contacts, "Contacts AO récupérés avec succès");
+      } catch (error) {
+        console.error('[API] Erreur getAoContacts:', error);
+        throw createError.database("Erreur lors de la récupération des contacts AO");
+      }
+    })
+  );
+
+  // POST /api/ao-contacts - Créer liaison AO-Contact
+  app.post("/api/ao-contacts",
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(insertAoContactsSchema),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const contactData = req.body;
+        const newContact = await storage.createAoContact(contactData);
+        sendSuccess(res, newContact, "Liaison AO-Contact créée avec succès", 201);
+      } catch (error) {
+        console.error('[API] Erreur createAoContact:', error);
+        throw createError.database("Erreur lors de la création de la liaison AO-Contact");
+      }
+    })
+  );
+
+  // DELETE /api/ao-contacts/:id - Supprimer liaison AO-Contact
+  app.delete("/api/ao-contacts/:id",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteAoContact(id);
+        sendSuccess(res, null, "Liaison AO-Contact supprimée avec succès");
+      } catch (error) {
+        console.error('[API] Erreur deleteAoContact:', error);
+        throw createError.database("Erreur lors de la suppression de la liaison AO-Contact");
+      }
+    })
+  );
+
+  // =========================
+  // PROJECT CONTACTS ENDPOINTS - Table de liaison Projects ↔ Contacts
+  // =========================
+  
+  // GET /api/project-contacts/:projectId - Lister contacts liés à un projet
+  app.get("/api/project-contacts/:projectId",
+    isAuthenticated,
+    validateParams(z.object({ projectId: z.string().uuid("ID Projet invalide") })),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { projectId } = req.params;
+        const contacts = await storage.getProjectContacts(projectId);
+        sendSuccess(res, contacts, "Contacts projet récupérés avec succès");
+      } catch (error) {
+        console.error('[API] Erreur getProjectContacts:', error);
+        throw createError.database("Erreur lors de la récupération des contacts projet");
+      }
+    })
+  );
+
+  // POST /api/project-contacts - Créer liaison Project-Contact
+  app.post("/api/project-contacts",
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(insertProjectContactsSchema),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const contactData = req.body;
+        const newContact = await storage.createProjectContact(contactData);
+        sendSuccess(res, newContact, "Liaison Project-Contact créée avec succès", 201);
+      } catch (error) {
+        console.error('[API] Erreur createProjectContact:', error);
+        throw createError.database("Erreur lors de la création de la liaison Project-Contact");
+      }
+    })
+  );
+
+  // DELETE /api/project-contacts/:id - Supprimer liaison Project-Contact
+  app.delete("/api/project-contacts/:id",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteProjectContact(id);
+        sendSuccess(res, null, "Liaison Project-Contact supprimée avec succès");
+      } catch (error) {
+        console.error('[API] Erreur deleteProjectContact:', error);
+        throw createError.database("Erreur lors de la suppression de la liaison Project-Contact");
+      }
+    })
+  );
+
+  // ================================
+  // SUPPLIER SPECIALIZATIONS ENDPOINTS - Table de liaison Suppliers ↔ Spécialisations
+  // ================================
+  
+  // GET /api/supplier-specializations - Lister spécialisations par fournisseur (optionnel)
+  app.get("/api/supplier-specializations",
+    isAuthenticated,
+    rateLimits.general,
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { supplier_id } = req.query;
+        const specializations = await storage.getSupplierSpecializations(supplier_id);
+        sendSuccess(res, specializations, "Spécialisations fournisseur récupérées avec succès");
+      } catch (error) {
+        console.error('[API] Erreur getSupplierSpecializations:', error);
+        throw createError.database("Erreur lors de la récupération des spécialisations fournisseur");
+      }
+    })
+  );
+
+  // POST /api/supplier-specializations - Créer spécialisation fournisseur
+  app.post("/api/supplier-specializations",
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(insertSupplierSpecializationsSchema),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const specData = req.body;
+        const newSpec = await storage.createSupplierSpecialization(specData);
+        sendSuccess(res, newSpec, "Spécialisation fournisseur créée avec succès", 201);
+      } catch (error) {
+        console.error('[API] Erreur createSupplierSpecialization:', error);
+        throw createError.database("Erreur lors de la création de la spécialisation fournisseur");
+      }
+    })
+  );
+
+  // PUT /api/supplier-specializations/:id - Mettre à jour spécialisation fournisseur
+  app.put("/api/supplier-specializations/:id",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateBody(insertSupplierSpecializationsSchema.partial()),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const updateData = req.body;
+        const updatedSpec = await storage.updateSupplierSpecialization(id, updateData);
+        sendSuccess(res, updatedSpec, "Spécialisation fournisseur mise à jour avec succès");
+      } catch (error) {
+        console.error('[API] Erreur updateSupplierSpecialization:', error);
+        throw createError.database("Erreur lors de la mise à jour de la spécialisation fournisseur");
+      }
+    })
+  );
+
+  // DELETE /api/supplier-specializations/:id - Supprimer spécialisation fournisseur
+  app.delete("/api/supplier-specializations/:id",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteSupplierSpecialization(id);
+        sendSuccess(res, null, "Spécialisation fournisseur supprimée avec succès");
+      } catch (error) {
+        console.error('[API] Erreur deleteSupplierSpecialization:', error);
+        throw createError.database("Erreur lors de la suppression de la spécialisation fournisseur");
+      }
     })
   );
 

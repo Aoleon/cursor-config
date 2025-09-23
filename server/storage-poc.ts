@@ -226,12 +226,14 @@ export interface IStorage {
   
   // Métriques Business operations
   getMetricsBusiness(entityType?: string, entityId?: string): Promise<MetricsBusiness[]>;
+  getMetricsBusinessById(id: string): Promise<MetricsBusiness | undefined>;
   createMetricsBusiness(metric: InsertMetricsBusiness): Promise<MetricsBusiness>;
   updateMetricsBusiness(id: string, metric: Partial<InsertMetricsBusiness>): Promise<MetricsBusiness>;
   deleteMetricsBusiness(id: string): Promise<void>;
   
   // Temps Pose operations
   getTempsPose(workScope?: string, componentType?: string): Promise<TempsPose[]>;
+  getTempsPoseById(id: string): Promise<TempsPose | undefined>;
   createTempsPose(temps: InsertTempsPose): Promise<TempsPose>;
   updateTempsPose(id: string, temps: Partial<InsertTempsPose>): Promise<TempsPose>;
   deleteTempsPose(id: string): Promise<void>;
@@ -4298,6 +4300,20 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async getMetricsBusinessById(id: string): Promise<MetricsBusiness | undefined> {
+    try {
+      const [result] = await this.db
+        .select()
+        .from(metricsBusiness)
+        .where(eq(metricsBusiness.id, id));
+      
+      return result;
+    } catch (error) {
+      logger.error('Erreur getMetricsBusinessById:', error);
+      throw error;
+    }
+  }
+
   async createMetricsBusiness(metric: InsertMetricsBusiness): Promise<MetricsBusiness> {
     try {
       const [result] = await this.db
@@ -4363,6 +4379,20 @@ export class MemStorage implements IStorage {
       return results;
     } catch (error) {
       logger.error('Erreur getTempsPose:', error);
+      throw error;
+    }
+  }
+
+  async getTempsPoseById(id: string): Promise<TempsPose | undefined> {
+    try {
+      const [result] = await this.db
+        .select()
+        .from(tempsPose)
+        .where(eq(tempsPose.id, id));
+      
+      return result;
+    } catch (error) {
+      logger.error('Erreur getTempsPoseById:', error);
       throw error;
     }
   }
@@ -4561,10 +4591,744 @@ export class MemStorage implements IStorage {
 
   async deleteSupplierSpecialization(id: string): Promise<void> {
     try {
-      await this.db.delete(supplierSpecializations).where(eq(supplierSpecializations.id, id));
+      await db.delete(supplierSpecializations).where(eq(supplierSpecializations.id, id));
       logger.info(`Spécialisation fournisseur ${id} supprimée`);
     } catch (error) {
       logger.error('Erreur deleteSupplierSpecialization:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // HELPER METHODS
+  // ========================================
+
+  async getOfferById(id: string): Promise<Offer | undefined> {
+    return this.getOffer(id);
+  }
+
+  async getProjectsByOffer(offerId: string): Promise<Project[]> {
+    try {
+      const projects = await db.select().from(projects).where(eq(projects.offerId, offerId));
+      return projects;
+    } catch (error) {
+      logger.error('Erreur getProjectsByOffer:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // TECHNICAL SCORING CONFIGURATION
+  // ========================================
+
+  async getScoringConfig(): Promise<TechnicalScoringConfig> {
+    // Configuration par défaut pour le POC
+    return {
+      materialCompatibility: {
+        pvc: { supportWeight: 'medium', thermalRating: 'low' },
+        alu: { supportWeight: 'high', thermalRating: 'high' },
+        bois: { supportWeight: 'medium', thermalRating: 'medium' }
+      },
+      performanceThresholds: {
+        thermal: { min: 0.8, max: 1.4 },
+        acoustic: { min: 30, max: 50 },
+        security: { min: 1, max: 5 }
+      },
+      riskFactors: {
+        dimensionLimits: { maxWidth: 3000, maxHeight: 2500 },
+        structuralConstraints: ['earthquake', 'wind', 'thermal']
+      }
+    };
+  }
+
+  async updateScoringConfig(config: TechnicalScoringConfig): Promise<void> {
+    // Pour le POC, on ne sauvegarde pas la config (en mémoire)
+    logger.info('Configuration scoring mise à jour (POC - en mémoire)');
+  }
+
+  // ========================================
+  // TECHNICAL ALERTS SYSTEM
+  // ========================================
+
+  async enqueueTechnicalAlert(alert: InsertTechnicalAlert): Promise<TechnicalAlert> {
+    try {
+      const [newAlert] = await db.insert(technicalAlerts).values(alert).returning();
+      logger.info(`Alerte technique créée avec ID: ${newAlert.id}`);
+      return newAlert;
+    } catch (error) {
+      logger.error('Erreur enqueueTechnicalAlert:', error);
+      throw error;
+    }
+  }
+
+  async listTechnicalAlerts(filter?: TechnicalAlertsFilter): Promise<TechnicalAlert[]> {
+    try {
+      let query = db.select().from(technicalAlerts);
+      
+      if (filter?.aoId) {
+        query = query.where(eq(technicalAlerts.aoId, filter.aoId));
+      }
+      if (filter?.status) {
+        query = query.where(eq(technicalAlerts.status, filter.status));
+      }
+      if (filter?.severity) {
+        query = query.where(eq(technicalAlerts.severity, filter.severity));
+      }
+      
+      const alerts = await query.orderBy(desc(technicalAlerts.createdAt));
+      return alerts;
+    } catch (error) {
+      logger.error('Erreur listTechnicalAlerts:', error);
+      throw error;
+    }
+  }
+
+  async getTechnicalAlert(id: string): Promise<TechnicalAlert | null> {
+    try {
+      const [alert] = await db.select().from(technicalAlerts).where(eq(technicalAlerts.id, id));
+      return alert || null;
+    } catch (error) {
+      logger.error('Erreur getTechnicalAlert:', error);
+      throw error;
+    }
+  }
+
+  async acknowledgeTechnicalAlert(id: string, userId: string): Promise<void> {
+    try {
+      await db.update(technicalAlerts)
+        .set({ status: 'acknowledged', acknowledgedBy: userId, acknowledgedAt: new Date() })
+        .where(eq(technicalAlerts.id, id));
+      logger.info(`Alerte technique ${id} acquittée par ${userId}`);
+    } catch (error) {
+      logger.error('Erreur acknowledgeTechnicalAlert:', error);
+      throw error;
+    }
+  }
+
+  async validateTechnicalAlert(id: string, userId: string): Promise<void> {
+    try {
+      await db.update(technicalAlerts)
+        .set({ status: 'resolved', resolvedBy: userId, resolvedAt: new Date() })
+        .where(eq(technicalAlerts.id, id));
+      logger.info(`Alerte technique ${id} validée par ${userId}`);
+    } catch (error) {
+      logger.error('Erreur validateTechnicalAlert:', error);
+      throw error;
+    }
+  }
+
+  async bypassTechnicalAlert(id: string, userId: string, until: Date, reason: string): Promise<void> {
+    try {
+      await db.update(technicalAlerts)
+        .set({ status: 'bypassed', resolvedBy: userId, resolvedAt: new Date() })
+        .where(eq(technicalAlerts.id, id));
+      
+      // Ajouter entrée historique
+      await this.addTechnicalAlertHistory(id, 'bypassed', userId, reason, { until: until.toISOString() });
+      logger.info(`Alerte technique ${id} bypassée par ${userId} jusqu'à ${until}`);
+    } catch (error) {
+      logger.error('Erreur bypassTechnicalAlert:', error);
+      throw error;
+    }
+  }
+
+  async getActiveBypassForAo(aoId: string): Promise<{ until: Date; reason: string } | null> {
+    try {
+      const bypasses = await db.select()
+        .from(technicalAlertHistory)
+        .where(and(
+          eq(technicalAlertHistory.action, 'bypassed'),
+          eq(technicalAlertHistory.note, aoId) // Utilisation simplifiée pour le POC
+        ));
+      
+      if (bypasses.length === 0) return null;
+      
+      const lastBypass = bypasses[0];
+      return {
+        until: new Date(lastBypass.metadata?.until || Date.now()),
+        reason: lastBypass.note || 'Aucune raison spécifiée'
+      };
+    } catch (error) {
+      logger.error('Erreur getActiveBypassForAo:', error);
+      return null;
+    }
+  }
+
+  async listTechnicalAlertHistory(alertId: string): Promise<TechnicalAlertHistory[]> {
+    try {
+      const history = await db.select()
+        .from(technicalAlertHistory)
+        .where(eq(technicalAlertHistory.alertId, alertId))
+        .orderBy(desc(technicalAlertHistory.createdAt));
+      return history;
+    } catch (error) {
+      logger.error('Erreur listTechnicalAlertHistory:', error);
+      throw error;
+    }
+  }
+
+  async addTechnicalAlertHistory(alertId: string | null, action: string, actorUserId: string | null, note?: string, metadata?: Record<string, any>): Promise<TechnicalAlertHistory> {
+    try {
+      const [entry] = await db.insert(technicalAlertHistory).values({
+        alertId,
+        action,
+        actorUserId,
+        note,
+        metadata
+      }).returning();
+      return entry;
+    } catch (error) {
+      logger.error('Erreur addTechnicalAlertHistory:', error);
+      throw error;
+    }
+  }
+
+  async listAoSuppressionHistory(aoId: string): Promise<TechnicalAlertHistory[]> {
+    try {
+      const history = await db.select()
+        .from(technicalAlertHistory)
+        .where(and(
+          eq(technicalAlertHistory.action, 'suppressed'),
+          eq(technicalAlertHistory.note, aoId)
+        ))
+        .orderBy(desc(technicalAlertHistory.createdAt));
+      return history;
+    } catch (error) {
+      logger.error('Erreur listAoSuppressionHistory:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // MATERIAL COLOR RULES
+  // ========================================
+
+  async getMaterialColorRules(): Promise<MaterialColorAlertRule[]> {
+    return DatabaseStorage.materialColorRules;
+  }
+
+  async setMaterialColorRules(rules: MaterialColorAlertRule[]): Promise<void> {
+    DatabaseStorage.materialColorRules = rules;
+    logger.info(`Règles matériaux-couleurs mises à jour: ${rules.length} règles`);
+  }
+
+  // ========================================
+  // PROJECT TIMELINES - INTELLIGENCE TEMPORELLE
+  // ========================================
+
+  async getProjectTimelines(projectId: string): Promise<ProjectTimeline[]> {
+    try {
+      const timelines = await db.select()
+        .from(projectTimelines)
+        .where(eq(projectTimelines.projectId, projectId))
+        .orderBy(projectTimelines.startDate);
+      return timelines;
+    } catch (error) {
+      logger.error('Erreur getProjectTimelines:', error);
+      throw error;
+    }
+  }
+
+  async getAllProjectTimelines(): Promise<ProjectTimeline[]> {
+    try {
+      const timelines = await db.select()
+        .from(projectTimelines)
+        .orderBy(desc(projectTimelines.createdAt));
+      return timelines;
+    } catch (error) {
+      logger.error('Erreur getAllProjectTimelines:', error);
+      throw error;
+    }
+  }
+
+  async createProjectTimeline(data: InsertProjectTimeline): Promise<ProjectTimeline> {
+    try {
+      const [timeline] = await db.insert(projectTimelines).values(data).returning();
+      logger.info(`Timeline projet créée avec ID: ${timeline.id}`);
+      return timeline;
+    } catch (error) {
+      logger.error('Erreur createProjectTimeline:', error);
+      throw error;
+    }
+  }
+
+  async updateProjectTimeline(id: string, data: Partial<InsertProjectTimeline>): Promise<ProjectTimeline> {
+    try {
+      const [timeline] = await db.update(projectTimelines)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(projectTimelines.id, id))
+        .returning();
+      logger.info(`Timeline projet ${id} mise à jour`);
+      return timeline;
+    } catch (error) {
+      logger.error('Erreur updateProjectTimeline:', error);
+      throw error;
+    }
+  }
+
+  async deleteProjectTimeline(id: string): Promise<void> {
+    try {
+      await db.delete(projectTimelines).where(eq(projectTimelines.id, id));
+      logger.info(`Timeline projet ${id} supprimée`);
+    } catch (error) {
+      logger.error('Erreur deleteProjectTimeline:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // DATE INTELLIGENCE RULES
+  // ========================================
+
+  async getActiveRules(filters?: { phase?: typeof projectStatusEnum.enumValues[number], projectType?: string }): Promise<DateIntelligenceRule[]> {
+    try {
+      let query = db.select().from(dateIntelligenceRules).where(eq(dateIntelligenceRules.isActive, true));
+      
+      if (filters?.phase) {
+        query = query.where(eq(dateIntelligenceRules.phase, filters.phase));
+      }
+      if (filters?.projectType) {
+        query = query.where(eq(dateIntelligenceRules.projectType, filters.projectType));
+      }
+      
+      const rules = await query.orderBy(desc(dateIntelligenceRules.priority));
+      return rules;
+    } catch (error) {
+      logger.error('Erreur getActiveRules:', error);
+      throw error;
+    }
+  }
+
+  async getAllRules(): Promise<DateIntelligenceRule[]> {
+    try {
+      const rules = await db.select()
+        .from(dateIntelligenceRules)
+        .orderBy(desc(dateIntelligenceRules.createdAt));
+      return rules;
+    } catch (error) {
+      logger.error('Erreur getAllRules:', error);
+      throw error;
+    }
+  }
+
+  async getRule(id: string): Promise<DateIntelligenceRule | undefined> {
+    try {
+      const [rule] = await db.select().from(dateIntelligenceRules).where(eq(dateIntelligenceRules.id, id));
+      return rule;
+    } catch (error) {
+      logger.error('Erreur getRule:', error);
+      throw error;
+    }
+  }
+
+  async createRule(data: InsertDateIntelligenceRule): Promise<DateIntelligenceRule> {
+    try {
+      const [rule] = await db.insert(dateIntelligenceRules).values(data).returning();
+      logger.info(`Règle d'intelligence temporelle créée avec ID: ${rule.id}`);
+      return rule;
+    } catch (error) {
+      logger.error('Erreur createRule:', error);
+      throw error;
+    }
+  }
+
+  async updateRule(id: string, data: Partial<InsertDateIntelligenceRule>): Promise<DateIntelligenceRule> {
+    try {
+      const [rule] = await db.update(dateIntelligenceRules)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(dateIntelligenceRules.id, id))
+        .returning();
+      logger.info(`Règle d'intelligence temporelle ${id} mise à jour`);
+      return rule;
+    } catch (error) {
+      logger.error('Erreur updateRule:', error);
+      throw error;
+    }
+  }
+
+  async deleteRule(id: string): Promise<void> {
+    try {
+      await db.delete(dateIntelligenceRules).where(eq(dateIntelligenceRules.id, id));
+      logger.info(`Règle d'intelligence temporelle ${id} supprimée`);
+    } catch (error) {
+      logger.error('Erreur deleteRule:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // DATE ALERTS - ALERTES DATES ET ÉCHÉANCES
+  // ========================================
+
+  async getDateAlerts(filters?: { entityType?: string, entityId?: string, status?: string }): Promise<DateAlert[]> {
+    try {
+      let query = db.select().from(dateAlerts);
+      
+      if (filters?.entityType) {
+        query = query.where(eq(dateAlerts.entityType, filters.entityType));
+      }
+      if (filters?.entityId) {
+        query = query.where(eq(dateAlerts.entityId, filters.entityId));
+      }
+      if (filters?.status) {
+        query = query.where(eq(dateAlerts.status, filters.status));
+      }
+      
+      const alerts = await query.orderBy(desc(dateAlerts.createdAt));
+      return alerts;
+    } catch (error) {
+      logger.error('Erreur getDateAlerts:', error);
+      throw error;
+    }
+  }
+
+  async getDateAlert(id: string): Promise<DateAlert | undefined> {
+    try {
+      const [alert] = await db.select().from(dateAlerts).where(eq(dateAlerts.id, id));
+      return alert;
+    } catch (error) {
+      logger.error('Erreur getDateAlert:', error);
+      throw error;
+    }
+  }
+
+  async createDateAlert(data: InsertDateAlert): Promise<DateAlert> {
+    try {
+      const [alert] = await db.insert(dateAlerts).values(data).returning();
+      logger.info(`Alerte de date créée avec ID: ${alert.id}`);
+      return alert;
+    } catch (error) {
+      logger.error('Erreur createDateAlert:', error);
+      throw error;
+    }
+  }
+
+  async updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert> {
+    try {
+      const [alert] = await db.update(dateAlerts)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(dateAlerts.id, id))
+        .returning();
+      logger.info(`Alerte de date ${id} mise à jour`);
+      return alert;
+    } catch (error) {
+      logger.error('Erreur updateDateAlert:', error);
+      throw error;
+    }
+  }
+
+  async deleteDateAlert(id: string): Promise<void> {
+    try {
+      await db.delete(dateAlerts).where(eq(dateAlerts.id, id));
+      logger.info(`Alerte de date ${id} supprimée`);
+    } catch (error) {
+      logger.error('Erreur deleteDateAlert:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // ANALYTICS KPI OPERATIONS
+  // ========================================
+
+  async createKPISnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot> {
+    try {
+      const [snapshot] = await db.insert(kpiSnapshots).values(data).returning();
+      logger.info(`Snapshot KPI créé avec ID: ${snapshot.id}`);
+      return snapshot;
+    } catch (error) {
+      logger.error('Erreur createKPISnapshot:', error);
+      throw error;
+    }
+  }
+
+  async getKPISnapshots(period: DateRange, limit?: number): Promise<KpiSnapshot[]> {
+    try {
+      let query = db.select()
+        .from(kpiSnapshots)
+        .where(and(
+          gte(kpiSnapshots.snapshotDate, period.from),
+          lte(kpiSnapshots.snapshotDate, period.to)
+        ))
+        .orderBy(desc(kpiSnapshots.snapshotDate));
+      
+      if (limit) {
+        query = query.limit(limit);
+      }
+      
+      const snapshots = await query;
+      return snapshots;
+    } catch (error) {
+      logger.error('Erreur getKPISnapshots:', error);
+      throw error;
+    }
+  }
+
+  async getLatestKPISnapshot(): Promise<KpiSnapshot | null> {
+    try {
+      const [snapshot] = await db.select()
+        .from(kpiSnapshots)
+        .orderBy(desc(kpiSnapshots.snapshotDate))
+        .limit(1);
+      return snapshot || null;
+    } catch (error) {
+      logger.error('Erreur getLatestKPISnapshot:', error);
+      throw error;
+    }
+  }
+
+  async createBusinessMetric(data: InsertBusinessMetric): Promise<BusinessMetric> {
+    try {
+      const [metric] = await db.insert(businessMetrics).values(data).returning();
+      logger.info(`Métrique business créée avec ID: ${metric.id}`);
+      return metric;
+    } catch (error) {
+      logger.error('Erreur createBusinessMetric:', error);
+      throw error;
+    }
+  }
+
+  async getBusinessMetrics(filters: MetricFilters): Promise<BusinessMetric[]> {
+    try {
+      let query = db.select().from(businessMetrics);
+      
+      if (filters.metricType) {
+        query = query.where(eq(businessMetrics.metricType, filters.metricType));
+      }
+      if (filters.userId) {
+        query = query.where(eq(businessMetrics.userId, filters.userId));
+      }
+      if (filters.periodStart) {
+        query = query.where(gte(businessMetrics.periodStart, filters.periodStart));
+      }
+      if (filters.periodEnd) {
+        query = query.where(lte(businessMetrics.periodEnd, filters.periodEnd));
+      }
+      
+      const metrics = await query.orderBy(desc(businessMetrics.createdAt));
+      return metrics;
+    } catch (error) {
+      logger.error('Erreur getBusinessMetrics:', error);
+      throw error;
+    }
+  }
+
+  async getMetricTimeSeries(metricType: string, period: DateRange): Promise<BusinessMetric[]> {
+    try {
+      const metrics = await db.select()
+        .from(businessMetrics)
+        .where(and(
+          eq(businessMetrics.metricType, metricType),
+          gte(businessMetrics.periodStart, period.from),
+          lte(businessMetrics.periodEnd, period.to)
+        ))
+        .orderBy(businessMetrics.periodStart);
+      return metrics;
+    } catch (error) {
+      logger.error('Erreur getMetricTimeSeries:', error);
+      throw error;
+    }
+  }
+
+  async createPerformanceBenchmark(data: InsertPerformanceBenchmark): Promise<PerformanceBenchmark> {
+    try {
+      const [benchmark] = await db.insert(performanceBenchmarks).values(data).returning();
+      logger.info(`Benchmark performance créé avec ID: ${benchmark.id}`);
+      return benchmark;
+    } catch (error) {
+      logger.error('Erreur createPerformanceBenchmark:', error);
+      throw error;
+    }
+  }
+
+  async getBenchmarks(entityType: string, entityId?: string): Promise<PerformanceBenchmark[]> {
+    try {
+      let query = db.select().from(performanceBenchmarks).where(eq(performanceBenchmarks.entityType, entityType));
+      
+      if (entityId) {
+        query = query.where(eq(performanceBenchmarks.entityId, entityId));
+      }
+      
+      const benchmarks = await query.orderBy(desc(performanceBenchmarks.createdAt));
+      return benchmarks;
+    } catch (error) {
+      logger.error('Erreur getBenchmarks:', error);
+      throw error;
+    }
+  }
+
+  async getTopPerformers(metricType: string, limit?: number): Promise<PerformanceBenchmark[]> {
+    try {
+      let query = db.select()
+        .from(performanceBenchmarks)
+        .where(eq(performanceBenchmarks.metricType, metricType))
+        .orderBy(desc(performanceBenchmarks.value));
+      
+      if (limit) {
+        query = query.limit(limit);
+      }
+      
+      const topPerformers = await query;
+      return topPerformers;
+    } catch (error) {
+      logger.error('Erreur getTopPerformers:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // PREDICTIVE ENGINE METHODS
+  // ========================================
+
+  async getMonthlyRevenueHistory(range: { start_date: string; end_date: string }): Promise<Array<{
+    month: string;
+    total_revenue: number;
+    projects_count: number;
+    avg_project_value: number;
+  }>> {
+    try {
+      // Simulation de données pour le POC
+      const months = [];
+      const start = new Date(range.start_date);
+      const end = new Date(range.end_date);
+      
+      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+        months.push({
+          month: d.toISOString().slice(0, 7), // YYYY-MM
+          total_revenue: Math.random() * 100000 + 50000,
+          projects_count: Math.floor(Math.random() * 10) + 5,
+          avg_project_value: Math.random() * 20000 + 10000
+        });
+      }
+      
+      return months;
+    } catch (error) {
+      logger.error('Erreur getMonthlyRevenueHistory:', error);
+      throw error;
+    }
+  }
+
+  async getProjectDelayHistory(range: { start_date: string; end_date: string }): Promise<Array<{
+    project_id: string;
+    planned_days: number;
+    actual_days: number;
+    delay_days: number;
+    project_type: string;
+    complexity: string;
+  }>> {
+    try {
+      // Simulation de données pour le POC
+      const projectDelays = await db.select({
+        project_id: projects.id,
+        planned_days: sql<number>`EXTRACT(DAY FROM (${projects.plannedEndDate} - ${projects.plannedStartDate}))`,
+        actual_days: sql<number>`EXTRACT(DAY FROM (${projects.actualEndDate} - ${projects.actualStartDate}))`,
+        delay_days: sql<number>`EXTRACT(DAY FROM (${projects.actualEndDate} - ${projects.plannedEndDate}))`,
+        project_type: projects.projectType,
+        complexity: projects.complexity
+      })
+      .from(projects)
+      .where(and(
+        gte(projects.createdAt, new Date(range.start_date)),
+        lte(projects.createdAt, new Date(range.end_date)),
+        ne(projects.actualEndDate, null)
+      ));
+      
+      return projectDelays;
+    } catch (error) {
+      logger.error('Erreur getProjectDelayHistory:', error);
+      throw error;
+    }
+  }
+
+  async getTeamLoadHistory(range: { start_date: string; end_date: string }): Promise<Array<{
+    month: string;
+    total_projects: number;
+    team_capacity: number;
+    utilization_rate: number;
+    avg_project_duration: number;
+  }>> {
+    try {
+      // Simulation de données pour le POC
+      const months = [];
+      const start = new Date(range.start_date);
+      const end = new Date(range.end_date);
+      
+      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+        months.push({
+          month: d.toISOString().slice(0, 7),
+          total_projects: Math.floor(Math.random() * 15) + 5,
+          team_capacity: 100,
+          utilization_rate: Math.random() * 0.4 + 0.6, // 60-100%
+          avg_project_duration: Math.random() * 30 + 60 // 60-90 jours
+        });
+      }
+      
+      return months;
+    } catch (error) {
+      logger.error('Erreur getTeamLoadHistory:', error);
+      throw error;
+    }
+  }
+
+  async saveForecastSnapshot(forecast: { forecast_data: any; generated_at: string; params: any }): Promise<string> {
+    try {
+      // Pour le POC, utilisation d'une table générique ou storage en mémoire
+      const snapshotId = `forecast_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      logger.info(`Snapshot forecast sauvegardé avec ID: ${snapshotId}`);
+      return snapshotId;
+    } catch (error) {
+      logger.error('Erreur saveForecastSnapshot:', error);
+      throw error;
+    }
+  }
+
+  async listForecastSnapshots(limit?: number): Promise<Array<{
+    id: string;
+    generated_at: string;
+    forecast_period: string;
+    confidence: number;
+    method_used: string;
+  }>> {
+    try {
+      // Simulation de données pour le POC
+      const snapshots = [];
+      const count = limit || 10;
+      
+      for (let i = 0; i < count; i++) {
+        snapshots.push({
+          id: `forecast_${Date.now() - i * 86400000}_${Math.random().toString(36).substr(2, 9)}`,
+          generated_at: new Date(Date.now() - i * 86400000).toISOString(),
+          forecast_period: `${6} months`,
+          confidence: Math.random() * 0.3 + 0.7, // 70-100%
+          method_used: ['exp_smoothing', 'moving_average', 'trend_analysis'][i % 3]
+        });
+      }
+      
+      return snapshots;
+    } catch (error) {
+      logger.error('Erreur listForecastSnapshots:', error);
+      throw error;
+    }
+  }
+
+  async getSectorBenchmarks(): Promise<{
+    industry_avg_conversion: number;
+    avg_duration_benchmark: number;
+    margin_benchmark: number;
+    quality_benchmark: number;
+    efficiency_benchmark: number;
+  }> {
+    try {
+      // Benchmarks secteur menuiserie (données POC)
+      return {
+        industry_avg_conversion: 0.35, // 35% taux conversion moyen
+        avg_duration_benchmark: 75, // 75 jours durée moyenne
+        margin_benchmark: 0.18, // 18% marge moyenne
+        quality_benchmark: 4.2, // 4.2/5 qualité moyenne
+        efficiency_benchmark: 0.82 // 82% efficacité moyenne
+      };
+    } catch (error) {
+      logger.error('Erreur getSectorBenchmarks:', error);
       throw error;
     }
   }

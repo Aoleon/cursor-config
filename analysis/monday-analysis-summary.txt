@@ -1,0 +1,97 @@
+
+# ANALYSE DES EXPORTS MONDAY.COM - RAPPORT DE SYNTHÈSE
+================================================================================
+
+## 📊 STATISTIQUES GÉNÉRALES
+
+📁 Fichiers analysés: 38
+📋 Feuilles Excel: 39
+📊 Colonnes totales: 575
+📈 Lignes de données: 6655
+❌ Erreurs rencontrées: 0
+
+⏱️  Temps d'analyse: 2025-09-23T11:30:19.823Z → 2025-09-23T11:30:21.722Z
+
+## 📂 RÉPARTITION PAR CATÉGORIE
+
+📁 projets_specifiques: 1 fichiers, 1 feuilles
+📁 planning: 11 fichiers, 11 feuilles
+📁 general: 10 fichiers, 11 feuilles
+📁 chantiers: 4 fichiers, 4 feuilles
+📁 contacts: 1 fichiers, 1 feuilles
+📁 direction: 2 fichiers, 2 feuilles
+📁 formation: 1 fichiers, 1 feuilles
+📁 personnel: 5 fichiers, 5 feuilles
+📁 taches: 3 fichiers, 3 feuilles
+
+## 🔍 PATTERNS IDENTIFIÉS
+
+📊 Types de données détectés:
+   • text: 36 colonnes
+   • empty: 3 colonnes
+
+📋 Colonnes communes (présentes dans plusieurs fichiers):
+   • "boulogne": 2 occurrences dans 2 fichiers
+
+🔗 Relations potentielles identifiées:
+
+## 🎯 MAPPINGS SAXIUM SUGGÉRÉS
+
+### Table: projects
+📁 Fichiers sources: PREURES_-_RUE_NOIRE_1758620731.xlsx, CHANTIERS_1758620580.xlsx, CHANTIERS_Administratif_1758620613.xlsx, Copie_de_CHANTIERS_PROJET_1758620682.xlsx, _Personnel_chantier_1758620704.xlsx, JLM_CHANTIERS_1758620597.xlsx
+📊 Colonnes identifiées: 6
+🔹 Colonnes principales:
+   • preures_-_rue_noire (text)
+   • chantiers_🏗️ (empty)
+   • chantiers_administratif (text)
+   • copie_de_chantiers_🏗️_projet (empty)
+   • 👷‍♂️_personnel_chantier (text)
+
+### Table: aos
+📁 Fichiers sources: AO_Planning_1758620539.xlsx
+📊 Colonnes identifiées: 1
+🔹 Colonnes principales:
+   • ao_planning_🖥️ (text)
+
+### Table: custom_table
+📁 Fichiers sources: BETHUNE_BUDAPEST_1758620834.xlsx, BOULOGNE_102_-_GCC_-_102_lgts_-_Mint_1758620856.xlsx, BOULOGNE_102_-_GCC_-_102_lgts_-_Serrurerie_1758620850.xlsx, CAPSO_1758620571.xlsx, DIRECTION_1758620650.xlsx, ECQUES_BUREAUX_JLM_1758620829.xlsx, Formation_Bureaux_1758620863.xlsx, Heures_Insertion_1758620671.xlsx, PERENCHIES_10_14_-_Portes_de_Hall_1758620845.xlsx, P_RENCHIES_-_Charpente_Brisis_1758620839.xlsx, SOUS-TRAITANTS_1758620632.xlsx, TEMPS_DE_POSE_JLM_1758620739.xlsx, TO_DO_FLAVIE_1758620656.xlsx, TO_DO_Julien_1758620664.xlsx, TO_DO_LUDIVINE_1758621044.xlsx, _Tableau_bord_JLM_1758620606.xlsx
+📊 Colonnes identifiées: 17
+🔹 Colonnes principales:
+   • bethune_budapest (text)
+   • boulogne_102_-_gcc_-_102_lgts_-_mint (text)
+   • boulogne_102_-_gcc_-_102_lgts_-_serrurerie (text)
+   • capso (text)
+   • time_tracking (text)
+
+### Table: users
+📁 Fichiers sources: Contacts_1758620760.xlsx, Formation_Ouvriers_1758620716.xlsx, Outillage_MAKITA_1758620723.xlsx, Pi_ces_personnel_1758620698.xlsx, _Personnel_bureau_1758620710.xlsx
+📊 Colonnes identifiées: 5
+🔹 Colonnes principales:
+   • contacts (text)
+   • formation_ouvriers (text)
+   • outillage_makita_🛠️ (text)
+   • pièces_personnel (text)
+   • 👩‍💻_personnel_bureau (text)
+
+### Table: planning
+📁 Fichiers sources: BOULOGNE_1758620773.xlsx, Boulogne_1758620768.xlsx, CAMPAGNE_1758620806.xlsx, FRUGES_1758620811.xlsx, FRUGES_TS_1758620823.xlsx, PLANNING_SYMPHONIE_1758620816.xlsx, Planning_BETHUNE_1758620799.xlsx, Planning_ETAPLES_GRAND_LARGE_men_ext_1758620793.xlsx, Planning_ETAPLES_GRAND_LARGE_men_int_1758620787.xlsx, Planning_LONGUENESSE_85_1758620780.xlsx
+📊 Colonnes identifiées: 9
+🔹 Colonnes principales:
+   • boulogne (text) [variantes: BOULOGNE, Boulogne]
+   • campagne (text)
+   • fruges (text)
+   • fruges_ts (text)
+   • planning_symphonie (text)
+
+
+## 🚀 RECOMMANDATIONS
+
+1. **Intégration prioritaire**: Commencer par les tables avec le plus de données (contacts, planning, projets)
+2. **Normalisation**: Standardiser les noms de colonnes pour faciliter le mapping
+3. **Validation**: Vérifier la cohérence des données avant import
+4. **Relations**: Établir les clés étrangères basées sur les patterns identifiés
+5. **Enums**: Créer des énumérations pour les champs à valeurs limitées
+
+================================================================================
+Rapport généré automatiquement par analyze-monday-exports.js
+2025-09-23T11:30:21.727Z

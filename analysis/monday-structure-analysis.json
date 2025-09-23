@@ -1,0 +1,2988 @@
+{
+  "summary": {
+    "totalFiles": 38,
+    "totalSheets": 39,
+    "totalColumns": 575,
+    "totalRows": 6655,
+    "errors": [],
+    "startTime": "2025-09-23T11:30:19.823Z",
+    "endTime": "2025-09-23T11:30:21.722Z"
+  },
+  "files": {
+    "attached_assets/export-monday/AMOPALE/PREURES_-_RUE_NOIRE_1758620731.xlsx": {
+      "filename": "PREURES_-_RUE_NOIRE_1758620731.xlsx",
+      "fullPath": "attached_assets/export-monday/AMOPALE/PREURES_-_RUE_NOIRE_1758620731.xlsx",
+      "category": "projets_specifiques",
+      "sheetCount": 1,
+      "sheets": {
+        "preures - rue noire": {
+          "name": "preures - rue noire",
+          "rowCount": 21,
+          "columnCount": 5,
+          "columns": {
+            "PREURES - RUE NOIRE": {
+              "name": "PREURES - RUE NOIRE",
+              "dataTypes": {
+                "text": 18,
+                "empty": 3
+              },
+              "sampleValues": [
+                "Planning travaux",
+                "Name",
+                "Terrassement - Assainissement",
+                "Gros oeuvre",
+                "Charpente - Couverture"
+              ],
+              "nullCount": 3,
+              "minLength": 4,
+              "maxLength": 29,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Planning travaux",
+                "Name",
+                "Terrassement - Assainissement",
+                "Gros oeuvre",
+                "Charpente - Couverture",
+                "Menuiseries extérieures",
+                "Enduit",
+                "Plâtrerie Isolation",
+                "Menuiserie intérieure",
+                "Carrelage",
+                "Sol - Revêtement parquet",
+                "Plomberie - chauffage",
+                "Electricité",
+                "Peinture",
+                "Titre du groupe",
+                "Ligne 4",
+                "Ligne 5"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 15713,
+      "lastModified": "2025-09-23T11:18:55.738Z"
+    },
+    "attached_assets/export-monday/AO_Planning_1758620539.xlsx": {
+      "filename": "AO_Planning_1758620539.xlsx",
+      "fullPath": "attached_assets/export-monday/AO_Planning_1758620539.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "ao planning  🖥️": {
+          "name": "ao planning  🖥️",
+          "rowCount": 911,
+          "columnCount": 39,
+          "columns": {
+            "AO Planning  🖥️": {
+              "name": "AO Planning  🖥️",
+              "dataTypes": {
+                "text": 843,
+                "empty": 68
+              },
+              "sampleValues": [
+                "Commerce Devis",
+                "Emailed Éléments",
+                "Name",
+                "GRANDE-SYNTHE 60 - Construction neuf - Quartier des Ilot des Peintres - PARTENORD HABITAT ->01/10/25",
+                "DUNKERQUE 85 NEXITY - MEXT"
+              ],
+              "nullCount": 68,
+              "minLength": 4,
+              "maxLength": 236,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Commerce Devis",
+                "Emailed Éléments",
+                "Name",
+                "GRANDE-SYNTHE 60 - Construction neuf - Quartier des Ilot des Peintres - PARTENORD HABITAT ->01/10/25",
+                "DUNKERQUE 85 NEXITY - MEXT",
+                "DUNKERQUE 85 NEUF  MEXT- NEXITY IR NORD LILLE : 10165 - DUNKERQUE B1",
+                "LE CROTOY 28 - COGEDIM - MEXT  -  LE CROTOY - TS Micro crèches en Logements",
+                "A RELANCER",
+                "SAINS les MARQUIONS - NOVEBAT",
+                "GC Maison des mines",
+                "AO EN COURS",
+                "CAMIERS - Carré des sonates - TMA",
+                "LE TOUQUET HITO - Consultation Mext/Hall/Serrurerie",
+                "RANG DU FLIERS 17+13 Indiv JUMELES EXT V2 TS PV taille chassis",
+                "CALAIS 27 - LE RUBANIER - IMMO INVESTIM  - MINT",
+                "CALAIS - Appart étage DELCLOY",
+                "LA MADELEINE AD : Accident kouoh Charlotte du 12/03/2025 Sinistre N°113",
+                "BEUVRY 60 - BASLY - NOVALYS -> 03/10/25",
+                "HENIN BEAUMONT 66 logements collectifs et un local commercial à Hénin-Beaumont - OGN Promotion - Lot  MINT -> 12/09",
+                "WASQUEHAL 28 - Consultation THOMAS & PIRON - 28 Lgts Collectifs WASQUEHAL"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 200466,
+      "lastModified": "2025-09-23T11:18:55.683Z"
+    },
+    "attached_assets/export-monday/BETHUNE_BUDAPEST_1758620834.xlsx": {
+      "filename": "BETHUNE_BUDAPEST_1758620834.xlsx",
+      "fullPath": "attached_assets/export-monday/BETHUNE_BUDAPEST_1758620834.xlsx",
+      "category": "general",
+      "sheetCount": 1,
+      "sheets": {
+        "bethune budapest": {
+          "name": "bethune budapest",
+          "rowCount": 12,
+          "columnCount": 13,
+          "columns": {
+            "BETHUNE BUDAPEST": {
+              "name": "BETHUNE BUDAPEST",
+              "dataTypes": {
+                "text": 9,
+                "empty": 3
+              },
+              "sampleValues": [
+                "Planning",
+                "Name",
+                "Task 1",
+                "Task 2",
+                "Task 3"
+              ],
+              "nullCount": 3,
+              "minLength": 4,
+              "maxLength": 9,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Planning",
+                "Name",
+                "Task 1",
+                "Task 2",
+                "Task 3",
+                "Execution",
+                "Launch"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 15990,
+      "lastModified": "2025-09-23T11:18:55.315Z"
+    },
+    "attached_assets/export-monday/BOULOGNE_102_-_GCC_-_102_lgts_-_Mint_1758620856.xlsx": {
+      "filename": "BOULOGNE_102_-_GCC_-_102_lgts_-_Mint_1758620856.xlsx",
+      "fullPath": "attached_assets/export-monday/BOULOGNE_102_-_GCC_-_102_lgts_-_Mint_1758620856.xlsx",
+      "category": "general",
+      "sheetCount": 1,
+      "sheets": {
+        "boulogne 102 - gcc - ": {
+          "name": "boulogne 102 - gcc - ",
+          "rowCount": 12,
+          "columnCount": 13,
+          "columns": {
+            "BOULOGNE 102 - GCC - 102 lgts - Mint": {
+              "name": "BOULOGNE 102 - GCC - 102 lgts - Mint",
+              "dataTypes": {
+                "text": 9,
+                "empty": 3
+              },
+              "sampleValues": [
+                "Planning",
+                "Name",
+                "Task 1",
+                "Task 2",
+                "Task 3"
+              ],
+              "nullCount": 3,
+              "minLength": 4,
+              "maxLength": 9,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Planning",
+                "Name",
+                "Task 1",
+                "Task 2",
+                "Task 3",
+                "Execution",
+                "Launch"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16006,
+      "lastModified": "2025-09-23T11:18:55.545Z"
+    },
+    "attached_assets/export-monday/BOULOGNE_102_-_GCC_-_102_lgts_-_Serrurerie_1758620850.xlsx": {
+      "filename": "BOULOGNE_102_-_GCC_-_102_lgts_-_Serrurerie_1758620850.xlsx",
+      "fullPath": "attached_assets/export-monday/BOULOGNE_102_-_GCC_-_102_lgts_-_Serrurerie_1758620850.xlsx",
+      "category": "general",
+      "sheetCount": 1,
+      "sheets": {
+        "boulogne 102 - gcc - ": {
+          "name": "boulogne 102 - gcc - ",
+          "rowCount": 12,
+          "columnCount": 13,
+          "columns": {
+            "BOULOGNE 102 - GCC - 102 lgts - Serrurerie": {
+              "name": "BOULOGNE 102 - GCC - 102 lgts - Serrurerie",
+              "dataTypes": {
+                "text": 9,
+                "empty": 3
+              },
+              "sampleValues": [
+                "Planning",
+                "Name",
+                "Task 1",
+                "Task 2",
+                "Task 3"
+              ],
+              "nullCount": 3,
+              "minLength": 4,
+              "maxLength": 9,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Planning",
+                "Name",
+                "Task 1",
+                "Task 2",
+                "Task 3",
+                "Execution",
+                "Launch"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16012,
+      "lastModified": "2025-09-23T11:18:55.325Z"
+    },
+    "attached_assets/export-monday/CAPSO_1758620571.xlsx": {
+      "filename": "CAPSO_1758620571.xlsx",
+      "fullPath": "attached_assets/export-monday/CAPSO_1758620571.xlsx",
+      "category": "general",
+      "sheetCount": 2,
+      "sheets": {
+        "capso": {
+          "name": "capso",
+          "rowCount": 518,
+          "columnCount": 19,
+          "columns": {
+            "CAPSO": {
+              "name": "CAPSO",
+              "dataTypes": {
+                "text": 441,
+                "empty": 77
+              },
+              "sampleValues": [
+                "Utilisez ce tableau pour recevoir des demandes de projet via un formulaire et pour gérer le processus d'approbation de projet.\n\nComment cela fonctionne-t-il ? Une fois soumis, le formulaire peuplera le groupe « nouvelles demandes ». Après approbation, un nouvel élément sera créé dans le tableau « gestion de portefeuille » qui est lié à la demande de projet.",
+                "Emailed Éléments",
+                "Nom",
+                "AIRE - Salle DUCROT - Demande Devis Dominique",
+                "ST OMER - QUARTIER FOCH - MISSION LOCALE - Réparation sol"
+              ],
+              "nullCount": 77,
+              "minLength": 3,
+              "maxLength": 359,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Utilisez ce tableau pour recevoir des demandes de projet via un formulaire et pour gérer le processus d'approbation de projet.\n\nComment cela fonctionne-t-il ? Une fois soumis, le formulaire peuplera le groupe « nouvelles demandes ». Après approbation, un nouvel élément sera créé dans le tableau « gestion de portefeuille » qui est lié à la demande de projet.",
+                "Emailed Éléments",
+                "Nom",
+                "AIRE - Salle DUCROT - Demande Devis Dominique",
+                "ST OMER - QUARTIER FOCH - MISSION LOCALE - Réparation sol",
+                "FW: Salle Balavoine - Portes - Complément",
+                "AIRE ANNEXE VAUBAN - passage boite aux lettres dans une porte bois",
+                "SAINT OMER - Ecole d'art - Devis plancher",
+                "ST OMER - MAISON DU MARAIS - Protection vis du moulin",
+                "ARQUES - CHATEAU PORION - Complément GC Prévu ? Réalisé 24ml à 245€ DS",
+                "FW: devis remplacement vitre fissurée salle de sport ducrot",
+                "Nouvelles demandes",
+                "Sous étude",
+                "ST OMER - LA STATION  - Ventouses encastrées",
+                "ST OMER MASON DU MARAIS - Remplacement vitrage",
+                "Fw: modification portes au niveau de la salle ducrocq",
+                "Approuvée",
+                "AIRE SUR LA LYS - SALLE Henri BERTON - ADAPT V3 - BC 2022-5017 SIRET 20006903700014",
+                "Subitems",
+                "CAMPAGNE Aménagement GARAGE OM /  MENUISERIES, PLÂTRERIE, PLAFONDS, ISOLATION ATTENTE BC"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        },
+        "chronometre": {
+          "name": "chronometre",
+          "rowCount": 356,
+          "columnCount": 1,
+          "columns": {
+            "Time Tracking": {
+              "name": "Time Tracking",
+              "dataTypes": {
+                "empty": 69,
+                "text": 287
+              },
+              "sampleValues": [
+                "ST OMER - CRD QUARTIER FOCH Cloison et portes",
+                "Started By",
+                "Julien LAMBOROT",
+                "Total",
+                "ST OMER - ECOLE de la Seconde Chance - ADAP"
+              ],
+              "nullCount": 69,
+              "minLength": 5,
+              "maxLength": 99,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "ST OMER - CRD QUARTIER FOCH Cloison et portes",
+                "Started By",
+                "Julien LAMBOROT",
+                "Total",
+                "ST OMER - ECOLE de la Seconde Chance - ADAP",
+                "AREA - BANQUE D'ACCUEIL - Compléments",
+                "ST OMER - Bourse du travail - ADAP V5 Quartier Foch",
+                "ST OMER - MISSION LOCALE - Reprise plafond tombé",
+                "ST OMER - ECOLE SECONDE CHANCE - Local Archive CF1H",
+                "AIRE - PPE - Départ feu plaques - ATTENTE BC REGULE",
+                "ST OMER MHD porte et vitrage et TIsanerie",
+                "Laurent WISSOCQ",
+                "FAUQUEMBERGUES RPE (Petite Enfance) - Modif cloisons et plafond",
+                "ST OMER LE BROCKUS - S.P.A. - Vitrage",
+                "AIRE SUR  LA LYS - TAGV Devis porte",
+                "LONGUENESSE - HOTEL COM - Porte Ext Alu",
+                "EPERLECQUES - MDS maison de santé - Cloison facture en doublon",
+                "THEROUANNE SALLE DE SPORT  - Ajout Laine de verre dans plafond - LDV 120",
+                "ARQUES BLENDECQUES - TAGV Gens du Voyage : Remplacement de 2 portes extérieures du bloc 7 handicapé",
+                "LONGUENESSE - TAGV Gens du Voyage : Remplacement de 2 portes extérieures et 2 intérieures"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 85594,
+      "lastModified": "2025-09-23T11:18:55.773Z"
+    },
+    "attached_assets/export-monday/CHANTIERS_1758620580.xlsx": {
+      "filename": "CHANTIERS_1758620580.xlsx",
+      "fullPath": "attached_assets/export-monday/CHANTIERS_1758620580.xlsx",
+      "category": "chantiers",
+      "sheetCount": 1,
+      "sheets": {
+        "chantiers 🏗️": {
+          "name": "chantiers 🏗️",
+          "rowCount": 1000,
+          "columnCount": 30,
+          "columns": {
+            "CHANTIERS 🏗️": {
+              "name": "CHANTIERS 🏗️",
+              "dataTypes": {
+                "text": 141,
+                "empty": 859
+              },
+              "sampleValues": [
+                "Emailed Éléments",
+                "Name",
+                "BERCK Reflet d’Ecume Refab Dormants 2/2",
+                "BERCK Reflet d’Ecume - Recommande Dormants",
+                "Sav boulogne 102 boitiers serrures livraison S11"
+              ],
+              "nullCount": 859,
+              "minLength": 3,
+              "maxLength": 94,
+              "patterns": [],
+              "primaryType": "empty",
+              "isLookupCandidate": true,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Emailed Éléments",
+                "Name",
+                "BERCK Reflet d’Ecume Refab Dormants 2/2",
+                "BERCK Reflet d’Ecume - Recommande Dormants",
+                "Sav boulogne 102 boitiers serrures livraison S11",
+                "BERCK Reflet d'Ecume - Refab 3",
+                "BERCK ECUME recommande 4",
+                "SAV",
+                "NOUVEAUX",
+                "CALAIS 19 - TOURNESOL GREUZE - DVA MEXT V4",
+                "ST MARTIN Maison Médicale : 4 Serrure box : poignée avec serrure",
+                "CHANTIERS En cours",
+                "BRAY DUNES - 17 Lgts - Flandres Opal Habitat",
+                "Subitems",
+                "SAINT OMER - Ancienne LA BANQUE DE FRANCE/ LOT 04 MENUISERIES EXTÉRIEURES ALU. V4 - avril 2022",
+                "DESVRES - Septalia M&C - Mext",
+                "THUMERIES 14 Lgts Collectifs - THOMAS & PIRON - Mext PVC",
+                "PERENCHIES - Les Acacias - PRIMA MEN EXT",
+                "LONGUENESSE - AUDOLYS - TS PLAN DE TRAVAIL",
+                "SAINT OMER - Ancienne BANQUE DE FRANCE/ LOT 09 PARQUET.avril 2022 (copy)"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 459660,
+      "lastModified": "2025-09-23T11:18:55.505Z"
+    },
+    "attached_assets/export-monday/CHANTIERS_Administratif_1758620613.xlsx": {
+      "filename": "CHANTIERS_Administratif_1758620613.xlsx",
+      "fullPath": "attached_assets/export-monday/CHANTIERS_Administratif_1758620613.xlsx",
+      "category": "chantiers",
+      "sheetCount": 1,
+      "sheets": {
+        "chantiers administrat": {
+          "name": "chantiers administrat",
+          "rowCount": 314,
+          "columnCount": 31,
+          "columns": {
+            "CHANTIERS Administratif": {
+              "name": "CHANTIERS Administratif",
+              "dataTypes": {
+                "text": 291,
+                "empty": 23
+              },
+              "sampleValues": [
+                "Emailed Éléments",
+                "Name",
+                "Nouveaux",
+                "Name",
+                "DESVRES - Septalia M&C - Mext"
+              ],
+              "nullCount": 23,
+              "minLength": 4,
+              "maxLength": 167,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Emailed Éléments",
+                "Name",
+                "Nouveaux",
+                "DESVRES - Septalia M&C - Mext",
+                "LONGUENESSE - Construction d'un plateau d'analyses - MEXT",
+                "MARCQ en BAROEUL - CER - B.SALIN",
+                "LONGUENESSE - RESIDENCE LES GENETS B9 - REMPLACEMENT BLOC PORTES",
+                "BERCK CAZIN MAS DUNE AU VENT - Remplacement 4 Portes",
+                "DUNKERQUE 31 - ANGELLIER - REALITE - 31 lgts - Mint V4",
+                "DUNKERQUE 31 - ANGELLIER - REALITE - 31 lgts - Mext v3",
+                "CAMPIGNEULE LES PETITES - ROUSSEL",
+                "LONGUENESSE - AUDOLYS - CUISINE.",
+                "DOUAI AD : Création Bureaux _ AD Douai (copy)",
+                "BERCK - CAZIN PERROCHAUD - BUREAU MAS",
+                "CALAIS - Mme DELCLOY - DVA",
+                "DOHEM MAIRIE Fourniture d'un store",
+                "DOHEM MAIRIE Fourniture de 3 stores",
+                "CAMBRAI AD : Réfection magasin CAMBRAI",
+                "LOMME - WESLEY LEBOUCQ - Porte d’entrée",
+                "DUNKERQUE - PHOENIX - TISSERIN - MINT V4"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 72778,
+      "lastModified": "2025-09-23T11:18:55.519Z"
+    },
+    "attached_assets/export-monday/Contacts_1758620760.xlsx": {
+      "filename": "Contacts_1758620760.xlsx",
+      "fullPath": "attached_assets/export-monday/Contacts_1758620760.xlsx",
+      "category": "contacts",
+      "sheetCount": 1,
+      "sheets": {
+        "contacts": {
+          "name": "contacts",
+          "rowCount": 9,
+          "columnCount": 9,
+          "columns": {
+            "Contacts": {
+              "name": "Contacts",
+              "dataTypes": {
+                "text": 7,
+                "empty": 2
+              },
+              "sampleValues": [
+                "Bienvenue sur votre tableau des contacts ! Ici, vous pouvez enregistrer et gérer tous vos contacts",
+                "Contacts",
+                "Nom",
+                "Laurent Fromentin",
+                "Emmanuel Branque"
+              ],
+              "nullCount": 2,
+              "minLength": 3,
+              "maxLength": 98,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Bienvenue sur votre tableau des contacts ! Ici, vous pouvez enregistrer et gérer tous vos contacts",
+                "Contacts",
+                "Nom",
+                "Laurent Fromentin",
+                "Emmanuel Branque",
+                "Aïcha Langot",
+                "Eric Rodin"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 15862,
+      "lastModified": "2025-09-23T11:18:55.736Z"
+    },
+    "attached_assets/export-monday/Copie_de_CHANTIERS_PROJET_1758620682.xlsx": {
+      "filename": "Copie_de_CHANTIERS_PROJET_1758620682.xlsx",
+      "fullPath": "attached_assets/export-monday/Copie_de_CHANTIERS_PROJET_1758620682.xlsx",
+      "category": "chantiers",
+      "sheetCount": 1,
+      "sheets": {
+        "copie de chantiers 🏗️": {
+          "name": "copie de chantiers 🏗️",
+          "rowCount": 1000,
+          "columnCount": 28,
+          "columns": {
+            "Copie de CHANTIERS 🏗️ PROJET": {
+              "name": "Copie de CHANTIERS 🏗️ PROJET",
+              "dataTypes": {
+                "text": 177,
+                "empty": 823
+              },
+              "sampleValues": [
+                "Emailed Éléments",
+                "Name",
+                "CAMIER Casse verre  devis de LE KAP VERRE COTE D'OPALE",
+                "- HAZEBROUCK - TOLESPORTES ABIMEES- pour discution NOVEBAT",
+                "Sav boulogne 102 boitiers serrures livraison S11"
+              ],
+              "nullCount": 823,
+              "minLength": 3,
+              "maxLength": 135,
+              "patterns": [],
+              "primaryType": "empty",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Emailed Éléments",
+                "Name",
+                "CAMIER Casse verre  devis de LE KAP VERRE COTE D'OPALE",
+                "- HAZEBROUCK - TOLESPORTES ABIMEES- pour discution NOVEBAT",
+                "Sav boulogne 102 boitiers serrures livraison S11",
+                "Berck reflet d’Ecume - MEXT Recommmande Erreur JLM",
+                "FW: LE CROTOY - REUNION DU JEUDI 27/02",
+                "FW: TAGV ARQUES-BLENDECQUES",
+                "Fwd: AREA - Aire sur la Lys",
+                "TETEGHEM vitrage piscine Re: Envoi devis de LE KAP VERRE COTE D'OPALE",
+                "FW: BERCK OXYGENE TMA Appt 05 BAT A",
+                "FW: CCFL - MSP Haverskerque SAV PA",
+                "SAV Mairie de Wizernes - Fenêtre qui ne s'ouvre plus",
+                "SAV",
+                "ECOLE SAINT LOUIS - RECOLLER BAVETTE R+1",
+                "RINXENT BLANCHE ALBION SAV",
+                "LAVENTIE - HANNOTTE réserves",
+                "HARDELOT LORNIER -Décaissé GO Puis panneaux plus haut ?",
+                "CLETY - SCOTTE VR ne fonctionne pas",
+                "NOUVEAUX"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 369704,
+      "lastModified": "2025-09-23T11:18:55.650Z"
+    },
+    "attached_assets/export-monday/DIRECTION_1758620650.xlsx": {
+      "filename": "DIRECTION_1758620650.xlsx",
+      "fullPath": "attached_assets/export-monday/DIRECTION_1758620650.xlsx",
+      "category": "direction",
+      "sheetCount": 1,
+      "sheets": {
+        "direction": {
+          "name": "direction",
+          "rowCount": 122,
+          "columnCount": 8,
+          "columns": {
+            "DIRECTION": {
+              "name": "DIRECTION",
+              "dataTypes": {
+                "text": 108,
+                "empty": 14
+              },
+              "sampleValues": [
+                "Flavie Julien",
+                "Emailed Éléments",
+                "Name",
+                "FW: Devis - Projet JLM MENUISERIE SAS LONGUENESSE",
+                "FW: Ergonomie et Confort au Bureau pour 2025"
+              ],
+              "nullCount": 14,
+              "minLength": 2,
+              "maxLength": 131,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Flavie Julien",
+                "Emailed Éléments",
+                "Name",
+                "FW: Devis - Projet JLM MENUISERIE SAS LONGUENESSE",
+                "FW: Ergonomie et Confort au Bureau pour 2025",
+                "MAIL SAV créé",
+                "FW: [UMB-FFB] Invitation CA 5 et 6 décembre 2024 à Paris",
+                "Fwd: offre de prix Raboteuse",
+                "FW: Participez aux Trophées Employeurs : démarquez-vous - Inscrivez votre entreprise jusqu'au 27 septembre",
+                "FW: Optimisez votre espace de stockage",
+                "FW: Relance : RDV de la Transition Ecologique 12.09.24 9h - Blendecques",
+                "FW: RELANCE, Invitation - Visite d'Usine Méo GMB - 24 et 25 Octobre 2024",
+                "FW: IFRB 59/62 : réservez dès maintenant vos formations pour la rentrée",
+                "Fwd: Invitation Soirée Couleurs 2024",
+                "Faire cartographie prenantes RSE",
+                "REP Valo Déchets COVANORD",
+                "Fwd: COTATION BANQUE DE FRANCE - A compléter via votre Espace Dirigeant",
+                "Qualité : fiche auto-contrôle",
+                "FW: devis tables + chaises et visuels",
+                "FFB VALOBAT à voir pou reprise des châssis gratuitement"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 21814,
+      "lastModified": "2025-09-23T11:18:55.553Z"
+    },
+    "attached_assets/export-monday/ECQUES_BUREAUX_JLM_1758620829.xlsx": {
+      "filename": "ECQUES_BUREAUX_JLM_1758620829.xlsx",
+      "fullPath": "attached_assets/export-monday/ECQUES_BUREAUX_JLM_1758620829.xlsx",
+      "category": "general",
+      "sheetCount": 1,
+      "sheets": {
+        "ecques bureaux jlm": {
+          "name": "ecques bureaux jlm",
+          "rowCount": 18,
+          "columnCount": 16,
+          "columns": {
+            "ECQUES BUREAUX JLM": {
+              "name": "ECQUES BUREAUX JLM",
+              "dataTypes": {
+                "text": 11,
+                "empty": 7
+              },
+              "sampleValues": [
+                "Planning",
+                "Name",
+                "MEXT ALU",
+                "Subitems",
+                "Finition réglages"
+              ],
+              "nullCount": 7,
+              "minLength": 4,
+              "maxLength": 17,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Planning",
+                "Name",
+                "MEXT ALU",
+                "Subitems",
+                "Finition réglages",
+                "Task 3",
+                "Execution",
+                "Launch"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16446,
+      "lastModified": "2025-09-23T11:18:55.312Z"
+    },
+    "attached_assets/export-monday/Formation_Bureaux_1758620863.xlsx": {
+      "filename": "Formation_Bureaux_1758620863.xlsx",
+      "fullPath": "attached_assets/export-monday/Formation_Bureaux_1758620863.xlsx",
+      "category": "formation",
+      "sheetCount": 1,
+      "sheets": {
+        "formation bureaux": {
+          "name": "formation bureaux",
+          "rowCount": 15,
+          "columnCount": 7,
+          "columns": {
+            "Formation Bureaux": {
+              "name": "Formation Bureaux",
+              "dataTypes": {
+                "text": 12,
+                "empty": 3
+              },
+              "sampleValues": [
+                "BUREAU",
+                "Name",
+                "Sylvie BAUDART",
+                "Ludivine COMBAZ",
+                "Flavie"
+              ],
+              "nullCount": 3,
+              "minLength": 4,
+              "maxLength": 20,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "BUREAU",
+                "Name",
+                "Sylvie BAUDART",
+                "Ludivine COMBAZ",
+                "Flavie",
+                "Julien",
+                "Nicolas LOVERGNE",
+                "Julien DUCROCQ",
+                "SORTI",
+                "Stéphane VANBALEGHEM",
+                "Laurent WISSOCQ"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 15997,
+      "lastModified": "2025-09-23T11:18:55.506Z"
+    },
+    "attached_assets/export-monday/Gestion salariés/Formation_Ouvriers_1758620716.xlsx": {
+      "filename": "Formation_Ouvriers_1758620716.xlsx",
+      "fullPath": "attached_assets/export-monday/Gestion salariés/Formation_Ouvriers_1758620716.xlsx",
+      "category": "personnel",
+      "sheetCount": 1,
+      "sheets": {
+        "formation ouvriers": {
+          "name": "formation ouvriers",
+          "rowCount": 41,
+          "columnCount": 17,
+          "columns": {
+            "Formation Ouvriers": {
+              "name": "Formation Ouvriers",
+              "dataTypes": {
+                "text": 38,
+                "empty": 3
+              },
+              "sampleValues": [
+                "Plan de formation salarié",
+                "Name",
+                "TRISTRAM Arnaud",
+                "ROSE Bryan",
+                "POURCHEL Franck"
+              ],
+              "nullCount": 3,
+              "minLength": 4,
+              "maxLength": 25,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Plan de formation salarié",
+                "Name",
+                "TRISTRAM Arnaud",
+                "ROSE Bryan",
+                "POURCHEL Franck",
+                "WIDEHEM J-Charles",
+                "LEFEBVRE José",
+                "DUMETZ Mathis",
+                "MEISSNER Maxence",
+                "COFFIN Nicolas",
+                "RODRIGUEZ Antoine",
+                "LEMAIRE Maxime",
+                "ANSART Frédéric",
+                "VEXTARD Dimitri",
+                "BAUVAIS Julien",
+                "PONCIN Thomas",
+                "VOLLEZ Julien",
+                "POTIER Mathys",
+                "ARGENTIN Michel",
+                "HAUTECOEUR Sébastien"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 18751,
+      "lastModified": "2025-09-23T11:18:55.728Z"
+    },
+    "attached_assets/export-monday/Gestion salariés/Outillage_MAKITA_1758620723.xlsx": {
+      "filename": "Outillage_MAKITA_1758620723.xlsx",
+      "fullPath": "attached_assets/export-monday/Gestion salariés/Outillage_MAKITA_1758620723.xlsx",
+      "category": "personnel",
+      "sheetCount": 1,
+      "sheets": {
+        "outillage makita 🛠️": {
+          "name": "outillage makita 🛠️",
+          "rowCount": 39,
+          "columnCount": 21,
+          "columns": {
+            "Outillage MAKITA 🛠️": {
+              "name": "Outillage MAKITA 🛠️",
+              "dataTypes": {
+                "text": 35,
+                "empty": 4
+              },
+              "sampleValues": [
+                "Inventaire 04/07/23",
+                "Name",
+                "COFFIN  Nicolas",
+                "Subitems",
+                "COFFIN CAMION"
+              ],
+              "nullCount": 4,
+              "minLength": 4,
+              "maxLength": 21,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Inventaire 04/07/23",
+                "Name",
+                "COFFIN  Nicolas",
+                "Subitems",
+                "COFFIN CAMION",
+                "COTTE Quentin",
+                "DUMETZ Mathis",
+                "FOURNIER Mattthieu",
+                "HOCHART Rémy",
+                "LEFEBVRE José",
+                "MEISSNER Maxence",
+                "POURCHEL Franck",
+                "ROSE Bryan",
+                "TRISTRAM Arnaud",
+                "TRISTRAM CAMION",
+                "VEXTARD Dimitri",
+                "RODRIGUEZ Camion",
+                "WIDEHEN Jean-Charles",
+                "VEXTARD Camion",
+                "RODRIGUEZ Antoine"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 20927,
+      "lastModified": "2025-09-23T11:18:55.733Z"
+    },
+    "attached_assets/export-monday/Gestion salariés/Pi_ces_personnel_1758620698.xlsx": {
+      "filename": "Pi_ces_personnel_1758620698.xlsx",
+      "fullPath": "attached_assets/export-monday/Gestion salariés/Pi_ces_personnel_1758620698.xlsx",
+      "category": "personnel",
+      "sheetCount": 1,
+      "sheets": {
+        "pièces personnel": {
+          "name": "pièces personnel",
+          "rowCount": 43,
+          "columnCount": 12,
+          "columns": {
+            "Pièces personnel": {
+              "name": "Pièces personnel",
+              "dataTypes": {
+                "text": 42,
+                "empty": 1
+              },
+              "sampleValues": [
+                "SALARIES EN POSTE dossier administratif",
+                "Name",
+                "José LEFEBVRE",
+                "Arnaud TRISTRAM",
+                "Maxence MEISSNER"
+              ],
+              "nullCount": 1,
+              "minLength": 4,
+              "maxLength": 39,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "SALARIES EN POSTE dossier administratif",
+                "Name",
+                "José LEFEBVRE",
+                "Arnaud TRISTRAM",
+                "Maxence MEISSNER",
+                "Nicolas COFFIN",
+                "J-Charles WIDEHEM",
+                "Franck POURCHEL",
+                "Bryan ROSE",
+                "Mathis DUMETZ",
+                "Dimitri VEXTARD",
+                "Maxime LEMAIRE",
+                "Antoine RODRIGUEZ",
+                "Frédéric ANSART",
+                "Julien BAUVAIS",
+                "Thomas PONCIN",
+                "Michel ARGENTIN",
+                "Julien VOLLEZ",
+                "Sébastien HAUTECOEUR",
+                "FLAHAUT Cédric"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 18308,
+      "lastModified": "2025-09-23T11:18:55.723Z"
+    },
+    "attached_assets/export-monday/Gestion salariés/_Personnel_bureau_1758620710.xlsx": {
+      "filename": "_Personnel_bureau_1758620710.xlsx",
+      "fullPath": "attached_assets/export-monday/Gestion salariés/_Personnel_bureau_1758620710.xlsx",
+      "category": "personnel",
+      "sheetCount": 1,
+      "sheets": {
+        "👩‍💻 personnel bureau": {
+          "name": "👩‍💻 personnel bureau",
+          "rowCount": 17,
+          "columnCount": 27,
+          "columns": {
+            "👩‍💻 Personnel bureau": {
+              "name": "👩‍💻 Personnel bureau",
+              "dataTypes": {
+                "text": 13,
+                "empty": 4
+              },
+              "sampleValues": [
+                "21-10-01 Liste du personnel et TH",
+                "Name",
+                "BAUDART Sylvie",
+                "COMBAZ Ludivine",
+                "WISSOCQ Laurent"
+              ],
+              "nullCount": 4,
+              "minLength": 4,
+              "maxLength": 33,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "21-10-01 Liste du personnel et TH",
+                "Name",
+                "BAUDART Sylvie",
+                "COMBAZ Ludivine",
+                "WISSOCQ Laurent",
+                "LOVERGNE Nicolas",
+                "DUCROCQ Julien",
+                "CASTHELAIN France",
+                "Sortis",
+                "VANBALEGHEM Stéphane",
+                "Titre du groupe"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 18075,
+      "lastModified": "2025-09-23T11:18:55.730Z"
+    },
+    "attached_assets/export-monday/Gestion salariés/_Personnel_chantier_1758620704.xlsx": {
+      "filename": "_Personnel_chantier_1758620704.xlsx",
+      "fullPath": "attached_assets/export-monday/Gestion salariés/_Personnel_chantier_1758620704.xlsx",
+      "category": "personnel",
+      "sheetCount": 1,
+      "sheets": {
+        "👷‍♂️ personnel chanti": {
+          "name": "👷‍♂️ personnel chanti",
+          "rowCount": 47,
+          "columnCount": 24,
+          "columns": {
+            "👷‍♂️ Personnel chantier": {
+              "name": "👷‍♂️ Personnel chantier",
+              "dataTypes": {
+                "text": 43,
+                "empty": 4
+              },
+              "sampleValues": [
+                "21-10-01 Liste du personnel et TH",
+                "Name",
+                "COFFIN  Nicolas",
+                "DUMETZ Mathis",
+                "LEFEBVRE José"
+              ],
+              "nullCount": 4,
+              "minLength": 4,
+              "maxLength": 33,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "21-10-01 Liste du personnel et TH",
+                "Name",
+                "COFFIN  Nicolas",
+                "DUMETZ Mathis",
+                "LEFEBVRE José",
+                "LEMAIRE Maxime",
+                "MEISSNER Maxence",
+                "POURCHEL Franck",
+                "RODRIGUEZ Antoine",
+                "ROSE Bryan",
+                "TRISTRAM Arnaud",
+                "VEXTARD Dimitri",
+                "WIDEHEN Jean-Charles",
+                "ANSART Frédéric",
+                "BAUVAIS Julien",
+                "PONCIN Thomas",
+                "ARGENTIN Michel",
+                "VOLLEZ Julien",
+                "HAUTECOEUR Sébastien",
+                "FLAHAUT Cédric"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 23860,
+      "lastModified": "2025-09-23T11:18:55.726Z"
+    },
+    "attached_assets/export-monday/Heures_Insertion_1758620671.xlsx": {
+      "filename": "Heures_Insertion_1758620671.xlsx",
+      "fullPath": "attached_assets/export-monday/Heures_Insertion_1758620671.xlsx",
+      "category": "general",
+      "sheetCount": 1,
+      "sheets": {
+        "heures insertion": {
+          "name": "heures insertion",
+          "rowCount": 26,
+          "columnCount": 9,
+          "columns": {
+            "Heures Insertion": {
+              "name": "Heures Insertion",
+              "dataTypes": {
+                "text": 21,
+                "empty": 5
+              },
+              "sampleValues": [
+                "Insertion en cours",
+                "Name",
+                "ETAPLES GRAND LARGE",
+                "BETHUNE",
+                "DUNKERQUE BANC VERT"
+              ],
+              "nullCount": 5,
+              "minLength": 4,
+              "maxLength": 22,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Insertion en cours",
+                "Name",
+                "ETAPLES GRAND LARGE",
+                "BETHUNE",
+                "DUNKERQUE BANC VERT",
+                "BAVINCOVE RENESCURE",
+                "HOULLE EPERLECQUES",
+                "DESVRES NORD FACADE",
+                "LONGUENESSE 85",
+                "Insertion terminée",
+                "DUNKERQUE ADOMA",
+                "LOON PLAGE",
+                "ESTREE BLANCHE",
+                "DESVRES Gendarmerie",
+                "BOURTHES",
+                "FRETHUN",
+                "Inclusion",
+                "DUNKERQUE 31 ANGELIERS",
+                "Ligne 5"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16674,
+      "lastModified": "2025-09-23T11:18:55.762Z"
+    },
+    "attached_assets/export-monday/JLM_CHANTIERS_1758620597.xlsx": {
+      "filename": "JLM_CHANTIERS_1758620597.xlsx",
+      "fullPath": "attached_assets/export-monday/JLM_CHANTIERS_1758620597.xlsx",
+      "category": "chantiers",
+      "sheetCount": 1,
+      "sheets": {
+        "jlm chantiers": {
+          "name": "jlm chantiers",
+          "rowCount": 10,
+          "columnCount": 20,
+          "columns": {
+            "JLM CHANTIERS": {
+              "name": "JLM CHANTIERS",
+              "dataTypes": {
+                "text": 9,
+                "empty": 1
+              },
+              "sampleValues": [
+                "Projets",
+                "Nom",
+                "ECQUES BUREAUX JLM",
+                "BETHUNE BUDAPEST",
+                "PÉRENCHIES - Charpente Brisis"
+              ],
+              "nullCount": 1,
+              "minLength": 3,
+              "maxLength": 42,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Projets",
+                "Nom",
+                "ECQUES BUREAUX JLM",
+                "BETHUNE BUDAPEST",
+                "PÉRENCHIES - Charpente Brisis",
+                "PERENCHIES 10+14 - Portes de Hall",
+                "BOULOGNE 102 - GCC - 102 lgts - Serrurerie",
+                "BOULOGNE 102 - GCC - 102 lgts - Mint",
+                "TEST PROJET Joli"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16913,
+      "lastModified": "2025-09-23T11:18:55.760Z"
+    },
+    "attached_assets/export-monday/PERENCHIES_10_14_-_Portes_de_Hall_1758620845.xlsx": {
+      "filename": "PERENCHIES_10_14_-_Portes_de_Hall_1758620845.xlsx",
+      "fullPath": "attached_assets/export-monday/PERENCHIES_10_14_-_Portes_de_Hall_1758620845.xlsx",
+      "category": "general",
+      "sheetCount": 1,
+      "sheets": {
+        "perenchies 10+14 - po": {
+          "name": "perenchies 10+14 - po",
+          "rowCount": 12,
+          "columnCount": 13,
+          "columns": {
+            "PERENCHIES 10+14 - Portes de Hall": {
+              "name": "PERENCHIES 10+14 - Portes de Hall",
+              "dataTypes": {
+                "text": 9,
+                "empty": 3
+              },
+              "sampleValues": [
+                "Planning",
+                "Name",
+                "Task 1",
+                "Task 2",
+                "Task 3"
+              ],
+              "nullCount": 3,
+              "minLength": 4,
+              "maxLength": 9,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Planning",
+                "Name",
+                "Task 1",
+                "Task 2",
+                "Task 3",
+                "Execution",
+                "Launch"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16009,
+      "lastModified": "2025-09-23T11:18:55.543Z"
+    },
+    "attached_assets/export-monday/P_RENCHIES_-_Charpente_Brisis_1758620839.xlsx": {
+      "filename": "P_RENCHIES_-_Charpente_Brisis_1758620839.xlsx",
+      "fullPath": "attached_assets/export-monday/P_RENCHIES_-_Charpente_Brisis_1758620839.xlsx",
+      "category": "general",
+      "sheetCount": 1,
+      "sheets": {
+        "pérenchies - charpent": {
+          "name": "pérenchies - charpent",
+          "rowCount": 12,
+          "columnCount": 13,
+          "columns": {
+            "PÉRENCHIES - Charpente Brisis": {
+              "name": "PÉRENCHIES - Charpente Brisis",
+              "dataTypes": {
+                "text": 9,
+                "empty": 3
+              },
+              "sampleValues": [
+                "Planning",
+                "Name",
+                "Task 1",
+                "Task 2",
+                "Task 3"
+              ],
+              "nullCount": 3,
+              "minLength": 4,
+              "maxLength": 9,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Planning",
+                "Name",
+                "Task 1",
+                "Task 2",
+                "Task 3",
+                "Execution",
+                "Launch"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16010,
+      "lastModified": "2025-09-23T11:18:55.322Z"
+    },
+    "attached_assets/export-monday/Planning chantier/BOULOGNE_1758620773.xlsx": {
+      "filename": "BOULOGNE_1758620773.xlsx",
+      "fullPath": "attached_assets/export-monday/Planning chantier/BOULOGNE_1758620773.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "boulogne": {
+          "name": "boulogne",
+          "rowCount": 12,
+          "columnCount": 5,
+          "columns": {
+            "BOULOGNE": {
+              "name": "BOULOGNE",
+              "dataTypes": {
+                "text": 9,
+                "empty": 3
+              },
+              "sampleValues": [
+                "RDV",
+                "Name",
+                "Ligne 1",
+                "Ligne 2",
+                "Ligne 3"
+              ],
+              "nullCount": 3,
+              "minLength": 3,
+              "maxLength": 15,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "RDV",
+                "Name",
+                "Ligne 1",
+                "Ligne 2",
+                "Ligne 3",
+                "Titre du groupe",
+                "Ligne 4",
+                "Ligne 5"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 15441,
+      "lastModified": "2025-09-23T11:18:55.717Z"
+    },
+    "attached_assets/export-monday/Planning chantier/Boulogne_1758620768.xlsx": {
+      "filename": "Boulogne_1758620768.xlsx",
+      "fullPath": "attached_assets/export-monday/Planning chantier/Boulogne_1758620768.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "boulogne": {
+          "name": "boulogne",
+          "rowCount": 214,
+          "columnCount": 24,
+          "columns": {
+            "Boulogne": {
+              "name": "Boulogne",
+              "dataTypes": {
+                "text": 210,
+                "empty": 4
+              },
+              "sampleValues": [
+                "Classeur1",
+                "Name",
+                "Appt 74",
+                "Appt 80",
+                "Appt 86"
+              ],
+              "nullCount": 4,
+              "minLength": 4,
+              "maxLength": 15,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Classeur1",
+                "Name",
+                "Appt 74",
+                "Appt 80",
+                "Appt 86",
+                "Appt 92",
+                "Appt 98",
+                "Appt 73",
+                "Appt 79",
+                "Appt 85",
+                "Appt 91",
+                "Appt 97",
+                "Appt 78",
+                "Appt 84",
+                "Appt 90",
+                "Appt 96",
+                "Appt 102",
+                "Appt 77",
+                "Appt 83",
+                "Appt 89"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 37858,
+      "lastModified": "2025-09-23T11:18:55.715Z"
+    },
+    "attached_assets/export-monday/Planning chantier/CAMPAGNE_1758620806.xlsx": {
+      "filename": "CAMPAGNE_1758620806.xlsx",
+      "fullPath": "attached_assets/export-monday/Planning chantier/CAMPAGNE_1758620806.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "campagne": {
+          "name": "campagne",
+          "rowCount": 31,
+          "columnCount": 14,
+          "columns": {
+            "CAMPAGNE": {
+              "name": "CAMPAGNE",
+              "dataTypes": {
+                "text": 25,
+                "empty": 6
+              },
+              "sampleValues": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "BARDAGE",
+                "Nom",
+                "Bardage Zinc",
+                "Bardage Bois Ext"
+              ],
+              "nullCount": 6,
+              "minLength": 3,
+              "maxLength": 194,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "BARDAGE",
+                "Nom",
+                "Bardage Zinc",
+                "Bardage Bois Ext",
+                "Bardage Int Lattes M1",
+                "Enduit Ext",
+                "Fin",
+                "MENUISERIE INTERIEURE",
+                "Portes Intérieures",
+                "Stores",
+                "Placards SOGAL",
+                "Finitions : Tablette, moulures",
+                "Escalier escamotable",
+                "Isolations Parois Rampants",
+                "Isolations Parois Verticales",
+                "Habillage Parois Rampants",
+                "Habillage Parois Verticales",
+                "Lancement",
+                "Tâche 7"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 17462,
+      "lastModified": "2025-09-23T11:18:55.688Z"
+    },
+    "attached_assets/export-monday/Planning chantier/FRUGES_1758620811.xlsx": {
+      "filename": "FRUGES_1758620811.xlsx",
+      "fullPath": "attached_assets/export-monday/Planning chantier/FRUGES_1758620811.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "fruges": {
+          "name": "fruges",
+          "rowCount": 34,
+          "columnCount": 14,
+          "columns": {
+            "FRUGES": {
+              "name": "FRUGES",
+              "dataTypes": {
+                "text": 24,
+                "empty": 10
+              },
+              "sampleValues": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "carea",
+                "Nom",
+                "Ossature",
+                "Livraison"
+              ],
+              "nullCount": 10,
+              "minLength": 3,
+              "maxLength": 194,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "carea",
+                "Nom",
+                "Ossature",
+                "Livraison",
+                "Pose",
+                "Cage escalier gauche",
+                "Echafaudage",
+                "pose panneaux",
+                "Cage escalier droit",
+                "Pose panneaux",
+                "Zone cour",
+                "Ossature-isolation",
+                "FIN"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 17243,
+      "lastModified": "2025-09-23T11:18:55.722Z"
+    },
+    "attached_assets/export-monday/Planning chantier/FRUGES_TS_1758620823.xlsx": {
+      "filename": "FRUGES_TS_1758620823.xlsx",
+      "fullPath": "attached_assets/export-monday/Planning chantier/FRUGES_TS_1758620823.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "fruges ts": {
+          "name": "fruges ts",
+          "rowCount": 19,
+          "columnCount": 9,
+          "columns": {
+            "FRUGES TS": {
+              "name": "FRUGES TS",
+              "dataTypes": {
+                "text": 14,
+                "empty": 5
+              },
+              "sampleValues": [
+                "SOUS FACE PREAU ALU",
+                "Name",
+                "Ossature",
+                "Isolation",
+                "Pose"
+              ],
+              "nullCount": 5,
+              "minLength": 4,
+              "maxLength": 40,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "SOUS FACE PREAU ALU",
+                "Name",
+                "Ossature",
+                "Isolation",
+                "Pose",
+                "FAÇADE 9 FIN",
+                "POSE DU BARDAGE FUNDERMAX",
+                "EBRASEMENTS ALU",
+                "FACADE PREAU",
+                "OSSATURE",
+                "POSE BARDAGE",
+                "ALUMINIUM DE FINITION 5BAVETTE ENGRAVEE)"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16075,
+      "lastModified": "2025-09-23T11:18:55.720Z"
+    },
+    "attached_assets/export-monday/Planning chantier/PLANNING_SYMPHONIE_1758620816.xlsx": {
+      "filename": "PLANNING_SYMPHONIE_1758620816.xlsx",
+      "fullPath": "attached_assets/export-monday/Planning chantier/PLANNING_SYMPHONIE_1758620816.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "planning symphonie": {
+          "name": "planning symphonie",
+          "rowCount": 22,
+          "columnCount": 12,
+          "columns": {
+            "PLANNING SYMPHONIE": {
+              "name": "PLANNING SYMPHONIE",
+              "dataTypes": {
+                "text": 17,
+                "empty": 5
+              },
+              "sampleValues": [
+                "OSSATURE",
+                "Name",
+                "ossature Appliques",
+                "BARDAGE",
+                "Name"
+              ],
+              "nullCount": 5,
+              "minLength": 4,
+              "maxLength": 34,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "OSSATURE",
+                "Name",
+                "ossature Appliques",
+                "BARDAGE",
+                "bardage appliques",
+                "bardage façade Nord",
+                "bardage facade Sud",
+                "badage pignon Est",
+                "Bardage pignons Ouest",
+                "Bardage Hall A",
+                "bardage Hall B",
+                "Bardage Tour 1à  4 Façades Sud",
+                "FINITIONS ALUMINIUM",
+                "Habillage des encadrements de baie",
+                "diverses finitions"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16461,
+      "lastModified": "2025-09-23T11:18:55.684Z"
+    },
+    "attached_assets/export-monday/Planning chantier/Planning_BETHUNE_1758620799.xlsx": {
+      "filename": "Planning_BETHUNE_1758620799.xlsx",
+      "fullPath": "attached_assets/export-monday/Planning chantier/Planning_BETHUNE_1758620799.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "planning bethune": {
+          "name": "planning bethune",
+          "rowCount": 27,
+          "columnCount": 12,
+          "columns": {
+            "Planning BETHUNE": {
+              "name": "Planning BETHUNE",
+              "dataTypes": {
+                "text": 23,
+                "empty": 4
+              },
+              "sampleValues": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "Préparation chantier",
+                "Nom",
+                "Dossier technique",
+                "Validation dossier technique"
+              ],
+              "nullCount": 4,
+              "minLength": 3,
+              "maxLength": 194,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "Préparation chantier",
+                "Nom",
+                "Dossier technique",
+                "Validation dossier technique",
+                "Commande et fabrication matériaux",
+                "Logement témoin",
+                "Validation du logement témoin",
+                "Exécution",
+                "Logement 309",
+                "Logement 297",
+                "Logement 287",
+                "Logement 281",
+                "Logement 275",
+                "Logement 267",
+                "Logement 261",
+                "Logement 255",
+                "Logement 249",
+                "Logement 243",
+                "Logement 229"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16818,
+      "lastModified": "2025-09-23T11:18:55.692Z"
+    },
+    "attached_assets/export-monday/Planning chantier/Planning_ETAPLES_GRAND_LARGE_men_ext_1758620793.xlsx": {
+      "filename": "Planning_ETAPLES_GRAND_LARGE_men_ext_1758620793.xlsx",
+      "fullPath": "attached_assets/export-monday/Planning chantier/Planning_ETAPLES_GRAND_LARGE_men_ext_1758620793.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "planning etaples gran": {
+          "name": "planning etaples gran",
+          "rowCount": 19,
+          "columnCount": 12,
+          "columns": {
+            "Planning ETAPLES GRAND LARGE men ext": {
+              "name": "Planning ETAPLES GRAND LARGE men ext",
+              "dataTypes": {
+                "text": 15,
+                "empty": 4
+              },
+              "sampleValues": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "Préparation chantier",
+                "Nom",
+                "Ajouter tâche",
+                "Dossier technique"
+              ],
+              "nullCount": 4,
+              "minLength": 3,
+              "maxLength": 194,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "Préparation chantier",
+                "Nom",
+                "Ajouter tâche",
+                "Dossier technique",
+                "Validation dossier technique",
+                "Commande et fabrication matériaux",
+                "Logement témoin",
+                "Validation du logement témoin",
+                "Exécution",
+                "Entrée 92",
+                "Entrée 72",
+                "Entrée 48",
+                "Entrée 24"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16376,
+      "lastModified": "2025-09-23T11:18:55.687Z"
+    },
+    "attached_assets/export-monday/Planning chantier/Planning_ETAPLES_GRAND_LARGE_men_int_1758620787.xlsx": {
+      "filename": "Planning_ETAPLES_GRAND_LARGE_men_int_1758620787.xlsx",
+      "fullPath": "attached_assets/export-monday/Planning chantier/Planning_ETAPLES_GRAND_LARGE_men_int_1758620787.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "planning etaples gran": {
+          "name": "planning etaples gran",
+          "rowCount": 18,
+          "columnCount": 12,
+          "columns": {
+            "Planning ETAPLES GRAND LARGE men int": {
+              "name": "Planning ETAPLES GRAND LARGE men int",
+              "dataTypes": {
+                "text": 14,
+                "empty": 4
+              },
+              "sampleValues": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "Préparation chantier",
+                "Nom",
+                "Dossier technique",
+                "Validation dossier technique"
+              ],
+              "nullCount": 4,
+              "minLength": 3,
+              "maxLength": 194,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "Préparation chantier",
+                "Nom",
+                "Dossier technique",
+                "Validation dossier technique",
+                "Commande et fabrication matériaux",
+                "Logement témoin",
+                "Validation du logement témoin",
+                "Exécution",
+                "Entrée 92",
+                "Entrée 72",
+                "Entrée 48",
+                "Entrée 24"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16317,
+      "lastModified": "2025-09-23T11:18:55.696Z"
+    },
+    "attached_assets/export-monday/Planning chantier/Planning_LONGUENESSE_85_1758620780.xlsx": {
+      "filename": "Planning_LONGUENESSE_85_1758620780.xlsx",
+      "fullPath": "attached_assets/export-monday/Planning chantier/Planning_LONGUENESSE_85_1758620780.xlsx",
+      "category": "planning",
+      "sheetCount": 1,
+      "sheets": {
+        "planning longuenesse ": {
+          "name": "planning longuenesse ",
+          "rowCount": 20,
+          "columnCount": 13,
+          "columns": {
+            "Planning LONGUENESSE 85": {
+              "name": "Planning LONGUENESSE 85",
+              "dataTypes": {
+                "text": 16,
+                "empty": 4
+              },
+              "sampleValues": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "Préparation chantier",
+                "Nom",
+                "Dossier technique",
+                "Validation dossier technique"
+              ],
+              "nullCount": 4,
+              "minLength": 3,
+              "maxLength": 194,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+                "Préparation chantier",
+                "Nom",
+                "Dossier technique",
+                "Validation dossier technique",
+                "Commande et fabrication matériaux",
+                "Logement témoin",
+                "Validation du logement témoin",
+                "Exécution",
+                "Bat B-C Mext",
+                "Bat A Mext",
+                "Bat B-C Mint",
+                "Bat A Mint",
+                "Bat B-C - Réglages, finitions",
+                "Bat A - Réglages, finitions"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16548,
+      "lastModified": "2025-09-23T11:18:55.691Z"
+    },
+    "attached_assets/export-monday/SOUS-TRAITANTS_1758620632.xlsx": {
+      "filename": "SOUS-TRAITANTS_1758620632.xlsx",
+      "fullPath": "attached_assets/export-monday/SOUS-TRAITANTS_1758620632.xlsx",
+      "category": "general",
+      "sheetCount": 1,
+      "sheets": {
+        "sous-traitants": {
+          "name": "sous-traitants",
+          "rowCount": 331,
+          "columnCount": 16,
+          "columns": {
+            "SOUS-TRAITANTS": {
+              "name": "SOUS-TRAITANTS",
+              "dataTypes": {
+                "text": 153,
+                "empty": 178
+              },
+              "sampleValues": [
+                "En cours",
+                "Name",
+                "ECQUES - DELALLEAU - Escalier",
+                "Subitems",
+                "LE PARCQ - MULTIWAL - Mur mobile"
+              ],
+              "nullCount": 178,
+              "minLength": 4,
+              "maxLength": 167,
+              "patterns": [],
+              "primaryType": "empty",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "En cours",
+                "Name",
+                "ECQUES - DELALLEAU - Escalier",
+                "Subitems",
+                "LE PARCQ - MULTIWAL - Mur mobile",
+                "DUNKERQUE Angellier - Etude - 33Ther",
+                "ARQUES H2/H3 - SATT Concept Confort",
+                "Ajouter élément",
+                "ARQUES H4 - SATT Concept Confort PAIEMENT PAR NEXITY 11660 ET 10000 E JLM",
+                "BAILLEUL - Escaliers - LAVOGEZ",
+                "BERCK - BELLE EUGENIE - HOCHART FERRONNERIE",
+                "BERCK - OXYGENE - Etude - 33Ther",
+                "BERCK - OXYGENE - SATT",
+                "BERCK OXYGENE - AMS 3500 e déclaré NEXITY 1500 E JLM MUR RIDEAU BAT A",
+                "BERCK OXYGENE - AMS 5000 E JLM MUR RIDEAU BAT C 100% JLM",
+                "BERCK - SIAM - Electricité",
+                "BOURTHES - Plans  - Technibois",
+                "HAZEBROUCK GARE - Plans  - Technibois",
+                "BRAY DUNES Mext - SATT 50% JLM 50%MO",
+                "CALAIS - Plans - Technibois"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 37761,
+      "lastModified": "2025-09-23T11:18:55.657Z"
+    },
+    "attached_assets/export-monday/TEMPS_DE_POSE_JLM_1758620739.xlsx": {
+      "filename": "TEMPS_DE_POSE_JLM_1758620739.xlsx",
+      "fullPath": "attached_assets/export-monday/TEMPS_DE_POSE_JLM_1758620739.xlsx",
+      "category": "general",
+      "sheetCount": 1,
+      "sheets": {
+        "temps de pose jlm": {
+          "name": "temps de pose jlm",
+          "rowCount": 40,
+          "columnCount": 5,
+          "columns": {
+            "TEMPS DE POSE JLM": {
+              "name": "TEMPS DE POSE JLM",
+              "dataTypes": {
+                "text": 35,
+                "empty": 5
+              },
+              "sampleValues": [
+                "MINT",
+                "Name",
+                "POSE BLOC PORTE 1 Vantail",
+                "POSE BLOC PORTE 2 Vantaux",
+                "POSE DE FERME PORTE"
+              ],
+              "nullCount": 5,
+              "minLength": 4,
+              "maxLength": 83,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "MINT",
+                "Name",
+                "POSE BLOC PORTE 1 Vantail",
+                "POSE BLOC PORTE 2 Vantaux",
+                "POSE DE FERME PORTE",
+                "POSE DE CREMONE POMPIER",
+                "POSE DE BEQUILLE",
+                "POSE DE CHANT PLAT",
+                "POSE DE BUTEE DE PORTE",
+                "POSE DE PORTE SUR BATI METAL POSE compris approvisionnement et pose des accessoires",
+                "POSE DE PLACARDS",
+                "POSE ETAGERES sur cornieres",
+                "POSE DE GAINE TECHNIQUES",
+                "POSE DE TRAPPES",
+                "POSE DE PLINTHES",
+                "Créer Élément",
+                "BARDAGE",
+                "POSE GRILLE ANTI RONGEUR (AU M.L)",
+                "POSE DE PARE PLUIE",
+                "OSSATURE CHEVRONS SUR EQUERRE"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 16494,
+      "lastModified": "2025-09-23T11:18:55.313Z"
+    },
+    "attached_assets/export-monday/TO_DO_FLAVIE_1758620656.xlsx": {
+      "filename": "TO_DO_FLAVIE_1758620656.xlsx",
+      "fullPath": "attached_assets/export-monday/TO_DO_FLAVIE_1758620656.xlsx",
+      "category": "taches",
+      "sheetCount": 1,
+      "sheets": {
+        "to do flavie": {
+          "name": "to do flavie",
+          "rowCount": 99,
+          "columnCount": 7,
+          "columns": {
+            "TO DO FLAVIE": {
+              "name": "TO DO FLAVIE",
+              "dataTypes": {
+                "text": 96,
+                "empty": 3
+              },
+              "sampleValues": [
+                "Titre du groupe",
+                "Name",
+                "BERCK OXYGENE",
+                "WAILLY BEAUCAMP - STOVEN",
+                "BERCK OXYGENE - NEXITY - Construction logements Lot Mext PVC"
+              ],
+              "nullCount": 3,
+              "minLength": 4,
+              "maxLength": 100,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Titre du groupe",
+                "Name",
+                "BERCK OXYGENE",
+                "WAILLY BEAUCAMP - STOVEN",
+                "BERCK OXYGENE - NEXITY - Construction logements Lot Mext PVC",
+                "BERCK OXYGENE - NEXITY - Construction logements Lot Mext Alu",
+                "RENTY - DEPREZ Devis Gouttière",
+                "ROUVROY - Pharmacie des 4 vents",
+                "WIZERNES - Mext école",
+                "BERCK - Ecouffe",
+                "CAMIERS SAINTE CECILE - DVA",
+                "LONGUENESSE- EILCO - CAPSO BC2023-2640",
+                "SAINT OMER - Hôtel Belly",
+                "DUNKERQUE - ADOMA - BC Nord - Mint",
+                "CALAIS - HLI - Siége AFAPEI+lgt - Bardage",
+                "LONGUENESSE - Construction d'un plateau d'analyses - MEXT",
+                "BOURTHES - Terrain de Foot - Bardage",
+                "DESVRES - Septalia M&C - Mext",
+                "Saint-Omer / Résidence du Théâtre - Plans EXE menuiseries extérieures Devis Ventouses",
+                "FW: Saint-Omer / Résidence du Théâtre - Plans EXE menuiseries extérieures Devis Ventouses"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 19982,
+      "lastModified": "2025-09-23T11:18:55.652Z"
+    },
+    "attached_assets/export-monday/TO_DO_Julien_1758620664.xlsx": {
+      "filename": "TO_DO_Julien_1758620664.xlsx",
+      "fullPath": "attached_assets/export-monday/TO_DO_Julien_1758620664.xlsx",
+      "category": "taches",
+      "sheetCount": 1,
+      "sheets": {
+        "to do julien": {
+          "name": "to do julien",
+          "rowCount": 154,
+          "columnCount": 9,
+          "columns": {
+            "TO DO Julien": {
+              "name": "TO DO Julien",
+              "dataTypes": {
+                "text": 147,
+                "empty": 7
+              },
+              "sampleValues": [
+                "Emailed Éléments",
+                "Name",
+                "DEYA facture Plinthes et BOULOGNE",
+                "TS SAMER",
+                "FW: SATT POSE MENUISERIES"
+              ],
+              "nullCount": 7,
+              "minLength": 2,
+              "maxLength": 131,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Emailed Éléments",
+                "Name",
+                "DEYA facture Plinthes et BOULOGNE",
+                "TS SAMER",
+                "FW: SATT POSE MENUISERIES",
+                "Fw: ACTIFLIP",
+                "Fwd: Manutention professionnelle",
+                "FW: QUANTIPLAN  Logiciel métré sur plan PDF, Photos....",
+                "FW: 220909 - MCV -JLM LAMBOROT - Chariot pour vitrage",
+                "FW: Sabrina - SYSDECO WARDRECQUES",
+                "Fwd: Accompagnement coaching CONSTRUCTYS - 125€/H",
+                "Levage Vitrages FW: Devis 22091450",
+                "Développement logiciel avec bâti geste",
+                "FW: Lumbres Boulodrome Accord Mairie pour SAUVAGE",
+                "GAP JOEL LEROY : Caution TONYE / RENARD",
+                "ARQUES H4 - bat D porte acier supplémentaire avenant 3  - Caution RG ?",
+                "CITE MINIERE - BAT'SUP  - Caution RG ?",
+                "LONGUENESSE 85 - FOH MEN EXT et MINT  - Caution RG ?",
+                "MODE OPERATION SS 4 - Réhabilitation de 55 logements à EPERLECCQUES ET HOULLE",
+                "PÉRENCHIES - Charpente Brisis  - Caution RG ?"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 24861,
+      "lastModified": "2025-09-23T11:18:55.764Z"
+    },
+    "attached_assets/export-monday/TO_DO_LUDIVINE_1758621044.xlsx": {
+      "filename": "TO_DO_LUDIVINE_1758621044.xlsx",
+      "fullPath": "attached_assets/export-monday/TO_DO_LUDIVINE_1758621044.xlsx",
+      "category": "taches",
+      "sheetCount": 1,
+      "sheets": {
+        "to do ludivine": {
+          "name": "to do ludivine",
+          "rowCount": 1000,
+          "columnCount": 10,
+          "columns": {
+            "TO DO LUDIVINE": {
+              "name": "TO DO LUDIVINE",
+              "dataTypes": {
+                "text": 826,
+                "empty": 174
+              },
+              "sampleValues": [
+                "A faire",
+                "Nom",
+                "CONTRAT JULIEN V",
+                "FACTURE CB CHATGPT 08/07/2025 256.03 E",
+                "FACTURE CJD 1630 E 12/08/2025"
+              ],
+              "nullCount": 174,
+              "minLength": 3,
+              "maxLength": 166,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "A faire",
+                "Nom",
+                "CONTRAT JULIEN V",
+                "FACTURE CB CHATGPT 08/07/2025 256.03 E",
+                "FACTURE CJD 1630 E 12/08/2025",
+                "FMA contestation facture",
+                "Voir pour subvention Devis YOUCOM n° DV-01152",
+                "SIAM ECART FACTURES CAMBRAI",
+                "CAPSO FACTURES rejetées 4870 + 4913",
+                "SALIN MISE EN RECOUVREMENT 161 : Devis",
+                "BTP BANQUE ARC153-25 Rayonnages Prêt",
+                "BAUDELET ARCHIVES - Proposition de prix",
+                "POUR JL CONTACT - DEMANDE  DHENIN",
+                "ZUYDCOOTE - BALNEO - Signature marchcé",
+                "Re: Dossier DOS192294 - Nos réf. 478 3655 EVE 62 Q - Rés. Les genets/Insecte Lyctus",
+                "RE: Dossier DOS192294 - Nos réf. 478 3655 EVE 62 Q - Rés. Les genets/Insecte Lyctus",
+                "RGPD",
+                "TETEGHEM LA CAPELINE- Projet DGD pour validation",
+                "ATTESTATION TEMOIGNAGE FAIT LICENCIEMENT ALEXANDRE",
+                "BERCK BELLE EUGENIE B206 - CONVOCATION EXPERTISE"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 86098,
+      "lastModified": "2025-09-23T11:18:55.540Z"
+    },
+    "attached_assets/export-monday/_Tableau_bord_JLM_1758620606.xlsx": {
+      "filename": "_Tableau_bord_JLM_1758620606.xlsx",
+      "fullPath": "attached_assets/export-monday/_Tableau_bord_JLM_1758620606.xlsx",
+      "category": "direction",
+      "sheetCount": 1,
+      "sheets": {
+        "🧭 tableau bord jlm": {
+          "name": "🧭 tableau bord jlm",
+          "rowCount": 48,
+          "columnCount": 13,
+          "columns": {
+            "🧭 Tableau bord JLM": {
+              "name": "🧭 Tableau bord JLM",
+              "dataTypes": {
+                "text": 43,
+                "empty": 5
+              },
+              "sampleValues": [
+                "Exercice 2024-2025",
+                "Name",
+                "2024 - 08 Aout",
+                "2024 - 09 Septembre",
+                "2024 - 10 Octobre"
+              ],
+              "nullCount": 5,
+              "minLength": 4,
+              "maxLength": 20,
+              "patterns": [],
+              "primaryType": "text",
+              "isLookupCandidate": false,
+              "isForeignKeyCandidate": false,
+              "isStatusField": false,
+              "uniqueValuesArray": [
+                "Exercice 2024-2025",
+                "Name",
+                "2024 - 08 Aout",
+                "2024 - 09 Septembre",
+                "2024 - 10 Octobre",
+                "2024 - 11 Novembre",
+                "2024 - 12 Décembre",
+                "2025 - 01 Janvier",
+                "2025 - 02 Février",
+                "2025 - 03 Mars",
+                "2025 - 04 Avril",
+                "2025 - 05 Mai",
+                "2025 - 06 juin",
+                "2025 - 07 Juillet",
+                "2025 - 08 Août",
+                "Exercice 2023 - 2024",
+                "2024 - 05 Juin",
+                "2024 - 07 Juillet",
+                "2024 - 06 Mai",
+                "2024 - 04 Avril"
+              ]
+            }
+          },
+          "isEmpty": false,
+          "possiblePrimaryKeys": [],
+          "relationships": []
+        }
+      },
+      "fileSize": 18774,
+      "lastModified": "2025-09-23T11:18:55.550Z"
+    }
+  },
+  "patterns": {
+    "columnTypes": {
+      "text": 36,
+      "empty": 3
+    },
+    "commonColumns": {
+      "boulogne": {
+        "occurrences": 2,
+        "files": [
+          "BOULOGNE_1758620773.xlsx",
+          "Boulogne_1758620768.xlsx"
+        ],
+        "types": [
+          "text"
+        ]
+      }
+    },
+    "relationshipCandidates": [],
+    "totalUniqueColumns": 38
+  },
+  "saxiumMappings": {
+    "suggestedTables": {
+      "projects": {
+        "files": [
+          "PREURES_-_RUE_NOIRE_1758620731.xlsx",
+          "CHANTIERS_1758620580.xlsx",
+          "CHANTIERS_Administratif_1758620613.xlsx",
+          "Copie_de_CHANTIERS_PROJET_1758620682.xlsx",
+          "_Personnel_chantier_1758620704.xlsx",
+          "JLM_CHANTIERS_1758620597.xlsx"
+        ],
+        "columns": {
+          "preures_-_rue_noire": {
+            "originalNames": [
+              "PREURES - RUE NOIRE"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Planning travaux",
+              "Name",
+              "Terrassement - Assainissement",
+              "Gros oeuvre",
+              "Charpente - Couverture"
+            ],
+            "nullable": true
+          },
+          "chantiers_🏗️": {
+            "originalNames": [
+              "CHANTIERS 🏗️"
+            ],
+            "dataType": "empty",
+            "samples": [
+              "Emailed Éléments",
+              "Name",
+              "BERCK Reflet d’Ecume Refab Dormants 2/2",
+              "BERCK Reflet d’Ecume - Recommande Dormants",
+              "Sav boulogne 102 boitiers serrures livraison S11"
+            ],
+            "nullable": true
+          },
+          "chantiers_administratif": {
+            "originalNames": [
+              "CHANTIERS Administratif"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Emailed Éléments",
+              "Name",
+              "Nouveaux",
+              "Name",
+              "DESVRES - Septalia M&C - Mext"
+            ],
+            "nullable": true
+          },
+          "copie_de_chantiers_🏗️_projet": {
+            "originalNames": [
+              "Copie de CHANTIERS 🏗️ PROJET"
+            ],
+            "dataType": "empty",
+            "samples": [
+              "Emailed Éléments",
+              "Name",
+              "CAMIER Casse verre  devis de LE KAP VERRE COTE D'OPALE",
+              "- HAZEBROUCK - TOLESPORTES ABIMEES- pour discution NOVEBAT",
+              "Sav boulogne 102 boitiers serrures livraison S11"
+            ],
+            "nullable": true
+          },
+          "👷‍♂️_personnel_chantier": {
+            "originalNames": [
+              "👷‍♂️ Personnel chantier"
+            ],
+            "dataType": "text",
+            "samples": [
+              "21-10-01 Liste du personnel et TH",
+              "Name",
+              "COFFIN  Nicolas",
+              "DUMETZ Mathis",
+              "LEFEBVRE José"
+            ],
+            "nullable": true
+          },
+          "jlm_chantiers": {
+            "originalNames": [
+              "JLM CHANTIERS"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Projets",
+              "Nom",
+              "ECQUES BUREAUX JLM",
+              "BETHUNE BUDAPEST",
+              "PÉRENCHIES - Charpente Brisis"
+            ],
+            "nullable": true
+          }
+        },
+        "confidence": "medium"
+      },
+      "aos": {
+        "files": [
+          "AO_Planning_1758620539.xlsx"
+        ],
+        "columns": {
+          "ao_planning_🖥️": {
+            "originalNames": [
+              "AO Planning  🖥️"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Commerce Devis",
+              "Emailed Éléments",
+              "Name",
+              "GRANDE-SYNTHE 60 - Construction neuf - Quartier des Ilot des Peintres - PARTENORD HABITAT ->01/10/25",
+              "DUNKERQUE 85 NEXITY - MEXT"
+            ],
+            "nullable": true
+          }
+        },
+        "confidence": "medium"
+      },
+      "custom_table": {
+        "files": [
+          "BETHUNE_BUDAPEST_1758620834.xlsx",
+          "BOULOGNE_102_-_GCC_-_102_lgts_-_Mint_1758620856.xlsx",
+          "BOULOGNE_102_-_GCC_-_102_lgts_-_Serrurerie_1758620850.xlsx",
+          "CAPSO_1758620571.xlsx",
+          "DIRECTION_1758620650.xlsx",
+          "ECQUES_BUREAUX_JLM_1758620829.xlsx",
+          "Formation_Bureaux_1758620863.xlsx",
+          "Heures_Insertion_1758620671.xlsx",
+          "PERENCHIES_10_14_-_Portes_de_Hall_1758620845.xlsx",
+          "P_RENCHIES_-_Charpente_Brisis_1758620839.xlsx",
+          "SOUS-TRAITANTS_1758620632.xlsx",
+          "TEMPS_DE_POSE_JLM_1758620739.xlsx",
+          "TO_DO_FLAVIE_1758620656.xlsx",
+          "TO_DO_Julien_1758620664.xlsx",
+          "TO_DO_LUDIVINE_1758621044.xlsx",
+          "_Tableau_bord_JLM_1758620606.xlsx"
+        ],
+        "columns": {
+          "bethune_budapest": {
+            "originalNames": [
+              "BETHUNE BUDAPEST"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Planning",
+              "Name",
+              "Task 1",
+              "Task 2",
+              "Task 3"
+            ],
+            "nullable": true
+          },
+          "boulogne_102_-_gcc_-_102_lgts_-_mint": {
+            "originalNames": [
+              "BOULOGNE 102 - GCC - 102 lgts - Mint"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Planning",
+              "Name",
+              "Task 1",
+              "Task 2",
+              "Task 3"
+            ],
+            "nullable": true
+          },
+          "boulogne_102_-_gcc_-_102_lgts_-_serrurerie": {
+            "originalNames": [
+              "BOULOGNE 102 - GCC - 102 lgts - Serrurerie"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Planning",
+              "Name",
+              "Task 1",
+              "Task 2",
+              "Task 3"
+            ],
+            "nullable": true
+          },
+          "capso": {
+            "originalNames": [
+              "CAPSO"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Utilisez ce tableau pour recevoir des demandes de projet via un formulaire et pour gérer le processus d'approbation de projet.\n\nComment cela fonctionne-t-il ? Une fois soumis, le formulaire peuplera le groupe « nouvelles demandes ». Après approbation, un nouvel élément sera créé dans le tableau « gestion de portefeuille » qui est lié à la demande de projet.",
+              "Emailed Éléments",
+              "Nom",
+              "AIRE - Salle DUCROT - Demande Devis Dominique",
+              "ST OMER - QUARTIER FOCH - MISSION LOCALE - Réparation sol"
+            ],
+            "nullable": true
+          },
+          "time_tracking": {
+            "originalNames": [
+              "Time Tracking"
+            ],
+            "dataType": "text",
+            "samples": [
+              "ST OMER - CRD QUARTIER FOCH Cloison et portes",
+              "Started By",
+              "Julien LAMBOROT",
+              "Total",
+              "ST OMER - ECOLE de la Seconde Chance - ADAP"
+            ],
+            "nullable": true
+          },
+          "direction": {
+            "originalNames": [
+              "DIRECTION"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Flavie Julien",
+              "Emailed Éléments",
+              "Name",
+              "FW: Devis - Projet JLM MENUISERIE SAS LONGUENESSE",
+              "FW: Ergonomie et Confort au Bureau pour 2025"
+            ],
+            "nullable": true
+          },
+          "ecques_bureaux_jlm": {
+            "originalNames": [
+              "ECQUES BUREAUX JLM"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Planning",
+              "Name",
+              "MEXT ALU",
+              "Subitems",
+              "Finition réglages"
+            ],
+            "nullable": true
+          },
+          "formation_bureaux": {
+            "originalNames": [
+              "Formation Bureaux"
+            ],
+            "dataType": "text",
+            "samples": [
+              "BUREAU",
+              "Name",
+              "Sylvie BAUDART",
+              "Ludivine COMBAZ",
+              "Flavie"
+            ],
+            "nullable": true
+          },
+          "heures_insertion": {
+            "originalNames": [
+              "Heures Insertion"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Insertion en cours",
+              "Name",
+              "ETAPLES GRAND LARGE",
+              "BETHUNE",
+              "DUNKERQUE BANC VERT"
+            ],
+            "nullable": true
+          },
+          "perenchies_10+14_-_portes_de_hall": {
+            "originalNames": [
+              "PERENCHIES 10+14 - Portes de Hall"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Planning",
+              "Name",
+              "Task 1",
+              "Task 2",
+              "Task 3"
+            ],
+            "nullable": true
+          },
+          "pérenchies_-_charpente_brisis": {
+            "originalNames": [
+              "PÉRENCHIES - Charpente Brisis"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Planning",
+              "Name",
+              "Task 1",
+              "Task 2",
+              "Task 3"
+            ],
+            "nullable": true
+          },
+          "sous-traitants": {
+            "originalNames": [
+              "SOUS-TRAITANTS"
+            ],
+            "dataType": "empty",
+            "samples": [
+              "En cours",
+              "Name",
+              "ECQUES - DELALLEAU - Escalier",
+              "Subitems",
+              "LE PARCQ - MULTIWAL - Mur mobile"
+            ],
+            "nullable": true
+          },
+          "temps_de_pose_jlm": {
+            "originalNames": [
+              "TEMPS DE POSE JLM"
+            ],
+            "dataType": "text",
+            "samples": [
+              "MINT",
+              "Name",
+              "POSE BLOC PORTE 1 Vantail",
+              "POSE BLOC PORTE 2 Vantaux",
+              "POSE DE FERME PORTE"
+            ],
+            "nullable": true
+          },
+          "to_do_flavie": {
+            "originalNames": [
+              "TO DO FLAVIE"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Titre du groupe",
+              "Name",
+              "BERCK OXYGENE",
+              "WAILLY BEAUCAMP - STOVEN",
+              "BERCK OXYGENE - NEXITY - Construction logements Lot Mext PVC"
+            ],
+            "nullable": true
+          },
+          "to_do_julien": {
+            "originalNames": [
+              "TO DO Julien"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Emailed Éléments",
+              "Name",
+              "DEYA facture Plinthes et BOULOGNE",
+              "TS SAMER",
+              "FW: SATT POSE MENUISERIES"
+            ],
+            "nullable": true
+          },
+          "to_do_ludivine": {
+            "originalNames": [
+              "TO DO LUDIVINE"
+            ],
+            "dataType": "text",
+            "samples": [
+              "A faire",
+              "Nom",
+              "CONTRAT JULIEN V",
+              "FACTURE CB CHATGPT 08/07/2025 256.03 E",
+              "FACTURE CJD 1630 E 12/08/2025"
+            ],
+            "nullable": true
+          },
+          "🧭_tableau_bord_jlm": {
+            "originalNames": [
+              "🧭 Tableau bord JLM"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Exercice 2024-2025",
+              "Name",
+              "2024 - 08 Aout",
+              "2024 - 09 Septembre",
+              "2024 - 10 Octobre"
+            ],
+            "nullable": true
+          }
+        },
+        "confidence": "medium"
+      },
+      "users": {
+        "files": [
+          "Contacts_1758620760.xlsx",
+          "Formation_Ouvriers_1758620716.xlsx",
+          "Outillage_MAKITA_1758620723.xlsx",
+          "Pi_ces_personnel_1758620698.xlsx",
+          "_Personnel_bureau_1758620710.xlsx"
+        ],
+        "columns": {
+          "contacts": {
+            "originalNames": [
+              "Contacts"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Bienvenue sur votre tableau des contacts ! Ici, vous pouvez enregistrer et gérer tous vos contacts",
+              "Contacts",
+              "Nom",
+              "Laurent Fromentin",
+              "Emmanuel Branque"
+            ],
+            "nullable": true
+          },
+          "formation_ouvriers": {
+            "originalNames": [
+              "Formation Ouvriers"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Plan de formation salarié",
+              "Name",
+              "TRISTRAM Arnaud",
+              "ROSE Bryan",
+              "POURCHEL Franck"
+            ],
+            "nullable": true
+          },
+          "outillage_makita_🛠️": {
+            "originalNames": [
+              "Outillage MAKITA 🛠️"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Inventaire 04/07/23",
+              "Name",
+              "COFFIN  Nicolas",
+              "Subitems",
+              "COFFIN CAMION"
+            ],
+            "nullable": true
+          },
+          "pièces_personnel": {
+            "originalNames": [
+              "Pièces personnel"
+            ],
+            "dataType": "text",
+            "samples": [
+              "SALARIES EN POSTE dossier administratif",
+              "Name",
+              "José LEFEBVRE",
+              "Arnaud TRISTRAM",
+              "Maxence MEISSNER"
+            ],
+            "nullable": true
+          },
+          "👩‍💻_personnel_bureau": {
+            "originalNames": [
+              "👩‍💻 Personnel bureau"
+            ],
+            "dataType": "text",
+            "samples": [
+              "21-10-01 Liste du personnel et TH",
+              "Name",
+              "BAUDART Sylvie",
+              "COMBAZ Ludivine",
+              "WISSOCQ Laurent"
+            ],
+            "nullable": true
+          }
+        },
+        "confidence": "medium"
+      },
+      "planning": {
+        "files": [
+          "BOULOGNE_1758620773.xlsx",
+          "Boulogne_1758620768.xlsx",
+          "CAMPAGNE_1758620806.xlsx",
+          "FRUGES_1758620811.xlsx",
+          "FRUGES_TS_1758620823.xlsx",
+          "PLANNING_SYMPHONIE_1758620816.xlsx",
+          "Planning_BETHUNE_1758620799.xlsx",
+          "Planning_ETAPLES_GRAND_LARGE_men_ext_1758620793.xlsx",
+          "Planning_ETAPLES_GRAND_LARGE_men_int_1758620787.xlsx",
+          "Planning_LONGUENESSE_85_1758620780.xlsx"
+        ],
+        "columns": {
+          "boulogne": {
+            "originalNames": [
+              "BOULOGNE",
+              "Boulogne"
+            ],
+            "dataType": "text",
+            "samples": [
+              "RDV",
+              "Name",
+              "Ligne 1",
+              "Ligne 2",
+              "Ligne 3"
+            ],
+            "nullable": true
+          },
+          "campagne": {
+            "originalNames": [
+              "CAMPAGNE"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+              "BARDAGE",
+              "Nom",
+              "Bardage Zinc",
+              "Bardage Bois Ext"
+            ],
+            "nullable": true
+          },
+          "fruges": {
+            "originalNames": [
+              "FRUGES"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+              "carea",
+              "Nom",
+              "Ossature",
+              "Livraison"
+            ],
+            "nullable": true
+          },
+          "fruges_ts": {
+            "originalNames": [
+              "FRUGES TS"
+            ],
+            "dataType": "text",
+            "samples": [
+              "SOUS FACE PREAU ALU",
+              "Name",
+              "Ossature",
+              "Isolation",
+              "Pose"
+            ],
+            "nullable": true
+          },
+          "planning_symphonie": {
+            "originalNames": [
+              "PLANNING SYMPHONIE"
+            ],
+            "dataType": "text",
+            "samples": [
+              "OSSATURE",
+              "Name",
+              "ossature Appliques",
+              "BARDAGE",
+              "Name"
+            ],
+            "nullable": true
+          },
+          "planning_bethune": {
+            "originalNames": [
+              "Planning BETHUNE"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+              "Préparation chantier",
+              "Nom",
+              "Dossier technique",
+              "Validation dossier technique"
+            ],
+            "nullable": true
+          },
+          "planning_etaples_grand_large_men_ext": {
+            "originalNames": [
+              "Planning ETAPLES GRAND LARGE men ext"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+              "Préparation chantier",
+              "Nom",
+              "Ajouter tâche",
+              "Dossier technique"
+            ],
+            "nullable": true
+          },
+          "planning_etaples_grand_large_men_int": {
+            "originalNames": [
+              "Planning ETAPLES GRAND LARGE men int"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+              "Préparation chantier",
+              "Nom",
+              "Dossier technique",
+              "Validation dossier technique"
+            ],
+            "nullable": true
+          },
+          "planning_longuenesse_85": {
+            "originalNames": [
+              "Planning LONGUENESSE 85"
+            ],
+            "dataType": "text",
+            "samples": [
+              "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+              "Préparation chantier",
+              "Nom",
+              "Dossier technique",
+              "Validation dossier technique"
+            ],
+            "nullable": true
+          }
+        },
+        "confidence": "medium"
+      }
+    },
+    "columnMappings": {},
+    "enumMappings": {
+      "CHANTIERS 🏗️": {
+        "values": [
+          "Emailed Éléments",
+          "Name",
+          "BERCK Reflet d’Ecume Refab Dormants 2/2",
+          "BERCK Reflet d’Ecume - Recommande Dormants",
+          "Sav boulogne 102 boitiers serrures livraison S11",
+          "BERCK Reflet d'Ecume - Refab 3",
+          "BERCK ECUME recommande 4",
+          "SAV",
+          "NOUVEAUX",
+          "CALAIS 19 - TOURNESOL GREUZE - DVA MEXT V4",
+          "ST MARTIN Maison Médicale : 4 Serrure box : poignée avec serrure",
+          "CHANTIERS En cours",
+          "BRAY DUNES - 17 Lgts - Flandres Opal Habitat",
+          "Subitems",
+          "SAINT OMER - Ancienne LA BANQUE DE FRANCE/ LOT 04 MENUISERIES EXTÉRIEURES ALU. V4 - avril 2022",
+          "DESVRES - Septalia M&C - Mext",
+          "THUMERIES 14 Lgts Collectifs - THOMAS & PIRON - Mext PVC",
+          "PERENCHIES - Les Acacias - PRIMA MEN EXT",
+          "LONGUENESSE - AUDOLYS - TS PLAN DE TRAVAIL",
+          "SAINT OMER - Ancienne BANQUE DE FRANCE/ LOT 09 PARQUET.avril 2022 (copy)"
+        ],
+        "suggestedEnum": "chantiers_____enum",
+        "files": [
+          "CHANTIERS_1758620580.xlsx"
+        ]
+      }
+    }
+  }
+}

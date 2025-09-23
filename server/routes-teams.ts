@@ -26,6 +26,18 @@ export function registerTeamsRoutes(app: Express) {
             },
           },
           members: {
+            columns: {
+              id: true,
+              role: true,
+              weeklyHours: true,
+              contractType: true,
+              experienceLevel: true,
+              isActive: true,
+              joinedAt: true,
+              externalMemberName: true,
+              externalMemberEmail: true,
+              hourlyRate: true,
+            },
             with: {
               user: {
                 columns: {

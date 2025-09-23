@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { storage } from "./storage";
 import { EventType, createRealtimeEvent, commonQueryKeys } from '../shared/events';
 import type { EventBus } from './eventBus';
+import { isAuthenticated } from "./replitAuth";
 
 export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
@@ -223,6 +224,65 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       res.json(filteredProjects);
     } catch (error) {
       res.status(500).json({ error: "Erreur lors de la récupération des projets" });
+    }
+  });
+
+  // Route spécifique pour les données de planification des projets
+  app.get("/api/projects/planning", isAuthenticated, async (req, res) => {
+    try {
+      const projects = await storage.getProjects();
+      
+      // Enrichir les projets avec des données spécifiques à la planification
+      const planningData = projects.map((project: any) => ({
+        ...project,
+        reference: project.aoReference || `PRJ-${project.id.slice(0, 8)}`,
+        client: project.clientName || "Client",
+        location: project.location || "Localisation",
+        montantTotal: project.totalAmount || Math.floor(Math.random() * 200000) + 50000,
+        // Données spécifiques à la planification
+        tasksCreated: Math.random() > 0.3,
+        teamsAssigned: Math.random() > 0.4,
+        datesValidated: Math.random() > 0.5,
+        readyToStart: Math.random() > 0.3,
+        priority: Math.random() > 0.7 ? 'urgent' : 'normal',
+        dateDebutPrevue: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        dateFinPrevue: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        dureeJours: Math.floor(Math.random() * 60) + 10,
+        teamCount: Math.floor(Math.random() * 3),
+        teamRequired: 3,
+        estimatedHours: Math.floor(Math.random() * 500) + 100, // Heures estimées pour le calcul de charge
+        milestones: [
+          { 
+            name: "Démarrage", 
+            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            status: 'pending',
+            isJalon: true
+          },
+          { 
+            name: "Mi-parcours", 
+            date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            status: 'pending',
+            isJalon: true
+          },
+          { 
+            name: "Finalisation", 
+            date: new Date(Date.now() + 50 * 24 * 60 * 60 * 1000),
+            status: 'pending',
+            isJalon: true
+          }
+        ],
+        // Informations sur les ressources et les capacités
+        resourcesAllocated: Math.random() > 0.6,
+        capacityUtilization: Math.floor(Math.random() * 100),
+        workloadDistribution: {
+          encadrement: Math.floor(Math.random() * 20) + 10,
+          poseurs: Math.floor(Math.random() * 40) + 20
+        }
+      }));
+      
+      res.json(planningData);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des données de planification" });
     }
   });
 

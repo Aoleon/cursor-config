@@ -40,6 +40,7 @@ import { useGanttDrag } from "@/hooks/useGanttDrag";
 import { useGanttPeriods } from "@/hooks/useGanttPeriods";
 import { useGanttWorkload, type ItemWorkload } from "@/hooks/useGanttWorkload";
 import { useGanttHierarchy, type HierarchyItem } from "@/hooks/useGanttHierarchy";
+import { useTeamsWithCapacity, type TeamWithCapacity } from "@/hooks/useTeamsWithCapacity";
 import type { GanttProject, GanttMilestone, GanttTask } from "@shared/schema";
 import type { GanttItem } from "@/types/gantt";
 
@@ -48,6 +49,7 @@ interface MiniWorkloadHistogramProps {
   itemWorkload: ItemWorkload;
   periodInfo: any;
   viewMode: 'week' | 'month';
+  averageHoursPerPerson?: number;
   className?: string;
   'data-testid'?: string;
 }
@@ -56,6 +58,7 @@ const MiniWorkloadHistogram = ({
   itemWorkload, 
   periodInfo, 
   viewMode, 
+  averageHoursPerPerson = 8,
   className = '', 
   'data-testid': dataTestId 
 }: MiniWorkloadHistogramProps) => {
@@ -70,8 +73,8 @@ const MiniWorkloadHistogram = ({
         const dateKey = format(day, 'yyyy-MM-dd');
         const hours = dailyDistribution[dateKey] || 0;
         
-        // Calculer l'intensité (0-100%) basée sur 8h max par jour
-        const intensity = Math.min(100, (hours / 8) * 100);
+        // Calculer l'intensité (0-100%) basée sur les heures contractuelles moyennes par jour
+        const intensity = Math.min(100, (hours / (averageHoursPerPerson || 8)) * 100);
         const heightPercent = Math.max(10, intensity); // Min 10% pour visibilité
         
         let barColor = 'bg-gray-200';
@@ -115,7 +118,7 @@ const MiniWorkloadHistogram = ({
         }
         
         const avgHours = weekDays > 0 ? weekHours / weekDays : 0;
-        const intensity = Math.min(100, (avgHours / 8) * 100);
+        const intensity = Math.min(100, (avgHours / (averageHoursPerPerson || 8)) * 100);
         const heightPercent = Math.max(10, intensity);
         
         let barColor = 'bg-gray-200';
@@ -372,6 +375,35 @@ export default function GanttChart({
     viewMode,
     currentPeriod
   });
+
+  // Récupérer les équipes avec leurs capacités contractuelles
+  const { data: teamsWithCapacity = [] } = useTeamsWithCapacity();
+
+  // Calculer la capacité totale contractuelle par jour
+  const teamCapacityCalculations = useMemo(() => {
+    const totalDailyCapacityPosteurs = teamsWithCapacity.reduce((sum, team) => {
+      return sum + team.members
+        .filter(m => m.role === 'poseur' || m.role === 'aide')
+        .reduce((memberSum, member) => memberSum + (Number(member.weeklyHours) || 35) / 5, 0);
+    }, 0);
+
+    const totalDailyCapacityEncadrement = teamsWithCapacity.reduce((sum, team) => {
+      return sum + team.members
+        .filter(m => m.role === 'chef_equipe' || m.role === 'responsable' || m.role === 'technicien')
+        .reduce((memberSum, member) => memberSum + (Number(member.weeklyHours) || 35) / 5, 0);
+    }, 0);
+
+    const totalDailyCapacity = totalDailyCapacityPosteurs + totalDailyCapacityEncadrement;
+
+    return {
+      totalDailyCapacity,
+      totalDailyCapacityPosteurs,
+      totalDailyCapacityEncadrement,
+      totalMembers: teamsWithCapacity.reduce((sum, team) => sum + team.members.length, 0),
+      averageHoursPerPerson: totalDailyCapacity > 0 && teamsWithCapacity.reduce((sum, team) => sum + team.members.length, 0) > 0 ? 
+        totalDailyCapacity / teamsWithCapacity.reduce((sum, team) => sum + team.members.length, 0) : 8, // Défaut 8h si pas d'équipes
+    };
+  }, [teamsWithCapacity]);
 
   // Utilitaires de calcul pour le rendu
   const getItemColor = useCallback((status: string, type: 'project' | 'milestone' | 'task', priority?: string, isOverdue?: boolean) => {
@@ -888,8 +920,8 @@ export default function GanttChart({
                         typeCategory = 'Poseurs';
                       }
                       
-                      // Calculer le nombre de personnes nécessaires (8h = 1 personne)
-                      const personsNeeded = Math.ceil(dailyHours / 8);
+                      // Calculer le nombre de personnes nécessaires basé sur les heures contractuelles réelles
+                      const personsNeeded = Math.ceil(dailyHours / teamCapacityCalculations.averageHoursPerPerson);
                       
                       if (personsNeeded > 0) {
                         byType[typeCategory] += personsNeeded;
@@ -966,7 +998,7 @@ export default function GanttChart({
                         if (day >= itemStart && day <= itemEnd) {
                           const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
                           const dailyHours = item.estimatedHours / totalWorkDays;
-                          const personsNeeded = Math.ceil(dailyHours / 8);
+                          const personsNeeded = Math.ceil(dailyHours / teamCapacityCalculations.averageHoursPerPerson);
                           const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
                           const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
                           dailyStaff += personsNeeded + chefEquipe;
@@ -991,7 +1023,7 @@ export default function GanttChart({
                         if (day >= itemStart && day <= itemEnd) {
                           const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
                           const dailyHours = item.estimatedHours / totalWorkDays;
-                          const personsNeeded = Math.ceil(dailyHours / 8);
+                          const personsNeeded = Math.ceil(dailyHours / teamCapacityCalculations.averageHoursPerPerson);
                           const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
                           const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
                           dailyStaff += personsNeeded + chefEquipe;
@@ -1043,7 +1075,7 @@ export default function GanttChart({
                       if (day >= itemStart && day <= itemEnd) {
                         const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
                         const dailyHours = item.estimatedHours / totalWorkDays;
-                        const personsNeeded = Math.ceil(dailyHours / 8);
+                        const personsNeeded = Math.ceil(dailyHours / teamCapacityCalculations.averageHoursPerPerson);
                         const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
                         const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
                         dayStaff += personsNeeded + chefEquipe;
@@ -1070,7 +1102,7 @@ export default function GanttChart({
                       if (day >= itemStart && day <= itemEnd) {
                         const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
                         const dailyHours = item.estimatedHours / totalWorkDays;
-                        const personsNeeded = Math.ceil(dailyHours / 8);
+                        const personsNeeded = Math.ceil(dailyHours / teamCapacityCalculations.averageHoursPerPerson);
                         const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
                         const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
                         dayStaff += personsNeeded + chefEquipe;
@@ -1097,7 +1129,7 @@ export default function GanttChart({
                       if (day >= itemStart && day <= itemEnd) {
                         const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
                         const dailyHours = item.estimatedHours / totalWorkDays;
-                        const personsNeeded = Math.ceil(dailyHours / 8);
+                        const personsNeeded = Math.ceil(dailyHours / teamCapacityCalculations.averageHoursPerPerson);
                         const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
                         const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
                         dayStaff += personsNeeded + chefEquipe;
@@ -1125,7 +1157,7 @@ export default function GanttChart({
                         if (day >= itemStart && day <= itemEnd) {
                           const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
                           const dailyHours = item.estimatedHours / totalWorkDays;
-                          const personsNeeded = Math.ceil(dailyHours / 8);
+                          const personsNeeded = Math.ceil(dailyHours / teamCapacityCalculations.averageHoursPerPerson);
                           const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
                           const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
                           dayStaff += personsNeeded + chefEquipe;
@@ -1141,6 +1173,158 @@ export default function GanttChart({
                   return variance < 2 ? 'Lissée' : variance < 4 ? 'Modérée' : 'À lisser';
                 })()}
               </div>
+            </div>
+          </div>
+
+          {/* Section des capacités contractuelles des équipes */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+            <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center">
+              <Users className="w-4 h-4 mr-2" />
+              Capacités Contractuelles des Équipes
+            </h4>
+            
+            {/* Résumé des capacités par type */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="bg-white p-3 rounded border">
+                <div className="text-xs text-gray-600 mb-1">Poseurs (Contrats)</div>
+                <div className="text-lg font-bold text-blue-600">
+                  {teamCapacityCalculations.totalDailyCapacityPosteurs.toFixed(1)}h/jour
+                </div>
+                <div className="text-xs text-gray-500">
+                  {teamsWithCapacity.reduce((sum, team) => 
+                    sum + team.members.filter(m => m.role === 'poseur' || m.role === 'aide').length, 0
+                  )} personnes
+                </div>
+              </div>
+              
+              <div className="bg-white p-3 rounded border">
+                <div className="text-xs text-gray-600 mb-1">Encadrement (Contrats)</div>
+                <div className="text-lg font-bold text-purple-600">
+                  {teamCapacityCalculations.totalDailyCapacityEncadrement.toFixed(1)}h/jour
+                </div>
+                <div className="text-xs text-gray-500">
+                  {teamsWithCapacity.reduce((sum, team) => 
+                    sum + team.members.filter(m => m.role === 'chef_equipe' || m.role === 'responsable' || m.role === 'technicien').length, 0
+                  )} personnes
+                </div>
+              </div>
+              
+              <div className="bg-white p-3 rounded border">
+                <div className="text-xs text-gray-600 mb-1">Capacité Totale</div>
+                <div className="text-lg font-bold text-green-600">
+                  {teamCapacityCalculations.totalDailyCapacity.toFixed(1)}h/jour
+                </div>
+                <div className="text-xs text-gray-500">
+                  {teamCapacityCalculations.totalMembers} employés
+                </div>
+              </div>
+            </div>
+
+            {/* Indicateurs d'utilisation basés sur la charge actuelle */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white p-3 rounded border">
+                <div className="text-xs text-gray-600 mb-2">Taux d'Utilisation Moyen</div>
+                <div className="flex items-center space-x-2">
+                  {(() => {
+                    const avgDailyRequirement = (() => {
+                      const totalDays = periodInfo.periodDays.length;
+                      const totalStaffNeeded = periodInfo.periodDays.reduce((sum, day) => {
+                        let dayStaff = 0;
+                        allGanttItems.forEach(item => {
+                          if (!item.estimatedHours || !item.startDate || !item.endDate) return;
+                          const itemStart = new Date(item.startDate);
+                          const itemEnd = new Date(item.endDate);
+                          if (day >= itemStart && day <= itemEnd) {
+                            const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
+                            const dailyHours = item.estimatedHours / totalWorkDays;
+                            const personsNeeded = Math.ceil(dailyHours / teamCapacityCalculations.averageHoursPerPerson);
+                            const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
+                            const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
+                            dayStaff += personsNeeded + chefEquipe;
+                          }
+                        });
+                        return sum + dayStaff;
+                      }, 0);
+                      return totalDays > 0 ? totalStaffNeeded / totalDays : 0;
+                    })();
+                    
+                    const avgDailyRequirementHours = avgDailyRequirement * teamCapacityCalculations.averageHoursPerPerson;
+                    const utilizationRate = teamCapacityCalculations.totalDailyCapacity > 0 
+                      ? (avgDailyRequirementHours / teamCapacityCalculations.totalDailyCapacity) * 100 
+                      : 0;
+                    
+                    const rateColor = utilizationRate > 100 ? 'text-red-600' 
+                      : utilizationRate > 85 ? 'text-orange-600'
+                      : utilizationRate > 70 ? 'text-yellow-600'
+                      : utilizationRate > 30 ? 'text-green-600'
+                      : 'text-blue-600';
+                    
+                    return (
+                      <>
+                        <div className={`text-xl font-bold ${rateColor}`}>
+                          {utilizationRate.toFixed(1)}%
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          ({avgDailyRequirementHours.toFixed(1)}h sur {teamCapacityCalculations.totalDailyCapacity.toFixed(1)}h)
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+              
+              <div className="bg-white p-3 rounded border">
+                <div className="text-xs text-gray-600 mb-2">État des Capacités</div>
+                <div className="text-sm">
+                  {(() => {
+                    const avgDailyRequirement = (() => {
+                      const totalDays = periodInfo.periodDays.length;
+                      const totalStaffNeeded = periodInfo.periodDays.reduce((sum, day) => {
+                        let dayStaff = 0;
+                        allGanttItems.forEach(item => {
+                          if (!item.estimatedHours || !item.startDate || !item.endDate) return;
+                          const itemStart = new Date(item.startDate);
+                          const itemEnd = new Date(item.endDate);
+                          if (day >= itemStart && day <= itemEnd) {
+                            const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
+                            const dailyHours = item.estimatedHours / totalWorkDays;
+                            const personsNeeded = Math.ceil(dailyHours / teamCapacityCalculations.averageHoursPerPerson);
+                            const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
+                            const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
+                            dayStaff += personsNeeded + chefEquipe;
+                          }
+                        });
+                        return sum + dayStaff;
+                      }, 0);
+                      return totalDays > 0 ? totalStaffNeeded / totalDays : 0;
+                    })();
+                    
+                    const avgDailyRequirementHours = avgDailyRequirement * teamCapacityCalculations.averageHoursPerPerson;
+                    const utilizationRate = teamCapacityCalculations.totalDailyCapacity > 0 
+                      ? (avgDailyRequirementHours / teamCapacityCalculations.totalDailyCapacity) * 100 
+                      : 0;
+                    
+                    if (utilizationRate > 100) {
+                      return <span className="text-red-600 font-medium">⚠️ Surcharge détectée</span>;
+                    } else if (utilizationRate > 85) {
+                      return <span className="text-orange-600 font-medium">⚡ Capacité élevée</span>;
+                    } else if (utilizationRate > 70) {
+                      return <span className="text-yellow-600 font-medium">📊 Charge optimale</span>;
+                    } else if (utilizationRate > 30) {
+                      return <span className="text-green-600 font-medium">✅ Capacité normale</span>;
+                    } else {
+                      return <span className="text-blue-600 font-medium">💤 Sous-utilisation</span>;
+                    }
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Information contractuelle détaillée */}
+            <div className="mt-3 text-xs text-gray-600 bg-gray-50 p-2 rounded">
+              <strong>Base de calcul contractuelle:</strong> Heures moyennes par personne: {teamCapacityCalculations.averageHoursPerPerson.toFixed(1)}h/jour
+              • Calcul basé sur les contrats réels des {teamCapacityCalculations.totalMembers} employés
+              {teamCapacityCalculations.totalMembers === 0 && " (Aucune équipe configurée - utilisation valeur par défaut 8h)"}
             </div>
           </div>
         </div>

@@ -878,14 +878,8 @@ export default function GanttChart({
                               break;
                             case 'chantier':
                               typeCategory = 'Poseurs';
-                              staffMultiplier = 1;
-                              // Ajouter aussi de l'encadrement pour les chantiers complexes
-                              if (item.priority === 'critique' || item.estimatedHours && item.estimatedHours > 100) {
-                                const supervisorHours = dailyHours * 0.2; // 20% du temps en supervision
-                                const supervisorPersons = Math.ceil((supervisorHours / 8) * 0.5);
-                                byType['Encadrement'] += supervisorPersons;
-                                staffMultiplier = 1.1; // Légèrement plus de poseurs aussi
-                              }
+                              // Projets complexes nécessitent plus de poseurs (le chef d'équipe sera ajouté automatiquement)
+                              staffMultiplier = (item.priority === 'critique' || item.estimatedHours && item.estimatedHours > 100) ? 1.2 : 1;
                               break;
                             case 'sav':
                               typeCategory = 'Poseurs';
@@ -909,7 +903,16 @@ export default function GanttChart({
                         // Calculer le nombre de personnes nécessaires (8h = 1 personne)
                         const personsNeeded = Math.ceil((dailyHours / 8) * staffMultiplier);
                         byType[typeCategory] += personsNeeded;
-                        totalStaff += personsNeeded;
+                        
+                        // Si c'est des poseurs, toujours ajouter un chef d'équipe automatiquement
+                        // Ratio : 1 chef pour 3-4 poseurs maximum
+                        if (typeCategory === 'Poseurs' && personsNeeded > 0) {
+                          const chefEquipe = Math.ceil(personsNeeded / 3.5); // 1 chef pour ~3-4 poseurs
+                          byType['Encadrement'] += chefEquipe;
+                          totalStaff += personsNeeded + chefEquipe;
+                        } else {
+                          totalStaff += personsNeeded;
+                        }
                       }
                     });
 
@@ -1009,12 +1012,12 @@ export default function GanttChart({
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-purple-500 rounded" />
               <span>Encadrement</span>
-              <span className="text-gray-500">(Étude, Planning, Jalons)</span>
+              <span className="text-gray-500">(Étude, Planning, Chefs d'équipe)</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-blue-500 rounded" />
               <span>Poseurs</span>
-              <span className="text-gray-500">(Chantier, Pose, SAV)</span>
+              <span className="text-gray-500">(Chantier, Pose, SAV - avec chef auto)</span>
             </div>
           </div>
           

@@ -6,6 +6,7 @@ import { IStorage } from "./storage-poc";
 import { AuditService } from "./services/AuditService";
 import { EventBus } from "./eventBus";
 import { isAuthenticated } from "./replitAuth";
+import { mondaySimpleSeed } from "./seeders/mondaySeed-simple";
 import { 
   auditLogsQuerySchema, 
   securityAlertsQuerySchema,
@@ -78,6 +79,14 @@ const exportDataSchema = z.object({
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   filters: z.record(z.any()).optional()
+});
+
+// Schema pour seeding Monday.com
+const mondaySeedSchema = z.object({
+  forceReseed: z.boolean().default(false),
+  entitiesOnly: z.array(z.enum(['tempsPose', 'aos', 'projects', 'contacts', 'metricsBusiness'])).optional(),
+  validateOnly: z.boolean().default(false),
+  includeReconciliation: z.boolean().default(true)
 });
 
 // ========================================
@@ -973,6 +982,177 @@ export function createAdminRoutes(
       res.status(500).json({
         success: false,
         error: 'Erreur lors de l\'export des données'
+      });
+    }
+  });
+
+  // ========================================
+  // 8. POST /api/admin/seed/monday - Seeding intelligent Monday.com
+  // ========================================
+  router.post('/seed/monday', async (req, res) => {
+    try {
+      const startTime = Date.now();
+      
+      // Validation des paramètres
+      const bodyValidation = mondaySeedSchema.safeParse(req.body);
+      if (!bodyValidation.success) {
+        return res.status(400).json({
+          success: false,
+          error: 'Paramètres de seeding invalides',
+          details: bodyValidation.error.errors
+        });
+      }
+
+      const { forceReseed, entitiesOnly, validateOnly, includeReconciliation } = bodyValidation.data;
+      
+      // Log du démarrage du seeding
+      await auditService.logEvent({
+        userId: (req.user as AuthenticatedUser).id,
+        userRole: (req.user as AuthenticatedUser).role,
+        sessionId: req.sessionID,
+        eventType: 'admin.action',
+        resource: 'monday_seed',
+        action: 'CREATE',
+        result: 'success',
+        severity: 'high',
+        metadata: {
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          seedingParams: {
+            forceReseed,
+            entitiesOnly,
+            validateOnly,
+            includeReconciliation
+          }
+        }
+      });
+
+      if (validateOnly) {
+        // Mode validation seule : vérifier l'état des données existantes
+        const validation = {
+          summary: await storage.getDashboardStats(), // Utilise méthode existante
+          message: "Validation mode: aucune donnée modifiée"
+        };
+
+        const executionTime = Date.now() - startTime;
+
+        await auditService.logEvent({
+          userId: (req.user as AuthenticatedUser).id,
+          userRole: (req.user as AuthenticatedUser).role,
+          sessionId: req.sessionID,
+          eventType: 'admin.action',
+          resource: 'monday_seed',
+          action: 'VALIDATE',
+          result: 'success',
+          severity: 'low',
+          metadata: {
+            ip: req.ip,
+            userAgent: req.get('User-Agent'),
+            executionTimeMs: executionTime,
+            validationResults: validation
+          }
+        });
+
+        return res.json({
+          success: true,
+          mode: 'validation_only',
+          data: validation,
+          execution_time_ms: executionTime
+        });
+      }
+
+      // Exécution du seeding principal
+      const seedResult = await mondaySimpleSeed.executeSeed({ validateOnly });
+      
+      const executionTime = Date.now() - startTime;
+
+      // Préparer la réponse avec réconciliation si demandée
+      const response: any = {
+        success: seedResult.success,
+        counts: seedResult.counts,
+        execution_time_ms: executionTime,
+        total_entries_created: Object.values(seedResult.counts).reduce((sum, count) => sum + count, 0)
+      };
+
+      if (includeReconciliation && seedResult.reconciliation) {
+        response.reconciliation = {
+          expected_vs_actual: seedResult.reconciliation,
+          analysis_source: "analysis/monday-structure-analysis.json"
+        };
+      }
+
+      if (seedResult.validation) {
+        response.validation = seedResult.validation;
+      }
+
+      if (seedResult.errors && seedResult.errors.length > 0) {
+        response.warnings = seedResult.errors;
+      }
+
+      // Log du résultat du seeding
+      await auditService.logEvent({
+        userId: (req.user as AuthenticatedUser).id,
+        userRole: (req.user as AuthenticatedUser).role,
+        sessionId: req.sessionID,
+        eventType: 'admin.action',
+        resource: 'monday_seed',
+        action: 'CREATE',
+        result: seedResult.success ? 'success' : 'partial',
+        severity: seedResult.success ? 'medium' : 'high',
+        metadata: {
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          executionTimeMs: executionTime,
+          seedingResults: {
+            totalEntries: response.total_entries_created,
+            entitiesCounts: seedResult.counts,
+            hasErrors: seedResult.errors.length > 0,
+            errorCount: seedResult.errors.length
+          },
+          reconciliationIncluded: includeReconciliation
+        }
+      });
+
+      // Publier événement pour notification temps réel
+      if (eventBus) {
+        eventBus.publish('admin.monday_seed_completed', {
+          data: {
+            adminUserId: (req.user as AuthenticatedUser).id,
+            success: seedResult.success,
+            totalEntries: response.total_entries_created,
+            entitiesCounts: seedResult.counts,
+            executionTimeMs: executionTime
+          }
+        });
+      }
+
+      res.json(response);
+
+    } catch (error) {
+      const executionTime = Date.now() - startTime;
+      console.error('[POST /admin/seed/monday] Erreur:', error);
+      
+      await auditService.logEvent({
+        userId: (req.user as AuthenticatedUser)?.id || 'unknown',
+        userRole: (req.user as AuthenticatedUser)?.role || 'unknown',
+        sessionId: req.sessionID,
+        eventType: 'system.error',
+        resource: 'monday_seed',
+        action: 'CREATE',
+        result: 'error',
+        severity: 'critical',
+        errorDetails: { message: error instanceof Error ? error.message : 'Unknown error' },
+        metadata: { 
+          ip: req.ip, 
+          userAgent: req.get('User-Agent'),
+          executionTimeMs: executionTime
+        }
+      });
+
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors du seeding Monday.com',
+        execution_time_ms: executionTime
       });
     }
   });

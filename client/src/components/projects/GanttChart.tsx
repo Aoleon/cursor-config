@@ -851,67 +851,56 @@ export default function GanttChart({
                       'Encadrement': 0
                     };
 
-                    // Calculer les besoins en personnel selon la typologie des tâches
-                    Object.entries(itemWorkloads).forEach(([itemId, workload]) => {
-                      const item = allGanttItems.find(i => i.id === itemId);
-                      if (item && workload.dailyDistribution[dateKey]) {
-                        const dailyHours = workload.dailyDistribution[dateKey];
-                        
-                        // Calcul des effectifs selon le type de tâche et sa complexité
-                        let staffMultiplier = 1;
-                        let typeCategory = 'Poseurs';
-                        
-                        // Déterminer la typologie selon le type et statut du projet
-                        if (item.type === 'project') {
-                          switch (item.status) {
-                            case 'etude':
-                              typeCategory = 'Encadrement';
-                              staffMultiplier = 0.5; // 1 responsable pour 2 projets
-                              break;
-                            case 'planification':
-                              typeCategory = 'Encadrement';
-                              staffMultiplier = 0.3;
-                              break;
-                            case 'approvisionnement':
-                              typeCategory = 'Poseurs';
-                              staffMultiplier = 0.8;
-                              break;
-                            case 'chantier':
-                              typeCategory = 'Poseurs';
-                              // Projets complexes nécessitent plus de poseurs (le chef d'équipe sera ajouté automatiquement)
-                              staffMultiplier = (item.priority === 'critique' || item.estimatedHours && item.estimatedHours > 100) ? 1.2 : 1;
-                              break;
-                            case 'sav':
-                              typeCategory = 'Poseurs';
-                              staffMultiplier = 0.8; // SAV nécessite moins de personnel
-                              break;
-                            default:
-                              typeCategory = 'Poseurs';
-                              staffMultiplier = 1;
-                          }
-                        } else if (item.type === 'task') {
-                          // Logique pour les tâches spécifiques
-                          if (item.isJalon) {
+                    // Calculer les besoins en personnel basé sur les heures pré-renseignées
+                    allGanttItems.forEach((item) => {
+                      // Vérifier si l'item a des heures estimées et des dates valides
+                      if (!item.estimatedHours || !item.startDate || !item.endDate) return;
+                      
+                      // Vérifier si ce jour est dans la période de l'item
+                      const itemStart = new Date(item.startDate);
+                      const itemEnd = new Date(item.endDate);
+                      
+                      if (day < itemStart || day > itemEnd) return;
+                      
+                      // Calculer le nombre de jours de travail pour cet item
+                      const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
+                      // Répartir les heures estimées sur tous les jours de travail
+                      const dailyHours = item.estimatedHours / totalWorkDays;
+                      
+                      // Déterminer la typologie selon le type et statut du projet/tâche
+                      let typeCategory = 'Poseurs';
+                      
+                      if (item.type === 'project') {
+                        switch (item.status) {
+                          case 'etude':
+                          case 'planification':
                             typeCategory = 'Encadrement';
-                            staffMultiplier = 0.2;
-                          } else {
+                            break;
+                          case 'approvisionnement':
+                          case 'chantier':
+                          case 'sav':
+                          default:
                             typeCategory = 'Poseurs';
-                            staffMultiplier = 1;
-                          }
                         }
-                        
-                        // Calculer le nombre de personnes nécessaires (8h = 1 personne)
-                        const personsNeeded = Math.ceil((dailyHours / 8) * staffMultiplier);
+                      } else if (item.type === 'task' && item.isJalon) {
+                        typeCategory = 'Encadrement';
+                      } else {
+                        typeCategory = 'Poseurs';
+                      }
+                      
+                      // Calculer le nombre de personnes nécessaires (8h = 1 personne)
+                      const personsNeeded = Math.ceil(dailyHours / 8);
+                      
+                      if (personsNeeded > 0) {
                         byType[typeCategory] += personsNeeded;
+                        totalStaff += personsNeeded;
                         
                         // Si c'est des poseurs, toujours ajouter un chef d'équipe automatiquement
                         // Ratio : 1 chef pour 3-4 poseurs maximum
-                        if (typeCategory === 'Poseurs' && personsNeeded > 0) {
+                        if (typeCategory === 'Poseurs') {
                           const chefEquipe = Math.ceil(personsNeeded / 3.5); // 1 chef pour ~3-4 poseurs
                           byType['Encadrement'] += chefEquipe;
-                          totalStaff += personsNeeded + chefEquipe;
-                        } else {
-                          totalStaff += personsNeeded;
+                          totalStaff += chefEquipe;
                         }
                       }
                     });
@@ -969,13 +958,21 @@ export default function GanttChart({
                 <div className="absolute top-1 right-2 text-xs text-gray-600 font-medium">
                   Max: {(() => {
                     const maxStaff = Math.max(...periodInfo.periodDays.map(day => {
-                      const dateKey = format(day, 'yyyy-MM-dd');
-                      return Object.values(itemWorkloads).reduce((sum, workload, index) => {
-                        const item = allGanttItems[index];
-                        const dailyHours = workload.dailyDistribution[dateKey] || 0;
-                        const personsNeeded = Math.ceil(dailyHours / 8);
-                        return sum + personsNeeded;
-                      }, 0);
+                      let dailyStaff = 0;
+                      allGanttItems.forEach(item => {
+                        if (!item.estimatedHours || !item.startDate || !item.endDate) return;
+                        const itemStart = new Date(item.startDate);
+                        const itemEnd = new Date(item.endDate);
+                        if (day >= itemStart && day <= itemEnd) {
+                          const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
+                          const dailyHours = item.estimatedHours / totalWorkDays;
+                          const personsNeeded = Math.ceil(dailyHours / 8);
+                          const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
+                          const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
+                          dailyStaff += personsNeeded + chefEquipe;
+                        }
+                      });
+                      return dailyStaff;
                     }));
                     return maxStaff;
                   })()} pers.
@@ -986,11 +983,21 @@ export default function GanttChart({
                     const totalDays = periodInfo.periodDays.length;
                     if (totalDays === 0) return '0';
                     const avgStaff = periodInfo.periodDays.reduce((sum, day) => {
-                      const dateKey = format(day, 'yyyy-MM-dd');
-                      return sum + Object.values(itemWorkloads).reduce((daySum, workload, index) => {
-                        const dailyHours = workload.dailyDistribution[dateKey] || 0;
-                        return daySum + Math.ceil(dailyHours / 8);
-                      }, 0);
+                      let dailyStaff = 0;
+                      allGanttItems.forEach(item => {
+                        if (!item.estimatedHours || !item.startDate || !item.endDate) return;
+                        const itemStart = new Date(item.startDate);
+                        const itemEnd = new Date(item.endDate);
+                        if (day >= itemStart && day <= itemEnd) {
+                          const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
+                          const dailyHours = item.estimatedHours / totalWorkDays;
+                          const personsNeeded = Math.ceil(dailyHours / 8);
+                          const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
+                          const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
+                          dailyStaff += personsNeeded + chefEquipe;
+                        }
+                      });
+                      return sum + dailyStaff;
                     }, 0) / totalDays;
                     return avgStaff.toFixed(1);
                   })()} pers.
@@ -1028,10 +1035,20 @@ export default function GanttChart({
               <div className="text-blue-600">
                 {(() => {
                   const peakDay = periodInfo.periodDays.reduce((peak, day) => {
-                    const dateKey = format(day, 'yyyy-MM-dd');
-                    const dayStaff = Object.values(itemWorkloads).reduce((sum, workload) => 
-                      sum + Math.ceil((workload.dailyDistribution[dateKey] || 0) / 8), 0
-                    );
+                    let dayStaff = 0;
+                    allGanttItems.forEach(item => {
+                      if (!item.estimatedHours || !item.startDate || !item.endDate) return;
+                      const itemStart = new Date(item.startDate);
+                      const itemEnd = new Date(item.endDate);
+                      if (day >= itemStart && day <= itemEnd) {
+                        const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
+                        const dailyHours = item.estimatedHours / totalWorkDays;
+                        const personsNeeded = Math.ceil(dailyHours / 8);
+                        const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
+                        const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
+                        dayStaff += personsNeeded + chefEquipe;
+                      }
+                    });
                     return dayStaff > peak.staff ? { day, staff: dayStaff } : peak;
                   }, { day: periodInfo.periodDays[0], staff: 0 });
                   
@@ -1045,10 +1062,20 @@ export default function GanttChart({
               <div className="text-green-600">
                 {(() => {
                   const lowDay = periodInfo.periodDays.reduce((low, day) => {
-                    const dateKey = format(day, 'yyyy-MM-dd');
-                    const dayStaff = Object.values(itemWorkloads).reduce((sum, workload) => 
-                      sum + Math.ceil((workload.dailyDistribution[dateKey] || 0) / 8), 0
-                    );
+                    let dayStaff = 0;
+                    allGanttItems.forEach(item => {
+                      if (!item.estimatedHours || !item.startDate || !item.endDate) return;
+                      const itemStart = new Date(item.startDate);
+                      const itemEnd = new Date(item.endDate);
+                      if (day >= itemStart && day <= itemEnd) {
+                        const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
+                        const dailyHours = item.estimatedHours / totalWorkDays;
+                        const personsNeeded = Math.ceil(dailyHours / 8);
+                        const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
+                        const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
+                        dayStaff += personsNeeded + chefEquipe;
+                      }
+                    });
                     return dayStaff < low.staff ? { day, staff: dayStaff } : low;
                   }, { day: periodInfo.periodDays[0], staff: 999 });
                   
@@ -1062,10 +1089,20 @@ export default function GanttChart({
               <div className="text-orange-600">
                 {(() => {
                   const criticalDays = periodInfo.periodDays.filter(day => {
-                    const dateKey = format(day, 'yyyy-MM-dd');
-                    const dayStaff = Object.values(itemWorkloads).reduce((sum, workload) => 
-                      sum + Math.ceil((workload.dailyDistribution[dateKey] || 0) / 8), 0
-                    );
+                    let dayStaff = 0;
+                    allGanttItems.forEach(item => {
+                      if (!item.estimatedHours || !item.startDate || !item.endDate) return;
+                      const itemStart = new Date(item.startDate);
+                      const itemEnd = new Date(item.endDate);
+                      if (day >= itemStart && day <= itemEnd) {
+                        const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
+                        const dailyHours = item.estimatedHours / totalWorkDays;
+                        const personsNeeded = Math.ceil(dailyHours / 8);
+                        const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
+                        const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
+                        dayStaff += personsNeeded + chefEquipe;
+                      }
+                    });
                     return dayStaff > 12; // Seuil critique à définir
                   }).length;
                   
@@ -1080,10 +1117,21 @@ export default function GanttChart({
                 {(() => {
                   const variance = (() => {
                     const staffPerDay = periodInfo.periodDays.map(day => {
-                      const dateKey = format(day, 'yyyy-MM-dd');
-                      return Object.values(itemWorkloads).reduce((sum, workload) => 
-                        sum + Math.ceil((workload.dailyDistribution[dateKey] || 0) / 8), 0
-                      );
+                      let dayStaff = 0;
+                      allGanttItems.forEach(item => {
+                        if (!item.estimatedHours || !item.startDate || !item.endDate) return;
+                        const itemStart = new Date(item.startDate);
+                        const itemEnd = new Date(item.endDate);
+                        if (day >= itemStart && day <= itemEnd) {
+                          const totalWorkDays = differenceInDays(itemEnd, itemStart) + 1;
+                          const dailyHours = item.estimatedHours / totalWorkDays;
+                          const personsNeeded = Math.ceil(dailyHours / 8);
+                          const isPosteurs = !(item.type === 'project' && (item.status === 'etude' || item.status === 'planification')) && !(item.type === 'task' && item.isJalon);
+                          const chefEquipe = isPosteurs ? Math.ceil(personsNeeded / 3.5) : 0;
+                          dayStaff += personsNeeded + chefEquipe;
+                        }
+                      });
+                      return dayStaff;
                     });
                     const avg = staffPerDay.reduce((a, b) => a + b, 0) / staffPerDay.length;
                     const variance = staffPerDay.reduce((sum, staff) => sum + Math.pow(staff - avg, 2), 0) / staffPerDay.length;

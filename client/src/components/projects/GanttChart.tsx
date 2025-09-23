@@ -847,8 +847,6 @@ export default function GanttChart({
                     const dateKey = format(day, 'yyyy-MM-dd');
                     let totalStaff = 0;
                     const byType: { [key: string]: number } = {
-                      'Menuisiers Senior': 0,
-                      'Menuisiers Junior': 0,
                       'Poseurs': 0,
                       'Encadrement': 0
                     };
@@ -861,7 +859,7 @@ export default function GanttChart({
                         
                         // Calcul des effectifs selon le type de tâche et sa complexité
                         let staffMultiplier = 1;
-                        let typeCategory = 'Menuisiers Junior';
+                        let typeCategory = 'Poseurs';
                         
                         // Déterminer la typologie selon le type et statut du projet
                         if (item.type === 'project') {
@@ -875,25 +873,26 @@ export default function GanttChart({
                               staffMultiplier = 0.3;
                               break;
                             case 'approvisionnement':
-                              typeCategory = 'Menuisiers Junior';
+                              typeCategory = 'Poseurs';
                               staffMultiplier = 0.8;
                               break;
                             case 'chantier':
-                              // Différencier selon la complexité estimée
+                              typeCategory = 'Poseurs';
+                              staffMultiplier = 1;
+                              // Ajouter aussi de l'encadrement pour les chantiers complexes
                               if (item.priority === 'critique' || item.estimatedHours && item.estimatedHours > 100) {
-                                typeCategory = 'Menuisiers Senior';
-                                staffMultiplier = 1.2;
-                              } else {
-                                typeCategory = 'Poseurs';
-                                staffMultiplier = 1;
+                                const supervisorHours = dailyHours * 0.2; // 20% du temps en supervision
+                                const supervisorPersons = Math.ceil((supervisorHours / 8) * 0.5);
+                                byType['Encadrement'] += supervisorPersons;
+                                staffMultiplier = 1.1; // Légèrement plus de poseurs aussi
                               }
                               break;
                             case 'sav':
-                              typeCategory = 'Menuisiers Senior';
-                              staffMultiplier = 0.6;
+                              typeCategory = 'Poseurs';
+                              staffMultiplier = 0.8; // SAV nécessite moins de personnel
                               break;
                             default:
-                              typeCategory = 'Menuisiers Junior';
+                              typeCategory = 'Poseurs';
                               staffMultiplier = 1;
                           }
                         } else if (item.type === 'task') {
@@ -901,12 +900,9 @@ export default function GanttChart({
                           if (item.isJalon) {
                             typeCategory = 'Encadrement';
                             staffMultiplier = 0.2;
-                          } else if (item.priority === 'critique') {
-                            typeCategory = 'Menuisiers Senior';
-                            staffMultiplier = 1.1;
                           } else {
                             typeCategory = 'Poseurs';
-                            staffMultiplier = 0.9;
+                            staffMultiplier = 1;
                           }
                         }
                         
@@ -932,9 +928,7 @@ export default function GanttChart({
                     // Couleurs par type de personnel
                     const typeColors = {
                       'Encadrement': 'bg-purple-500',
-                      'Menuisiers Senior': 'bg-blue-500',
-                      'Menuisiers Junior': 'bg-green-500',
-                      'Poseurs': 'bg-yellow-500'
+                      'Poseurs': 'bg-blue-500'
                     };
                     
                     const segments = Object.entries(dayStaff.byType).map(([type, count]) => {
@@ -1011,22 +1005,16 @@ export default function GanttChart({
           </div>
           
           {/* Légende par type de personnel */}
-          <div className="flex items-center justify-center space-x-4 text-xs text-gray-600 mt-2">
+          <div className="flex items-center justify-center space-x-6 text-xs text-gray-600 mt-2">
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-purple-500 rounded" />
               <span>Encadrement</span>
+              <span className="text-gray-500">(Étude, Planning, Jalons)</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-blue-500 rounded" />
-              <span>Menuisiers Senior</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-green-500 rounded" />
-              <span>Menuisiers Junior</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-yellow-500 rounded" />
               <span>Poseurs</span>
+              <span className="text-gray-500">(Chantier, Pose, SAV)</span>
             </div>
           </div>
           

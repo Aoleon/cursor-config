@@ -348,6 +348,68 @@ export const alertStatusEnum = pgEnum("alert_status", [
 ]);
 
 // ========================================
+// ENUMS PHASE 3 - SYSTÈME DE CHECKLIST ADMINISTRATIVE AUTOMATISÉE
+// ========================================
+
+// Statuts des checklists administratives par projet
+export const adminChecklistStatusEnum = pgEnum("admin_checklist_status", [
+  "draft", "active", "completed", "archived"
+]);
+
+// Statuts des éléments de checklist administrative
+export const checklistItemStatusEnum = pgEnum("checklist_item_status", [
+  "not_started", "in_progress", "completed", "blocked", "not_applicable"
+]);
+
+// Types de dépendances pour checklist administrative (différent des tâches planning)
+export const adminDependencyTypeEnum = pgEnum("admin_dependency_type", [
+  "blocker",        // Document bloquant - doit être complété avant de commencer
+  "prerequisite",   // Prérequis - doit être disponible avant traitement
+  "trigger",        // Déclencheur - génère automatiquement le document dépendant
+  "successor"       // Successeur - suit logiquement après completion
+]);
+
+// Types de documents administratifs français BTP (15+ types obligatoires)
+export const adminDocumentTypeEnum = pgEnum("admin_document_type", [
+  "PPSPS",                           // Plan Particulier de Sécurité et de Protection de la Santé
+  "DOE",                             // Dossier des Ouvrages Exécutés
+  "DICT",                            // Déclaration d'Intention de Commencement de Travaux
+  "ASSURANCE_DECENNALE",             // Assurance Décennale
+  "GARANTIE_PARFAIT_ACHEVEMENT",     // Garantie de Parfait Achèvement
+  "GARANTIE_BON_FONCTIONNEMENT",     // Garantie de Bon Fonctionnement
+  "DECLARATION_OUVERTURE_CHANTIER",  // Déclaration d'Ouverture de Chantier
+  "AUTORISATION_VOIRIE",             // Autorisation de Voirie
+  "PERMIS_CONSTRUIRE",               // Permis de Construire
+  "DECLARATION_PREALABLE",           // Déclaration Préalable
+  "ARRETE_MUNICIPAL",                // Arrêté Municipal
+  "RAPPORT_SOL",                     // Rapport de Sol
+  "DIAGNOSTIC_AMIANTE",              // Diagnostic Amiante
+  "DIAGNOSTIC_PLOMB",                // Diagnostic Plomb
+  "RAPPORT_ACCESSIBILITE",           // Rapport Accessibilité
+  "CONFORMITE_RT2020",               // Conformité RT2020
+  "CERTIFICATION_CE",                // Certification CE
+  "ATTESTATION_FIN_TRAVAUX",         // Attestation de Fin de Travaux
+  "PV_RECEPTION_TRAVAUX",            // PV de Réception des Travaux
+  "CERTIFICAT_CONFORMITE"            // Certificat de Conformité
+]);
+
+// Types de validation pour workflow d'approbation multi-niveaux
+export const validationTypeEnum = pgEnum("validation_type", [
+  "technical_validation",    // Validation technique
+  "legal_validation",        // Validation légale/réglementaire
+  "quality_validation",      // Validation qualité
+  "final_approval"           // Approbation finale
+]);
+
+// Statuts des validations dans le workflow d'approbation
+export const validationStatusEnum = pgEnum("validation_status", [
+  "pending",              // En attente de validation
+  "approved",             // Approuvé
+  "rejected",             // Rejeté
+  "revision_requested"    // Révision demandée
+]);
+
+// ========================================
 // TABLES POC UNIQUEMENT
 // ========================================
 
@@ -1390,6 +1452,239 @@ export const projectPriorities = pgTable("project_priorities", {
     priorityLevelIdx: index("project_priorities_level_idx").on(table.priorityLevel),
     scoreIdx: index("project_priorities_score_idx").on(table.priorityScore),
     activeIdx: index("project_priorities_active_idx").on(table.isActive),
+  };
+});
+
+// ========================================
+// TABLES PHASE 3 - SYSTÈME DE CHECKLIST ADMINISTRATIVE AUTOMATISÉE
+// ========================================
+
+// Table des checklists administratives par projet
+export const administrativeChecklists = pgTable("administrative_checklists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  // Informations de base de la checklist
+  name: varchar("name").notNull(), // Nom de la checklist (ex: "Checklist Passation Projet ABC")
+  description: text("description"), // Description détaillée de la checklist
+  
+  // Gestion et responsabilité
+  createdBy: varchar("created_by").notNull().references(() => users.id), // Référence utilisateur créateur
+  
+  // Statut et progression
+  status: adminChecklistStatusEnum("status").default("draft"), // draft, active, completed, archived
+  priority: priorityLevelEnum("priority").default("normale"), // Niveau de priorité existant
+  completionPercentage: integer("completion_percentage").default(0), // Pourcentage 0-100
+  
+  // Dates de suivi
+  expectedCompletionDate: timestamp("expected_completion_date"), // Date d'achèvement prévue
+  actualCompletionDate: timestamp("actual_completion_date"), // Date d'achèvement réelle (nullable)
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // Index de performance pour requêtes sur projets
+    projectIdIdx: index("administrative_checklists_project_id_idx").on(table.projectId),
+    // Index sur statut et priorité pour filtrage
+    statusPriorityIdx: index("administrative_checklists_status_priority_idx").on(table.status, table.priority),
+    // Index sur dates pour suivi temporel
+    expectedDateIdx: index("administrative_checklists_expected_date_idx").on(table.expectedCompletionDate),
+    actualDateIdx: index("administrative_checklists_actual_date_idx").on(table.actualCompletionDate),
+    // Index sur créateur
+    createdByIdx: index("administrative_checklists_created_by_idx").on(table.createdBy),
+  };
+});
+
+// Table des éléments de checklist (documents/démarches)
+export const administrativeChecklistItems = pgTable("administrative_checklist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  checklistId: varchar("checklist_id").notNull().references(() => administrativeChecklists.id, { onDelete: "cascade" }),
+  
+  // Type et informations du document/démarche
+  documentType: adminDocumentTypeEnum("document_type").notNull(), // Type de document BTP français
+  name: varchar("name").notNull(), // Nom du document/démarche
+  description: text("description"), // Description détaillée
+  
+  // Statut et caractéristiques
+  status: checklistItemStatusEnum("status").default("not_started"), // not_started, in_progress, completed, blocked, not_applicable
+  isRequired: boolean("is_required").default(true), // Obligatoire ou facultatif
+  
+  // Dates et échéances
+  expectedDate: timestamp("expected_date"), // Date attendue pour ce document
+  completedDate: timestamp("completed_date"), // Date de completion (nullable)
+  
+  // Assignation et validation
+  assignedTo: varchar("assigned_to").references(() => users.id), // Responsable de la tâche
+  validatedBy: varchar("validated_by").references(() => users.id), // Approbateur (nullable)
+  validatedAt: timestamp("validated_at"), // Date de validation (nullable)
+  
+  // Lien vers document et informations
+  documentUrl: varchar("document_url"), // Lien vers fichier (nullable)
+  notes: text("notes"), // Notes et commentaires
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // Index de performance pour requêtes sur checklists
+    checklistIdIdx: index("administrative_checklist_items_checklist_id_idx").on(table.checklistId),
+    // Index sur type de document pour filtrage
+    documentTypeIdx: index("administrative_checklist_items_document_type_idx").on(table.documentType),
+    // Index sur statut pour workflow
+    statusIdx: index("administrative_checklist_items_status_idx").on(table.status),
+    // Index sur dates pour suivi temporel
+    expectedDateIdx: index("administrative_checklist_items_expected_date_idx").on(table.expectedDate),
+    completedDateIdx: index("administrative_checklist_items_completed_date_idx").on(table.completedDate),
+    // Index sur assignation
+    assignedToIdx: index("administrative_checklist_items_assigned_to_idx").on(table.assignedTo),
+    validatedByIdx: index("administrative_checklist_items_validated_by_idx").on(table.validatedBy),
+    // Index composé sur statut et assignation pour performance
+    statusAssignedIdx: index("administrative_checklist_items_status_assigned_idx").on(table.status, table.assignedTo),
+    
+    // INDEX DE PERFORMANCE CIBLÉS - PHASE 3 ARCHITECTURE CRITIQUE
+    // Index composite pour performance sur projet et statut
+    projectStatusIdx: index("administrative_checklist_items_project_status_idx").on(table.checklistId, table.status),
+    // Index composite pour assignation et statut
+    assignedStatusIdx: index("administrative_checklist_items_assigned_status_idx").on(table.assignedTo, table.status),
+    // Index sur date d'échéance pour suivi temporel critique
+    dueDateIdx: index("administrative_checklist_items_due_date_idx").on(table.expectedDate),
+    
+    // CONTRAINTE D'INTÉGRITÉ CRITIQUE : Un seul document par type par checklist
+    checklistDocumentTypeUnique: uniqueIndex("administrative_checklist_items_checklist_document_unique").on(table.checklistId, table.documentType),
+  };
+});
+
+// Table des validations pour workflow d'approbation multi-niveaux
+export const administrativeValidations = pgTable("administrative_validations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  checklistItemId: varchar("checklist_item_id").notNull().references(() => administrativeChecklistItems.id, { onDelete: "cascade" }),
+  
+  // Validateur et type de validation
+  validatorId: varchar("validator_id").notNull().references(() => users.id), // Référence utilisateur validateur
+  validationType: validationTypeEnum("validation_type").notNull(), // technical_validation, legal_validation, quality_validation, final_approval
+  
+  // Statut et résultat de validation
+  status: validationStatusEnum("status").default("pending"), // pending, approved, rejected, revision_requested
+  validatedAt: timestamp("validated_at"), // Date de validation
+  
+  // Commentaires et notes
+  comments: text("comments"), // Commentaires de validation
+  revisionNotes: text("revision_notes"), // Notes pour demande de révision
+  
+  // Niveau de priorité de la validation
+  priority: priorityLevelEnum("priority").default("normale"), // Priorité de cette validation
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // Index de performance pour requêtes sur items de checklist
+    checklistItemIdIdx: index("administrative_validations_checklist_item_id_idx").on(table.checklistItemId),
+    // Index sur validateur pour suivi des tâches
+    validatorIdIdx: index("administrative_validations_validator_id_idx").on(table.validatorId),
+    // Index sur type et statut de validation pour workflow
+    typeStatusIdx: index("administrative_validations_type_status_idx").on(table.validationType, table.status),
+    // Index sur statut pour filtrage rapide
+    statusIdx: index("administrative_validations_status_idx").on(table.status),
+    // Index sur date de validation pour suivi temporel
+    validatedAtIdx: index("administrative_validations_validated_at_idx").on(table.validatedAt),
+    // Index composé pour performance sur workflow
+    validatorStatusIdx: index("administrative_validations_validator_status_idx").on(table.validatorId, table.status),
+  };
+});
+
+// Table de jonction pour dépendances normalisées entre éléments administratifs
+export const administrativeItemDependencies = pgTable("administrative_item_dependencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  itemId: varchar("item_id").notNull().references(() => administrativeChecklistItems.id, { onDelete: "cascade" }),
+  dependsOnItemId: varchar("depends_on_item_id").notNull().references(() => administrativeChecklistItems.id, { onDelete: "cascade" }),
+  
+  // Type et paramètres de dépendance
+  dependencyType: adminDependencyTypeEnum("dependency_type").notNull(), // blocker, prerequisite, trigger, successor
+  lagDays: integer("lag_days").default(0), // Délai en jours (peut être négatif pour avance)
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // Index de performance pour requêtes sur dépendances
+    itemIdIdx: index("administrative_item_dependencies_item_id_idx").on(table.itemId),
+    dependsOnItemIdIdx: index("administrative_item_dependencies_depends_on_item_id_idx").on(table.dependsOnItemId),
+    dependencyTypeIdx: index("administrative_item_dependencies_dependency_type_idx").on(table.dependencyType),
+    
+    // Contrainte d'unicité pour éviter dépendances dupliquées
+    itemDependencyUnique: uniqueIndex("administrative_item_dependencies_unique_idx").on(table.itemId, table.dependsOnItemId),
+  };
+});
+
+// Table des templates de checklist administrative pour automatisation
+export const administrativeChecklistTemplates = pgTable("administrative_checklist_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Informations de base du template
+  name: varchar("name").notNull(), // ex: "Template Marché Public"
+  description: text("description"), // Description du template
+  projectCategory: varchar("project_category"), // Catégorie de projet applicable
+  
+  // Configuration du template
+  isDefault: boolean("is_default").default(false), // Template par défaut
+  isActive: boolean("is_active").default(true), // Template actif
+  
+  // Métadonnées de création
+  createdBy: varchar("created_by").notNull().references(() => users.id), // Créateur du template
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // Index pour requêtes sur catégorie et statut
+    categoryDefaultIdx: index("administrative_checklist_templates_category_default_idx").on(table.projectCategory, table.isDefault),
+    activeIdx: index("administrative_checklist_templates_active_idx").on(table.isActive),
+    createdByIdx: index("administrative_checklist_templates_created_by_idx").on(table.createdBy),
+  };
+});
+
+// Table des éléments de template pour automatisation
+export const administrativeTemplateItems = pgTable("administrative_template_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull().references(() => administrativeChecklistTemplates.id, { onDelete: "cascade" }),
+  
+  // Configuration de l'élément template
+  documentType: adminDocumentTypeEnum("document_type").notNull(), // Type de document BTP français
+  defaultAssigneeRole: varchar("default_assignee_role"), // Rôle par défaut pour assignation
+  slaInDays: integer("sla_in_days").default(30), // SLA par défaut en jours
+  weight: integer("weight").default(1), // Poids pour calcul progression (1-100)
+  
+  // Paramètres d'automatisation
+  isRequired: boolean("is_required").default(true), // Élément obligatoire
+  triggerCondition: varchar("trigger_condition"), // Condition pour génération auto (ex: "project_status=passation")
+  
+  // Ordre d'affichage et regroupement
+  orderIndex: integer("order_index").default(0), // Ordre d'affichage
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // Index de performance pour requêtes sur templates
+    templateIdIdx: index("administrative_template_items_template_id_idx").on(table.templateId),
+    documentTypeIdx: index("administrative_template_items_document_type_idx").on(table.documentType),
+    
+    // Index composé pour performance
+    templateDocumentTypeIdx: index("administrative_template_items_template_document_idx").on(table.templateId, table.documentType),
+    
+    // Index pour ordre d'affichage
+    orderIdx: index("administrative_template_items_order_idx").on(table.orderIndex),
+    
+    // Contrainte d'unicité pour éviter doublons de documents par template
+    templateDocumentUnique: uniqueIndex("administrative_template_items_unique_idx").on(table.templateId, table.documentType),
   };
 });
 
@@ -3406,6 +3701,144 @@ export type InsertPerformanceBenchmark = z.infer<typeof insertPerformanceBenchma
 
 export type BusinessAlertConfig = typeof businessAlertsConfig.$inferSelect;
 export type InsertBusinessAlertConfig = z.infer<typeof insertBusinessAlertConfigSchema>;
+
+// ========================================
+// SCHEMAS ZOD POUR SYSTÈME DE CHECKLIST ADMINISTRATIVE AUTOMATISÉE - PHASE 3
+// ========================================
+
+// Schémas d'insertion pour les nouvelles tables administratives
+export const insertAdministrativeChecklistSchema = createInsertSchema(administrativeChecklists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  name: z.string().min(3, "Le nom de la checklist doit contenir au moins 3 caractères"),
+  description: z.string().optional(),
+  completionPercentage: z.number().min(0).max(100).default(0),
+});
+
+export const insertAdministrativeChecklistItemSchema = createInsertSchema(administrativeChecklistItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  name: z.string().min(3, "Le nom du document doit contenir au moins 3 caractères"),
+  description: z.string().optional(),
+  notes: z.string().optional(),
+  documentUrl: z.string().url().optional().or(z.literal("")),
+  dependencies: z.array(z.string()).default([]),
+});
+
+export const insertAdministrativeValidationSchema = createInsertSchema(administrativeValidations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  comments: z.string().optional(),
+  revisionNotes: z.string().optional(),
+});
+
+// Schémas de mise à jour pour les entités administratives
+export const updateAdministrativeChecklistSchema = insertAdministrativeChecklistSchema.partial().omit({
+  projectId: true,
+  createdBy: true,
+});
+
+export const updateAdministrativeChecklistItemSchema = insertAdministrativeChecklistItemSchema.partial().omit({
+  checklistId: true,
+});
+
+export const updateAdministrativeValidationSchema = insertAdministrativeValidationSchema.partial().omit({
+  checklistItemId: true,
+  validatorId: true,
+  validationType: true,
+});
+
+// Schémas pour requêtes et filtrage
+export const administrativeChecklistsQuerySchema = z.object({
+  projectId: z.string().optional(),
+  status: z.enum(['draft', 'active', 'completed', 'archived']).optional(),
+  priority: z.enum(['tres_faible', 'faible', 'normale', 'elevee', 'critique']).optional(),
+  createdBy: z.string().optional(),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  offset: z.coerce.number().min(0).default(0),
+});
+
+export const administrativeChecklistItemsQuerySchema = z.object({
+  checklistId: z.string().optional(),
+  status: z.enum(['not_started', 'in_progress', 'completed', 'blocked', 'not_applicable']).optional(),
+  documentType: z.string().optional(), // On accepte string car l'enum est long
+  isRequired: z.boolean().optional(),
+  assignedTo: z.string().optional(),
+  validatedBy: z.string().optional(),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  offset: z.coerce.number().min(0).default(0),
+});
+
+export const administrativeValidationsQuerySchema = z.object({
+  checklistItemId: z.string().optional(),
+  validatorId: z.string().optional(),
+  validationType: z.enum(['technical_validation', 'legal_validation', 'quality_validation', 'final_approval']).optional(),
+  status: z.enum(['pending', 'approved', 'rejected', 'revision_requested']).optional(),
+  priority: z.enum(['tres_faible', 'faible', 'normale', 'elevee', 'critique']).optional(),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  offset: z.coerce.number().min(0).default(0),
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR SYSTÈME DE CHECKLIST ADMINISTRATIVE AUTOMATISÉE - PHASE 3
+// ========================================
+
+// Types pour les tables administratives
+export type AdministrativeChecklist = typeof administrativeChecklists.$inferSelect;
+export type InsertAdministrativeChecklist = z.infer<typeof insertAdministrativeChecklistSchema>;
+export type UpdateAdministrativeChecklist = z.infer<typeof updateAdministrativeChecklistSchema>;
+
+export type AdministrativeChecklistItem = typeof administrativeChecklistItems.$inferSelect;
+export type InsertAdministrativeChecklistItem = z.infer<typeof insertAdministrativeChecklistItemSchema>;
+export type UpdateAdministrativeChecklistItem = z.infer<typeof updateAdministrativeChecklistItemSchema>;
+
+export type AdministrativeValidation = typeof administrativeValidations.$inferSelect;
+export type InsertAdministrativeValidation = z.infer<typeof insertAdministrativeValidationSchema>;
+export type UpdateAdministrativeValidation = z.infer<typeof updateAdministrativeValidationSchema>;
+
+// Types pour les requêtes
+export type AdministrativeChecklistsQuery = z.infer<typeof administrativeChecklistsQuerySchema>;
+export type AdministrativeChecklistItemsQuery = z.infer<typeof administrativeChecklistItemsQuerySchema>;
+export type AdministrativeValidationsQuery = z.infer<typeof administrativeValidationsQuerySchema>;
+
+// Types utilitaires pour l'administration
+export type AdminChecklistStatus = AdministrativeChecklist['status'];
+export type ChecklistItemStatus = AdministrativeChecklistItem['status'];
+export type AdminDocumentType = AdministrativeChecklistItem['documentType'];
+export type ValidationType = AdministrativeValidation['validationType'];
+export type ValidationStatus = AdministrativeValidation['status'];
+
+// Interface pour statistiques de checklist
+export interface ChecklistStatistics {
+  totalItems: number;
+  completedItems: number;
+  pendingItems: number;
+  blockedItems: number;
+  overdue: number;
+  completionPercentage: number;
+  expectedCompletionDate?: Date;
+  estimatedDelay?: number; // jours
+}
+
+// Interface pour rapport de validation
+export interface ValidationReport {
+  checklistId: string;
+  projectId: string;
+  projectName: string;
+  totalValidations: number;
+  approvedValidations: number;
+  rejectedValidations: number;
+  pendingValidations: number;
+  criticalBlocking: number;
+  averageValidationTime: number; // heures
+  validationCompletionRate: number; // pourcentage
+}
 
 // ========================================
 // SCHEMAS ZOD POUR API ANALYTICS - PHASE 3.1.4

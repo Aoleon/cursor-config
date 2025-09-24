@@ -45,6 +45,7 @@ import { registerWorkflowRoutes } from "./routes-workflow";
 import { registerBatigestRoutes } from "./routes-batigest";
 import { registerTeamsRoutes } from "./routes-teams";
 import { createAdminRoutes } from "./routes-admin";
+import { migrationRoutes } from "./routes-migration";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto, parsePeriod, getDefaultPeriod, getLastMonths, type DateRange } from "./dateUtils";
@@ -3486,6 +3487,9 @@ registerChiffrageRoutes(app, storage);
 
 // Enregistrer les routes de jalons de validation
 app.use("/api/validation-milestones", validationMilestonesRouter);
+
+// Routes migration Monday.com
+app.use("/api/migration", migrationRoutes);
 
 // Enregistrer les routes du workflow
 registerWorkflowRoutes(app);

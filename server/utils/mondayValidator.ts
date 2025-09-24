@@ -15,18 +15,250 @@ import { z } from 'zod';
 import type { MondayAoData, MondayProjectData } from './mondayDataGenerator';
 
 // ========================================
+// UTILITAIRES DATES MONDAY.COM
+// ========================================
+
+/**
+ * Valide le format de date Monday.com (2 ou 3 segments)
+ * Formats supportés selon convention française JLM:
+ * - Format 2 segments: "->28/02" (DD/MM - jour/mois français)
+ * - Format 3 segments: "->01/10/25" (DD/MM/YY - jour/mois/année)
+ * - Format complet: "->03/10/2025" (DD/MM/YYYY - jour/mois/année complète)
+ */
+export function validateMondayDateFormat(dateStr: string): boolean {
+  if (!dateStr || !dateStr.startsWith('->')) return false;
+  
+  // Regex étendue pour supporter 2 et 3 segments
+  const mondayDateRegex = /^->(\d{1,2})\/(\d{1,2})(\/\d{2,4})?$/;
+  return mondayDateRegex.test(dateStr);
+}
+
+/**
+ * Validation calendrier français avec support années bissextiles
+ */
+function isValidFrenchDate(day: number, month: number, year: number): boolean {
+  // Vérifier plages de base
+  if (day < 1 || day > 31 || month < 1 || month > 12) return false;
+  
+  // Vérifier jours du mois selon calendrier français
+  const daysInMonth = new Date(year, month, 0).getDate();
+  if (day > daysInMonth) return false;
+  
+  // Validation spéciale pour 29 février (années bissextiles)
+  if (month === 2 && day === 29) {
+    return ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0));
+  }
+  
+  return true;
+}
+
+/**
+ * Parse une date Monday.com vers format ISO (YYYY-MM-DD)
+ * CONVENTION FRANÇAISE JLM : TOUJOURS DD/MM pour 2 et 3 segments
+ */
+export function parseMondayDate(dateStr: string): string | null {
+  if (!dateStr || !dateStr.startsWith('->')) return null;
+  
+  const match = dateStr.match(/^->(\d{1,2})\/(\d{1,2})(\/\d{2,4})?$/);
+  if (!match) return null;
+  
+  const [, part1, part2, yearPart] = match;
+  
+  // CONVENTION FRANÇAISE JLM : part1=jour, part2=mois (TOUJOURS)
+  const day = parseInt(part1, 10);
+  const month = parseInt(part2, 10);
+  
+  // Déterminer l'année
+  const currentYear = new Date().getFullYear();
+  let year: number;
+  
+  if (yearPart) {
+    const yearStr = yearPart.slice(1); // Enlever le '/'
+    year = yearStr.length === 2 ? 2000 + parseInt(yearStr, 10) : parseInt(yearStr, 10);
+  } else {
+    // Si pas d'année, utiliser année courante
+    year = currentYear;
+  }
+  
+  // Validation française complète (avec années bissextiles)
+  if (!isValidFrenchDate(day, month, year)) {
+    return null;
+  }
+  
+  // Format ISO pour Saxium
+  return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Validation et parsing avec gestion warnings non bloquants
+ */
+export function validateAndParseMondayDate(dateStr: string): { 
+  parsed: string | null, 
+  warning?: string 
+} {
+  if (!dateStr) {
+    return { parsed: null };
+  }
+  
+  if (!dateStr.startsWith('->')) {
+    return {
+      parsed: null,
+      warning: `Format date Monday.com invalide: doit commencer par '->' (reçu: ${dateStr})`
+    };
+  }
+  
+  const parsed = parseMondayDate(dateStr);
+  
+  if (!parsed) {
+    // Essayer de déterminer la cause de l'échec
+    const match = dateStr.match(/^->(\d{1,2})\/(\d{1,2})(\/\d{2,4})?$/);
+    
+    if (!match) {
+      return {
+        parsed: null,
+        warning: `Format date Monday.com non reconnu: ${dateStr} (format attendu: ->DD/MM ou ->DD/MM/YY)`
+      };
+    }
+    
+    const [, part1, part2, yearPart] = match;
+    const day = parseInt(part1, 10);
+    const month = parseInt(part2, 10);
+    
+    if (month < 1 || month > 12) {
+      return {
+        parsed: null,
+        warning: `Mois invalide dans ${dateStr}: ${month} (doit être 1-12 selon convention française DD/MM)`
+      };
+    }
+    
+    if (day < 1 || day > 31) {
+      return {
+        parsed: null,
+        warning: `Jour invalide dans ${dateStr}: ${day} (doit être 1-31 selon convention française DD/MM)`
+      };
+    }
+    
+    return {
+      parsed: null,
+      warning: `Date invalide dans ${dateStr}: ${day}/${month} ne correspond pas au calendrier français`
+    };
+  }
+  
+  return { parsed };
+}
+
+// ========================================
+// VALIDATION PERMISSIVE POUR MIGRATION PRODUCTION
+// ========================================
+
+/**
+ * VALIDATION PERMISSIVE TEMPORAIRE - MODE PRODUCTION EXCEL
+ * Accepte pratiquement tous caractères sauf codes de contrôle
+ * RÉSOUT: "Nom client contient des caractères non supportés"
+ */
+function isValidForProduction(value: string): boolean {
+  if (!value || typeof value !== 'string') return false;
+  
+  // Mode permissif pour migration Excel authentique
+  const cleanValue = value.trim();
+  if (cleanValue.length === 0) return false;
+  
+  // Accepter pratiquement tous caractères sauf codes de contrôle
+  return /^[^\x00-\x1F\x7F]+$/.test(cleanValue);
+}
+
+/**
+ * NORMALISATION AUTOMATIQUE DONNÉES EXCEL
+ * Nettoie et normalise les données avant validation
+ */
+function normalizeExcelValue(value: string): string {
+  if (!value) return '';
+  
+  return String(value)
+    .trim()
+    .replace(/[\x00-\x1F\x7F]/g, '') // Supprimer codes de contrôle
+    .replace(/\s+/g, ' ') // Normaliser espaces multiples
+    .replace(/[""]/g, '"') // Normaliser guillemets
+    .replace(/['']/g, "'"); // Normaliser apostrophes
+}
+
+/**
+ * FALLBACK CLIENT NAME - VALEURS PAR DÉFAUT
+ * Fournit valeurs par défaut au lieu de rejeter
+ */
+function fallbackClientName(name: string): string {
+  const normalized = normalizeExcelValue(name);
+  
+  if (!normalized || normalized.length < 1) {
+    return 'CLIENT_EXCEL_INCONNU';
+  }
+  
+  if (!isValidForProduction(normalized)) {
+    console.warn(`[FALLBACK] Client name normalized: "${name}" → "CLIENT_EXCEL_NORMALISE"`);
+    return 'CLIENT_EXCEL_NORMALISE';
+  }
+  
+  return normalized;
+}
+
+/**
+ * FALLBACK GEOGRAPHIC NAME - VALEURS PAR DÉFAUT
+ * Fournit valeurs géographiques par défaut au lieu de rejeter
+ */
+function fallbackGeographicName(name: string): string {
+  const normalized = normalizeExcelValue(name);
+  
+  if (!normalized || normalized.length < 1) {
+    return 'ZONE_EXCEL_INCONNUE';
+  }
+  
+  if (!isValidForProduction(normalized)) {
+    console.warn(`[FALLBACK] Geographic name normalized: "${name}" → "ZONE_EXCEL_NORMALISEE"`);
+    return 'ZONE_EXCEL_NORMALISEE';
+  }
+  
+  return normalized;
+}
+
+/**
+ * DEBUG LOGGING DÉTAILLÉ POUR VALIDATION
+ * Affiche les caractères exacts qui causent les rejets
+ */
+function debugValidationValue(fieldName: string, value: string): void {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[DEBUG] Validation ${fieldName}: "${value}" (type: ${typeof value})`);
+    console.log(`[DEBUG] Caractères: ${JSON.stringify([...value])}`);
+    console.log(`[DEBUG] Codes char: ${[...value].map(c => c.charCodeAt(0)).join(', ')}`);
+    console.log(`[DEBUG] Valid for production: ${isValidForProduction(value)}`);
+  }
+}
+
+// ========================================
 // SCHÉMAS VALIDATION MONDAY.COM
 // ========================================
 
 // Validation AO Monday.com (basée sur 911 lignes analysées)
+// MODE PERMISSIF PRODUCTION - ACCEPTE DONNÉES EXCEL AUTHENTIQUES
 export const mondayAoSchema = z.object({
   mondayItemId: z.string().min(1, 'Monday Item ID requis'),
   clientName: z.string()
     .min(1, 'Nom client requis')
-    .refine(name => /^[A-Z\s&\-'\.]+$/i.test(name), 'Nom client doit être alphabétique'),
+    .transform(name => {
+      debugValidationValue('clientName', name);
+      return fallbackClientName(name);
+    })
+    .refine(name => isValidForProduction(name), {
+      message: 'Nom client invalide après normalisation (codes de contrôle détectés)'
+    }),
   city: z.string()
-    .min(2, 'Ville requise')
-    .refine(city => /^[A-Z\s\-']+$/i.test(city), 'Ville doit être alphabétique'),
+    .min(1, 'Ville requise')
+    .transform(city => {
+      debugValidationValue('city', city);
+      return fallbackGeographicName(city);
+    })
+    .refine(city => isValidForProduction(city), {
+      message: 'Ville invalide après normalisation (codes de contrôle détectés)'
+    }),
   aoCategory: z.enum(['MEXT', 'MINT', 'HALL', 'SERRURERIE', 'BARDAGE', 'AUTRE'], {
     errorMap: () => ({ message: 'Catégorie AO doit être MEXT, MINT, HALL, SERRURERIE, BARDAGE ou AUTRE' })
   }),
@@ -41,7 +273,9 @@ export const mondayAoSchema = z.object({
     .min(3, 'Lieu spécifique trop court')
     .optional(),
   estimatedDelay: z.string()
-    .regex(/^->\d{2}\/\d{2}\/\d{2}$/, 'Format date Monday.com invalide (ex: "->01/10/25")')
+    .refine(value => validateMondayDateFormat(value), {
+      message: 'Format date Monday.com invalide. Formats supportés: "->12/09" (2 segments) ou "->01/10/25" (3 segments)'
+    })
     .optional(),
   clientRecurrency: z.boolean().optional()
 });
@@ -54,14 +288,26 @@ export const mondayProjectSchema = z.object({
     .max(200, 'Nom projet trop long'),
   clientName: z.string()
     .min(1, 'Nom client requis')
-    .refine(name => /^[A-Z\s&\-'\.]+$/i.test(name), 'Nom client doit être alphabétique'),
+    .transform(name => {
+      debugValidationValue('project.clientName', name);
+      return fallbackClientName(name);
+    })
+    .refine(name => isValidForProduction(name), {
+      message: 'Nom client invalide après normalisation (codes de contrôle détectés)'
+    }),
   workflowStage: z.enum(['NOUVEAUX', 'En cours', 'ETUDE', 'VISA', 'PLANIFICATION', 'APPROVISIONNEMENT', 'CHANTIER', 'SAV'], {
     errorMap: () => ({ message: 'Stage workflow invalide' })
   }),
   projectSubtype: z.enum(['MEXT', 'MINT', 'BARDAGE', 'Refab', 'Recommande', 'DVA']).optional(),
   geographicZone: z.string()
-    .min(2, 'Zone géographique requise')
-    .refine(zone => /^[A-Z\s\-']+$/i.test(zone), 'Zone géographique doit être alphabétique')
+    .min(1, 'Zone géographique requise')
+    .transform(zone => {
+      debugValidationValue('geographicZone', zone);
+      return fallbackGeographicName(zone);
+    })
+    .refine(zone => isValidForProduction(zone), {
+      message: 'Zone géographique invalide après normalisation (codes de contrôle détectés)'
+    })
     .optional(),
   buildingCount: z.number()
     .int('Nombre bâtiments doit être entier')
@@ -69,6 +315,84 @@ export const mondayProjectSchema = z.object({
     .max(10, 'Maximum 10 bâtiments')
     .optional()
 });
+
+// ========================================
+// NORMALISATION ENUMS CASE-INSENSITIVE
+// ========================================
+
+/**
+ * Normalise les enums case-insensitive pour corriger 'bardage' → 'BARDAGE'
+ */
+function normalizeEnums(data: any): any {
+  const normalized = { ...data };
+  
+  // Normalisation aoCategory (AO)
+  if (normalized.aoCategory && typeof normalized.aoCategory === 'string') {
+    const categoryMap: { [key: string]: string } = {
+      'mext': 'MEXT',
+      'mint': 'MINT', 
+      'hall': 'HALL',
+      'serrurerie': 'SERRURERIE',
+      'bardage': 'BARDAGE',
+      'autre': 'AUTRE'
+    };
+    const normalized_category = categoryMap[normalized.aoCategory.toLowerCase()];
+    if (normalized_category) {
+      normalized.aoCategory = normalized_category;
+    }
+  }
+  
+  // Normalisation projectSubtype (Projects)
+  if (normalized.projectSubtype && typeof normalized.projectSubtype === 'string') {
+    const subtypeMap: { [key: string]: string } = {
+      'mext': 'MEXT',
+      'mint': 'MINT',
+      'bardage': 'BARDAGE',
+      'refab': 'Refab',
+      'recommande': 'Recommande',
+      'dva': 'DVA'
+    };
+    const normalized_subtype = subtypeMap[normalized.projectSubtype.toLowerCase()];
+    if (normalized_subtype) {
+      normalized.projectSubtype = normalized_subtype;
+    }
+  }
+  
+  // Normalisation workflowStage (Projects)
+  if (normalized.workflowStage && typeof normalized.workflowStage === 'string') {
+    const stageMap: { [key: string]: string } = {
+      'nouveaux': 'NOUVEAUX',
+      'en cours': 'En cours',
+      'etude': 'ETUDE',
+      'visa': 'VISA',
+      'planification': 'PLANIFICATION',
+      'approvisionnement': 'APPROVISIONNEMENT',
+      'chantier': 'CHANTIER',
+      'sav': 'SAV'
+    };
+    const normalized_stage = stageMap[normalized.workflowStage.toLowerCase()];
+    if (normalized_stage) {
+      normalized.workflowStage = normalized_stage;
+    }
+  }
+  
+  // Normalisation operationalStatus (AO)
+  if (normalized.operationalStatus && typeof normalized.operationalStatus === 'string') {
+    const statusMap: { [key: string]: string } = {
+      'a relancer': 'A RELANCER',
+      'ao en cours': 'AO EN COURS',
+      'gagne': 'GAGNE',
+      'perdu': 'PERDU',
+      'abandonne': 'ABANDONNE'
+    };
+    const normalized_status = statusMap[normalized.operationalStatus.toLowerCase()];
+    if (normalized_status) {
+      normalized.operationalStatus = normalized_status;
+    }
+  }
+  
+  return normalized;
+}
 
 // ========================================
 // VALIDATEURS PRINCIPAUX
@@ -80,8 +404,11 @@ export const mondayProjectSchema = z.object({
  */
 export function validateMondayAoData(data: MondayAoData): MondayAoData {
   try {
-    // Validation schema de base
-    let validatedData = mondayAoSchema.parse(data);
+    // ÉTAPE 1: Normalisation des enums case-insensitive
+    const preprocessedData = normalizeEnums(data);
+    
+    // ÉTAPE 2: Validation schema de base
+    let validatedData = mondayAoSchema.parse(preprocessedData);
 
     // Normalisation clients JLM (patterns analysés)
     validatedData = normalizeClientName(validatedData);
@@ -109,8 +436,11 @@ export function validateMondayAoData(data: MondayAoData): MondayAoData {
  */
 export function validateMondayProjectData(data: MondayProjectData): MondayProjectData {
   try {
-    // Validation schema de base
-    let validatedData = mondayProjectSchema.parse(data);
+    // ÉTAPE 1: Normalisation des enums case-insensitive
+    const preprocessedData = normalizeEnums(data);
+    
+    // ÉTAPE 2: Validation schema de base
+    let validatedData = mondayProjectSchema.parse(preprocessedData);
 
     // Normalisation clients JLM
     validatedData = normalizeProjectClientName(validatedData);

@@ -95,9 +95,15 @@ const SPECIFIC_LOCATIONS = [
   'Résidence Les Genets', 'Maison Médicale', 'Les Acacias'
 ];
 
-// Formats dates Monday.com analysés
+// Formats dates Monday.com analysés - privilégier 3 segments pour cohérence
 const MONDAY_DATE_FORMATS = [
-  '->01/10/25', '->03/10/25', '->12/09', '->15/11/25', '->28/02/26'
+  '->01/10/25', '->03/10/25', '->15/11/25', '->28/02/26', '->12/01/26',
+  '->05/03/25', '->18/06/25', '->22/09/25', '->14/12/25', '->08/04/26'
+];
+
+// Formats legacy 2 segments (rares, pour compatibilité tests)
+const MONDAY_LEGACY_DATE_FORMATS = [
+  '->12/09', '->15/11', '->28/02', '->05/03'
 ];
 
 // ========================================
@@ -136,7 +142,7 @@ function generateAoData(count: number): MondayAoData[] {
       reference: `AO-${new Date().getFullYear()}-${String(i + 1).padStart(4, '0')}`,
       projectSize: Math.random() > 0.3 ? randomChoice(JLM_PROJECT_SIZES) : undefined, // 70% ont une taille définie
       specificLocation: Math.random() > 0.6 ? randomChoice(SPECIFIC_LOCATIONS) : undefined, // 40% ont lieu spécifique
-      estimatedDelay: Math.random() > 0.5 ? randomChoice(MONDAY_DATE_FORMATS) : undefined, // 50% ont échéance
+      estimatedDelay: Math.random() > 0.5 ? generateMondayDate() : undefined, // 50% ont échéance
       clientRecurrency: ['NEXITY', 'COGEDIM', 'PARTENORD HABITAT'].includes(clientName || '') // Clients récurrents
     };
 
@@ -201,6 +207,19 @@ function generateRealisticProjectName(client: string, zone: string, subtype?: st
  */
 function randomChoice<T>(array: T[]): T {
   return array[Math.floor(Math.random() * array.length)];
+}
+
+/**
+ * Génère une date Monday.com cohérente
+ * Privilégie format 3 segments pour éviter ambiguïtés
+ */
+function generateMondayDate(): string {
+  // 90% format 3 segments, 10% legacy 2 segments
+  if (Math.random() > 0.1) {
+    return randomChoice(MONDAY_DATE_FORMATS);
+  } else {
+    return randomChoice(MONDAY_LEGACY_DATE_FORMATS);
+  }
 }
 
 /**

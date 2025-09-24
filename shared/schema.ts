@@ -494,7 +494,7 @@ export const warrantyStatusEnum = pgEnum("warranty_status", [
 
 // Catégories d'AO identifiées dans Monday.com (MEXT, MINT, etc.)
 export const aoCategoryEnum = pgEnum("ao_category", [
-  "MEXT", "MINT", "HALL", "SERRURERIE", "AUTRE"
+  "MEXT", "MINT", "HALL", "SERRURERIE", "BARDAGE", "AUTRE"
 ]);
 
 // Statuts opérationnels AO identifiés dans Monday.com 
@@ -6215,7 +6215,7 @@ export const actionTypeEnum = pgEnum("action_type", [
 ]);
 
 // Entités sur lesquelles les actions peuvent être effectuées
-export const actionEntityEnum = pgEnum("chatbot_entity", [
+export const chatbotEntityEnum = pgEnum("chatbot_entity", [
   "offer",           // Offres commerciales
   "project",         // Projets
   "ao",              // Appels d'offres
@@ -6260,7 +6260,7 @@ export const actions = pgTable("actions", {
   
   // Classification de l'action
   type: actionTypeEnum("type").notNull(),
-  entity: actionEntityEnum("entity").notNull(),
+  entity: chatbotEntityEnum("entity").notNull(),
   operation: varchar("operation").notNull(), // create_offer, update_status, delete_project, etc.
   
   // Utilisateur et session

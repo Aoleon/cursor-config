@@ -6215,7 +6215,7 @@ export const actionTypeEnum = pgEnum("action_type", [
 ]);
 
 // Entités sur lesquelles les actions peuvent être effectuées
-export const actionEntityEnum = pgEnum("chatbot_action_entity", [
+export const actionEntityEnum = pgEnum("chatbot_entity", [
   "offer",           // Offres commerciales
   "project",         // Projets
   "ao",              // Appels d'offres

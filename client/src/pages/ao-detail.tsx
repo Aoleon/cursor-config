@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/layout/header";
 import { LotsManager } from "@/components/ao/LotsManager";
@@ -122,6 +123,11 @@ export default function AoDetail() {
     description: "",
     prorataEventuel: "",
     delaiContractuel: "",
+    // Champs Monday.com Phase 1
+    projectSize: "",
+    specificLocation: "",
+    estimatedDelay: "",
+    clientRecurrency: false,
   });
 
   // États pour la gestion des contacts
@@ -195,6 +201,11 @@ export default function AoDetail() {
         description: ao.description || "",
         prorataEventuel: ao.prorataEventuel ? ao.prorataEventuel.toString() : "",
         delaiContractuel: ao.delaiContractuel ? ao.delaiContractuel.toString() : "",
+        // Champs Monday.com Phase 1
+        projectSize: ao.projectSize || "",
+        specificLocation: ao.specificLocation || "",
+        estimatedDelay: ao.estimatedDelay || "",
+        clientRecurrency: ao.clientRecurrency || false,
       });
 
       // Charger les contacts sélectionnés
@@ -1051,6 +1062,110 @@ export default function AoDetail() {
                           {formData.source === "partner" && "Partenaire"}
                           {formData.source === "other" && "Autre"}
                         </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Informations Monday.com Phase 1 */}
+          {(isEditing || formData.projectSize || formData.specificLocation || formData.estimatedDelay || formData.clientRecurrency) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Building className="h-5 w-5" />
+                  <span>Informations Monday.com</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isEditing ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="projectSize">Taille du projet</Label>
+                      <Input
+                        id="projectSize"
+                        value={formData.projectSize}
+                        onChange={(e) => handleFieldChange("projectSize", e.target.value)}
+                        placeholder="Ex: 60 lgts, 85 lgts, 102 lgts"
+                        data-testid="input-project-size"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="estimatedDelay">Délai estimé</Label>
+                      <Input
+                        id="estimatedDelay"
+                        value={formData.estimatedDelay}
+                        onChange={(e) => handleFieldChange("estimatedDelay", e.target.value)}
+                        placeholder="Ex: ->01/10/25"
+                        data-testid="input-estimated-delay"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <Label htmlFor="specificLocation">Localisation spécifique</Label>
+                      <Textarea
+                        id="specificLocation"
+                        value={formData.specificLocation}
+                        onChange={(e) => handleFieldChange("specificLocation", e.target.value)}
+                        placeholder="Ex: Quartier des Ilot des Peintres"
+                        className="min-h-[60px]"
+                        data-testid="input-specific-location"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <Label className="text-base">Client récurrent</Label>
+                          <p className="text-sm text-on-surface-muted">
+                            Client fréquent (NEXITY, COGEDIM, etc.)
+                          </p>
+                        </div>
+                        <Switch 
+                          checked={formData.clientRecurrency}
+                          onCheckedChange={(value) => handleFieldChange("clientRecurrency", value)}
+                          data-testid="switch-client-recurrency"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {formData.projectSize && (
+                      <div>
+                        <Label className="text-sm text-on-surface-muted">Taille du projet</Label>
+                        <p className="font-medium">{formData.projectSize}</p>
+                      </div>
+                    )}
+                    
+                    {formData.estimatedDelay && (
+                      <div>
+                        <Label className="text-sm text-on-surface-muted">Délai estimé</Label>
+                        <p className="font-medium">{formData.estimatedDelay}</p>
+                      </div>
+                    )}
+                    
+                    {formData.specificLocation && (
+                      <div className="md:col-span-2">
+                        <Label className="text-sm text-on-surface-muted">Localisation spécifique</Label>
+                        <p className="font-medium">{formData.specificLocation}</p>
+                      </div>
+                    )}
+                    
+                    {formData.clientRecurrency !== undefined && (
+                      <div className="md:col-span-2">
+                        <Label className="text-sm text-on-surface-muted">Client récurrent</Label>
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-3 h-3 rounded-full ${
+                            formData.clientRecurrency ? 'bg-success' : 'bg-surface-muted'
+                          }`}></div>
+                          <p className="font-medium">
+                            {formData.clientRecurrency ? 'Oui - Client fréquent' : 'Non - Nouveau client'}
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>

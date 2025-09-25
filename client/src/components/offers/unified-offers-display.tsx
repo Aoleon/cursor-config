@@ -14,7 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FileText, Search, Calendar, MapPin, Building, Plus, Star, Eye, Edit } from "lucide-react";
+import { FileText, Search, Calendar, MapPin, Building, Plus, Star, Eye, Edit, Home, Users } from "lucide-react";
 
 interface UnifiedOffersDisplayProps {
   showCreateButton?: boolean;
@@ -423,6 +423,21 @@ export default function UnifiedOffersDisplay({
                             </p>
                           </div>
                         </div>
+                        
+                        {/* Champs Monday.com */}
+                        {offer.projectSize && (
+                          <div className="flex items-center space-x-2">
+                            <Home className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium text-on-surface">
+                                {offer.projectSize}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Taille projet
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Intitulé de l'opération si présent */}
@@ -437,6 +452,12 @@ export default function UnifiedOffersDisplay({
                         <div className="flex flex-wrap items-center gap-2">
                           {getStatusBadge(offer)}
                           {getMenuiserieTypeBadge(offer.menuiserieType)}
+                          {offer.clientRecurrency && (
+                            <Badge className="bg-success/10 text-success">
+                              <Users className="w-3 h-3 mr-1" />
+                              Client récurrent
+                            </Badge>
+                          )}
                         </div>
                         
                         {(offer.montantEstime || offer.estimatedAmount) && (

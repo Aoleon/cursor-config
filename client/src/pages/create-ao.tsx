@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/layout/header";
@@ -59,6 +60,12 @@ const createAoSchema = z.object({
   // Source
   source: z.enum(["mail", "phone", "website", "partner", "other"]),
   description: z.string().optional(),
+  
+  // Champs Monday.com Phase 1
+  projectSize: z.string().optional(),
+  specificLocation: z.string().optional(), 
+  estimatedDelay: z.string().optional(),
+  clientRecurrency: z.boolean().default(false),
 });
 
 type CreateAoFormData = z.infer<typeof createAoSchema>;
@@ -119,6 +126,11 @@ export default function CreateAO() {
       departement: "",
       menuiserieType: "fenetre",
       source: "website",
+      // Valeurs par défaut Monday.com
+      projectSize: "",
+      specificLocation: "",
+      estimatedDelay: "",
+      clientRecurrency: false,
     },
   });
 
@@ -1043,7 +1055,68 @@ export default function CreateAO() {
               </CardContent>
             </Card>
 
-            {/* 5. Contacts réutilisables */}
+            {/* 5. Informations Monday.com Phase 1 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Building className="h-5 w-5" />
+                  <span>Informations Monday.com</span>
+                </CardTitle>
+                <CardDescription>
+                  Champs spécifiques migrés depuis Monday.com pour une correspondance 100%
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="projectSize">Taille du projet</Label>
+                    <Input
+                      id="projectSize"
+                      data-testid="input-project-size"
+                      {...form.register("projectSize")}
+                      placeholder="Ex: 60 lgts, 85 lgts, 102 lgts"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="estimatedDelay">Délai estimé</Label>
+                    <Input
+                      id="estimatedDelay"
+                      data-testid="input-estimated-delay"
+                      {...form.register("estimatedDelay")}
+                      placeholder="Ex: ->01/10/25"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="specificLocation">Localisation spécifique</Label>
+                  <Textarea
+                    id="specificLocation"
+                    data-testid="input-specific-location"
+                    {...form.register("specificLocation")}
+                    placeholder="Ex: Quartier des Ilot des Peintres"
+                    className="min-h-[60px]"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">Client récurrent</Label>
+                    <p className="text-sm text-on-surface-muted">
+                      Client fréquent (NEXITY, COGEDIM, etc.)
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={form.watch("clientRecurrency")}
+                    onCheckedChange={(value) => form.setValue("clientRecurrency", value)}
+                    data-testid="switch-client-recurrency"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 6. Contacts réutilisables */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">

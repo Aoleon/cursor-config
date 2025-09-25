@@ -589,16 +589,22 @@ export class MondayProductionFinalService {
       // Validation Monday.com
       const validated = validateMondayProjectData(projectData);
       
-      // CORRECTION FINALE ERREUR DATES PROJETS
-      // Calculer dates sûres avec gestion d'erreur robuste
-      const safeStartDate = this.safeToISOString(new Date());
-      const safeEndDate = this.safeToISOString(this.calculateDefaultEndDate());
+      // CORRECTION FINALE ERREUR DATES PROJETS - APPLICATION LOGIQUE AOS QUI MARCHE
+      // Calculer dates sûres avec gestion d'erreur robuste IDENTIQUE aux AOs
+      const defaultStartDate = new Date();
+      const defaultEndDate = this.calculateDefaultEndDate();
       
-      // Transformation vers Saxium avec mapping dates correct
+      // APPLIQUER safeToISOString PARTOUT pour éviter "value.toISOString is not a function"
+      const safeStartDate = this.safeToISOString(defaultStartDate);
+      const safeEndDate = this.safeToISOString(defaultEndDate);
+      
+      // Transformation vers Saxium avec mapping dates CORRECT selon schéma
       const saxiumProject: InsertProject = {
         name: validated.name,
         mondayProjectId: validated.mondayProjectId,
         clientName: validated.clientName,
+        client: validated.clientName, // CORRECTION: Garantir client non-null comme AOs
+        location: validated.geographicZone || 'ZONE_INCONNUE', // CORRECTION: Mapping location requis
         geographicZone: validated.geographicZone,
         region: 'Hauts-de-France', // JLM = Nord France
         status: this.mapProjectStatus(validated.workflowStage),
@@ -606,10 +612,10 @@ export class MondayProductionFinalService {
         buildingCount: validated.buildingCount,
         description: `Migration authentique Monday.com - ${validated.mondayProjectId}`,
         priority: 'normal',
-        // FIX CRITIQUE: Utiliser les vrais noms de champs du schéma
-        ...(safeStartDate && { startDate: safeStartDate }),
-        ...(safeEndDate && { endDate: safeEndDate })
-        // Seulement inclure les dates si elles sont valides (pas null)
+        // FIX CRITIQUE: Utiliser les vrais noms de champs du schéma + safeToISOString
+        startDate: safeStartDate, // CORRECTION: toujours inclure (pas conditional)
+        endDate: safeEndDate, // CORRECTION: toujours inclure (pas conditional)
+        progressPercentage: 0 // CORRECTION: Valeur par défaut requise
       };
       
       return saxiumProject;

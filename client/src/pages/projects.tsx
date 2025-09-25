@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, User, Euro, Kanban, Users } from "lucide-react";
+import { Calendar, MapPin, User, Euro, Kanban, Users, Home, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import KanbanBoard from "@/components/projects/kanban-board";
@@ -161,6 +161,41 @@ export default function Projects() {
                         <span>
                           {project.responsibleUser.firstName} {project.responsibleUser.lastName}
                         </span>
+                      </div>
+                    )}
+
+                    {/* Section Monday.com - Nouveaux champs Phase 1 */}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid={`monday-info-${project.id}`}>
+                      {project.geographicZone && (
+                        <>
+                          <MapPin className="h-4 w-4" />
+                          <Badge variant="outline" data-testid={`badge-geographic-zone-${project.id}`}>
+                            {project.geographicZone}
+                          </Badge>
+                        </>
+                      )}
+                      
+                      {project.projectSubtype && (
+                        <Badge variant="secondary" data-testid={`badge-project-subtype-${project.id}`}>
+                          <Home className="h-4 w-4 mr-1" />
+                          {project.projectSubtype}
+                        </Badge>
+                      )}
+                      
+                      {(project.buildingCount !== null && project.buildingCount !== undefined) && (
+                        <span className="flex items-center gap-1" data-testid={`building-count-${project.id}`}>
+                          <Home className="h-4 w-4" />
+                          {project.buildingCount} bât.
+                        </span>
+                      )}
+                    </div>
+
+                    {project.mondayProjectId && (
+                      <div className="flex items-center gap-2" data-testid={`monday-project-id-${project.id}`}>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                        <Badge variant="outline" className="text-xs">
+                          ID: {project.mondayProjectId}
+                        </Badge>
                       </div>
                     )}
 

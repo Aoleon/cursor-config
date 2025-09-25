@@ -7,12 +7,13 @@ import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   ArrowLeft, Calendar, Clock, User, MapPin, Euro, 
-  CheckCircle, AlertCircle, Play, Pause, Settings
+  CheckCircle, AlertCircle, Play, Pause, Settings, ExternalLink
 } from "lucide-react";
 import { format, differenceInDays, isAfter, isBefore } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -55,6 +56,11 @@ interface ProjectDetail {
   description?: string;
   createdAt: string;
   updatedAt: string;
+  // Champs Monday.com Phase 1
+  mondayProjectId?: string;
+  projectSubtype?: string;
+  geographicZone?: string;
+  buildingCount?: number;
   responsibleUser?: {
     id: string;
     firstName: string;
@@ -353,6 +359,36 @@ export default function ProjectDetail() {
                       </div>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Section Informations Monday.com */}
+              <Card data-testid="monday-info-section">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ExternalLink className="h-5 w-5" />
+                    Informations Monday.com
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div data-testid="monday-project-id-detail">
+                      <Label className="text-sm font-medium text-muted-foreground">ID Monday.com</Label>
+                      <p className="text-sm">{project.mondayProjectId || "Non défini"}</p>
+                    </div>
+                    <div data-testid="project-subtype-detail">
+                      <Label className="text-sm font-medium text-muted-foreground">Type de projet</Label>
+                      <p className="text-sm">{project.projectSubtype || "Non défini"}</p>
+                    </div>
+                    <div data-testid="geographic-zone-detail">
+                      <Label className="text-sm font-medium text-muted-foreground">Zone géographique</Label>
+                      <p className="text-sm">{project.geographicZone || "Non définie"}</p>
+                    </div>
+                    <div data-testid="building-count-detail">
+                      <Label className="text-sm font-medium text-muted-foreground">Nombre de bâtiments</Label>
+                      <p className="text-sm">{project.buildingCount ?? "Non défini"}</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>

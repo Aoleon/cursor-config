@@ -594,7 +594,8 @@ export class MondayProductionFinalService {
       const defaultStartDate = new Date();
       const defaultEndDate = this.calculateDefaultEndDate();
       
-      // APPLIQUER safeToISOString PARTOUT pour éviter "value.toISOString is not a function"
+      // CORRECTION CRITIQUE: APPLIQUER safeToISOString à TOUS LES CHAMPS TIMESTAMP
+      // Selon schéma projects: 13+ champs timestamp doivent être traités
       const safeStartDate = this.safeToISOString(defaultStartDate);
       const safeEndDate = this.safeToISOString(defaultEndDate);
       
@@ -612,10 +613,25 @@ export class MondayProductionFinalService {
         buildingCount: validated.buildingCount,
         description: `Migration authentique Monday.com - ${validated.mondayProjectId}`,
         priority: 'normal',
-        // FIX CRITIQUE: Utiliser les vrais noms de champs du schéma + safeToISOString
-        startDate: safeStartDate, // CORRECTION: toujours inclure (pas conditional)
-        endDate: safeEndDate, // CORRECTION: toujours inclure (pas conditional)
-        progressPercentage: 0 // CORRECTION: Valeur par défaut requise
+        progressPercentage: 0,
+        
+        // FIX CRITIQUE: APPLIQUER safeToISOString à TOUS les champs timestamp pour éliminer "value.toISOString is not a function"
+        // Champs dates de base (OBLIGATOIRES avec safeToISOString)
+        startDate: safeStartDate,
+        endDate: safeEndDate,
+        
+        // TOUS les autres champs timestamp de la table projects (traités avec safeToISOString)
+        dateOS: this.safeToISOString(null), // Date Ordre de Service
+        dateLimiteRemise: this.safeToISOString(null), // Date limite remise originale AO
+        dateLivraisonPrevue: this.safeToISOString(null), // Date livraison contractuelle
+        demarragePrevu: this.safeToISOString(null), // Date démarrage prévue
+        dateLivraisonReelle: this.safeToISOString(null), // Date livraison réelle
+        finEtudesValidatedAt: this.safeToISOString(null), // Validation fin études
+        dateDebutChantier: this.safeToISOString(null), // Date réelle début chantier
+        dateFinChantier: this.safeToISOString(null), // Date réelle fin chantier
+        lastOptimizedAt: this.safeToISOString(null), // Dernière optimisation
+        startDatePlanned: this.safeToISOString(defaultStartDate), // Date début plannifiée
+        endDatePlanned: this.safeToISOString(defaultEndDate) // Date fin plannifiée
       };
       
       return saxiumProject;

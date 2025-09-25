@@ -55,6 +55,7 @@ const navigation: NavigationItem[] = [
   // ============= DASHBOARDS STANDARDISÉS ============= //
   { name: "Dashboard Dirigeant", href: "/dashboard/executive", icon: BarChart3 },
   { name: "Dashboard BE", href: "/dashboard/be", icon: Settings },
+  { name: "Migration Monday.com", href: "/dashboard/monday-migration", icon: Database },
   
   // ============= WORKFLOW AVANT-VENTE ============= //
   { 

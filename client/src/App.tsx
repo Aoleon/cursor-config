@@ -51,6 +51,8 @@ import TechnicalAlerts from "@/pages/technical-alerts";
 import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
 // Import du Dashboard Admin Sécurité
 import AdminSecurityDashboard from "@/pages/AdminSecurityDashboard";
+// Import du Dashboard Migration Monday.com
+import MondayMigrationDashboard from "@/pages/monday-migration-dashboard";
 // Import de la navigation intelligente
 import SmartLanding from "@/components/navigation/SmartLanding";
 import AppLayout from "@/components/layout/AppLayout";
@@ -109,6 +111,7 @@ function Router() {
       <Route path="/dashboard/executive" component={() => <ProtectedRoute component={ExecutiveDashboard} />} />
       <Route path="/dashboard/be" component={() => <ProtectedRoute component={BEDashboard} />} />
       <Route path="/dashboard/admin-security" component={() => <ProtectedRoute component={AdminSecurityDashboard} />} />
+      <Route path="/dashboard/monday-migration" component={() => <ProtectedRoute component={MondayMigrationDashboard} />} />
       {/* REDIRECTION INTELLIGENTE: Page d'accueil avec détection de rôle */}
       <Route path="/">
         <SmartLanding />

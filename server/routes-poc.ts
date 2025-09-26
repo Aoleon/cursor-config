@@ -1444,6 +1444,42 @@ function convertDatesInObject(obj: any): any {
 // PROJECT ROUTES - 5 étapes POC
 // ========================================
 
+// GET /api/projects/schema - Retourne le schéma de validation projet
+app.get('/api/projects/schema', 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
+    sendSuccess(res, {
+      schema: insertProjectSchema,
+      required: ['name', 'status'], // champs obligatoires de base
+      optional: ['aoId', 'offerId', 'mondayProjectId', 'description', 'client', 'location', 'budget', 'startDate', 'endDate'],
+      aoWorkflow: {
+        // Champs spécifiques au workflow AO → Projet
+        aoId: 'string - ID de l\'AO source',
+        inheritFromAo: ['clientName', 'city', 'reference', 'estimatedValue']
+      }
+    });
+  })
+);
+
+// GET /api/projects/config - Retourne la configuration projet
+app.get('/api/projects/config', 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
+    sendSuccess(res, {
+      statuses: ['passation', 'etude', 'visa_architecte', 'planification', 'approvisionnement', 'chantier', 'sav'],
+      phases: ['passation', 'etude', 'planification', 'approvisionnement', 'chantier', 'sav'],
+      defaultStatus: 'passation',
+      workflow: {
+        ao_to_project: {
+          enabled: true,
+          required_fields: ['name', 'status'],
+          auto_inherit: ['client', 'location', 'description', 'budget']
+        }
+      }
+    });
+  })
+);
+
 app.get("/api/projects", isAuthenticated, async (req, res) => {
   try {
     const projects = await storage.getProjects();
@@ -5020,9 +5056,9 @@ app.get('/api/analytics/pipeline',
       ]);
       
       // Agréger les données depuis storage
-      const aos = await storage.getAllAos();
-      const offers = await storage.getAllOffers();
-      const projects = await storage.getAllProjects();
+      const aos = await storage.getAos();
+      const offers = await storage.getOffers();
+      const projects = await storage.getProjects();
       
       const pipeline = {
         ao_count: aos.length,
@@ -5078,7 +5114,7 @@ app.get('/api/analytics/alerts',
       let dateAlerts = [];
       
       try {
-        technicalAlerts = await storage.getTechnicalAlerts();
+        technicalAlerts = await storage.listTechnicalAlerts();
       } catch (technicalError: any) {
         console.warn('[Analytics/Alerts] Erreur récupération alertes techniques:', technicalError.message);
         // Fallback: continuer avec alertes vides pour éviter crash complet
@@ -5147,9 +5183,9 @@ app.get('/api/analytics/bottlenecks',
     try {
       // Analyser les goulots d'étranglement en regardant les délais et charges
       const [projects, offers, tasks] = await Promise.all([
-        storage.getAllProjects(),
-        storage.getAllOffers(),
-        storage.getAllProjectTasks()
+        storage.getProjects(),
+        storage.getOffers(),
+        storage.getAllTasks()
       ]);
       
       // Identifier les phases qui prennent le plus de temps

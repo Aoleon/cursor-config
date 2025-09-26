@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { storage } from "./storage";
+import { storage } from "./storage-poc";
 import { EventType, createRealtimeEvent, commonQueryKeys } from '../shared/events';
 import type { EventBus } from './eventBus';
 import { isAuthenticated } from "./replitAuth";
@@ -10,7 +10,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
   
   // Récupérer les AOs en étude technique
-  app.get("/api/aos/etude", async (req, res) => {
+  app.get("/api/aos/etude", isAuthenticated, async (req, res) => {
     try {
       const aos = await storage.getAos();
       // Filtrer les AOs simulés en étude technique
@@ -36,7 +36,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   });
 
   // Valider l'étude technique d'un AO
-  app.post("/api/aos/:id/validate-etude", async (req, res) => {
+  app.post("/api/aos/:id/validate-etude", isAuthenticated, async (req, res) => {
     try {
       const aoId = req.params.id;
       // Simulation de validation - dans un cas réel, on mettrait à jour le statut en BDD
@@ -56,7 +56,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
 
   // Récupérer les AOs en chiffrage
-  app.get("/api/aos/chiffrage", async (req, res) => {
+  app.get("/api/aos/chiffrage", isAuthenticated, async (req, res) => {
     try {
       const aos = await storage.getAos();
       // Enrichir avec données de chiffrage
@@ -83,7 +83,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   });
 
   // Valider le chiffrage
-  app.post("/api/aos/:id/validate-chiffrage", async (req, res) => {
+  app.post("/api/aos/:id/validate-chiffrage", isAuthenticated, async (req, res) => {
     try {
       res.json({ 
         success: true, 
@@ -101,7 +101,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
 
   // Récupérer les devis prêts
-  app.get("/api/aos/devis-ready", async (req, res) => {
+  app.get("/api/aos/devis-ready", isAuthenticated, async (req, res) => {
     try {
       const aos = await storage.getAos();
       const devisReady = aos.map((ao: any) => ({
@@ -124,7 +124,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   });
 
   // Envoyer un devis
-  app.post("/api/aos/:id/send-devis", async (req, res) => {
+  app.post("/api/aos/:id/send-devis", isAuthenticated, async (req, res) => {
     try {
       const { method } = req.body;
       res.json({ 
@@ -139,7 +139,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   });
 
   // Relancer un client
-  app.post("/api/aos/:id/relance", async (req, res) => {
+  app.post("/api/aos/:id/relance", isAuthenticated, async (req, res) => {
     try {
       res.json({ 
         success: true, 
@@ -157,7 +157,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
 
   // Récupérer les projets par statut
-  app.get("/api/projects", async (req, res) => {
+  app.get("/api/projects", isAuthenticated, async (req, res) => {
     try {
       const { status } = req.query;
       const projects = await storage.getProjects();
@@ -287,7 +287,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   });
 
   // Valider la planification
-  app.post("/api/projects/:id/validate-planning", async (req, res) => {
+  app.post("/api/projects/:id/validate-planning", isAuthenticated, async (req, res) => {
     try {
       res.json({ 
         success: true, 
@@ -301,7 +301,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   });
 
   // Démarrer un chantier
-  app.post("/api/projects/:id/start-chantier", async (req, res) => {
+  app.post("/api/projects/:id/start-chantier", isAuthenticated, async (req, res) => {
     try {
       res.json({ 
         success: true, 
@@ -316,7 +316,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   });
 
   // Terminer un chantier
-  app.post("/api/projects/:id/finish", async (req, res) => {
+  app.post("/api/projects/:id/finish", isAuthenticated, async (req, res) => {
     try {
       res.json({ 
         success: true, 
@@ -331,7 +331,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   });
 
   // Signaler un problème sur chantier
-  app.post("/api/projects/:id/issue", async (req, res) => {
+  app.post("/api/projects/:id/issue", isAuthenticated, async (req, res) => {
     try {
       const { issue } = req.body;
       res.json({ 
@@ -563,7 +563,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
             newWeights: { montantWeight, delaiWeight, typeClientWeight, complexiteWeight, chargeBeWeight, risqueWeight, strategiqueWeight }
           }
         });
-        eventBus.emit(configEvent);
+        eventBus.publish(configEvent);
       }
       
       res.json({ 
@@ -607,7 +607,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
             overrideBy: 'user'
           }
         });
-        eventBus.emit(overrideEvent);
+        eventBus.publish(overrideEvent);
       }
       
       // Simuler la mise à jour
@@ -722,7 +722,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
             dismissedBy: 'user'
           }
         });
-        eventBus.emit(alertDismissEvent);
+        eventBus.publish(alertDismissEvent);
       }
       
       res.json({ 
@@ -831,7 +831,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
             newConfig: { weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels }
           }
         });
-        eventBus.emit(configSaveEvent);
+        eventBus.publish(configSaveEvent);
       }
       
       // Simuler la sauvegarde

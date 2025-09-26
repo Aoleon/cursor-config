@@ -502,6 +502,15 @@ export const aoOperationalStatusEnum = pgEnum("ao_operational_status", [
   "en_cours", "a_relancer", "gagne", "perdu", "abandonne", "en_attente"
 ]);
 
+// Statuts workflow AO pour le processus d'étude technique
+export const aoStatusEnum = pgEnum("ao_status", [
+  "brouillon",           // AO en cours de rédaction
+  "etude",               // AO en étude technique (défaut pour nouveaux AOs)
+  "en_cours_chiffrage",  // AO en cours de chiffrage
+  "finalise",            // AO finalisé, prêt pour transformation en projet
+  "archive"              // AO archivé
+]);
+
 // Types de liaisons contacts-projets/AO
 export const contactLinkTypeEnum = pgEnum("contact_link_type", [
   "maitre_ouvrage", "maitre_oeuvre", "architecte", "controleur_technique", 
@@ -920,6 +929,9 @@ export const aos = pgTable("aos", {
   specificLocation: text("specific_location"),       // "Quartier des Ilot des Peintres"
   estimatedDelay: varchar("estimated_delay"),        // "->01/10/25" format parsing
   clientRecurrency: boolean("client_recurrency"),    // NEXITY/COGEDIM récurrents
+  
+  // Workflow et statut
+  status: aoStatusEnum("status").default("etude"), // Statut workflow AO (défaut: étude pour être visible immédiatement)
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

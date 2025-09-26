@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/layout/header";
@@ -62,10 +63,10 @@ const createAoSchema = z.object({
   description: z.string().optional(),
   
   // Champs Monday.com Phase 1
-  projectSize: z.string().optional(),
+  projectSize: z.enum(["Petit projet", "Projet moyen", "Grand projet"]).optional(),
   specificLocation: z.string().optional(), 
-  estimatedDelay: z.string().optional(),
-  clientRecurrency: z.boolean().default(false),
+  estimatedDelay: z.enum(["Express (1-2 semaines)", "Standard (4-6 semaines)", "Long terme (8+ semaines)"]).optional(),
+  clientRecurrency: z.enum(["Nouveau client", "Client récurrent", "Client premium"]),
 });
 
 type CreateAoFormData = z.infer<typeof createAoSchema>;
@@ -127,10 +128,10 @@ export default function CreateAO() {
       menuiserieType: "fenetre",
       source: "website",
       // Valeurs par défaut Monday.com
-      projectSize: "",
+      projectSize: undefined,
       specificLocation: "",
-      estimatedDelay: "",
-      clientRecurrency: false,
+      estimatedDelay: undefined,
+      clientRecurrency: "Nouveau client",
     },
   });
 
@@ -1068,25 +1069,49 @@ export default function CreateAO() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="projectSize">Taille du projet</Label>
-                    <Input
-                      id="projectSize"
-                      data-testid="input-project-size"
-                      {...form.register("projectSize")}
-                      placeholder="Ex: 60 lgts, 85 lgts, 102 lgts"
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="projectSize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Taille du projet</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-project-size">
+                              <SelectValue placeholder="Sélectionner la taille du projet" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Petit projet">Petit projet</SelectItem>
+                            <SelectItem value="Projet moyen">Projet moyen</SelectItem>
+                            <SelectItem value="Grand projet">Grand projet</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
                   
-                  <div>
-                    <Label htmlFor="estimatedDelay">Délai estimé</Label>
-                    <Input
-                      id="estimatedDelay"
-                      data-testid="input-estimated-delay"
-                      {...form.register("estimatedDelay")}
-                      placeholder="Ex: ->01/10/25"
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="estimatedDelay"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Délai estimé</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-estimated-delay">
+                              <SelectValue placeholder="Sélectionner le délai estimé" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Express (1-2 semaines)">Express (1-2 semaines)</SelectItem>
+                            <SelectItem value="Standard (4-6 semaines)">Standard (4-6 semaines)</SelectItem>
+                            <SelectItem value="Long terme (8+ semaines)">Long terme (8+ semaines)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div>
@@ -1100,19 +1125,27 @@ export default function CreateAO() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">Client récurrent</Label>
-                    <p className="text-sm text-on-surface-muted">
-                      Client fréquent (NEXITY, COGEDIM, etc.)
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={form.watch("clientRecurrency")}
-                    onCheckedChange={(value) => form.setValue("clientRecurrency", value)}
-                    data-testid="switch-client-recurrency"
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="clientRecurrency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client récurrent</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-client-recurrency">
+                            <SelectValue placeholder="Sélectionner le type de client" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Nouveau client">Nouveau client</SelectItem>
+                          <SelectItem value="Client récurrent">Client récurrent</SelectItem>
+                          <SelectItem value="Client premium">Client premium</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 

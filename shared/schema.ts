@@ -162,6 +162,25 @@ export const priorityFactorEnum = pgEnum("priority_factor", [
 ]);
 
 // ========================================
+// ENUMS MONDAY.COM PHASE 1 - INTÉGRATION CRITIQUE
+// ========================================
+
+// Types de clients pour Monday.com Phase 1
+export const clientRecurrencyEnum = pgEnum("client_recurrency", [
+  "Nouveau client", "Client récurrent", "Client premium"
+]);
+
+// Tailles de projets pour Monday.com Phase 1
+export const projectSizeEnum = pgEnum("project_size", [
+  "Petit projet", "Projet moyen", "Grand projet"
+]);
+
+// Délais estimés pour Monday.com Phase 1
+export const estimatedDelayEnum = pgEnum("estimated_delay", [
+  "Express (1-2 semaines)", "Standard (4-6 semaines)", "Long terme (8+ semaines)"
+]);
+
+// ========================================
 // ENUMS MATÉRIAUX ET COULEURS - PATTERNS AVANCÉS OCR
 // ========================================
 
@@ -928,7 +947,7 @@ export const aos = pgTable("aos", {
   projectSize: varchar("project_size"),              // "60 lgts", "85 lgts", "102 lgts"
   specificLocation: text("specific_location"),       // "Quartier des Ilot des Peintres"
   estimatedDelay: varchar("estimated_delay"),        // "->01/10/25" format parsing
-  clientRecurrency: boolean("client_recurrency"),    // NEXITY/COGEDIM récurrents
+  clientRecurrency: clientRecurrencyEnum("client_recurrency"),    // Type de client Monday.com Phase 1
   
   // Workflow et statut
   status: aoStatusEnum("status").default("etude"), // Statut workflow AO (défaut: étude pour être visible immédiatement)

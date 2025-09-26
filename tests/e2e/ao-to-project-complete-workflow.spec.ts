@@ -113,7 +113,10 @@ test.describe('Workflow Complet AO → Projet E2E', () => {
     await page.getByTestId('input-reference').fill(AO_2503_DATA.reference);
     await page.getByTestId('input-client').fill(AO_2503_DATA.client);
     await page.getByTestId('input-location').fill(AO_2503_DATA.location);
-    await page.getByTestId('select-departement').selectOption(AO_2503_DATA.departement);
+    
+    // Sélection département avec Shadcn Select
+    await page.getByTestId('select-departement').click();
+    await page.getByText('62 – Pas-de-Calais').click();
     
     // Informations détaillées du projet
     await page.getByTestId('textarea-intitule-operation').fill(AO_2503_DATA.intituleOperation);
@@ -126,9 +129,13 @@ test.describe('Workflow Complet AO → Projet E2E', () => {
     // Vérifier calcul automatique J-15
     await expect(page.getByTestId('display-date-rendu-ao')).toContainText('27 février 2025');
     
-    // Informations techniques
-    await page.getByTestId('select-menuiserie-type').selectOption(AO_2503_DATA.menuiserieType);
-    await page.getByTestId('select-type-marche').selectOption(AO_2503_DATA.typeMarche);
+    // Informations techniques avec Shadcn Select
+    await page.getByTestId('select-menuiserie-type').click();
+    await page.getByText('Extérieure et intérieure').click();
+    
+    await page.getByTestId('select-type-marche').click();
+    await page.getByText('Marché public').click();
+    
     await page.getByTestId('input-montant-estime').fill(AO_2503_DATA.montantEstime.toString());
     
     // Contacts
@@ -139,8 +146,23 @@ test.describe('Workflow Complet AO → Projet E2E', () => {
     await page.getByTestId('button-submit-ao').click();
     await expect(page.getByTestId('message-success')).toBeVisible();
     
-    const aoId = await page.url().match(/\/aos\/([^\/]+)/)?.[1];
+    // Attendre que le modal se ferme et que le nouvel AO apparaisse dans la liste
+    await expect(page.getByTestId('create-ao-modal')).not.toBeVisible({ timeout: 10000 });
+    
+    // Chercher l'AO dans la liste et capturer son ID
+    const aoElement = page.getByTestId(`ao-row-${AO_2503_DATA.reference}`);
+    await expect(aoElement).toBeVisible({ timeout: 15000 });
+    
+    const aoLink = aoElement.getByTestId('link-ao-detail');
+    const aoHref = await aoLink.getAttribute('href');
+    const aoId = aoHref?.match(/\/aos\/([^\/]+)/)?.[1];
+    
     console.log('✅ AO créé avec ID:', aoId);
+    
+    // Naviguer vers la page de détail de l'AO
+    await aoLink.click();
+    await page.waitForURL(new RegExp(`/aos/${aoId}$`), { timeout: 10000 });
+    await expect(page.getByTestId('ao-detail-view')).toBeVisible();
     
     // ========================================
     // ÉTAPE 2: AJOUT DES LOTS TECHNIQUES
@@ -315,14 +337,18 @@ test.describe('Workflow Complet AO → Projet E2E', () => {
       await page.getByTestId('button-add-task').click();
       await page.getByTestId('input-task-name').fill(task.name);
       await page.getByTestId('input-task-duration').fill(task.duration.toString());
-      await page.getByTestId('select-task-phase').selectOption(task.phase);
+      await page.getByTestId('select-task-phase').click();
+      await page.getByText(task.phase).click();
       await page.getByTestId('button-save-task').click();
     }
     
     // Affecter des équipes
     await page.getByTestId('button-manage-teams').click();
-    await page.getByTestId('select-team-leader').selectOption('sylvie.martin');
-    await page.getByTestId('select-chef-travaux').selectOption('julien.lamborot');
+    await page.getByTestId('select-team-leader').click();
+    await page.getByText('Sylvie Martin').click();
+    
+    await page.getByTestId('select-chef-travaux').click();
+    await page.getByText('Julien Lamborot').click();
     await page.getByTestId('button-save-teams').click();
     
     // Valider la planification
@@ -390,7 +416,8 @@ test.describe('Workflow Complet AO → Projet E2E', () => {
     // Créer une garantie décennale
     await page.getByTestId('button-manage-warranties').click();
     await page.getByTestId('button-add-warranty').click();
-    await page.getByTestId('select-warranty-type').selectOption('decennial');
+    await page.getByTestId('select-warranty-type').click();
+    await page.getByText('Garantie décennale').click();
     await page.getByTestId('input-warranty-duration').fill('10');
     await page.getByTestId('textarea-warranty-description').fill('Garantie décennale menuiseries extérieures et intérieures');
     await page.getByTestId('button-save-warranty').click();
@@ -398,7 +425,8 @@ test.describe('Workflow Complet AO → Projet E2E', () => {
     // Programmer une maintenance préventive
     await page.getByTestId('button-schedule-maintenance').click();
     await page.getByTestId('input-maintenance-date').fill('2025-12-01');
-    await page.getByTestId('select-maintenance-type').selectOption('preventive');
+    await page.getByTestId('select-maintenance-type').click();
+    await page.getByText('Maintenance préventive').click();
     await page.getByTestId('textarea-maintenance-description').fill('Contrôle annuel étanchéité et mécanismes');
     await page.getByTestId('button-save-maintenance').click();
     

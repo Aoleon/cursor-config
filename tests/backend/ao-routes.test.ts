@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import { registerRoutes } from '../../server/routes'
+import { setupTestAuth } from './auth-test-helper'
 
 describe('AO API Routes Tests', () => {
   let app: express.Express
@@ -11,6 +12,10 @@ describe('AO API Routes Tests', () => {
   beforeEach(async () => {
     app = express()
     app.use(express.json())
+    
+    // Setup test authentication bypass
+    setupTestAuth(app)
+    
     server = await registerRoutes(app)
   })
 

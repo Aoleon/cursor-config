@@ -57,9 +57,10 @@ export default defineConfig({
       }
     },
     
-    // Patterns de fichiers de test - Frontend et shared seulement  
+    // Patterns de fichiers de test - Frontend, Backend et shared  
     include: [
       'tests/frontend/**/*.{test,spec}.{ts,tsx}',
+      'tests/backend/**/*.{test,spec}.{ts,js}',
       'client/src/**/*.{test,spec}.{ts,tsx}',
       'shared/**/*.{test,spec}.{ts,js}'
     ],

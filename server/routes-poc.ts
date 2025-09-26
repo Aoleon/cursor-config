@@ -595,6 +595,39 @@ app.get("/api/aos",
   })
 );
 
+// ========================================
+// ENDPOINT SPÉCIFIQUE ÉTUDE TECHNIQUE - PRIORITAIRE
+// ========================================
+// CORRECTIF CRITIQUE : Placer AVANT l'endpoint générique /api/aos/:id
+// pour éviter que "etude" soit interprété comme un UUID
+app.get("/api/aos/etude", isAuthenticated, async (req, res) => {
+  try {
+    const aos = await storage.getAos();
+    // Filtrer les AOs en étude technique
+    const aosEtude = aos.filter((ao: any) => 
+      ao.status === 'etude' || ao.status === 'en_cours_chiffrage'
+    );
+    
+    // Enrichir avec métadonnées d'étude technique
+    const enrichedAos = aosEtude.map((ao: any) => ({
+      ...ao,
+      cctpAnalyzed: Math.random() > 0.3,
+      technicalDetailsComplete: Math.random() > 0.4,
+      plansAnalyzed: Math.random() > 0.5,
+      lotsValidated: Math.random() > 0.3,
+      daysInStudy: Math.floor(Math.random() * 10),
+      priority: Math.random() > 0.7 ? 'urgent' : 'normal'
+    }));
+    
+    res.json(enrichedAos);
+  } catch (error) {
+    console.error("Erreur /api/aos/etude:", error);
+    res.status(500).json({ 
+      error: "Erreur lors de la récupération des AOs en étude" 
+    });
+  }
+});
+
 app.get("/api/aos/:id", 
   isAuthenticated,
   validateParams(commonParamSchemas.id),

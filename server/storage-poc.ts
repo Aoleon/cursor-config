@@ -5332,6 +5332,82 @@ export class MemStorage implements IStorage {
       throw error;
     }
   }
+
+  // ========================================
+  // MÉTHODES MANQUANTES POUR BUSINESS ALERTS - PHASE 3.1.7.4
+  // ========================================
+
+  async getActiveBusinessThresholds(): Promise<any[]> {
+    try {
+      // Implémentation stub temporaire - retourne des seuils par défaut
+      logger.info('[DatabaseStorage] getActiveBusinessThresholds: Utilisation seuils par défaut');
+      return [
+        {
+          id: 'threshold_profitability_default',
+          thresholdType: 'profitability',
+          thresholdKey: 'global_margin',
+          operator: 'less_than',
+          thresholdValue: '15',
+          severity: 'warning',
+          alertTitle: 'Marge globale faible',
+          alertMessage: 'La marge globale est en dessous du seuil critique'
+        },
+        {
+          id: 'threshold_team_util_default',
+          thresholdType: 'team_utilization',
+          thresholdKey: 'team_overload',
+          operator: 'greater_than',
+          thresholdValue: '90',
+          severity: 'critical',
+          alertTitle: 'Surcharge équipe',
+          alertMessage: 'Une équipe est en surcharge critique'
+        }
+      ];
+    } catch (error) {
+      logger.error('Erreur getActiveBusinessThresholds:', error);
+      return [];
+    }
+  }
+
+  async findSimilarAlerts(params: {
+    entity_type: string;
+    entity_id: string;
+    alert_type: string;
+    hours_window: number;
+  }): Promise<any[]> {
+    try {
+      // Implémentation stub temporaire - aucune alerte similaire trouvée
+      logger.debug(`[DatabaseStorage] findSimilarAlerts: Recherche pour ${params.entity_type}:${params.entity_id}`);
+      return [];
+    } catch (error) {
+      logger.error('Erreur findSimilarAlerts:', error);
+      return [];
+    }
+  }
+
+  async getBusinessAlert(id: string): Promise<any | null> {
+    try {
+      // Implémentation stub temporaire - alerte non trouvée
+      logger.debug(`[DatabaseStorage] getBusinessAlert: Recherche alerte ${id}`);
+      return null;
+    } catch (error) {
+      logger.error('Erreur getBusinessAlert:', error);
+      return null;
+    }
+  }
+
+  async createBusinessAlert(data: any): Promise<string> {
+    try {
+      const alertId = `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      logger.info(`[DatabaseStorage] createBusinessAlert: Alerte créée ${alertId} - ${data.alertType}`);
+      
+      // Stub temporaire - simule la création d'une alerte
+      return alertId;
+    } catch (error) {
+      logger.error('Erreur createBusinessAlert:', error);
+      throw error;
+    }
+  }
 }
 
 // Export default instance

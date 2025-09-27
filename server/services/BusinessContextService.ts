@@ -27,7 +27,10 @@ import type {
   AdaptiveLearningPatterns,
   InsertAdaptiveLearningPatterns,
   BusinessContextMetricsLog,
-  InsertBusinessContextMetricsLog,
+  InsertBusinessContextMetricsLog
+} from "@shared/schema";
+
+import {
   businessContextRequestSchema,
   contextEnrichmentRequestSchema,
   adaptiveLearningUpdateSchema,

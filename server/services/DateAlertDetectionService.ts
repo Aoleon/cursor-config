@@ -1711,6 +1711,114 @@ export class MenuiserieDetectionRules {
     return alertsCreated;
   }
 
+  // ========================================
+  // MÉTHODE PUBLIQUE ORCHESTRATRICE - PHASE 3.1.7.4
+  // ========================================
+
+  /**
+   * Évalue tous les seuils business configurés et génère les alertes correspondantes
+   * Méthode publique appelée par PeriodicDetectionScheduler
+   */
+  async evaluateBusinessThresholds(): Promise<DetectionSummary> {
+    const startTime = Date.now();
+    const summary: DetectionSummary = {
+      totalAlertsGenerated: 0,
+      alertsByType: {},
+      alertsBySeverity: {},
+      criticalIssues: 0,
+      actionableItems: 0,
+      detectionRunTime: 0,
+      nextScheduledRun: new Date(Date.now() + 30 * 60 * 1000), // +30 min
+      recommendations: []
+    };
+
+    try {
+      this.logger.info('[BusinessThresholds] Démarrage évaluation seuils business');
+      
+      // 1. RÉCUPÉRER TOUS LES SEUILS ACTIFS
+      const allThresholds = await this.storage.getActiveBusinessThresholds();
+      
+      if (!allThresholds || allThresholds.length === 0) {
+        this.logger.info('[BusinessThresholds] Aucun seuil actif configuré');
+        summary.detectionRunTime = Date.now() - startTime;
+        return summary;
+      }
+
+      // 2. GROUPER PAR TYPE DE SEUIL
+      const profitabilityThresholds = allThresholds.filter(t => t.thresholdType === 'profitability');
+      const teamUtilizationThresholds = allThresholds.filter(t => t.thresholdType === 'team_utilization');
+      const predictiveRiskThresholds = allThresholds.filter(t => t.thresholdType === 'predictive_risk');
+
+      // 3. ÉVALUER CHAQUE CATÉGORIE DE SEUILS
+      const alertIds: string[] = [];
+
+      // Évaluation rentabilité
+      if (profitabilityThresholds.length > 0) {
+        const profitabilityAlerts = await this.evaluateProfitabilityThresholds(profitabilityThresholds);
+        alertIds.push(...profitabilityAlerts);
+        summary.alertsByType['profitability'] = profitabilityAlerts.length;
+        this.logger.info(`[BusinessThresholds] ${profitabilityAlerts.length} alertes rentabilité générées`);
+      }
+
+      // Évaluation utilisation équipes
+      if (teamUtilizationThresholds.length > 0) {
+        const teamAlerts = await this.evaluateTeamUtilizationThresholds(teamUtilizationThresholds);
+        alertIds.push(...teamAlerts);
+        summary.alertsByType['team_utilization'] = teamAlerts.length;
+        this.logger.info(`[BusinessThresholds] ${teamAlerts.length} alertes charge équipe générées`);
+      }
+
+      // Évaluation risques prédictifs
+      if (predictiveRiskThresholds.length > 0) {
+        const riskAlerts = await this.evaluatePredictiveRiskThresholds(predictiveRiskThresholds);
+        alertIds.push(...riskAlerts);
+        summary.alertsByType['predictive_risk'] = riskAlerts.length;
+        this.logger.info(`[BusinessThresholds] ${riskAlerts.length} alertes risque prédictif générées`);
+      }
+
+      // 4. CALCULER STATISTIQUES RÉSUMÉ
+      summary.totalAlertsGenerated = alertIds.length;
+      
+      // Récupérer les détails des alertes créées pour statistiques
+      if (alertIds.length > 0) {
+        const createdAlerts = await Promise.all(
+          alertIds.map(id => this.storage.getBusinessAlert(id).catch(() => null))
+        );
+        
+        // Compter par sévérité
+        for (const alert of createdAlerts.filter(a => a !== null)) {
+          if (alert) {
+            const severity = alert.severity || 'info';
+            summary.alertsBySeverity[severity] = (summary.alertsBySeverity[severity] || 0) + 1;
+            
+            if (severity === 'critical') {
+              summary.criticalIssues++;
+            }
+            summary.actionableItems++;
+          }
+        }
+      }
+
+      // 5. GÉNÉRER RECOMMANDATIONS
+      if (summary.totalAlertsGenerated > 0) {
+        summary.recommendations.push(`${summary.totalAlertsGenerated} alertes générées nécessitent attention`);
+        if (summary.criticalIssues > 0) {
+          summary.recommendations.push(`${summary.criticalIssues} alertes critiques à traiter en priorité`);
+        }
+      }
+
+      summary.detectionRunTime = Date.now() - startTime;
+      this.logger.info(`[BusinessThresholds] Évaluation terminée: ${summary.totalAlertsGenerated} alertes en ${summary.detectionRunTime}ms`);
+      
+      return summary;
+
+    } catch (error) {
+      summary.detectionRunTime = Date.now() - startTime;
+      this.logger.error('[BusinessThresholds] Erreur évaluation seuils:', error);
+      throw error;
+    }
+  }
+
   private async evaluateTeamUtilizationThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
     const alertsCreated: string[] = [];
     

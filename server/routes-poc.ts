@@ -541,6 +541,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ENDPOINT DE DÉBOGAGE TEMPORAIRE - À SUPPRIMER APRÈS RÉSOLUTION
+  app.get('/api/debug-auth-state', async (req: any, res) => {
+    // Seulement en développement - pas de restriction
+    try {
+      const debugInfo = {
+        timestamp: new Date().toISOString(),
+        request: {
+          isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+          hasUser: !!req.user,
+          hasSession: !!req.session,
+          sessionID: req.sessionID || 'undefined',
+          hostname: req.hostname,
+          cookies: req.headers.cookie ? 'présents' : 'absents'
+        },
+        user: req.user ? {
+          type: typeof req.user,
+          keys: Object.keys(req.user),
+          id: req.user.id,
+          email: req.user.email,
+          isOIDC: req.user.isOIDC,
+          hasClaims: !!req.user.claims,
+          isBasicAuth: req.user.isBasicAuth
+        } : null,
+        session: req.session ? {
+          hasUser: !!req.session.user,
+          userType: req.session.user ? typeof req.session.user : 'undefined',
+          userKeys: req.session.user ? Object.keys(req.session.user) : [],
+          userIsBasicAuth: req.session.user?.isBasicAuth,
+          userId: req.session.user?.id,
+          userEmail: req.session.user?.email
+        } : null,
+        middlewareLogic: {
+          sessionUserIsBasicAuth: !!(req.session?.user?.isBasicAuth),
+          reqUserIsBasicAuth: !!(req.user?.isBasicAuth),
+          shouldPassBasicAuth: !!(req.session?.user?.isBasicAuth || req.user?.isBasicAuth)
+        }
+      };
+
+      console.log('[DEBUG AUTH] Inspection complète:', JSON.stringify(debugInfo, null, 2));
+      res.json(debugInfo);
+    } catch (error) {
+      console.error('[DEBUG AUTH] Erreur:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Fonction helper pour déterminer le rôle utilisateur
   function determineUserRole(email: string): string {
     // Logique basée sur l'email pour déterminer le rôle

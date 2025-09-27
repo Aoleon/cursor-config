@@ -27,8 +27,8 @@ export default function Offers() {
       <div className="px-6 py-6">
         <UnifiedOffersDisplay 
           showCreateButton={true} 
-          title="Offres"
-          endpoint="/api/offers"
+          title="Appels d'Offres"
+          endpoint="/api/aos"
         />
       </div>
     </>

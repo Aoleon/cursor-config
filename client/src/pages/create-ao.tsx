@@ -218,7 +218,7 @@ export default function CreateAO() {
         description: `L'AO ${newAo.reference} a été créé avec ${lots.length} lot${lots.length > 1 ? 's' : ''}`,
       });
       
-      setLocation("/");
+      setLocation("/offers");
     },
     onError: (error: any) => {
       console.error("Error creating AO:", error);
@@ -841,7 +841,8 @@ export default function CreateAO() {
                 </Alert>
               )}
               
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* 1. Informations générales */}
             <Card>
               <CardHeader>
@@ -1270,6 +1271,7 @@ export default function CreateAO() {
               </Button>
             </div>
           </form>
+              </Form>
             </TabsContent>
           </Tabs>
         </div>

@@ -34,7 +34,10 @@ import {
   insertProjectReserveSchema, insertSavInterventionSchema, insertSavWarrantyClaimSchema,
   insertTempsPoseSchema, insertMetricsBusinessSchema, insertAoContactsSchema,
   insertProjectContactsSchema, insertSupplierSpecializationsSchema,
-  type ProjectReserve, type SavIntervention, type SavWarrantyClaim
+  insertSupplierQuoteSessionSchema, insertAoLotSupplierSchema, 
+  insertSupplierDocumentSchema, insertSupplierQuoteAnalysisSchema,
+  type ProjectReserve, type SavIntervention, type SavWarrantyClaim,
+  type SupplierQuoteSession, type AoLotSupplier, type SupplierDocument, type SupplierQuoteAnalysis
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -7927,6 +7930,284 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
       } catch (error) {
         console.error('[Monday Dashboard] Erreur récupération logs:', error);
         throw createError.database('Erreur lors de la récupération des logs de migration');
+      }
+    })
+  );
+
+  // ========================================
+  // WORKFLOW FOURNISSEURS - NOUVELLES ROUTES API
+  // ========================================
+
+  /**
+   * GET /api/supplier-workflow/:aoId/status
+   * Récupère le statut global du workflow fournisseurs pour un AO
+   */
+  app.get('/api/supplier-workflow/:aoId/status',
+    isAuthenticated,
+    validateParams(z.object({
+      aoId: z.string().uuid('ID AO invalide')
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { aoId } = req.params;
+        
+        // Vérifier que l'AO existe
+        const ao = await storage.getAo(aoId);
+        if (!ao) {
+          throw createError.notFound('AO non trouvé');
+        }
+        
+        const workflowStatus = await storage.getSupplierWorkflowStatus(aoId);
+        
+        sendSuccess(res, workflowStatus, 'Statut workflow récupéré avec succès');
+      } catch (error) {
+        console.error('[Supplier Workflow] Erreur récupération statut:', error);
+        throw createError.database('Erreur lors de la récupération du statut du workflow');
+      }
+    })
+  );
+
+  /**
+   * POST /api/supplier-workflow/lot-suppliers
+   * Sélectionne des fournisseurs pour un lot spécifique
+   */
+  app.post('/api/supplier-workflow/lot-suppliers',
+    isAuthenticated,
+    validateBody(insertAoLotSupplierSchema.extend({
+      supplierIds: z.array(z.string()).min(1, 'Au moins un fournisseur requis')
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { aoId, aoLotId, supplierIds, notes } = req.body;
+        const userId = req.session.user!.id;
+        
+        // Vérifier que l'AO et le lot existent
+        const ao = await storage.getAo(aoId);
+        if (!ao) {
+          throw createError.notFound('AO non trouvé');
+        }
+
+        // Créer les associations lot-fournisseurs
+        const createdAssociations = [];
+        for (const supplierId of supplierIds) {
+          const aoLotSupplier = await storage.createAoLotSupplier({
+            aoId,
+            aoLotId,
+            supplierId,
+            selectedBy: userId,
+            notes,
+            selectionDate: new Date(),
+            isActive: true
+          });
+          createdAssociations.push(aoLotSupplier);
+        }
+        
+        sendSuccess(res, createdAssociations, 'Fournisseurs sélectionnés avec succès');
+      } catch (error) {
+        console.error('[Supplier Workflow] Erreur sélection fournisseurs:', error);
+        throw createError.database('Erreur lors de la sélection des fournisseurs');
+      }
+    })
+  );
+
+  /**
+   * GET /api/supplier-workflow/lot/:aoLotId/suppliers
+   * Récupère les fournisseurs sélectionnés pour un lot
+   */
+  app.get('/api/supplier-workflow/lot/:aoLotId/suppliers',
+    isAuthenticated,
+    validateParams(z.object({
+      aoLotId: z.string().uuid('ID lot invalide')
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { aoLotId } = req.params;
+        
+        const lotSuppliers = await storage.getAoLotSuppliers(aoLotId);
+        
+        sendSuccess(res, lotSuppliers, 'Fournisseurs du lot récupérés avec succès');
+      } catch (error) {
+        console.error('[Supplier Workflow] Erreur récupération fournisseurs lot:', error);
+        throw createError.database('Erreur lors de la récupération des fournisseurs du lot');
+      }
+    })
+  );
+
+  /**
+   * POST /api/supplier-workflow/sessions
+   * Génère une session sécurisée pour un fournisseur sur un lot
+   */
+  app.post('/api/supplier-workflow/sessions',
+    isAuthenticated,
+    validateBody(insertSupplierQuoteSessionSchema.extend({
+      expiresInHours: z.number().min(1).max(168).optional().default(72) // 72h par défaut
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { aoId, aoLotId, supplierId, expiresInHours = 72 } = req.body;
+        const userId = req.session.user!.id;
+        
+        // Vérifier que l'association lot-fournisseur existe
+        const lotSuppliers = await storage.getAoLotSuppliers(aoLotId);
+        const supplierAssociation = lotSuppliers.find(ls => ls.supplierId === supplierId);
+        
+        if (!supplierAssociation) {
+          throw createError.notFound('Ce fournisseur n\'est pas sélectionné pour ce lot');
+        }
+        
+        // Générer un token unique sécurisé
+        const accessToken = await storage.generateSessionToken();
+        const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
+        
+        const session = await storage.createSupplierQuoteSession({
+          aoId,
+          aoLotId,
+          supplierId,
+          accessToken,
+          status: 'active',
+          expiresAt,
+          createdBy: userId,
+          allowedUploads: 5, // Limite par défaut
+          isActive: true
+        });
+        
+        sendSuccess(res, session, 'Session de devis créée avec succès');
+      } catch (error) {
+        console.error('[Supplier Workflow] Erreur création session:', error);
+        throw createError.database('Erreur lors de la création de la session');
+      }
+    })
+  );
+
+  /**
+   * GET /api/supplier-workflow/sessions/:sessionId/summary
+   * Récupère le résumé des documents d'une session
+   */
+  app.get('/api/supplier-workflow/sessions/:sessionId/summary',
+    isAuthenticated,
+    validateParams(z.object({
+      sessionId: z.string().uuid('ID session invalide')
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { sessionId } = req.params;
+        
+        const summary = await storage.getSessionDocumentsSummary(sessionId);
+        
+        sendSuccess(res, summary, 'Résumé de session récupéré avec succès');
+      } catch (error) {
+        console.error('[Supplier Workflow] Erreur récupération résumé session:', error);
+        throw createError.database('Erreur lors de la récupération du résumé de session');
+      }
+    })
+  );
+
+  /**
+   * GET /api/supplier-workflow/sessions/public/:token
+   * Accès public pour fournisseurs via token sécurisé
+   */
+  app.get('/api/supplier-workflow/sessions/public/:token',
+    validateParams(z.object({
+      token: z.string().min(32, 'Token invalide')
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { token } = req.params;
+        
+        const session = await storage.getSupplierQuoteSessionByToken(token);
+        if (!session) {
+          throw createError.unauthorized('Token invalide ou expiré');
+        }
+        
+        // Vérifier que la session n'est pas expirée
+        if (session.expiresAt && new Date() > session.expiresAt) {
+          throw createError.unauthorized('Session expirée');
+        }
+        
+        if (session.status !== 'active') {
+          throw createError.forbidden('Session non active');
+        }
+        
+        // Retourner les informations publiques de la session
+        const publicSession = {
+          id: session.id,
+          aoId: session.aoId,
+          aoLotId: session.aoLotId,
+          status: session.status,
+          expiresAt: session.expiresAt,
+          allowedUploads: session.allowedUploads,
+          instructions: session.instructions,
+          supplier: session.supplier,
+          aoLot: session.aoLot
+        };
+        
+        sendSuccess(res, publicSession, 'Session récupérée avec succès');
+      } catch (error) {
+        console.error('[Supplier Workflow] Erreur accès session publique:', error);
+        throw createError.database('Erreur lors de l\'accès à la session');
+      }
+    })
+  );
+
+  /**
+   * POST /api/supplier-workflow/documents/upload
+   * Upload sécurisé de documents par les fournisseurs (via token)
+   */
+  app.post('/api/supplier-workflow/documents/upload',
+    uploadMiddleware.single('document'),
+    validateBody(z.object({
+      sessionToken: z.string().min(32, 'Token session requis'),
+      documentType: z.enum(['quote', 'technical_specs', 'certifications', 'other']),
+      description: z.string().optional()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { sessionToken, documentType, description } = req.body;
+        const file = req.file;
+        
+        if (!file) {
+          throw createError.badRequest('Fichier requis');
+        }
+        
+        // Vérifier la session
+        const session = await storage.getSupplierQuoteSessionByToken(sessionToken);
+        if (!session) {
+          throw createError.unauthorized('Token de session invalide');
+        }
+        
+        if (session.status !== 'active' || (session.expiresAt && new Date() > session.expiresAt)) {
+          throw createError.forbidden('Session expirée ou inactive');
+        }
+        
+        // Vérifier le quota d'uploads
+        const existingDocuments = await storage.getDocumentsBySession(session.id);
+        if (existingDocuments.length >= session.allowedUploads!) {
+          throw createError.forbidden('Quota d\'uploads atteint');
+        }
+        
+        // Stocker le fichier (à implémenter avec le service object storage)
+        const fileName = `${session.id}_${Date.now()}_${file.originalname}`;
+        const filePath = `supplier-quotes/${fileName}`;
+        
+        // Créer l'enregistrement du document
+        const document = await storage.createSupplierDocument({
+          sessionId: session.id,
+          supplierId: session.supplierId,
+          aoLotId: session.aoLotId,
+          documentType,
+          fileName: file.originalname,
+          filePath,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          description,
+          uploadedAt: new Date(),
+          status: 'uploaded'
+        });
+        
+        sendSuccess(res, document, 'Document uploadé avec succès');
+      } catch (error) {
+        console.error('[Supplier Workflow] Erreur upload document:', error);
+        throw createError.database('Erreur lors de l\'upload du document');
       }
     })
   );

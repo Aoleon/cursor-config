@@ -7,6 +7,7 @@ import {
   alertThresholds, businessAlerts,
   projectReserves, savInterventions, savWarrantyClaims,
   metricsBusiness, tempsPose, aoContacts, projectContacts, supplierSpecializations,
+  supplierQuoteSessions, aoLotSuppliers, supplierDocuments, supplierQuoteAnalysis,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -45,7 +46,11 @@ import {
   type TempsPose, type InsertTempsPose,
   type AoContacts, type InsertAoContacts,
   type ProjectContacts, type InsertProjectContacts,
-  type SupplierSpecializations, type InsertSupplierSpecializations
+  type SupplierSpecializations, type InsertSupplierSpecializations,
+  type SupplierQuoteSession, type InsertSupplierQuoteSession,
+  type AoLotSupplier, type InsertAoLotSupplier,
+  type SupplierDocument, type InsertSupplierDocument,
+  type SupplierQuoteAnalysis, type InsertSupplierQuoteAnalysis
 } from "@shared/schema";
 import { db } from "./db";
 import type { EventBus } from "./eventBus";
@@ -508,6 +513,61 @@ export interface IStorage {
   createSavWarrantyClaim(claim: InsertSavWarrantyClaim): Promise<SavWarrantyClaim>;
   updateSavWarrantyClaim(id: string, claim: Partial<InsertSavWarrantyClaim>): Promise<SavWarrantyClaim>;
   deleteSavWarrantyClaim(id: string): Promise<void>;
+
+  // ========================================
+  // WORKFLOW FOURNISSEURS - NOUVELLES OPERATIONS
+  // ========================================
+
+  // Supplier Quote Sessions operations - Gestion des sessions de devis sécurisées
+  getSupplierQuoteSessions(aoId?: string, aoLotId?: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any })[]>;
+  getSupplierQuoteSession(id: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any }) | undefined>;
+  getSupplierQuoteSessionByToken(token: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any }) | undefined>;
+  createSupplierQuoteSession(session: InsertSupplierQuoteSession): Promise<SupplierQuoteSession>;
+  updateSupplierQuoteSession(id: string, session: Partial<InsertSupplierQuoteSession>): Promise<SupplierQuoteSession>;
+  deleteSupplierQuoteSession(id: string): Promise<void>;
+  generateSessionToken(): Promise<string>; // Génère un token unique sécurisé
+
+  // AO Lot Suppliers operations - Gestion de la sélection fournisseurs par lot
+  getAoLotSuppliers(aoLotId: string): Promise<(AoLotSupplier & { supplier?: any; selectedByUser?: any })[]>;
+  getAoLotSupplier(id: string): Promise<(AoLotSupplier & { supplier?: any; selectedByUser?: any }) | undefined>;
+  createAoLotSupplier(aoLotSupplier: InsertAoLotSupplier): Promise<AoLotSupplier>;
+  updateAoLotSupplier(id: string, aoLotSupplier: Partial<InsertAoLotSupplier>): Promise<AoLotSupplier>;
+  deleteAoLotSupplier(id: string): Promise<void>;
+  getSuppliersByLot(aoLotId: string): Promise<any[]>; // Récupère les fournisseurs sélectionnés pour un lot
+
+  // Supplier Documents operations - Gestion des documents fournisseurs
+  getSupplierDocuments(sessionId?: string, supplierId?: string): Promise<(SupplierDocument & { session?: any; validatedByUser?: any })[]>;
+  getSupplierDocument(id: string): Promise<(SupplierDocument & { session?: any; validatedByUser?: any }) | undefined>;
+  createSupplierDocument(document: InsertSupplierDocument): Promise<SupplierDocument>;
+  updateSupplierDocument(id: string, document: Partial<InsertSupplierDocument>): Promise<SupplierDocument>;
+  deleteSupplierDocument(id: string): Promise<void>;
+  getDocumentsBySession(sessionId: string): Promise<SupplierDocument[]>; // Documents d'une session spécifique
+
+  // Supplier Quote Analysis operations - Gestion de l'analyse OCR des devis
+  getSupplierQuoteAnalyses(documentId?: string, sessionId?: string): Promise<(SupplierQuoteAnalysis & { document?: any; reviewedByUser?: any })[]>;
+  getSupplierQuoteAnalysis(id: string): Promise<(SupplierQuoteAnalysis & { document?: any; reviewedByUser?: any }) | undefined>;
+  createSupplierQuoteAnalysis(analysis: InsertSupplierQuoteAnalysis): Promise<SupplierQuoteAnalysis>;
+  updateSupplierQuoteAnalysis(id: string, analysis: Partial<InsertSupplierQuoteAnalysis>): Promise<SupplierQuoteAnalysis>;
+  deleteSupplierQuoteAnalysis(id: string): Promise<void>;
+  getAnalysisByDocument(documentId: string): Promise<SupplierQuoteAnalysis | undefined>; // Analyse d'un document spécifique
+
+  // Workflow helpers - Méthodes utilitaires pour le workflow fournisseurs
+  getSupplierWorkflowStatus(aoId: string): Promise<{
+    totalLots: number;
+    lotsWithSuppliers: number;
+    activeSessions: number;
+    documentsUploaded: number;
+    documentsAnalyzed: number;
+    pendingAnalysis: number;
+  }>;
+  
+  getSessionDocumentsSummary(sessionId: string): Promise<{
+    totalDocuments: number;
+    analyzedDocuments: number;
+    pendingDocuments: number;
+    mainQuotePresent: boolean;
+    averageQualityScore?: number;
+  }>;
 }
 
 // ========================================

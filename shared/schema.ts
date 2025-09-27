@@ -572,6 +572,30 @@ export const equipmentTypeEnum = pgEnum("equipment_type", [
   "outillage_main", "electroportatif", "vehicule", "echafaudage", "autre"
 ]);
 
+// ========================================
+// ENUMS WORKFLOW FOURNISSEURS - NOUVEAU
+// ========================================
+
+// Statuts des sessions de devis fournisseurs
+export const quoteSessionStatusEnum = pgEnum("quote_session_status", [
+  "active", "expired", "completed", "cancelled", "suspended"
+]);
+
+// Types de documents fournisseurs
+export const supplierDocumentTypeEnum = pgEnum("supplier_document_type", [
+  "devis", "fiche_technique", "certification", "assurance", "catalogue", "autre"
+]);
+
+// Statuts des documents fournisseurs
+export const supplierDocumentStatusEnum = pgEnum("supplier_document_status", [
+  "pending", "uploaded", "analyzed", "validated", "rejected"
+]);
+
+// Statuts de l'analyse OCR des devis
+export const ocrAnalysisStatusEnum = pgEnum("ocr_analysis_status", [
+  "pending", "in_progress", "completed", "failed", "manual_review_required"
+]);
+
 // Types document RH
 export const documentTypeEnum = pgEnum("document_type", [
   "contrat_travail", "visite_medicale", "habilitation_caces", 
@@ -820,6 +844,192 @@ export const lotSupplierQuotes = pgTable("lot_supplier_quotes", {
     responseDateIdx: index("lot_supplier_quotes_response_date_idx").on(table.responseDate),
     // Contrainte d'unicité pour éviter doublons
     lotSupplierUnique: uniqueIndex("lot_supplier_quotes_unique_idx").on(table.aoLotId, table.supplierId),
+  };
+});
+
+// ========================================
+// NOUVELLES TABLES WORKFLOW FOURNISSEURS
+// ========================================
+
+// Table pour gérer les sessions de devis fournisseurs avec tokens sécurisés
+export const supplierQuoteSessions = pgTable("supplier_quote_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  aoId: varchar("ao_id").notNull().references(() => aos.id, { onDelete: "cascade" }),
+  aoLotId: varchar("ao_lot_id").notNull().references(() => aoLots.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  
+  // Token et sécurité
+  accessToken: varchar("access_token").notNull().unique(), // Token unique pour accès sécurisé
+  tokenExpiresAt: timestamp("token_expires_at").notNull(), // Date d'expiration du token
+  ipAddressesAllowed: text("ip_addresses_allowed").array(), // IPs autorisées (optionnel)
+  
+  // Statut et workflow
+  status: quoteSessionStatusEnum("status").default("active"),
+  invitedAt: timestamp("invited_at").defaultNow(), // Date d'invitation envoyée
+  firstAccessAt: timestamp("first_access_at"), // Premier accès du fournisseur
+  lastAccessAt: timestamp("last_access_at"), // Dernier accès
+  submittedAt: timestamp("submitted_at"), // Date de soumission du devis
+  
+  // Métadonnées
+  emailSent: boolean("email_sent").default(false), // Email d'invitation envoyé
+  remindersSent: integer("reminders_sent").default(0), // Nombre de relances envoyées
+  notes: text("notes"), // Notes internes
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    aoLotSupplierIdx: index("supplier_quote_sessions_ao_lot_supplier_idx").on(table.aoLotId, table.supplierId),
+    accessTokenIdx: uniqueIndex("supplier_quote_sessions_access_token_idx").on(table.accessToken),
+    statusIdx: index("supplier_quote_sessions_status_idx").on(table.status),
+    tokenExpiryIdx: index("supplier_quote_sessions_token_expiry_idx").on(table.tokenExpiresAt),
+    supplierSessionsIdx: index("supplier_quote_sessions_supplier_idx").on(table.supplierId),
+  };
+});
+
+// Table de liaison pour sélection spécifique des fournisseurs par lot
+export const aoLotSuppliers = pgTable("ao_lot_suppliers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  aoId: varchar("ao_id").notNull().references(() => aos.id, { onDelete: "cascade" }),
+  aoLotId: varchar("ao_lot_id").notNull().references(() => aoLots.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  
+  // Sélection et critères
+  selectedAt: timestamp("selected_at").defaultNow(), // Date de sélection du fournisseur pour ce lot
+  selectedBy: varchar("selected_by").references(() => users.id), // Utilisateur qui a sélectionné
+  selectionCriteria: jsonb("selection_criteria").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Critères de sélection
+  
+  // Priorité et préférences
+  priority: integer("priority").default(1), // Ordre de priorité du fournisseur pour ce lot
+  isPreferred: boolean("is_preferred").default(false), // Fournisseur préféré pour ce lot
+  maxBudget: decimal("max_budget", { precision: 10, scale: 2 }), // Budget maximum alloué
+  
+  // Délais spécifiques
+  expectedResponseDelay: integer("expected_response_delay").default(7), // Délai de réponse attendu (jours)
+  expectedDeliveryDelay: integer("expected_delivery_delay"), // Délai de livraison attendu (jours)
+  
+  // Métadonnées
+  notes: text("notes"), // Notes spécifiques à cette association
+  isActive: boolean("is_active").default(true), // Association active
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // Contrainte unique : un fournisseur ne peut être sélectionné qu'une fois par lot
+    aoLotSupplierUnique: uniqueIndex("ao_lot_suppliers_unique_idx").on(table.aoLotId, table.supplierId),
+    aoLotIdx: index("ao_lot_suppliers_ao_lot_idx").on(table.aoLotId),
+    supplierIdx: index("ao_lot_suppliers_supplier_idx").on(table.supplierId),
+    priorityIdx: index("ao_lot_suppliers_priority_idx").on(table.priority),
+    selectedByIdx: index("ao_lot_suppliers_selected_by_idx").on(table.selectedBy),
+  };
+});
+
+// Table pour stocker les documents uploadés par les fournisseurs
+export const supplierDocuments = pgTable("supplier_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => supplierQuoteSessions.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  aoLotId: varchar("ao_lot_id").notNull().references(() => aoLots.id, { onDelete: "cascade" }),
+  
+  // Informations du document
+  filename: varchar("filename").notNull(),
+  originalName: varchar("original_name").notNull(),
+  mimeType: varchar("mime_type").notNull(),
+  fileSize: integer("file_size").notNull(), // Taille en bytes
+  documentType: supplierDocumentTypeEnum("document_type").default("devis"),
+  
+  // Stockage
+  objectStoragePath: varchar("object_storage_path").notNull(), // Chemin dans object storage
+  objectStorageUrl: varchar("object_storage_url"), // URL d'accès (si public)
+  checksum: varchar("checksum"), // Hash MD5/SHA256 pour vérification intégrité
+  
+  // Workflow et statut
+  status: supplierDocumentStatusEnum("status").default("uploaded"),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+  validatedAt: timestamp("validated_at"),
+  validatedBy: varchar("validated_by").references(() => users.id),
+  
+  // Métadonnées
+  description: text("description"), // Description fournie par le fournisseur
+  isMainQuote: boolean("is_main_quote").default(false), // Document principal du devis
+  version: integer("version").default(1), // Version du document (si re-upload)
+  tags: text("tags").array().default(sql`'{}'::text[]`), // Tags pour classification
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    sessionDocumentsIdx: index("supplier_documents_session_idx").on(table.sessionId),
+    supplierDocumentsIdx: index("supplier_documents_supplier_idx").on(table.supplierId),
+    lotDocumentsIdx: index("supplier_documents_lot_idx").on(table.aoLotId),
+    statusIdx: index("supplier_documents_status_idx").on(table.status),
+    documentTypeIdx: index("supplier_documents_type_idx").on(table.documentType),
+    uploadDateIdx: index("supplier_documents_upload_date_idx").on(table.uploadedAt),
+    mainQuoteIdx: index("supplier_documents_main_quote_idx").on(table.isMainQuote),
+  };
+});
+
+// Table pour stocker les résultats d'analyse OCR des devis fournisseurs
+export const supplierQuoteAnalysis = pgTable("supplier_quote_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull().references(() => supplierDocuments.id, { onDelete: "cascade" }),
+  sessionId: varchar("session_id").notNull().references(() => supplierQuoteSessions.id, { onDelete: "cascade" }),
+  aoLotId: varchar("ao_lot_id").notNull().references(() => aoLots.id, { onDelete: "cascade" }),
+  
+  // Statut de l'analyse OCR
+  status: ocrAnalysisStatusEnum("status").default("pending"),
+  analyzedAt: timestamp("analyzed_at"),
+  analysisEngine: varchar("analysis_engine").default("tesseract"), // Moteur OCR utilisé
+  confidence: decimal("confidence", { precision: 5, scale: 2 }), // Score de confiance 0-100
+  
+  // Données extraites - Prix et quantités
+  extractedPrices: jsonb("extracted_prices").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Prix détectés
+  totalAmountHT: decimal("total_amount_ht", { precision: 10, scale: 2 }), // Montant HT détecté
+  totalAmountTTC: decimal("total_amount_ttc", { precision: 10, scale: 2 }), // Montant TTC détecté
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }), // Taux TVA détecté
+  currency: varchar("currency").default("EUR"), // Devise
+  
+  // Données extraites - Informations fournisseur
+  supplierInfo: jsonb("supplier_info").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Infos fournisseur extraites
+  
+  // Données extraites - Produits et services
+  lineItems: jsonb("line_items").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Lignes de devis détectées
+  materials: jsonb("materials").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Matériaux détectés
+  laborCosts: jsonb("labor_costs").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Coûts main d'oeuvre
+  
+  // Données extraites - Délais et conditions
+  deliveryDelay: integer("delivery_delay"), // Délai de livraison (jours)
+  paymentTerms: varchar("payment_terms"), // Conditions de paiement
+  validityPeriod: integer("validity_period"), // Durée de validité du devis (jours)
+  
+  // Données brutes et métadonnées
+  rawOcrText: text("raw_ocr_text"), // Texte brut extrait par OCR
+  extractedData: jsonb("extracted_data").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Toutes données extraites
+  errorDetails: jsonb("error_details").$type<Record<string, any>>(), // Détails erreurs si échec
+  
+  // Révision manuelle
+  requiresManualReview: boolean("requires_manual_review").default(false),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  
+  // Scores et métriques
+  qualityScore: decimal("quality_score", { precision: 5, scale: 2 }), // Score qualité du devis 0-100
+  completenessScore: decimal("completeness_score", { precision: 5, scale: 2 }), // Score complétude 0-100
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    documentAnalysisIdx: index("supplier_quote_analysis_document_idx").on(table.documentId),
+    sessionAnalysisIdx: index("supplier_quote_analysis_session_idx").on(table.sessionId),
+    lotAnalysisIdx: index("supplier_quote_analysis_lot_idx").on(table.aoLotId),
+    statusIdx: index("supplier_quote_analysis_status_idx").on(table.status),
+    analyzedDateIdx: index("supplier_quote_analysis_analyzed_date_idx").on(table.analyzedAt),
+    confidenceIdx: index("supplier_quote_analysis_confidence_idx").on(table.confidence),
+    manualReviewIdx: index("supplier_quote_analysis_manual_review_idx").on(table.requiresManualReview),
+    qualityScoreIdx: index("supplier_quote_analysis_quality_score_idx").on(table.qualityScore),
   };
 });
 
@@ -2160,6 +2370,92 @@ export const projectSuppliersRelations = relations(projectSuppliers, ({ one }) =
 }));
 
 // ========================================
+// RELATIONS NOUVELLES TABLES WORKFLOW FOURNISSEURS
+// ========================================
+
+// Relations pour supplier_quote_sessions
+export const supplierQuoteSessionsRelations = relations(supplierQuoteSessions, ({ one, many }) => ({
+  ao: one(aos, {
+    fields: [supplierQuoteSessions.aoId],
+    references: [aos.id],
+  }),
+  aoLot: one(aoLots, {
+    fields: [supplierQuoteSessions.aoLotId],
+    references: [aoLots.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [supplierQuoteSessions.supplierId],
+    references: [suppliers.id],
+  }),
+  documents: many(supplierDocuments),
+  analysis: many(supplierQuoteAnalysis),
+}));
+
+// Relations pour ao_lot_suppliers
+export const aoLotSuppliersRelations = relations(aoLotSuppliers, ({ one }) => ({
+  ao: one(aos, {
+    fields: [aoLotSuppliers.aoId],
+    references: [aos.id],
+  }),
+  aoLot: one(aoLots, {
+    fields: [aoLotSuppliers.aoLotId],
+    references: [aoLots.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [aoLotSuppliers.supplierId],
+    references: [suppliers.id],
+  }),
+  selectedBy: one(users, {
+    fields: [aoLotSuppliers.selectedBy],
+    references: [users.id],
+    relationName: "lot_supplier_selector",
+  }),
+}));
+
+// Relations pour supplier_documents
+export const supplierDocumentsRelations = relations(supplierDocuments, ({ one, many }) => ({
+  session: one(supplierQuoteSessions, {
+    fields: [supplierDocuments.sessionId],
+    references: [supplierQuoteSessions.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [supplierDocuments.supplierId],
+    references: [suppliers.id],
+  }),
+  aoLot: one(aoLots, {
+    fields: [supplierDocuments.aoLotId],
+    references: [aoLots.id],
+  }),
+  validatedBy: one(users, {
+    fields: [supplierDocuments.validatedBy],
+    references: [users.id],
+    relationName: "document_validator",
+  }),
+  analysis: many(supplierQuoteAnalysis),
+}));
+
+// Relations pour supplier_quote_analysis
+export const supplierQuoteAnalysisRelations = relations(supplierQuoteAnalysis, ({ one }) => ({
+  document: one(supplierDocuments, {
+    fields: [supplierQuoteAnalysis.documentId],
+    references: [supplierDocuments.id],
+  }),
+  session: one(supplierQuoteSessions, {
+    fields: [supplierQuoteAnalysis.sessionId],
+    references: [supplierQuoteSessions.id],
+  }),
+  aoLot: one(aoLots, {
+    fields: [supplierQuoteAnalysis.aoLotId],
+    references: [aoLots.id],
+  }),
+  reviewedBy: one(users, {
+    fields: [supplierQuoteAnalysis.reviewedBy],
+    references: [users.id],
+    relationName: "analysis_reviewer",
+  }),
+}));
+
+// ========================================
 // TYPES TYPESCRIPT POUR POC
 // ========================================
 
@@ -2280,6 +2576,22 @@ export type InsertSupplierRequest = typeof supplierRequests.$inferInsert;
 
 export type Supplier = typeof suppliers.$inferSelect;
 export type InsertSupplier = typeof suppliers.$inferInsert;
+
+// ========================================
+// TYPES WORKFLOW FOURNISSEURS - NOUVELLES TABLES
+// ========================================
+
+export type SupplierQuoteSession = typeof supplierQuoteSessions.$inferSelect;
+export type InsertSupplierQuoteSession = typeof supplierQuoteSessions.$inferInsert;
+
+export type AoLotSupplier = typeof aoLotSuppliers.$inferSelect;
+export type InsertAoLotSupplier = typeof aoLotSuppliers.$inferInsert;
+
+export type SupplierDocument = typeof supplierDocuments.$inferSelect;
+export type InsertSupplierDocument = typeof supplierDocuments.$inferInsert;
+
+export type SupplierQuoteAnalysis = typeof supplierQuoteAnalysis.$inferSelect;
+export type InsertSupplierQuoteAnalysis = typeof supplierQuoteAnalysis.$inferInsert;
 
 export type TeamResource = typeof teamResources.$inferSelect;
 export type InsertTeamResource = typeof teamResources.$inferInsert;
@@ -2473,6 +2785,37 @@ export const insertProjectSupplierSchema = createInsertSchema(projectSuppliers).
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+// ========================================
+// SCHÉMAS ZOD WORKFLOW FOURNISSEURS - NOUVELLES TABLES
+// ========================================
+
+export const insertSupplierQuoteSessionSchema = createInsertSchema(supplierQuoteSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  accessToken: true, // Généré automatiquement
+});
+
+export const insertAoLotSupplierSchema = createInsertSchema(aoLotSuppliers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupplierDocumentSchema = createInsertSchema(supplierDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  uploadedAt: true, // Défini automatiquement lors de l'upload
+});
+
+export const insertSupplierQuoteAnalysisSchema = createInsertSchema(supplierQuoteAnalysis).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  analyzedAt: true, // Défini lors de l'analyse
 });
 
 // ========================================

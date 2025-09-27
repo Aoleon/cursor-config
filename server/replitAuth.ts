@@ -90,14 +90,25 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  for (const domain of process.env
-    .REPLIT_DOMAINS!.split(",")) {
+  // Configuration des domaines d'authentification
+  const domains = process.env.REPLIT_DOMAINS!.split(",");
+  
+  // En développement, ajouter localhost pour les tests locaux
+  if (process.env.NODE_ENV === 'development') {
+    domains.push('localhost');
+  }
+  
+  for (const domain of domains) {
+    // Détecter le protocole approprié
+    const protocol = domain === 'localhost' ? 'http' : 'https';
+    const port = domain === 'localhost' ? ':5000' : '';
+    
     const strategy = new Strategy(
       {
         name: `replitauth:${domain}`,
         config,
         scope: "openid email profile offline_access",
-        callbackURL: `https://${domain}/api/callback`,
+        callbackURL: `${protocol}://${domain}${port}/api/callback`,
       },
       verify,
     );

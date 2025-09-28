@@ -9,6 +9,16 @@ import type { TechnicalScoringResult, SpecialCriteria, ColorSpec, MaterialSpec, 
 import { eventBus } from './eventBus';
 // Import storage pour charger la configuration utilisateur
 import { storage } from './storage-poc';
+// Import du moteur OCR contextuel pour amélioration intelligente
+import { contextualOCREngine, type ContextualOCRResult } from './services/ContextualOCREngine';
+// Imports des types pour le contexte OCR
+import type { 
+  AOFieldsExtracted, 
+  SupplierQuoteFields, 
+  FieldMappingResult, 
+  ValidationError, 
+  FieldCorrection 
+} from '@shared/schema';
 
 // Imports dynamiques pour éviter les erreurs d'initialisation
 let pdfParseModule: typeof pdfParse | null = null;
@@ -67,6 +77,7 @@ interface OCRResult {
   confidence: number;
   processedFields: AOFieldsExtracted;
   technicalScoring?: TechnicalScoringResult; // Résultat du scoring technique
+  contextualResult?: ContextualOCRResult; // Résultat du moteur contextuel
   rawData: any;
 }
 
@@ -80,6 +91,7 @@ export interface SupplierQuoteOCRResult {
   processedFields: SupplierQuoteFields;
   qualityScore: number;
   completenessScore: number;
+  contextualResult?: ContextualOCRResult; // Résultat du moteur contextuel
   rawData: any;
 }
 
@@ -610,6 +622,260 @@ export class OCRService {
   }
 
   // ========================================
+  // MÉTHODES DE VALIDATION ET AUTO-COMPLÉTION AVANCÉES
+  // ========================================
+
+  /**
+   * Génère des patterns adaptatifs basés sur les données contextuelles
+   */
+  async generateAdaptivePatterns(documentType: 'ao' | 'supplier_quote'): Promise<Record<string, RegExp[]>> {
+    try {
+      console.log(`[OCR] Génération de patterns adaptatifs pour ${documentType}...`);
+      
+      // Utiliser le moteur contextuel pour générer des patterns adaptatifs
+      const adaptivePatterns = contextualOCREngine.generateAdaptivePatterns(documentType);
+      
+      // Combiner avec les patterns de base existants
+      const combinedPatterns = { ...AO_PATTERNS, ...adaptivePatterns };
+      
+      console.log(`[OCR] ${Object.keys(adaptivePatterns).length} patterns adaptatifs générés`);
+      return combinedPatterns;
+      
+    } catch (error) {
+      console.warn('[OCR] Échec génération patterns adaptatifs:', error);
+      return AO_PATTERNS; // Fallback vers patterns de base
+    }
+  }
+
+  /**
+   * Valide et corrige automatiquement les champs extraits
+   */
+  async validateAndCorrectFields(fields: AOFieldsExtracted | SupplierQuoteFields, documentType: 'ao' | 'supplier_quote'): Promise<{
+    correctedFields: AOFieldsExtracted | SupplierQuoteFields;
+    corrections: FieldCorrection[];
+    validationScore: number;
+  }> {
+    try {
+      console.log(`[OCR] Validation et correction des champs ${documentType}...`);
+      
+      // Utiliser le moteur contextuel pour validation et correction
+      const contextualResult = await contextualOCREngine.enhanceOCRFields(fields, documentType);
+      
+      const validationScore = this.calculateValidationScore(contextualResult.validationErrors);
+      
+      console.log(`[OCR] Validation terminée - Score: ${validationScore}, Corrections: ${contextualResult.suggestedCorrections.length}`);
+      
+      return {
+        correctedFields: contextualResult.extractedFields,
+        corrections: contextualResult.suggestedCorrections,
+        validationScore
+      };
+      
+    } catch (error) {
+      console.error('[OCR] Échec validation/correction:', error);
+      return {
+        correctedFields: fields,
+        corrections: [],
+        validationScore: 0.5
+      };
+    }
+  }
+
+  /**
+   * Auto-complète les champs manquants depuis les données maître
+   */
+  async autoCompleteFromMasterData(fields: AOFieldsExtracted): Promise<{
+    completedFields: AOFieldsExtracted;
+    completedFieldNames: string[];
+    completionScore: number;
+  }> {
+    try {
+      console.log('[OCR] Auto-complétion depuis données maître...');
+      
+      const completedFields = { ...fields };
+      const completedFieldNames: string[] = [];
+      
+      // Auto-complétion basée sur client/location
+      if (completedFields.client && completedFields.location) {
+        const similarAOs = await storage.getAos();
+        const matchingAO = similarAOs.find(ao => 
+          ao.client === completedFields.client && 
+          ao.location === completedFields.location
+        );
+        
+        if (matchingAO) {
+          // Auto-compléter les champs manquants
+          if (!completedFields.departement && matchingAO.departement) {
+            completedFields.departement = matchingAO.departement;
+            completedFieldNames.push('departement');
+          }
+          
+          if (!completedFields.bureauEtudes && matchingAO.bureauEtudes) {
+            completedFields.bureauEtudes = matchingAO.bureauEtudes;
+            completedFieldNames.push('bureauEtudes');
+          }
+          
+          if (!completedFields.bureauControle && matchingAO.bureauControle) {
+            completedFields.bureauControle = matchingAO.bureauControle;
+            completedFieldNames.push('bureauControle');
+          }
+          
+          if (!completedFields.menuiserieType && matchingAO.menuiserieType) {
+            completedFields.menuiserieType = matchingAO.menuiserieType;
+            completedFieldNames.push('menuiserieType');
+          }
+        }
+      }
+      
+      // Auto-complétion des maîtres d'ouvrage/d'œuvre depuis base de contacts
+      await this.autoCompleteMasterContacts(completedFields, completedFieldNames);
+      
+      const completionScore = completedFieldNames.length / Object.keys(completedFields).length;
+      
+      console.log(`[OCR] Auto-complétion terminée - ${completedFieldNames.length} champs complétés, score: ${completionScore.toFixed(2)}`);
+      
+      return {
+        completedFields,
+        completedFieldNames,
+        completionScore
+      };
+      
+    } catch (error) {
+      console.error('[OCR] Échec auto-complétion:', error);
+      return {
+        completedFields: fields,
+        completedFieldNames: [],
+        completionScore: 0
+      };
+    }
+  }
+
+  /**
+   * Auto-complète les contacts maître depuis la base de données
+   */
+  private async autoCompleteMasterContacts(fields: AOFieldsExtracted, completedFieldNames: string[]): Promise<void> {
+    try {
+      // Chercher les maîtres d'ouvrage existants
+      if (fields.maitreOuvrageNom && !fields.maitreOuvrageEmail) {
+        const maitresOuvrage = await storage.getMaitresOuvrage();
+        const matchingMO = maitresOuvrage.find(mo => 
+          mo.nom.toLowerCase().includes(fields.maitreOuvrageNom!.toLowerCase())
+        );
+        
+        if (matchingMO) {
+          if (!fields.maitreOuvrageEmail && matchingMO.email) {
+            fields.maitreOuvrageEmail = matchingMO.email;
+            completedFieldNames.push('maitreOuvrageEmail');
+          }
+          
+          if (!fields.maitreOuvragePhone && matchingMO.telephone) {
+            fields.maitreOuvragePhone = matchingMO.telephone;
+            completedFieldNames.push('maitreOuvragePhone');
+          }
+          
+          if (!fields.maitreOuvrageAdresse && matchingMO.adresse) {
+            fields.maitreOuvrageAdresse = matchingMO.adresse;
+            completedFieldNames.push('maitreOuvrageAdresse');
+          }
+        }
+      }
+      
+      // Chercher les maîtres d'œuvre existants
+      if (fields.maitreOeuvreNom) {
+        const maitresOeuvre = await storage.getMaitresOeuvre();
+        const matchingMOE = maitresOeuvre.find(moe => 
+          moe.nom.toLowerCase().includes(fields.maitreOeuvreNom!.toLowerCase())
+        );
+        
+        if (matchingMOE && !fields.maitreOeuvreContact) {
+          const contacts = await storage.getContactsMaitreOeuvre();
+          const contactMOE = contacts.find(c => c.maitreOeuvreId === matchingMOE.id);
+          
+          if (contactMOE) {
+            fields.maitreOeuvreContact = `${contactMOE.nom} - ${contactMOE.email}`;
+            completedFieldNames.push('maitreOeuvreContact');
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.warn('[OCR] Échec auto-complétion contacts maître:', error);
+    }
+  }
+
+  /**
+   * Calcule un score de validation basé sur les erreurs détectées
+   */
+  private calculateValidationScore(validationErrors: ValidationError[]): number {
+    if (validationErrors.length === 0) return 1.0;
+    
+    let score = 1.0;
+    for (const error of validationErrors) {
+      switch (error.severity) {
+        case 'critical':
+          score -= 0.3;
+          break;
+        case 'error':
+          score -= 0.2;
+          break;
+        case 'warning':
+          score -= 0.1;
+          break;
+      }
+    }
+    
+    return Math.max(0, score);
+  }
+
+  /**
+   * Génère un rapport d'amélioration contextuelle
+   */
+  async generateImprovementReport(
+    originalFields: AOFieldsExtracted | SupplierQuoteFields,
+    enhancedFields: AOFieldsExtracted | SupplierQuoteFields,
+    contextualResult: ContextualOCRResult,
+    documentType: 'ao' | 'supplier_quote'
+  ): Promise<{
+    improvementPercentage: number;
+    fieldsImproved: string[];
+    autoCompletedFields: string[];
+    confidenceBoost: number;
+    recommendations: string[];
+  }> {
+    const fieldsImproved = contextualResult.mappingResults
+      .filter(r => r.originalValue !== r.mappedValue)
+      .map(r => r.fieldName);
+    
+    const improvementPercentage = (contextualResult.contextualScore - 0.5) * 100;
+    const confidenceBoost = contextualResult.confidence - 0.7; // Base de comparaison 70%
+    
+    const recommendations: string[] = [];
+    
+    // Générer des recommandations basées sur les résultats
+    if (contextualResult.validationErrors.length > 0) {
+      recommendations.push(`${contextualResult.validationErrors.length} erreurs de validation détectées - Vérification manuelle recommandée`);
+    }
+    
+    if (contextualResult.autoCompletedFields.length > 0) {
+      recommendations.push(`${contextualResult.autoCompletedFields.length} champs auto-complétés depuis les données maître`);
+    }
+    
+    if (contextualResult.contextualScore < 0.7) {
+      recommendations.push('Score contextuel faible - Enrichir les données de référence pour améliorer la précision');
+    }
+    
+    console.log(`[OCR] Rapport d'amélioration généré - ${improvementPercentage.toFixed(1)}% d'amélioration, ${fieldsImproved.length} champs optimisés`);
+    
+    return {
+      improvementPercentage,
+      fieldsImproved,
+      autoCompletedFields: contextualResult.autoCompletedFields,
+      confidenceBoost,
+      recommendations
+    };
+  }
+
+  // ========================================
   // MÉTHODE PRINCIPALE POUR DEVIS FOURNISSEURS
   // ========================================
   
@@ -657,11 +923,50 @@ export class OCRService {
       const processedFields = await this.parseSupplierQuoteFields(extractedText);
       processedFields.extractionMethod = extractionMethod;
       
-      // Étape 3: Calculer les scores de qualité
-      const qualityScore = this.calculateQuoteQualityScore(processedFields, extractedText);
+      // Étape 3: AMÉLIORATION CONTEXTUELLE - Nouveau moteur intelligent
+      console.log('[OCR] Application du moteur contextuel...');
+      let contextualResult: ContextualOCRResult | undefined;
+      try {
+        contextualResult = await contextualOCREngine.enhanceOCRFields(processedFields, 'supplier_quote');
+        
+        // Utiliser les champs améliorés par le moteur contextuel
+        const enhancedFields = contextualResult.extractedFields as SupplierQuoteFields;
+        Object.assign(processedFields, enhancedFields);
+        
+        // Ajout des métadonnées contextuelles
+        processedFields.contextualMetadata = {
+          processingMethod: 'contextual_enhanced',
+          validationScore: contextualResult.contextualScore,
+          amountConsistencyCheck: contextualResult.validationErrors.some(e => e.fieldName.includes('Amount')),
+          delayNormalizationApplied: contextualResult.autoCompletedFields.includes('deliveryDelay'),
+          materialEnhancementApplied: contextualResult.mappingResults.some(m => m.fieldName.includes('material'))
+        };
+        
+        console.log(`[OCR] Amélioration contextuelle terminée - Score: ${contextualResult.contextualScore}, Champs améliorés: ${contextualResult.mappingResults.length}`);
+        
+        // Émettre des alertes pour erreurs critiques
+        const criticalErrors = contextualResult.validationErrors.filter(e => e.severity === 'critical');
+        if (criticalErrors.length > 0) {
+          eventBus.emit('ocr:validation_errors', {
+            documentId,
+            errors: criticalErrors,
+            documentType: 'supplier_quote'
+          });
+        }
+        
+      } catch (contextualError) {
+        console.warn('[OCR] Échec du moteur contextuel, poursuite en mode standard:', contextualError);
+        // Continuer avec les champs de base si le moteur contextuel échoue
+      }
+      
+      // Étape 4: Calculer les scores de qualité (avec bonus contextuel)
+      const baseQualityScore = this.calculateQuoteQualityScore(processedFields, extractedText);
+      const qualityScore = contextualResult ? 
+        Math.min(100, baseQualityScore + (contextualResult.contextualScore * 10)) : 
+        baseQualityScore;
       const completenessScore = this.calculateCompletenessScore(processedFields);
       
-      // Étape 4: Sauvegarder dans la base de données
+      // Étape 5: Sauvegarder dans la base de données
       await this.saveSupplierQuoteAnalysis({
         documentId,
         sessionId,
@@ -674,7 +979,10 @@ export class OCRService {
         extractionMethod
       });
       
-      console.log(`[OCR] ✅ Analyse devis terminée - Qualité: ${qualityScore}%, Complétude: ${completenessScore}%`);
+      const statusMessage = contextualResult ? 
+        `[OCR] ✅ Analyse devis terminée (contextuel) - Qualité: ${qualityScore}%, Complétude: ${completenessScore}%, Score contextuel: ${contextualResult.contextualScore}` :
+        `[OCR] ✅ Analyse devis terminée (standard) - Qualité: ${qualityScore}%, Complétude: ${completenessScore}%`;
+      console.log(statusMessage);
       
       return {
         extractedText,
@@ -682,11 +990,13 @@ export class OCRService {
         processedFields,
         qualityScore,
         completenessScore,
+        contextualResult, // Inclure le résultat contextuel
         rawData: { 
           method: extractionMethod,
           documentId,
           sessionId,
-          aoLotId 
+          aoLotId,
+          contextualEnhanced: !!contextualResult
         }
       };
       
@@ -715,17 +1025,51 @@ export class OCRService {
       if (nativeText && nativeText.length > 100) {
         // PDF contient du texte natif
         console.log('[OCR] PDF with native text detected, using pdf-parse');
-        const processedFields = await this.parseAOFields(nativeText);
+        let processedFields = await this.parseAOFields(nativeText);
+        
+        // AMÉLIORATION CONTEXTUELLE - Moteur intelligent pour AO
+        console.log('[OCR] Application du moteur contextuel pour AO...');
+        let contextualResult: ContextualOCRResult | undefined;
+        let finalConfidence = 95;
+        
+        try {
+          contextualResult = await contextualOCREngine.enhanceOCRFields(processedFields, 'ao');
+          
+          // Utiliser les champs améliorés par le moteur contextuel
+          const enhancedFields = contextualResult.extractedFields as AOFieldsExtracted;
+          processedFields = { ...processedFields, ...enhancedFields };
+          
+          // Ajout des métadonnées contextuelles
+          processedFields.contextualMetadata = {
+            processingMethod: 'contextual_enhanced',
+            similarAOsFound: contextualResult.mappingResults.filter(m => m.source === 'context_inferred').length,
+            confidenceBoost: contextualResult.contextualScore * 10,
+            autoCompletedFromContext: contextualResult.autoCompletedFields,
+            validationFlags: contextualResult.validationErrors.map(e => e.fieldName)
+          };
+          
+          // Bonus de confiance basé sur la cohérence contextuelle
+          finalConfidence = Math.min(100, 95 + (contextualResult.contextualScore * 5));
+          
+          console.log(`[OCR] Amélioration contextuelle AO terminée - Score: ${contextualResult.contextualScore}, Champs mappés: ${contextualResult.mappingResults.length}`);
+          
+        } catch (contextualError) {
+          console.warn('[OCR] Échec du moteur contextuel AO, poursuite en mode standard:', contextualError);
+        }
         
         // Calculer le scoring technique après détection des critères
         const technicalScoring = await this.computeTechnicalScoring(processedFields.specialCriteria, processedFields.reference);
         
         return {
           extractedText: nativeText,
-          confidence: 95,
+          confidence: finalConfidence,
           processedFields,
           technicalScoring,
-          rawData: { method: 'native-text' }
+          contextualResult,
+          rawData: { 
+            method: 'native-text',
+            contextualEnhanced: !!contextualResult
+          }
         };
       }
       
@@ -794,7 +1138,37 @@ export class OCRService {
       
       // Simuler les données extraites depuis le PDF scanné
       const fullText = this.getSimulatedOCRText();
-      const processedFields = await this.parseAOFields(fullText);
+      let processedFields = await this.parseAOFields(fullText);
+      
+      // AMÉLIORATION CONTEXTUELLE - Moteur intelligent pour OCR AO
+      console.log('[OCR] Application du moteur contextuel pour OCR AO...');
+      let contextualResult: ContextualOCRResult | undefined;
+      let finalConfidence = 85;
+      
+      try {
+        contextualResult = await contextualOCREngine.enhanceOCRFields(processedFields, 'ao');
+        
+        // Utiliser les champs améliorés par le moteur contextuel
+        const enhancedFields = contextualResult.extractedFields as AOFieldsExtracted;
+        processedFields = { ...processedFields, ...enhancedFields };
+        
+        // Ajout des métadonnées contextuelles
+        processedFields.contextualMetadata = {
+          processingMethod: 'contextual_enhanced',
+          similarAOsFound: contextualResult.mappingResults.filter(m => m.source === 'context_inferred').length,
+          confidenceBoost: contextualResult.contextualScore * 10,
+          autoCompletedFromContext: contextualResult.autoCompletedFields,
+          validationFlags: contextualResult.validationErrors.map(e => e.fieldName)
+        };
+        
+        // Bonus de confiance contextuelle (plus important pour OCR car moins fiable de base)
+        finalConfidence = Math.min(100, 85 + (contextualResult.contextualScore * 15));
+        
+        console.log(`[OCR] Amélioration contextuelle OCR terminée - Score: ${contextualResult.contextualScore}, Confiance finale: ${finalConfidence}`);
+        
+      } catch (contextualError) {
+        console.warn('[OCR] Échec du moteur contextuel OCR, poursuite en mode standard:', contextualError);
+      }
       
       // Calculer le scoring technique après détection des critères
       const technicalScoring = await this.computeTechnicalScoring(processedFields.specialCriteria, processedFields.reference);
@@ -803,9 +1177,10 @@ export class OCRService {
       
       return {
         extractedText: fullText,
-        confidence: 85, // Confiance simulée pour le POC
+        confidence: finalConfidence,
         processedFields,
         technicalScoring,
+        contextualResult,
         rawData: { method: 'ocr-poc', note: 'POC simulation for scanned PDFs' }
       };
       

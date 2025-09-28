@@ -7205,3 +7205,260 @@ export interface ActionHistoryResponse {
     details?: any;
   };
 }
+
+// ========================================
+// TYPES POUR MOTEUR OCR CONTEXTUEL
+// ========================================
+
+// Résultat OCR contextuel amélioré
+export interface ContextualOCRResult {
+  extractedFields: AOFieldsExtracted | SupplierQuoteFields;
+  confidence: number;
+  contextualScore: number; // Score basé sur cohérence contextuelle
+  mappingResults: FieldMappingResult[];
+  validationErrors: ValidationError[];
+  autoCompletedFields: string[];
+  suggestedCorrections: FieldCorrection[];
+}
+
+// Résultat du mapping d'un champ
+export interface FieldMappingResult {
+  fieldName: string;
+  originalValue?: string;
+  mappedValue?: string;
+  confidence: number;
+  source: 'exact_match' | 'fuzzy_match' | 'context_inferred' | 'auto_completed';
+  contextualEvidence?: string[];
+}
+
+// Erreur de validation contextuelle
+export interface ValidationError {
+  fieldName: string;
+  error: string;
+  severity: 'warning' | 'error' | 'critical';
+  suggestedFix?: string;
+}
+
+// Correction suggérée
+export interface FieldCorrection {
+  fieldName: string;
+  currentValue: string;
+  suggestedValue: string;
+  reason: string;
+  confidence: number;
+}
+
+// Contexte pour amélioration OCR
+export interface ContextualContext {
+  existingAos: Ao[];
+  existingProjects: Project[];
+  knownClients: string[];
+  knownLocations: string[];
+  knownDepartements: string[];
+  menuiserieTypes: string[];
+  bureauEtudesOptions: string[];
+  bureauControleOptions: string[];
+}
+
+// Champs extraits d'un AO par OCR - interface étendue
+export interface AOFieldsExtracted {
+  // Informations générales
+  reference?: string;
+  intituleOperation?: string;
+  client?: string;
+  location?: string;
+  
+  // Dates
+  dateRenduAO?: string;
+  dateAcceptationAO?: string;
+  demarragePrevu?: string;
+  deadline?: string;
+  dateOS?: string;
+  delaiContractuel?: string;
+  dateLimiteRemise?: string;
+  
+  // Maître d'ouvrage
+  maitreOuvrage?: {
+    nom?: string;
+    adresse?: string;
+    contact?: string;
+    email?: string;
+    telephone?: string;
+  };
+  maitreOuvrageNom?: string;
+  maitreOuvrageAdresse?: string;
+  maitreOuvrageContact?: string;
+  maitreOuvrageEmail?: string;
+  maitreOuvragePhone?: string;
+  
+  // Maître d'œuvre
+  maitreOeuvre?: {
+    nom?: string;
+    contact?: string;
+  };
+  maitreOeuvreNom?: string;
+  maitreOeuvreContact?: string;
+  
+  // Techniques
+  lotConcerne?: string;
+  menuiserieType?: string;
+  montantEstime?: string;
+  typeMarche?: string;
+  
+  // Lots détaillés
+  lots?: AOLot[];
+  
+  // Source et contexte
+  plateformeSource?: string;
+  departement?: string;
+  
+  // Éléments techniques
+  bureauEtudes?: string;
+  bureauControle?: string;
+  sps?: string;
+  
+  // Détection automatique des documents
+  cctpDisponible?: boolean;
+  plansDisponibles?: boolean;
+  dpgfClientDisponible?: boolean;
+  dceDisponible?: boolean;
+  
+  // Critères techniques spéciaux
+  specialCriteria?: {
+    batimentPassif: boolean;
+    isolationRenforcee: boolean;
+    precadres: boolean;
+    voletsExterieurs: boolean;
+    coupeFeu: boolean;
+    evidences?: Record<string, string[]>; // extraits de texte correspondants
+  };
+
+  // Champs matériaux et couleurs - PATTERNS AVANCÉS OCR
+  materials?: MaterialSpec[];
+  colors?: ColorSpec[];
+  
+  // Métadonnées contextuelles - Nouveau pour amélioration
+  contextualMetadata?: {
+    processingMethod: 'standard' | 'contextual_enhanced';
+    similarAOsFound: number;
+    confidenceBoost: number;
+    autoCompletedFromContext: string[];
+    validationFlags: string[];
+  };
+}
+
+// Champs extraits d'un devis fournisseur - interface étendue
+export interface SupplierQuoteFields {
+  // Informations fournisseur
+  supplierName?: string;
+  supplierAddress?: string;
+  supplierContact?: string;
+  supplierEmail?: string;
+  supplierPhone?: string;
+  supplierSiret?: string;
+  
+  // Référence et dates du devis
+  quoteReference?: string;
+  quoteDate?: string;
+  validityDate?: string;
+  validityPeriod?: number; // en jours
+  
+  // Montants financiers
+  totalAmountHT?: number;
+  totalAmountTTC?: number;
+  vatRate?: number;
+  currency?: string;
+  
+  // Détails des lignes de devis
+  lineItems?: SupplierQuoteLineItem[];
+  
+  // Délais et livraison
+  deliveryDelay?: number; // en jours
+  deliveryTerms?: string;
+  productionDelay?: number; // en jours
+  
+  // Conditions commerciales
+  paymentTerms?: string;
+  paymentDelay?: number; // en jours
+  warranty?: string;
+  warrantyPeriod?: number; // en mois
+  
+  // Matériaux et spécifications techniques
+  materials?: MaterialSpec[];
+  colors?: ColorSpec[];
+  technicalSpecs?: Record<string, any>;
+  
+  // Certifications et normes
+  certifications?: string[];
+  standards?: string[];
+  
+  // Performance énergétique (menuiserie)
+  thermalPerformance?: {
+    uw?: number; // coefficient thermique
+    aev?: string; // classement air-eau-vent
+    other?: Record<string, string>;
+  };
+  
+  // Notes et commentaires
+  notes?: string;
+  specialConditions?: string[];
+  
+  // Métadonnées extraction
+  extractionMethod: 'native-text' | 'ocr';
+  processingErrors?: string[];
+  
+  // Métadonnées contextuelles - Nouveau pour amélioration
+  contextualMetadata?: {
+    processingMethod: 'standard' | 'contextual_enhanced';
+    validationScore: number;
+    amountConsistencyCheck: boolean;
+    delayNormalizationApplied: boolean;
+    materialEnhancementApplied: boolean;
+  };
+}
+
+// Interface pour lot d'AO
+export interface AOLot {
+  numero: string;
+  designation: string;
+  type?: string;
+  montantEstime?: string;
+}
+
+// Interface pour ligne de devis fournisseur
+export interface SupplierQuoteLineItem {
+  designation: string;
+  quantity?: number;
+  unit?: string;
+  unitPrice?: number;
+  totalPrice?: number;
+  materialType?: string;
+  specifications?: string;
+  reference?: string;
+}
+
+// Configuration pour patterns adaptatifs
+export interface AdaptivePatternsConfig {
+  documentType: 'ao' | 'supplier_quote';
+  context: ContextualContext;
+  specializations: {
+    menuiserieType?: string;
+    clientType?: string;
+    departement?: string;
+    projectSize?: 'small' | 'medium' | 'large';
+  };
+}
+
+// Métrique d'amélioration OCR contextuel
+export interface OCRImprovementMetric {
+  documentId: string;
+  documentType: 'ao' | 'supplier_quote';
+  beforeContextualScore: number;
+  afterContextualScore: number;
+  improvementPercentage: number;
+  fieldsImproved: string[];
+  autoCompletedFields: string[];
+  validationErrorsFound: number;
+  processingTime: number;
+  timestamp: Date;
+}

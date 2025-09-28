@@ -1208,6 +1208,12 @@ export const aos = pgTable("aos", {
 }, (table) => {
   return {
     referenceIdx: index("aos_reference_idx").on(table.reference),
+    // Index composites stratégiques pour performance optimisée (ContextBuilder)
+    entityStatusIdx: index("aos_entity_status_idx").on(table.id, table.status),
+    statusOperationalIdx: index("aos_status_operational_idx").on(table.status, table.operationalStatus),
+    clientLocationIdx: index("aos_client_location_idx").on(table.client, table.location),
+    dateCreatedIdx: index("aos_date_created_idx").on(table.dateSortieAO, table.createdAt),
+    operationalStatusIdx: index("aos_operational_status_idx").on(table.operationalStatus),
   };
 });
 
@@ -1484,6 +1490,11 @@ export const offers = pgTable("offers", {
   return {
     referenceIdx: index("offers_reference_idx").on(table.reference),
     statusIdx: index("offers_status_idx").on(table.status),
+    // Index composites stratégiques pour performance optimisée (ContextBuilder)
+    aoStatusCreatedIdx: index("offers_ao_status_created_idx").on(table.aoId, table.status, table.createdAt),
+    statusClientIdx: index("offers_status_client_idx").on(table.status, table.client),
+    responsibleStatusIdx: index("offers_responsible_status_idx").on(table.responsibleUserId, table.status),
+    priorityStatusIdx: index("offers_priority_status_idx").on(table.isPriority, table.status),
   };
 });
 
@@ -1620,6 +1631,73 @@ export const projects = pgTable("projects", {
   // ========================================
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // Index composites stratégiques pour performance optimisée (ContextBuilder)
+    offerStatusIdx: index("projects_offer_status_idx").on(table.offerId, table.status),
+    statusClientIdx: index("projects_status_client_idx").on(table.status, table.client),
+    responsibleStatusIdx: index("projects_responsible_status_idx").on(table.responsibleUserId, table.status),
+    statusDateIdx: index("projects_status_date_idx").on(table.status, table.startDate),
+    locationStatusIdx: index("projects_location_status_idx").on(table.location, table.status),
+    createdStatusIdx: index("projects_created_status_idx").on(table.createdAt, table.status),
+  };
+});
+
+// ========================================
+// TABLE CONTEXTES CHATBOT - OPTIMISATION PHASE 2 PERFORMANCE
+// ========================================
+
+// Table pour stocker et optimiser les contextes générés par le chatbot
+export const chatbotContexts = pgTable("chatbot_contexts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Identification de l'entité source
+  entityType: varchar("entity_type").notNull(), // "ao", "offer", "project", "supplier", etc.
+  entityId: varchar("entity_id").notNull(),
+  
+  // Configuration utilisée pour générer le contexte
+  configHash: varchar("config_hash").notNull(), // Hash MD5 de la configuration
+  contextTypes: text("context_types").array().notNull(), // Types de contexte inclus
+  scope: varchar("scope").notNull(), // "minimal", "standard", "comprehensive"
+  compressionLevel: varchar("compression_level").notNull(), // "none", "light", "aggressive"
+  
+  // Données contextuelles générées
+  contextData: jsonb("context_data").notNull(), // Données JSON du contexte
+  tokenEstimate: integer("token_estimate").notNull(), // Estimation nombre de tokens
+  
+  // Métriques de génération
+  generationTimeMs: integer("generation_time_ms").notNull(),
+  tablesQueried: text("tables_queried").array().notNull(), // Tables consultées pour générer le contexte
+  dataFreshnessScore: decimal("data_freshness_score", { precision: 3, scale: 2 }), // Score fraîcheur 0-1
+  relevanceScore: decimal("relevance_score", { precision: 3, scale: 2 }), // Score pertinence 0-1
+  
+  // Cache et invalidation
+  cacheKey: varchar("cache_key").notNull().unique(), // Clé de cache générée
+  tags: text("tags").array().notNull(), // Tags pour invalidation intelligente
+  lastAccessed: timestamp("last_accessed").notNull(),
+  accessCount: integer("access_count").default(0),
+  expiresAt: timestamp("expires_at").notNull(),
+  
+  // Métadonnées utilisateur
+  requestedByUserId: varchar("requested_by_user_id").references(() => users.id),
+  userRole: varchar("user_role"), // Rôle au moment de la génération
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // Index composites stratégiques pour performance ContextBuilder
+    entityTypeIdIdx: index("chatbot_contexts_entity_type_id_idx").on(table.entityType, table.entityId),
+    entityLastAccessedIdx: index("chatbot_contexts_entity_last_accessed_idx").on(table.entityType, table.entityId, table.lastAccessed),
+    configHashIdx: index("chatbot_contexts_config_hash_idx").on(table.configHash),
+    cacheKeyIdx: index("chatbot_contexts_cache_key_idx").on(table.cacheKey),
+    expiresAtIdx: index("chatbot_contexts_expires_at_idx").on(table.expiresAt),
+    lastAccessedIdx: index("chatbot_contexts_last_accessed_idx").on(table.lastAccessed),
+    accessCountIdx: index("chatbot_contexts_access_count_idx").on(table.accessCount),
+    tagsIdx: index("chatbot_contexts_tags_idx").on(table.tags),
+    userRoleIdx: index("chatbot_contexts_user_role_idx").on(table.userRole),
+    scopeCompressionIdx: index("chatbot_contexts_scope_compression_idx").on(table.scope, table.compressionLevel),
+  };
 });
 
 // Tâches de projet pour planning partagé

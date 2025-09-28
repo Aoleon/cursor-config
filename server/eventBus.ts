@@ -9,6 +9,7 @@ import type {
 } from '../shared/events';
 import { createRealtimeEvent, EventType as EventTypeEnum } from '../shared/events';
 import { log } from './vite';
+import type { ContextCacheService } from './services/ContextCacheService';
 
 type EventHandler = (event: RealtimeEvent) => void;
 
@@ -23,19 +24,30 @@ export class EventBus extends EventEmitter {
   private subscriptions = new Map<string, SubscriptionInfo>();
   private eventHistory: RealtimeEvent[] = [];
   private readonly maxHistorySize = 100; // Garder les 100 derniers événements
+  
+  // PHASE 2 PERFORMANCE: Intégration cache intelligent
+  private contextCacheService: ContextCacheService | null = null;
+  private cacheInvalidationEnabled = true;
+  private autoInvalidationHooks = new Map<string, (event: RealtimeEvent) => void>();
 
   constructor() {
     super();
     this.setMaxListeners(50); // Augmenter la limite pour éviter les warnings
+    this.setupAutomaticCacheInvalidation();
   }
 
   /**
-   * Publier un événement vers tous les abonnés
+   * Publier un événement vers tous les abonnés avec invalidation cache automatique
    */
   public publish(event: RealtimeEvent): void {
     try {
       // Ajouter à l'historique
       this.addToHistory(event);
+      
+      // PHASE 2 PERFORMANCE: Invalidation cache automatique
+      if (this.cacheInvalidationEnabled && this.contextCacheService) {
+        this.processAutomaticCacheInvalidation(event);
+      }
       
       // Émettre l'événement
       this.emit('event', event);
@@ -166,6 +178,169 @@ export class EventBus extends EventEmitter {
     }
 
     return events;
+  }
+
+  // ========================================
+  // INTÉGRATION CACHE INTELLIGENT PHASE 2 PERFORMANCE
+  // ========================================
+
+  /**
+   * Configure l'intégration avec le service de cache contextuel
+   */
+  public integrateWithContextCache(cacheService: ContextCacheService): void {
+    this.contextCacheService = cacheService;
+    this.cacheInvalidationEnabled = true;
+    
+    log('[EventBus] Intégration ContextCacheService activée - invalidation automatique disponible');
+  }
+
+  /**
+   * Active/désactive l'invalidation automatique du cache
+   */
+  public setCacheInvalidationEnabled(enabled: boolean): void {
+    this.cacheInvalidationEnabled = enabled;
+    log(`[EventBus] Invalidation cache automatique: ${enabled ? 'ACTIVÉE' : 'DÉSACTIVÉE'}`);
+  }
+
+  /**
+   * Traite l'invalidation automatique du cache selon l'événement
+   */
+  private async processAutomaticCacheInvalidation(event: RealtimeEvent): Promise<void> {
+    if (!this.contextCacheService) return;
+
+    try {
+      const startTime = Date.now();
+      
+      // Mapping des événements vers les types d'entités et actions
+      const invalidationMapping = this.getInvalidationMapping(event);
+      
+      if (invalidationMapping) {
+        await this.contextCacheService.invalidateOnEntityChange(
+          invalidationMapping.entityType,
+          invalidationMapping.entityId,
+          invalidationMapping.changeType,
+          invalidationMapping.additionalContext
+        );
+        
+        const duration = Date.now() - startTime;
+        log(`[EventBus] Invalidation cache auto: ${invalidationMapping.entityType}:${invalidationMapping.entityId} en ${duration}ms`);
+      }
+    } catch (error) {
+      log(`[EventBus] Erreur invalidation cache automatique: ${error}`);
+    }
+  }
+
+  /**
+   * Génère le mapping d'invalidation selon l'événement
+   */
+  private getInvalidationMapping(event: RealtimeEvent): {
+    entityType: string;
+    entityId: string;
+    changeType: 'update' | 'delete' | 'status_change';
+    additionalContext?: Record<string, any>;
+  } | null {
+    switch (event.type) {
+      // Événements AO
+      case EventTypeEnum.AO_STATUS_CHANGED:
+        return {
+          entityType: 'ao',
+          entityId: event.entityId,
+          changeType: 'status_change',
+          additionalContext: {
+            status: event.newStatus,
+            previousStatus: event.prevStatus
+          }
+        };
+
+      // Événements Offres
+      case EventTypeEnum.OFFER_STATUS_CHANGED:
+      case EventTypeEnum.OFFER_SIGNED:
+      case EventTypeEnum.OFFER_VALIDATED:
+        return {
+          entityType: 'offer',
+          entityId: event.entityId,
+          changeType: event.type === EventTypeEnum.OFFER_STATUS_CHANGED ? 'status_change' : 'update',
+          additionalContext: {
+            status: event.newStatus || 'updated',
+            previousStatus: event.prevStatus,
+            aoId: event.metadata?.aoId,
+            complexity: 'medium' // Default complexity for offers
+          }
+        };
+
+      // Événements Projets
+      case EventTypeEnum.PROJECT_CREATED:
+      case EventTypeEnum.PROJECT_STATUS_CHANGED:
+        return {
+          entityType: 'project',
+          entityId: event.entityId,
+          changeType: event.type === EventTypeEnum.PROJECT_STATUS_CHANGED ? 'status_change' : 'update',
+          additionalContext: {
+            status: event.newStatus || 'created',
+            previousStatus: event.prevStatus,
+            offerId: event.offerId,
+            phase: event.newStatus,
+            complexity: 'complex' // Projects are typically complex
+          }
+        };
+
+      // Événements Fournisseurs
+      case EventTypeEnum.SUPPLIER_QUOTE_RECEIVED:
+        return {
+          entityType: 'supplier',
+          entityId: event.entityId,
+          changeType: 'update',
+          additionalContext: {
+            offerId: event.offerId,
+            complexity: 'simple'
+          }
+        };
+
+      // Événements Tâches
+      case EventTypeEnum.TASK_STATUS_CHANGED:
+      case EventTypeEnum.TASK_OVERDUE:
+        return {
+          entityType: 'project', // Les tâches impactent le contexte projet
+          entityId: event.projectId || 'unknown',
+          changeType: 'update',
+          additionalContext: {
+            taskId: event.entityId,
+            taskStatus: event.newStatus,
+            complexity: 'medium'
+          }
+        };
+
+      default:
+        return null; // Pas d'invalidation pour ce type d'événement
+    }
+  }
+
+  /**
+   * Configure les hooks d'invalidation automatique
+   */
+  private setupAutomaticCacheInvalidation(): void {
+    // Hook pour les modifications d'AO
+    this.autoInvalidationHooks.set('ao_changes', (event) => {
+      if (event.entity === 'ao' || event.entity === 'appel_offres') {
+        log(`[EventBus] Hook AO déclenché pour ${event.entityId}`);
+      }
+    });
+
+    // Hook pour les modifications d'offres
+    this.autoInvalidationHooks.set('offer_changes', (event) => {
+      if (event.entity === 'offer') {
+        log(`[EventBus] Hook Offre déclenché pour ${event.entityId}`);
+      }
+    });
+
+    // Hook pour les modifications de projets
+    this.autoInvalidationHooks.set('project_changes', (event) => {
+      if (event.entity === 'project') {
+        log(`[EventBus] Hook Projet déclenché pour ${event.entityId}`);
+      }
+    });
+
+    log('[EventBus] Hooks d\'invalidation automatique configurés');
   }
 
   /**
@@ -565,6 +740,112 @@ export class EventBus extends EventEmitter {
         aoReference: params.aoReference,
         ...params.metadata,
       },
+    });
+
+    this.publish(event);
+  }
+
+  // ========================================
+  // ÉVÉNEMENTS CACHE CONTEXTUEL PHASE 2 PERFORMANCE
+  // ========================================
+
+  /**
+   * Publie un événement de cache hit/miss pour monitoring
+   */
+  public publishContextCacheEvent(params: {
+    entityType: string;
+    entityId: string;
+    cacheKey: string;
+    action: 'hit' | 'miss' | 'invalidated' | 'prewarmed';
+    executionTimeMs: number;
+    userId?: string;
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.SYSTEM_CACHE_EVENT,
+      entity: 'cache',
+      entityId: params.cacheKey,
+      severity: params.action === 'miss' ? 'info' : 'success',
+      message: `Cache ${params.action} pour ${params.entityType}:${params.entityId} (${params.executionTimeMs}ms)`,
+      affectedQueryKeys: [
+        ['/api/analytics/cache-metrics'],
+        ['/api/system/performance']
+      ],
+      userId: params.userId,
+      metadata: {
+        entityType: params.entityType,
+        entityId: params.entityId,
+        cacheKey: params.cacheKey,
+        action: params.action,
+        executionTimeMs: params.executionTimeMs
+      }
+    });
+
+    this.publish(event);
+  }
+
+  /**
+   * Publie un événement de prewarming de cache
+   */
+  public publishCachePrewarmingEvent(params: {
+    entityTypes: string[];
+    contextCount: number;
+    executionTimeMs: number;
+    isScheduled: boolean;
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.SYSTEM_CACHE_PREWARMING,
+      entity: 'cache',
+      entityId: 'prewarming-system',
+      severity: 'success',
+      title: '🔥 Cache Prewarming Exécuté',
+      message: `${params.contextCount} contextes préchargés en ${params.executionTimeMs}ms (${params.entityTypes.join(', ')})`,
+      affectedQueryKeys: [
+        ['/api/analytics/cache-metrics'],
+        ['/api/system/performance'],
+        ['/api/chatbot/health']
+      ],
+      metadata: {
+        entityTypes: params.entityTypes,
+        contextCount: params.contextCount,
+        executionTimeMs: params.executionTimeMs,
+        isScheduled: params.isScheduled,
+        action: 'prewarming_completed'
+      }
+    });
+
+    this.publish(event);
+  }
+
+  /**
+   * Publie un événement d'optimisation de performance détectée
+   */
+  public publishPerformanceOptimizationEvent(params: {
+    optimizationType: 'cache_hit_ratio' | 'query_optimization' | 'index_usage';
+    improvementPercent: number;
+    beforeValue: number;
+    afterValue: number;
+    entityType?: string;
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.SYSTEM_PERFORMANCE_OPTIMIZATION,
+      entity: 'performance',
+      entityId: params.optimizationType,
+      severity: 'success',
+      title: '🚀 Optimisation Performance Détectée',
+      message: `Amélioration ${params.optimizationType}: +${params.improvementPercent.toFixed(1)}% (${params.beforeValue} → ${params.afterValue})`,
+      affectedQueryKeys: [
+        ['/api/analytics/performance'],
+        ['/api/system/health'],
+        ['/api/chatbot/health']
+      ],
+      metadata: {
+        optimizationType: params.optimizationType,
+        improvementPercent: params.improvementPercent,
+        beforeValue: params.beforeValue,
+        afterValue: params.afterValue,
+        entityType: params.entityType,
+        action: 'optimization_detected'
+      }
     });
 
     this.publish(event);

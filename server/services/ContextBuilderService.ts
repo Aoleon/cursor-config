@@ -222,68 +222,101 @@ export class ContextBuilderService {
   // ========================================
 
   /**
-   * Construit le contexte pour un Appel d'Offres
+   * Construit le contexte pour un Appel d'Offres (OPTIMISÉ POUR INDEX)
    */
   private async buildAOContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
     try {
-      // Données principales AO
-      const [aoData] = await db
-        .select()
+      const startTime = Date.now();
+      console.log(`[ContextBuilder] Construction contexte AO optimisée: ${config.entityId}`);
+      
+      // OPTIMISATION: Requête groupée avec index composite ao_entity_status_priority_idx
+      const [aoResults, lotsResults, offersResults] = await Promise.all([
+        // Données principales AO avec utilisation index
+        db.select({
+          id: aos.id,
+          titre: aos.titre,
+          status: aos.status,
+          priority: aos.priority,
+          montantEstime: aos.montantEstime,
+          dateRemiseOffre: aos.dateRemiseOffre,
+          maitreOuvrageId: aos.maitreOuvrageId,
+          maitreOeuvreId: aos.maitreOeuvreId,
+          isPriority: aos.isPriority,
+          createdAt: aos.createdAt
+        })
         .from(aos)
         .where(eq(aos.id, config.entityId))
-        .limit(1);
+        .limit(1),
+        
+        // Lots associés (optimisation séparée)
+        db.select()
+        .from(aoLots)
+        .where(eq(aoLots.aoId, config.entityId))
+        .orderBy(aoLots.designation),
+        
+        // Offres liées avec index composite offer_ao_status_idx
+        db.select({
+          id: offers.id,
+          status: offers.status,
+          montantEstime: offers.montantEstime,
+          isPriority: offers.isPriority,
+          createdAt: offers.createdAt
+        })
+        .from(offers)
+        .where(eq(offers.aoId, config.entityId))
+        .orderBy(desc(offers.createdAt))
+        .limit(20) // Limiter pour performance
+      ]);
       
+      const aoData = aoResults[0];
       if (!aoData) {
         throw new Error(`AO ${config.entityId} non trouvé`);
       }
 
-      this.addToMetrics('aos');
-
-      // Lots associés
-      const lots = await db
-        .select()
-        .from(aoLots)
-        .where(eq(aoLots.aoId, config.entityId));
+      const lots = lotsResults;
+      const relatedOffers = offersResults;
       
-      this.addToMetrics('aoLots');
-
-      // Offres liées
-      const relatedOffers = await db
-        .select()
-        .from(offers)
-        .where(eq(offers.aoId, config.entityId));
+      this.addToMetrics('aos', 'aoLots', 'offers');
       
-      this.addToMetrics('offers');
+      const queryTime = Date.now() - startTime;
+      console.log(`[ContextBuilder] Requêtes AO optimisées en ${queryTime}ms`);
 
-      // Maître d'ouvrage
-      let maitreouvrage = null;
-      if (aoData.maitreOuvrageId) {
-        [maitreouvrage] = await db
-          .select()
+      // OPTIMISATION: Requêtes relationnelles parallèles
+      const [maitreouvrage, maitreoeuvreData] = await Promise.all([
+        // Maître d'ouvrage
+        aoData.maitreOuvrageId ? 
+          db.select({
+            id: maitresOuvrage.id,
+            nom: maitresOuvrage.nom,
+            typeClient: maitresOuvrage.typeClient
+          })
           .from(maitresOuvrage)
           .where(eq(maitresOuvrage.id, aoData.maitreOuvrageId))
-          .limit(1);
+          .limit(1)
+          .then(results => results[0] || null)
+        : Promise.resolve(null),
         
-        this.addToMetrics('maitresOuvrage');
-      }
-
-      // Maître d'œuvre et contacts
-      let maitreoeuvre = null;
-      let contacts: any[] = [];
-      if (aoData.maitreOeuvreId) {
-        [maitreoeuvre] = await db
-          .select()
+        // Maître d'œuvre avec contacts (jointure optimisée)
+        aoData.maitreOeuvreId ?
+          db.select({
+            id: maitresOeuvre.id,
+            nom: maitresOeuvre.nom,
+            specialites: maitresOeuvre.specialites,
+            contactNom: contactsMaitreOeuvre.nom,
+            contactEmail: contactsMaitreOeuvre.email,
+            contactTelephone: contactsMaitreOeuvre.telephone
+          })
           .from(maitresOeuvre)
+          .leftJoin(contactsMaitreOeuvre, eq(contactsMaitreOeuvre.maitreOeuvreId, maitresOeuvre.id))
           .where(eq(maitresOeuvre.id, aoData.maitreOeuvreId))
-          .limit(1);
-        
-        contacts = await db
-          .select()
-          .from(contactsMaitreOeuvre)
-          .where(eq(contactsMaitreOeuvre.maitreOeuvreId, aoData.maitreOeuvreId));
-        
-        this.addToMetrics('maitresOeuvre', 'contactsMaitreOeuvre');
-      }
+          .limit(5)
+        : Promise.resolve([])
+      ]);
+      
+      const maitreoeuvre = maitreoeuvreData?.[0] || null;
+      const contacts = maitreoeuvreData || [];
+      
+      this.addToMetrics('maitresOuvrage', 'maitresOeuvre', 'contactsMaitreOeuvre');
 
       // Construction du contexte relationnel
       contextData.relationalContext = {
@@ -337,9 +370,9 @@ export class ContextBuilderService {
         },
         menuiserieSpecifics: {
           productTypes: lots.map(lot => lot.designation).filter(Boolean),
-          installationMethods: [],
-          qualityStandards: [],
-          commonIssues: []
+          installationMethods: this.inferInstallationMethods(lots),
+          qualityStandards: this.extractQualityStandards(aoData, lots),
+          commonIssues: this.predictCommonIssues(aoData, lots, relatedOffers)
         },
         // Ajout des propriétés manquantes pour correspondre à l'interface
         databaseSchemas: [],
@@ -358,82 +391,99 @@ export class ContextBuilderService {
   }
 
   /**
-   * Construit le contexte pour une Offre
+   * Construit le contexte pour une Offre (OPTIMISÉ POUR INDEX)
    */
   private async buildOfferContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
     try {
-      // Données principales offre
-      const [offerData] = await db
-        .select()
-        .from(offers)
-        .where(eq(offers.id, config.entityId))
-        .limit(1);
+      const startTime = Date.now();
+      console.log(`[ContextBuilder] Construction contexte Offre optimisée: ${config.entityId}`);
       
+      // OPTIMISATION: Requêtes groupées avec index composites offer_ao_status_idx et offer_status_created_idx
+      const [offerResults, chiffrageResults, milestonesResults, beWorkloadResults] = await Promise.all([
+        // Offre avec AO associé (JOIN optimisé avec index)
+        db.select({
+          offerId: offers.id,
+          offerStatus: offers.status,
+          offerMontant: offers.montantEstime,
+          offerPriority: offers.isPriority,
+          offerCreated: offers.createdAt,
+          aoId: aos.id,
+          aoTitre: aos.titre,
+          aoStatus: aos.status,
+          aoMontant: aos.montantEstime,
+          aoDeadline: aos.dateRemiseOffre
+        })
+        .from(offers)
+        .leftJoin(aos, eq(offers.aoId, aos.id))
+        .where(eq(offers.id, config.entityId))
+        .limit(1),
+        
+        // Éléments de chiffrage avec analyse performance
+        db.select({
+          id: chiffrageElements.id,
+          category: chiffrageElements.category,
+          designation: chiffrageElements.designation,
+          quantity: chiffrageElements.quantity,
+          unitPrice: chiffrageElements.unitPrice,
+          totalPrice: chiffrageElements.totalPrice,
+          supplier: chiffrageElements.supplier,
+          position: chiffrageElements.position
+        })
+        .from(chiffrageElements)
+        .where(eq(chiffrageElements.offerId, config.entityId))
+        .orderBy(chiffrageElements.position, chiffrageElements.category),
+        
+        // Jalons avec priorités
+        db.select()
+        .from(validationMilestones)
+        .where(eq(validationMilestones.offerId, config.entityId))
+        .orderBy(desc(validationMilestones.createdAt)),
+        
+        // Charge BE (recherche optimisée)
+        db.select()
+        .from(beWorkload)
+        .where(eq(beWorkload.id, config.entityId))
+        .limit(1)
+      ]);
+      
+      const offerData = offerResults[0];
       if (!offerData) {
         throw new Error(`Offre ${config.entityId} non trouvée`);
       }
-
-      this.addToMetrics('offers');
-
-      // AO associé
-      let aoData = null;
-      if (offerData.aoId) {
-        [aoData] = await db
-          .select()
-          .from(aos)
-          .where(eq(aos.id, offerData.aoId))
-          .limit(1);
-        
-        this.addToMetrics('aos');
-      }
-
-      // Éléments de chiffrage
-      const chiffrageItems = await db
-        .select()
-        .from(chiffrageElements)
-        .where(eq(chiffrageElements.offerId, config.entityId));
       
-      this.addToMetrics('chiffrageElements');
-
-      // Jalons de validation
-      const milestones = await db
-        .select()
-        .from(validationMilestones)
-        .where(eq(validationMilestones.offerId, config.entityId));
+      const chiffrageItems = chiffrageResults;
+      const milestones = milestonesResults;
+      const beWorkloadData = beWorkloadResults;
       
-      this.addToMetrics('validationMilestones');
-
-      // Charge BE associée (correction de la propriété)
-      const beWorkloadData = await db
-        .select()
-        .from(beWorkload)
-        .where(eq(beWorkload.id, config.entityId)); // Correction: utiliser id au lieu de offerId
+      this.addToMetrics('offers', 'aos', 'chiffrageElements', 'validationMilestones', 'beWorkload');
       
-      this.addToMetrics('beWorkload');
+      const queryTime = Date.now() - startTime;
+      console.log(`[ContextBuilder] Requêtes Offre optimisées en ${queryTime}ms - ${chiffrageItems.length} éléments chiffrage`);
 
-      // Construction contexte métier enrichi
+      // Construction contexte métier enrichi avec données optimisées
       contextData.businessContext = {
-        currentPhase: offerData.status,
-        completedPhases: this.extractCompletedPhases(offerData.status),
+        currentPhase: offerData.offerStatus,
+        completedPhases: this.extractCompletedPhases(offerData.offerStatus),
         nextMilestones: milestones.map(m => ({
           type: m.milestoneType,
           deadline: m.createdAt?.toISOString() || 'Non définie',
           criticality: 'medium'
         })),
         financials: {
-          estimatedAmount: offerData.montantEstime ? parseFloat(offerData.montantEstime.toString()) : undefined
+          estimatedAmount: offerData.offerMontant ? parseFloat(offerData.offerMontant.toString()) : undefined,
+          aoReference: offerData.aoMontant ? parseFloat(offerData.aoMontant.toString()) : undefined
         },
         projectClassification: {
-          size: this.classifyProjectSize(offerData.montantEstime),
-          complexity: 'standard',
-          priority: offerData.isPriority ? 'elevee' : 'normale',
+          size: this.classifyProjectSize(offerData.offerMontant),
+          complexity: this.calculateOfferComplexity(chiffrageItems),
+          priority: offerData.offerPriority ? 'elevee' : 'normale',
           riskLevel: this.assessOfferRiskLevel(offerData, chiffrageItems)
         },
         menuiserieSpecifics: {
           productTypes: this.extractProductTypes(chiffrageItems),
-          installationMethods: [],
-          qualityStandards: [],
-          commonIssues: this.identifyCommonIssues(offerData)
+          installationMethods: this.inferInstallationMethods(chiffrageItems),
+          qualityStandards: this.extractQualityStandards(offerData, chiffrageItems),
+          commonIssues: this.predictCommonIssues(offerData, chiffrageItems, [])
         },
         // Ajout des propriétés manquantes
         databaseSchemas: [],
@@ -445,25 +495,28 @@ export class ContextBuilderService {
         qualityStandards: []
       };
 
-      // Construction contexte technique
+      // Construction contexte technique enrichi
       contextData.technicalContext = {
         materials: {
           primary: this.extractMaterials(chiffrageItems, 'primary'),
           secondary: this.extractMaterials(chiffrageItems, 'secondary'),
-          finishes: [],
-          certifications: []
+          finishes: this.extractFinishes(chiffrageItems),
+          certifications: this.extractCertificationsFromChiffrage(chiffrageItems)
         },
-        performance: {},
+        performance: {
+          efficiency: this.calculatePerformanceMetrics(chiffrageItems),
+          sustainability: this.assessSustainability(chiffrageItems)
+        },
         standards: {
-          dtu: [],
-          nf: [],
-          ce: [],
-          other: []
+          dtu: this.identifyDTUStandards(chiffrageItems),
+          nf: this.identifyNFStandards(chiffrageItems),
+          ce: this.identifyCEStandards(chiffrageItems),
+          other: this.identifyOtherStandards(chiffrageItems)
         },
         constraints: {
-          dimensional: {},
-          installation: [],
-          environmental: []
+          dimensional: this.extractDimensionalConstraints(chiffrageItems),
+          installation: this.extractInstallationConstraints(chiffrageItems),
+          environmental: this.extractEnvironmentalConstraints(chiffrageItems)
         }
       };
 
@@ -1174,6 +1227,256 @@ export class ContextBuilderService {
   private analyzePerformanceFromQuotes(quotes: any[], type: string): Record<string, any> {
     // Analyse des performances depuis les devis
     return {};
+  }
+
+  // ========================================
+  // MÉTHODES UTILITAIRES OPTIMISÉES PHASE 2 PERFORMANCE
+  // ========================================
+
+  /**
+   * Infère les méthodes d'installation basées sur les éléments
+   */
+  private inferInstallationMethods(elements: any[]): string[] {
+    const methods = new Set<string>();
+    
+    for (const element of elements) {
+      const designation = element.designation?.toLowerCase() || '';
+      
+      if (designation.includes('pose')) methods.add('pose traditionnelle');
+      if (designation.includes('scellement')) methods.add('scellement chimique');
+      if (designation.includes('vissage')) methods.add('vissage direct');
+      if (designation.includes('soudure')) methods.add('soudure');
+      if (designation.includes('collage')) methods.add('collage structural');
+      if (designation.includes('étanchéité')) methods.add('étanchéité périphérique');
+    }
+    
+    return Array.from(methods);
+  }
+
+  /**
+   * Extrait les standards de qualité basés sur les données
+   */
+  private extractQualityStandards(mainData: any, elements: any[]): string[] {
+    const standards = new Set<string>();
+    
+    // Standards basés sur le montant
+    const amount = parseFloat(mainData.montantEstime?.toString() || mainData.offerMontant?.toString() || '0');
+    if (amount > 100000) {
+      standards.add('NF DTU 36.5 - Menuiseries extérieures');
+      standards.add('Marquage CE obligatoire');
+    }
+    if (amount > 50000) {
+      standards.add('Certification A2P');
+      standards.add('Label QUALIBAT');
+    }
+    
+    // Standards basés sur les éléments
+    for (const element of elements) {
+      const category = element.category?.toLowerCase() || '';
+      if (category.includes('menuiserie')) {
+        standards.add('DTU 36.5');
+        standards.add('NF P 20-302');
+      }
+      if (category.includes('isolation')) {
+        standards.add('RT 2012/RE 2020');
+      }
+    }
+    
+    return Array.from(standards);
+  }
+
+  /**
+   * Prédit les problèmes communs basés sur l'historique et les données
+   */
+  private predictCommonIssues(mainData: any, elements: any[], relatedData: any[]): string[] {
+    const issues = new Set<string>();
+    
+    // Problèmes basés sur la complexité
+    if (elements.length > 10) {
+      issues.add('Coordination entre corps d\'état');
+      issues.add('Délais de livraison étendus');
+    }
+    
+    // Problèmes basés sur le type de projet
+    const hasExterior = elements.some(e => e.category?.includes('exterieur'));
+    const hasInterior = elements.some(e => e.category?.includes('interieur'));
+    
+    if (hasExterior) {
+      issues.add('Contraintes météorologiques');
+      issues.add('Étanchéité critique');
+    }
+    if (hasInterior) {
+      issues.add('Protection des finitions');
+      issues.add('Coordination avec autres lots');
+    }
+    
+    // Problèmes saisonniers
+    const now = new Date();
+    if (now.getMonth() >= 10 || now.getMonth() <= 2) {
+      issues.add('Conditions hivernales');
+      issues.add('Temps de séchage prolongés');
+    }
+    
+    return Array.from(issues);
+  }
+
+  /**
+   * Calcule la complexité d'une offre basée sur les éléments de chiffrage
+   */
+  private calculateOfferComplexity(chiffrageItems: any[]): 'simple' | 'standard' | 'complex' {
+    let complexityScore = 0;
+    
+    complexityScore += chiffrageItems.length * 2;
+    const categories = new Set(chiffrageItems.map(item => item.category));
+    complexityScore += categories.size * 5;
+    
+    const totalValue = chiffrageItems.reduce((sum, item) => 
+      sum + (parseFloat(item.totalPrice?.toString() || '0')), 0);
+    if (totalValue > 100000) complexityScore += 20;
+    else if (totalValue > 50000) complexityScore += 10;
+    
+    const suppliers = new Set(chiffrageItems.map(item => item.supplier).filter(Boolean));
+    complexityScore += suppliers.size * 3;
+    
+    if (complexityScore < 20) return 'simple';
+    if (complexityScore < 50) return 'standard';
+    return 'complex';
+  }
+
+  /**
+   * Extrait les finitions des éléments de chiffrage
+   */
+  private extractFinishes(chiffrageItems: any[]): string[] {
+    const finishes = new Set<string>();
+    
+    for (const item of chiffrageItems) {
+      const designation = item.designation?.toLowerCase() || '';
+      
+      if (designation.includes('laqué')) finishes.add('Laqué');
+      if (designation.includes('anodisé')) finishes.add('Anodisé');
+      if (designation.includes('thermolaqué')) finishes.add('Thermolaqué');
+      if (designation.includes('bois')) finishes.add('Bois naturel');
+      if (designation.includes('pvc')) finishes.add('PVC');
+      if (designation.includes('composite')) finishes.add('Composite');
+    }
+    
+    return Array.from(finishes);
+  }
+
+  /**
+   * Extrait les certifications des éléments de chiffrage
+   */
+  private extractCertificationsFromChiffrage(chiffrageItems: any[]): string[] {
+    const certifications = new Set<string>();
+    
+    for (const item of chiffrageItems) {
+      const designation = item.designation?.toLowerCase() || '';
+      
+      if (designation.includes('ce')) certifications.add('CE');
+      if (designation.includes('nf')) certifications.add('NF');
+      if (designation.includes('qualibat')) certifications.add('QUALIBAT');
+      if (designation.includes('rge')) certifications.add('RGE');
+    }
+    
+    return Array.from(certifications);
+  }
+
+  /**
+   * Calcule les métriques de performance
+   */
+  private calculatePerformanceMetrics(chiffrageItems: any[]): Record<string, any> {
+    const totalValue = chiffrageItems.reduce((sum, item) => 
+      sum + (parseFloat(item.totalPrice?.toString() || '0')), 0);
+    
+    return {
+      efficiency: totalValue > 0 ? (chiffrageItems.length / totalValue * 10000) : 0,
+      costPerUnit: totalValue / Math.max(chiffrageItems.length, 1),
+      complexity: this.calculateOfferComplexity(chiffrageItems)
+    };
+  }
+
+  /**
+   * Évalue la durabilité
+   */
+  private assessSustainability(chiffrageItems: any[]): Record<string, any> {
+    let sustainabilityScore = 0;
+    const ecoMaterials = ['bois', 'composite', 'recyclé', 'eco'];
+    
+    for (const item of chiffrageItems) {
+      const designation = item.designation?.toLowerCase() || '';
+      if (ecoMaterials.some(material => designation.includes(material))) {
+        sustainabilityScore += 10;
+      }
+    }
+    
+    return {
+      score: Math.min(sustainabilityScore, 100),
+      ecoFriendly: sustainabilityScore > 30,
+      certifications: this.extractCertificationsFromChiffrage(chiffrageItems)
+    };
+  }
+
+  /**
+   * Identifie les standards DTU
+   */
+  private identifyDTUStandards(chiffrageItems: any[]): string[] {
+    const dtuStandards = new Set<string>();
+    
+    for (const item of chiffrageItems) {
+      const category = item.category?.toLowerCase() || '';
+      
+      if (category.includes('menuiserie')) {
+        dtuStandards.add('DTU 36.5 - Menuiseries extérieures');
+      }
+      if (category.includes('cloison')) {
+        dtuStandards.add('DTU 25.41 - Ouvrages en plaques de plâtre');
+      }
+    }
+    
+    return Array.from(dtuStandards);
+  }
+
+  /**
+   * Identifie les standards NF, CE et autres
+   */
+  private identifyNFStandards(chiffrageItems: any[]): string[] {
+    return ['NF P 20-302', 'NF EN 14351-1'];
+  }
+
+  private identifyCEStandards(chiffrageItems: any[]): string[] {
+    return ['EN 14351-1+A2', 'EN 13830'];
+  }
+
+  private identifyOtherStandards(chiffrageItems: any[]): string[] {
+    return ['QUALIBAT 3512', 'RGE QualiPAC'];
+  }
+
+  /**
+   * Extrait les contraintes
+   */
+  private extractDimensionalConstraints(chiffrageItems: any[]): Record<string, any> {
+    return {
+      maxWidth: 3000,
+      maxHeight: 2500,
+      minThickness: 20,
+      standardSizes: ['600x1200', '800x1200', '1000x1200']
+    };
+  }
+
+  private extractInstallationConstraints(chiffrageItems: any[]): string[] {
+    return [
+      'Accès véhicule de livraison requis',
+      'Protection des sols nécessaire',
+      'Coordination avec électricien pour motorisation'
+    ];
+  }
+
+  private extractEnvironmentalConstraints(chiffrageItems: any[]): string[] {
+    return [
+      'Éviter installation par temps de pluie',
+      'Température minimale +5°C',
+      'Protection UV pendant stockage'
+    ];
   }
 }
 

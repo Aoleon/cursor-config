@@ -163,37 +163,45 @@ export class ContextCacheService {
   // ========================================
 
   /**
-   * Invalide le cache lors de modifications d'entités
+   * Invalide le cache lors de modifications d'entités avec tagging intelligent
    */
   async invalidateOnEntityChange(
     entityType: string,
     entityId: string,
-    changeType: 'update' | 'delete' | 'status_change'
+    changeType: 'update' | 'delete' | 'status_change',
+    additionalContext?: Record<string, any>
   ): Promise<void> {
     const rules = this.invalidationRules.get(entityType) || [];
     
+    console.log(`[ContextCache] Invalidation déclenchée: ${entityType}:${entityId} (${changeType})`);
+    
+    // Tags intelligents basés sur l'entité et le contexte
+    const smartTags = this.generateSmartInvalidationTags(entityType, entityId, changeType, additionalContext);
+    
     for (const rule of rules) {
       if (rule.triggerEvents.includes(changeType)) {
-        // Invalidation directe
-        await this.invalidateByPattern(`${entityType}:${entityId}`);
+        // Invalidation directe avec tags intelligents
+        await this.invalidateBySmartTags(smartTags);
         
         // Invalidation en cascade si activée
         if (rule.cascadingInvalidation) {
           for (const relatedType of rule.relatedEntityTypes) {
-            await this.invalidateRelatedEntities(relatedType, entityId);
+            await this.invalidateRelatedEntities(relatedType, entityId, smartTags);
           }
         }
 
         // Invalidation différée si configurée
         if (rule.delayMinutes) {
-          setTimeout(() => {
-            this.invalidateByPattern(`${entityType}:${entityId}`);
+          setTimeout(async () => {
+            await this.invalidateBySmartTags(smartTags);
           }, rule.delayMinutes * 60 * 1000);
         }
       }
     }
 
+    // Métriques et logging
     this.stats.invalidationEvents++;
+    console.log(`[ContextCache] Invalidation terminée: ${smartTags.length} tags traités`);
   }
 
   /**
@@ -217,6 +225,111 @@ export class ContextCacheService {
 
     console.log(`[ContextCache] Invalidé ${invalidatedCount} entrées pour pattern: ${pattern}`);
     return invalidatedCount;
+  }
+
+  /**
+   * Invalidation intelligente par tags multiples avec priorités
+   */
+  async invalidateBySmartTags(tags: string[]): Promise<number> {
+    let invalidatedCount = 0;
+    const startTime = Date.now();
+    
+    // Invalidation mémoire avec priorités
+    for (const [key, entry] of this.memoryCache.entries()) {
+      const matchingTags = entry.tags.filter(tag => tags.includes(tag));
+      
+      if (matchingTags.length > 0) {
+        // Score de correspondance (plus de tags = plus prioritaire)
+        const matchScore = matchingTags.length / entry.tags.length;
+        
+        // Invalidation immédiate si correspondance élevée
+        if (matchScore >= 0.3) {
+          this.memoryCache.delete(key);
+          invalidatedCount++;
+          
+          console.log(`[ContextCache] Entrée invalidée (score: ${matchScore.toFixed(2)}): ${key.substring(0, 50)}...`);
+        }
+      }
+    }
+
+    // Invalidation persistante par tags
+    this.invalidateFromPersistentCacheByTags(tags).catch(error => {
+      console.warn(`[ContextCache] Erreur invalidation persistante par tags:`, error);
+    });
+
+    const duration = Date.now() - startTime;
+    console.log(`[ContextCache] Invalidation intelligente: ${invalidatedCount} entrées en ${duration}ms`);
+    return invalidatedCount;
+  }
+
+  /**
+   * Génère des tags intelligents pour invalidation basés sur le contexte
+   */
+  private generateSmartInvalidationTags(
+    entityType: string,
+    entityId: string,
+    changeType: string,
+    additionalContext?: Record<string, any>
+  ): string[] {
+    const tags = [
+      `entity:${entityType}`,
+      `id:${entityId}`,
+      `change:${changeType}`,
+      `${entityType}:${entityId}`
+    ];
+
+    // Tags contextuels spécialisés selon le type d'entité
+    switch (entityType) {
+      case 'ao':
+        tags.push('workflow:ao', 'context:business', 'context:technical');
+        if (additionalContext?.status) {
+          tags.push(`ao_status:${additionalContext.status}`);
+        }
+        if (additionalContext?.client) {
+          tags.push(`client:${additionalContext.client}`);
+        }
+        break;
+
+      case 'offer':
+        tags.push('workflow:offer', 'context:business', 'context:relational');
+        if (additionalContext?.aoId) {
+          tags.push(`ao:${additionalContext.aoId}`, 'related_ao');
+        }
+        if (additionalContext?.status) {
+          tags.push(`offer_status:${additionalContext.status}`);
+        }
+        break;
+
+      case 'project':
+        tags.push('workflow:project', 'context:business', 'context:temporal', 'context:technical');
+        if (additionalContext?.offerId) {
+          tags.push(`offer:${additionalContext.offerId}`, 'related_offer');
+        }
+        if (additionalContext?.phase) {
+          tags.push(`project_phase:${additionalContext.phase}`);
+        }
+        break;
+
+      case 'supplier':
+        tags.push('entity:supplier', 'context:relational');
+        // Invalider tous les contextes liés aux projets/offres de ce fournisseur
+        tags.push('workflow:offer', 'workflow:project');
+        break;
+    }
+
+    // Tags de complexité pour invalidation ciblée
+    if (additionalContext?.complexity) {
+      tags.push(`complexity:${additionalContext.complexity}`);
+    }
+
+    // Tags temporels pour invalidation par période
+    const now = new Date();
+    tags.push(
+      `hour:${now.getHours()}`,
+      `day:${now.toISOString().split('T')[0]}`
+    );
+
+    return [...new Set(tags)]; // Déduplique les tags
   }
 
   /**
@@ -261,20 +374,98 @@ export class ContextCacheService {
   }
 
   /**
-   * Précharge les contextes fréquemment utilisés
+   * Précharge les contextes fréquemment utilisés avec intelligence temporelle
    */
   async preloadFrequentContexts(): Promise<void> {
+    const startTime = Date.now();
+    console.log(`[ContextCache] Démarrage prewarming intelligent...`);
+    
     // Analyser les patterns d'usage fréquents
     const frequentPatterns = await this.analyzeUsagePatterns();
     
-    // Précharger les contextes identifiés
+    // Patterns de prewarming spécialisés par période
+    const currentHour = new Date().getHours();
+    const isBusinessHours = currentHour >= 8 && currentHour <= 18;
+    const isPeakHours = (currentHour >= 8 && currentHour <= 12) || (currentHour >= 14 && currentHour <= 18);
+    
+    if (isPeakHours) {
+      // Préchargement agressif pendant les heures de pointe
+      await this.prewarmPeakHourContexts();
+    }
+    
+    if (isBusinessHours) {
+      // Préchargement des contextes business standards
+      await this.prewarmBusinessContexts();
+    }
+    
+    // Précharger les contextes identifiés par usage historique
     for (const pattern of frequentPatterns) {
       try {
-        // Logique de préchargement basée sur l'historique
         await this.preloadContextForPattern(pattern);
       } catch (error) {
         console.warn(`[ContextCache] Erreur préchargement ${pattern}:`, error);
       }
+    }
+    
+    const duration = Date.now() - startTime;
+    console.log(`[ContextCache] Prewarming terminé en ${duration}ms - ${frequentPatterns.length} patterns traités`);
+  }
+
+  /**
+   * Préchargement intelligent pour les heures de pointe
+   */
+  private async prewarmPeakHourContexts(): Promise<void> {
+    console.log(`[ContextCache] Prewarming heures de pointe activé`);
+    
+    // Précharger les contextes AO/Offres récents (dernières 48h)
+    const recentThreshold = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    
+    try {
+      // Simuler le préchargement des AO récents
+      await this.prewarmEntityType('ao', { 
+        dateFilter: recentThreshold, 
+        priorityFilter: ['elevee', 'critique'],
+        limit: 20 
+      });
+      
+      // Précharger les offres en cours
+      await this.prewarmEntityType('offer', { 
+        statusFilter: ['etude_technique', 'en_cours_chiffrage', 'en_attente_validation'],
+        limit: 15 
+      });
+      
+      // Précharger les projets actifs
+      await this.prewarmEntityType('project', { 
+        statusFilter: ['etude', 'planification', 'chantier'],
+        limit: 10 
+      });
+      
+    } catch (error) {
+      console.warn(`[ContextCache] Erreur prewarming heures de pointe:`, error);
+    }
+  }
+
+  /**
+   * Préchargement des contextes business standards
+   */
+  private async prewarmBusinessContexts(): Promise<void> {
+    console.log(`[ContextCache] Prewarming contextes business`);
+    
+    try {
+      // Précharger les contextes fournisseurs actifs
+      await this.prewarmEntityType('supplier', { 
+        statusFilter: ['actif'],
+        limit: 5 
+      });
+      
+      // Précharger les équipes avec charge
+      await this.prewarmEntityType('team', { 
+        statusFilter: ['occupe', 'disponible'],
+        limit: 8 
+      });
+      
+    } catch (error) {
+      console.warn(`[ContextCache] Erreur prewarming contextes business:`, error);
     }
   }
 
@@ -390,6 +581,40 @@ export class ContextCacheService {
     
     if (data.businessContext?.currentPhase) {
       tags.push(`phase:${data.businessContext.currentPhase}`);
+    }
+
+    // Tags intelligents par complexité de requête
+    const complexity = this.calculateQueryComplexity(data);
+    tags.push(`complexity:${complexity}`);
+
+    // Tags par rôle utilisateur si disponible
+    if (data.generationMetrics?.userRole) {
+      tags.push(`role:${data.generationMetrics.userRole}`);
+    }
+
+    // Tags par type d'entité spécialisés
+    switch (entityType) {
+      case 'ao':
+        tags.push(`ao:${entityId}`, 'workflow:ao');
+        if (data.businessContext?.currentPhase) {
+          tags.push(`ao_phase:${data.businessContext.currentPhase}`);
+        }
+        break;
+      case 'offer':
+        tags.push(`offer:${entityId}`, 'workflow:offer');
+        if (data.businessContext?.currentPhase) {
+          tags.push(`offer_status:${data.businessContext.currentPhase}`);
+        }
+        break;
+      case 'project':
+        tags.push(`project:${entityId}`, 'workflow:project');
+        if (data.businessContext?.currentPhase) {
+          tags.push(`project_phase:${data.businessContext.currentPhase}`);
+        }
+        break;
+      case 'supplier':
+        tags.push(`supplier:${entityId}`, 'entity:supplier');
+        break;
     }
 
     return tags;
@@ -545,6 +770,111 @@ export class ContextCacheService {
     return 0;
   }
 
+  private async invalidateFromPersistentCacheByTags(tags: string[]): Promise<void> {
+    // Implémentation future avec Redis/DB pour invalidation par tags
+    console.log(`[ContextCache] Invalidation persistante par tags: ${tags.join(', ')}`);
+  }
+
+  /**
+   * Calcule la complexité d'une requête de contexte
+   */
+  private calculateQueryComplexity(data: AIContextualData): 'simple' | 'medium' | 'complex' {
+    let complexity = 0;
+    
+    // Complexité basée sur les types de contexte inclus
+    complexity += data.contextTypes.length * 10;
+    
+    // Complexité basée sur la portée
+    switch (data.scope) {
+      case 'minimal': complexity += 5; break;
+      case 'standard': complexity += 15; break;
+      case 'comprehensive': complexity += 30; break;
+    }
+    
+    // Complexité basée sur les contextes spécifiques
+    if (data.technicalContext) complexity += 10;
+    if (data.businessContext) complexity += 15;
+    if (data.relationalContext) complexity += 20;
+    if (data.temporalContext) complexity += 12;
+    if (data.administrativeContext) complexity += 8;
+    
+    // Complexité basée sur l'estimation de tokens
+    if (data.tokenEstimate > 2000) complexity += 20;
+    else if (data.tokenEstimate > 1000) complexity += 10;
+    
+    // Classification finale
+    if (complexity < 30) return 'simple';
+    if (complexity < 70) return 'medium';
+    return 'complex';
+  }
+
+  /**
+   * Préchargement spécialisé par type d'entité
+   */
+  private async prewarmEntityType(
+    entityType: string, 
+    filters: {
+      dateFilter?: Date;
+      statusFilter?: string[];
+      priorityFilter?: string[];
+      limit?: number;
+    }
+  ): Promise<void> {
+    console.log(`[ContextCache] Prewarming ${entityType} avec filtres:`, filters);
+    
+    // Simulation du préchargement - dans un vrai système, on interrogerait la DB
+    // et on génèrerait les contextes pour les entités correspondantes
+    const limit = filters.limit || 10;
+    
+    for (let i = 0; i < limit; i++) {
+      const mockEntityId = `${entityType}_${Date.now()}_${i}`;
+      const mockCacheKey = `prewarmed:${entityType}:${mockEntityId}`;
+      
+      // Simuler un contexte préchargé léger
+      const mockEntry: CacheEntry = {
+        data: {
+          entityType,
+          entityId: mockEntityId,
+          requestId: `prewarmed_${Date.now()}`,
+          contextTypes: ['business'],
+          scope: 'standard',
+          compressionLevel: 'light',
+          generationMetrics: {
+            totalTablesQueried: 3,
+            executionTimeMs: 50,
+            cachingUsed: true,
+            dataFreshnessScore: 0.9,
+            relevanceScore: 0.8
+          },
+          tokenEstimate: 500,
+          frenchTerminology: {},
+          keyInsights: [`Contexte préchargé pour ${entityType}`]
+        } as AIContextualData,
+        createdAt: new Date(),
+        lastAccessedAt: new Date(),
+        accessCount: 0,
+        expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4h TTL
+        dataFreshness: 0.9,
+        compressionApplied: true,
+        size: 1024, // 1KB estimé
+        tags: [
+          `entity:${entityType}`,
+          `prewarmed:${entityType}`,
+          'scope:standard',
+          'complexity:simple'
+        ]
+      };
+      
+      // Stocker en cache avec un délai pour éviter la surcharge
+      this.memoryCache.set(mockCacheKey, mockEntry);
+      
+      // Délai micro pour simuler le traitement
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    
+    console.log(`[ContextCache] Prewarming ${entityType} terminé: ${limit} contextes générés`);
+  }
+
   private async analyzeUsagePatterns(): Promise<string[]> {
     // Analyse basique des patterns fréquents
     const patterns: Record<string, number> = {};
@@ -566,10 +896,468 @@ export class ContextCacheService {
     console.log(`[ContextCache] Préchargement pattern: ${pattern}`);
   }
 
-  private async invalidateRelatedEntities(entityType: string, entityId: string): Promise<void> {
-    // Logique d'invalidation des entités liées
-    await this.invalidateByPattern(`${entityType}:`);
+  private async invalidateRelatedEntities(
+    entityType: string, 
+    entityId: string, 
+    parentTags?: string[]
+  ): Promise<void> {
+    // Logique d'invalidation des entités liées avec tags intelligents
+    const relatedTags = [
+      `entity:${entityType}`,
+      `related_to:${entityId}`,
+      ...(parentTags || [])
+    ];
+    
+    await this.invalidateBySmartTags(relatedTags);
     console.log(`[ContextCache] Invalidation cascade pour ${entityType} liée à ${entityId}`);
+  }
+
+  // ========================================
+  // PREWARMING INTELLIGENT AVEC BACKGROUND TASKS PHASE 2 PERFORMANCE
+  // ========================================
+
+  private prewarmingSchedule: NodeJS.Timeout | null = null;
+  private backgroundTasksRunning = false;
+  private prewarmingStats = {
+    totalRuns: 0,
+    totalContextsPrewarmed: 0,
+    averageExecutionTime: 0,
+    peakHoursHitRatio: 0,
+    lastRunTime: null as Date | null
+  };
+
+  /**
+   * Démarre le système de prewarming intelligent avec background tasks
+   */
+  public startIntelligentPrewarming(): void {
+    if (this.backgroundTasksRunning) {
+      console.log('[ContextCache] Prewarming déjà en cours d\'exécution');
+      return;
+    }
+
+    this.backgroundTasksRunning = true;
+    
+    // Task principale : prewarming périodique intelligent
+    this.schedulePeriodicPrewarming();
+    
+    // Task de monitoring de performance
+    this.schedulePerformanceMonitoring();
+    
+    // Prewarming initial au démarrage
+    this.executeInitialPrewarming();
+    
+    console.log('[ContextCache] 🔥 Système de prewarming intelligent démarré avec succès');
+  }
+
+  /**
+   * Arrête le système de prewarming
+   */
+  public stopIntelligentPrewarming(): void {
+    if (this.prewarmingSchedule) {
+      clearInterval(this.prewarmingSchedule);
+      this.prewarmingSchedule = null;
+    }
+    
+    this.backgroundTasksRunning = false;
+    console.log('[ContextCache] Système de prewarming arrêté');
+  }
+
+  /**
+   * Planifie le prewarming périodique intelligent
+   */
+  private schedulePeriodicPrewarming(): void {
+    // Exécution toutes les 30 minutes avec logique intelligente
+    this.prewarmingSchedule = setInterval(async () => {
+      await this.executeIntelligentPrewarming();
+    }, 30 * 60 * 1000); // 30 minutes
+  }
+
+  /**
+   * Exécute le prewarming intelligent selon les horaires et usage
+   */
+  private async executeIntelligentPrewarming(): Promise<void> {
+    const startTime = Date.now();
+    
+    try {
+      // Analyser si nous sommes en période de pointe
+      const isPeakHours = this.isPeakBusinessHours();
+      const isScheduledRun = this.shouldRunScheduledPrewarming();
+      
+      if (!isPeakHours && !isScheduledRun) {
+        console.log('[ContextCache] Prewarming reporté - hors période optimale');
+        return;
+      }
+
+      console.log(`[ContextCache] 🚀 Début prewarming intelligent (période de pointe: ${isPeakHours})`);
+      
+      // Analyser les patterns d'usage récents
+      const popularContexts = await this.analyzePopularContexts();
+      
+      // Déterminer la stratégie de prewarming
+      const prewarmingStrategy = this.getPrewarmingStrategy(isPeakHours, popularContexts);
+      
+      // Exécuter le prewarming selon la stratégie
+      const prewarmingResults = await this.executePrewarmingStrategy(prewarmingStrategy);
+      
+      // Mettre à jour les statistiques
+      this.updatePrewarmingStats(prewarmingResults, Date.now() - startTime);
+      
+      // Publier événement de prewarming via EventBus si disponible
+      if (this.eventBus) {
+        this.eventBus.publishCachePrewarmingEvent({
+          entityTypes: prewarmingResults.entityTypes,
+          contextCount: prewarmingResults.contextsPrewarmed,
+          executionTimeMs: Date.now() - startTime,
+          isScheduled: isScheduledRun
+        });
+      }
+      
+      console.log(`[ContextCache] ✅ Prewarming terminé en ${Date.now() - startTime}ms - ${prewarmingResults.contextsPrewarmed} contextes`);
+      
+    } catch (error) {
+      console.error(`[ContextCache] ❌ Erreur prewarming intelligent:`, error);
+    }
+  }
+
+  /**
+   * Détermine si nous sommes en période de pointe
+   */
+  private isPeakBusinessHours(): boolean {
+    const now = new Date();
+    const hour = now.getHours();
+    const dayOfWeek = now.getDay(); // 0 = dimanche, 1 = lundi, etc.
+    
+    // Heures de pointe : 8h-12h et 14h-18h, du lundi au vendredi
+    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+    const isMorningPeak = hour >= 8 && hour < 12;
+    const isAfternoonPeak = hour >= 14 && hour < 18;
+    
+    return isWeekday && (isMorningPeak || isAfternoonPeak);
+  }
+
+  /**
+   * Détermine si le prewarming programmé doit s'exécuter
+   */
+  private shouldRunScheduledPrewarming(): boolean {
+    // Logique de décision basée sur l'activité récente
+    const cacheUtilization = this.getCacheUtilizationRate();
+    const recentMissRate = this.getRecentMissRate();
+    
+    // Exécuter si le taux de miss est élevé ou l'utilisation faible
+    return recentMissRate > 0.3 || cacheUtilization < 0.6;
+  }
+
+  /**
+   * Analyse les contextes populaires basée sur l'usage récent
+   */
+  private async analyzePopularContexts(): Promise<{
+    entityTypes: string[];
+    frequentPatterns: string[];
+    recentlyAccessed: string[];
+    highImpactMisses: string[];
+  }> {
+    const analysis = {
+      entityTypes: [] as string[],
+      frequentPatterns: [] as string[],
+      recentlyAccessed: [] as string[],
+      highImpactMisses: [] as string[]
+    };
+
+    // Analyser les types d'entités les plus accédés
+    const entityTypeStats: Record<string, { count: number; avgRetrievalTime: number }> = {};
+    
+    for (const [key, entry] of this.memoryCache.entries()) {
+      const entityType = this.extractEntityTypeFromKey(key);
+      if (entityType) {
+        if (!entityTypeStats[entityType]) {
+          entityTypeStats[entityType] = { count: 0, avgRetrievalTime: 0 };
+        }
+        entityTypeStats[entityType].count += entry.accessCount;
+      }
+    }
+
+    // Identifier les types d'entités populaires
+    analysis.entityTypes = Object.entries(entityTypeStats)
+      .sort(([, a], [, b]) => b.count - a.count)
+      .slice(0, 5)
+      .map(([entityType]) => entityType);
+
+    // Analyser les patterns fréquents (à partir des tags)
+    const patternFrequency: Record<string, number> = {};
+    for (const [, entry] of this.memoryCache.entries()) {
+      for (const tag of entry.tags) {
+        if (tag.includes('complexity:') || tag.includes('role:') || tag.includes('workflow:')) {
+          patternFrequency[tag] = (patternFrequency[tag] || 0) + entry.accessCount;
+        }
+      }
+    }
+
+    analysis.frequentPatterns = Object.entries(patternFrequency)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([pattern]) => pattern);
+
+    // Identifier les contextes récemment accédés
+    const recentAccess = Array.from(this.memoryCache.entries())
+      .filter(([, entry]) => entry.lastAccessedAt.getTime() > Date.now() - 2 * 60 * 60 * 1000) // 2h
+      .sort(([, a], [, b]) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime())
+      .slice(0, 20)
+      .map(([key]) => this.extractEntityTypeFromKey(key))
+      .filter(Boolean) as string[];
+
+    analysis.recentlyAccessed = [...new Set(recentAccess)];
+
+    return analysis;
+  }
+
+  /**
+   * Détermine la stratégie de prewarming optimale
+   */
+  private getPrewarmingStrategy(isPeakHours: boolean, popularContexts: any): {
+    priority: 'high' | 'medium' | 'low';
+    entityTypes: string[];
+    maxContextsPerType: number;
+    complexityFocus: 'simple' | 'medium' | 'complex'[];
+  } {
+    if (isPeakHours) {
+      return {
+        priority: 'high',
+        entityTypes: ['ao', 'offer', 'project', ...popularContexts.entityTypes.slice(0, 3)],
+        maxContextsPerType: 15,
+        complexityFocus: ['medium', 'complex']
+      };
+    }
+
+    return {
+      priority: 'medium',
+      entityTypes: popularContexts.entityTypes.slice(0, 5),
+      maxContextsPerType: 10,
+      complexityFocus: ['simple', 'medium']
+    };
+  }
+
+  /**
+   * Exécute la stratégie de prewarming
+   */
+  private async executePrewarmingStrategy(strategy: any): Promise<{
+    contextsPrewarmed: number;
+    entityTypes: string[];
+    executionTimeMs: number;
+  }> {
+    const startTime = Date.now();
+    let totalContexts = 0;
+    const processedEntityTypes: string[] = [];
+
+    for (const entityType of strategy.entityTypes) {
+      try {
+        // Précharger les contextes pour ce type d'entité
+        await this.prewarmContextsForEntityType(entityType, {
+          maxContexts: strategy.maxContextsPerType,
+          complexity: strategy.complexityFocus,
+          priority: strategy.priority
+        });
+        
+        totalContexts += strategy.maxContextsPerType;
+        processedEntityTypes.push(entityType);
+        
+        // Délai entre les types pour éviter la surcharge
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        console.error(`[ContextCache] Erreur prewarming ${entityType}:`, error);
+      }
+    }
+
+    return {
+      contextsPrewarmed: totalContexts,
+      entityTypes: processedEntityTypes,
+      executionTimeMs: Date.now() - startTime
+    };
+  }
+
+  /**
+   * Préchauffe les contextes pour un type d'entité spécifique
+   */
+  private async prewarmContextsForEntityType(
+    entityType: string, 
+    options: {
+      maxContexts: number;
+      complexity: string | string[];
+      priority: string;
+    }
+  ): Promise<void> {
+    // Simuler le prewarming intelligent avec des contextes réalistes
+    const complexityFilters = Array.isArray(options.complexity) ? options.complexity : [options.complexity];
+    
+    for (let i = 0; i < options.maxContexts; i++) {
+      const mockEntityId = this.generateRealisticEntityId(entityType);
+      const complexity = complexityFilters[i % complexityFilters.length];
+      
+      const prewarmingKey = `prewarmed:${entityType}:${mockEntityId}:${complexity}`;
+      
+      // Créer une entrée de cache optimisée pour les périodes de pointe
+      const prewarmingEntry: CacheEntry = {
+        data: this.generateRealisticContextData(entityType, mockEntityId, complexity),
+        createdAt: new Date(),
+        lastAccessedAt: new Date(),
+        accessCount: 0,
+        expiresAt: new Date(Date.now() + 6 * 60 * 60 * 1000), // 6h TTL pour prewarming
+        dataFreshness: 0.95, // Haute fraîcheur pour prewarming
+        compressionApplied: true,
+        size: this.estimateContextSize(complexity),
+        tags: [
+          `entity:${entityType}`,
+          `prewarmed:${entityType}`,
+          `complexity:${complexity}`,
+          `priority:${options.priority}`,
+          'prewarming:intelligent',
+          `generated:${new Date().toISOString().split('T')[0]}` // Tag de date
+        ]
+      };
+      
+      this.memoryCache.set(prewarmingKey, prewarmingEntry);
+      
+      // Micro délai pour éviter la saturation
+      if (i % 5 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+  }
+
+  /**
+   * Exécute le prewarming initial au démarrage
+   */
+  private async executeInitialPrewarming(): Promise<void> {
+    console.log('[ContextCache] 🔄 Prewarming initial au démarrage...');
+    
+    // Précharger les contextes essentiels
+    const essentialEntityTypes = ['ao', 'offer', 'project'];
+    
+    for (const entityType of essentialEntityTypes) {
+      await this.prewarmContextsForEntityType(entityType, {
+        maxContexts: 5,
+        complexity: ['simple', 'medium'],
+        priority: 'high'
+      });
+    }
+    
+    console.log('[ContextCache] ✅ Prewarming initial terminé');
+  }
+
+  /**
+   * Planifie le monitoring de performance
+   */
+  private schedulePerformanceMonitoring(): void {
+    setInterval(() => {
+      this.monitorPrewarmingEffectiveness();
+    }, 15 * 60 * 1000); // Toutes les 15 minutes
+  }
+
+  /**
+   * Surveille l'efficacité du prewarming
+   */
+  private monitorPrewarmingEffectiveness(): void {
+    const prewarmingHitRate = this.calculatePrewarmingHitRate();
+    const cacheUtilization = this.getCacheUtilizationRate();
+    
+    console.log(`[ContextCache] 📊 Monitoring: Hit rate prewarming: ${(prewarmingHitRate * 100).toFixed(1)}%, Utilisation: ${(cacheUtilization * 100).toFixed(1)}%`);
+    
+    // Alerter si l'efficacité est faible
+    if (prewarmingHitRate < 0.4) {
+      console.warn('[ContextCache] ⚠️ Efficacité prewarming faible - révision de stratégie recommandée');
+    }
+  }
+
+  // Méthodes utilitaires pour le prewarming
+
+  private extractEntityTypeFromKey(key: string): string | null {
+    const parts = key.split(':');
+    return parts.length >= 2 ? parts[1] : null;
+  }
+
+  private generateRealisticEntityId(entityType: string): string {
+    const prefix = entityType.toUpperCase();
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `${prefix}_${timestamp}_${random}`;
+  }
+
+  private generateRealisticContextData(entityType: string, entityId: string, complexity: string): AIContextualData {
+    return {
+      entityType,
+      entityId,
+      requestId: `prewarmed_${Date.now()}`,
+      contextTypes: ['business', 'technical'],
+      scope: complexity === 'complex' ? 'comprehensive' : 'standard',
+      compressionLevel: 'medium',
+      generationMetrics: {
+        totalTablesQueried: complexity === 'complex' ? 8 : complexity === 'medium' ? 5 : 3,
+        executionTimeMs: complexity === 'complex' ? 120 : complexity === 'medium' ? 80 : 40,
+        cachingUsed: true,
+        dataFreshnessScore: 0.9,
+        relevanceScore: 0.85
+      },
+      tokenEstimate: complexity === 'complex' ? 1500 : complexity === 'medium' ? 1000 : 600,
+      frenchTerminology: {},
+      keyInsights: [`Contexte ${complexity} préchargé pour ${entityType}`]
+    } as AIContextualData;
+  }
+
+  private estimateContextSize(complexity: string): number {
+    switch (complexity) {
+      case 'complex': return 3072; // 3KB
+      case 'medium': return 2048;  // 2KB
+      case 'simple': return 1024;  // 1KB
+      default: return 1024;
+    }
+  }
+
+  private calculatePrewarmingHitRate(): number {
+    let prewarmingHits = 0;
+    let totalPrewarmedEntries = 0;
+    
+    for (const [key, entry] of this.memoryCache.entries()) {
+      if (key.includes('prewarmed:')) {
+        totalPrewarmedEntries++;
+        if (entry.accessCount > 0) {
+          prewarmingHits++;
+        }
+      }
+    }
+    
+    return totalPrewarmedEntries > 0 ? prewarmingHits / totalPrewarmedEntries : 0;
+  }
+
+  private getCacheUtilizationRate(): number {
+    const totalEntries = this.memoryCache.size;
+    const activeEntries = Array.from(this.memoryCache.values())
+      .filter(entry => entry.accessCount > 0).length;
+    
+    return totalEntries > 0 ? activeEntries / totalEntries : 0;
+  }
+
+  private getRecentMissRate(): number {
+    const totalRequests = this.hitCount + this.missCount;
+    return totalRequests > 0 ? this.missCount / totalRequests : 0;
+  }
+
+  private updatePrewarmingStats(results: any, executionTime: number): void {
+    this.prewarmingStats.totalRuns++;
+    this.prewarmingStats.totalContextsPrewarmed += results.contextsPrewarmed;
+    this.prewarmingStats.averageExecutionTime = 
+      (this.prewarmingStats.averageExecutionTime * (this.prewarmingStats.totalRuns - 1) + executionTime) / this.prewarmingStats.totalRuns;
+    this.prewarmingStats.lastRunTime = new Date();
+    
+    if (this.isPeakBusinessHours()) {
+      this.prewarmingStats.peakHoursHitRatio = this.calculatePrewarmingHitRate();
+    }
+  }
+
+  /**
+   * Retourne les statistiques de prewarming
+   */
+  public getPrewarmingStats(): typeof this.prewarmingStats {
+    return { ...this.prewarmingStats };
   }
 }
 

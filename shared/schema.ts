@@ -537,6 +537,47 @@ export const contactLinkTypeEnum = pgEnum("contact_link_type", [
 ]);
 
 // ========================================
+// ENUMS POUR SYSTÈME MÉTRIQUES PERFORMANCE PIPELINE - PHASE 1 OPTIMISATION
+// ========================================
+
+// Étapes du pipeline chatbot pour tracing granulaire
+export const pipelineStepEnum = pgEnum("pipeline_step", [
+  "context_generation",    // Génération contexte business
+  "ai_model_selection",    // Sélection modèle IA optimal  
+  "sql_generation",        // Génération SQL par IA
+  "sql_execution",         // Exécution SQL en base
+  "response_formatting",   // Formatage réponse utilisateur
+  "cache_operations"       // Opérations cache (lecture/écriture)
+]);
+
+// Types d'alertes performance
+export const performanceAlertTypeEnum = pgEnum("performance_alert_type", [
+  "slo_violation",         // Violation SLO temps de réponse
+  "cache_miss_spike",      // Pic de cache miss
+  "query_timeout",         // Timeout requête
+  "high_latency",          // Latence élevée détectée
+  "resource_exhaustion",   // Épuisement ressources
+  "cascade_failure"        // Échec en cascade
+]);
+
+// Sévérités des alertes performance
+export const performanceAlertSeverityEnum = pgEnum("performance_alert_severity", [
+  "info",      // Information
+  "warning",   // Avertissement
+  "critical",  // Critique
+  "emergency"  // Urgence
+]);
+
+// Types SLO pour définir les objectifs performance
+export const sloTypeEnum = pgEnum("slo_type", [
+  "response_time",         // Temps de réponse total
+  "step_duration",         // Durée étape spécifique
+  "cache_hit_rate",        // Taux de succès cache
+  "error_rate",            // Taux d'erreur
+  "throughput"             // Débit requêtes/seconde
+]);
+
+// ========================================
 // NOUVEAUX ENUMS EXTENSIONS MONDAY.COM - MODULES RH ET MÉTIER
 // ========================================
 
@@ -8330,3 +8371,203 @@ export type EmployeeLabelInsert = z.infer<typeof employeeLabelInsertSchema>;
 
 export type EmployeeLabelAssignment = typeof employeeLabelAssignments.$inferSelect;
 export type EmployeeLabelAssignmentInsert = z.infer<typeof employeeLabelAssignmentInsertSchema>;
+
+// ========================================
+// NOUVELLES TABLES MÉTRIQUES PERFORMANCE PIPELINE - PHASE 1 OPTIMISATION
+// ========================================
+
+// Métriques détaillées par pipeline d'exécution
+export const pipelineMetrics = pgTable("pipeline_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  traceId: varchar("trace_id").notNull().unique(),
+  userId: varchar("user_id").notNull(),
+  userRole: varchar("user_role").notNull(),
+  query: text("query").notNull(),
+  complexity: queryComplexityEnum("complexity").notNull(),
+  
+  // Durées par étape en millisecondes
+  contextGenerationMs: integer("context_generation_ms").default(0),
+  aiModelSelectionMs: integer("ai_model_selection_ms").default(0),
+  sqlGenerationMs: integer("sql_generation_ms").default(0),
+  sqlExecutionMs: integer("sql_execution_ms").default(0),
+  responseFormattingMs: integer("response_formatting_ms").default(0),
+  totalDurationMs: integer("total_duration_ms").notNull(),
+  cacheOperationsMs: integer("cache_operations_ms").default(0),
+  
+  // Métadonnées contextuelles
+  success: boolean("success").default(true),
+  cacheHit: boolean("cache_hit").default(false),
+  stepDetails: jsonb("step_details"), // Détails JSON des étapes
+  metadata: jsonb("metadata"),        // Métadonnées additionnelles
+  
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// SLOs (Service Level Objectives) configurables
+export const performanceSLOs = pgTable("performance_slos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  sloType: sloTypeEnum("slo_type").notNull(),
+  
+  // Configuration seuils par complexité
+  simpleThresholdMs: integer("simple_threshold_ms").default(5000),   // 5 secondes
+  complexThresholdMs: integer("complex_threshold_ms").default(10000), // 10 secondes
+  expertThresholdMs: integer("expert_threshold_ms").default(15000),   // 15 secondes
+  
+  // Paramètres monitoring
+  isActive: boolean("is_active").default(true),
+  alertCooldownMinutes: integer("alert_cooldown_minutes").default(15),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Alertes performance générées automatiquement
+export const performanceAlerts = pgTable("performance_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertType: performanceAlertTypeEnum("alert_type").notNull(),
+  severity: performanceAlertSeverityEnum("severity").notNull(),
+  
+  title: varchar("title").notNull(),
+  description: text("description"),
+  
+  // Valeurs seuil vs réelle
+  threshold: integer("threshold"),      // Valeur seuil dépassée
+  actualValue: integer("actual_value"), // Valeur réelle mesurée
+  
+  // Contexte alerte  
+  traceId: varchar("trace_id"),         // Pipeline concerné
+  userId: varchar("user_id"),           // Utilisateur concerné
+  metadata: jsonb("metadata"),          // Contexte additionnel
+  
+  // Gestion workflow
+  acknowledged: boolean("acknowledged").default(false),
+  acknowledgedBy: varchar("acknowledged_by"),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Cache de métriques agrégées pour dashboard temps réel
+export const metricsAggregates = pgTable("metrics_aggregates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Clé d'agrégation
+  metricType: varchar("metric_type").notNull(), // 'step_duration', 'cache_hit_rate', etc.
+  timeWindow: varchar("time_window").notNull(), // '1h', '24h', '7d'
+  complexity: queryComplexityEnum("complexity"),
+  stepName: pipelineStepEnum("step_name"),
+  
+  // Statistiques calculées
+  p50: integer("p50").default(0),
+  p95: integer("p95").default(0), 
+  p99: integer("p99").default(0),
+  mean: integer("mean").default(0),
+  min: integer("min").default(0),
+  max: integer("max").default(0),
+  count: integer("count").default(0),
+  
+  // Métriques spécialisées
+  hitRate: decimal("hit_rate", { precision: 5, scale: 4 }), // Taux de succès cache
+  errorRate: decimal("error_rate", { precision: 5, scale: 4 }), // Taux d'erreur
+  
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  validUntil: timestamp("valid_until").notNull(),
+});
+
+// ========================================
+// INDEXES POUR PERFORMANCE MÉTRIQUES
+// ========================================
+
+// Index sur pipeline_metrics pour requêtes fréquentes
+// Temporairement commentés pour éviter les erreurs de démarrage
+// export const pipelineMetricsTimestampIdx = index("pipeline_metrics_timestamp_idx").on(pipelineMetrics.timestamp);
+// export const pipelineMetricsUserComplexityIdx = index("pipeline_metrics_user_complexity_idx").on(
+//   pipelineMetrics.userId, 
+//   pipelineMetrics.complexity
+// );
+// export const pipelineMetricsTraceIdx = index("pipeline_metrics_trace_idx").on(pipelineMetrics.traceId);
+
+// Index sur alertes pour dashboard
+// export const performanceAlertsActiveIdx = index("performance_alerts_active_idx").on(
+//   performanceAlerts.acknowledged, 
+//   performanceAlerts.createdAt
+// );
+
+// Index sur agrégats pour accès rapide dashboard
+// export const metricsAggregatesLookupIdx = index("metrics_aggregates_lookup_idx").on(
+//   metricsAggregates.metricType, 
+//   metricsAggregates.timeWindow, 
+//   metricsAggregates.complexity
+// );
+
+// ========================================
+// SCHEMAS ZOD POUR VALIDATION MÉTRIQUES PERFORMANCE
+// ========================================
+
+export const insertPipelineMetricsSchema = createInsertSchema(pipelineMetrics).omit({
+  id: true,
+  timestamp: true,
+});
+
+export const insertPerformanceSLOsSchema = createInsertSchema(performanceSLOs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPerformanceAlertsSchema = createInsertSchema(performanceAlerts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMetricsAggregatesSchema = createInsertSchema(metricsAggregates).omit({
+  id: true,
+  calculatedAt: true,
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR MÉTRIQUES PERFORMANCE
+// ========================================
+
+export type PipelineStep = typeof pipelineStepEnum.enumValues[number];
+export type QueryComplexity = typeof queryComplexityEnum.enumValues[number];
+export type PerformanceAlertType = typeof performanceAlertTypeEnum.enumValues[number];
+export type PerformanceAlertSeverity = typeof performanceAlertSeverityEnum.enumValues[number];
+export type SLOType = typeof sloTypeEnum.enumValues[number];
+
+export type PipelineMetrics = typeof pipelineMetrics.$inferSelect;
+export type InsertPipelineMetrics = z.infer<typeof insertPipelineMetricsSchema>;
+
+export type PerformanceSLO = typeof performanceSLOs.$inferSelect;
+export type InsertPerformanceSLO = z.infer<typeof insertPerformanceSLOsSchema>;
+
+export type PerformanceAlert = typeof performanceAlerts.$inferSelect;
+export type InsertPerformanceAlert = z.infer<typeof insertPerformanceAlertsSchema>;
+
+export type MetricsAggregate = typeof metricsAggregates.$inferSelect;
+export type InsertMetricsAggregate = z.infer<typeof insertMetricsAggregatesSchema>;
+
+// Types d'interface pour le service de métriques
+export interface PipelineTimings {
+  contextGeneration: number;
+  aiModelSelection: number;
+  sqlGeneration: number;
+  sqlExecution: number;
+  responseFormatting: number;
+  total: number;
+  cacheOperations: number;
+}
+
+export interface CachePerformanceMetrics {
+  hitRateSimple: number;
+  hitRateComplex: number;
+  hitRateExpert: number;
+  avgHitRetrievalTime: number;
+  avgMissRetrievalTime: number;
+  memoryHits: number;
+  dbHits: number;
+}

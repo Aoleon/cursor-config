@@ -59,6 +59,7 @@ import { AnalyticsService } from "./services/AnalyticsService";
 import { PredictiveEngineService } from "./services/PredictiveEngineService";
 import { MondayProductionFinalService } from "./services/MondayProductionFinalService";
 import { initializeDefaultRules, DateIntelligenceRulesSeeder } from "./seeders/dateIntelligenceRulesSeeder";
+import { getPerformanceMetricsService } from "./services/PerformanceMetricsService";
 
 // Import du service email générique
 import { emailService, inviteSupplierForQuote, type IEmailService } from "./services/emailService";
@@ -4958,6 +4959,179 @@ app.get("/api/admin/intelligence/test-integration",
       } catch (error: any) {
         console.error('[PerformanceMetrics] Erreur calcul métriques:', error);
         throw createError.database( "Erreur lors du calcul des métriques de performance");
+      }
+    })
+  );
+
+  // ============================================================
+  // AI CHATBOT PERFORMANCE METRICS ROUTES - Phase 1 Optimisation Performance
+  // ============================================================
+
+  // GET /api/ai-performance/pipeline-metrics - Métriques détaillées pipeline IA
+  app.get("/api/ai-performance/pipeline-metrics",
+    isAuthenticated,
+    validateQuery(z.object({
+      timeRange: z.object({
+        startDate: z.string().datetime(),
+        endDate: z.string().datetime()
+      }).optional(),
+      complexity: z.enum(['simple', 'complex', 'expert']).optional(),
+      userId: z.string().optional(),
+      includeP95P99: z.boolean().default(true)
+    }).optional()),
+    asyncHandler(async (req, res) => {
+      try {
+        const { timeRange, complexity, userId, includeP95P99 } = req.query || {};
+        
+        console.log('[AI-Performance] Récupération métriques pipeline avec filtres:', req.query);
+        
+        // Récupérer les métriques du service de performance
+        const performanceService = getPerformanceMetricsService(storage as IStorage);
+        const metrics = await performanceService.getPipelineMetrics({
+          timeRange,
+          complexity,
+          userId,
+          includePercentiles: includeP95P99
+        });
+        
+        sendSuccess(res, metrics, {
+          calculatedAt: new Date(),
+          filtersApplied: Object.keys(req.query || {}).length
+        });
+        
+      } catch (error) {
+        console.error('[AI-Performance] Erreur pipeline metrics:', error);
+        throw createError.internal('Erreur lors de la récupération des métriques pipeline');
+      }
+    })
+  );
+
+  // GET /api/ai-performance/cache-analytics - Analytics cache hit/miss par complexité
+  app.get("/api/ai-performance/cache-analytics", 
+    isAuthenticated,
+    validateQuery(z.object({
+      timeRange: z.object({
+        startDate: z.string().datetime(),
+        endDate: z.string().datetime()
+      }).optional(),
+      breakdown: z.enum(['complexity', 'user', 'time']).default('complexity')
+    }).optional()),
+    asyncHandler(async (req, res) => {
+      try {
+        const { timeRange, breakdown } = req.query || {};
+        
+        console.log('[AI-Performance] Analytics cache avec breakdown:', breakdown);
+        
+        const performanceService = getPerformanceMetricsService(storage as IStorage);
+        const cacheAnalytics = await performanceService.getCacheAnalytics({
+          timeRange,
+          breakdown
+        });
+        
+        sendSuccess(res, cacheAnalytics, {
+          breakdown,
+          calculatedAt: new Date()
+        });
+        
+      } catch (error) {
+        console.error('[AI-Performance] Erreur cache analytics:', error);
+        throw createError.internal('Erreur lors de l\'analyse des métriques cache');
+      }
+    })
+  );
+
+  // GET /api/ai-performance/slo-compliance - Conformité SLO et alertes
+  app.get("/api/ai-performance/slo-compliance",
+    isAuthenticated,
+    validateQuery(z.object({
+      timeRange: z.object({
+        startDate: z.string().datetime(),
+        endDate: z.string().datetime()
+      }).optional(),
+      includeTrends: z.boolean().default(true),
+      includeAlerts: z.boolean().default(true)
+    }).optional()),
+    asyncHandler(async (req, res) => {
+      try {
+        const { timeRange, includeTrends, includeAlerts } = req.query || {};
+        
+        console.log('[AI-Performance] SLO compliance check');
+        
+        const performanceService = getPerformanceMetricsService(storage as IStorage);
+        const sloMetrics = await performanceService.getSLOCompliance({
+          timeRange,
+          includeTrends,
+          includeAlerts
+        });
+        
+        sendSuccess(res, sloMetrics, {
+          sloTargets: {
+            simple: '5s',
+            complex: '10s',
+            expert: '15s'
+          },
+          calculatedAt: new Date()
+        });
+        
+      } catch (error) {
+        console.error('[AI-Performance] Erreur SLO compliance:', error);
+        throw createError.internal('Erreur lors de la vérification de conformité SLO');
+      }
+    })
+  );
+
+  // GET /api/ai-performance/bottlenecks - Identification goulots d'étranglement
+  app.get("/api/ai-performance/bottlenecks",
+    isAuthenticated,
+    validateQuery(z.object({
+      timeRange: z.object({
+        startDate: z.string().datetime(),
+        endDate: z.string().datetime()
+      }).optional(),
+      threshold: z.number().min(0.1).max(10).default(2.0) // En secondes
+    }).optional()),
+    asyncHandler(async (req, res) => {
+      try {
+        const { timeRange, threshold } = req.query || {};
+        
+        console.log('[AI-Performance] Analyse goulots avec seuil:', threshold);
+        
+        const performanceService = getPerformanceMetricsService(storage as IStorage);
+        const bottlenecks = await performanceService.identifyBottlenecks({
+          timeRange,
+          thresholdSeconds: threshold
+        });
+        
+        sendSuccess(res, bottlenecks, {
+          thresholdUsed: threshold,
+          analysisDate: new Date()
+        });
+        
+      } catch (error) {
+        console.error('[AI-Performance] Erreur bottlenecks analysis:', error);
+        throw createError.internal('Erreur lors de l\'identification des goulots d\'étranglement');
+      }
+    })
+  );
+
+  // GET /api/ai-performance/real-time-stats - Statistiques temps réel
+  app.get("/api/ai-performance/real-time-stats",
+    isAuthenticated,
+    asyncHandler(async (req, res) => {
+      try {
+        console.log('[AI-Performance] Stats temps réel');
+        
+        const performanceService = getPerformanceMetricsService(storage as IStorage);
+        const realtimeStats = await performanceService.getRealTimeStats();
+        
+        sendSuccess(res, realtimeStats, {
+          timestamp: new Date(),
+          refreshInterval: 30 // seconds
+        });
+        
+      } catch (error) {
+        console.error('[AI-Performance] Erreur real-time stats:', error);
+        throw createError.internal('Erreur lors de la récupération des statistiques temps réel');
       }
     })
   );

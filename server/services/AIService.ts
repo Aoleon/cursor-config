@@ -6,6 +6,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { getContextBuilderService } from "./ContextBuilderService";
 import { getContextCacheService } from "./ContextCacheService";
+import { getPerformanceMetricsService } from "./PerformanceMetricsService";
 
 // Référence blueprints: javascript_anthropic et javascript_openai intégrés
 /*
@@ -70,6 +71,7 @@ export class AIService {
   private storage: IStorage;
   private contextBuilder: any;
   private contextCache: any;
+  private performanceMetrics: any;
   // Cache in-memory en fallback si DB échoue
   private memoryCache: Map<string, {
     data: any;
@@ -97,6 +99,7 @@ export class AIService {
     // Initialisation des services de contexte enrichi
     this.contextBuilder = getContextBuilderService(storage);
     this.contextCache = getContextCacheService(storage);
+    this.performanceMetrics = getPerformanceMetricsService(storage);
   }
 
   // ========================================
@@ -105,46 +108,161 @@ export class AIService {
 
   /**
    * Génère du SQL à partir d'une requête naturelle avec sélection automatique de modèle
+   * INSTRUMENTÉ pour tracing détaillé des performances
    */
   async generateSQL(request: AiQueryRequest): Promise<AiQueryResponse> {
     const startTime = Date.now();
     const requestId = crypto.randomUUID();
+    const traceId = crypto.randomUUID();
+    
+    // === INSTRUMENTATION PERFORMANCE : Démarrage tracing pipeline ===
+    this.performanceMetrics.startPipelineTrace(
+      traceId, 
+      request.userId || 'system', 
+      request.userRole, 
+      request.query,
+      request.complexity || 'simple'
+    );
 
     try {
-      // 1. Validation et nettoyage de la requête
+      // === ÉTAPE 1: VALIDATION ET NETTOYAGE ===
+      this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'validation' });
+      
       const sanitizedRequest = await this.sanitizeAndValidateRequest(request);
       if (!sanitizedRequest.success) {
+        this.performanceMetrics.endStep(traceId, 'context_generation', false, { error: 'validation_failed' });
+        await this.performanceMetrics.endPipelineTrace(
+          traceId, request.userId || 'system', request.userRole, request.query, 
+          request.complexity || 'simple', false, false, { validationError: true }
+        );
         return sanitizedRequest;
       }
+      
+      this.performanceMetrics.endStep(traceId, 'context_generation', true, { step: 'validation_complete' });
 
-      // 2. Vérification du cache si activé
+      // === ÉTAPE 2: OPÉRATIONS CACHE ===
+      this.performanceMetrics.startStep(traceId, 'cache_operations', { operation: 'cache_lookup' });
+      
       if (request.useCache !== false) {
+        const cacheStartTime = Date.now();
         const cachedResult = await this.getCachedResponse(request);
+        const cacheTime = Date.now() - cacheStartTime;
+        
         if (cachedResult) {
+          this.performanceMetrics.endStep(traceId, 'cache_operations', true, { 
+            operation: 'cache_hit', 
+            cacheRetrievalTime: cacheTime,
+            tokensRetrieved: cachedResult.tokensUsed
+          });
+          
+          // Fin du tracing avec succès cache
+          const detailedTimings = await this.performanceMetrics.endPipelineTrace(
+            traceId, request.userId || 'system', request.userRole, request.query, 
+            request.complexity || 'simple', true, true, { fromCache: true, cacheTime }
+          );
+
+          // Logging métriques existant (préservé)
           await this.logMetrics(request, "cache", startTime, cachedResult.tokensUsed, true, "hit");
+          
           return {
             success: true,
             data: {
               ...cachedResult,
               fromCache: true,
-              responseTimeMs: Date.now() - startTime
+              responseTimeMs: Date.now() - startTime,
+              performanceTrace: {
+                traceId,
+                detailedTimings,
+                cacheHit: true
+              }
             }
           };
         }
       }
+      
+      this.performanceMetrics.endStep(traceId, 'cache_operations', true, { operation: 'cache_miss' });
 
-      // 3. Sélection intelligente du modèle
+      // === ÉTAPE 3: SÉLECTION MODÈLE IA ===
+      this.performanceMetrics.startStep(traceId, 'ai_model_selection', { stage: 'model_selection' });
+      
+      const modelSelectionStartTime = Date.now();
       const modelSelection = await this.selectOptimalModel(request);
+      const modelSelectionTime = Date.now() - modelSelectionStartTime;
       
-      // 4. Génération SQL avec le modèle sélectionné
+      this.performanceMetrics.endStep(traceId, 'ai_model_selection', true, { 
+        selectedModel: modelSelection.selectedModel,
+        selectionTime: modelSelectionTime,
+        confidence: modelSelection.confidence,
+        reason: modelSelection.reason
+      });
+
+      // === ÉTAPE 4: GÉNÉRATION SQL ===
+      this.performanceMetrics.startStep(traceId, 'sql_generation', { 
+        model: modelSelection.selectedModel,
+        complexity: request.complexity
+      });
+      
+      const sqlGenerationStartTime = Date.now();
       const sqlResult = await this.executeModelQuery(request, modelSelection, requestId);
+      const sqlGenerationTime = Date.now() - sqlGenerationStartTime;
       
-      // 5. Mise en cache si succès
+      this.performanceMetrics.endStep(traceId, 'sql_generation', sqlResult.success, { 
+        generationTime: sqlGenerationTime,
+        tokensUsed: sqlResult.data?.tokensUsed || 0,
+        modelUsed: modelSelection.selectedModel,
+        sqlLength: sqlResult.data?.sql?.length || 0
+      });
+
+      // === ÉTAPE 5: OPÉRATIONS CACHE (ÉCRITURE) ===
+      this.performanceMetrics.startStep(traceId, 'cache_operations', { operation: 'cache_write' });
+      
       if (sqlResult.success && sqlResult.data && request.useCache !== false) {
+        const cacheWriteStartTime = Date.now();
         await this.cacheResponse(request, sqlResult.data);
+        const cacheWriteTime = Date.now() - cacheWriteStartTime;
+        
+        this.performanceMetrics.endStep(traceId, 'cache_operations', true, { 
+          operation: 'cache_write_complete',
+          writeTime: cacheWriteTime
+        });
+      } else {
+        this.performanceMetrics.endStep(traceId, 'cache_operations', false, { 
+          operation: 'cache_write_skipped',
+          reason: sqlResult.success ? 'cache_disabled' : 'sql_generation_failed'
+        });
       }
 
-      // 6. Logging des métriques
+      // === ÉTAPE 6: FORMATAGE RÉPONSE ===
+      this.performanceMetrics.startStep(traceId, 'response_formatting', { resultCount: sqlResult.data?.results?.length || 0 });
+      
+      const responseFormatStartTime = Date.now();
+      
+      // Préparation réponse avec métriques enrichies
+      const responseData = {
+        ...sqlResult.data,
+        performanceMetrics: {
+          modelSelectionTime,
+          sqlGenerationTime,
+          totalTime: Date.now() - startTime
+        }
+      };
+      
+      const responseFormatTime = Date.now() - responseFormatStartTime;
+      this.performanceMetrics.endStep(traceId, 'response_formatting', true, { 
+        formatTime: responseFormatTime
+      });
+
+      // === FIN DU TRACING PIPELINE ===
+      const detailedTimings = await this.performanceMetrics.endPipelineTrace(
+        traceId, request.userId || 'system', request.userRole, request.query, 
+        request.complexity || 'simple', sqlResult.success, false, {
+          modelUsed: modelSelection.selectedModel,
+          tokensUsed: sqlResult.data?.tokensUsed || 0,
+          sqlLength: sqlResult.data?.sql?.length || 0
+        }
+      );
+
+      // === LOGGING MÉTRIQUES EXISTANT (PRÉSERVÉ) ===
       await this.logMetrics(
         request, 
         modelSelection.selectedModel, 
@@ -154,12 +272,37 @@ export class AIService {
         "miss"
       );
 
-      return sqlResult;
+      // === RÉPONSE ENRICHIE AVEC MÉTRIQUES ===
+      return {
+        ...sqlResult,
+        data: {
+          ...responseData,
+          performanceTrace: {
+            traceId,
+            detailedTimings,
+            cacheHit: false,
+            stepBreakdown: {
+              modelSelection: modelSelectionTime,
+              sqlGeneration: sqlGenerationTime,
+              responseFormatting: responseFormatTime
+            }
+          }
+        }
+      };
 
     } catch (error) {
-      console.error(`[AIService] Erreur génération SQL:`, error);
+      console.error(`[AIService] Erreur génération SQL (trace: ${traceId}):`, error);
       
-      // Logging de l'erreur
+      // Finaliser le tracing en erreur
+      await this.performanceMetrics.endPipelineTrace(
+        traceId, request.userId || 'system', request.userRole, request.query, 
+        request.complexity || 'simple', false, false, { 
+          error: error instanceof Error ? error.message : String(error),
+          errorType: 'unknown'
+        }
+      );
+      
+      // Logging de l'erreur (préservé)
       await this.logMetrics(request, "unknown", startTime, 0, false, "miss");
       
       return {
@@ -168,7 +311,8 @@ export class AIService {
           type: "unknown",
           message: "Erreur interne du service IA",
           details: error instanceof Error ? error.message : String(error),
-          fallbackAttempted: false
+          fallbackAttempted: false,
+          traceId // Inclure traceId pour debug
         }
       };
     }

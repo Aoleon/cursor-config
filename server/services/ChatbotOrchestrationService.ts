@@ -4,6 +4,7 @@ import { SQLEngineService } from "./SQLEngineService";
 import { BusinessContextService } from "./BusinessContextService";
 import { ActionExecutionService } from "./ActionExecutionService";
 import { EventBus } from "../eventBus";
+import { getPerformanceMetricsService } from "./PerformanceMetricsService";
 import { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { sql, eq, and, desc, gte, lte, asc } from "drizzle-orm";
@@ -97,6 +98,7 @@ export class ChatbotOrchestrationService {
   private actionExecutionService: ActionExecutionService;
   private eventBus: EventBus;
   private storage: IStorage;
+  private performanceMetrics: any;
 
   constructor(
     aiService: AIService,
@@ -114,6 +116,7 @@ export class ChatbotOrchestrationService {
     this.actionExecutionService = actionExecutionService;
     this.eventBus = eventBus;
     this.storage = storage;
+    this.performanceMetrics = getPerformanceMetricsService(storage);
   }
 
   // ========================================
@@ -122,11 +125,13 @@ export class ChatbotOrchestrationService {
 
   /**
    * Pipeline complet d'orchestration chatbot : NL → BusinessContext → AI → SQL → RBAC → Execution
+   * INSTRUMENTÉ pour tracing détaillé des performances
    */
   async processChatbotQuery(request: ChatbotQueryRequest): Promise<ChatbotQueryResponse> {
     const startTime = Date.now();
     const conversationId = crypto.randomUUID();
     const sessionId = request.sessionId || crypto.randomUUID();
+    const traceId = crypto.randomUUID();
 
     let debugInfo: any = {};
     let rbacFiltersApplied: string[] = [];
@@ -134,16 +139,36 @@ export class ChatbotOrchestrationService {
     let aiRoutingDecision = "";
     let securityChecksPassed: string[] = [];
 
+    // === INSTRUMENTATION PERFORMANCE : Démarrage tracing pipeline orchestration ===
+    this.performanceMetrics.startPipelineTrace(
+      traceId, 
+      request.userId, 
+      request.userRole, 
+      request.query,
+      this.detectQueryComplexity(request.query)
+    );
+
     try {
-      console.log(`[ChatbotOrchestration] Démarrage requête ${conversationId} pour ${request.userId} (${request.userRole})`);
+      console.log(`[ChatbotOrchestration] Démarrage requête ${conversationId} (trace: ${traceId}) pour ${request.userId} (${request.userRole})`);
 
       // ========================================
       // 1. DÉTECTION D'INTENTIONS D'ACTIONS - NOUVEAU PIPELINE
       // ========================================
+      this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'action_detection' });
+      
+      const actionDetectionStartTime = Date.now();
       const actionIntention = this.actionExecutionService.detectActionIntention(request.query);
+      const actionDetectionTime = Date.now() - actionDetectionStartTime;
       
       if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
         console.log(`[ChatbotOrchestration] Action détectée: ${actionIntention.actionType} sur ${actionIntention.entity}`);
+        
+        this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
+          step: 'action_detected',
+          detectionTime: actionDetectionTime,
+          actionType: actionIntention.actionType,
+          confidence: actionIntention.confidence
+        });
         
         // Proposer l'action au lieu d'exécuter une requête SQL
         const actionDefinition = await this.actionExecutionService.analyzeActionWithAI(request.query, request.userRole);
@@ -167,6 +192,15 @@ export class ChatbotOrchestrationService {
 
           const actionProposal = await this.actionExecutionService.proposeAction(proposeActionRequest);
 
+          // Finaliser le tracing pour action
+          await this.performanceMetrics.endPipelineTrace(
+            traceId, request.userId, request.userRole, request.query, 
+            this.detectQueryComplexity(request.query), true, false, { 
+              actionFlow: true, 
+              actionType: actionIntention.actionType 
+            }
+          );
+
           // Retourner une réponse spécialisée pour les actions
           return this.createActionProposalResponse(
             conversationId,
@@ -177,10 +211,18 @@ export class ChatbotOrchestrationService {
           );
         }
       }
+      
+      this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
+        step: 'action_detection_complete', 
+        detectionTime: actionDetectionTime,
+        actionDetected: false 
+      });
 
       // ========================================
       // 2. VALIDATION RBAC UTILISATEUR (pipeline standard)
       // ========================================
+      this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'rbac_validation' });
+      
       const rbacStartTime = Date.now();
       
       const userPermissions = await this.rbacService.getUserPermissions(
@@ -188,7 +230,22 @@ export class ChatbotOrchestrationService {
         request.userRole
       );
 
+      const rbacTime = Date.now() - rbacStartTime;
+
       if (!userPermissions || Object.keys(userPermissions.permissions).length === 0) {
+        this.performanceMetrics.endStep(traceId, 'context_generation', false, { 
+          step: 'rbac_failed', 
+          rbacTime,
+          reason: 'insufficient_permissions'
+        });
+        
+        await this.performanceMetrics.endPipelineTrace(
+          traceId, request.userId, request.userRole, request.query, 
+          this.detectQueryComplexity(request.query), false, false, { 
+            rbacError: true 
+          }
+        );
+
         return this.createErrorResponse(
           conversationId,
           request.query,
@@ -199,13 +256,21 @@ export class ChatbotOrchestrationService {
       }
 
       securityChecksPassed.push("rbac_permissions_validated");
+      this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
+        step: 'rbac_validated', 
+        rbacTime,
+        permissionsCount: Object.keys(userPermissions.permissions).length
+      });
+      
       if (request.options?.includeDebugInfo) {
-        debugInfo.rbac_check_ms = Date.now() - rbacStartTime;
+        debugInfo.rbac_check_ms = rbacTime;
       }
 
       // ========================================
       // 3. GÉNÉRATION CONTEXTE MÉTIER INTELLIGENT
       // ========================================
+      this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'business_context' });
+      
       const contextStartTime = Date.now();
 
       const businessContextRequest = {
@@ -223,18 +288,38 @@ export class ChatbotOrchestrationService {
         businessContextRequest
       );
 
+      const contextTime = Date.now() - contextStartTime;
+
       if (!businessContextResponse.success || !businessContextResponse.context) {
         console.warn("[ChatbotOrchestration] Échec génération contexte métier, continuation avec contexte minimal");
+        
+        this.performanceMetrics.endStep(traceId, 'context_generation', false, { 
+          step: 'business_context_failed', 
+          contextTime,
+          reason: 'context_generation_error'
+        });
       } else {
         businessContextLoaded = true;
+        
+        this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
+          step: 'business_context_complete', 
+          contextTime,
+          contextSize: JSON.stringify(businessContextResponse.context).length
+        });
+        
         if (request.options?.includeDebugInfo) {
-          debugInfo.context_generation_ms = Date.now() - contextStartTime;
+          debugInfo.context_generation_ms = contextTime;
         }
       }
 
       // ========================================
       // 4. GÉNÉRATION ET EXÉCUTION SQL VIA MOTEUR SÉCURISÉ
       // ========================================
+      this.performanceMetrics.startStep(traceId, 'sql_execution', { 
+        step: 'sql_generation_and_execution',
+        hasContext: businessContextLoaded
+      });
+      
       const sqlStartTime = Date.now();
 
       const sqlQueryRequest = {
@@ -252,6 +337,21 @@ export class ChatbotOrchestrationService {
       const sqlGenerationTime = Date.now() - sqlStartTime;
 
       if (!sqlResult.success) {
+        this.performanceMetrics.endStep(traceId, 'sql_execution', false, { 
+          sqlGenerationTime,
+          errorType: sqlResult.error?.type,
+          errorMessage: sqlResult.error?.message
+        });
+        
+        // Finaliser le tracing en erreur
+        await this.performanceMetrics.endPipelineTrace(
+          traceId, request.userId, request.userRole, request.query, 
+          this.detectQueryComplexity(request.query), false, false, { 
+            sqlError: true, 
+            errorType: sqlResult.error?.type 
+          }
+        );
+
         await this.logConversation({
           id: conversationId,
           userId: request.userId,
@@ -280,9 +380,22 @@ export class ChatbotOrchestrationService {
         );
       }
 
+      this.performanceMetrics.endStep(traceId, 'sql_execution', true, { 
+        sqlGenerationTime,
+        resultCount: sqlResult.results?.length || 0,
+        sqlLength: sqlResult.sql?.length || 0,
+        cacheHit: sqlResult.metadata?.cacheHit || false
+      });
+
       // ========================================
       // 5. GÉNÉRATION RÉPONSE CONVERSATIONNELLE 
       // ========================================
+      this.performanceMetrics.startStep(traceId, 'response_formatting', { 
+        resultCount: sqlResult.results?.length || 0
+      });
+
+      const responseFormattingStartTime = Date.now();
+
       const explanation = this.generateExplanation(
         request.query,
         sqlResult.results || [],
@@ -296,10 +409,30 @@ export class ChatbotOrchestrationService {
         sqlResult.results || []
       );
 
+      const responseFormattingTime = Date.now() - responseFormattingStartTime;
+
+      this.performanceMetrics.endStep(traceId, 'response_formatting', true, { 
+        responseFormattingTime,
+        explanationLength: explanation.length,
+        suggestionsCount: suggestions.length
+      });
+
       // ========================================
-      // 6. LOGGING ET MÉTRIQUES
+      // 6. LOGGING ET MÉTRIQUES ENRICHIES
       // ========================================
       const totalExecutionTime = Date.now() - startTime;
+
+      // Finaliser le tracing complet avec succès
+      const detailedTimings = await this.performanceMetrics.endPipelineTrace(
+        traceId, request.userId, request.userRole, request.query, 
+        this.detectQueryComplexity(request.query), true, sqlResult.metadata?.cacheHit || false, {
+          modelUsed: sqlResult.metadata?.aiModelUsed,
+          resultCount: sqlResult.results?.length || 0,
+          sqlLength: sqlResult.sql?.length || 0,
+          businessContextLoaded,
+          rbacChecksPerformed: securityChecksPassed.length
+        }
+      );
 
       await this.logConversation({
         id: conversationId,
@@ -330,7 +463,7 @@ export class ChatbotOrchestrationService {
         "query",
         totalExecutionTime,
         true,
-        0 // TODO: récupérer tokens utilisés du SQLEngine
+        sqlResult.metadata?.tokensUsed || 0 // Utiliser les tokens du résultat SQL
       );
 
       // ========================================
@@ -371,7 +504,7 @@ export class ChatbotOrchestrationService {
         cache_hit: sqlResult.metadata?.cacheHit || false
       };
 
-      // Debug info si demandé
+      // Debug info si demandé - ENRICHI avec métriques détaillées
       if (request.options?.includeDebugInfo) {
         response.debug_info = {
           rbac_filters_applied: sqlResult.rbacFiltersApplied || [],
@@ -381,16 +514,53 @@ export class ChatbotOrchestrationService {
           performance_metrics: {
             context_generation_ms: debugInfo.context_generation_ms || 0,
             sql_generation_ms: sqlGenerationTime,
+            response_formatting_ms: responseFormattingTime,
             query_execution_ms: sqlResult.executionTime || 0,
             total_orchestration_ms: totalExecutionTime
+          },
+          // === NOUVELLES MÉTRIQUES DÉTAILLÉES ===
+          detailed_timings: detailedTimings,
+          trace_id: traceId,
+          pipeline_steps_breakdown: {
+            action_detection_time: actionDetectionTime || 0,
+            rbac_validation_time: debugInfo.rbac_check_ms || 0,
+            business_context_time: debugInfo.context_generation_ms || 0,
+            sql_execution_time: sqlGenerationTime,
+            response_formatting_time: responseFormattingTime
           }
         };
       }
 
+      // === ENRICHISSEMENT RÉPONSE AVEC MÉTRIQUES PERFORMANCE ===
+      response.performance_trace = {
+        trace_id: traceId,
+        detailed_timings: detailedTimings,
+        cache_performance: {
+          hit: sqlResult.metadata?.cacheHit || false,
+          retrieval_time_ms: sqlResult.metadata?.cacheRetrievalTime || 0
+        },
+        complexity_detected: this.detectQueryComplexity(request.query),
+        slo_compliance: {
+          target_ms: this.getSLOTargetForComplexity(this.detectQueryComplexity(request.query)),
+          actual_ms: totalExecutionTime,
+          compliant: totalExecutionTime <= this.getSLOTargetForComplexity(this.detectQueryComplexity(request.query))
+        }
+      };
+
       return response;
 
     } catch (error) {
-      console.error(`[ChatbotOrchestration] Erreur pipeline complet:`, error);
+      console.error(`[ChatbotOrchestration] Erreur pipeline complet (trace: ${traceId}):`, error);
+      
+      // === FINALISER LE TRACING EN ERREUR ===
+      await this.performanceMetrics.endPipelineTrace(
+        traceId, request.userId, request.userRole, request.query, 
+        this.detectQueryComplexity(request.query), false, false, { 
+          error: error instanceof Error ? error.message : String(error),
+          errorType: 'orchestration_error',
+          errorStack: error instanceof Error ? error.stack : undefined
+        }
+      );
       
       // Logging d'erreur
       await this.logConversation({
@@ -421,14 +591,55 @@ export class ChatbotOrchestrationService {
         0
       );
 
-      return this.createErrorResponse(
+      const errorResponse = this.createErrorResponse(
         conversationId,
         request.query,
         "unknown",
         error instanceof Error ? error.message : String(error),
         "Une erreur inattendue s'est produite. Veuillez réessayer."
       );
+
+      // Ajouter trace ID pour debug
+      (errorResponse as any).trace_id = traceId;
+      return errorResponse;
     }
+  }
+
+  // ========================================
+  // MÉTHODES HELPERS SLO ET PERFORMANCE
+  // ========================================
+
+  /**
+   * Retourne les seuils SLO par complexité de requête
+   */
+  private getSLOTargetForComplexity(complexity: string): number {
+    const SLO_TARGETS = {
+      'simple': 5000,    // 5 secondes
+      'complex': 10000,  // 10 secondes  
+      'expert': 15000    // 15 secondes (cas extrêmes)
+    };
+    
+    return SLO_TARGETS[complexity as keyof typeof SLO_TARGETS] || SLO_TARGETS.complex;
+  }
+
+  /**
+   * Calcule les métriques de conformité SLO
+   */
+  private calculateSLOCompliance(executionTime: number, complexity: string): {
+    target_ms: number;
+    actual_ms: number;
+    compliant: boolean;
+    violation_percentage?: number;
+  } {
+    const target = this.getSLOTargetForComplexity(complexity);
+    const compliant = executionTime <= target;
+    
+    return {
+      target_ms: target,
+      actual_ms: executionTime,
+      compliant,
+      violation_percentage: compliant ? undefined : ((executionTime - target) / target) * 100
+    };
   }
 
   // ========================================
@@ -942,7 +1153,7 @@ export class ChatbotOrchestrationService {
         errorCount: success ? 0 : 1,
         avgResponseTimeMs: responseTime,
         totalTokensUsed: tokensUsed,
-        estimatedCost: "0.0000" // TODO: calculer le coût réel
+        estimatedCost: parseFloat("0.0000") // TODO: calculer le coût réel
       });
     } catch (error) {
       console.error("[ChatbotOrchestration] Erreur logging métriques:", error);

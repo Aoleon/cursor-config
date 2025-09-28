@@ -56,6 +56,8 @@ import MondayMigrationDashboard from "@/pages/monday-migration-dashboard";
 // Import de la navigation intelligente
 import SmartLanding from "@/components/navigation/SmartLanding";
 import AppLayout from "@/components/layout/AppLayout";
+// Import du portail fournisseur
+import SupplierPortal from "@/pages/supplier-portal";
 
 function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -190,6 +192,12 @@ function Router() {
       <Route path="/date-intelligence/performance">
         <Redirect to="/dashboard/executive?tab=intelligence" />
       </Route>
+      
+      {/* ============= PORTAIL FOURNISSEUR - Accès public sécurisé ============= */}
+      <Route path="/supplier-portal/:token">
+        {(params) => <SupplierPortal />}
+      </Route>
+      
       <Route component={NotFound} />
     </Switch>
   );

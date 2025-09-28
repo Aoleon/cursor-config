@@ -8108,6 +8108,7 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
   /**
    * GET /api/supplier-workflow/sessions/public/:token
    * Accès public pour fournisseurs via token sécurisé
+   * CORRECTIF SÉCURITÉ CRITIQUE - Validation stricte + premier accès
    */
   app.get('/api/supplier-workflow/sessions/public/:token',
     validateParams(z.object({
@@ -8117,37 +8118,144 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
       try {
         const { token } = req.params;
         
-        const session = await storage.getSupplierQuoteSessionByToken(token);
-        if (!session) {
-          throw createError.unauthorized('Token invalide ou expiré');
+        // CORRECTIF SÉCURITÉ: Validation plus stricte du token
+        if (!token || token.length < 32) {
+          throw createError.notFound('Token non trouvé');
         }
         
-        // Vérifier que la session n'est pas expirée
+        const session = await storage.getSupplierQuoteSessionByToken(token);
+        if (!session) {
+          // CORRECTIF SÉCURITÉ: 404 pour token inexistant (vs 401)
+          throw createError.notFound('Session non trouvée');
+        }
+        
+        // CORRECTIF SÉCURITÉ: Vérification expiration avant tout autre check
         if (session.expiresAt && new Date() > session.expiresAt) {
           throw createError.unauthorized('Session expirée');
         }
         
+        // CORRECTIF SÉCURITÉ: Validation du statut de session
         if (session.status !== 'active') {
           throw createError.forbidden('Session non active');
         }
         
-        // Retourner les informations publiques de la session
+        // CORRECTIF WORKFLOW: Marquer le premier accès côté serveur
+        let isFirstAccess = false;
+        if (!session.firstAccessAt) {
+          isFirstAccess = true;
+          // Mettre à jour le premier accès dans la session
+          await storage.updateSupplierQuoteSession(session.id, {
+            firstAccessAt: new Date(),
+            lastAccessAt: new Date()
+          });
+          
+          // CORRECTIF ANALYTICS: Log pour tracking workflow
+          console.log(`[Supplier Workflow] Premier accès détecté - Session: ${session.id}, Supplier: ${session.supplierId}, AO: ${session.aoId}`);
+          
+          // Émettre événement pour analytics si eventBus disponible
+          if (eventBus) {
+            eventBus.emit('supplier_session_first_access', {
+              sessionId: session.id,
+              supplierId: session.supplierId,
+              aoId: session.aoId,
+              aoLotId: session.aoLotId,
+              timestamp: new Date()
+            });
+          }
+        } else {
+          // Mettre à jour la dernière visite
+          await storage.updateSupplierQuoteSession(session.id, {
+            lastAccessAt: new Date()
+          });
+        }
+        
+        // Récupérer les données complètes après mise à jour
+        const updatedSession = await storage.getSupplierQuoteSessionByToken(token);
+        if (!updatedSession) {
+          throw createError.database('Erreur lors de la mise à jour de session');
+        }
+        
+        // Récupérer les documents associés à la session
+        const documents = await storage.getDocumentsBySession(session.id);
+        
+        // CORRECTIF STRUCTURE: Retourner les informations publiques étendues
         const publicSession = {
-          id: session.id,
-          aoId: session.aoId,
-          aoLotId: session.aoLotId,
-          status: session.status,
-          expiresAt: session.expiresAt,
-          allowedUploads: session.allowedUploads,
-          instructions: session.instructions,
-          supplier: session.supplier,
-          aoLot: session.aoLot
+          // Session info
+          id: updatedSession.id,
+          status: updatedSession.status,
+          tokenExpiresAt: updatedSession.expiresAt?.toISOString(),
+          invitedAt: updatedSession.createdAt?.toISOString(),
+          firstAccessAt: updatedSession.firstAccessAt?.toISOString() || null,
+          lastAccessAt: updatedSession.lastAccessAt?.toISOString() || null,
+          submittedAt: updatedSession.submittedAt?.toISOString() || null,
+          
+          // AO/Lot details (données enrichies nécessaires pour le frontend)
+          ao: {
+            id: updatedSession.aoId,
+            reference: updatedSession.aoLot?.ao?.reference || 'N/A',
+            title: updatedSession.aoLot?.ao?.title || 'N/A',
+            description: updatedSession.aoLot?.ao?.description || '',
+            publicationDate: updatedSession.aoLot?.ao?.publicationDate?.toISOString() || '',
+            limitDate: updatedSession.aoLot?.ao?.limitDate?.toISOString() || '',
+            status: updatedSession.aoLot?.ao?.status || 'active'
+          },
+          
+          lot: {
+            id: updatedSession.aoLotId,
+            reference: updatedSession.aoLot?.reference || 'N/A',
+            title: updatedSession.aoLot?.title || 'N/A',
+            description: updatedSession.aoLot?.description || '',
+            quantity: updatedSession.aoLot?.quantity || 1,
+            unit: updatedSession.aoLot?.unit || 'unité',
+            estimatedPrice: updatedSession.aoLot?.estimatedPrice || 0,
+            technicalSpecs: updatedSession.aoLot?.technicalSpecs || {}
+          },
+          
+          // Supplier info
+          supplier: {
+            id: updatedSession.supplierId,
+            name: updatedSession.supplier?.name || 'N/A',
+            contactEmail: updatedSession.supplier?.contactEmail || 'N/A',
+            contactName: updatedSession.supplier?.contactName || 'N/A',
+            phone: updatedSession.supplier?.phone || 'N/A'
+          },
+          
+          // Documents uploaded
+          documents: documents.map(doc => ({
+            id: doc.id,
+            filename: doc.fileName,
+            originalName: doc.fileName,
+            documentType: doc.documentType,
+            fileSize: doc.fileSize,
+            status: doc.status,
+            uploadedAt: doc.uploadedAt?.toISOString(),
+            validatedAt: doc.validatedAt?.toISOString() || null,
+            validatedBy: doc.validatedBy || null
+          })),
+          
+          // Configuration
+          allowedUploads: updatedSession.allowedUploads,
+          instructions: updatedSession.instructions,
+          
+          // Indicateurs pour le frontend
+          isFirstAccess
         };
         
         sendSuccess(res, publicSession, 'Session récupérée avec succès');
       } catch (error) {
         console.error('[Supplier Workflow] Erreur accès session publique:', error);
-        throw createError.database('Erreur lors de l\'accès à la session');
+        
+        // CORRECTIF SÉCURITÉ: Gestion d'erreur appropriée selon le type
+        if (error.name === 'NotFoundError') {
+          throw error; // Propager 404
+        } else if (error.name === 'UnauthorizedError') {
+          throw error; // Propager 401
+        } else if (error.name === 'ForbiddenError') {
+          throw error; // Propager 403
+        } else {
+          // Erreur générique -> 500
+          throw createError.database('Erreur lors de l\'accès à la session');
+        }
       }
     })
   );

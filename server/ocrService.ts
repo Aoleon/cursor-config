@@ -15,6 +15,8 @@ import { contextualOCREngine, type ContextualOCRResult } from './services/Contex
 import type { 
   AOFieldsExtracted, 
   SupplierQuoteFields, 
+  SupplierQuoteLineItem,
+  AOLot,
   FieldMappingResult, 
   ValidationError, 
   FieldCorrection 
@@ -95,160 +97,9 @@ export interface SupplierQuoteOCRResult {
   rawData: any;
 }
 
-export interface SupplierQuoteFields {
-  // Informations fournisseur
-  supplierName?: string;
-  supplierAddress?: string;
-  supplierContact?: string;
-  supplierEmail?: string;
-  supplierPhone?: string;
-  supplierSiret?: string;
-  
-  // Référence et dates du devis
-  quoteReference?: string;
-  quoteDate?: string;
-  validityDate?: string;
-  validityPeriod?: number; // en jours
-  
-  // Montants financiers
-  totalAmountHT?: number;
-  totalAmountTTC?: number;
-  vatRate?: number;
-  currency?: string;
-  
-  // Détails des lignes de devis
-  lineItems?: SupplierQuoteLineItem[];
-  
-  // Délais et livraison
-  deliveryDelay?: number; // en jours
-  deliveryTerms?: string;
-  productionDelay?: number; // en jours
-  
-  // Conditions commerciales
-  paymentTerms?: string;
-  paymentDelay?: number; // en jours
-  warranty?: string;
-  warrantyPeriod?: number; // en mois
-  
-  // Matériaux et spécifications techniques
-  materials?: MaterialSpec[];
-  colors?: ColorSpec[];
-  technicalSpecs?: Record<string, any>;
-  
-  // Certifications et normes
-  certifications?: string[];
-  standards?: string[];
-  
-  // Performance énergétique (menuiserie)
-  thermalPerformance?: {
-    uw?: number; // coefficient thermique
-    aev?: string; // classement air-eau-vent
-    other?: Record<string, string>;
-  };
-  
-  // Notes et commentaires
-  notes?: string;
-  specialConditions?: string[];
-  
-  // Métadonnées extraction
-  extractionMethod: 'native-text' | 'ocr';
-  processingErrors?: string[];
-}
 
-interface SupplierQuoteLineItem {
-  designation: string;
-  quantity?: number;
-  unit?: string;
-  unitPrice?: number;
-  totalPrice?: number;
-  materialType?: string;
-  specifications?: string;
-  reference?: string;
-}
 
-interface AOLot {
-  numero: string;
-  designation: string;
-  type?: string;
-  montantEstime?: string;
-}
 
-interface AOFieldsExtracted {
-  // Informations générales
-  reference?: string;
-  intituleOperation?: string;
-  client?: string;
-  location?: string;
-  
-  // Dates
-  dateRenduAO?: string;
-  dateAcceptationAO?: string;
-  demarragePrevu?: string;
-  deadline?: string;
-  dateOS?: string;
-  delaiContractuel?: string;
-  dateLimiteRemise?: string;
-  
-  // Maître d'ouvrage
-  maitreOuvrage?: {
-    nom?: string;
-    adresse?: string;
-    contact?: string;
-    email?: string;
-    telephone?: string;
-  };
-  maitreOuvrageNom?: string;
-  maitreOuvrageAdresse?: string;
-  maitreOuvrageContact?: string;
-  maitreOuvrageEmail?: string;
-  maitreOuvragePhone?: string;
-  
-  // Maître d'œuvre
-  maitreOeuvre?: {
-    nom?: string;
-    contact?: string;
-  };
-  maitreOeuvreNom?: string;
-  maitreOeuvreContact?: string;
-  
-  // Techniques
-  lotConcerne?: string;
-  menuiserieType?: string;
-  montantEstime?: string;
-  typeMarche?: string;
-  
-  // Lots détaillés
-  lots?: AOLot[];
-  
-  // Source et contexte
-  plateformeSource?: string;
-  departement?: string;
-  
-  // Éléments techniques
-  bureauEtudes?: string;
-  bureauControle?: string;
-  sps?: string;
-  
-  // Détection automatique des documents
-  cctpDisponible?: boolean;
-  plansDisponibles?: boolean;
-  dpgfClientDisponible?: boolean;
-  dceDisponible?: boolean;
-  
-  // Critères techniques spéciaux
-  specialCriteria?: {
-    batimentPassif: boolean;
-    isolationRenforcee: boolean;
-    precadres: boolean;
-    voletsExterieurs: boolean;
-    coupeFeu: boolean;
-    evidences?: Record<string, string[]>; // extraits de texte correspondants
-  };
-
-  // Nouveaux champs matériaux et couleurs - PATTERNS AVANCÉS OCR
-  materials?: MaterialSpec[];
-  colors?: ColorSpec[];
-}
 
 // Patterns de reconnaissance pour les AO français (paramétrable)
 const AO_PATTERNS: Record<string, RegExp[]> = {

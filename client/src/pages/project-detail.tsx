@@ -13,8 +13,9 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   ArrowLeft, Calendar, Clock, User, MapPin, Euro, 
-  CheckCircle, AlertCircle, Play, Pause, Settings, ExternalLink
+  CheckCircle, AlertCircle, Play, Pause, Settings, ExternalLink, Hash, Building
 } from "lucide-react";
+import MondayFields from "@/components/projects/monday-fields";
 import { format, differenceInDays, isAfter, isBefore } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -248,10 +249,31 @@ export default function ProjectDetail() {
           ]}
         />
         
-        <div className="px-6 py-6 space-y-6">
-          {/* Vue d'ensemble du projet */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
+        <div className="px-6 py-6">
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Vue d'ensemble
+              </TabsTrigger>
+              <TabsTrigger value="timeline" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Timeline
+              </TabsTrigger>
+              <TabsTrigger value="monday" className="flex items-center gap-2">
+                <Hash className="h-4 w-4" />
+                Champs Monday.com
+              </TabsTrigger>
+              <TabsTrigger value="documents" className="flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                Documents
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="overview" className="space-y-6">
+              {/* Vue d'ensemble du projet */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
               <Card data-testid="project-overview">
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -362,12 +384,12 @@ export default function ProjectDetail() {
                 </CardContent>
               </Card>
 
-              {/* Section Informations Monday.com */}
+              {/* Section Informations Monday.com - Version Compact */}
               <Card data-testid="monday-info-section">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <ExternalLink className="h-5 w-5" />
-                    Informations Monday.com
+                    <Hash className="h-5 w-5" />
+                    Aperçu Monday.com
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -389,13 +411,38 @@ export default function ProjectDetail() {
                       <p className="text-sm">{project.buildingCount ?? "Non défini"}</p>
                     </div>
                   </div>
+                  
+                  {/* Aperçu compact des nouveaux champs */}
+                  <div className="mt-4 pt-4 border-t">
+                    <MondayFields 
+                      projectId={project.id} 
+                      mode="compact"
+                    />
+                  </div>
+                  
+                  <div className="flex justify-center mt-4">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        const tabElement = document.querySelector('[data-state="inactive"][data-value="monday"]') as HTMLElement;
+                        if (tabElement) tabElement.click();
+                      }}
+                      data-testid="button-view-monday-details"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Voir tous les champs Monday.com
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-          
-          {/* Timeline des tâches */}
-          <Card>
+              </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="timeline" className="space-y-6">
+              {/* Timeline des tâches */}
+              <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="w-5 h-5" />
@@ -500,9 +547,40 @@ export default function ProjectDetail() {
                     </div>
                   );
                 })}
+                </div>
+              </CardContent>
+            </Card>
+            </TabsContent>
+            
+            <TabsContent value="monday" className="space-y-6">
+              {/* Section complète des champs Monday.com */}
+              <div data-testid="monday-fields-section">
+                <MondayFields 
+                  projectId={project.id} 
+                  mode="full"
+                />
               </div>
-            </CardContent>
-          </Card>
+            </TabsContent>
+            
+            <TabsContent value="documents" className="space-y-6">
+              {/* Section Documents - à implémenter */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building className="h-5 w-5" />
+                    Documents et Fichiers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8" data-testid="documents-placeholder">
+                    <Building className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium">Section Documents</h3>
+                    <p className="text-muted-foreground">Cette section sera développée ultérieurement.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
     </>
   );

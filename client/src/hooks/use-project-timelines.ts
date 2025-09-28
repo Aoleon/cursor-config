@@ -79,7 +79,7 @@ export function useProjectTimelines(filters?: GanttFilters) {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/project-timelines'] });
       
-      const { affectedPhases, totalDelayDays } = data.data || {};
+      const { affectedPhases, totalDelayDays } = data || {};
       
       toast({
         title: "🔄 Recalcul en cascade terminé",
@@ -138,8 +138,8 @@ export function useProjectTimelines(filters?: GanttFilters) {
 
   return {
     // Données
-    timelines: getFilteredTimelines(timelines?.data),
-    allTimelines: timelines?.data || [],
+    timelines: getFilteredTimelines(timelines),
+    allTimelines: timelines || [],
     isLoading,
     error,
     
@@ -153,7 +153,7 @@ export function useProjectTimelines(filters?: GanttFilters) {
     isRecalculating: recalculateFromPhaseMutation.isPending,
     
     // Statistiques
-    stats: getTimelineStats(timelines?.data),
+    stats: getTimelineStats(timelines),
   };
 }
 
@@ -167,7 +167,7 @@ export function useProjectTimeline(timelineId: string) {
   });
 
   return {
-    timeline: timeline?.data,
+    timeline: timeline,
     isLoading,
     refresh: () => queryClient.invalidateQueries({ 
       queryKey: ['api', 'project-timelines', timelineId] 

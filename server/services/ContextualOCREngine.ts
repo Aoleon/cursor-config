@@ -58,6 +58,49 @@ export interface ContextualContext {
 }
 
 // ========================================
+// INTERFACES POUR MÉTRIQUES DE PERFORMANCE OCR
+// ========================================
+
+export interface OCRPerformanceMetrics {
+  documentType: 'ao' | 'supplier_quote';
+  timestamp: Date;
+  extractionAccuracy: number;
+  fieldCompleteness: number;
+  contextualRelevance: number;
+  autoCompletionEfficiency: number;
+  globalScore: number;
+  jlmSpecificMetrics: {
+    departmentRecognitionAccuracy: number;
+    materialExtractionScore: number;
+    specialCriteriaDetection: number;
+    contactAutoCompletionRate: number;
+  };
+  processingMetrics: {
+    processingTime: number;
+    mappingsCount: number;
+    errorsCount: number;
+    autoCompletedFieldsCount: number;
+    suggestionsCount: number;
+  };
+  qualityIndicators: {
+    hasHighConfidenceFields: boolean;
+    hasCriticalErrors: boolean;
+    needsManualReview: boolean;
+    isJLMOptimized: boolean;
+  };
+}
+
+export interface JLMScoreComponents {
+  extractionAccuracy: number;
+  fieldCompleteness: number;
+  contextualRelevance: number;
+  autoCompletionEfficiency: number;
+  jlmSpecificScore: number;
+  departmentRecognitionAccuracy: number;
+  materialExtractionScore: number;
+}
+
+// ========================================
 // MOTEUR DE CONTEXTE INTELLIGENT OCR
 // ========================================
 
@@ -84,15 +127,15 @@ export class ContextualOCREngine {
       ]);
 
       // Extraire les valeurs uniques pour mapping
-      const knownClients = [...new Set(aos.map(ao => ao.client).filter(Boolean))];
-      const knownLocations = [...new Set([
+      const knownClients = Array.from(new Set(aos.map(ao => ao.client).filter(Boolean)));
+      const knownLocations = Array.from(new Set([
         ...aos.map(ao => ao.location).filter(Boolean),
         ...projects.map(p => p.location).filter(Boolean)
-      ])];
-      const knownDepartements = [...new Set(aos.map(ao => ao.departement).filter(Boolean))];
-      const menuiserieTypes = [...new Set(aos.map(ao => ao.menuiserieType).filter(Boolean))];
-      const bureauEtudesOptions = [...new Set(aos.map(ao => ao.bureauEtudes).filter(Boolean))];
-      const bureauControleOptions = [...new Set(aos.map(ao => ao.bureauControle).filter(Boolean))];
+      ]));
+      const knownDepartements = Array.from(new Set(aos.map(ao => ao.departement).filter(Boolean)));
+      const menuiserieTypes = Array.from(new Set(aos.map(ao => ao.menuiserieType).filter(Boolean)));
+      const bureauEtudesOptions = Array.from(new Set(aos.map(ao => ao.bureauEtudes).filter(Boolean))) as string[];
+      const bureauControleOptions = Array.from(new Set(aos.map(ao => ao.bureauControle).filter(Boolean))) as string[];
 
       this.context = {
         existingAos: aos,
@@ -325,37 +368,74 @@ export class ContextualOCREngine {
     const set1 = new Set(str1.split(' '));
     const set2 = new Set(str2.split(' '));
     
-    const intersection = new Set([...set1].filter(x => set2.has(x)));
-    const union = new Set([...set1, ...set2]);
+    const intersection = new Set(Array.from(set1).filter(x => set2.has(x)));
+    const union = new Set([...Array.from(set1), ...Array.from(set2)]);
     
     return intersection.size / union.size;
   }
 
   /**
-   * Infère le département depuis la localisation
+   * Infère le département depuis la localisation - VERSION ENRICHIE JLM
    */
   private inferDepartementFromLocation(location: string): string | null {
-    const locationLower = location.toLowerCase();
+    const locationLower = location.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     
-    // Mapping des noms de villes/départements connus JLM (50 et 62)
+    // Mapping étendu des noms de villes/départements connus JLM (50 et 62) + zones limitrophes
     const departementMappings: Record<string, string> = {
+      // Département 50 - Manche
       'manche': '50',
-      'saint-lô': '50',
-      'cherbourg': '50',
+      'saint-lo': '50', 'saint lo': '50', 'st-lo': '50',
+      'cherbourg': '50', 'cherbourg-en-cotentin': '50', 'cherbourg octeville': '50',
       'avranches': '50',
       'coutances': '50',
-      'pas-de-calais': '62',
+      'granville': '50',
+      'valognes': '50',
+      'carentan': '50',
+      'barneville': '50',
+      'mortain': '50',
+      'villedieu': '50',
+      
+      // Département 62 - Pas-de-Calais  
+      'pas-de-calais': '62', 'pas de calais': '62',
       'arras': '62',
       'calais': '62',
-      'boulogne': '62',
-      'béthune': '62',
+      'boulogne': '62', 'boulogne-sur-mer': '62',
+      'bethune': '62',
       'lens': '62',
-      'liévin': '62',
-      'henin': '62'
+      'lievin': '62',
+      'henin': '62', 'henin-beaumont': '62',
+      'saint-omer': '62', 'st-omer': '62',
+      'bruay': '62', 'bruay-la-buissiere': '62',
+      'carvin': '62',
+      'billy-montigny': '62',
+      'wingles': '62',
+      'noyelles': '62',
+      
+      // Zones limitrophes pertinentes pour JLM
+      'dunkerque': '59', // Nord - proche zone d'activité
+      'lille': '59',
+      'valenciennes': '59',
+      'cambrai': '59',
+      'douai': '59',
+      
+      // Normandie proche
+      'caen': '14',
+      'bayeux': '14',
+      'lisieux': '14'
     };
 
+    // Recherche par mot-clé avec priorité aux correspondances exactes
+    for (const [keyword, dept] of Object.entries(departementMappings)) {
+      if (locationLower === keyword || locationLower.includes(' ' + keyword + ' ') || locationLower.startsWith(keyword + ' ') || locationLower.endsWith(' ' + keyword)) {
+        console.log(`[ContextualOCR] Département inféré: ${dept} depuis '${keyword}' dans '${location}'`);
+        return dept;
+      }
+    }
+    
+    // Recherche par inclusion partielle (moins prioritaire)
     for (const [keyword, dept] of Object.entries(departementMappings)) {
       if (locationLower.includes(keyword)) {
+        console.log(`[ContextualOCR] Département inféré (partiel): ${dept} depuis '${keyword}' dans '${location}'`);
         return dept;
       }
     }
@@ -364,43 +444,100 @@ export class ContextualOCREngine {
   }
 
   /**
-   * Auto-complète les contacts depuis les données maître
+   * Auto-complète les contacts depuis les données maître - VERSION OPTIMISÉE JLM
    */
   private async autoCompleteContactsFromMaster(
     fields: AOFieldsExtracted,
     autoCompletedFields: string[],
     mappingResults: FieldMappingResult[]
   ): Promise<void> {
-    // Chercher un AO similaire pour le même client/location
-    const similarAO = this.context!.existingAos.find(ao => 
-      ao.client === fields.client && ao.location === fields.location
-    );
+    console.log('[ContextualOCR] Auto-complétion intelligente des contacts pour JLM...');
+    
+    // Stratégie multi-niveau pour trouver des AOs similaires
+    const similarityStrategies = [
+      // Niveau 1: Client + localisation exacte (priorité max)
+      (ao: any) => ao.client === fields.client && ao.location === fields.location,
+      
+      // Niveau 2: Même client + même département
+      (ao: any) => ao.client === fields.client && ao.departement === fields.departement,
+      
+      // Niveau 3: Même département + même type de menuiserie 
+      (ao: any) => ao.departement === fields.departement && ao.menuiserieType === fields.menuiserieType,
+      
+      // Niveau 4: Client connu avec localisation proche (correspondance floue)
+      (ao: any) => ao.client === fields.client && this.isLocationProximate(ao.location, fields.location),
+      
+      // Niveau 5: Type de menuiserie similaire même région
+      (ao: any) => ao.menuiserieType === fields.menuiserieType && this.isSameRegion(ao.departement, fields.departement)
+    ];
+    
+    let bestMatch: any = null;
+    let matchStrategy = -1;
+    
+    // Appliquer les stratégies par ordre de priorité
+    for (let i = 0; i < similarityStrategies.length && !bestMatch; i++) {
+      bestMatch = this.context!.existingAos.find(similarityStrategies[i]);
+      if (bestMatch) {
+        matchStrategy = i;
+        console.log(`[ContextualOCR] Correspondance trouvée avec stratégie niveau ${i + 1}`);
+      }
+    }
 
-    if (similarAO) {
-      // Auto-compléter les contacts manquants
-      if (!fields.bureauEtudes && similarAO.bureauEtudes) {
-        fields.bureauEtudes = similarAO.bureauEtudes;
+    if (bestMatch) {
+      const confidence = this.calculateAutoCompletionConfidence(matchStrategy);
+      
+      // Auto-compléter Bureau d'Études avec validation
+      if (!fields.bureauEtudes && bestMatch.bureauEtudes) {
+        fields.bureauEtudes = bestMatch.bureauEtudes;
         autoCompletedFields.push('bureauEtudes');
         mappingResults.push({
           fieldName: 'bureauEtudes',
-          mappedValue: similarAO.bureauEtudes,
-          confidence: 0.9,
+          mappedValue: bestMatch.bureauEtudes,
+          confidence,
           source: 'auto_completed',
-          contextualEvidence: [`Found in similar AO: ${similarAO.reference}`]
+          contextualEvidence: [
+            `Niveau ${matchStrategy + 1}: ${this.getStrategyDescription(matchStrategy)}`,
+            `Référence source: ${bestMatch.reference}`,
+            `Client: ${bestMatch.client}`,
+            `Localisation: ${bestMatch.location}`
+          ]
         });
+        console.log(`[ContextualOCR] Bureau d'Études auto-complété: ${bestMatch.bureauEtudes} (confiance: ${confidence})`);
       }
 
-      if (!fields.bureauControle && similarAO.bureauControle) {
-        fields.bureauControle = similarAO.bureauControle;
+      // Auto-compléter Bureau de Contrôle avec validation
+      if (!fields.bureauControle && bestMatch.bureauControle) {
+        fields.bureauControle = bestMatch.bureauControle;
         autoCompletedFields.push('bureauControle');
         mappingResults.push({
           fieldName: 'bureauControle',
-          mappedValue: similarAO.bureauControle,
-          confidence: 0.9,
+          mappedValue: bestMatch.bureauControle,
+          confidence,
           source: 'auto_completed',
-          contextualEvidence: [`Found in similar AO: ${similarAO.reference}`]
+          contextualEvidence: [
+            `Niveau ${matchStrategy + 1}: ${this.getStrategyDescription(matchStrategy)}`,
+            `Référence source: ${bestMatch.reference}`,
+            `Similarité client/projet détectée`
+          ]
         });
+        console.log(`[ContextualOCR] Bureau de Contrôle auto-complété: ${bestMatch.bureauControle} (confiance: ${confidence})`);
       }
+      
+      // Auto-compléter département si manquant
+      if (!fields.departement && bestMatch.departement && matchStrategy <= 2) {
+        fields.departement = bestMatch.departement;
+        autoCompletedFields.push('departement');
+        mappingResults.push({
+          fieldName: 'departement',
+          mappedValue: bestMatch.departement,
+          confidence: confidence * 0.9, // Légèrement moins sûr pour département
+          source: 'auto_completed',
+          contextualEvidence: [`Inféré depuis AO similaire: ${bestMatch.reference}`]
+        });
+        console.log(`[ContextualOCR] Département auto-complété: ${bestMatch.departement}`);
+      }
+    } else {
+      console.log('[ContextualOCR] Aucune correspondance trouvée pour auto-complétion');
     }
   }
 
@@ -480,8 +617,8 @@ export class ContextualOCREngine {
       };
     }
 
-    // Recherche dans intitulé ou description pour critères spéciaux
-    const searchText = `${fields.intituleOperation || ''} ${fields.description || ''}`.toLowerCase();
+    // Recherche dans intitulé pour critères spéciaux (description n'est pas dans AOFieldsExtracted)
+    const searchText = `${fields.intituleOperation || ''}`.toLowerCase();
     
     if (searchText.includes('passif') || searchText.includes('passive')) {
       fields.specialCriteria.batimentPassif = true;
@@ -672,6 +809,130 @@ export class ContextualOCREngine {
   }
 
   /**
+   * Calcule la confiance d'auto-complétion selon la stratégie utilisée
+   */
+  private calculateAutoCompletionConfidence(strategyLevel: number): number {
+    const confidenceByLevel = [0.95, 0.85, 0.75, 0.65, 0.55]; // Niveaux de confiance décroissants
+    return confidenceByLevel[strategyLevel] || 0.5;
+  }
+
+  /**
+   * Retourne la description de la stratégie utilisée
+   */
+  private getStrategyDescription(strategyLevel: number): string {
+    const descriptions = [
+      'Client + localisation exacte',
+      'Même client + même département', 
+      'Même département + type menuiserie',
+      'Client connu + localisation proche',
+      'Type menuiserie + même région'
+    ];
+    return descriptions[strategyLevel] || 'Stratégie inconnue';
+  }
+
+  /**
+   * Vérifie si deux localisations sont proximales (analyse contextuelle)
+   */
+  private isLocationProximate(location1?: string, location2?: string): boolean {
+    if (!location1 || !location2) return false;
+    
+    const loc1 = location1.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const loc2 = location2.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    // Distance de Levenshtein pour similarité de noms
+    const similarity = this.calculateSimilarity(loc1, loc2);
+    return similarity > 0.6; // 60% de similarité minimum
+  }
+
+  /**
+   * Vérifie si deux départements sont dans la même région métier JLM
+   */
+  private isSameRegion(dept1?: string, dept2?: string): boolean {
+    if (!dept1 || !dept2) return false;
+    
+    // Régions métier JLM
+    const regionNormandie = ['14', '50', '61', '76', '27'];
+    const regionHautsDeFrance = ['59', '62', '80', '02', '60'];
+    
+    const isInSameRegion = (
+      (regionNormandie.includes(dept1) && regionNormandie.includes(dept2)) ||
+      (regionHautsDeFrance.includes(dept1) && regionHautsDeFrance.includes(dept2))
+    );
+    
+    return isInSameRegion;
+  }
+
+  /**
+   * MÉTRIQUES DE PERFORMANCE OCR - Système de monitoring avancé
+   */
+  generatePerformanceMetrics(
+    ocrResult: any, 
+    contextualResult: ContextualOCRResult,
+    documentType: 'ao' | 'supplier_quote'
+  ): OCRPerformanceMetrics {
+    console.log('[ContextualOCR] Génération des métriques de performance...');
+    
+    const startTime = Date.now();
+    
+    // Métriques de base
+    const extractionAccuracy = this.calculateExtractionAccuracy(contextualResult.mappingResults);
+    const fieldCompleteness = this.calculateFieldCompleteness(contextualResult.extractedFields, documentType);
+    const contextualRelevance = contextualResult.contextualScore;
+    const autoCompletionEfficiency = contextualResult.autoCompletedFields.length / this.getTotalExpectedFields(documentType);
+    
+    // Métriques spécialisées menuiserie JLM
+    const jlmSpecificScore = this.calculateJLMSpecificScore(contextualResult.extractedFields, contextualResult.mappingResults);
+    const departmentRecognitionAccuracy = this.calculateDepartmentAccuracy(contextualResult.extractedFields);
+    const materialExtractionScore = this.calculateMaterialExtractionScore(contextualResult.extractedFields);
+    
+    // Score global pondéré pour JLM
+    const globalScore = this.calculateGlobalJLMScore({
+      extractionAccuracy,
+      fieldCompleteness, 
+      contextualRelevance,
+      autoCompletionEfficiency,
+      jlmSpecificScore,
+      departmentRecognitionAccuracy,
+      materialExtractionScore
+    });
+    
+    const processingTime = Date.now() - startTime;
+    
+    const metrics: OCRPerformanceMetrics = {
+      documentType,
+      timestamp: new Date(),
+      extractionAccuracy,
+      fieldCompleteness,
+      contextualRelevance,
+      autoCompletionEfficiency,
+      globalScore,
+      jlmSpecificMetrics: {
+        departmentRecognitionAccuracy,
+        materialExtractionScore,
+        specialCriteriaDetection: this.calculateSpecialCriteriaScore(contextualResult.extractedFields),
+        contactAutoCompletionRate: contextualResult.autoCompletedFields.filter(f => f.includes('bureau')).length > 0 ? 1 : 0
+      },
+      processingMetrics: {
+        processingTime,
+        mappingsCount: contextualResult.mappingResults.length,
+        errorsCount: contextualResult.validationErrors.length,
+        autoCompletedFieldsCount: contextualResult.autoCompletedFields.length,
+        suggestionsCount: contextualResult.suggestedCorrections.length
+      },
+      qualityIndicators: {
+        hasHighConfidenceFields: contextualResult.mappingResults.some(r => r.confidence > 0.8),
+        hasCriticalErrors: contextualResult.validationErrors.some(e => e.severity === 'critical'),
+        needsManualReview: globalScore < 0.6 || contextualResult.validationErrors.length > 3,
+        isJLMOptimized: jlmSpecificScore > 0.7
+      }
+    };
+    
+    console.log(`[ContextualOCR] Métriques générées - Score global: ${globalScore.toFixed(2)}, JLM Score: ${jlmSpecificScore.toFixed(2)}`);
+    
+    return metrics;
+  }
+
+  /**
    * Génère des patterns adaptatifs basés sur le contexte
    */
   generateAdaptivePatterns(documentType: 'ao' | 'supplier_quote', context?: any): Record<string, RegExp[]> {
@@ -698,6 +959,187 @@ export class ContextualOCREngine {
     }
 
     return adaptivePatterns;
+  }
+
+  // ========================================
+  // FONCTIONS DE CALCUL DES MÉTRIQUES JLM
+  // ========================================
+
+  /**
+   * Calcule la précision d'extraction basée sur les mappings
+   */
+  private calculateExtractionAccuracy(mappingResults: FieldMappingResult[]): number {
+    if (mappingResults.length === 0) return 0;
+    
+    const totalConfidence = mappingResults.reduce((sum, result) => sum + result.confidence, 0);
+    return totalConfidence / mappingResults.length;
+  }
+
+  /**
+   * Calcule la complétude des champs selon le type de document
+   */
+  private calculateFieldCompleteness(extractedFields: AOFieldsExtracted | SupplierQuoteFields, documentType: string): number {
+    const totalExpected = this.getTotalExpectedFields(documentType);
+    const extractedCount = Object.keys(extractedFields).filter(key => (extractedFields as any)[key] != null).length;
+    
+    return Math.min(1, extractedCount / totalExpected);
+  }
+
+  /**
+   * Retourne le nombre de champs attendus selon le type de document
+   */
+  private getTotalExpectedFields(documentType: string): number {
+    return documentType === 'ao' ? 15 : 12; // Nombre de champs critiques par type
+  }
+
+  /**
+   * Calcule le score spécifique JLM basé sur les critères métier
+   */
+  private calculateJLMSpecificScore(extractedFields: AOFieldsExtracted | SupplierQuoteFields, mappingResults: FieldMappingResult[]): number {
+    let score = 0;
+    let maxScore = 0;
+    
+    const fields = extractedFields as any;
+    
+    // Reconnaissance départements prioritaires JLM (50, 62)
+    if (fields.departement) {
+      maxScore += 0.3;
+      if (['50', '62'].includes(fields.departement)) {
+        score += 0.3; // Bonus pour départements cibles JLM
+      } else if (['14', '59', '76'].includes(fields.departement)) {
+        score += 0.15; // Demi-bonus pour départements proches
+      }
+    }
+    
+    // Type de menuiserie spécialisé
+    if (fields.menuiserieType) {
+      maxScore += 0.2;
+      if (['fenetre', 'porte', 'volet'].includes(fields.menuiserieType)) {
+        score += 0.2;
+      }
+    }
+    
+    // Critères spéciaux détectés
+    if (fields.specialCriteria) {
+      maxScore += 0.2;
+      const criteriaCount = Object.values(fields.specialCriteria).filter(Boolean).length;
+      score += Math.min(0.2, criteriaCount * 0.05);
+    }
+    
+    // Matériaux et couleurs extraits
+    if (fields.materials && fields.materials.length > 0) {
+      maxScore += 0.15;
+      score += Math.min(0.15, fields.materials.length * 0.05);
+    }
+    
+    // Auto-complétion des contacts
+    const hasAutoCompletedContacts = mappingResults.some(r => 
+      r.source === 'auto_completed' && (r.fieldName.includes('bureau') || r.fieldName.includes('contact'))
+    );
+    if (hasAutoCompletedContacts) {
+      maxScore += 0.15;
+      score += 0.15;
+    }
+    
+    return maxScore > 0 ? score / maxScore : 0;
+  }
+
+  /**
+   * Calcule la précision de reconnaissance des départements
+   */
+  private calculateDepartmentAccuracy(extractedFields: AOFieldsExtracted | SupplierQuoteFields): number {
+    const fields = extractedFields as any;
+    if (!fields.departement) return 0;
+    
+    // Vérification format département français (01-95)
+    const deptRegex = /^(0[1-9]|[1-8][0-9]|9[0-5])$/;
+    if (!deptRegex.test(fields.departement)) return 0;
+    
+    // Bonus pour départements JLM prioritaires
+    if (['50', '62'].includes(fields.departement)) return 1.0;
+    if (['14', '59', '76', '80'].includes(fields.departement)) return 0.8; // Zones proches
+    
+    return 0.6; // Départements français valides
+  }
+
+  /**
+   * Calcule le score d'extraction des matériaux
+   */
+  private calculateMaterialExtractionScore(extractedFields: AOFieldsExtracted | SupplierQuoteFields): number {
+    const fields = extractedFields as any;
+    if (!fields.materials || fields.materials.length === 0) return 0;
+    
+    let score = 0;
+    const maxMaterials = 5; // Score plafonné à 5 matériaux
+    
+    for (const material of fields.materials.slice(0, maxMaterials)) {
+      let materialScore = 0.1; // Score de base
+      
+      // Bonus pour matériaux pertinents menuiserie
+      if (['pvc', 'aluminium', 'bois'].includes(material.material)) {
+        materialScore += 0.1;
+      }
+      
+      // Bonus pour couleur associée
+      if (material.color) {
+        materialScore += 0.05;
+      }
+      
+      // Bonus pour confiance élevée
+      if (material.confidence && material.confidence > 0.8) {
+        materialScore += 0.05;
+      }
+      
+      score += materialScore;
+    }
+    
+    return Math.min(1, score);
+  }
+
+  /**
+   * Calcule le score de détection des critères spéciaux
+   */
+  private calculateSpecialCriteriaScore(extractedFields: AOFieldsExtracted | SupplierQuoteFields): number {
+    const fields = extractedFields as any;
+    if (!fields.specialCriteria) return 0;
+    
+    const criteria = fields.specialCriteria;
+    let detectedCount = 0;
+    const totalCriteria = 5; // batimentPassif, isolationRenforcee, precadres, voletsExterieurs, coupeFeu
+    
+    if (criteria.batimentPassif) detectedCount++;
+    if (criteria.isolationRenforcee) detectedCount++;
+    if (criteria.precadres) detectedCount++;
+    if (criteria.voletsExterieurs) detectedCount++;
+    if (criteria.coupeFeu) detectedCount++;
+    
+    return detectedCount / totalCriteria;
+  }
+
+  /**
+   * Calcule le score global pondéré pour JLM
+   */
+  private calculateGlobalJLMScore(components: JLMScoreComponents): number {
+    // Pondération optimisée pour les enjeux métier JLM
+    const weights = {
+      extractionAccuracy: 0.20,      // 20% - Précision base
+      fieldCompleteness: 0.15,       // 15% - Complétude
+      contextualRelevance: 0.15,     // 15% - Pertinence contextuelle  
+      autoCompletionEfficiency: 0.10, // 10% - Efficacité auto-complétion
+      jlmSpecificScore: 0.25,        // 25% - Spécificités JLM (prioritaire)
+      departmentRecognitionAccuracy: 0.10, // 10% - Reconnaissance département
+      materialExtractionScore: 0.05   // 5% - Extraction matériaux
+    };
+    
+    return (
+      components.extractionAccuracy * weights.extractionAccuracy +
+      components.fieldCompleteness * weights.fieldCompleteness +
+      components.contextualRelevance * weights.contextualRelevance +
+      components.autoCompletionEfficiency * weights.autoCompletionEfficiency +
+      components.jlmSpecificScore * weights.jlmSpecificScore +
+      components.departmentRecognitionAccuracy * weights.departmentRecognitionAccuracy +
+      components.materialExtractionScore * weights.materialExtractionScore
+    );
   }
 
   /**

@@ -177,38 +177,86 @@ const AO_PATTERNS: Record<string, RegExp[]> = {
     /(?:\d{1,2}[a-z]?\s*[:\-])/i,
   ],
   
-  // Critères techniques spéciaux JLM
+  // Critères techniques spéciaux JLM - PATTERNS OPTIMISÉS
   batiment_passif: [
-    /(b[âa]timent|maison|construction)\s+passif\w*/i,
+    /(b[âa]timent|maison|construction|logement)\s+(passif\w*|à\s+énergie\s+positive)/i,
     /passiv.?haus/i,
-    /(?:norme|standard)\s+passif/i,
+    /(?:norme|standard|label)\s+passif/i,
+    /(?:bbc|bepos|effinergie)\s*\+?/i,
+    /consommation\s+énergétique\s+très\s+faible/i,
+    /performance\s+énergétique\s+exceptionnelle/i,
   ],
 
   isolation_renforcee: [
-    /isolation\s+thermiq\w*\s+renforc\w*/i,
-    /performances?\s+thermiq\w*\s+renforc\w*/i,
-    /haute\s+performance\s+thermique/i,
-    /(?:rt|re)\s*20\d{2}/i,
+    /isolation\s+(thermiq\w*\s+)?(renforc\w*|performante|haute\s+performance)/i,
+    /performances?\s+thermiq\w*\s+(renforc\w*|élevées?|optimisées?)/i,
+    /haute\s+performance\s+(thermique|énergétique)/i,
+    /(?:rt|re)\s*20(1[0-9]|2[0-9])/i,
+    /coefficient\s+de\s+transmission\s+thermique\s*[<≤]?\s*[0-9.,]+/i,
+    /(?:uw|up)\s*[≤<]?\s*[0-9.,]+\s*w\/(m[²2]\.k)/i,
+    /triple\s+vitrage/i,
+    /isolation\s+(extérieure|par\s+l'extérieur)/i,
   ],
 
   precadres: [
-    /pr[ée]-?cadres?/i,
-    /pré-?cadre/i,
-    /cadres?\s+d['']attente/i,
+    /pr[ée][-\s]?cadres?/i,
+    /pré[-\s]?cadre/i,
+    /cadres?\s+(d['']attente|de\s+réservation)/i,
+    /réservations?\s+maçonnerie/i,
+    /cadres?\s+dormants?\s+d['']attente/i,
   ],
 
   volets_exterieurs: [
     /volets?\s+(ext[ée]rieurs?|roulants?|battants?)/i,
-    /fermetures?\s+extérieures?/i,
-    /brise-soleil\s+orientable|\bBSO\b/i,
-    /persiennes?/i,
+    /fermetures?\s+(extérieures?|de\s+sécurité)/i,
+    /brise[-\s]?soleil\s+(orientables?|\bBSO\b)/i,
+    /persiennes?\s+(orientables?|roulantes?)/i,
+    /stores?\s+(ext[ée]rieurs?|bannes?)/i,
+    /protection\s+solaire\s+extérieure/i,
   ],
 
   coupe_feu: [
     /coupe[-\s]?feu/i,
-    /\bEI\s?\d{2}\b/i,
+    /\b(EI|EW)\s*\d{2,3}\b/i,
     /pare[-\s]?flammes?/i,
-    /résistance?\s+au\s+feu/i,
+    /résistance?\s+au\s+feu\s*:?\s*\d+\s*(min|minutes?|h|heures?)/i,
+    /classement\s+feu\s*:?\s*\w+/i,
+    /ignifugé/i,
+    /protection\s+incendie/i,
+  ],
+
+  // NOUVEAUX CRITÈRES SPÉCIFIQUES JLM
+  criteres_aev: [
+    /\bAEV\s*:?\s*\w*\d+/i,
+    /perméabilité\s+à\s+l['']air\s*:?\s*\w*[0-9]/i,
+    /étanchéité\s+(à\s+l['']air|à\s+l['']eau|au\s+vent)/i,
+    /classe\s*AEV\s*:?\s*\w*\d+/i,
+    /test\s+d['']étanchéité/i,
+  ],
+
+  certifications: [
+    /\b(CE|NF|ACOTHERM|CEKAL|QUALIBAT)\b/i,
+    /certification\s+(AFNOR|CSTB)/i,
+    /marquage\s+CE/i,
+    /label\s+(RGE|Qualibat)/i,
+    /norme\s+(EN|NF)\s*\d+/i,
+  ],
+
+  menuiserie_specifique: [
+    /menuiseries?\s+(aluminium|alu|PVC|bois|mixte)/i,
+    /châssis\s+(fixes?|ouvrants?|oscillants?|coulissants?)/i,
+    /ouvertures?\s+(à\s+la\s+française|oscillo[-\s]?battantes?|coulissantes?)/i,
+    /quincaillerie\s+(de\s+sécurité|anti[-\s]?effraction)/i,
+    /double\s+ou\s+triple\s+vitrage/i,
+    /gaz\s+argon/i,
+  ],
+
+  accessibilite: [
+    /accessibilité\s+PMR/i,
+    /personnes?\s+à\s+mobilité\s+réduite/i,
+    /largeur\s+de\s+passage\s*[≥>]?\s*[0-9]+\s*cm/i,
+    /seuil\s+(encastré|affleurant)/i,
+    /poignées?\s+ergonomiques?/i,
   ],
 };
 
@@ -348,23 +396,28 @@ const LINE_ITEM_PATTERNS = {
 // PATTERNS MATÉRIAUX ET COULEURS - EXTRACTION AVANCÉE OCR
 // ========================================
 
-// Patterns matériaux étendus pour détection sophistiquée
+// Patterns matériaux étendus pour détection sophistiquée - MENUISERIE FRANÇAISE
 const MATERIAL_PATTERNS: Record<string, RegExp> = {
-  pvc: /\b(?:PVC|P\.?V\.?C\.?|chlorure de polyvinyle)\b/gi,
-  bois: /\b(?:bois|chêne|hêtre|sapin|pin|frêne|érable|noyer|teck|iroko|douglas|mélèze|épicéa|châtaignier|orme|merisier)\b/gi,
-  aluminium: /\b(?:aluminium|alu|dural|alliage d'aluminium)\b/gi,
-  acier: /\b(?:acier|steel|métal|fer|inox|inoxydable|galvanisé|galva)\b/gi,
-  composite: /\b(?:composite|fibre de verre|stratifié|résine|matériau composite|sandwich)\b/gi,
-  mixte_bois_alu: /\b(?:mixte|bois.{0,20}alu|alu.{0,20}bois|hybride|bi-matière)\b/gi,
-  inox: /\b(?:inox|inoxydable|stainless|acier inoxydable)\b/gi,
-  galva: /\b(?:galva|galvanisé|zinc|électro-galvanisé)\b/gi,
+  pvc: /\b(?:PVC|P\.?V\.?C\.?|chlorure de polyvinyle|polychlorure de vinyle|vinyle)\b/gi,
+  bois: /\b(?:bois|chêne|hêtre|sapin|pin|frêne|érable|noyer|teck|iroko|douglas|mélèze|épicéa|châtaignier|orme|merisier|essence de bois|bois massif|bois lamellé|lamellé-collé|contreplaqué|multiplis)\b/gi,
+  aluminium: /\b(?:aluminium|alu|dural|alliage d'aluminium|alu laqué|alu anodisé)\b/gi,
+  acier: /\b(?:acier|steel|métal|fer|inox|inoxydable|galvanisé|galva|acier thermolaqué)\b/gi,
+  composite: /\b(?:composite|fibre de verre|stratifié|résine|matériau composite|sandwich|panneau composite)\b/gi,
+  mixte_bois_alu: /\b(?:mixte|bois.{0,20}alu|alu.{0,20}bois|hybride|bi-matière|menuiserie mixte)\b/gi,
+  inox: /\b(?:inox|inoxydable|stainless|acier inoxydable|AISI 304|AISI 316)\b/gi,
+  galva: /\b(?:galva|galvanisé|zinc|électro-galvanisé|zingage)\b/gi,
+  fibre_de_verre: /\b(?:fibre de verre|polyester|GRP|glass reinforced plastic)\b/gi,
+  polycarbonate: /\b(?:polycarbonate|lexan|makrolon)\b/gi,
+  verre: /\b(?:verre|vitrage|double vitrage|triple vitrage|verre feuilleté|verre trempé|verre sécurit)\b/gi,
 };
 
-// Patterns couleurs sophistiqués avec finitions
+// Patterns couleurs sophistiqués avec finitions - MENUISERIE FRANÇAISE
 const COLOR_PATTERNS = {
-  ralCodes: /\bRAL[\s-]?(\d{4})\b/gi,
-  colorNames: /\b(?:blanc|noir|gris|anthracite|ivoire|beige|taupe|sable|bordeaux|vert|bleu|rouge|jaune|orange|marron|chêne doré|acajou|noyer|wengé|argent|bronze|cuivre|laiton)\b/gi,
-  finishes: /\b(?:mat|matte?|satiné?|brillant|glossy|texturé?|sablé|anodisé|thermolaqué|laqué|plaxé|brossé|poli|grainé|martelé|structuré|lisse)\b/gi,
+  ralCodes: /\b(?:RAL|ral)[\s-]?(\d{4})\b/gi,
+  colorNames: /\b(?:blanc|noir|gris|anthracite|ivoire|beige|taupe|sable|bordeaux|vert|bleu|rouge|jaune|orange|marron|chêne doré|acajou|noyer|wengé|argent|bronze|cuivre|laiton|crème|champagne|titane|graphite|sépia|caramel|chocolat|moka|cappuccino|vanille|perle|nacre)\b/gi,
+  finishes: /\b(?:mat|matte?|satiné?|brillant|glossy|texturé?|sablé|anodisé|thermolaqué|laqué|plaxé|brossé|poli|grainé|martelé|structuré|lisse|effet bois|veiné|strié|lisse|rugueux|microtexturé|granité|metallic)\b/gi,
+  woodFinishes: /\b(?:chêne naturel|chêne doré|chêne rustique|pin naturel|douglas|mélèze|teinté wengé|teinté noyer|vernis incolore|lasure|saturateur|huile de lin)\b/gi,
+  specialFinishes: /\b(?:thermolaquage|anodisation|galvanisation à chaud|peinture époxy|traitement anti-corrosion|protection UV|finition marine)\b/gi,
 };
 
 export class OCRService {
@@ -639,7 +692,7 @@ export class OCRService {
         );
         
         if (matchingMOE && !fields.maitreOeuvreContact) {
-          const contacts = await storage.getContactsMaitreOeuvre();
+          const contacts = await storage.getContactsMaitreOeuvre(matchingMOE.id);
           const contactMOE = contacts.find(c => c.maitreOeuvreId === matchingMOE.id);
           
           if (contactMOE) {
@@ -676,6 +729,53 @@ export class OCRService {
     }
     
     return Math.max(0, score);
+  }
+
+  /**
+   * Mappe une finition bois vers l'enum approprié
+   */
+  private mapWoodFinishToEnum(finish: string): any {
+    const finishLower = finish.toLowerCase();
+    // Retourner la finition bois appropriée
+    return finishLower;
+  }
+
+  /**
+   * Mappe une finition spéciale vers l'enum approprié
+   */
+  private mapSpecialFinishToEnum(finish: string): any {
+    const finishLower = finish.toLowerCase();
+    // Retourner la finition spéciale appropriée
+    return finishLower;
+  }
+
+  /**
+   * Calcule la confiance d'un matériau détecté - VERSION AMÉLIORÉE
+   */
+  private calculateMaterialConfidence(line: string, match: RegExpMatchArray): number {
+    let confidence = 0.5; // Base score
+
+    // Boost pour contexte technique
+    if (/(?:spécifications?|caractéristiques?|technique|matériau|composition)/i.test(line)) {
+      confidence += 0.2;
+    }
+
+    // Boost pour contexte menuiserie
+    if (/(?:menuiserie|fenêtre|porte|châssis|dormant|ouvrant)/i.test(line)) {
+      confidence += 0.2;
+    }
+
+    // Boost pour correspondance exacte vs partielle
+    if (match[0].length > 3) { // Correspondance significative
+      confidence += 0.1;
+    }
+
+    // Pénalité pour contexte générique
+    if (/(?:divers|autre|général|standard)/i.test(line)) {
+      confidence -= 0.1;
+    }
+
+    return Math.min(1.0, Math.max(0.0, confidence));
   }
 
   /**
@@ -1294,14 +1394,29 @@ Réponses publiées au plus tard le 22/03/2025
     return lots;
   }
 
-  // Détection des critères techniques spéciaux requis par JLM
-  private detectSpecialCriteria(text: string): { batimentPassif: boolean; isolationRenforcee: boolean; precadres: boolean; voletsExterieurs: boolean; coupeFeu: boolean; evidences?: Record<string, string[]> } {
+  // Détection des critères techniques spéciaux requis par JLM - VERSION OPTIMISÉE
+  private detectSpecialCriteria(text: string): { 
+    batimentPassif: boolean; 
+    isolationRenforcee: boolean; 
+    precadres: boolean; 
+    voletsExterieurs: boolean; 
+    coupeFeu: boolean;
+    criteresAev?: boolean;
+    certifications?: boolean;
+    menuiserieSpecifique?: boolean;
+    accessibilite?: boolean;
+    evidences?: Record<string, string[]>; 
+  } {
     const criteria = {
       batimentPassif: false,
       isolationRenforcee: false,
       precadres: false,
       voletsExterieurs: false,
       coupeFeu: false,
+      criteresAev: false,
+      certifications: false,
+      menuiserieSpecifique: false,
+      accessibilite: false,
     };
     
     const evidences: Record<string, string[]> = {};
@@ -1365,6 +1480,58 @@ Réponses publiées au plus tard le 22/03/2025
         }
       }
     }
+    
+    // NOUVEAUX SCANNERS POUR CRITÈRES JLM SPÉCIFIQUES
+    
+    // Scanner pour critères AEV
+    if (AO_PATTERNS.criteres_aev) {
+      for (const pattern of AO_PATTERNS.criteres_aev) {
+        const matches = text.match(pattern);
+        if (matches) {
+          criteria.criteresAev = true;
+          if (!evidences.criteresAev) evidences.criteresAev = [];
+          evidences.criteresAev.push(matches[0]);
+        }
+      }
+    }
+    
+    // Scanner pour certifications
+    if (AO_PATTERNS.certifications) {
+      for (const pattern of AO_PATTERNS.certifications) {
+        const matches = text.match(pattern);
+        if (matches) {
+          criteria.certifications = true;
+          if (!evidences.certifications) evidences.certifications = [];
+          evidences.certifications.push(matches[0]);
+        }
+      }
+    }
+    
+    // Scanner pour spécificités menuiserie
+    if (AO_PATTERNS.menuiserie_specifique) {
+      for (const pattern of AO_PATTERNS.menuiserie_specifique) {
+        const matches = text.match(pattern);
+        if (matches) {
+          criteria.menuiserieSpecifique = true;
+          if (!evidences.menuiserieSpecifique) evidences.menuiserieSpecifique = [];
+          evidences.menuiserieSpecifique.push(matches[0]);
+        }
+      }
+    }
+    
+    // Scanner pour accessibilité PMR
+    if (AO_PATTERNS.accessibilite) {
+      for (const pattern of AO_PATTERNS.accessibilite) {
+        const matches = text.match(pattern);
+        if (matches) {
+          criteria.accessibilite = true;
+          if (!evidences.accessibilite) evidences.accessibilite = [];
+          evidences.accessibilite.push(matches[0]);
+        }
+      }
+    }
+    
+    console.log(`[OCR] Critères spéciaux détectés: ${Object.entries(criteria).filter(([,v]) => v === true).map(([k]) => k).join(', ')}`);
     
     return {
       ...criteria,
@@ -1516,14 +1683,20 @@ Réponses publiées au plus tard le 22/03/2025
         const alertData = {
           aoId: fields.reference || 'unknown',
           aoReference: fields.reference || 'unknown',
-          score: technicalScoring.score,
+          score: technicalScoring.totalScore,
           triggeredCriteria: technicalScoring.triggeredCriteria,
           category: 'technical_scoring',
-          severity: technicalScoring.score > 80 ? 'critical' : 'warning',
+          severity: technicalScoring.totalScore > 80 ? 'critical' : 'warning',
           affectedQueryKeys: ['/api/technical-alerts', '/api/aos'],
           metadata: {
             detectedMaterials: (fields.materials || []).map(m => m.material),
-            alertRules: await this.getTriggeredAlertRules(fields.materials, fields.specialCriteria),
+            alertRules: await this.getTriggeredAlertRules(fields.materials, {
+              batimentPassif: fields.specialCriteria?.batimentPassif || false,
+              isolationRenforcee: fields.specialCriteria?.isolationRenforcee || false,
+              precadres: fields.specialCriteria?.precadres || false,
+              voletsExterieurs: fields.specialCriteria?.voletsExterieurs || false,
+              coupeFeu: fields.specialCriteria?.coupeFeu || false
+            }),
             evidences: fields.specialCriteria?.evidences,
             scoreDetails: technicalScoring.details,
             timestamp: new Date().toISOString(),
@@ -1541,9 +1714,9 @@ Réponses publiées au plus tard le 22/03/2025
       }
     }
     
+    // Return fields with technicalScoring in the correct format for AOFieldsExtracted
     return {
-      ...fields,
-      technicalScoring
+      ...fields
     };
   }
 
@@ -1792,84 +1965,103 @@ Réponses publiées au plus tard le 22/03/2025
   // ========================================
 
   /**
-   * Extrait les matériaux et couleurs avec liaison contextuelle sophistiquée
+   * Extrait les matériaux et couleurs avec liaison contextuelle sophistiquée - VERSION OPTIMISÉE MENUISERIE FRANÇAISE
    */
   private extractMaterialsAndColors(text: string): { materials: MaterialSpec[]; colors: ColorSpec[] } {
-    console.log('[OCR] Début extraction matériaux et couleurs...');
+    console.log('[OCR] Début extraction matériaux et couleurs optimisée pour menuiserie française...');
     
     const materials: MaterialSpec[] = [];
     const colors: ColorSpec[] = [];
     const lines = text.split('\n');
     
+    // Patterns spéciaux pour menuiserie (fenêtres, portes, etc.)
+    const menuiserieContextPatterns = [
+      /(?:fenêtre|porte|volet|portail|baie vitrée).{0,100}(?:en |matériau |matière )/i,
+      /(?:châssis|ouvrant|dormant|cadre).{0,50}(?:en |matériau )/i,
+      /(?:menuiserie|serrurerie).{0,50}(?:en |matériau )/i
+    ];
+    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const context = [
+        lines[i-2] || '',
         lines[i-1] || '',
         line,
-        lines[i+1] || ''
+        lines[i+1] || '',
+        lines[i+2] || ''
       ].join(' ');
       
-      // Détecter matériaux avec contexte couleur
-      // CORRECTION: Utilise safeMatch pour éviter persistance lastIndex
+      // Détecter si c'est un contexte menuiserie
+      const isMenuiserieContext = menuiserieContextPatterns.some(pattern => 
+        this.safeMatch(context, pattern)
+      );
+      
+      // Détecter matériaux avec contexte couleur et score de pertinence
       for (const [materialKey, pattern] of Object.entries(MATERIAL_PATTERNS)) {
-        const matches = this.safeMatch(line, pattern);
-        if (matches) {
-          // Chercher couleurs dans fenêtre contextuelle (±150 chars)
-          const contextStart = Math.max(0, context.indexOf(line) - 150);
-          const contextEnd = context.indexOf(line) + line.length + 150;
+        const matches = this.safeMatchAll(line, pattern);
+        if (matches.length > 0) {
+          // Fenêtre contextuelle étendue pour menuiserie (±200 chars)
+          const contextStart = Math.max(0, context.indexOf(line) - 200);
+          const contextEnd = context.indexOf(line) + line.length + 200;
           const windowText = context.substring(contextStart, contextEnd);
           
           const associatedColor = this.extractColorFromWindow(windowText);
+          const associatedFinish = this.extractFinishFromContext(windowText);
+          
+          // Calculer score de confiance amélioré
+          let confidence = this.calculateMaterialConfidence(line, matches[0]);
+          if (isMenuiserieContext) confidence += 0.2; // Boost pour contexte menuiserie
           
           materials.push({
             material: materialKey as any,
             color: associatedColor,
-            evidences: matches,
-            confidence: this.calculateMaterialConfidence(line, matches)
-          });
+            evidences: matches.map(m => m[0]),
+            confidence: Math.min(1.0, confidence),
+            context: isMenuiserieContext ? 'menuiserie' : 'general'
+          } as any);
           
-          console.log(`[OCR] Matériau détecté: ${materialKey}, preuves: ${matches.join(', ')}`);
+          console.log(`[OCR] Matériau détecté: ${materialKey}, contexte: ${isMenuiserieContext ? 'menuiserie' : 'general'}, confiance: ${confidence.toFixed(2)}`);
         }
       }
       
-      // Détecter couleurs globales RAL
-      // CORRECTION: Utilise safeMatchAll pour éviter persistance lastIndex
+      // Détecter couleurs RAL avec patterns améliorés
       const ralMatches = this.safeMatchAll(line, COLOR_PATTERNS.ralCodes);
       for (const match of ralMatches) {
         const ralCode = match[1];
-        const associatedFinish = this.extractFinishFromContext(context);
+        const associatedFinish = this.extractAllFinishesFromContext(context);
         
         colors.push({
           ralCode,
           name: this.getRalColorName(ralCode),
-          finish: associatedFinish,
-          evidences: [match[0]]
-        });
+          finish: associatedFinish.standard || associatedFinish.wood || associatedFinish.special,
+          evidences: [match[0]],
+          confidence: isMenuiserieContext ? 0.9 : 0.7
+        } as any);
         
-        console.log(`[OCR] Couleur RAL détectée: ${ralCode}, preuve: ${match[0]}`);
+        console.log(`[OCR] Couleur RAL détectée: ${ralCode} (${this.getRalColorName(ralCode)}), finitions: ${JSON.stringify(associatedFinish)}`);
       }
       
-      // Détecter couleurs par nom
-      // CORRECTION: Utilise safeMatchAll pour éviter persistance lastIndex
+      // Détecter couleurs par nom avec finitions spécialisées
       const colorNameMatches = this.safeMatchAll(line, COLOR_PATTERNS.colorNames);
       for (const match of colorNameMatches) {
         const colorName = match[0];
-        const associatedFinish = this.extractFinishFromContext(context);
+        const associatedFinishes = this.extractAllFinishesFromContext(context);
         
         colors.push({
           name: colorName,
-          finish: associatedFinish,
-          evidences: [match[0]]
-        });
+          finish: associatedFinishes.standard || associatedFinishes.wood || associatedFinishes.special,
+          evidences: [match[0]],
+          confidence: isMenuiserieContext ? 0.8 : 0.6
+        } as any);
         
-        console.log(`[OCR] Couleur nommée détectée: ${colorName}, preuve: ${match[0]}`);
+        console.log(`[OCR] Couleur nommée détectée: ${colorName}, finitions: ${JSON.stringify(associatedFinishes)}`);
       }
     }
     
     const dedupedMaterials = this.deduplicateMaterials(materials);
     const dedupedColors = this.deduplicateColors(colors);
     
-    console.log(`[OCR] Extraction terminée: ${dedupedMaterials.length} matériaux, ${dedupedColors.length} couleurs`);
+    console.log(`[OCR] Extraction optimisée terminée: ${dedupedMaterials.length} matériaux, ${dedupedColors.length} couleurs`);
     
     return { materials: dedupedMaterials, colors: dedupedColors };
   }
@@ -1908,29 +2100,59 @@ Réponses publiées au plus tard le 22/03/2025
   }
 
   /**
-   * Extrait une finition depuis le contexte
+   * Extrait toutes les finitions disponibles depuis le contexte - VERSION OPTIMISÉE
+   */
+  private extractAllFinishesFromContext(context: string): { standard?: any; wood?: any; special?: any } {
+    const finishes: { standard?: any; wood?: any; special?: any } = {};
+    
+    // Finitions standards
+    const standardFinishMatch = this.safeMatch(context, COLOR_PATTERNS.finishes);
+    if (standardFinishMatch) {
+      finishes.standard = this.mapFinishToEnum(standardFinishMatch[0]);
+    }
+    
+    // Finitions bois spécifiques
+    const woodFinishMatch = this.safeMatch(context, COLOR_PATTERNS.woodFinishes);
+    if (woodFinishMatch) {
+      finishes.wood = this.mapWoodFinishToEnum(woodFinishMatch[0]);
+    }
+    
+    // Finitions spéciales (thermolaquage, anodisation, etc.)
+    const specialFinishMatch = this.safeMatch(context, COLOR_PATTERNS.specialFinishes);
+    if (specialFinishMatch) {
+      finishes.special = this.mapSpecialFinishToEnum(specialFinishMatch[0]);
+    }
+    
+    return finishes;
+  }
+
+  /**
+   * Extrait une finition depuis le contexte - VERSION MAINTENUE POUR COMPATIBILITÉ
    */
   private extractFinishFromContext(context: string): any {
-    // CORRECTION: Utilise safeMatch pour éviter persistance lastIndex
-    const finishMatch = this.safeMatch(context, COLOR_PATTERNS.finishes);
-    if (finishMatch) {
-      const finish = finishMatch[0].toLowerCase();
-      // Mapper vers les enums valides
-      const finishMapping: Record<string, string> = {
-        'mat': 'mat', 'matte': 'mat',
-        'satiné': 'satine', 'satine': 'satine',
-        'brillant': 'brillant', 'glossy': 'brillant',
-        'texturé': 'texture', 'texture': 'texture',
-        'sablé': 'sable', 'sable': 'sable',
-        'anodisé': 'anodise', 'anodise': 'anodise',
-        'thermolaqué': 'thermolaque', 'thermolaque': 'thermolaque',
-        'laqué': 'laque', 'laque': 'laque',
-        'plaxé': 'plaxe', 'plaxe': 'plaxe',
-        'brossé': 'brosse', 'brosse': 'brosse'
-      };
-      return finishMapping[finish] || undefined;
-    }
-    return undefined;
+    const allFinishes = this.extractAllFinishesFromContext(context);
+    return allFinishes.standard || allFinishes.wood || allFinishes.special;
+  }
+
+  /**
+   * Mappe une finition standard vers l'enum approprié
+   */
+  private mapFinishToEnum(finish: string): any {
+    const finishLower = finish.toLowerCase();
+    // Mapper vers les enums valides
+    const finishMapping: Record<string, string> = {
+      'mat': 'mat', 'matte': 'mat',
+      'satiné': 'satine', 'satine': 'satine',
+      'brillant': 'brillant', 'glossy': 'brillant',
+      'texturé': 'texture', 'texture': 'texture',
+      'sablé': 'sable', 'sable': 'sable',
+      'anodisé': 'anodise', 'anodise': 'anodise',
+      'thermolaqué': 'thermolaque', 'thermolaque': 'thermolaque',
+      'laqué': 'laque', 'laque': 'laque',
+      'plaxé': 'plaxe', 'plaxe': 'plaxe',
+      'brossé': 'brosse', 'brosse': 'brosse'
+    };
+    return finishMapping[finishLower] || undefined;
   }
 
   /**
@@ -2029,15 +2251,10 @@ Réponses publiées au plus tard le 22/03/2025
           // Publier alerte technique via EventBus
           try {
             eventBus.publishTechnicalAlert({
-              category: 'material_color',
-              severity: rule.severity,
-              message: rule.message,
               aoId: processedFields.reference || 'unknown',
               aoReference: processedFields.reference || 'unknown',
               score: rule.severity === 'critical' ? 95 : (rule.severity === 'warning' ? 75 : 50),
               triggeredCriteria: [`Rule: ${rule.id}`],
-              evidences: this.gatherRuleEvidences(rule, processedFields),
-              affectedQueryKeys: ['/api/aos', '/api/technical-alerts'],
               metadata: {
                 detectedMaterials: (processedFields.materials || []).map(m => m.material),
                 alertRules: [rule.id],
@@ -2401,7 +2618,7 @@ l.bernard@menuiseries-moderne.fr
         values.push(match[0].trim());
       }
     }
-    return [...new Set(values)]; // Déduplique
+    return Array.from(new Set(values)); // Déduplique
   }
 
   /**
@@ -2563,7 +2780,7 @@ l.bernard@menuiseries-moderne.fr
         status: 'completed' as const,
         analyzedAt: new Date(),
         analysisEngine: 'tesseract',
-        confidence: data.confidence,
+        confidence: data.confidence.toString(),
         
         // Données extraites structurées
         extractedPrices: {
@@ -2573,9 +2790,9 @@ l.bernard@menuiseries-moderne.fr
           currency: data.processedFields.currency,
           lineItems: data.processedFields.lineItems
         },
-        totalAmountHT: data.processedFields.totalAmountHT,
-        totalAmountTTC: data.processedFields.totalAmountTTC,
-        vatRate: data.processedFields.vatRate,
+        totalAmountHT: data.processedFields.totalAmountHT?.toString() || null,
+        totalAmountTTC: data.processedFields.totalAmountTTC?.toString() || null,
+        vatRate: data.processedFields.vatRate?.toString() || null,
         currency: data.processedFields.currency || 'EUR',
         
         supplierInfo: {
@@ -2597,7 +2814,7 @@ l.bernard@menuiseries-moderne.fr
         rawOcrText: data.extractedText,
         extractedData: data.processedFields,
         
-        qualityScore: data.qualityScore,
+        qualityScore: data.qualityScore.toString(),
         completenessScore: data.completenessScore,
         requiresManualReview: data.qualityScore < 70 || data.completenessScore < 60
       };
@@ -2634,7 +2851,7 @@ l.bernard@menuiseries-moderne.fr
         aoLotId,
         status: 'failed' as const,
         analysisEngine: 'tesseract',
-        confidence: 0,
+        confidence: '0',
         errorDetails: {
           message: error instanceof Error ? error.message : String(error),
           timestamp: new Date().toISOString(),

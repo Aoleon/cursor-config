@@ -4,6 +4,7 @@ import { getAIService } from "../services/AIService";
 import { storage } from "../storage";
 import { aiQueryRequestSchema } from "@shared/schema";
 import type { AiQueryRequest } from "@shared/schema";
+import type { IStorage } from "../storage-poc";
 
 const router = Router();
 
@@ -34,7 +35,7 @@ router.post("/generate-sql", async (req, res) => {
     const request: AiQueryRequest = validationResult.data;
     
     // Récupération du service IA
-    const aiService = getAIService(storage);
+    const aiService = getAIService(storage as IStorage);
     
     // Génération SQL
     const result = await aiService.generateSQL(request);
@@ -73,7 +74,7 @@ router.get("/usage-stats", async (req, res) => {
       });
     }
     
-    const aiService = getAIService(storage);
+    const aiService = getAIService(storage as IStorage);
     const stats = await aiService.getUsageStats(timeRangeDays);
     
     res.status(200).json({
@@ -97,7 +98,7 @@ router.get("/usage-stats", async (req, res) => {
  */
 router.post("/clean-cache", async (req, res) => {
   try {
-    const aiService = getAIService(storage);
+    const aiService = getAIService(storage as IStorage);
     const cleanedCount = await aiService.cleanExpiredCache();
     
     res.status(200).json({
@@ -123,7 +124,7 @@ router.post("/clean-cache", async (req, res) => {
  */
 router.get("/health-check", async (req, res) => {
   try {
-    const aiService = getAIService(storage);
+    const aiService = getAIService(storage as IStorage);
     const health = await aiService.healthCheck();
     
     const overallHealthy = health.claude && health.database && health.cache;
@@ -190,7 +191,7 @@ router.post("/test-model", async (req, res) => {
       maxTokens: 500
     };
 
-    const aiService = getAIService(storage);
+    const aiService = getAIService(storage as IStorage);
     const result = await aiService.generateSQL(testRequest);
 
     res.status(200).json({
@@ -224,7 +225,7 @@ router.get("/model-comparison", async (req, res) => {
 
     // TODO: Implémenter la logique de comparaison détaillée
     // Pour l'instant, retourner les stats générales
-    const aiService = getAIService(storage);
+    const aiService = getAIService(storage as IStorage);
     const stats = await aiService.getUsageStats(timeRangeDays);
 
     const comparison = {
@@ -268,7 +269,7 @@ router.get("/cache-stats", async (req, res) => {
   try {
     // TODO: Implémenter les stats détaillées du cache
     // Pour l'instant, retourner les stats de base
-    const aiService = getAIService(storage);
+    const aiService = getAIService(storage as IStorage);
     const stats = await aiService.getUsageStats(30);
 
     const cacheStats = {

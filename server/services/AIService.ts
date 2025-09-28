@@ -24,7 +24,10 @@ import type {
   AiQueryLogs,
   InsertAiQueryCache,
   InsertAiModelMetrics,
-  InsertAiQueryLogs,
+  InsertAiQueryLogs
+} from "@shared/schema";
+
+import {
   aiQueryCache,
   aiModelMetrics,
   aiQueryLogs
@@ -59,7 +62,7 @@ const PRICING_PER_1K_TOKENS = {
 
 export class AIService {
   private anthropic: Anthropic;
-  private openai: OpenAI;
+  private openai: OpenAI | null;
   private storage: IStorage;
   // Cache in-memory en fallback si DB échoue
   private memoryCache: Map<string, {
@@ -79,6 +82,8 @@ export class AIService {
       this.openai = new OpenAI({ 
         apiKey: process.env.OPENAI_API_KEY 
       });
+    } else {
+      this.openai = null;
     }
 
     this.storage = storage;
@@ -170,7 +175,7 @@ export class AIService {
     // Force un modèle spécifique si demandé
     if (request.forceModel) {
       return {
-        selectedModel: request.forceModel,
+        selectedModel: request.forceModel as "claude_sonnet_4" | "gpt_5",
         reason: "Modèle forcé par l'utilisateur",
         confidence: 1.0,
         appliedRules: ["user_override"],
@@ -496,7 +501,7 @@ export class AIService {
         this.memoryCache.set(queryHash, {
           data,
           expiresAt: cached[0].expiresAt,
-          tokensUsed: cached[0].tokensUsed
+          tokensUsed: cached[0].tokensUsed || 0
         });
         
         console.log(`[AIService] Cache hit DB pour ${queryHash.substring(0, 8)}`);
@@ -576,7 +581,7 @@ export class AIService {
     const now = new Date();
     let cleaned = 0;
     
-    for (const [key, value] of this.memoryCache.entries()) {
+    for (const [key, value] of Array.from(this.memoryCache.entries())) {
       if (value.expiresAt <= now) {
         this.memoryCache.delete(key);
         cleaned++;
@@ -623,9 +628,9 @@ export class AIService {
       const metrics: InsertAiModelMetrics = {
         userId: "system", // TODO: récupérer l'userId réel du contexte
         userRole: request.userRole,
-        modelUsed: modelUsed as any,
-        queryType: request.queryType || "text_to_sql",
-        complexity: request.complexity || "simple",
+        modelUsed: (modelUsed === "claude_sonnet_4" || modelUsed === "gpt_5") ? modelUsed : "claude_sonnet_4",
+        queryType: (request.queryType || "text_to_sql") as "validation" | "text_to_sql" | "data_analysis" | "business_insight" | "optimization",
+        complexity: (request.complexity || "simple") as "simple" | "complex" | "expert",
         tokensUsed,
         responseTimeMs: responseTime,
         success,
@@ -642,7 +647,7 @@ export class AIService {
         queryHash: this.generateQueryHash(request),
         originalQuery: request.query,
         processedQuery: request.query, // TODO: implémenter le preprocessing
-        modelSelected: modelUsed as any,
+        modelSelected: (modelUsed === "claude_sonnet_4" || modelUsed === "gpt_5") ? modelUsed : "claude_sonnet_4",
         fallbackUsed: false, // TODO: tracker les fallbacks
         contextSize: request.context?.length || 0,
         validationPassed: true,
@@ -762,7 +767,7 @@ INSTRUCTIONS:
       console.warn(`[AIService] Erreur parsing réponse IA:`, error);
       
       // Fallback: essayer d'extraire le SQL brut
-      const sqlMatch = responseText.match(/SELECT.*?;/is);
+      const sqlMatch = responseText.match(/SELECT[\s\S]*?;/i);
       
       return {
         sql: sqlMatch ? sqlMatch[0] : "",

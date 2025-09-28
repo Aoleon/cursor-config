@@ -8917,6 +8917,557 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
   console.log('  - POST /api/supplier-quote-analysis/:id/approve');
 
   // ========================================
+  // ROUTES COMPARAISON DEVIS FOURNISSEURS - INTERFACE COMPARAISON OCR
+  // ========================================
+  
+  console.log('[System] Configuration des routes de comparaison des devis fournisseurs...');
+  
+  // Schéma pour la sélection de fournisseur
+  const selectSupplierSchema = z.object({
+    supplierId: z.string().uuid(),
+    analysisId: z.string().uuid().optional(),
+    selectionReason: z.string().optional(),
+    notes: z.string().optional()
+  });
+  
+  // Schéma pour mise à jour des notes
+  const updateNotesSchema = z.object({
+    notes: z.string().max(2000),
+    isInternal: z.boolean().default(false)
+  });
+  
+  // GET /api/ao-lots/:id/comparison - Récupérer toutes les données de comparaison pour un lot
+  app.get('/api/ao-lots/:id/comparison',
+    isAuthenticated,
+    validateParams(z.object({ id: z.string().uuid() })),
+    validateQuery(z.object({
+      includeRawOcr: z.boolean().default(false),
+      sortBy: z.enum(['price', 'delivery', 'quality', 'completeness']).default('price'),
+      sortOrder: z.enum(['asc', 'desc']).default('asc'),
+      status: z.enum(['all', 'completed', 'pending', 'failed']).default('all')
+    })),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id: aoLotId } = req.params;
+        const { includeRawOcr, sortBy, sortOrder, status } = req.query;
+        
+        console.log(`[Comparison API] Récupération données comparaison lot ${aoLotId}`);
+        
+        // Vérifier que le lot existe
+        const lot = await storage.getAoLot(aoLotId);
+        if (!lot) {
+          throw createError.notFound(`Lot AO ${aoLotId} non trouvé`);
+        }
+        
+        // Récupérer toutes les sessions de devis pour ce lot
+        const sessions = await storage.getSupplierQuoteSessionsByLot(aoLotId);
+        
+        // Pour chaque session, récupérer les analyses OCR
+        const suppliersData = [];
+        
+        for (const session of sessions) {
+          try {
+            // Récupérer les analyses de la session
+            const analyses = await storage.getSupplierQuoteAnalysesBySession(session.id, {
+              status: status === 'all' ? undefined : status
+            });
+            
+            // Récupérer les infos du fournisseur
+            const supplier = await storage.getSupplier(session.supplierId);
+            
+            // Récupérer les documents de la session
+            const documents = await storage.getSupplierDocumentsBySession(session.id);
+            
+            // Calculer les métriques agrégées
+            const bestAnalysis = analyses
+              .filter(a => a.status === 'completed')
+              .sort((a, b) => (b.qualityScore || 0) - (a.qualityScore || 0))[0];
+            
+            const avgQuality = analyses.length > 0 ? 
+              analyses.reduce((sum, a) => sum + (a.qualityScore || 0), 0) / analyses.length : 0;
+            
+            const avgCompleteness = analyses.length > 0 ?
+              analyses.reduce((sum, a) => sum + (a.completenessScore || 0), 0) / analyses.length : 0;
+            
+            // Données formatées pour comparaison
+            const supplierComparison = {
+              supplierId: session.supplierId,
+              supplierName: supplier?.name || 'Fournisseur inconnu',
+              supplierInfo: {
+                email: supplier?.email,
+                phone: supplier?.phone,
+                city: supplier?.city,
+                specializations: supplier?.specializations || []
+              },
+              
+              // Session info
+              sessionId: session.id,
+              sessionStatus: session.status,
+              invitedAt: session.invitedAt,
+              submittedAt: session.submittedAt,
+              
+              // Analysis info - CORRECTION CRITIQUE: Ajouter analysisId pour les notes
+              analysisId: bestAnalysis?.id || null,
+              
+              // Données OCR agrégées
+              ocrData: bestAnalysis ? {
+                // Prix et montants
+                totalAmountHT: bestAnalysis.totalAmountHT,
+                totalAmountTTC: bestAnalysis.totalAmountTTC,
+                vatRate: bestAnalysis.vatRate,
+                currency: bestAnalysis.currency || 'EUR',
+                extractedPrices: bestAnalysis.extractedPrices,
+                
+                // Délais et conditions
+                deliveryDelay: bestAnalysis.deliveryDelay,
+                deliveryDelayDays: bestAnalysis.deliveryDelay || null,
+                paymentTerms: bestAnalysis.paymentTerms,
+                validityPeriod: bestAnalysis.validityPeriod,
+                
+                // Matériaux et spécifications
+                materials: bestAnalysis.materials,
+                lineItems: bestAnalysis.lineItems,
+                laborCosts: bestAnalysis.laborCosts,
+                
+                // Qualité et métriques
+                confidence: bestAnalysis.confidence,
+                qualityScore: bestAnalysis.qualityScore,
+                completenessScore: bestAnalysis.completenessScore,
+                requiresManualReview: bestAnalysis.requiresManualReview,
+                
+                // Métadonnées
+                analyzedAt: bestAnalysis.analyzedAt,
+                analysisEngine: bestAnalysis.analysisEngine,
+                
+                // Texte brut si demandé
+                rawOcrText: includeRawOcr ? bestAnalysis.rawOcrText : undefined
+              } : null,
+              
+              // Statistiques des analyses
+              analysisStats: {
+                totalAnalyses: analyses.length,
+                completedAnalyses: analyses.filter(a => a.status === 'completed').length,
+                failedAnalyses: analyses.filter(a => a.status === 'failed').length,
+                averageQuality: Math.round(avgQuality),
+                averageCompleteness: Math.round(avgCompleteness),
+                requiresReview: analyses.filter(a => a.requiresManualReview).length
+              },
+              
+              // Documents associés
+              documents: documents.map(doc => ({
+                id: doc.id,
+                filename: doc.filename,
+                originalName: doc.originalName,
+                documentType: doc.documentType,
+                isMainQuote: doc.isMainQuote,
+                uploadedAt: doc.uploadedAt
+              })),
+              
+              // Notes et commentaires
+              notes: bestAnalysis?.reviewNotes || null,
+              lastReviewedAt: bestAnalysis?.reviewedAt || null,
+              reviewedBy: bestAnalysis?.reviewedBy || null
+            };
+            
+            suppliersData.push(supplierComparison);
+            
+          } catch (sessionError) {
+            console.error(`[Comparison API] Erreur traitement session ${session.id}:`, sessionError);
+            // Continuer avec les autres sessions même en cas d'erreur
+          }
+        }
+        
+        // Tri des données selon les critères
+        const sortedData = suppliersData.sort((a, b) => {
+          let valueA, valueB;
+          
+          switch (sortBy) {
+            case 'price':
+              valueA = a.ocrData?.totalAmountHT || Number.MAX_VALUE;
+              valueB = b.ocrData?.totalAmountHT || Number.MAX_VALUE;
+              break;
+            case 'delivery':
+              valueA = a.ocrData?.deliveryDelay || Number.MAX_VALUE;
+              valueB = b.ocrData?.deliveryDelay || Number.MAX_VALUE;
+              break;
+            case 'quality':
+              valueA = a.ocrData?.qualityScore || 0;
+              valueB = b.ocrData?.qualityScore || 0;
+              break;
+            case 'completeness':
+              valueA = a.ocrData?.completenessScore || 0;
+              valueB = b.ocrData?.completenessScore || 0;
+              break;
+            default:
+              return 0;
+          }
+          
+          return sortOrder === 'asc' ? valueA - valueB : valueB - valueA;
+        });
+        
+        // Calcul des métriques globales de comparaison
+        const validSuppliers = sortedData.filter(s => s.ocrData);
+        const prices = validSuppliers.map(s => s.ocrData!.totalAmountHT).filter(p => p != null);
+        const deliveryTimes = validSuppliers.map(s => s.ocrData!.deliveryDelay).filter(d => d != null);
+        
+        const comparisonMetrics = {
+          totalSuppliers: sortedData.length,
+          validAnalyses: validSuppliers.length,
+          priceRange: prices.length > 0 ? {
+            min: Math.min(...prices),
+            max: Math.max(...prices),
+            average: prices.reduce((sum, p) => sum + p, 0) / prices.length
+          } : null,
+          deliveryRange: deliveryTimes.length > 0 ? {
+            min: Math.min(...deliveryTimes),
+            max: Math.max(...deliveryTimes),
+            average: deliveryTimes.reduce((sum, d) => sum + d, 0) / deliveryTimes.length
+          } : null,
+          bestPrice: prices.length > 0 ? Math.min(...prices) : null,
+          fastestDelivery: deliveryTimes.length > 0 ? Math.min(...deliveryTimes) : null
+        };
+        
+        const result = {
+          aoLotId,
+          lot: {
+            id: lot.id,
+            numero: lot.numero,
+            designation: lot.designation,
+            menuiserieType: lot.menuiserieType,
+            montantEstime: lot.montantEstime
+          },
+          suppliers: sortedData,
+          metrics: comparisonMetrics,
+          sortedBy: sortBy,
+          sortOrder,
+          generatedAt: new Date()
+        };
+        
+        sendSuccess(res, result, 'Données de comparaison récupérées avec succès');
+        
+      } catch (error) {
+        console.error('[Comparison API] Erreur récupération comparaison:', error);
+        throw error;
+      }
+    })
+  );
+  
+  // POST /api/ao-lots/:id/select-supplier - Sélectionner le fournisseur final pour un lot
+  app.post('/api/ao-lots/:id/select-supplier',
+    isAuthenticated,
+    validateParams(z.object({ id: z.string().uuid() })),
+    validateBody(selectSupplierSchema),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id: aoLotId } = req.params;
+        const { supplierId, analysisId, selectionReason, notes } = req.body;
+        const userId = req.session.user?.id;
+        
+        console.log(`[Comparison API] Sélection fournisseur ${supplierId} pour lot ${aoLotId} par utilisateur ${userId}`);
+        
+        // Vérifier que le lot existe
+        const lot = await storage.getAoLot(aoLotId);
+        if (!lot) {
+          throw createError.notFound(`Lot AO ${aoLotId} non trouvé`);
+        }
+        
+        // Vérifier que le fournisseur a bien soumis un devis pour ce lot
+        const session = await storage.getSupplierQuoteSessionByLotAndSupplier(aoLotId, supplierId);
+        if (!session) {
+          throw createError.badRequest(`Aucune session de devis trouvée pour le fournisseur ${supplierId} sur le lot ${aoLotId}`);
+        }
+        
+        // Mettre à jour le lot avec le fournisseur sélectionné
+        await storage.updateAoLot(aoLotId, {
+          selectedSupplierId: supplierId,
+          selectedAnalysisId: analysisId,
+          selectionReason,
+          selectionDate: new Date(),
+          selectedBy: userId,
+          status: 'fournisseur_selectionne' // Nouveau statut
+        });
+        
+        // Créer un historique de sélection
+        await storage.createLotSupplierSelection({
+          aoLotId,
+          supplierId,
+          analysisId,
+          selectedBy: userId,
+          selectionReason,
+          notes,
+          selectedAt: new Date()
+        });
+        
+        // Mettre à jour le statut de la session sélectionnée
+        await storage.updateSupplierQuoteSession(session.id, {
+          status: 'selected',
+          selectedAt: new Date()
+        });
+        
+        // Mettre à jour les autres sessions comme non sélectionnées
+        const allSessions = await storage.getSupplierQuoteSessionsByLot(aoLotId);
+        for (const otherSession of allSessions) {
+          if (otherSession.id !== session.id) {
+            await storage.updateSupplierQuoteSession(otherSession.id, {
+              status: 'not_selected'
+            });
+          }
+        }
+        
+        // Émettre un événement pour notifier la sélection
+        eventBus.emit('supplier-selected', {
+          aoLotId,
+          supplierId,
+          analysisId,
+          selectedBy: userId,
+          timestamp: new Date()
+        });
+        
+        sendSuccess(res, {
+          aoLotId,
+          selectedSupplierId: supplierId,
+          selectedAnalysisId: analysisId,
+          selectionDate: new Date(),
+          selectedBy: userId
+        }, 'Fournisseur sélectionné avec succès');
+        
+      } catch (error) {
+        console.error('[Comparison API] Erreur sélection fournisseur:', error);
+        throw error;
+      }
+    })
+  );
+  
+  // GET /api/supplier-quote-sessions/:id/comparison-data - Données OCR formatées pour comparaison
+  app.get('/api/supplier-quote-sessions/:id/comparison-data',
+    isAuthenticated,
+    validateParams(z.object({ id: z.string().uuid() })),
+    validateQuery(z.object({
+      includeRawData: z.boolean().default(false),
+      format: z.enum(['summary', 'detailed']).default('summary')
+    })),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id: sessionId } = req.params;
+        const { includeRawData, format } = req.query;
+        
+        console.log(`[Comparison API] Récupération données comparaison session ${sessionId}`);
+        
+        // Récupérer la session
+        const session = await storage.getSupplierQuoteSession(sessionId);
+        if (!session) {
+          throw createError.notFound(`Session ${sessionId} non trouvée`);
+        }
+        
+        // Récupérer toutes les analyses de la session
+        const analyses = await storage.getSupplierQuoteAnalysesBySession(sessionId);
+        
+        // Récupérer les documents associés
+        const documents = await storage.getSupplierDocumentsBySession(sessionId);
+        
+        // Récupérer les infos du fournisseur
+        const supplier = await storage.getSupplier(session.supplierId);
+        
+        // Prendre la meilleure analyse (qualité la plus élevée)
+        const bestAnalysis = analyses
+          .filter(a => a.status === 'completed')
+          .sort((a, b) => (b.qualityScore || 0) - (a.qualityScore || 0))[0];
+        
+        if (format === 'summary') {
+          // Format résumé pour affichage tableau comparatif
+          const summaryData = {
+            sessionId,
+            supplierId: session.supplierId,
+            supplierName: supplier?.name || 'Inconnu',
+            
+            // Prix condensé
+            pricing: bestAnalysis ? {
+              totalHT: bestAnalysis.totalAmountHT,
+              totalTTC: bestAnalysis.totalAmountTTC,
+              vatRate: bestAnalysis.vatRate,
+              currency: bestAnalysis.currency || 'EUR'
+            } : null,
+            
+            // Délais et conditions
+            delivery: bestAnalysis ? {
+              delay: bestAnalysis.deliveryDelay,
+              delayText: bestAnalysis.deliveryDelay ? `${bestAnalysis.deliveryDelay} jours` : null,
+              paymentTerms: bestAnalysis.paymentTerms,
+              validity: bestAnalysis.validityPeriod
+            } : null,
+            
+            // Qualité OCR
+            quality: bestAnalysis ? {
+              score: bestAnalysis.qualityScore,
+              completeness: bestAnalysis.completenessScore,
+              confidence: bestAnalysis.confidence,
+              needsReview: bestAnalysis.requiresManualReview
+            } : null,
+            
+            // Statut
+            status: {
+              session: session.status,
+              analysis: bestAnalysis?.status || 'no_analysis',
+              hasDocuments: documents.length > 0
+            }
+          };
+          
+          sendSuccess(res, summaryData, 'Données résumé récupérées');
+          
+        } else {
+          // Format détaillé pour vue complète
+          const detailedData = {
+            sessionId,
+            aoLotId: session.aoLotId,
+            supplierId: session.supplierId,
+            
+            // Infos fournisseur complètes
+            supplier: supplier ? {
+              name: supplier.name,
+              email: supplier.email,
+              phone: supplier.phone,
+              address: supplier.address,
+              city: supplier.city,
+              specializations: supplier.specializations
+            } : null,
+            
+            // Session complète
+            session: {
+              status: session.status,
+              invitedAt: session.invitedAt,
+              submittedAt: session.submittedAt,
+              isSelected: session.status === 'selected'
+            },
+            
+            // Analyses détaillées
+            analyses: analyses.map(analysis => ({
+              id: analysis.id,
+              documentId: analysis.documentId,
+              status: analysis.status,
+              analyzedAt: analysis.analyzedAt,
+              confidence: analysis.confidence,
+              
+              // Données financières
+              pricing: {
+                totalAmountHT: analysis.totalAmountHT,
+                totalAmountTTC: analysis.totalAmountTTC,
+                vatRate: analysis.vatRate,
+                currency: analysis.currency,
+                extractedPrices: analysis.extractedPrices
+              },
+              
+              // Détails produits et services
+              products: {
+                lineItems: analysis.lineItems,
+                materials: analysis.materials,
+                laborCosts: analysis.laborCosts
+              },
+              
+              // Conditions
+              terms: {
+                deliveryDelay: analysis.deliveryDelay,
+                paymentTerms: analysis.paymentTerms,
+                validityPeriod: analysis.validityPeriod
+              },
+              
+              // Qualité
+              quality: {
+                qualityScore: analysis.qualityScore,
+                completenessScore: analysis.completenessScore,
+                requiresManualReview: analysis.requiresManualReview,
+                reviewNotes: analysis.reviewNotes
+              },
+              
+              // Données brutes si demandées
+              rawData: includeRawData ? {
+                rawOcrText: analysis.rawOcrText,
+                extractedData: analysis.extractedData,
+                errorDetails: analysis.errorDetails
+              } : undefined
+            })),
+            
+            // Documents associés
+            documents: documents.map(doc => ({
+              id: doc.id,
+              filename: doc.filename,
+              originalName: doc.originalName,
+              documentType: doc.documentType,
+              isMainQuote: doc.isMainQuote,
+              fileSize: doc.fileSize,
+              uploadedAt: doc.uploadedAt
+            }))
+          };
+          
+          sendSuccess(res, detailedData, 'Données détaillées récupérées');
+        }
+        
+      } catch (error) {
+        console.error('[Comparison API] Erreur récupération données session:', error);
+        throw error;
+      }
+    })
+  );
+  
+  // PUT /api/supplier-quote-analysis/:id/notes - Ajouter/modifier notes pour une analyse
+  app.put('/api/supplier-quote-analysis/:id/notes',
+    isAuthenticated,
+    validateParams(z.object({ id: z.string().uuid() })),
+    validateBody(updateNotesSchema),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id: analysisId } = req.params;
+        const { notes, isInternal } = req.body;
+        const userId = req.session.user?.id;
+        
+        console.log(`[Comparison API] Mise à jour notes analyse ${analysisId} par utilisateur ${userId}`);
+        
+        // Récupérer l'analyse
+        const analysis = await storage.getSupplierQuoteAnalysis(analysisId);
+        if (!analysis) {
+          throw createError.notFound(`Analyse ${analysisId} non trouvée`);
+        }
+        
+        // Mettre à jour les notes
+        const updatedAnalysis = await storage.updateSupplierQuoteAnalysis(analysisId, {
+          reviewNotes: notes,
+          reviewedBy: userId,
+          reviewedAt: new Date()
+        });
+        
+        // Créer un historique des notes si important
+        if (notes.length > 100) { // Notes importantes uniquement
+          await storage.createAnalysisNoteHistory({
+            analysisId,
+            notes,
+            isInternal,
+            createdBy: userId,
+            createdAt: new Date()
+          });
+        }
+        
+        sendSuccess(res, {
+          analysisId,
+          notes,
+          isInternal,
+          updatedBy: userId,
+          updatedAt: new Date()
+        }, 'Notes mises à jour avec succès');
+        
+      } catch (error) {
+        console.error('[Comparison API] Erreur mise à jour notes:', error);
+        throw error;
+      }
+    })
+  );
+  
+  console.log('[System] ✅ Routes comparaison devis fournisseurs configurées');
+  console.log('[System] Nouvelles APIs disponibles:');
+  console.log('  - GET /api/ao-lots/:id/comparison');
+  console.log('  - POST /api/ao-lots/:id/select-supplier');
+  console.log('  - GET /api/supplier-quote-sessions/:id/comparison-data');
+  console.log('  - PUT /api/supplier-quote-analysis/:id/notes');
+
+  // ========================================
   // CORRECTIF CRITIQUE URGENT - ROUTES ADMIN
   // ========================================
   

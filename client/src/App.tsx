@@ -58,6 +58,8 @@ import SmartLanding from "@/components/navigation/SmartLanding";
 import AppLayout from "@/components/layout/AppLayout";
 // Import du portail fournisseur
 import SupplierPortal from "@/pages/supplier-portal";
+// Import de la comparaison des devis
+import ComparaisonDevis from "@/pages/comparaison-devis";
 
 function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -136,6 +138,8 @@ function Router() {
         <Redirect to="/workflow/etude-technique" />
       </Route>
       <Route path="/aos/:id" component={() => <ProtectedRoute component={AoDetail} />} />
+      {/* Route pour la comparaison des devis fournisseurs */}
+      <Route path="/comparaison-devis/:aoLotId" component={() => <ProtectedRoute component={ComparaisonDevis} />} />
       
       {/* ============= OFFERS - Gestion lifecycle offres ============= */}
       <Route path="/offers" component={() => <ProtectedRoute component={Offers} />} />

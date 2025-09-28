@@ -3659,7 +3659,7 @@ export const aoFieldsExtractedSchema = z.object({
 export type ColorSpec = z.infer<typeof colorSpecSchema>;
 export type MaterialSpec = z.infer<typeof materialSpecSchema>;
 export type MaterialColorAlertRule = z.infer<typeof materialColorAlertRuleSchema>;
-export type AOFieldsExtracted = z.infer<typeof aoFieldsExtractedSchema>;
+export type AOFieldsExtractedZod = z.infer<typeof aoFieldsExtractedSchema>;
 
 // ========================================
 // SYSTÈME D'ALERTES TECHNIQUES POUR JULIEN LAMBOROT

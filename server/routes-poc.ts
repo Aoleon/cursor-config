@@ -60,6 +60,9 @@ import { PredictiveEngineService } from "./services/PredictiveEngineService";
 import { MondayProductionFinalService } from "./services/MondayProductionFinalService";
 import { initializeDefaultRules, DateIntelligenceRulesSeeder } from "./seeders/dateIntelligenceRulesSeeder";
 
+// Import du service email générique
+import { emailService, inviteSupplierForQuote, type IEmailService } from "./services/emailService";
+
 // Extension du type Session pour inclure la propriété user
 declare module 'express-session' {
   interface SessionData {
@@ -8208,6 +8211,252 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
       } catch (error) {
         console.error('[Supplier Workflow] Erreur upload document:', error);
         throw createError.database('Erreur lors de l\'upload du document');
+      }
+    })
+  );
+
+  /**
+   * POST /api/supplier-workflow/sessions/:sessionId/invite
+   * Envoie une invitation email à un fournisseur via le système d'email générique
+   */
+  app.post('/api/supplier-workflow/sessions/:sessionId/invite',
+    isAuthenticated,
+    validateParams(z.object({
+      sessionId: z.string().uuid('ID session invalide')
+    })),
+    validateBody(z.object({
+      aoReference: z.string().min(1, 'Référence AO requise'),
+      lotDescription: z.string().min(1, 'Description du lot requise'),
+      instructions: z.string().optional(),
+      sendReminders: z.boolean().optional().default(true)
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { sessionId } = req.params;
+        const { aoReference, lotDescription, instructions, sendReminders } = req.body;
+        
+        // Récupérer la session avec ses relations
+        const session = await storage.getSupplierQuoteSession(sessionId);
+        if (!session) {
+          throw createError.notFound('Session non trouvée');
+        }
+        
+        // Vérifier que la session est active
+        if (session.status !== 'active') {
+          throw createError.badRequest('La session doit être active pour envoyer une invitation');
+        }
+        
+        // Récupérer les informations du fournisseur
+        const supplier = await storage.getSupplier(session.supplierId!);
+        if (!supplier) {
+          throw createError.notFound('Fournisseur non trouvé');
+        }
+        
+        if (!supplier.email) {
+          throw createError.badRequest('Le fournisseur n\'a pas d\'email configuré');
+        }
+        
+        // Envoyer l'invitation via le service email générique
+        console.log(`[Supplier Workflow] Envoi invitation à ${supplier.email} pour session ${sessionId}`);
+        
+        const invitationResult = await inviteSupplierForQuote(
+          session,
+          supplier,
+          aoReference,
+          lotDescription,
+          instructions
+        );
+        
+        if (!invitationResult.success) {
+          throw createError.serviceUnavailable(
+            `Erreur lors de l'envoi de l'invitation: ${invitationResult.error}`
+          );
+        }
+        
+        // Marquer la session comme invitée et mettre à jour les métadonnées
+        await storage.updateSupplierQuoteSession(sessionId, {
+          status: 'invited',
+          metadata: {
+            ...(session.metadata || {}),
+            invitationSent: true,
+            invitationDate: new Date().toISOString(),
+            invitationEmailId: invitationResult.messageId,
+            aoReference,
+            lotDescription,
+            instructions,
+            reminderScheduled: sendReminders
+          }
+        });
+        
+        // Programmer des rappels automatiques si demandé
+        if (sendReminders) {
+          // TODO: Implémenter le scheduling réel des rappels
+          console.log(`[Supplier Workflow] Rappels programmés pour session ${sessionId}`);
+        }
+        
+        const result = {
+          session: {
+            id: session.id,
+            status: 'invited',
+            supplierId: session.supplierId,
+            expiresAt: session.expiresAt
+          },
+          invitation: {
+            sent: true,
+            messageId: invitationResult.messageId,
+            recipientEmail: supplier.email,
+            sentAt: new Date().toISOString()
+          },
+          supplier: {
+            id: supplier.id,
+            name: supplier.name,
+            email: supplier.email
+          }
+        };
+        
+        sendSuccess(res, result, 'Invitation envoyée avec succès');
+      } catch (error) {
+        console.error('[Supplier Workflow] Erreur envoi invitation:', error);
+        throw createError.database('Erreur lors de l\'envoi de l\'invitation');
+      }
+    })
+  );
+
+  /**
+   * POST /api/supplier-workflow/sessions/create-and-invite
+   * Crée une session ET envoie l'invitation en une seule opération
+   */
+  app.post('/api/supplier-workflow/sessions/create-and-invite',
+    isAuthenticated,
+    validateBody(insertSupplierQuoteSessionSchema.extend({
+      expiresInHours: z.number().min(1).max(168).optional().default(72),
+      aoReference: z.string().min(1, 'Référence AO requise'),
+      lotDescription: z.string().min(1, 'Description du lot requise'),
+      instructions: z.string().optional(),
+      sendReminders: z.boolean().optional().default(true)
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { 
+          aoId, aoLotId, supplierId, expiresInHours = 72,
+          aoReference, lotDescription, instructions, sendReminders 
+        } = req.body;
+        const userId = req.session.user!.id;
+        
+        // Vérifier que l'association lot-fournisseur existe
+        const lotSuppliers = await storage.getAoLotSuppliers(aoLotId);
+        const supplierAssociation = lotSuppliers.find(ls => ls.supplierId === supplierId);
+        
+        if (!supplierAssociation) {
+          throw createError.notFound('Ce fournisseur n\'est pas sélectionné pour ce lot');
+        }
+        
+        // Récupérer les informations du fournisseur
+        const supplier = await storage.getSupplier(supplierId);
+        if (!supplier) {
+          throw createError.notFound('Fournisseur non trouvé');
+        }
+        
+        if (!supplier.email) {
+          throw createError.badRequest('Le fournisseur n\'a pas d\'email configuré');
+        }
+        
+        // Générer un token unique sécurisé
+        const accessToken = await storage.generateSessionToken();
+        const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
+        
+        // Créer la session
+        const session = await storage.createSupplierQuoteSession({
+          aoId,
+          aoLotId,
+          supplierId,
+          accessToken,
+          status: 'active',
+          expiresAt,
+          createdBy: userId,
+          allowedUploads: 5,
+          isActive: true,
+          metadata: {
+            aoReference,
+            lotDescription,
+            instructions
+          }
+        });
+        
+        // Envoyer l'invitation immédiatement
+        console.log(`[Supplier Workflow] Envoi invitation pour nouvelle session ${session.id}`);
+        
+        const invitationResult = await inviteSupplierForQuote(
+          session,
+          supplier,
+          aoReference,
+          lotDescription,
+          instructions
+        );
+        
+        if (!invitationResult.success) {
+          // Si l'envoi échoue, on garde la session mais on marque l'erreur
+          console.warn(`[Supplier Workflow] Échec envoi invitation pour session ${session.id}: ${invitationResult.error}`);
+          
+          await storage.updateSupplierQuoteSession(session.id, {
+            status: 'invitation_failed',
+            metadata: {
+              ...session.metadata,
+              invitationError: invitationResult.error,
+              invitationFailedAt: new Date().toISOString()
+            }
+          });
+          
+          throw createError.serviceUnavailable(
+            `Session créée mais erreur lors de l'envoi de l'invitation: ${invitationResult.error}`
+          );
+        }
+        
+        // Marquer la session comme invitée
+        await storage.updateSupplierQuoteSession(session.id, {
+          status: 'invited',
+          metadata: {
+            ...session.metadata,
+            invitationSent: true,
+            invitationDate: new Date().toISOString(),
+            invitationEmailId: invitationResult.messageId,
+            reminderScheduled: sendReminders
+          }
+        });
+        
+        // Programmer des rappels automatiques si demandé
+        if (sendReminders) {
+          // TODO: Implémenter le scheduling réel des rappels
+          console.log(`[Supplier Workflow] Rappels programmés pour session ${session.id}`);
+        }
+        
+        const result = {
+          session: {
+            id: session.id,
+            status: 'invited',
+            supplierId: session.supplierId,
+            expiresAt: session.expiresAt,
+            accessToken: session.accessToken,
+            allowedUploads: session.allowedUploads
+          },
+          invitation: {
+            sent: true,
+            messageId: invitationResult.messageId,
+            recipientEmail: supplier.email,
+            sentAt: new Date().toISOString()
+          },
+          supplier: {
+            id: supplier.id,
+            name: supplier.name,
+            email: supplier.email
+          },
+          accessUrl: emailService.generateSupplierAccessUrl(session.accessToken)
+        };
+        
+        sendSuccess(res, result, 'Session créée et invitation envoyée avec succès');
+      } catch (error) {
+        console.error('[Supplier Workflow] Erreur création session + invitation:', error);
+        throw createError.database('Erreur lors de la création de session et envoi d\'invitation');
       }
     })
   );

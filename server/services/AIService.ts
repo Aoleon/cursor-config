@@ -4,6 +4,8 @@ import { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
+import { getContextBuilderService } from "./ContextBuilderService";
+import { getContextCacheService } from "./ContextCacheService";
 
 // Référence blueprints: javascript_anthropic et javascript_openai intégrés
 /*
@@ -24,7 +26,9 @@ import type {
   AiQueryLogs,
   InsertAiQueryCache,
   InsertAiModelMetrics,
-  InsertAiQueryLogs
+  InsertAiQueryLogs,
+  AIContextualData,
+  ContextGenerationConfig
 } from "@shared/schema";
 
 import {
@@ -64,6 +68,8 @@ export class AIService {
   private anthropic: Anthropic;
   private openai: OpenAI | null;
   private storage: IStorage;
+  private contextBuilder: any;
+  private contextCache: any;
   // Cache in-memory en fallback si DB échoue
   private memoryCache: Map<string, {
     data: any;
@@ -87,6 +93,10 @@ export class AIService {
     }
 
     this.storage = storage;
+    
+    // Initialisation des services de contexte enrichi
+    this.contextBuilder = getContextBuilderService(storage);
+    this.contextCache = getContextCacheService(storage);
   }
 
   // ========================================
@@ -205,20 +215,38 @@ export class AIService {
       appliedRules.push("auto_complexity_detection");
     }
 
-    // Règle 3: Contexte métier menuiserie → Claude pour meilleur contexte
+    // Règle 3: Contexte métier menuiserie enrichi → Claude pour meilleur contexte français
     if (this.isMenuiserieBusinessQuery(request.query, request.context)) {
       selectedModel = "claude_sonnet_4";
-      reason = "Requête métier menuiserie → Claude (meilleur contexte domaine)";
-      confidence = 0.8;
+      reason = "Requête métier menuiserie → Claude (meilleur contexte domaine BTP français)";
+      confidence = 0.85;
       appliedRules.push("menuiserie_specialization");
     }
+    
+    // Règle 4: Analyses prédictives complexes → GPT-5 pour ML avancé
+    if (request.queryType === 'predictive_analysis' || 
+        this.containsPredictiveKeywords(request.query)) {
+      selectedModel = "gpt_5";
+      reason = "Analyse prédictive complexe → GPT-5 (capacités ML avancées)";
+      confidence = 0.9;
+      appliedRules.push("predictive_specialization");
+    }
+    
+    // Règle 5: Requêtes multi-entités complexes → GPT-5
+    const entityCount = this.countEntityReferences(request.query);
+    if (entityCount >= 3) {
+      selectedModel = "gpt_5";
+      reason = "Requête multi-entités complexe → GPT-5 (meilleure corrélation)";
+      confidence = 0.85;
+      appliedRules.push("multi_entity_complexity");
+    }
 
-    // Règle 4: Si pas de GPT disponible → Claude obligatoire
+    // Règle 6: Si pas de GPT disponible → Claude obligatoire
     if (!this.openai && selectedModel === "gpt_5") {
       selectedModel = "claude_sonnet_4";
-      reason = "GPT-5 non disponible → Fallback Claude";
-      confidence = 0.6;
-      appliedRules.push("gpt_unavailable_fallback");
+      reason = "GPT-5 non disponible → Fallback Claude avec boost contexte";
+      confidence = 0.65;
+      appliedRules.push("gpt_unavailable_fallback", "claude_contextual_boost");
     }
 
     return {
@@ -231,6 +259,62 @@ export class AIService {
   }
 
   /**
+   * Amélioration: Détecte si c'est une requête métier menuiserie BTP enrichie
+   */
+  private isMenuiserieBusinessQuery(query: string, context: string): boolean {
+    const queryLower = query.toLowerCase();
+    const contextLower = context.toLowerCase();
+    
+    // Score de pertinence métier (plus précis)
+    let metierScore = 0;
+    
+    // === VOCABULAIRE MÉTIER BTP/MENUISERIE (poids fort) ===
+    const metierKeywords = [
+      // Produits spécialisés
+      'menuiserie', 'fenêtre', 'porte', 'volet', 'ouverture', 'huisserie', 'fermeture',
+      'dormant', 'ouvrant', 'vitrage', 'quincaillerie', 'seuil', 'calfeutrement',
+      // Matériaux techniques
+      'pvc', 'bois', 'aluminium', 'acier', 'composite', 'mixte', 'thermolaqué', 'anodisé',
+      // Workflow BTP
+      'appel d\'offres', 'ao', 'devis', 'cctp', 'dpgf', 'visa', 'réception', 'sav',
+      'pose', 'chantier', 'livraison', 'installation', 'métré', 'étanchéité',
+      // Acteurs spécialisés
+      'maître d\'ouvrage', 'maître d\'œuvre', 'fournisseur', 'sous-traitant', 'poseur',
+      // Normes et certifications
+      'dtu', 'cekal', 'ce', 'aev', 'rt2020', 're2020', 'conformité', 'certification',
+      // Spécificités JLM
+      'mext', 'mint', 'boulogne', 'nord', 'pas-de-calais'
+    ];
+    
+    metierKeywords.forEach(keyword => {
+      if (queryLower.includes(keyword) || contextLower.includes(keyword)) {
+        metierScore += keyword.length > 5 ? 2 : 1; // Bonus pour mots techniques longs
+      }
+    });
+    
+    // === PATTERNS MÉTIER FRANÇAIS (bonus) ===
+    const frenchBusinessPatterns = [
+      /\b(projet|chantier|offre)[s]?\s+#?\d+/,
+      /\b(rentabil|marge)[a-z]*\b/,
+      /\b(délai|planning|retard)[s]?\b/,
+      /\b(59|62)\b/, // Départements
+      /\bral\s?\d{4}\b/, // Couleurs
+      /\b\d+\s*(mm|cm|m)\b/ // Dimensions
+    ];
+    
+    frenchBusinessPatterns.forEach(pattern => {
+      if (pattern.test(queryLower)) metierScore += 1.5;
+    });
+    
+    // === BONUS CONTEXTE ENRICHI ===
+    if (contextLower.includes('saxium') || contextLower.includes('monday')) metierScore += 1;
+    if (contextLower.includes('ocr') || contextLower.includes('enrichi')) metierScore += 1;
+    
+    // Seuil ajusté pour meilleure détection
+    return metierScore >= 3;
+  }
+  
+  /**
    * Analyse la complexité d'une requête (0.0 = simple, 1.0 = très complexe)
    */
   private analyzeQueryComplexity(query: string, context: string): number {
@@ -238,7 +322,7 @@ export class AIService {
     const queryLower = query.toLowerCase();
     const contextLower = context.toLowerCase();
 
-    // Facteurs de complexité
+    // Facteurs de complexité enrichis métier BTP
     
     // Longueur de la requête
     if (query.length > 100) score += 0.2;
@@ -686,61 +770,616 @@ export class AIService {
   // ========================================
 
   /**
-   * Construit le prompt système selon le type de requête
+   * Construit le prompt système enrichi selon le type de requête avec terminologie BTP française ultra-complète
    */
-  private buildSystemPrompt(queryType: string): string {
-    const basePrompt = `Tu es un expert en SQL et bases de données pour une entreprise de menuiserie française (JLM). 
-Tu génères des requêtes SQL PostgreSQL précises et optimisées.
+  private buildSystemPrompt(queryType: string, contextualData?: AIContextualData): string {
+    const basePrompt = `Tu es un expert IA spécialisé dans l'analyse de données pour JLM Menuiserie, entreprise française spécialisée dans la POSE de menuiseries (fenêtres, portes, volets).
 
-RÈGLES IMPORTANTES:
-1. Génère UNIQUEMENT du SQL PostgreSQL valide
-2. Utilise les noms de tables et colonnes exacts du schéma fourni
-3. Applique les bonnes pratiques SQL (indexes, performance)
-4. Gère les cas d'erreur et validations
-5. Explique ta logique en français
+🏗️ CONTEXTE MÉTIER JLM MENUISERIE:
+- Secteur: BTP - Menuiserie/Construction française Nord-Pas-de-Calais
+- Activité: POSE menuiseries extérieures (fenêtres, portes, volets, vérandas)
+- Workflow métier: AO → Étude technique → Chiffrage → Projet → Passation → VISA Architecte → Planning → Chantier → SAV
+- Spécialités: PVC, Bois, Aluminium, Acier, Composite, Mixte bois-alu
+- Normes françaises: DTU 36.5, NF P 24-351, Cekal, RT2020, RE2020, AEV, CE
 
-FORMAT DE RÉPONSE (JSON obligatoire):
+📊 TERMINOLOGIE MÉTIER BTP FRANÇAISE COMPLÈTE:
+🔹 COMMERCIAL: AO/Appel d'offres = tender • Devis = quote • CCTP = specifications • DPGF = bill of quantities • Marché = contract
+🔹 ACTEURS: Maître d'ouvrage = client • Maître d'œuvre = architect • Fournisseur = supplier • Sous-traitant = subcontractor • Poseur = installer
+🔹 TECHNIQUE: Pose = installation • Métré = measurement • Livraison = delivery • Chantier = worksite • SAV = after-sales service
+🔹 MENUISERIE: Dormant = frame • Ouvrant = sash • Vitrage = glazing • Quincaillerie = hardware • Seuil = threshold
+🔹 FINITION: Étanchéité = sealing • Réglage = adjustment • Calfeutrement = weatherstripping • Finition = finishing • Réception = handover
+🔹 QUALITÉ: Garantie = warranty • Conformité = compliance • DTU = technical standards • VISA = approval • Contrôle = inspection
+🔹 MATÉRIAUX: PVC = uPVC • Bois = wood • Aluminium = aluminum • Acier = steel • Composite = composite • Mixte = hybrid
+🔹 COULEURS: Blanc = white • RAL = color code • Laqué = lacquered • Anodisé = anodized • Plaxé = laminated
+
+🎯 RÈGLES TECHNIQUES SAXIUM:
+1. 📊 Génère UNIQUEMENT du SQL PostgreSQL valide et optimisé pour la base Saxium
+2. 🏷️ Utilise les noms exacts des tables/colonnes du schéma enrichi OCR+Monday.com
+3. ⚡ Applique les bonnes pratiques: indexes géographiques, LIMIT intelligent, agrégations temporelles
+4. 🔒 Gère les NULL, enums français, et cas d'erreur métier systématiquement
+5. 🔗 Privilégie les JOINs optimisés aux sous-requêtes pour les relations AO→Projet→Fournisseur
+6. 📈 Utilise les enums PostgreSQL métier (departement, materials, project_status, lot_status)
+7. 🧠 Exploite le contexte enrichi IA (OCR, business rules, prédictif) pour des analyses ultra-précises
+
+🇫🇷 INTELLIGENCE LINGUISTIQUE FRANÇAISE:
+- Reconnaît synonymes métier: "menuiseries" = "ouvertures" = "huisseries"
+- Interprète codes/références: "MEXT" = menuiseries extérieures, "MINT" = menuiseries intérieures
+- Détecte intentions: "en retard" → délais dépassés, "rentable" → marge positive
+- Comprend workflow: "signés" = projets confirmés, "livrés" = matériaux réceptionnés
+
+📋 FORMAT RÉPONSE JSON MÉTIER ENRICHI:
 {
-  "sql": "SELECT ...",
-  "explanation": "Explication détaillée en français",
+  "sql": "SELECT avec commentaires français",
+  "explanation": "Explication détaillée dans la terminologie JLM",
   "confidence": 0.95,
-  "warnings": ["Avertissement si nécessaire"],
-  "optimization_suggestions": ["Suggestions d'optimisation"]
+  "business_context": "Contexte métier précis (phase workflow, enjeux)",
+  "key_metrics": ["KPIs métier identifiés"],
+  "warnings": ["Alertes business éventuelles"],
+  "optimization_suggestions": ["Recommandations performance/business"],
+  "french_terminology_used": {"terme_english": "équivalent_métier_français"},
+  "data_quality_insights": ["Observations sur la qualité des données"],
+  "predictive_indicators": ["Indicateurs prédictifs identifiés"]
 }`;
 
+    // Enrichissement selon contexte disponible
+    let enrichedPrompt = basePrompt;
+    
+    if (contextualData?.businessContext) {
+      enrichedPrompt += `\n\n🔍 CONTEXTE ENRICHI DISPONIBLE:
+- Phase projet: ${contextualData.businessContext.currentPhase}
+- Classification: ${contextualData.businessContext.projectClassification.size} / ${contextualData.businessContext.projectClassification.complexity}
+- Insights clés: ${contextualData.keyInsights.join(', ')}`;
+    }
+
+    // Spécialisations ultra-précises par type de requête métier BTP
     switch (queryType) {
+      // === ANALYSES BUSINESS ET PERFORMANCE ===
+      case "business_analysis":
+        return enrichedPrompt + `\n\n💼 SPÉCIALISATION: Analyses business approfondies JLM Menuiserie
+- 🎯 Focus: Rentabilité projets, taux transformation AO→Projet, analyse marges par matériau
+- 📈 KPIs clés: CA mensuel/trimestriel, coût acquisition client, performance commerciale
+- 🔍 Indicateurs: Délai moyen signature, taux annulation, saisonnalité activité
+- 💰 Financier: Analyse rentabilité par type projet (neuf/rénovation), ROI investissements`;
+
       case "business_insight":
-        return basePrompt + `\n\nSPÉCIALISATION: Analyses business et KPIs métier menuiserie.`;
-      case "data_analysis":
-        return basePrompt + `\n\nSPÉCIALISATION: Analyses de données complexes avec agrégations.`;
+        return enrichedPrompt + `\n\n🎯 SPÉCIALISATION: Insights business et KPIs opérationnels menuiserie
+- Focus: Marges opérationnelles, performances équipes, taux conversion pipeline commercial
+- Métriques: CA récurrent vs nouveau client, charge BE, rotation fournisseurs
+- Alertes: Dérive budgétaire, sous-performance équipes, obsolescence stocks`;
+
+      // === ANALYSES PROJETS ET PRÉDICTIVES ===
+      case "project_insights":
+        return enrichedPrompt + `\n\n🏗️ SPÉCIALISATION: Analyses projets et insights opérationnels
+- 🎯 Focus: Performance projets, respect planning, qualité livraisons, satisfaction client
+- 📊 Métriques: Taux respect délais, dépassements budgétaires, incidents chantier
+- 🔍 Patterns: Corrélations matériau/délai, impact météo, saisonnalité poses
+- ⚡ Optimisation: Allocation ressources, priorisation chantiers, gestion risques`;
+
+      case "predictive_analysis":
+        return enrichedPrompt + `\n\n🔮 SPÉCIALISATION: Intelligence prédictive avancée menuiserie
+- 🎯 Focus: Prédiction retards chantier, risques projets, optimisation planning ressources
+- 🧮 Algorithmes: ML sur historiques, détection anomalies, scoring risque multicritères
+- 📈 Modèles: Prévision charge BE, estimation durées pose, prédiction SAV
+- ⚠️ Early Warning: Alertes précoces dérive projet, risque impayé, surcharge équipes`;
+
+      // === ANALYSES FOURNISSEURS ET COMPARATIVES ===
+      case "supplier_comparison":
+        return enrichedPrompt + `\n\n🏭 SPÉCIALISATION: Analyses comparatives fournisseurs menuiserie
+- 🎯 Focus: Performance fournisseurs (prix, délais, qualité), analyse concurrentielle
+- 📊 Critères: Ratio qualité/prix, respect délais livraison, taux défauts, réactivité SAV  
+- 🔍 Benchmarking: Comparaison multi-critères, scoring fournisseurs, recommandations sourcing
+- 📈 Trends: Évolution tarifs matériaux, parts de marché, innovation produits`;
+
+      // === VALIDATIONS TECHNIQUES ===
+      case "technical_validation":
+        return enrichedPrompt + `\n\n🔧 SPÉCIALISATION: Validation technique et conformité BTP
+- 🎯 Focus: Conformité DTU 36.5, respect normes AEV, validation études techniques
+- ✅ Contrôles: Dimensionnement ouvertures, performances thermiques, étanchéité
+- 📋 Certifications: Cekal, CE, labels énergétiques, conformité RE2020
+- ⚠️ Non-conformités: Détection écarts normatifs, points de vigilance pose`;
+
       case "validation":
-        return basePrompt + `\n\nSPÉCIALISATION: Validation de cohérence et conformité données.`;
+        return enrichedPrompt + `\n\n✅ SPÉCIALISATION: Validation conformité et cohérence données
+- Focus: Cohérence devis/factures, validation délais contractuels, respect workflow
+- Contrôles: Montants, dates jalons, statuts métier, contraintes réglementaires`;
+
+      // === ANALYSES TEMPORELLES ET GÉOGRAPHIQUES ===
+      case "temporal_analysis":
+        return enrichedPrompt + `\n\n⏰ SPÉCIALISATION: Analyses temporelles et saisonnalité BTP
+- 🎯 Focus: Saisonnalité activité, tendances pluriannuelles, cycles économiques
+- 📅 Patterns: Pic activité printemps, ralentissement hiver, impact congés
+- 📈 Prévisions: Charge prévisionnelle, planification ressources, budget annuel
+- 🌡️ Météo: Impact conditions climatiques sur planning, retards saisonniers`;
+
+      case "geographic_analysis":
+        return enrichedPrompt + `\n\n🗺️ SPÉCIALISATION: Analyses géographiques Nord-Pas-de-Calais
+- 🎯 Focus: Performance par département (59/62), zones géographiques, déplacements
+- 📍 Territoires: Boulogne, Calais, Dunkerque, Lille métropole, Artois
+- 🚛 Logistique: Optimisation tournées, coûts déplacement, planning géographique
+- 🏘️ Marchés: Typologie habitat (individuel/collectif), dynamiques territoriales`;
+
+      // === ANALYSES MATÉRIAUX ===
+      case "materials_analysis":
+        return enrichedPrompt + `\n\n🧱 SPÉCIALISATION: Analyses matériaux et performances techniques
+- 🎯 Focus: Performance PVC/Bois/Alu, évolution tarifs, innovations technologiques
+- 📊 Comparatifs: Durabilité, isolation thermique, coûts maintenance, esthétique
+- 🔍 Tendances: Parts de marché matériaux, préférences clients, réglementations
+- 💡 Innovation: Nouveaux matériaux, finitions, solutions techniques`;
+
+      // === OPTIMISATION WORKFLOW ===
+      case "workflow_optimization":
+        return enrichedPrompt + `\n\n⚡ SPÉCIALISATION: Optimisation workflow AO→SAV
+- 🎯 Focus: Fluidité processus, réduction délais, élimination goulots d'étranglement
+- 🔄 Workflow: AO→Étude→Chiffrage→Projet→Passation→VISA→Planning→Chantier→SAV
+- 📈 KPIs: Temps cycle total, délais inter-phases, taux blocage, satisfaction client
+- 🚀 Leviers: Automatisation, parallélisation tâches, optimisation ressources BE`;
+
+      // === ANALYSES GÉNÉRIQUES ===
+      case "data_analysis":
+        return enrichedPrompt + `\n\n📊 SPÉCIALISATION: Analyses données complexes secteur BTP
+- Focus: Tendances multi-variables, corrélations matériaux/délais, analyses multi-dimensionnelles
+- Techniques: Agrégations temporelles, analyses croisées, data mining métier`;
+
+      case "optimization":
+        return enrichedPrompt + `\n\n⚡ SPÉCIALISATION: Optimisation opérationnelle et performance
+- Focus: Optimisation ressources, amélioration processus, réduction coûts
+- Leviers: Automatisation, lean management, optimisation planning`;
+
       default:
-        return basePrompt;
+        return enrichedPrompt + `\n\n📝 ANALYSE GÉNÉRALE: Traitement de données métier BTP avec expertise menuiserie française`;
     }
   }
 
   /**
-   * Construit le prompt utilisateur avec contexte
+   * Construit le prompt utilisateur ultra-enrichi avec contexte IA multi-dimensionnel et données OCR
    */
-  private buildUserPrompt(query: string, context: string, userRole: string): string {
-    return `CONTEXTE MÉTIER:
-Rôle utilisateur: ${userRole}
-Entreprise: JLM Menuiserie (pose de menuiseries)
+  private buildUserPrompt(
+    query: string, 
+    context: string, 
+    userRole: string, 
+    contextualData?: AIContextualData
+  ): string {
+    
+    // Analyse intelligente de la requête pour sélection contexte optimal
+    const queryAnalysis = this.analyzeQueryIntent(query);
+    
+    let enrichedPrompt = `👤 PROFIL UTILISATEUR SAXIUM:
+🏢 Rôle: ${userRole} - ${this.getUserAccessLevel(userRole)}
+🏗️ Entreprise: JLM Menuiserie (pose menuiseries Nord-Pas-de-Calais)
+🎯 Intent détecté: ${queryAnalysis.intent} (confiance: ${Math.round(queryAnalysis.confidence * 100)}%)
+📍 Entités identifiées: ${queryAnalysis.entities.join(', ') || 'Analyse générale'}
 
-SCHÉMA BASE DE DONNÉES:
-${context || "Schéma non fourni"}
+📊 SCHÉMA SAXIUM ENRICHI (OCR + Monday.com + Analytics):
+${context || "Schéma base de données Saxium avec enrichissements IA"}`;
 
-REQUÊTE UTILISATEUR:
-${query}
+    // Intégration contexte ultra-enrichi avec données OCR et prédictives
+    if (contextualData) {
+      enrichedPrompt += `\n\n🧠 CONTEXTE INTELLIGENT MULTI-DIMENSIONNEL:`;
+      
+      // === CONTEXTE MÉTIER ENRICHI ===
+      if (contextualData.businessContext) {
+        const bc = contextualData.businessContext;
+        enrichedPrompt += `\n🏗️ MÉTIER: Phase "${bc.currentPhase}" | Priorité ${bc.projectClassification.priority}`;
+        if (bc.financials.estimatedAmount) {
+          enrichedPrompt += ` | Budget ${bc.financials.estimatedAmount.toLocaleString('fr-FR')}€`;
+          if (bc.financials.margin) {
+            enrichedPrompt += ` (marge ${bc.financials.margin}%)`;
+          }
+        }
+        if (bc.projectClassification) {
+          enrichedPrompt += `\n  📊 Classification: ${bc.projectClassification.size} | Complexité ${bc.projectClassification.complexity}`;
+        }
+      }
+      
+      // === CONTEXTE RELATIONNEL ET ACTEURS ===
+      if (contextualData.relationalContext) {
+        const rc = contextualData.relationalContext;
+        const client = rc.mainActors.client.name;
+        const suppliers = rc.mainActors.suppliers;
+        enrichedPrompt += `\n🤝 RELATIONNEL: Client "${client}" | ${suppliers.length} fournisseurs`;
+        if (suppliers.length > 0) {
+          const topSuppliers = suppliers.slice(0, 3).map(s => s.name).join(', ');
+          enrichedPrompt += `\n  🏭 Fournisseurs clés: ${topSuppliers}`;
+        }
+      }
+      
+      // === CONTEXTE TEMPOREL ET ALERTES ===
+      if (contextualData.temporalContext) {
+        const tc = contextualData.temporalContext;
+        if (tc.alerts && tc.alerts.length > 0) {
+          const criticalAlerts = tc.alerts.filter(a => a.severity === 'critical').length;
+          const warningAlerts = tc.alerts.filter(a => a.severity === 'warning').length;
+          enrichedPrompt += `\n⏰ TEMPOREL: ${tc.alerts.length} alertes (${criticalAlerts} critiques, ${warningAlerts} warnings)`;
+          
+          // Alertes les plus critiques
+          const topAlerts = tc.alerts
+            .filter(a => a.severity === 'critical')
+            .slice(0, 2)
+            .map(a => a.message)
+            .join(' | ');
+          if (topAlerts) {
+            enrichedPrompt += `\n  🚨 Alertes critiques: ${topAlerts}`;
+          }
+        }
+        
+        // Contexte saisonnier BTP
+        const currentMonth = new Date().getMonth() + 1;
+        const seasonalContext = this.getSeasonalContext(currentMonth);
+        enrichedPrompt += `\n  🌡️ Contexte saisonnier: ${seasonalContext}`;
+      }
+      
+      // === CONTEXTE TECHNIQUE ET DONNÉES OCR ENRICHIES ===
+      if (contextualData.technicalContext) {
+        const ttc = contextualData.technicalContext;
+        if (ttc.materials && ttc.materials.primary.length > 0) {
+          enrichedPrompt += `\n🔧 TECHNIQUE OCR-Enrichi: Matériaux ${ttc.materials.primary.join(', ')}`;
+          
+          // Couleurs détectées via OCR
+          if (ttc.materials.colors && ttc.materials.colors.length > 0) {
+            enrichedPrompt += ` | Couleurs ${ttc.materials.colors.slice(0, 3).join(', ')}`;
+          }
+          
+          // Dimensions et spécifications OCR
+          if (ttc.specifications && ttc.specifications.dimensions) {
+            const dims = ttc.specifications.dimensions;
+            enrichedPrompt += `\n  📐 Dimensions OCR: ${dims.length > 0 ? dims.slice(0, 2).join(' × ') : 'Non spécifiées'}`;
+          }
+          
+          // Références techniques détectées
+          if (ttc.references && ttc.references.length > 0) {
+            enrichedPrompt += `\n  📝 Références détectées: ${ttc.references.slice(0, 3).join(', ')}`;
+          }
+        }
+      }
+      
+      // === CONTEXTE ADMINISTRATIF ET RÉGLEMENTAIRE ===
+      if (contextualData.administrativeContext) {
+        const ac = contextualData.administrativeContext;
+        if (ac.permits && ac.permits.length > 0) {
+          const activePermits = ac.permits.filter(p => p.status === 'active').length;
+          enrichedPrompt += `\n📋 ADMINISTRATIF: ${ac.permits.length} autorisations (${activePermits} actives)`;
+        }
+        if (ac.compliance && ac.compliance.length > 0) {
+          const complianceRate = (ac.compliance.filter(c => c.status === 'compliant').length / ac.compliance.length) * 100;
+          enrichedPrompt += `\n  ✅ Conformité: ${Math.round(complianceRate)}% (${ac.compliance.length} contrôles)`;
+        }
+      }
+      
+      // === INSIGHTS PRÉDICTIFS ET BUSINESS INTELLIGENCE ===
+      if (contextualData.keyInsights && contextualData.keyInsights.length > 0) {
+        const criticalInsights = contextualData.keyInsights.filter(i => i.includes('retard') || i.includes('risque') || i.includes('critique'));
+        const businessInsights = contextualData.keyInsights.filter(i => i.includes('rentabil') || i.includes('marge') || i.includes('économie'));
+        
+        enrichedPrompt += `\n💡 INSIGHTS PRÉDICTIFS:`;
+        if (criticalInsights.length > 0) {
+          enrichedPrompt += `\n  ⚠️ Risques: ${criticalInsights.slice(0, 2).join(' | ')}`;
+        }
+        if (businessInsights.length > 0) {
+          enrichedPrompt += `\n  💰 Business: ${businessInsights.slice(0, 2).join(' | ')}`;
+        }
+        
+        // Autres insights généraux
+        const otherInsights = contextualData.keyInsights
+          .filter(i => !criticalInsights.includes(i) && !businessInsights.includes(i))
+          .slice(0, 2);
+        if (otherInsights.length > 0) {
+          enrichedPrompt += `\n  📊 Général: ${otherInsights.join(' | ')}`;
+        }
+      }
+      
+      // === TERMINOLOGIE ET CODES MÉTIER FRANÇAIS ===
+      if (contextualData.frenchTerminology && Object.keys(contextualData.frenchTerminology).length > 0) {
+        const techTerms = Object.entries(contextualData.frenchTerminology)
+          .filter(([_, fr]) => fr.includes('technique') || fr.includes('matériau') || fr.includes('pose'))
+          .slice(0, 3)
+          .map(([en, fr]) => `${en}→${fr}`)
+          .join(', ');
+        
+        const businessTerms = Object.entries(contextualData.frenchTerminology)
+          .filter(([_, fr]) => fr.includes('devis') || fr.includes('projet') || fr.includes('client'))
+          .slice(0, 3)
+          .map(([en, fr]) => `${en}→${fr}`)
+          .join(', ');
+          
+        enrichedPrompt += `\n🇫🇷 TERMINOLOGIE MÉTIER:`;
+        if (techTerms) enrichedPrompt += `\n  🔧 Technique: ${techTerms}`;
+        if (businessTerms) enrichedPrompt += `\n  💼 Business: ${businessTerms}`;
+      }
+      
+      // === PATTERNS ET CODES DÉTECTÉS DANS LA REQUÊTE ===
+      const detectedCodes = this.detectTechnicalCodes(query);
+      if (detectedCodes.length > 0) {
+        enrichedPrompt += `\n🔍 CODES/RÉFÉRENCES DÉTECTÉS: ${detectedCodes.join(', ')}`;
+      }
+    }
 
-INSTRUCTIONS:
-- Génère une requête SQL PostgreSQL optimisée
-- Respecte les permissions du rôle ${userRole}  
-- Fournis une explication claire en français
-- Indique le niveau de confiance
-- Signale les avertissements éventuels
-- Respecte STRICTEMENT le format JSON demandé`;
+    enrichedPrompt += `\n\n🎯 REQUÊTE UTILISATEUR MÉTIER:
+"${query}"
+
+📋 INSTRUCTIONS ULTRA-PRÉCISES SAXIUM:
+1. 🧠 Analyse la requête avec intelligence contextuelle métier BTP/menuiserie
+2. 🔍 Exploite TOUTES les données enrichies (OCR, Monday.com, prédictif, business)
+3. 🛠️ Génère du SQL PostgreSQL ultra-optimisé pour la base Saxium
+4. 🇫🇷 Utilise exclusivement la terminologie française BTP dans les explications
+5. ⚡ Optimise performance: indexes géographiques, agrégations temporelles, JOINs intelligents
+6. 🔒 Respecte les permissions RBAC du rôle ${userRole} avec filtrage contextuel
+7. 📊 Intègre les KPIs métier et insights business dans les résultats
+8. ⚠️ Détecte et signale toute anomalie ou point de vigilance métier
+9. 🔮 Propose des insights prédictifs quand pertinent (retards, risques, optimisations)
+10. 💡 Suggère des analyses complémentaires ou actions correctives
+11. 🏗️ Contextualise dans le workflow AO→Projet→Chantier→SAV
+12. ✅ RESPECTE RIGOUREUSEMENT le format JSON métier enrichi`;
+
+    return enrichedPrompt;
+  }
+
+  /**
+   * Détermine le niveau d'accès selon le rôle utilisateur
+   */
+  private getUserAccessLevel(userRole: string): string {
+    const accessLevels: Record<string, string> = {
+      'admin': 'Accès complet (lecture/écriture)',
+      'manager': 'Accès étendu (lecture + modifications limitées)',
+      'be_engineer': 'Accès techniques + projets (lecture + validation)',
+      'commercial': 'Accès commercial (AO, offres, clients)',
+      'user': 'Accès standard (lecture projets assignés)',
+      'readonly': 'Consultation uniquement'
+    };
+    
+    return accessLevels[userRole] || 'Accès standard';
+  }
+
+  /**
+   * Analyse intelligente de l'intention de la requête utilisateur
+   */
+  private analyzeQueryIntent(query: string): { intent: string; confidence: number; entities: string[] } {
+    const queryLower = query.toLowerCase();
+    const entities: string[] = [];
+    
+    // === DÉTECTION ENTITÉS MÉTIER ===
+    // Projets et références
+    if (/projet[s]?\s*#?\d+|#\d{4}/.test(queryLower)) entities.push('PROJET');
+    if (/ao[s]?\s*#?\d+|appel[s]?\s+d.offre[s]?/.test(queryLower)) entities.push('APPEL_OFFRE');
+    if (/devis|offre[s]?/.test(queryLower)) entities.push('OFFRE');
+    
+    // Acteurs métier
+    if (/fournisseur[s]?|supplier[s]?|fabricant[s]?/.test(queryLower)) entities.push('FOURNISSEUR');
+    if (/client[s]?|maître\s+d.ouvrage|moa/.test(queryLower)) entities.push('CLIENT');
+    if (/équipe[s]?|team[s]?|poseur[s]?/.test(queryLower)) entities.push('EQUIPE');
+    
+    // Matériaux et produits
+    if (/pvc|bois|aluminium|alu|acier|composite|mixte/.test(queryLower)) entities.push('MATERIAU');
+    if (/fenêtre[s]?|porte[s]?|volet[s]?|menuiserie[s]?/.test(queryLower)) entities.push('PRODUIT');
+    
+    // Temporel
+    if (/\d{4}|janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|mois|trimestre|année/.test(queryLower)) entities.push('TEMPOREL');
+    if (/retard[s]?|délai[s]?|planning/.test(queryLower)) entities.push('PLANNING');
+    
+    // Géographie
+    if (/boulogne|calais|dunkerque|lille|59|62|nord|pas.de.calais/.test(queryLower)) entities.push('GEOGRAPHIE');
+    
+    // === DÉTECTION INTENTIONS ===
+    let intent = 'ANALYSE_GENERALE';
+    let confidence = 0.6;
+    
+    // Analyses business
+    if (/rentabilité|rentable|marge[s]?|bénéfice[s]?|ca|chiffre.affaire[s]?|roi/.test(queryLower)) {
+      intent = 'ANALYSE_BUSINESS'; confidence = 0.85;
+    }
+    
+    // Comparaisons
+    else if (/compar[aieo]|vs|versus|différence[s]?|meilleur[s]?|performance[s]?/.test(queryLower)) {
+      intent = 'COMPARAISON'; confidence = 0.8;
+    }
+    
+    // Prédictions et risques
+    else if (/prédi[rctio]|risque[s]?|alerte[s]?|prévision[s]?|estim[aeio]/.test(queryLower)) {
+      intent = 'PREDICTION'; confidence = 0.85;
+    }
+    
+    // Analyses temporelles
+    else if (/(évolution|trend|tendance[s]?|saisonnal|mensuel|annuel|historique)/.test(queryLower)) {
+      intent = 'ANALYSE_TEMPORELLE'; confidence = 0.8;
+    }
+    
+    // Recherche et filtrage
+    else if (/liste[rs]?|affich[aer]|montr[aer]|quels?|combien|trouve[rs]?/.test(queryLower)) {
+      intent = 'RECHERCHE'; confidence = 0.75;
+    }
+    
+    // Validation et conformité
+    else if (/conform[eité]|valid[aeiot]|contrôle[rs]?|vérifi[aer]|dtu|norme[s]?/.test(queryLower)) {
+      intent = 'VALIDATION'; confidence = 0.8;
+    }
+    
+    // Optimisation
+    else if (/optimis[aeiot]|amélio[rrr]|réduir[aie]|efficac[eité]|performance[s]?/.test(queryLower)) {
+      intent = 'OPTIMISATION'; confidence = 0.8;
+    }
+    
+    // Bonus de confiance selon complexité
+    if (entities.length > 2) confidence = Math.min(0.95, confidence + 0.1);
+    if (queryLower.length > 50) confidence = Math.min(0.95, confidence + 0.05);
+    
+    return { intent, confidence, entities };
+  }
+  
+  /**
+   * Détecte les codes et références techniques dans la requête
+   */
+  private detectTechnicalCodes(query: string): string[] {
+    const codes: string[] = [];
+    const queryUpper = query.toUpperCase();
+    
+    // Codes projets JLM (#2503, #21600, etc.)
+    const projectCodes = queryUpper.match(/#\d{4,5}/g);
+    if (projectCodes) codes.push(...projectCodes.map(c => `Projet ${c}`));
+    
+    // Codes AO
+    const aoCodes = queryUpper.match(/AO[-\s]?\d{4}/g);
+    if (aoCodes) codes.push(...aoCodes.map(c => `AO ${c.replace(/AO[-\s]?/, '')}`));
+    
+    // Références matériaux/couleurs
+    const ralCodes = queryUpper.match(/RAL\s?\d{4}/g);
+    if (ralCodes) codes.push(...ralCodes.map(c => `Couleur ${c}`));
+    
+    // Normes françaises
+    const dtuCodes = queryUpper.match(/DTU\s?[\d.]+/g);
+    if (dtuCodes) codes.push(...dtuCodes.map(c => `Norme ${c}`));
+    
+    // Codes spéciaux JLM
+    if (queryUpper.includes('MEXT')) codes.push('Menuiseries Extérieures');
+    if (queryUpper.includes('MINT')) codes.push('Menuiseries Intérieures');
+    if (queryUpper.includes('BOUL')) codes.push('Site Boulogne');
+    if (queryUpper.includes('VIS')) codes.push('VISA Architecte');
+    
+    // Départements
+    const deptCodes = queryUpper.match(/\b(59|62)\b/g);
+    if (deptCodes) codes.push(...deptCodes.map(c => `Département ${c}`));
+    
+    return [...new Set(codes)]; // Dédoublonner
+  }
+  
+  /**
+   * Fournit le contexte saisonnier BTP pour un mois donné
+   */
+  private getSeasonalContext(month: number): string {
+    const seasonalContexts: Record<number, string> = {
+      1: 'Hiver - Activité ralentie, focus planification et préparation',
+      2: 'Hiver - Période creuse, formations équipes, préparation saison',
+      3: 'Pré-printemps - Reprise progressive, préparation chantiers',
+      4: 'Printemps - Pic activité, démarrage chantiers extérieurs',
+      5: 'Printemps - Haute activité, conditions idéales pose',
+      6: 'Début été - Activité soutenue, attention canicule',
+      7: 'Été - Congés équipes, ralentissement, maintenance matériel',
+      8: 'Fin été - Congés, activité réduite, préparation rentrée',
+      9: 'Rentrée - Reprise forte activité, rattrapage planning',
+      10: 'Automne - Activité soutenue, urgence avant hiver',
+      11: 'Automne - Dernières poses extérieures, préparation hiver',
+      12: 'Hiver - Activité intérieure, bilan annuel, planification N+1'
+    };
+    
+    return seasonalContexts[month] || 'Contexte saisonnier indéterminé';
+  }
+
+  /**
+   * Détecte si la requête contient des mots-clés prédictifs
+   */
+  private containsPredictiveKeywords(query: string): boolean {
+    const predictiveKeywords = [
+      // Prédiction directe
+      'prédi', 'prédic', 'prévoi', 'prévision', 'estim', 'anticip',
+      // Risques et alertes
+      'risque', 'danger', 'menace', 'alerte', 'warning', 'problème probable',
+      // Tendances et évolution
+      'évolution', 'tend', 'trend', 'projection', 'scénario', 'probable',
+      // Indicateurs métier BTP
+      'retard probable', 'surcoût potentiel', 'dérive budgétaire',
+      'charge prévisionnelle', 'capacité future', 'disponibilité équipe',
+      // Intelligence temporelle
+      'dans les prochains', 'probablement', 'vraisemblablement',
+      'si la tendance', 'selon l\'historique', 'basé sur le passé'
+    ];
+    
+    const queryLower = query.toLowerCase();
+    return predictiveKeywords.some(keyword => queryLower.includes(keyword));
+  }
+
+  /**
+   * Compte les références d'entités dans la requête pour évaluer la complexité
+   */
+  private countEntityReferences(query: string): number {
+    const queryLower = query.toLowerCase();
+    let entityCount = 0;
+    
+    // Entités principales
+    const entityPatterns = [
+      // Projets et références
+      /projet[s]?\s*#?\d+|#\d{4,5}|ao[-\s]?\d{4}/g,
+      // Acteurs métier
+      /fournisseur[s]?|client[s]?|équipe[s]?|poseur[s]?|be[\s_]?engineer/g,
+      // Matériaux
+      /pvc|bois|aluminium|alu|acier|composite|mixte/g,
+      // Produits
+      /fenêtre[s]?|porte[s]?|volet[s]?|menuiserie[s]?|ouverture[s]?/g,
+      // Workflow
+      /appel[s]?\s+d['\'']offre[s]?|devis|offre[s]?|chantier[s]?|sav/g,
+      // Temporel
+      /\d{4}|mois|trimestre|année[s]?|janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre/g,
+      // Géographie  
+      /boulogne|calais|dunkerque|lille|59|62|nord|pas[-\s]de[-\s]calais/g,
+      // Métriques business
+      /marge[s]?|ca|chiffre[s]?[-\s]?d['\'']affaire[s]?|rentabilité|coût[s]?|prix|délai[s]?/g
+    ];
+    
+    entityPatterns.forEach(pattern => {
+      const matches = queryLower.match(pattern);
+      if (matches) entityCount += matches.length;
+    });
+    
+    return entityCount;
+  }
+
+  /**
+   * Génère un contexte enrichi pour une entité spécifique
+   */
+  async buildEnrichedContext(
+    entityType: 'ao' | 'offer' | 'project' | 'supplier' | 'team' | 'client',
+    entityId: string,
+    requestType: 'full' | 'summary' | 'specific' = 'summary'
+  ): Promise<AIContextualData | null> {
+    try {
+      // Configuration par défaut pour la génération de contexte
+      const config: ContextGenerationConfig = {
+        entityType,
+        entityId,
+        requestType,
+        contextFilters: {
+          includeTypes: ['metier', 'relationnel', 'temporel'], // Types de base
+          scope: 'related_entities',
+          maxDepth: 2,
+          includePredictive: true
+        },
+        performance: {
+          compressionLevel: 'light',
+          maxTokens: 2000,
+          cacheStrategy: 'moderate',
+          freshnessThreshold: 4 // 4 heures
+        },
+        businessSpecialization: {
+          menuiserieTypes: ['fenetre', 'porte', 'volet'],
+          projectPhases: ['etude', 'chiffrage', 'planification', 'chantier'],
+          clientTypes: ['public', 'prive'],
+          geographicScope: ['59', '62'] // Nord-Pas-de-Calais par défaut
+        }
+      };
+
+      // Tentative de récupération depuis le cache
+      const cachedContext = await this.contextCache.getContext(entityType, entityId, config);
+      if (cachedContext) {
+        console.log(`[AIService] Contexte enrichi récupéré depuis le cache pour ${entityType}:${entityId}`);
+        return cachedContext;
+      }
+
+      // Génération du contexte enrichi
+      console.log(`[AIService] Génération contexte enrichi pour ${entityType}:${entityId}`);
+      const result = await this.contextBuilder.buildContextualData(config);
+      
+      if (result.success && result.data) {
+        // Mise en cache pour utilisation future
+        await this.contextCache.setContext(entityType, entityId, config, result.data);
+        
+        console.log(`[AIService] Contexte enrichi généré avec succès: ${result.data.tokenEstimate} tokens estimés`);
+        return result.data;
+      } else {
+        console.warn(`[AIService] Échec génération contexte: ${result.error?.message}`);
+        return null;
+      }
+
+    } catch (error) {
+      console.error(`[AIService] Erreur génération contexte enrichi:`, error);
+      return null;
+    }
   }
 
   /**
@@ -998,6 +1637,22 @@ export function getAIService(storage: IStorage): AIService {
     aiServiceInstance = new AIService(storage);
   }
   return aiServiceInstance;
+}
+
+/**
+ * Vérifie si le contexte business est suffisamment riche pour optimiser la sélection
+ */
+function hasRichBusinessContext(contextualData: AIContextualData): boolean {
+  let richness = 0;
+  
+  if (contextualData.businessContext) richness += 2;
+  if (contextualData.relationalContext) richness += 1;
+  if (contextualData.temporalContext?.alerts?.length) richness += 1;
+  if (contextualData.technicalContext) richness += 1;
+  if (contextualData.keyInsights?.length) richness += 1;
+  if (contextualData.frenchTerminology) richness += 1;
+  
+  return richness >= 4; // Seuil pour "contexte riche"
 }
 
 export default AIService;

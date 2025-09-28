@@ -4781,9 +4781,23 @@ export const cacheStatusEnum = pgEnum("cache_status", [
   "hit", "miss", "expired", "invalid"
 ]);
 
-// Types de requêtes IA
+// Types de requêtes IA - Enrichi pour métier JLM Menuiserie
 export const aiQueryTypeEnum = pgEnum("ai_query_type", [
-  "text_to_sql", "data_analysis", "business_insight", "validation", "optimization"
+  "text_to_sql",         // Génération SQL classique
+  "data_analysis",       // Analyses de données générales
+  "business_insight",    // Insights généraux
+  "validation",          // Validation conformité
+  "optimization",        // Optimisation performance
+  // === NOUVEAUX TYPES MÉTIER BTP/MENUISERIE ===
+  "business_analysis",   // Analyses business métier (marges, taux conversion, performance)
+  "project_insights",    // Insights projets (délais, risques, prédictions)
+  "supplier_comparison", // Comparaisons fournisseurs (prix, délais, qualité)
+  "predictive_analysis", // Analyses prédictives (planning, coûts, ressources)
+  "technical_validation",// Validation technique BTP (normes DTU, conformité)
+  "temporal_analysis",   // Analyses temporelles (saisonnalité, tendances)
+  "geographic_analysis", // Analyses géographiques par département
+  "materials_analysis",  // Analyses matériaux (PVC, bois, alu, performances)
+  "workflow_optimization"// Optimisation workflow AO→Projet→Chantier→SAV
 ]);
 
 // ========================================
@@ -4895,7 +4909,11 @@ export const aiQueryRequestSchema = z.object({
   userRole: z.string().min(1),
   complexity: queryComplexityEnum.enumValues[0] ? z.enum(queryComplexityEnum.enumValues as [string, ...string[]]) : z.enum(["simple", "complex", "expert"]),
   forceModel: aiModelEnum.enumValues[0] ? z.enum(aiModelEnum.enumValues as [string, ...string[]]) : z.enum(["claude_sonnet_4", "gpt_5"]),
-  queryType: aiQueryTypeEnum.enumValues[0] ? z.enum(aiQueryTypeEnum.enumValues as [string, ...string[]]) : z.enum(["text_to_sql", "data_analysis", "business_insight", "validation", "optimization"]),
+  queryType: aiQueryTypeEnum.enumValues[0] ? z.enum(aiQueryTypeEnum.enumValues as [string, ...string[]]) : z.enum([
+    "text_to_sql", "data_analysis", "business_insight", "validation", "optimization",
+    "business_analysis", "project_insights", "supplier_comparison", "predictive_analysis",
+    "technical_validation", "temporal_analysis", "geographic_analysis", "materials_analysis", "workflow_optimization"
+  ]),
   useCache: z.boolean().default(true),
   maxTokens: z.number().min(100).max(8192).default(2048),
 }).partial({
@@ -4916,7 +4934,11 @@ export const aiRoutingConfigSchema = z.object({
     }).optional(),
     complexity: z.array(z.enum(["simple", "complex", "expert"])).optional(),
     userRoles: z.array(z.string()).optional(),
-    queryTypes: z.array(z.enum(["text_to_sql", "data_analysis", "business_insight", "validation", "optimization"])).optional(),
+    queryTypes: z.array(z.enum([
+      "text_to_sql", "data_analysis", "business_insight", "validation", "optimization",
+      "business_analysis", "project_insights", "supplier_comparison", "predictive_analysis",
+      "technical_validation", "temporal_analysis", "geographic_analysis", "materials_analysis", "workflow_optimization"
+    ])).optional(),
     keywordMatches: z.array(z.string()).optional(),
   }),
   targetModel: z.enum(["claude_sonnet_4", "gpt_5"]),
@@ -7461,4 +7483,335 @@ export interface OCRImprovementMetric {
   validationErrorsFound: number;
   processingTime: number;
   timestamp: Date;
+}
+
+// ========================================
+// TYPES CONTEXTUELS IA ENRICHI - PHASE GENERATEUR CONTEXTE
+// ========================================
+
+// Types de contexte pour génération IA enrichie
+export const contextTypeEnum = pgEnum("context_type", [
+  "technique",      // Spécifications techniques, matériaux, normes
+  "metier",         // Terminologie BTP, workflow menuiserie
+  "relationnel",    // Contacts, fournisseurs, relations client-projet
+  "temporel",       // Planning, échéances, délais
+  "administratif"   // Procédures, conformité, documents
+]);
+
+// Portée du contexte pour optimisation
+export const contextScopeEnum = pgEnum("context_scope", [
+  "entity_focused",  // Contexte centré sur une entité spécifique
+  "related_entities", // Entités liées (projet + AO + fournisseurs)
+  "domain_wide",     // Large portée métier
+  "historical"       // Données historiques pour prédictions
+]);
+
+// Niveau de compression pour optimisation tokens
+export const compressionLevelEnum = pgEnum("compression_level", [
+  "none",      // Pas de compression
+  "light",     // Compression légère (résumé)
+  "medium",    // Compression modérée (points clés)
+  "high"       // Compression forte (synthèse ultra-compacte)
+]);
+
+// Interface principale pour données contextuelles IA
+export interface AIContextualData {
+  // Identification du contexte
+  entityType: 'ao' | 'offer' | 'project' | 'supplier' | 'team' | 'client';
+  entityId: string;
+  requestId: string;
+  
+  // Configuration du contexte
+  contextTypes: typeof contextTypeEnum.enumValues[number][];
+  scope: typeof contextScopeEnum.enumValues[number];
+  compressionLevel: typeof compressionLevelEnum.enumValues[number];
+  
+  // Données contextuelles par type
+  technicalContext?: TechnicalContext;
+  businessContext?: BusinessContext;
+  relationalContext?: RelationalContext;
+  temporalContext?: TemporalContext;
+  administrativeContext?: AdministrativeContext;
+  
+  // Métriques et métadonnées
+  generationMetrics: {
+    totalTablesQueried: number;
+    executionTimeMs: number;
+    cachingUsed: boolean;
+    dataFreshnessScore: number; // 0-1, 1 = très récent
+    relevanceScore: number; // 0-1, pertinence estimée
+  };
+  
+  // Optimisation pour IA
+  tokenEstimate: number;
+  frenchTerminology: Record<string, string>; // Traductions/équivalences
+  keyInsights: string[]; // Points clés résumés
+}
+
+// Contexte technique (matériaux, spécifications, normes)
+export interface TechnicalContext {
+  // Spécifications produits
+  materials: {
+    primary: string[];
+    secondary: string[];
+    finishes: string[];
+    certifications: string[];
+  };
+  
+  // Performances techniques
+  performance: {
+    thermal?: { uw?: number; aev?: string; };
+    acoustic?: Record<string, any>;
+    security?: Record<string, any>;
+    durability?: Record<string, any>;
+  };
+  
+  // Normes et conformité
+  standards: {
+    dtu: string[];
+    nf: string[];
+    ce: string[];
+    other: string[];
+  };
+  
+  // Contraintes techniques
+  constraints: {
+    dimensional: Record<string, any>;
+    installation: string[];
+    environmental: string[];
+  };
+}
+
+// Contexte métier (workflow BTP français)
+export interface BusinessContext {
+  // Étapes workflow
+  currentPhase: string;
+  completedPhases: string[];
+  nextMilestones: Array<{
+    type: string;
+    deadline: string;
+    criticality: 'low' | 'medium' | 'high' | 'critical';
+  }>;
+  
+  // Métrique business
+  financials: {
+    estimatedAmount?: number;
+    confirmedAmount?: number;
+    margin?: number;
+    profitabilityScore?: number;
+  };
+  
+  // Classification projet
+  projectClassification: {
+    size: 'small' | 'medium' | 'large';
+    complexity: 'simple' | 'standard' | 'complex' | 'expert';
+    priority: typeof priorityLevelEnum.enumValues[number];
+    riskLevel: 'low' | 'medium' | 'high';
+  };
+  
+  // Terminologie métier spécialisée
+  menuiserieSpecifics: {
+    productTypes: string[];
+    installationMethods: string[];
+    qualityStandards: string[];
+    commonIssues: string[];
+  };
+}
+
+// Contexte relationnel (acteurs, relations)
+export interface RelationalContext {
+  // Acteurs principaux
+  mainActors: {
+    client: {
+      name: string;
+      type: 'public' | 'private' | 'social';
+      recurrency: typeof clientRecurrencyEnum.enumValues[number];
+      criticalRequirements: string[];
+    };
+    
+    architect?: {
+      name: string;
+      experience: string;
+      previousCollaborations: number;
+      specialties: string[];
+    };
+    
+    suppliers: Array<{
+      name: string;
+      role: typeof supplierRoleEnum.enumValues[number];
+      reliability: number; // 0-1
+      specialties: string[];
+      currentStatus: string;
+    }>;
+  };
+  
+  // Historique collaborations
+  collaborationHistory: {
+    withClient: {
+      previousProjects: number;
+      successRate: number;
+      averageMargin: number;
+    };
+    
+    withSuppliers: Record<string, {
+      projectsCount: number;
+      averageResponseTime: number;
+      qualityScore: number;
+    }>;
+  };
+  
+  // Réseaux et recommandations
+  network: {
+    recommendedSuppliers: string[];
+    blacklistedSuppliers: string[];
+    strategicPartners: string[];
+  };
+}
+
+// Contexte temporel (planning, échéances)
+export interface TemporalContext {
+  // Planning global
+  timeline: {
+    projectStart: string;
+    estimatedEnd: string;
+    criticalDeadlines: Array<{
+      date: string;
+      description: string;
+      importance: 'milestone' | 'contractual' | 'regulatory';
+    }>;
+  };
+  
+  // Contraintes temporelles
+  temporalConstraints: {
+    seasonalFactors: string[];
+    weatherDependencies: string[];
+    resourceAvailability: Record<string, string>;
+    externalDependencies: string[];
+  };
+  
+  // Historique délais
+  delayHistory: {
+    averageProjectDuration: number; // jours
+    commonDelayFactors: string[];
+    seasonalVariations: Record<string, number>;
+  };
+  
+  // Alertes et risques temporels
+  alerts: Array<{
+    type: typeof dateAlertTypeEnum.enumValues[number];
+    severity: 'info' | 'warning' | 'critical';
+    message: string;
+    daysToDeadline?: number;
+  }>;
+}
+
+// Contexte administratif (procédures, conformité)
+export interface AdministrativeContext {
+  // Documents requis
+  requiredDocuments: {
+    completed: string[];
+    pending: string[];
+    missing: string[];
+    upcoming: Array<{
+      name: string;
+      deadline: string;
+      responsible: string;
+    }>;
+  };
+  
+  // Conformité réglementaire
+  regulatory: {
+    permits: Array<{
+      type: string;
+      status: 'obtained' | 'pending' | 'required';
+      validUntil?: string;
+    }>;
+    
+    inspections: Array<{
+      type: string;
+      scheduled?: string;
+      completed?: string;
+      result?: 'passed' | 'failed' | 'conditional';
+    }>;
+  };
+  
+  // Procédures internes
+  internalProcesses: {
+    validationSteps: Array<{
+      step: string;
+      responsible: string;
+      status: 'pending' | 'completed' | 'blocked';
+      requiredInputs: string[];
+    }>;
+    
+    qualityControls: Array<{
+      checkpoint: string;
+      criteria: string[];
+      frequency: string;
+    }>;
+  };
+  
+  // Assurances et garanties
+  insurance: {
+    coverage: string[];
+    validUntil: string;
+    specificConditions: string[];
+  };
+}
+
+// Configuration pour génération de contexte
+export interface ContextGenerationConfig {
+  // Paramètres de requête
+  entityType: AIContextualData['entityType'];
+  entityId: string;
+  requestType: 'full' | 'summary' | 'specific';
+  
+  // Filtres contextuels
+  contextFilters: {
+    includeTypes: typeof contextTypeEnum.enumValues[number][];
+    scope: typeof contextScopeEnum.enumValues[number];
+    maxDepth: number; // Profondeur des relations
+    includePredictive: boolean;
+  };
+  
+  // Optimisation
+  performance: {
+    compressionLevel: typeof compressionLevelEnum.enumValues[number];
+    maxTokens: number;
+    cacheStrategy: 'aggressive' | 'moderate' | 'minimal';
+    freshnessThreshold: number; // heures, données considérées fraîches
+  };
+  
+  // Spécialisations métier
+  businessSpecialization: {
+    menuiserieTypes?: string[];
+    projectPhases?: string[];
+    clientTypes?: string[];
+    geographicScope?: string[];
+  };
+}
+
+// Résultat de génération de contexte avec métriques
+export interface ContextGenerationResult {
+  success: boolean;
+  data?: AIContextualData;
+  error?: {
+    type: 'validation' | 'database' | 'timeout' | 'cache' | 'unknown';
+    message: string;
+    details?: any;
+  };
+  
+  performance: {
+    executionTimeMs: number;
+    tablesQueried: string[];
+    cacheHitRate: number; // 0-1
+    dataFreshness: number; // 0-1
+    compressionRatio?: number; // si compression appliquée
+  };
+  
+  recommendations?: {
+    suggestedOptimizations: string[];
+    relevanceWarnings: string[];
+    dataGaps: string[];
+  };
 }

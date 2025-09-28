@@ -3,8 +3,10 @@ import { z } from "zod";
 import { getAIService } from "../services/AIService";
 import { storage } from "../storage";
 import { aiQueryRequestSchema } from "@shared/schema";
-import type { AiQueryRequest } from "@shared/schema";
+import type { AiQueryRequest, ContextGenerationConfig } from "@shared/schema";
 import type { IStorage } from "../storage-poc";
+import { getContextBuilderService } from "../services/ContextBuilderService";
+import { getContextCacheService } from "../services/ContextCacheService";
 
 const router = Router();
 
@@ -341,6 +343,370 @@ router.get("/config", (req, res) => {
     success: true,
     data: config
   });
+});
+
+// ========================================
+// NOUVEAUX ENDPOINTS CONTEXTE ENRICHI IA
+// ========================================
+
+/**
+ * GET /api/ai/context/:entityType/:id
+ * Récupère le contexte enrichi pour une entité spécifique
+ */
+router.get("/context/:entityType/:id", async (req, res) => {
+  try {
+    const { entityType, id: entityId } = req.params;
+    const requestType = (req.query.type as string) || 'summary';
+    
+    // Validation des paramètres
+    const validEntityTypes = ['ao', 'offer', 'project', 'supplier', 'team', 'client'];
+    if (!validEntityTypes.includes(entityType)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          type: "validation_error",
+          message: `Type d'entité invalide. Types supportés: ${validEntityTypes.join(', ')}`,
+          details: { entityType, supportedTypes: validEntityTypes }
+        }
+      });
+    }
+
+    if (!entityId || entityId.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          type: "validation_error",
+          message: "ID d'entité requis",
+          details: { entityId }
+        }
+      });
+    }
+
+    // Récupération du service IA et génération du contexte
+    const aiService = getAIService(storage as IStorage);
+    const contextData = await aiService.buildEnrichedContext(
+      entityType as any,
+      entityId,
+      requestType as any
+    );
+
+    if (contextData) {
+      res.status(200).json({
+        success: true,
+        data: contextData,
+        metadata: {
+          entityType,
+          entityId,
+          requestType,
+          generatedAt: new Date().toISOString(),
+          tokensEstimate: contextData.tokenEstimate,
+          compressionLevel: contextData.compressionLevel
+        }
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: {
+          type: "not_found",
+          message: `Impossible de générer le contexte pour ${entityType}:${entityId}`,
+          details: { entityType, entityId }
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error("[AI Routes] Erreur récupération contexte:", error);
+    res.status(500).json({
+      success: false,
+      error: {
+        type: "unknown",
+        message: "Erreur interne lors de la génération du contexte",
+        details: error instanceof Error ? error.message : String(error)
+      }
+    });
+  }
+});
+
+/**
+ * POST /api/ai/context-preview
+ * Prévisualise un contexte sans le mettre en cache
+ */
+router.post("/context-preview", async (req, res) => {
+  try {
+    // Validation de la configuration contexte
+    const configSchema = z.object({
+      entityType: z.enum(['ao', 'offer', 'project', 'supplier', 'team', 'client']),
+      entityId: z.string().min(1),
+      contextFilters: z.object({
+        includeTypes: z.array(z.enum(['technique', 'metier', 'relationnel', 'temporel', 'administratif'])),
+        scope: z.enum(['entity_focused', 'related_entities', 'domain_wide', 'historical']),
+        maxDepth: z.number().min(1).max(5).default(2),
+        includePredictive: z.boolean().default(true)
+      }),
+      performance: z.object({
+        compressionLevel: z.enum(['none', 'light', 'medium', 'high']).default('light'),
+        maxTokens: z.number().min(100).max(10000).default(2000)
+      }).optional()
+    });
+
+    const validationResult = configSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          type: "validation_error",
+          message: "Configuration de contexte invalide",
+          details: validationResult.error.issues
+        }
+      });
+    }
+
+    const config: ContextGenerationConfig = {
+      ...validationResult.data,
+      requestType: 'full',
+      performance: {
+        ...validationResult.data.performance,
+        cacheStrategy: 'minimal', // Pas de cache pour preview
+        freshnessThreshold: 1
+      },
+      businessSpecialization: {
+        menuiserieTypes: ['fenetre', 'porte', 'volet'],
+        projectPhases: ['etude', 'chiffrage', 'planification', 'chantier'],
+        clientTypes: ['public', 'prive'],
+        geographicScope: ['59', '62']
+      }
+    };
+
+    // Génération directe du contexte (sans cache)
+    const contextBuilder = getContextBuilderService(storage as IStorage);
+    const result = await contextBuilder.buildContextualData(config);
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        performance: result.performance,
+        preview: true
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error,
+        performance: result.performance
+      });
+    }
+
+  } catch (error) {
+    console.error("[AI Routes] Erreur preview contexte:", error);
+    res.status(500).json({
+      success: false,
+      error: {
+        type: "unknown",
+        message: "Erreur interne lors de la prévisualisation",
+        details: error instanceof Error ? error.message : String(error)
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/ai/context-stats
+ * Récupère les statistiques du cache de contexte
+ */
+router.get("/context-stats", async (req, res) => {
+  try {
+    const contextCache = getContextCacheService(storage as IStorage);
+    const stats = contextCache.getStats();
+    const efficiency = await contextCache.analyzeEfficiencyByEntityType();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        globalStats: stats,
+        efficiencyByEntityType: efficiency,
+        retrievedAt: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error("[AI Routes] Erreur récupération stats cache:", error);
+    res.status(500).json({
+      success: false,
+      error: "Impossible de récupérer les statistiques du cache"
+    });
+  }
+});
+
+/**
+ * POST /api/ai/context-invalidate
+ * Invalide le cache de contexte selon différents critères
+ */
+router.post("/context-invalidate", async (req, res) => {
+  try {
+    const invalidationSchema = z.object({
+      strategy: z.enum(['pattern', 'entity', 'all']),
+      pattern: z.string().optional(),
+      entityType: z.enum(['ao', 'offer', 'project', 'supplier', 'team', 'client']).optional(),
+      entityId: z.string().optional()
+    });
+
+    const validationResult = invalidationSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          type: "validation_error",
+          message: "Paramètres d'invalidation invalides",
+          details: validationResult.error.issues
+        }
+      });
+    }
+
+    const { strategy, pattern, entityType, entityId } = validationResult.data;
+    const contextCache = getContextCacheService(storage as IStorage);
+    let invalidatedCount = 0;
+
+    switch (strategy) {
+      case 'all':
+        await contextCache.invalidateAll();
+        invalidatedCount = -1; // Toutes les entrées
+        break;
+        
+      case 'pattern':
+        if (!pattern) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              type: "validation_error",
+              message: "Pattern requis pour l'invalidation par pattern"
+            }
+          });
+        }
+        invalidatedCount = await contextCache.invalidateByPattern(pattern);
+        break;
+        
+      case 'entity':
+        if (!entityType || !entityId) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              type: "validation_error",
+              message: "EntityType et EntityId requis pour l'invalidation par entité"
+            }
+          });
+        }
+        await contextCache.invalidateOnEntityChange(entityType, entityId, 'update');
+        invalidatedCount = 1; // Estimation
+        break;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        strategy,
+        invalidatedCount,
+        pattern,
+        entityType,
+        entityId,
+        invalidatedAt: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error("[AI Routes] Erreur invalidation cache:", error);
+    res.status(500).json({
+      success: false,
+      error: "Erreur lors de l'invalidation du cache"
+    });
+  }
+});
+
+/**
+ * POST /api/ai/context-batch
+ * Génère des contextes pour plusieurs entités en lot
+ */
+router.post("/context-batch", async (req, res) => {
+  try {
+    const batchSchema = z.object({
+      entities: z.array(z.object({
+        entityType: z.enum(['ao', 'offer', 'project', 'supplier', 'team', 'client']),
+        entityId: z.string().min(1),
+        requestType: z.enum(['full', 'summary', 'specific']).default('summary')
+      })).max(10), // Limite à 10 entités par batch
+      globalConfig: z.object({
+        compressionLevel: z.enum(['none', 'light', 'medium', 'high']).default('light'),
+        includeTypes: z.array(z.enum(['technique', 'metier', 'relationnel', 'temporel', 'administratif'])).default(['metier', 'relationnel'])
+      }).optional()
+    });
+
+    const validationResult = batchSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          type: "validation_error",
+          message: "Configuration batch invalide",
+          details: validationResult.error.issues
+        }
+      });
+    }
+
+    const { entities, globalConfig } = validationResult.data;
+    const aiService = getAIService(storage as IStorage);
+    const results = [];
+
+    // Traitement en parallèle des entités (avec limite)
+    const batchPromises = entities.map(async (entity) => {
+      try {
+        const contextData = await aiService.buildEnrichedContext(
+          entity.entityType as any,
+          entity.entityId,
+          entity.requestType
+        );
+        
+        return {
+          entityType: entity.entityType,
+          entityId: entity.entityId,
+          success: true,
+          data: contextData,
+          tokensEstimate: contextData?.tokenEstimate || 0
+        };
+      } catch (error) {
+        return {
+          entityType: entity.entityType,
+          entityId: entity.entityId,
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        };
+      }
+    });
+
+    const batchResults = await Promise.all(batchPromises);
+    const successCount = batchResults.filter(r => r.success).length;
+    const totalTokens = batchResults.reduce((sum, r) => sum + (r.tokensEstimate || 0), 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        results: batchResults,
+        summary: {
+          totalEntities: entities.length,
+          successCount,
+          failureCount: entities.length - successCount,
+          totalTokensEstimate: totalTokens,
+          averageTokensPerEntity: totalTokens / entities.length
+        },
+        processedAt: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error("[AI Routes] Erreur traitement batch:", error);
+    res.status(500).json({
+      success: false,
+      error: "Erreur lors du traitement en lot"
+    });
+  }
 });
 
 export default router;

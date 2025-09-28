@@ -1,0 +1,134 @@
+{
+  "timestamp": "2025-09-28T10:54:12.096Z",
+  "totalTests": 15,
+  "passed": 0,
+  "failed": 10,
+  "skipped": 5,
+  "totalDuration": 125622,
+  "tests": [
+    {
+      "name": "Backend API - Workflow Fournisseurs",
+      "status": "FAIL",
+      "duration": 326,
+      "error": "Test failed: Command failed: npm run test tests/backend/workflow-fournisseurs-api.test.ts\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_52_06_662Z-debug-0.log\n"
+    },
+    {
+      "name": "Backend API - Routes OCR",
+      "status": "SKIP",
+      "duration": 1,
+      "details": "Fichier de test introuvable: tests/backend/ocr-*.test.ts"
+    },
+    {
+      "name": "Backend API - Email Service",
+      "status": "FAIL",
+      "duration": 309,
+      "error": "Test failed: Command failed: npm run test tests/backend/services/\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_52_06_986Z-debug-0.log\n"
+    },
+    {
+      "name": "Frontend - Composants AO",
+      "status": "SKIP",
+      "duration": 0,
+      "details": "Fichier de test introuvable: tests/frontend/components/AoDetail.test.ts"
+    },
+    {
+      "name": "Frontend - Composants CreateAO",
+      "status": "SKIP",
+      "duration": 0,
+      "details": "Fichier de test introuvable: tests/frontend/components/CreateAO.test.ts"
+    },
+    {
+      "name": "Frontend - Dashboard Business",
+      "status": "SKIP",
+      "duration": 1,
+      "details": "Fichier de test introuvable: tests/frontend/BusinessAlerts.test.ts"
+    },
+    {
+      "name": "Frontend - Executive Dashboard",
+      "status": "SKIP",
+      "duration": 1,
+      "details": "Fichier de test introuvable: tests/frontend/ExecutiveDashboard.test.ts"
+    },
+    {
+      "name": "E2E - Workflow Fournisseurs Complet",
+      "status": "FAIL",
+      "duration": 120068,
+      "error": "Test failed: spawnSync /bin/sh ETIMEDOUT"
+    },
+    {
+      "name": "E2E - Scénarios Menuiserie",
+      "status": "FAIL",
+      "duration": 2905,
+      "error": "Test failed: Command failed: npx playwright test tests/e2e/menuiserie-scenarios.spec.ts"
+    },
+    {
+      "name": "Performance - API Response Time",
+      "status": "FAIL",
+      "duration": 303,
+      "error": "Test failed: Command failed: npm run test:performance\nnpm error Missing script: \"test:performance\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_10_263Z-debug-0.log\n"
+    },
+    {
+      "name": "Performance - OCR Processing Speed",
+      "status": "FAIL",
+      "duration": 301,
+      "error": "Test failed: Command failed: npm run test tests/backend/ocr-scoring-config-fix.test.ts\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_10_562Z-debug-0.log\n"
+    },
+    {
+      "name": "Sécurité - Tokens d'accès",
+      "status": "FAIL",
+      "duration": 339,
+      "error": "Test failed: Command failed: npm run test tests/backend/auth-system.test.ts\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_10_883Z-debug-0.log\n"
+    },
+    {
+      "name": "Sécurité - Object Storage",
+      "status": "FAIL",
+      "duration": 303,
+      "error": "Test failed: Command failed: npm run test tests/backend/objectStorage.security.test.ts\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_11_222Z-debug-0.log\n"
+    },
+    {
+      "name": "Intégrité - Storage POC",
+      "status": "FAIL",
+      "duration": 388,
+      "error": "Test failed: Command failed: npm run test tests/backend/storage-poc.test.ts\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_11_602Z-debug-0.log\n"
+    },
+    {
+      "name": "Intégrité - Relations Base",
+      "status": "FAIL",
+      "duration": 359,
+      "error": "Test failed: Command failed: npm run test tests/backend/storage.test.ts\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_11_904Z-debug-0.log\n"
+    }
+  ],
+  "summary": {
+    "backend": {
+      "passed": 0,
+      "failed": 2,
+      "duration": 636
+    },
+    "frontend": {
+      "passed": 0,
+      "failed": 0,
+      "duration": 2
+    },
+    "e2e": {
+      "passed": 0,
+      "failed": 2,
+      "duration": 122973
+    },
+    "performance": {
+      "passed": 0,
+      "failed": 2,
+      "duration": 604
+    }
+  },
+  "recommendations": [
+    "10 test(s) échoué(s) nécessitent une attention immédiate",
+    "1 test(s) lent(s) - optimisation recommandée",
+    "Problèmes détectés dans les APIs backend - priorité haute",
+    "Échecs E2E détectés - vérifier intégration complète"
+  ],
+  "criticalIssues": [
+    "CRITIQUE: Backend API - Workflow Fournisseurs - Test failed: Command failed: npm run test tests/backend/workflow-fournisseurs-api.test.ts\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_52_06_662Z-debug-0.log\n",
+    "CRITIQUE: E2E - Workflow Fournisseurs Complet - Test failed: spawnSync /bin/sh ETIMEDOUT",
+    "CRITIQUE: Sécurité - Tokens d'accès - Test failed: Command failed: npm run test tests/backend/auth-system.test.ts\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_10_883Z-debug-0.log\n",
+    "CRITIQUE: Sécurité - Object Storage - Test failed: Command failed: npm run test tests/backend/objectStorage.security.test.ts\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_11_222Z-debug-0.log\n"
+  ]
+}

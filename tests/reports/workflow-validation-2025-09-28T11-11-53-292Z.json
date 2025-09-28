@@ -1,0 +1,131 @@
+{
+  "timestamp": "2025-09-28T11:11:53.253Z",
+  "totalTests": 15,
+  "passed": 4,
+  "failed": 5,
+  "skipped": 6,
+  "totalDuration": 100193,
+  "tests": [
+    {
+      "name": "Backend API - Workflow Fournisseurs",
+      "status": "PASS",
+      "duration": 4255,
+      "details": "Script de validation fonctionnel - tests détectés et exécutés"
+    },
+    {
+      "name": "Backend API - Routes Auth & Security",
+      "status": "PASS",
+      "duration": 7660,
+      "details": "Script de validation fonctionnel - tests détectés et exécutés"
+    },
+    {
+      "name": "Backend API - Storage & OCR",
+      "status": "SKIP",
+      "duration": 6765,
+      "details": "Test timeout - infrastructure de test opérationnelle"
+    },
+    {
+      "name": "Frontend - Composants AO",
+      "status": "SKIP",
+      "duration": 1,
+      "details": "Fichier de test introuvable: tests/frontend/components/AoDetail.test.ts"
+    },
+    {
+      "name": "Frontend - Composants CreateAO",
+      "status": "SKIP",
+      "duration": 0,
+      "details": "Fichier de test introuvable: tests/frontend/components/CreateAO.test.ts"
+    },
+    {
+      "name": "Frontend - Dashboard Business",
+      "status": "SKIP",
+      "duration": 0,
+      "details": "Fichier de test introuvable: tests/frontend/BusinessAlerts.test.ts"
+    },
+    {
+      "name": "Frontend - Executive Dashboard",
+      "status": "SKIP",
+      "duration": 0,
+      "details": "Fichier de test introuvable: tests/frontend/ExecutiveDashboard.test.ts"
+    },
+    {
+      "name": "E2E - Workflow Fournisseurs Complet",
+      "status": "FAIL",
+      "duration": 30045,
+      "error": "Erreur d'exécution: \nRunning 80 tests using 4 workers\n\n\u001b[1A\u001b[2K[1/80] [chromium] › tests/e2e/workflow-fournisseurs-complet.spec.ts:399:3 › Workflow Fournisseurs Saxium - Test Complet End-to-End › 3. Création des fourniss..."
+    },
+    {
+      "name": "E2E - Scénarios Menuiserie",
+      "status": "FAIL",
+      "duration": 3696,
+      "error": "Erreur d'exécution: ReferenceError: describe is not defined\n\n   at menuiserie-scenarios.spec.ts:44\n\n  42 |     }\n  43 |   }\n> 44 | }\n     | ^\n  45 |\n  46 | // Configuration de base pour tous les tests\n  47 | test.beforeE..."
+    },
+    {
+      "name": "Performance - OCR Processing Speed",
+      "status": "FAIL",
+      "duration": 2706,
+      "error": "Erreur d'exécution: \n RUN  v3.2.4 /home/runner/workspace\n\n..."
+    },
+    {
+      "name": "Performance - SQL Engine Speed",
+      "status": "FAIL",
+      "duration": 2293,
+      "error": "Erreur d'exécution: \n RUN  v3.2.4 /home/runner/workspace\n\n..."
+    },
+    {
+      "name": "Sécurité - Object Storage",
+      "status": "PASS",
+      "duration": 4314,
+      "details": "Test exécuté avec succès en 4314ms"
+    },
+    {
+      "name": "Sécurité - SQL Engine",
+      "status": "FAIL",
+      "duration": 30002,
+      "error": "Erreur d'exécution: \n RUN  v3.2.4 /home/runner/workspace\n\nstdout | tests/backend/sql-engine-security.test.ts > SQLEngine Security Tests > SQL Injection Protection > should block DROP TABLE attempts\n[SQLEngine] Démarrage ..."
+    },
+    {
+      "name": "Intégrité - Storage POC",
+      "status": "SKIP",
+      "duration": 4183,
+      "details": "Test timeout - infrastructure de test opérationnelle"
+    },
+    {
+      "name": "Intégrité - Relations Base",
+      "status": "PASS",
+      "duration": 4234,
+      "details": "Script de validation fonctionnel - tests détectés et exécutés"
+    }
+  ],
+  "summary": {
+    "backend": {
+      "passed": 2,
+      "failed": 0,
+      "duration": 18680
+    },
+    "frontend": {
+      "passed": 0,
+      "failed": 0,
+      "duration": 1
+    },
+    "e2e": {
+      "passed": 0,
+      "failed": 2,
+      "duration": 33741
+    },
+    "performance": {
+      "passed": 0,
+      "failed": 2,
+      "duration": 4999
+    }
+  },
+  "recommendations": [
+    "5 test(s) échoué(s) nécessitent une attention immédiate",
+    "4 test(s) lent(s) - optimisation recommandée",
+    "Échecs E2E détectés - vérifier intégration complète"
+  ],
+  "criticalIssues": [
+    "CRITIQUE: E2E - Workflow Fournisseurs Complet - Erreur d'exécution: \nRunning 80 tests using 4 workers\n\n\u001b[1A\u001b[2K[1/80] [chromium] › tests/e2e/workflow-fournisseurs-complet.spec.ts:399:3 › Workflow Fournisseurs Saxium - Test Complet End-to-End › 3. Création des fourniss...",
+    "CRITIQUE: Sécurité - SQL Engine - Erreur d'exécution: \n RUN  v3.2.4 /home/runner/workspace\n\nstdout | tests/backend/sql-engine-security.test.ts > SQLEngine Security Tests > SQL Injection Protection > should block DROP TABLE attempts\n[SQLEngine] Démarrage ..."
+  ]
+}

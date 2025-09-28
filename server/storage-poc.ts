@@ -2699,6 +2699,439 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // ========================================
+  // SUPPLIER QUOTE SESSIONS OPERATIONS - WORKFLOW FOURNISSEURS
+  // ========================================
+
+  async getSupplierQuoteSessions(aoId?: string, aoLotId?: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any })[]> {
+    try {
+      let query = db.select().from(supplierQuoteSessions);
+      
+      if (aoId) {
+        query = query.where(eq(supplierQuoteSessions.aoId, aoId));
+      }
+      if (aoLotId) {
+        query = query.where(eq(supplierQuoteSessions.aoLotId, aoLotId));
+      }
+
+      const sessions = await query;
+      logger.info(`Récupération de ${sessions.length} sessions fournisseurs`);
+      return sessions;
+    } catch (error) {
+      logger.error('Erreur getSupplierQuoteSessions:', error);
+      throw error;
+    }
+  }
+
+  async getSupplierQuoteSession(id: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any }) | undefined> {
+    try {
+      const [session] = await db.select().from(supplierQuoteSessions).where(eq(supplierQuoteSessions.id, id));
+      return session;
+    } catch (error) {
+      logger.error('Erreur getSupplierQuoteSession:', error);
+      throw error;
+    }
+  }
+
+  async getSupplierQuoteSessionByToken(token: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any }) | undefined> {
+    try {
+      const [session] = await db.select().from(supplierQuoteSessions).where(eq(supplierQuoteSessions.accessToken, token));
+      return session;
+    } catch (error) {
+      logger.error('Erreur getSupplierQuoteSessionByToken:', error);
+      throw error;
+    }
+  }
+
+  async createSupplierQuoteSession(session: InsertSupplierQuoteSession): Promise<SupplierQuoteSession> {
+    try {
+      const [newSession] = await db.insert(supplierQuoteSessions).values(session).returning();
+      logger.info(`Session fournisseur créée: ${newSession.id}`);
+      return newSession;
+    } catch (error) {
+      logger.error('Erreur createSupplierQuoteSession:', error);
+      throw error;
+    }
+  }
+
+  async updateSupplierQuoteSession(id: string, session: Partial<InsertSupplierQuoteSession>): Promise<SupplierQuoteSession> {
+    try {
+      const [updatedSession] = await db.update(supplierQuoteSessions)
+        .set({ ...session, updatedAt: new Date() })
+        .where(eq(supplierQuoteSessions.id, id))
+        .returning();
+      logger.info(`Session fournisseur mise à jour: ${id}`);
+      return updatedSession;
+    } catch (error) {
+      logger.error('Erreur updateSupplierQuoteSession:', error);
+      throw error;
+    }
+  }
+
+  async deleteSupplierQuoteSession(id: string): Promise<void> {
+    try {
+      await db.delete(supplierQuoteSessions).where(eq(supplierQuoteSessions.id, id));
+      logger.info(`Session fournisseur supprimée: ${id}`);
+    } catch (error) {
+      logger.error('Erreur deleteSupplierQuoteSession:', error);
+      throw error;
+    }
+  }
+
+  async generateSessionToken(): Promise<string> {
+    // Génère un token unique sécurisé de 32 caractères
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < 32; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return token;
+  }
+
+  // ========================================
+  // AO LOT SUPPLIERS OPERATIONS - SÉLECTION FOURNISSEURS PAR LOT
+  // ========================================
+
+  async getAoLotSuppliers(aoLotId: string): Promise<(AoLotSupplier & { supplier?: any; selectedByUser?: any })[]> {
+    try {
+      const lotSuppliers = await db.select().from(aoLotSuppliers).where(eq(aoLotSuppliers.aoLotId, aoLotId));
+      logger.info(`Récupération de ${lotSuppliers.length} fournisseurs pour le lot ${aoLotId}`);
+      return lotSuppliers;
+    } catch (error) {
+      logger.error('Erreur getAoLotSuppliers:', error);
+      throw error;
+    }
+  }
+
+  async getAoLotSupplier(id: string): Promise<(AoLotSupplier & { supplier?: any; selectedByUser?: any }) | undefined> {
+    try {
+      const [lotSupplier] = await db.select().from(aoLotSuppliers).where(eq(aoLotSuppliers.id, id));
+      return lotSupplier;
+    } catch (error) {
+      logger.error('Erreur getAoLotSupplier:', error);
+      throw error;
+    }
+  }
+
+  async createAoLotSupplier(lotSupplier: InsertAoLotSupplier): Promise<AoLotSupplier> {
+    try {
+      const [newLotSupplier] = await db.insert(aoLotSuppliers).values(lotSupplier).returning();
+      logger.info(`Association lot-fournisseur créée: ${newLotSupplier.id}`);
+      return newLotSupplier;
+    } catch (error) {
+      logger.error('Erreur createAoLotSupplier:', error);
+      throw error;
+    }
+  }
+
+  async updateAoLotSupplier(id: string, lotSupplier: Partial<InsertAoLotSupplier>): Promise<AoLotSupplier> {
+    try {
+      const [updatedLotSupplier] = await db.update(aoLotSuppliers)
+        .set({ ...lotSupplier, updatedAt: new Date() })
+        .where(eq(aoLotSuppliers.id, id))
+        .returning();
+      logger.info(`Association lot-fournisseur mise à jour: ${id}`);
+      return updatedLotSupplier;
+    } catch (error) {
+      logger.error('Erreur updateAoLotSupplier:', error);
+      throw error;
+    }
+  }
+
+  async deleteAoLotSupplier(id: string): Promise<void> {
+    try {
+      await db.delete(aoLotSuppliers).where(eq(aoLotSuppliers.id, id));
+      logger.info(`Association lot-fournisseur supprimée: ${id}`);
+    } catch (error) {
+      logger.error('Erreur deleteAoLotSupplier:', error);
+      throw error;
+    }
+  }
+
+  async getSuppliersByLot(aoLotId: string): Promise<any[]> {
+    try {
+      // Cette méthode devrait faire une jointure pour récupérer les détails des fournisseurs
+      // Pour l'instant, on retourne les associations basiques
+      const associations = await this.getAoLotSuppliers(aoLotId);
+      return associations;
+    } catch (error) {
+      logger.error('Erreur getSuppliersByLot:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // SUPPLIER DOCUMENTS OPERATIONS - GESTION DOCUMENTS FOURNISSEURS
+  // ========================================
+
+  async getSupplierDocuments(sessionId?: string, supplierId?: string): Promise<(SupplierDocument & { session?: any; validatedByUser?: any })[]> {
+    try {
+      let query = db.select().from(supplierDocuments);
+      
+      if (sessionId) {
+        query = query.where(eq(supplierDocuments.sessionId, sessionId));
+      }
+      if (supplierId) {
+        query = query.where(eq(supplierDocuments.supplierId, supplierId));
+      }
+
+      const documents = await query;
+      logger.info(`Récupération de ${documents.length} documents fournisseurs`);
+      return documents;
+    } catch (error) {
+      logger.error('Erreur getSupplierDocuments:', error);
+      throw error;
+    }
+  }
+
+  async getSupplierDocument(id: string): Promise<(SupplierDocument & { session?: any; validatedByUser?: any }) | undefined> {
+    try {
+      const [document] = await db.select().from(supplierDocuments).where(eq(supplierDocuments.id, id));
+      return document;
+    } catch (error) {
+      logger.error('Erreur getSupplierDocument:', error);
+      throw error;
+    }
+  }
+
+  async createSupplierDocument(document: InsertSupplierDocument): Promise<SupplierDocument> {
+    try {
+      const [newDocument] = await db.insert(supplierDocuments).values(document).returning();
+      logger.info(`Document fournisseur créé: ${newDocument.id}`);
+      return newDocument;
+    } catch (error) {
+      logger.error('Erreur createSupplierDocument:', error);
+      throw error;
+    }
+  }
+
+  async updateSupplierDocument(id: string, document: Partial<InsertSupplierDocument>): Promise<SupplierDocument> {
+    try {
+      const [updatedDocument] = await db.update(supplierDocuments)
+        .set({ ...document, updatedAt: new Date() })
+        .where(eq(supplierDocuments.id, id))
+        .returning();
+      logger.info(`Document fournisseur mis à jour: ${id}`);
+      return updatedDocument;
+    } catch (error) {
+      logger.error('Erreur updateSupplierDocument:', error);
+      throw error;
+    }
+  }
+
+  async deleteSupplierDocument(id: string): Promise<void> {
+    try {
+      await db.delete(supplierDocuments).where(eq(supplierDocuments.id, id));
+      logger.info(`Document fournisseur supprimé: ${id}`);
+    } catch (error) {
+      logger.error('Erreur deleteSupplierDocument:', error);
+      throw error;
+    }
+  }
+
+  async getDocumentsBySession(sessionId: string): Promise<SupplierDocument[]> {
+    try {
+      const documents = await db.select().from(supplierDocuments).where(eq(supplierDocuments.sessionId, sessionId));
+      logger.info(`Récupération de ${documents.length} documents pour la session ${sessionId}`);
+      return documents;
+    } catch (error) {
+      logger.error('Erreur getDocumentsBySession:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // SUPPLIER QUOTE ANALYSIS OPERATIONS - ANALYSE OCR DES DEVIS
+  // ========================================
+
+  async getSupplierQuoteAnalyses(documentId?: string, sessionId?: string): Promise<(SupplierQuoteAnalysis & { document?: any; reviewedByUser?: any })[]> {
+    try {
+      let query = db.select().from(supplierQuoteAnalysis);
+      
+      if (documentId) {
+        query = query.where(eq(supplierQuoteAnalysis.documentId, documentId));
+      }
+      if (sessionId) {
+        query = query.where(eq(supplierQuoteAnalysis.sessionId, sessionId));
+      }
+
+      const analyses = await query;
+      logger.info(`Récupération de ${analyses.length} analyses OCR`);
+      return analyses;
+    } catch (error) {
+      logger.error('Erreur getSupplierQuoteAnalyses:', error);
+      throw error;
+    }
+  }
+
+  async getSupplierQuoteAnalysis(id: string): Promise<(SupplierQuoteAnalysis & { document?: any; reviewedByUser?: any }) | undefined> {
+    try {
+      const [analysis] = await db.select().from(supplierQuoteAnalysis).where(eq(supplierQuoteAnalysis.id, id));
+      return analysis;
+    } catch (error) {
+      logger.error('Erreur getSupplierQuoteAnalysis:', error);
+      throw error;
+    }
+  }
+
+  async createSupplierQuoteAnalysis(analysis: InsertSupplierQuoteAnalysis): Promise<SupplierQuoteAnalysis> {
+    try {
+      const [newAnalysis] = await db.insert(supplierQuoteAnalysis).values(analysis).returning();
+      logger.info(`Analyse OCR créée: ${newAnalysis.id}`);
+      return newAnalysis;
+    } catch (error) {
+      logger.error('Erreur createSupplierQuoteAnalysis:', error);
+      throw error;
+    }
+  }
+
+  async updateSupplierQuoteAnalysis(id: string, analysis: Partial<InsertSupplierQuoteAnalysis>): Promise<SupplierQuoteAnalysis> {
+    try {
+      const [updatedAnalysis] = await db.update(supplierQuoteAnalysis)
+        .set({ ...analysis, updatedAt: new Date() })
+        .where(eq(supplierQuoteAnalysis.id, id))
+        .returning();
+      logger.info(`Analyse OCR mise à jour: ${id}`);
+      return updatedAnalysis;
+    } catch (error) {
+      logger.error('Erreur updateSupplierQuoteAnalysis:', error);
+      throw error;
+    }
+  }
+
+  async deleteSupplierQuoteAnalysis(id: string): Promise<void> {
+    try {
+      await db.delete(supplierQuoteAnalysis).where(eq(supplierQuoteAnalysis.id, id));
+      logger.info(`Analyse OCR supprimée: ${id}`);
+    } catch (error) {
+      logger.error('Erreur deleteSupplierQuoteAnalysis:', error);
+      throw error;
+    }
+  }
+
+  async getAnalysisByDocument(documentId: string): Promise<SupplierQuoteAnalysis | undefined> {
+    try {
+      const [analysis] = await db.select().from(supplierQuoteAnalysis).where(eq(supplierQuoteAnalysis.documentId, documentId));
+      return analysis;
+    } catch (error) {
+      logger.error('Erreur getAnalysisByDocument:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // WORKFLOW HELPERS - MÉTHODES UTILITAIRES WORKFLOW FOURNISSEURS
+  // ========================================
+
+  async getSupplierWorkflowStatus(aoId: string): Promise<{
+    totalLots: number;
+    lotsWithSuppliers: number;
+    activeSessions: number;
+    documentsUploaded: number;
+    documentsAnalyzed: number;
+    pendingAnalysis: number;
+  }> {
+    try {
+      // Compter les lots de l'AO
+      const lots = await this.getAoLots(aoId);
+      const totalLots = lots.length;
+
+      // Compter les lots avec fournisseurs associés
+      let lotsWithSuppliers = 0;
+      for (const lot of lots) {
+        const suppliers = await this.getAoLotSuppliers(lot.id);
+        if (suppliers.length > 0) {
+          lotsWithSuppliers++;
+        }
+      }
+
+      // Compter les sessions actives
+      const sessions = await this.getSupplierQuoteSessions(aoId);
+      const activeSessions = sessions.filter(s => s.status === 'active').length;
+
+      // Compter les documents uploadés et analysés
+      let documentsUploaded = 0;
+      let documentsAnalyzed = 0;
+      for (const session of sessions) {
+        const docs = await this.getDocumentsBySession(session.id);
+        documentsUploaded += docs.length;
+        
+        for (const doc of docs) {
+          const analysis = await this.getAnalysisByDocument(doc.id);
+          if (analysis) {
+            documentsAnalyzed++;
+          }
+        }
+      }
+
+      const pendingAnalysis = documentsUploaded - documentsAnalyzed;
+
+      const status = {
+        totalLots,
+        lotsWithSuppliers,
+        activeSessions,
+        documentsUploaded,
+        documentsAnalyzed,
+        pendingAnalysis
+      };
+
+      logger.info(`Statut workflow AO ${aoId}:`, status);
+      return status;
+    } catch (error) {
+      logger.error('Erreur getSupplierWorkflowStatus:', error);
+      throw error;
+    }
+  }
+
+  async getSessionDocumentsSummary(sessionId: string): Promise<{
+    totalDocuments: number;
+    analyzedDocuments: number;
+    pendingDocuments: number;
+    mainQuotePresent: boolean;
+    averageQualityScore?: number;
+  }> {
+    try {
+      const documents = await this.getDocumentsBySession(sessionId);
+      const totalDocuments = documents.length;
+
+      let analyzedDocuments = 0;
+      let qualityScores: number[] = [];
+      let mainQuotePresent = false;
+
+      for (const doc of documents) {
+        const analysis = await this.getAnalysisByDocument(doc.id);
+        if (analysis) {
+          analyzedDocuments++;
+          if (analysis.qualityScore) {
+            qualityScores.push(analysis.qualityScore);
+          }
+          if (doc.documentType === 'quote' && doc.isPrimaryQuote) {
+            mainQuotePresent = true;
+          }
+        }
+      }
+
+      const pendingDocuments = totalDocuments - analyzedDocuments;
+      const averageQualityScore = qualityScores.length > 0 
+        ? qualityScores.reduce((sum, score) => sum + score, 0) / qualityScores.length
+        : undefined;
+
+      const summary = {
+        totalDocuments,
+        analyzedDocuments,
+        pendingDocuments,
+        mainQuotePresent,
+        averageQualityScore
+      };
+
+      logger.info(`Résumé documents session ${sessionId}:`, summary);
+      return summary;
+    } catch (error) {
+      logger.error('Erreur getSessionDocumentsSummary:', error);
+      throw error;
+    }
+  }
 }
 
 // ========================================

@@ -529,9 +529,17 @@ export class OCRService {
   /**
    * Méthode sécurisée pour exécuter matchAll avec des regex globales
    * Utilise un clone pour éviter la contamination entre documents
+   * CORRECTION: Assure que la regex est globale avant d'utiliser matchAll
    */
   private safeMatchAll(text: string, regex: RegExp): RegExpMatchArray[] {
     const clonedRegex = this.cloneRegex(regex);
+    
+    // Vérifier si la regex a le flag global, sinon l'ajouter
+    if (!clonedRegex.global) {
+      const globalRegex = new RegExp(clonedRegex.source, clonedRegex.flags + 'g');
+      return Array.from(text.matchAll(globalRegex));
+    }
+    
     return Array.from(text.matchAll(clonedRegex));
   }
 

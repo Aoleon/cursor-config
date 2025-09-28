@@ -1,0 +1,225 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport Validation Workflow Fournisseurs</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
+        .test-result { padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .pass { background: #d4edda; border-left: 4px solid #28a745; }
+        .fail { background: #f8d7da; border-left: 4px solid #dc3545; }
+        .skip { background: #e2e3e5; border-left: 4px solid #6c757d; }
+        .critical { background: #f8d7da; border: 2px solid #dc3545; }
+        .recommendations { background: #d1ecf1; padding: 15px; border-radius: 8px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Rapport de Validation - Workflow Fournisseurs Saxium</h1>
+        <p>Généré le: 28/09/2025 10:54:12</p>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <h3>📊 Tests Totaux</h3>
+            <h2>15</h2>
+        </div>
+        <div class="stat-card">
+            <h3>✅ Réussis</h3>
+            <h2>0</h2>
+        </div>
+        <div class="stat-card">
+            <h3>❌ Échoués</h3>
+            <h2>10</h2>
+        </div>
+        <div class="stat-card">
+            <h3>⏱️ Durée</h3>
+            <h2>126s</h2>
+        </div>
+    </div>
+
+    <h2>📋 Détail des Tests</h2>
+    
+        <div class="test-result fail">
+            <strong>Backend API - Workflow Fournisseurs</strong> - FAIL (326ms)
+            <br><small style="color: #dc3545;">❌ Test failed: Command failed: npm run test tests/backend/workflow-fournisseurs-api.test.ts
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_52_06_662Z-debug-0.log
+</small>
+            
+        </div>
+    
+        <div class="test-result skip">
+            <strong>Backend API - Routes OCR</strong> - SKIP (1ms)
+            
+            <br><small>ℹ️ Fichier de test introuvable: tests/backend/ocr-*.test.ts</small>
+        </div>
+    
+        <div class="test-result fail">
+            <strong>Backend API - Email Service</strong> - FAIL (309ms)
+            <br><small style="color: #dc3545;">❌ Test failed: Command failed: npm run test tests/backend/services/
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_52_06_986Z-debug-0.log
+</small>
+            
+        </div>
+    
+        <div class="test-result skip">
+            <strong>Frontend - Composants AO</strong> - SKIP (0ms)
+            
+            <br><small>ℹ️ Fichier de test introuvable: tests/frontend/components/AoDetail.test.ts</small>
+        </div>
+    
+        <div class="test-result skip">
+            <strong>Frontend - Composants CreateAO</strong> - SKIP (0ms)
+            
+            <br><small>ℹ️ Fichier de test introuvable: tests/frontend/components/CreateAO.test.ts</small>
+        </div>
+    
+        <div class="test-result skip">
+            <strong>Frontend - Dashboard Business</strong> - SKIP (1ms)
+            
+            <br><small>ℹ️ Fichier de test introuvable: tests/frontend/BusinessAlerts.test.ts</small>
+        </div>
+    
+        <div class="test-result skip">
+            <strong>Frontend - Executive Dashboard</strong> - SKIP (1ms)
+            
+            <br><small>ℹ️ Fichier de test introuvable: tests/frontend/ExecutiveDashboard.test.ts</small>
+        </div>
+    
+        <div class="test-result fail">
+            <strong>E2E - Workflow Fournisseurs Complet</strong> - FAIL (120068ms)
+            <br><small style="color: #dc3545;">❌ Test failed: spawnSync /bin/sh ETIMEDOUT</small>
+            
+        </div>
+    
+        <div class="test-result fail">
+            <strong>E2E - Scénarios Menuiserie</strong> - FAIL (2905ms)
+            <br><small style="color: #dc3545;">❌ Test failed: Command failed: npx playwright test tests/e2e/menuiserie-scenarios.spec.ts</small>
+            
+        </div>
+    
+        <div class="test-result fail">
+            <strong>Performance - API Response Time</strong> - FAIL (303ms)
+            <br><small style="color: #dc3545;">❌ Test failed: Command failed: npm run test:performance
+npm error Missing script: "test:performance"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_10_263Z-debug-0.log
+</small>
+            
+        </div>
+    
+        <div class="test-result fail">
+            <strong>Performance - OCR Processing Speed</strong> - FAIL (301ms)
+            <br><small style="color: #dc3545;">❌ Test failed: Command failed: npm run test tests/backend/ocr-scoring-config-fix.test.ts
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_10_562Z-debug-0.log
+</small>
+            
+        </div>
+    
+        <div class="test-result fail">
+            <strong>Sécurité - Tokens d'accès</strong> - FAIL (339ms)
+            <br><small style="color: #dc3545;">❌ Test failed: Command failed: npm run test tests/backend/auth-system.test.ts
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_10_883Z-debug-0.log
+</small>
+            
+        </div>
+    
+        <div class="test-result fail">
+            <strong>Sécurité - Object Storage</strong> - FAIL (303ms)
+            <br><small style="color: #dc3545;">❌ Test failed: Command failed: npm run test tests/backend/objectStorage.security.test.ts
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_11_222Z-debug-0.log
+</small>
+            
+        </div>
+    
+        <div class="test-result fail">
+            <strong>Intégrité - Storage POC</strong> - FAIL (388ms)
+            <br><small style="color: #dc3545;">❌ Test failed: Command failed: npm run test tests/backend/storage-poc.test.ts
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_11_602Z-debug-0.log
+</small>
+            
+        </div>
+    
+        <div class="test-result fail">
+            <strong>Intégrité - Relations Base</strong> - FAIL (359ms)
+            <br><small style="color: #dc3545;">❌ Test failed: Command failed: npm run test tests/backend/storage.test.ts
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_11_904Z-debug-0.log
+</small>
+            
+        </div>
+    
+
+    
+        <div class="critical">
+            <h2>🚨 Problèmes Critiques</h2>
+            <ul>
+                <li>CRITIQUE: Backend API - Workflow Fournisseurs - Test failed: Command failed: npm run test tests/backend/workflow-fournisseurs-api.test.ts
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_52_06_662Z-debug-0.log
+</li><li>CRITIQUE: E2E - Workflow Fournisseurs Complet - Test failed: spawnSync /bin/sh ETIMEDOUT</li><li>CRITIQUE: Sécurité - Tokens d'accès - Test failed: Command failed: npm run test tests/backend/auth-system.test.ts
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_10_883Z-debug-0.log
+</li><li>CRITIQUE: Sécurité - Object Storage - Test failed: Command failed: npm run test tests/backend/objectStorage.security.test.ts
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-09-28T10_54_11_222Z-debug-0.log
+</li>
+            </ul>
+        </div>
+    
+
+    <div class="recommendations">
+        <h2>💡 Recommandations</h2>
+        <ul>
+            <li>10 test(s) échoué(s) nécessitent une attention immédiate</li><li>1 test(s) lent(s) - optimisation recommandée</li><li>Problèmes détectés dans les APIs backend - priorité haute</li><li>Échecs E2E détectés - vérifier intégration complète</li>
+        </ul>
+    </div>
+
+    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #6c757d; text-align: center;">
+        <p>Rapport généré automatiquement par le système de validation Saxium</p>
+    </footer>
+</body>
+</html>

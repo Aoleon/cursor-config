@@ -5953,6 +5953,15 @@ export interface ChatbotQueryResponse {
   execution_time_ms: number;
   model_used?: string;
   cache_hit: boolean;
+  // Variante dédiée pour les propositions d'actions
+  action_proposal?: {
+    action_id?: string;
+    confirmation_required: boolean;
+    confirmation_id?: string;
+    risk_level: 'low' | 'medium' | 'high';
+    estimated_time?: number;
+    warnings?: string[];
+  };
   debug_info?: {
     rbac_filters_applied: string[];
     business_context_loaded: boolean;

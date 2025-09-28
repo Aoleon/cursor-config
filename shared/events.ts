@@ -84,7 +84,11 @@ export enum EventType {
   ALERT_THRESHOLD_DEACTIVATED = 'alert_threshold.deactivated',
   
   // Événements déclencheurs évaluation seuils
-  PREDICTIVE_SNAPSHOT_SAVED = 'predictive.snapshot_saved'
+  PREDICTIVE_SNAPSHOT_SAVED = 'predictive.snapshot_saved',
+  
+  // Événements chatbot et apprentissage adaptatif
+  CHATBOT_QUERY_PROCESSED = 'chatbot.query_processed',
+  CHATBOT_FEEDBACK_RECEIVED = 'chatbot.feedback_received'
 }
 
 // ========================================

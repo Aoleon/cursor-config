@@ -157,6 +157,7 @@ export class ChatbotOrchestrationService {
             targetEntityId: actionDefinition.targetEntityId,
             riskLevel: actionDefinition.risk_level,
             confirmationRequired: actionDefinition.confirmation_required,
+            expirationMinutes: 30, // Valeur par défaut appropriée pour actions détectées via chatbot
             userId: request.userId,
             userRole: request.userRole,
             sessionId: request.sessionId,
@@ -314,7 +315,7 @@ export class ChatbotOrchestrationService {
         sql: sqlResult.sql,
         results: sqlResult.results,
         executionTimeMs: totalExecutionTime,
-        confidence: sqlResult.confidence ? parseFloat(sqlResult.confidence.toString()) : null,
+        confidence: sqlResult.confidence !== null && sqlResult.confidence !== undefined ? parseFloat(sqlResult.confidence.toString()) : 0,
         modelUsed: sqlResult.metadata?.aiModelUsed || null,
         cacheHit: sqlResult.metadata?.cacheHit || false,
         errorOccurred: false,
@@ -335,15 +336,23 @@ export class ChatbotOrchestrationService {
       // ========================================
       // 7. ÉVÉNEMENT POUR APPRENTISSAGE ADAPTATIF
       // ========================================
-      await this.eventBus.publish('chatbot.query_processed', {
+      const { createRealtimeEvent, EventType } = await import("@shared/events");
+      await this.eventBus.publish(createRealtimeEvent({
+        type: EventType.CHATBOT_QUERY_PROCESSED,
+        entity: 'chatbot',
+        entityId: conversationId,
+        severity: 'info',
+        affectedQueryKeys: ['/api/chatbot/conversations'],
         userId: request.userId,
-        userRole: request.userRole,
-        query: request.query,
-        success: true,
-        executionTime: totalExecutionTime,
-        confidence: sqlResult.confidence,
-        resultCount: sqlResult.results?.length || 0
-      });
+        metadata: {
+          userRole: request.userRole,
+          query: request.query,
+          success: true,
+          executionTime: totalExecutionTime,
+          confidence: sqlResult.confidence,
+          resultCount: sqlResult.results?.length || 0
+        }
+      }));
 
       // ========================================
       // 8. CONSTRUCTION RÉPONSE FINALE
@@ -455,7 +464,7 @@ export class ChatbotOrchestrationService {
           text: s.suggestionText,
           category: s.category,
           priority: s.priority,
-          success_rate: parseFloat(s.successRate),
+          success_rate: s.successRate !== null && s.successRate !== undefined ? parseFloat(s.successRate.toString()) : 0.0,
           estimated_complexity: this.estimateComplexity(s.suggestionText),
           context_dependent: !!s.contextConditions
         })),
@@ -682,7 +691,11 @@ export class ChatbotOrchestrationService {
       const formattedConversations = conversations.map(c => ({
         id: c.id,
         query: c.query,
-        summary: this.generateConversationSummary(c.query, c.response, c.errorOccurred),
+        summary: this.generateConversationSummary(
+          c.query || '', 
+          c.response || {}, 
+          c.errorOccurred || false
+        ),
         success: !c.errorOccurred,
         execution_time_ms: c.executionTimeMs,
         confidence: c.confidence ? parseFloat(c.confidence) : undefined,
@@ -769,15 +782,23 @@ export class ChatbotOrchestrationService {
       if (conversation.length > 0) {
         // 3. Déclencher l'apprentissage adaptatif
         const conv = conversation[0];
-        await this.eventBus.publish('chatbot.feedback_received', {
+        const { createRealtimeEvent, EventType } = await import("@shared/events");
+        await this.eventBus.publish(createRealtimeEvent({
+          type: EventType.CHATBOT_FEEDBACK_RECEIVED,
+          entity: 'chatbot',
+          entityId: request.conversationId,
+          severity: request.rating >= 4 ? 'info' : 'warning',
+          affectedQueryKeys: ['/api/chatbot/feedback'],
           userId: request.userId,
-          userRole: conv.userRole,
-          query: conv.query,
-          rating: request.rating,
-          feedbackType: request.feedbackType,
-          executionTime: conv.executionTimeMs,
-          modelUsed: conv.modelUsed
-        });
+          metadata: {
+            userRole: conv.userRole,
+            query: conv.query,
+            rating: request.rating,
+            feedbackType: request.feedbackType,
+            executionTime: conv.executionTimeMs,
+            modelUsed: conv.modelUsed
+          }
+        }));
       }
 
       // 4. Générer des améliorations suggérées basées sur le feedback
@@ -1218,7 +1239,7 @@ export class ChatbotOrchestrationService {
         confirmationRequired: false,
         riskLevel: 'high',
         error: {
-          type: 'unknown',
+          type: 'execution',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
         }
       };
@@ -1261,7 +1282,7 @@ export class ChatbotOrchestrationService {
         success: false,
         actionId: request.actionId,
         error: {
-          type: 'unknown',
+          type: 'execution',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
         }
       };
@@ -1297,7 +1318,7 @@ export class ChatbotOrchestrationService {
         total: 0,
         hasMore: false,
         error: {
-          type: 'unknown',
+          type: 'execution',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
         }
       };

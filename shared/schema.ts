@@ -7815,3 +7815,509 @@ export interface ContextGenerationResult {
     dataGaps: string[];
   };
 }
+
+// ========================================
+// EXTENSIONS MONDAY.COM - 6 CHAMPS MANQUANTS CRITIQUES
+// ========================================
+
+// NOUVEAU ENUM: Types d'équipements pour gestion batteries/outillage
+export const equipmentBatteryTypeEnum = pgEnum("equipment_battery_type", [
+  "battery_lithium", "battery_nimh", "battery_lead_acid", "charger", 
+  "tool_battery_combo", "spare_battery", "portable_tool", "stationary_equipment"
+]);
+
+// NOUVEAU ENUM: Statuts d'équipements batteries
+export const equipmentBatteryStatusEnum = pgEnum("equipment_battery_status", [
+  "available", "in_use", "charging", "maintenance", "defective", "retired"
+]);
+
+// NOUVEAU ENUM: Catégories de sous-éléments projets
+export const projectSubElementCategoryEnum = pgEnum("project_sub_element_category", [
+  "technical_detail", "material_specification", "work_phase", "quality_checkpoint", 
+  "safety_requirement", "regulatory_compliance", "delivery_milestone", "other"
+]);
+
+// ========================================
+// 1. NB BATTERIE - GESTION STOCK BATTERIES OUTILLAGE
+// ========================================
+
+// Table principale pour gestion des batteries et outillage
+export const equipmentBatteries = pgTable("equipment_batteries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Identification équipement
+  name: varchar("name").notNull(), // Nom/modèle de l'équipement
+  brand: varchar("brand"), // Marque (ex: "Bosch", "Makita", "DeWalt")
+  model: varchar("model"), // Modèle exact
+  serialNumber: varchar("serial_number"), // Numéro de série
+  
+  // Type et catégorie
+  type: equipmentBatteryTypeEnum("type").notNull(),
+  category: varchar("category"), // Catégorie libre (ex: "Perceuse", "Visseuse")
+  
+  // Spécifications techniques
+  voltage: decimal("voltage", { precision: 5, scale: 2 }), // Voltage (ex: 18V, 12V)
+  capacity: decimal("capacity", { precision: 8, scale: 2 }), // Capacité (Ah)
+  powerRating: decimal("power_rating", { precision: 8, scale: 2 }), // Puissance (W)
+  
+  // Gestion stock et statut
+  quantity: integer("quantity").default(1), // Quantité disponible
+  quantityAvailable: integer("quantity_available").default(1), // Quantité disponible
+  quantityInUse: integer("quantity_in_use").default(0), // Quantité en cours d'utilisation
+  status: equipmentBatteryStatusEnum("status").default("available"),
+  
+  // Localisation et assignation
+  storageLocation: varchar("storage_location"), // Lieu de stockage
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id), // Assigné à
+  assignedToProjectId: varchar("assigned_to_project_id").references(() => projects.id), // Assigné au projet
+  
+  // Maintenance et lifecycle
+  purchaseDate: timestamp("purchase_date"), // Date d'achat
+  warrantyExpiry: timestamp("warranty_expiry"), // Fin de garantie
+  lastMaintenanceDate: timestamp("last_maintenance_date"), // Dernière maintenance
+  nextMaintenanceDate: timestamp("next_maintenance_date"), // Prochaine maintenance
+  maintenanceNotes: text("maintenance_notes"), // Notes maintenance
+  
+  // Utilisation et performance
+  hoursUsed: decimal("hours_used", { precision: 10, scale: 2 }).default("0"), // Heures d'utilisation
+  cycleCount: integer("cycle_count").default(0), // Nombre de cycles (pour batteries)
+  performanceRating: decimal("performance_rating", { precision: 3, scale: 2 }), // Note performance 0-5
+  
+  // Coûts
+  purchasePrice: decimal("purchase_price", { precision: 10, scale: 2 }), // Prix d'achat
+  maintenanceCost: decimal("maintenance_cost", { precision: 10, scale: 2 }).default("0"), // Coût maintenance total
+  
+  // Métadonnées
+  notes: text("notes"), // Notes libres
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    nameIdx: index("equipment_batteries_name_idx").on(table.name),
+    typeIdx: index("equipment_batteries_type_idx").on(table.type),
+    statusIdx: index("equipment_batteries_status_idx").on(table.status),
+    assignedUserIdx: index("equipment_batteries_assigned_user_idx").on(table.assignedToUserId),
+    assignedProjectIdx: index("equipment_batteries_assigned_project_idx").on(table.assignedToProjectId),
+    brandModelIdx: index("equipment_batteries_brand_model_idx").on(table.brand, table.model),
+  };
+});
+
+// ========================================
+// 2. OBJECTIF MARGE H - PILOTAGE PERFORMANCE PAR OBJECTIFS
+// ========================================
+
+// Table pour objectifs de marge par heure
+export const marginTargets = pgTable("margin_targets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Référence à l'entité concernée
+  offerId: varchar("offer_id").references(() => offers.id),
+  projectId: varchar("project_id").references(() => projects.id),
+  userId: varchar("user_id").references(() => users.id), // Objectif individuel
+  teamId: varchar("team_id").references(() => teams.id), // Objectif équipe
+  
+  // Objectifs de marge
+  targetMarginHourly: decimal("target_margin_hourly", { precision: 10, scale: 2 }), // Objectif marge/heure (€/h)
+  targetMarginPercentage: decimal("target_margin_percentage", { precision: 5, scale: 2 }), // Objectif marge (%)
+  targetRevenueHourly: decimal("target_revenue_hourly", { precision: 10, scale: 2 }), // Objectif CA/heure (€/h)
+  
+  // Réalisé vs objectif
+  actualMarginHourly: decimal("actual_margin_hourly", { precision: 10, scale: 2 }), // Marge réelle/heure
+  actualMarginPercentage: decimal("actual_margin_percentage", { precision: 5, scale: 2 }), // Marge réelle (%)
+  actualRevenueHourly: decimal("actual_revenue_hourly", { precision: 10, scale: 2 }), // CA réel/heure
+  
+  // Période et contexte
+  targetPeriodStart: timestamp("target_period_start"), // Début période objectif
+  targetPeriodEnd: timestamp("target_period_end"), // Fin période objectif
+  targetCategory: varchar("target_category"), // Catégorie (ex: "etude", "chantier", "global")
+  
+  // Calculs et métriques
+  hoursSpent: decimal("hours_spent", { precision: 10, scale: 2 }).default("0"), // Heures passées
+  totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default("0"), // CA total
+  totalCosts: decimal("total_costs", { precision: 12, scale: 2 }).default("0"), // Coûts totaux
+  
+  // Performance et alertes
+  performanceScore: decimal("performance_score", { precision: 5, scale: 2 }), // Score performance 0-100
+  isTargetMet: boolean("is_target_met").default(false), // Objectif atteint
+  alertThreshold: decimal("alert_threshold", { precision: 5, scale: 2 }).default("80"), // Seuil alerte (%)
+  alertTriggered: boolean("alert_triggered").default(false), // Alerte déclenchée
+  
+  // Contexte et notes
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    offerIdx: index("margin_targets_offer_idx").on(table.offerId),
+    projectIdx: index("margin_targets_project_idx").on(table.projectId),
+    userIdx: index("margin_targets_user_idx").on(table.userId),
+    teamIdx: index("margin_targets_team_idx").on(table.teamId),
+    periodIdx: index("margin_targets_period_idx").on(table.targetPeriodStart, table.targetPeriodEnd),
+    categoryIdx: index("margin_targets_category_idx").on(table.targetCategory),
+    performanceIdx: index("margin_targets_performance_idx").on(table.performanceScore),
+  };
+});
+
+// ========================================
+// 6. SOUS-ÉLÉMENTS - DÉTAILS GRANULAIRES PROJETS
+// ========================================
+
+// Table pour sous-éléments détaillés des projets
+export const projectSubElements = pgTable("project_sub_elements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Référence au projet parent
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  parentElementId: varchar("parent_element_id"), // Auto-référence pour hiérarchie
+  
+  // Identification et classification
+  name: varchar("name").notNull(), // Nom du sous-élément
+  code: varchar("code"), // Code référence (ex: "SE-001", "WIND-01")
+  category: projectSubElementCategoryEnum("category").notNull(),
+  subcategory: varchar("subcategory"), // Sous-catégorie libre
+  
+  // Description et spécifications
+  description: text("description"), // Description détaillée
+  technicalSpecs: jsonb("technical_specs"), // Spécifications techniques JSON
+  requirements: text("requirements").array(), // Exigences spécifiques
+  
+  // Quantités et dimensions
+  quantity: decimal("quantity", { precision: 10, scale: 3 }), // Quantité
+  unit: varchar("unit"), // Unité (m², ml, u, kg, etc.)
+  dimensions: varchar("dimensions"), // Dimensions (ex: "1200x800x150")
+  weight: decimal("weight", { precision: 10, scale: 3 }), // Poids (kg)
+  
+  // Matériaux et couleurs
+  primaryMaterial: varchar("primary_material"), // Matériau principal
+  secondaryMaterials: varchar("secondary_materials").array(), // Matériaux secondaires
+  colorPrimary: varchar("color_primary"), // Couleur principale
+  colorSecondary: varchar("color_secondary"), // Couleur secondaire
+  finish: varchar("finish"), // Finition (mat, brillant, etc.)
+  
+  // Planning et délais
+  plannedStartDate: timestamp("planned_start_date"), // Date début prévue
+  plannedEndDate: timestamp("planned_end_date"), // Date fin prévue
+  actualStartDate: timestamp("actual_start_date"), // Date début réelle
+  actualEndDate: timestamp("actual_end_date"), // Date fin réelle
+  duration: integer("duration"), // Durée en jours
+  
+  // Coûts et budgets
+  estimatedCost: decimal("estimated_cost", { precision: 12, scale: 2 }), // Coût estimé
+  actualCost: decimal("actual_cost", { precision: 12, scale: 2 }), // Coût réel
+  laborCost: decimal("labor_cost", { precision: 12, scale: 2 }), // Coût main d'œuvre
+  materialCost: decimal("material_cost", { precision: 12, scale: 2 }), // Coût matériaux
+  
+  // Responsabilités et ressources
+  responsibleUserId: varchar("responsible_user_id").references(() => users.id), // Responsable
+  assignedTeamId: varchar("assigned_team_id").references(() => teams.id), // Équipe assignée
+  supplierId: varchar("supplier_id").references(() => suppliers.id), // Fournisseur
+  
+  // Statut et progression
+  status: varchar("status").default("planned"), // planned, in_progress, completed, cancelled
+  progressPercentage: integer("progress_percentage").default(0), // Progression 0-100
+  qualityCheckPassed: boolean("quality_check_passed"), // Contrôle qualité passé
+  
+  // Priorité et dépendances
+  priority: priorityLevelEnum("priority").default("normale"),
+  dependencies: varchar("dependencies").array(), // IDs des éléments prérequis
+  
+  // Documentation et notes
+  attachments: jsonb("attachments"), // Pièces jointes JSON
+  notes: text("notes"), // Notes libres
+  qualityNotes: text("quality_notes"), // Notes contrôle qualité
+  
+  // Ordre et hiérarchie
+  displayOrder: integer("display_order").default(0), // Ordre d'affichage
+  hierarchyLevel: integer("hierarchy_level").default(1), // Niveau hiérarchique
+  
+  // Métadonnées
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectIdx: index("project_sub_elements_project_idx").on(table.projectId),
+    parentIdx: index("project_sub_elements_parent_idx").on(table.parentElementId),
+    categoryIdx: index("project_sub_elements_category_idx").on(table.category),
+    statusIdx: index("project_sub_elements_status_idx").on(table.status),
+    responsibleIdx: index("project_sub_elements_responsible_idx").on(table.responsibleUserId),
+    teamIdx: index("project_sub_elements_team_idx").on(table.assignedTeamId),
+    priorityIdx: index("project_sub_elements_priority_idx").on(table.priority),
+    orderIdx: index("project_sub_elements_order_idx").on(table.displayOrder),
+  };
+});
+
+// ========================================
+// 3. DURÉE ÉTUDE - PLANIFICATION TEMPORELLE ÉTUDES
+// ========================================
+
+// Extension des tables AOs pour inclure la durée d'étude
+// Note: Ces champs seront ajoutés aux tables existantes via ALTER TABLE
+
+// ========================================
+// 4. HASHTAGS - SYSTÈME DE CLASSIFICATION DYNAMIQUE
+// ========================================
+
+// Table pour les hashtags/tags de classification dynamique
+export const classificationTags = pgTable("classification_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Identification du tag
+  name: varchar("name").notNull().unique(), // Nom du tag (ex: "urgent", "client-premium", "complexe")
+  slug: varchar("slug").notNull().unique(), // Slug pour URL (ex: "client-premium")
+  description: text("description"), // Description du tag
+  
+  // Catégorie et classification
+  category: varchar("category"), // Catégorie (ex: "status", "priority", "type", "client")
+  color: varchar("color").default("#007bff"), // Couleur d'affichage (hex)
+  icon: varchar("icon"), // Icône (ex: "star", "warning", "check")
+  
+  // Configuration et comportement
+  isSystemTag: boolean("is_system_tag").default(false), // Tag système (non supprimable)
+  isAutoApplied: boolean("is_auto_applied").default(false), // Application automatique
+  autoApplyRules: jsonb("auto_apply_rules"), // Règles d'application automatique JSON
+  
+  // Utilisation et stats
+  usageCount: integer("usage_count").default(0), // Nombre d'utilisations
+  lastUsedAt: timestamp("last_used_at"), // Dernière utilisation
+  
+  // Permissions et visibilité
+  isPublic: boolean("is_public").default(true), // Visible par tous
+  createdByUserId: varchar("created_by_user_id").references(() => users.id), // Créateur
+  
+  // Métadonnées
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    nameIdx: index("classification_tags_name_idx").on(table.name),
+    slugIdx: index("classification_tags_slug_idx").on(table.slug),
+    categoryIdx: index("classification_tags_category_idx").on(table.category),
+    usageIdx: index("classification_tags_usage_idx").on(table.usageCount),
+    activeIdx: index("classification_tags_active_idx").on(table.isActive),
+  };
+});
+
+// Table de liaison pour appliquer les tags aux différentes entités
+export const entityTags = pgTable("entity_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Référence au tag
+  tagId: varchar("tag_id").notNull().references(() => classificationTags.id, { onDelete: "cascade" }),
+  
+  // Entité taguée (polymorphe)
+  entityType: varchar("entity_type").notNull(), // "ao", "offer", "project", "user", "team", etc.
+  entityId: varchar("entity_id").notNull(), // ID de l'entité
+  
+  // Contexte et application
+  appliedByUserId: varchar("applied_by_user_id").references(() => users.id), // Qui a appliqué le tag
+  appliedAt: timestamp("applied_at").defaultNow(), // Quand appliqué
+  isAutoApplied: boolean("is_auto_applied").default(false), // Application automatique
+  autoApplyReason: varchar("auto_apply_reason"), // Raison de l'application auto
+  
+  // Métadonnées
+  notes: text("notes"), // Notes sur l'application du tag
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    tagEntityIdx: index("entity_tags_tag_entity_idx").on(table.tagId, table.entityType, table.entityId),
+    entityIdx: index("entity_tags_entity_idx").on(table.entityType, table.entityId),
+    tagIdx: index("entity_tags_tag_idx").on(table.tagId),
+    appliedByIdx: index("entity_tags_applied_by_idx").on(table.appliedByUserId),
+    activeIdx: index("entity_tags_active_idx").on(table.isActive),
+  };
+});
+
+// ========================================
+// 5. LABEL/LABEL 1 - CLASSIFICATION EMPLOYÉS
+// ========================================
+
+// Extension de la table users pour classification des employés
+// Note: Ces champs seront ajoutés via ALTER TABLE à la table users existante
+
+// Table pour les labels/classifications d'employés
+export const employeeLabels = pgTable("employee_labels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Identification du label
+  name: varchar("name").notNull(), // Nom du label (ex: "Senior", "Expert MEXT", "Formateur")
+  shortName: varchar("short_name"), // Nom court (ex: "Sr", "Exp", "Form")
+  category: varchar("category").notNull(), // Catégorie (ex: "level", "specialization", "role")
+  
+  // Apparence et affichage
+  color: varchar("color").default("#6c757d"), // Couleur d'affichage
+  backgroundColor: varchar("background_color").default("#f8f9fa"), // Couleur de fond
+  icon: varchar("icon"), // Icône associée
+  
+  // Hiérarchie et ordre
+  displayOrder: integer("display_order").default(0), // Ordre d'affichage
+  level: integer("level"), // Niveau hiérarchique (1=junior, 5=expert)
+  
+  // Critères et conditions
+  criteria: jsonb("criteria"), // Critères d'attribution JSON
+  autoAssign: boolean("auto_assign").default(false), // Attribution automatique
+  autoAssignRules: jsonb("auto_assign_rules"), // Règles d'attribution auto
+  
+  // Description et notes
+  description: text("description"), // Description détaillée
+  benefits: text("benefits").array(), // Avantages liés au label
+  requirements: text("requirements").array(), // Prérequis
+  
+  // Métadonnées
+  isSystemLabel: boolean("is_system_label").default(false), // Label système
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    nameIdx: index("employee_labels_name_idx").on(table.name),
+    categoryIdx: index("employee_labels_category_idx").on(table.category),
+    levelIdx: index("employee_labels_level_idx").on(table.level),
+    orderIdx: index("employee_labels_order_idx").on(table.displayOrder),
+    activeIdx: index("employee_labels_active_idx").on(table.isActive),
+  };
+});
+
+// Table de liaison employés-labels (relation N-N)
+export const employeeLabelAssignments = pgTable("employee_label_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Relations
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  labelId: varchar("label_id").notNull().references(() => employeeLabels.id, { onDelete: "cascade" }),
+  
+  // Attribution et contexte
+  assignedByUserId: varchar("assigned_by_user_id").references(() => users.id), // Qui a assigné
+  assignedAt: timestamp("assigned_at").defaultNow(), // Date d'attribution
+  isAutoAssigned: boolean("is_auto_assigned").default(false), // Attribution automatique
+  autoAssignReason: varchar("auto_assign_reason"), // Raison auto
+  
+  // Validité et durée
+  validFrom: timestamp("valid_from").defaultNow(), // Valide à partir de
+  validUntil: timestamp("valid_until"), // Valide jusqu'à (optionnel)
+  isPermanent: boolean("is_permanent").default(true), // Attribution permanente
+  
+  // Métadonnées
+  notes: text("notes"), // Notes sur l'attribution
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    userLabelIdx: index("employee_label_assignments_user_label_idx").on(table.userId, table.labelId),
+    userIdx: index("employee_label_assignments_user_idx").on(table.userId),
+    labelIdx: index("employee_label_assignments_label_idx").on(table.labelId),
+    assignedByIdx: index("employee_label_assignments_assigned_by_idx").on(table.assignedByUserId),
+    validityIdx: index("employee_label_assignments_validity_idx").on(table.validFrom, table.validUntil),
+    activeIdx: index("employee_label_assignments_active_idx").on(table.isActive),
+  };
+});
+
+// ========================================
+// AJOUTS AUX TABLES EXISTANTES - EXTENSIONS COMPATIBILITÉ MONDAY.COM
+// ========================================
+
+// Extension users pour Label/Label 1 (champs directs)
+// Ces champs seront ajoutés via ALTER TABLE
+/*
+ALTER TABLE users ADD COLUMN employee_label_primary VARCHAR;
+ALTER TABLE users ADD COLUMN employee_label_secondary VARCHAR;
+ALTER TABLE users ADD COLUMN employee_classification VARCHAR;
+ALTER TABLE users ADD COLUMN skill_level INTEGER DEFAULT 1;
+ALTER TABLE users ADD COLUMN specialization_tags VARCHAR[] DEFAULT '{}';
+*/
+
+// Extension aos pour Durée étude
+// Ces champs seront ajoutés via ALTER TABLE
+/*
+ALTER TABLE aos ADD COLUMN study_duration_estimated INTEGER; -- Durée estimée étude (jours)
+ALTER TABLE aos ADD COLUMN study_duration_actual INTEGER; -- Durée réelle étude (jours)
+ALTER TABLE aos ADD COLUMN study_deadline DATE; -- Deadline étude
+ALTER TABLE aos ADD COLUMN study_complexity VARCHAR DEFAULT 'normale'; -- Complexité étude
+ALTER TABLE aos ADD COLUMN study_notes TEXT; -- Notes spécifiques étude
+*/
+
+// Extension offers pour Durée étude et Objectif Marge H
+/*
+ALTER TABLE offers ADD COLUMN study_duration_estimated INTEGER;
+ALTER TABLE offers ADD COLUMN study_duration_actual INTEGER;
+ALTER TABLE offers ADD COLUMN target_margin_hourly DECIMAL(10,2);
+ALTER TABLE offers ADD COLUMN target_margin_percentage DECIMAL(5,2);
+*/
+
+// Extension projects pour Objectif Marge H et Hashtags
+/*
+ALTER TABLE projects ADD COLUMN target_margin_hourly DECIMAL(10,2);
+ALTER TABLE projects ADD COLUMN target_margin_percentage DECIMAL(5,2);
+ALTER TABLE projects ADD COLUMN classification_hashtags VARCHAR[] DEFAULT '{}';
+*/
+
+// ========================================
+// SCHÉMAS ZOD POUR VALIDATION DES NOUVEAUX CHAMPS
+// ========================================
+
+// Schéma pour gestion batteries/outillage
+export const equipmentBatteryInsertSchema = createInsertSchema(equipmentBatteries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const marginTargetInsertSchema = createInsertSchema(marginTargets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const projectSubElementInsertSchema = createInsertSchema(projectSubElements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const classificationTagInsertSchema = createInsertSchema(classificationTags).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const entityTagInsertSchema = createInsertSchema(entityTags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const employeeLabelInsertSchema = createInsertSchema(employeeLabels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const employeeLabelAssignmentInsertSchema = createInsertSchema(employeeLabelAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types TypeScript pour les nouveaux schémas
+export type EquipmentBattery = typeof equipmentBatteries.$inferSelect;
+export type EquipmentBatteryInsert = z.infer<typeof equipmentBatteryInsertSchema>;
+
+export type MarginTarget = typeof marginTargets.$inferSelect;
+export type MarginTargetInsert = z.infer<typeof marginTargetInsertSchema>;
+
+export type ProjectSubElement = typeof projectSubElements.$inferSelect;
+export type ProjectSubElementInsert = z.infer<typeof projectSubElementInsertSchema>;
+
+export type ClassificationTag = typeof classificationTags.$inferSelect;
+export type ClassificationTagInsert = z.infer<typeof classificationTagInsertSchema>;
+
+export type EntityTag = typeof entityTags.$inferSelect;
+export type EntityTagInsert = z.infer<typeof entityTagInsertSchema>;
+
+export type EmployeeLabel = typeof employeeLabels.$inferSelect;
+export type EmployeeLabelInsert = z.infer<typeof employeeLabelInsertSchema>;
+
+export type EmployeeLabelAssignment = typeof employeeLabelAssignments.$inferSelect;
+export type EmployeeLabelAssignmentInsert = z.infer<typeof employeeLabelAssignmentInsertSchema>;

@@ -70,6 +70,90 @@ interface OCRResult {
   rawData: any;
 }
 
+// ========================================
+// INTERFACE POUR ANALYSE DEVIS FOURNISSEURS
+// ========================================
+
+export interface SupplierQuoteOCRResult {
+  extractedText: string;
+  confidence: number;
+  processedFields: SupplierQuoteFields;
+  qualityScore: number;
+  completenessScore: number;
+  rawData: any;
+}
+
+export interface SupplierQuoteFields {
+  // Informations fournisseur
+  supplierName?: string;
+  supplierAddress?: string;
+  supplierContact?: string;
+  supplierEmail?: string;
+  supplierPhone?: string;
+  supplierSiret?: string;
+  
+  // Référence et dates du devis
+  quoteReference?: string;
+  quoteDate?: string;
+  validityDate?: string;
+  validityPeriod?: number; // en jours
+  
+  // Montants financiers
+  totalAmountHT?: number;
+  totalAmountTTC?: number;
+  vatRate?: number;
+  currency?: string;
+  
+  // Détails des lignes de devis
+  lineItems?: SupplierQuoteLineItem[];
+  
+  // Délais et livraison
+  deliveryDelay?: number; // en jours
+  deliveryTerms?: string;
+  productionDelay?: number; // en jours
+  
+  // Conditions commerciales
+  paymentTerms?: string;
+  paymentDelay?: number; // en jours
+  warranty?: string;
+  warrantyPeriod?: number; // en mois
+  
+  // Matériaux et spécifications techniques
+  materials?: MaterialSpec[];
+  colors?: ColorSpec[];
+  technicalSpecs?: Record<string, any>;
+  
+  // Certifications et normes
+  certifications?: string[];
+  standards?: string[];
+  
+  // Performance énergétique (menuiserie)
+  thermalPerformance?: {
+    uw?: number; // coefficient thermique
+    aev?: string; // classement air-eau-vent
+    other?: Record<string, string>;
+  };
+  
+  // Notes et commentaires
+  notes?: string;
+  specialConditions?: string[];
+  
+  // Métadonnées extraction
+  extractionMethod: 'native-text' | 'ocr';
+  processingErrors?: string[];
+}
+
+interface SupplierQuoteLineItem {
+  designation: string;
+  quantity?: number;
+  unit?: string;
+  unitPrice?: number;
+  totalPrice?: number;
+  materialType?: string;
+  specifications?: string;
+  reference?: string;
+}
+
 interface AOLot {
   numero: string;
   designation: string;
@@ -266,6 +350,138 @@ const AO_PATTERNS: Record<string, RegExp[]> = {
 };
 
 // ========================================
+// PATTERNS POUR DEVIS FOURNISSEURS - EXTRACTION MÉTIER
+// ========================================
+
+// Patterns de reconnaissance pour les devis fournisseurs français
+const SUPPLIER_QUOTE_PATTERNS: Record<string, RegExp[]> = {
+  // Informations fournisseur
+  supplierName: [
+    /(?:raison sociale|société|entreprise)\s*:?\s*([^\n]+)/i,
+    /^([A-Z][A-Z\s&-]+(?:SA|SARL|SAS|EURL)?)/m,
+  ],
+  
+  supplierAddress: [
+    /(?:adresse|siège social)\s*:?\s*([^\n]+(?:\n[^:\n]*)*)/i,
+    /\d+[,\s]+(?:rue|avenue|boulevard|place)[^\n]+\n?\d{5}\s+[^\n]+/i,
+  ],
+  
+  supplierContact: [
+    /(?:contact|interlocuteur|responsable)\s*:?\s*([^\n]+)/i,
+    /(?:M\.|Mme|Monsieur|Madame)\s+([A-Z][a-z]+(?: [A-Z][a-z]+)*)/i,
+  ],
+  
+  supplierEmail: [
+    /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
+  ],
+  
+  supplierPhone: [
+    /(?:tél|téléphone|portable|mobile)\s*:?\s*([0-9\s\.\-\+]{10,})/i,
+    /((?:0[1-9]|(?:\+33\s?)?[1-9])(?:[\s\-\.]?\d{2}){4})/g,
+  ],
+  
+  supplierSiret: [
+    /(?:siret|siren)\s*:?\s*(\d{14}|\d{9})/i,
+  ],
+  
+  // Référence et dates
+  quoteReference: [
+    /(?:devis|référence|n°|numéro)\s*:?\s*([A-Z0-9\-_\/]+)/i,
+    /(?:quote|ref)\s*:?\s*([A-Z0-9\-_\/]+)/i,
+  ],
+  
+  quoteDate: [
+    /(?:date du devis|établi le|le)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
+    /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/g,
+  ],
+  
+  validityDate: [
+    /(?:valable jusqu'au|validité|expire le)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
+  ],
+  
+  validityPeriod: [
+    /(?:valable|validité)\s+(\d+)\s*(?:jours?|mois?)/i,
+  ],
+  
+  // Montants financiers
+  totalAmountHT: [
+    /(?:total ht|sous-total|montant ht)\s*:?\s*([\d\s,\.]+)\s*€?/i,
+    /(\d+(?:[\s,]\d{3})*(?:[,\.]\d{2})?)\s*€\s*(?:ht|hors)/i,
+  ],
+  
+  totalAmountTTC: [
+    /(?:total ttc|montant ttc|total)\s*:?\s*([\d\s,\.]+)\s*€?/i,
+    /(\d+(?:[\s,]\d{3})*(?:[,\.]\d{2})?)\s*€\s*(?:ttc|toutes)/i,
+  ],
+  
+  vatRate: [
+    /(?:tva|taxe)\s*:?\s*(\d+(?:[,\.]\d+)?)\s*%/i,
+    /(\d+(?:[,\.]\d+)?)\s*%\s*(?:tva|taxe)/i,
+  ],
+  
+  // Délais
+  deliveryDelay: [
+    /(?:délai|livraison|fourniture)\s*:?\s*(\d+)\s*(?:jours?|semaines?|mois?)/i,
+    /(?:sous|dans)\s+(\d+)\s*(?:jours?|semaines?|mois?)/i,
+  ],
+  
+  productionDelay: [
+    /(?:fabrication|production)\s*:?\s*(\d+)\s*(?:jours?|semaines?)/i,
+  ],
+  
+  // Conditions commerciales
+  paymentTerms: [
+    /(?:paiement|règlement)\s*:?\s*([^\n]+)/i,
+    /(\d+)\s*(?:jours?|%)\s*(?:net|comptant|à réception)/i,
+  ],
+  
+  paymentDelay: [
+    /(\d+)\s*jours?\s*(?:net|fin de mois)/i,
+  ],
+  
+  warranty: [
+    /(?:garantie|garanties)\s*:?\s*([^\n]+)/i,
+  ],
+  
+  warrantyPeriod: [
+    /garantie\s+(\d+)\s*(?:ans?|mois?)/i,
+  ],
+  
+  // Performance énergétique
+  thermalUw: [
+    /(?:uw|coefficient thermique)\s*[<=]?\s*(\d+[,\.]\d+)/i,
+  ],
+  
+  aevClassification: [
+    /(?:aev|a\*?\d+\s*e\*?\d+[a-z]?\s*v\*?[a-z]?\d+)/i,
+  ],
+  
+  // Certifications
+  certifications: [
+    /(?:certifié|certification|norme|conforme)\s+([A-Z0-9\s\-]+)/i,
+    /(?:CE|NF|CSTB|ACOTHERM|CEKAL)/g,
+  ],
+};
+
+// Patterns pour détecter les lignes de devis
+const LINE_ITEM_PATTERNS = {
+  // Détection des lignes avec quantité et prix
+  fullLine: /(\d+(?:[,\.]\d+)?)\s*(?:u|pcs?|m[²²]?|ml?)\s*[xX*]?\s*([^\d\n]+?)\s*((?:\d+(?:[,\.]\d+)?(?:\s*€)?|€\s*\d+(?:[,\.]\d+)?))/gi,
+  
+  // Détection des désignations de produits
+  designation: /^[\s-]*(.+?)(?:\s*\d+[,\.]\d+\s*€|\s*€\s*\d+[,\.]\d+|$)/,
+  
+  // Détection quantité/unité
+  quantityUnit: /(\d+(?:[,\.]\d+)?)\s*(u|pcs?|m[²²]?|ml?|kg|tonnes?)/i,
+  
+  // Détection prix unitaire et total
+  prices: /((?:\d+(?:[,\.]\d+)?(?:\s*€)?|€\s*\d+(?:[,\.]\d+)?))/g,
+  
+  // Références produits
+  reference: /(?:ref|référence|code)\s*:?\s*([A-Z0-9\-_]+)/i,
+};
+
+// ========================================
 // PATTERNS MATÉRIAUX ET COULEURS - EXTRACTION AVANCÉE OCR
 // ========================================
 
@@ -291,6 +507,60 @@ const COLOR_PATTERNS = {
 export class OCRService {
   private tesseractWorker: any = null;
   private isInitializingTesseract = false;
+
+  /**
+   * Clone une regex pour éviter la persistance du lastIndex
+   * CORRECTION CRITIQUE: Les regex globales gardent lastIndex entre exécutions
+   * Ce qui cause des échecs sur documents multiples
+   */
+  private cloneRegex(regex: RegExp): RegExp {
+    return new RegExp(regex.source, regex.flags);
+  }
+
+  /**
+   * Méthode sécurisée pour exécuter des regex globales sans persistance de lastIndex
+   * Garantit que chaque exécution repart de zéro
+   */
+  private safeMatch(text: string, regex: RegExp): RegExpMatchArray | null {
+    const clonedRegex = this.cloneRegex(regex);
+    return text.match(clonedRegex);
+  }
+
+  /**
+   * Méthode sécurisée pour exécuter matchAll avec des regex globales
+   * Utilise un clone pour éviter la contamination entre documents
+   */
+  private safeMatchAll(text: string, regex: RegExp): RegExpMatchArray[] {
+    const clonedRegex = this.cloneRegex(regex);
+    return Array.from(text.matchAll(clonedRegex));
+  }
+
+  /**
+   * Exécute de manière sécurisée tous les patterns d'un groupe
+   * Retourne le premier match valide trouvé
+   */
+  private safePatternMatch(text: string, patterns: RegExp[]): RegExpMatchArray | null {
+    for (const pattern of patterns) {
+      const match = this.safeMatch(text, pattern);
+      if (match) {
+        return match;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Exécute de manière sécurisée tous les patterns pour collecter tous les matches
+   * Utilise pour patterns comme emails/téléphones qui peuvent avoir plusieurs occurrences
+   */
+  private safePatternMatchAll(text: string, patterns: RegExp[]): RegExpMatchArray[] {
+    const allMatches: RegExpMatchArray[] = [];
+    for (const pattern of patterns) {
+      const matches = this.safeMatchAll(text, pattern);
+      allMatches.push(...matches);
+    }
+    return allMatches;
+  }
 
   async initialize(): Promise<void> {
     if (this.tesseractWorker) {
@@ -331,7 +601,98 @@ export class OCRService {
     }
   }
 
-  // Méthode principale pour traiter un PDF
+  // ========================================
+  // MÉTHODE PRINCIPALE POUR DEVIS FOURNISSEURS
+  // ========================================
+  
+  /**
+   * Méthode principale pour analyser un devis fournisseur
+   * Intègre avec la table supplier_quote_analysis
+   */
+  async processSupplierQuote(
+    pdfBuffer: Buffer, 
+    documentId: string,
+    sessionId: string,
+    aoLotId: string
+  ): Promise<SupplierQuoteOCRResult> {
+    try {
+      console.log(`[OCR] Début analyse devis fournisseur - Document: ${documentId}`);
+      
+      // Initialiser les modules nécessaires
+      await initializeModules();
+      
+      // Étape 1: Essayer d'extraire le texte natif du PDF
+      console.log('[OCR] Tentative extraction texte natif...');
+      const nativeText = await this.extractNativeText(pdfBuffer);
+      
+      let extractedText: string;
+      let extractionMethod: 'native-text' | 'ocr';
+      let confidence: number;
+      
+      if (nativeText && nativeText.length > 100) {
+        // PDF contient du texte natif
+        console.log('[OCR] PDF avec texte natif détecté');
+        extractedText = nativeText;
+        extractionMethod = 'native-text';
+        confidence = 95;
+      } else {
+        // Fallback vers OCR pour PDFs scannés
+        console.log('[OCR] Fallback vers OCR pour PDF scanné');
+        const ocrResult = await this.processSupplierQuoteWithOCR(pdfBuffer);
+        extractedText = ocrResult.extractedText;
+        extractionMethod = 'ocr';
+        confidence = ocrResult.confidence;
+      }
+      
+      // Étape 2: Parser les champs spécifiques du devis
+      console.log('[OCR] Analyse des champs du devis...');
+      const processedFields = await this.parseSupplierQuoteFields(extractedText);
+      processedFields.extractionMethod = extractionMethod;
+      
+      // Étape 3: Calculer les scores de qualité
+      const qualityScore = this.calculateQuoteQualityScore(processedFields, extractedText);
+      const completenessScore = this.calculateCompletenessScore(processedFields);
+      
+      // Étape 4: Sauvegarder dans la base de données
+      await this.saveSupplierQuoteAnalysis({
+        documentId,
+        sessionId,
+        aoLotId,
+        extractedText,
+        processedFields,
+        confidence,
+        qualityScore,
+        completenessScore,
+        extractionMethod
+      });
+      
+      console.log(`[OCR] ✅ Analyse devis terminée - Qualité: ${qualityScore}%, Complétude: ${completenessScore}%`);
+      
+      return {
+        extractedText,
+        confidence,
+        processedFields,
+        qualityScore,
+        completenessScore,
+        rawData: { 
+          method: extractionMethod,
+          documentId,
+          sessionId,
+          aoLotId 
+        }
+      };
+      
+    } catch (error) {
+      console.error(`[OCR] ❌ Erreur lors de l'analyse du devis ${documentId}:`, error);
+      
+      // Sauvegarder l'erreur dans la base
+      await this.saveSupplierQuoteAnalysisError(documentId, sessionId, aoLotId, error);
+      
+      throw error;
+    }
+  }
+
+  // Méthode principale pour traiter un PDF (AO - existante)
   async processPDF(pdfBuffer: Buffer): Promise<OCRResult> {
     try {
       console.log('[OCR] Starting PDF processing...');
@@ -1215,8 +1576,9 @@ Réponses publiées au plus tard le 22/03/2025
       ].join(' ');
       
       // Détecter matériaux avec contexte couleur
+      // CORRECTION: Utilise safeMatch pour éviter persistance lastIndex
       for (const [materialKey, pattern] of Object.entries(MATERIAL_PATTERNS)) {
-        const matches = line.match(pattern);
+        const matches = this.safeMatch(line, pattern);
         if (matches) {
           // Chercher couleurs dans fenêtre contextuelle (±150 chars)
           const contextStart = Math.max(0, context.indexOf(line) - 150);
@@ -1237,7 +1599,8 @@ Réponses publiées au plus tard le 22/03/2025
       }
       
       // Détecter couleurs globales RAL
-      const ralMatches = [...line.matchAll(COLOR_PATTERNS.ralCodes)];
+      // CORRECTION: Utilise safeMatchAll pour éviter persistance lastIndex
+      const ralMatches = this.safeMatchAll(line, COLOR_PATTERNS.ralCodes);
       for (const match of ralMatches) {
         const ralCode = match[1];
         const associatedFinish = this.extractFinishFromContext(context);
@@ -1253,7 +1616,8 @@ Réponses publiées au plus tard le 22/03/2025
       }
       
       // Détecter couleurs par nom
-      const colorNameMatches = [...line.matchAll(COLOR_PATTERNS.colorNames)];
+      // CORRECTION: Utilise safeMatchAll pour éviter persistance lastIndex
+      const colorNameMatches = this.safeMatchAll(line, COLOR_PATTERNS.colorNames);
       for (const match of colorNameMatches) {
         const colorName = match[0];
         const associatedFinish = this.extractFinishFromContext(context);
@@ -1281,7 +1645,8 @@ Réponses publiées au plus tard le 22/03/2025
    */
   private extractColorFromWindow(windowText: string): ColorSpec | undefined {
     // Chercher RAL dans la fenêtre
-    const ralMatch = windowText.match(COLOR_PATTERNS.ralCodes);
+    // CORRECTION: Utilise safeMatch pour éviter persistance lastIndex
+    const ralMatch = this.safeMatch(windowText, COLOR_PATTERNS.ralCodes);
     if (ralMatch) {
       const ralCode = ralMatch[0].replace(/\D/g, '');
       const finish = this.extractFinishFromContext(windowText);
@@ -1294,7 +1659,8 @@ Réponses publiées au plus tard le 22/03/2025
     }
     
     // Chercher nom de couleur dans la fenêtre
-    const colorMatch = windowText.match(COLOR_PATTERNS.colorNames);
+    // CORRECTION: Utilise safeMatch pour éviter persistance lastIndex
+    const colorMatch = this.safeMatch(windowText, COLOR_PATTERNS.colorNames);
     if (colorMatch) {
       const finish = this.extractFinishFromContext(windowText);
       return {
@@ -1311,7 +1677,8 @@ Réponses publiées au plus tard le 22/03/2025
    * Extrait une finition depuis le contexte
    */
   private extractFinishFromContext(context: string): any {
-    const finishMatch = context.match(COLOR_PATTERNS.finishes);
+    // CORRECTION: Utilise safeMatch pour éviter persistance lastIndex
+    const finishMatch = this.safeMatch(context, COLOR_PATTERNS.finishes);
     if (finishMatch) {
       const finish = finishMatch[0].toLowerCase();
       // Mapper vers les enums valides
@@ -1563,6 +1930,497 @@ Réponses publiées au plus tard le 22/03/2025
     }
     
     return evidences;
+  }
+
+  // ========================================
+  // MÉTHODES UTILITAIRES POUR DEVIS FOURNISSEURS
+  // ========================================
+
+  /**
+   * Traitement OCR pour devis fournisseurs (PDFs scannés)
+   */
+  private async processSupplierQuoteWithOCR(pdfBuffer: Buffer): Promise<{ extractedText: string; confidence: number }> {
+    try {
+      console.log('[OCR] Initialisation Tesseract pour devis fournisseur...');
+      await this.initialize();
+      
+      if (!this.tesseractWorker) {
+        throw new Error('Tesseract worker failed to initialize');
+      }
+      
+      // Pour le POC, utiliser des données simulées de devis
+      console.log('[OCR] Mode POC: Simulation OCR pour devis fournisseur');
+      const simulatedText = this.getSimulatedSupplierQuoteText();
+      
+      return {
+        extractedText: simulatedText,
+        confidence: 85
+      };
+      
+    } catch (error) {
+      console.error('[OCR] Erreur traitement OCR devis:', error);
+      throw new Error(`Échec OCR devis fournisseur: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Génère un devis fournisseur simulé pour le POC
+   */
+  private getSimulatedSupplierQuoteText(): string {
+    return `
+MENUISERIES MODERNE SARL
+45 Rue des Artisans
+62100 CALAIS
+Tél: 03 21 85 47 52
+Email: contact@menuiseries-moderne.fr
+SIRET: 89234567891234
+
+DEVIS N° DEV-2025-0342
+Date: 15/03/2025
+Valable jusqu'au: 15/06/2025
+
+DESTINATAIRE:
+BAILLEUR SOCIAL HABITAT 62
+12 Rue de la République
+62100 CALAIS
+
+OBJET: Menuiseries PVC pour Résidence Les Terrasses
+
+DÉTAIL DU DEVIS:
+
+1. FENÊTRES PVC DOUBLE VITRAGE
+   - 150 fenêtres 120x140 cm
+   - PVC blanc RAL 9016
+   - Double vitrage 4/16/4 argon
+   - Coefficient Uw = 1.2 W/m².K
+   - Classement AEV: A*4 E*9A V*A2
+   Prix unitaire: 320,00 €
+   Total: 48 000,00 € HT
+
+2. PORTES-FENÊTRES PVC
+   - 50 portes-fenêtres 215x140 cm
+   - PVC blanc RAL 9016
+   - Double vitrage renforcé
+   - Seuil PMR inclus
+   Prix unitaire: 580,00 €
+   Total: 29 000,00 € HT
+
+3. POSE ET INSTALLATION
+   - Dépose ancienne menuiserie
+   - Pose avec étanchéité
+   - Finitions périphériques
+   - Main d'œuvre qualifiée
+   Prix forfaitaire: 15 600,00 € HT
+
+RÉCAPITULATIF:
+Sous-total HT: 92 600,00 €
+TVA 20%: 18 520,00 €
+TOTAL TTC: 111 120,00 €
+
+CONDITIONS:
+- Délai de livraison: 8 semaines
+- Délai de fabrication: 6 semaines
+- Installation: 2 semaines
+- Garantie: 10 ans pièces et main d'œuvre
+- Paiement: 30% à la commande, 40% à la livraison, 30% à la réception
+- Validité du devis: 3 mois
+
+CERTIFICATIONS:
+- Marquage CE conforme
+- Certification ACOTHERM TH11
+- Label CEKAL
+- Qualification RGE
+
+Contact commercial:
+M. BERNARD Laurent
+Tél: 06 12 34 56 78
+l.bernard@menuiseries-moderne.fr
+`;
+  }
+
+  /**
+   * Parse les champs spécifiques d'un devis fournisseur
+   */
+  private async parseSupplierQuoteFields(text: string): Promise<SupplierQuoteFields> {
+    console.log('[OCR] Parsing des champs du devis fournisseur...');
+    
+    const fields: SupplierQuoteFields = {
+      extractionMethod: 'native-text',
+      processingErrors: []
+    };
+
+    try {
+      // Extraction des informations fournisseur
+      fields.supplierName = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.supplierName);
+      fields.supplierAddress = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.supplierAddress);
+      fields.supplierContact = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.supplierContact);
+      fields.supplierEmail = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.supplierEmail);
+      fields.supplierPhone = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.supplierPhone);
+      fields.supplierSiret = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.supplierSiret);
+
+      // Extraction référence et dates
+      fields.quoteReference = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.quoteReference);
+      fields.quoteDate = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.quoteDate);
+      fields.validityDate = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.validityDate);
+      
+      const validityPeriodStr = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.validityPeriod);
+      if (validityPeriodStr) {
+        fields.validityPeriod = parseInt(validityPeriodStr);
+      }
+
+      // Extraction montants financiers
+      const totalHTStr = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.totalAmountHT);
+      if (totalHTStr) {
+        fields.totalAmountHT = this.parseAmount(totalHTStr);
+      }
+      
+      const totalTTCStr = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.totalAmountTTC);
+      if (totalTTCStr) {
+        fields.totalAmountTTC = this.parseAmount(totalTTCStr);
+      }
+      
+      const vatRateStr = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.vatRate);
+      if (vatRateStr) {
+        fields.vatRate = parseFloat(vatRateStr.replace(',', '.'));
+      }
+      
+      fields.currency = 'EUR'; // Par défaut pour la France
+
+      // Extraction délais
+      const deliveryDelayStr = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.deliveryDelay);
+      if (deliveryDelayStr) {
+        fields.deliveryDelay = this.parseDelay(deliveryDelayStr);
+      }
+      
+      const productionDelayStr = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.productionDelay);
+      if (productionDelayStr) {
+        fields.productionDelay = this.parseDelay(productionDelayStr);
+      }
+
+      // Extraction conditions commerciales
+      fields.paymentTerms = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.paymentTerms);
+      fields.warranty = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.warranty);
+      
+      const warrantyPeriodStr = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.warrantyPeriod);
+      if (warrantyPeriodStr) {
+        fields.warrantyPeriod = parseInt(warrantyPeriodStr);
+      }
+
+      // Extraction performance énergétique
+      const uwStr = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.thermalUw);
+      const aevStr = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.aevClassification);
+      
+      if (uwStr || aevStr) {
+        fields.thermalPerformance = {
+          uw: uwStr ? parseFloat(uwStr.replace(',', '.')) : undefined,
+          aev: aevStr || undefined,
+          other: {}
+        };
+      }
+
+      // Extraction certifications
+      fields.certifications = this.extractMultipleValues(text, SUPPLIER_QUOTE_PATTERNS.certifications);
+
+      // Extraction lignes de devis
+      fields.lineItems = this.extractLineItems(text);
+
+      // Extraction matériaux et couleurs (réutilisation des patterns existants)
+      const { materials, colors } = this.extractMaterialsAndColors(text);
+      fields.materials = materials;
+      fields.colors = colors;
+
+      console.log(`[OCR] Parsing terminé - ${Object.keys(fields).filter(k => fields[k as keyof SupplierQuoteFields] !== undefined).length} champs extraits`);
+      
+    } catch (error) {
+      console.error('[OCR] Erreur lors du parsing:', error);
+      fields.processingErrors = fields.processingErrors || [];
+      fields.processingErrors.push(`Parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    return fields;
+  }
+
+  /**
+   * Extrait la valeur d'un champ avec patterns multiples
+   * CORRECTION: Utilise safePatternMatch pour éviter persistance lastIndex
+   */
+  private extractFieldValue(text: string, patterns: RegExp[]): string | undefined {
+    const match = this.safePatternMatch(text, patterns);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+    return undefined;
+  }
+
+  /**
+   * Extrait plusieurs valeurs avec un pattern
+   * CORRECTION: Utilise safePatternMatchAll pour éviter persistance lastIndex
+   */
+  private extractMultipleValues(text: string, patterns: RegExp[]): string[] {
+    const values: string[] = [];
+    const allMatches = this.safePatternMatchAll(text, patterns);
+    
+    for (const match of allMatches) {
+      if (match[1]) {
+        values.push(match[1].trim());
+      } else if (match[0]) {
+        values.push(match[0].trim());
+      }
+    }
+    return [...new Set(values)]; // Déduplique
+  }
+
+  /**
+   * Parse un montant monétaire
+   */
+  private parseAmount(amountStr: string): number {
+    const cleanAmount = amountStr
+      .replace(/[^\d,\.\s]/g, '') // Enlever tout sauf chiffres, virgules, points, espaces
+      .replace(/\s/g, '') // Enlever espaces
+      .replace(',', '.'); // Virgule -> point pour parsing
+    
+    return parseFloat(cleanAmount) || 0;
+  }
+
+  /**
+   * Parse un délai (jours, semaines, mois)
+   */
+  private parseDelay(delayStr: string): number {
+    const match = delayStr.match(/(\d+)\s*(jours?|semaines?|mois?)/i);
+    if (!match) return 0;
+    
+    const value = parseInt(match[1]);
+    const unit = match[2].toLowerCase();
+    
+    if (unit.includes('semaine')) {
+      return value * 7; // Convertir en jours
+    } else if (unit.includes('mois')) {
+      return value * 30; // Approximation en jours
+    }
+    
+    return value; // Déjà en jours
+  }
+
+  /**
+   * Extrait les lignes de devis (produits/services)
+   */
+  private extractLineItems(text: string): SupplierQuoteLineItem[] {
+    const lineItems: SupplierQuoteLineItem[] = [];
+    const lines = text.split('\n');
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine.length < 10) continue; // Ignorer lignes trop courtes
+      
+      // Chercher les lignes avec quantité et prix
+      // CORRECTION: Utilise safeMatch pour éviter persistance lastIndex
+      const fullLineMatch = this.safeMatch(trimmedLine, LINE_ITEM_PATTERNS.fullLine);
+      if (fullLineMatch) {
+        const [, quantityStr, designation, priceStr] = fullLineMatch;
+        
+        lineItems.push({
+          designation: designation.trim(),
+          quantity: parseFloat(quantityStr.replace(',', '.')),
+          unitPrice: this.parseAmount(priceStr),
+          totalPrice: parseFloat(quantityStr.replace(',', '.')) * this.parseAmount(priceStr)
+        });
+      }
+      
+      // Chercher aussi les désignations sans quantité explicite
+      // CORRECTION: Utilise safeMatch pour éviter persistance lastIndex
+      const designationMatch = this.safeMatch(trimmedLine, LINE_ITEM_PATTERNS.designation);
+      const priceMatch = this.safeMatch(trimmedLine, LINE_ITEM_PATTERNS.prices);
+      
+      if (designationMatch && priceMatch && !fullLineMatch) {
+        lineItems.push({
+          designation: designationMatch[1].trim(),
+          totalPrice: this.parseAmount(priceMatch[0])
+        });
+      }
+    }
+    
+    console.log(`[OCR] ${lineItems.length} lignes de devis extraites`);
+    return lineItems;
+  }
+
+  /**
+   * Calcule le score de qualité du devis (0-100)
+   */
+  private calculateQuoteQualityScore(fields: SupplierQuoteFields, fullText: string): number {
+    let score = 0;
+    let maxScore = 0;
+    
+    // Score pour informations fournisseur (20 points)
+    maxScore += 20;
+    if (fields.supplierName) score += 5;
+    if (fields.supplierEmail || fields.supplierPhone) score += 5;
+    if (fields.supplierAddress) score += 5;
+    if (fields.supplierSiret) score += 5;
+    
+    // Score pour référence et dates (15 points)
+    maxScore += 15;
+    if (fields.quoteReference) score += 5;
+    if (fields.quoteDate) score += 5;
+    if (fields.validityDate || fields.validityPeriod) score += 5;
+    
+    // Score pour montants (25 points)
+    maxScore += 25;
+    if (fields.totalAmountHT || fields.totalAmountTTC) score += 10;
+    if (fields.vatRate) score += 5;
+    if (fields.lineItems && fields.lineItems.length > 0) score += 10;
+    
+    // Score pour délais (15 points)
+    maxScore += 15;
+    if (fields.deliveryDelay) score += 8;
+    if (fields.productionDelay) score += 7;
+    
+    // Score pour conditions commerciales (15 points)
+    maxScore += 15;
+    if (fields.paymentTerms) score += 8;
+    if (fields.warranty || fields.warrantyPeriod) score += 7;
+    
+    // Score pour spécifications techniques (10 points)
+    maxScore += 10;
+    if (fields.thermalPerformance) score += 5;
+    if (fields.certifications && fields.certifications.length > 0) score += 5;
+    
+    return Math.round((score / maxScore) * 100);
+  }
+
+  /**
+   * Calcule le score de complétude (0-100)
+   */
+  private calculateCompletenessScore(fields: SupplierQuoteFields): number {
+    const requiredFields = [
+      'supplierName', 'quoteReference', 'totalAmountHT', 'totalAmountTTC',
+      'deliveryDelay', 'paymentTerms', 'lineItems'
+    ];
+    
+    const presentFields = requiredFields.filter(field => {
+      const value = fields[field as keyof SupplierQuoteFields];
+      return value !== undefined && value !== null && 
+             (Array.isArray(value) ? value.length > 0 : true);
+    });
+    
+    return Math.round((presentFields.length / requiredFields.length) * 100);
+  }
+
+  /**
+   * Sauvegarde l'analyse du devis dans la base de données
+   */
+  private async saveSupplierQuoteAnalysis(data: {
+    documentId: string;
+    sessionId: string;
+    aoLotId: string;
+    extractedText: string;
+    processedFields: SupplierQuoteFields;
+    confidence: number;
+    qualityScore: number;
+    completenessScore: number;
+    extractionMethod: string;
+  }): Promise<void> {
+    try {
+      console.log(`[OCR] Sauvegarde analyse devis ${data.documentId}...`);
+      
+      const analysisData = {
+        documentId: data.documentId,
+        sessionId: data.sessionId,
+        aoLotId: data.aoLotId,
+        status: 'completed' as const,
+        analyzedAt: new Date(),
+        analysisEngine: 'tesseract',
+        confidence: data.confidence,
+        
+        // Données extraites structurées
+        extractedPrices: {
+          totalAmountHT: data.processedFields.totalAmountHT,
+          totalAmountTTC: data.processedFields.totalAmountTTC,
+          vatRate: data.processedFields.vatRate,
+          currency: data.processedFields.currency,
+          lineItems: data.processedFields.lineItems
+        },
+        totalAmountHT: data.processedFields.totalAmountHT,
+        totalAmountTTC: data.processedFields.totalAmountTTC,
+        vatRate: data.processedFields.vatRate,
+        currency: data.processedFields.currency || 'EUR',
+        
+        supplierInfo: {
+          name: data.processedFields.supplierName,
+          address: data.processedFields.supplierAddress,
+          contact: data.processedFields.supplierContact,
+          email: data.processedFields.supplierEmail,
+          phone: data.processedFields.supplierPhone,
+          siret: data.processedFields.supplierSiret
+        },
+        
+        lineItems: data.processedFields.lineItems || [],
+        materials: data.processedFields.materials || [],
+        
+        deliveryDelay: data.processedFields.deliveryDelay,
+        paymentTerms: data.processedFields.paymentTerms,
+        validityPeriod: data.processedFields.validityPeriod,
+        
+        rawOcrText: data.extractedText,
+        extractedData: data.processedFields,
+        
+        qualityScore: data.qualityScore,
+        completenessScore: data.completenessScore,
+        requiresManualReview: data.qualityScore < 70 || data.completenessScore < 60
+      };
+      
+      await storage.createSupplierQuoteAnalysis(analysisData);
+      
+      // Mettre à jour le statut du document
+      await storage.updateSupplierDocument(data.documentId, {
+        status: 'analyzed',
+        validatedAt: new Date()
+      });
+      
+      console.log(`[OCR] ✅ Analyse sauvegardée pour ${data.documentId}`);
+      
+    } catch (error) {
+      console.error(`[OCR] ❌ Erreur sauvegarde analyse ${data.documentId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sauvegarde une erreur d'analyse
+   */
+  private async saveSupplierQuoteAnalysisError(
+    documentId: string, 
+    sessionId: string, 
+    aoLotId: string, 
+    error: any
+  ): Promise<void> {
+    try {
+      const analysisData = {
+        documentId,
+        sessionId,
+        aoLotId,
+        status: 'failed' as const,
+        analysisEngine: 'tesseract',
+        confidence: 0,
+        errorDetails: {
+          message: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+          stack: error instanceof Error ? error.stack : undefined
+        },
+        requiresManualReview: true
+      };
+      
+      await storage.createSupplierQuoteAnalysis(analysisData);
+      
+      // Mettre à jour le statut du document en erreur
+      await storage.updateSupplierDocument(documentId, {
+        status: 'rejected'
+      });
+      
+      console.log(`[OCR] Erreur d'analyse sauvegardée pour ${documentId}`);
+      
+    } catch (saveError) {
+      console.error(`[OCR] Erreur lors de la sauvegarde d'erreur pour ${documentId}:`, saveError);
+    }
   }
 }
 

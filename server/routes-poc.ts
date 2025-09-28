@@ -8570,6 +8570,353 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
   );
 
   // ========================================
+  // ROUTES ANALYSE OCR DEVIS FOURNISSEURS - NOUVEAU SYSTÈME
+  // ========================================
+  
+  console.log('[System] Configuration des routes analyse OCR devis fournisseurs...');
+  
+  // POST /api/supplier-documents/:id/analyze - Déclencher analyse OCR d'un document
+  app.post('/api/supplier-documents/:id/analyze',
+    isAuthenticated,
+    validateParams(z.object({ id: z.string().uuid() })),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id: documentId } = req.params;
+        const userId = req.session.user?.id;
+        
+        if (!userId) {
+          throw createError.unauthorized('Session utilisateur requise');
+        }
+        
+        console.log(`[OCR API] Démarrage analyse OCR document ${documentId} par utilisateur ${userId}`);
+        
+        // Récupérer le document
+        const document = await storage.getSupplierDocument(documentId);
+        if (!document) {
+          throw createError.notFound(`Document ${documentId} non trouvé`);
+        }
+        
+        // Vérifier que le document n'est pas déjà en cours d'analyse
+        const existingAnalysis = await storage.getSupplierQuoteAnalysisByDocument(documentId);
+        if (existingAnalysis && existingAnalysis.status === 'in_progress') {
+          throw createError.conflict('Analyse déjà en cours pour ce document');
+        }
+        
+        // Marquer le document comme en cours d'analyse
+        await storage.updateSupplierDocument(documentId, {
+          status: 'processing'
+        });
+        
+        // Créer l'enregistrement d'analyse avec statut "in_progress"
+        const analysisRecord = await storage.createSupplierQuoteAnalysis({
+          documentId,
+          sessionId: document.sessionId,
+          aoLotId: document.aoLotId,
+          status: 'in_progress',
+          analysisEngine: 'tesseract',
+          confidence: 0,
+          extractedPrices: {},
+          supplierInfo: {},
+          lineItems: [],
+          materials: [],
+          rawOcrText: '',
+          extractedData: {},
+          requiresManualReview: false
+        });
+        
+        // Lancer l'analyse OCR en arrière-plan (asynchrone)
+        setImmediate(async () => {
+          try {
+            console.log(`[OCR API] Démarrage traitement asynchrone document ${documentId}`);
+            
+            // TODO: Récupérer le fichier depuis l'object storage
+            // Pour le POC, simuler un buffer PDF
+            const mockPdfBuffer = Buffer.from("Mock PDF content for POC");
+            
+            const result = await ocrService.processSupplierQuote(
+              mockPdfBuffer,
+              documentId,
+              document.sessionId,
+              document.aoLotId
+            );
+            
+            console.log(`[OCR API] ✅ Analyse terminée pour ${documentId} - Score qualité: ${result.qualityScore}%`);
+            
+          } catch (error) {
+            console.error(`[OCR API] ❌ Erreur analyse asynchrone ${documentId}:`, error);
+            
+            // Mettre à jour avec l'erreur
+            await storage.updateSupplierQuoteAnalysis(analysisRecord.id, {
+              status: 'failed',
+              errorDetails: {
+                message: error instanceof Error ? error.message : String(error),
+                timestamp: new Date().toISOString()
+              },
+              requiresManualReview: true
+            });
+            
+            await storage.updateSupplierDocument(documentId, {
+              status: 'rejected'
+            });
+          }
+        });
+        
+        sendSuccess(res, {
+          documentId,
+          analysisId: analysisRecord.id,
+          status: 'in_progress',
+          message: 'Analyse OCR démarrée en arrière-plan'
+        }, 'Analyse OCR initiée avec succès');
+        
+      } catch (error) {
+        console.error('[OCR API] Erreur déclenchement analyse:', error);
+        throw error;
+      }
+    })
+  );
+  
+  // GET /api/supplier-documents/:id/analysis - Récupérer les résultats d'analyse OCR
+  app.get('/api/supplier-documents/:id/analysis',
+    isAuthenticated,
+    validateParams(z.object({ id: z.string().uuid() })),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id: documentId } = req.params;
+        
+        console.log(`[OCR API] Récupération analyse pour document ${documentId}`);
+        
+        // Récupérer l'analyse
+        const analysis = await storage.getSupplierQuoteAnalysisByDocument(documentId);
+        if (!analysis) {
+          throw createError.notFound(`Aucune analyse trouvée pour le document ${documentId}`);
+        }
+        
+        // Récupérer aussi les infos du document pour contexte
+        const document = await storage.getSupplierDocument(documentId);
+        
+        const result = {
+          analysis: {
+            id: analysis.id,
+            documentId: analysis.documentId,
+            sessionId: analysis.sessionId,
+            aoLotId: analysis.aoLotId,
+            status: analysis.status,
+            analyzedAt: analysis.analyzedAt,
+            confidence: analysis.confidence,
+            qualityScore: analysis.qualityScore,
+            completenessScore: analysis.completenessScore,
+            requiresManualReview: analysis.requiresManualReview,
+            
+            // Données extraites
+            extractedPrices: analysis.extractedPrices,
+            supplierInfo: analysis.supplierInfo,
+            lineItems: analysis.lineItems,
+            materials: analysis.materials,
+            
+            // Montants principaux
+            totalAmountHT: analysis.totalAmountHT,
+            totalAmountTTC: analysis.totalAmountTTC,
+            vatRate: analysis.vatRate,
+            currency: analysis.currency,
+            
+            // Délais et conditions
+            deliveryDelay: analysis.deliveryDelay,
+            paymentTerms: analysis.paymentTerms,
+            validityPeriod: analysis.validityPeriod,
+            
+            // Métadonnées
+            analysisEngine: analysis.analysisEngine,
+            errorDetails: analysis.errorDetails,
+            reviewedBy: analysis.reviewedBy,
+            reviewedAt: analysis.reviewedAt,
+            reviewNotes: analysis.reviewNotes
+          },
+          document: document ? {
+            id: document.id,
+            filename: document.filename,
+            originalName: document.originalName,
+            documentType: document.documentType,
+            status: document.status,
+            uploadedAt: document.uploadedAt,
+            isMainQuote: document.isMainQuote
+          } : null
+        };
+        
+        sendSuccess(res, result, 'Analyse récupérée avec succès');
+        
+      } catch (error) {
+        console.error('[OCR API] Erreur récupération analyse:', error);
+        throw error;
+      }
+    })
+  );
+  
+  // GET /api/supplier-quote-sessions/:id/analysis - Récupérer toutes les analyses d'une session
+  app.get('/api/supplier-quote-sessions/:id/analysis',
+    isAuthenticated,
+    validateParams(z.object({ id: z.string().uuid() })),
+    validateQuery(z.object({
+      status: z.enum(['pending', 'in_progress', 'completed', 'failed', 'manual_review_required']).optional(),
+      includeRawText: z.boolean().default(false),
+      orderBy: z.enum(['analyzedAt', 'confidence', 'qualityScore']).default('analyzedAt'),
+      order: z.enum(['asc', 'desc']).default('desc')
+    })),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id: sessionId } = req.params;
+        const { status, includeRawText, orderBy, order } = req.query;
+        
+        console.log(`[OCR API] Récupération analyses pour session ${sessionId}`);
+        
+        // Vérifier que la session existe
+        const session = await storage.getSupplierQuoteSession(sessionId);
+        if (!session) {
+          throw createError.notFound(`Session ${sessionId} non trouvée`);
+        }
+        
+        // Récupérer toutes les analyses de la session
+        const analyses = await storage.getSupplierQuoteAnalysesBySession(sessionId, {
+          status,
+          orderBy,
+          order
+        });
+        
+        // Récupérer les documents associés pour contexte
+        const documents = await storage.getSupplierDocumentsBySession(sessionId);
+        const documentsMap = new Map(documents.map(doc => [doc.id, doc]));
+        
+        const result = {
+          sessionId,
+          session: {
+            id: session.id,
+            aoId: session.aoId,
+            aoLotId: session.aoLotId,
+            supplierId: session.supplierId,
+            status: session.status,
+            invitedAt: session.invitedAt,
+            submittedAt: session.submittedAt
+          },
+          totalAnalyses: analyses.length,
+          analyses: analyses.map(analysis => ({
+            id: analysis.id,
+            documentId: analysis.documentId,
+            status: analysis.status,
+            analyzedAt: analysis.analyzedAt,
+            confidence: analysis.confidence,
+            qualityScore: analysis.qualityScore,
+            completenessScore: analysis.completenessScore,
+            requiresManualReview: analysis.requiresManualReview,
+            
+            // Données extraites (résumé)
+            totalAmountHT: analysis.totalAmountHT,
+            totalAmountTTC: analysis.totalAmountTTC,
+            deliveryDelay: analysis.deliveryDelay,
+            lineItemsCount: Array.isArray(analysis.lineItems) ? analysis.lineItems.length : 0,
+            
+            // Texte brut si demandé
+            rawOcrText: includeRawText ? analysis.rawOcrText : undefined,
+            
+            // Infos document associé
+            document: documentsMap.get(analysis.documentId) ? {
+              filename: documentsMap.get(analysis.documentId)!.filename,
+              originalName: documentsMap.get(analysis.documentId)!.originalName,
+              documentType: documentsMap.get(analysis.documentId)!.documentType,
+              isMainQuote: documentsMap.get(analysis.documentId)!.isMainQuote
+            } : null,
+            
+            // Erreurs si échec
+            errorDetails: analysis.errorDetails
+          })),
+          
+          // Statistiques globales
+          statistics: {
+            completed: analyses.filter(a => a.status === 'completed').length,
+            failed: analyses.filter(a => a.status === 'failed').length,
+            inProgress: analyses.filter(a => a.status === 'in_progress').length,
+            requiresReview: analyses.filter(a => a.requiresManualReview).length,
+            averageQuality: analyses.length > 0 ? 
+              Math.round(analyses.reduce((sum, a) => sum + (a.qualityScore || 0), 0) / analyses.length) : 0,
+            averageConfidence: analyses.length > 0 ?
+              Math.round(analyses.reduce((sum, a) => sum + (a.confidence || 0), 0) / analyses.length) : 0
+          }
+        };
+        
+        sendSuccess(res, result, 'Analyses de session récupérées avec succès');
+        
+      } catch (error) {
+        console.error('[OCR API] Erreur récupération analyses session:', error);
+        throw error;
+      }
+    })
+  );
+  
+  // POST /api/supplier-quote-analysis/:id/approve - Approuver manuellement une analyse
+  app.post('/api/supplier-quote-analysis/:id/approve',
+    isAuthenticated,
+    validateParams(z.object({ id: z.string().uuid() })),
+    validateBody(z.object({
+      notes: z.string().optional(),
+      corrections: z.record(z.any()).optional() // Corrections éventuelles des données extraites
+    })),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id: analysisId } = req.params;
+        const { notes, corrections } = req.body;
+        const userId = req.session.user?.id;
+        
+        console.log(`[OCR API] Approbation analyse ${analysisId} par utilisateur ${userId}`);
+        
+        // Récupérer l'analyse
+        const analysis = await storage.getSupplierQuoteAnalysis(analysisId);
+        if (!analysis) {
+          throw createError.notFound(`Analyse ${analysisId} non trouvée`);
+        }
+        
+        // Appliquer les corrections si fournies
+        let updatedData = { ...analysis.extractedData };
+        if (corrections) {
+          updatedData = { ...updatedData, ...corrections };
+        }
+        
+        // Mettre à jour l'analyse
+        await storage.updateSupplierQuoteAnalysis(analysisId, {
+          requiresManualReview: false,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          reviewNotes: notes,
+          extractedData: updatedData
+        });
+        
+        // Mettre à jour le statut du document
+        await storage.updateSupplierDocument(analysis.documentId, {
+          status: 'validated',
+          validatedBy: userId,
+          validatedAt: new Date()
+        });
+        
+        sendSuccess(res, {
+          analysisId,
+          status: 'approved',
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          corrections: corrections || null
+        }, 'Analyse approuvée avec succès');
+        
+      } catch (error) {
+        console.error('[OCR API] Erreur approbation analyse:', error);
+        throw error;
+      }
+    })
+  );
+  
+  console.log('[System] ✅ Routes analyse OCR devis fournisseurs configurées');
+  console.log('[System] Endpoints disponibles:');
+  console.log('  - POST /api/supplier-documents/:id/analyze');
+  console.log('  - GET /api/supplier-documents/:id/analysis');
+  console.log('  - GET /api/supplier-quote-sessions/:id/analysis');
+  console.log('  - POST /api/supplier-quote-analysis/:id/approve');
+
+  // ========================================
   // CORRECTIF CRITIQUE URGENT - ROUTES ADMIN
   // ========================================
   

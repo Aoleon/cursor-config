@@ -48,7 +48,7 @@ describe('Pattern Detection Comprehensive - Phase 1 Validation', () => {
     
     // Initialiser OCR service et storage
     ocrService = new OCRService();
-    storage = new DatabaseStorage();
+    storage = new DatabaseStorage() as any;
     
     // Créer mock storage avec règles par défaut
     const mockStorage = storage as unknown as {
@@ -229,7 +229,7 @@ describe('Pattern Detection Comprehensive - Phase 1 Validation', () => {
         const result = await (ocrService as any).parseAOFields(color.text);
         
         const detectedColor = result.colors?.find((c: ColorSpec) => 
-          c.name.toLowerCase().includes(color.expectedName.toLowerCase())
+          c.name?.toLowerCase().includes(color.expectedName.toLowerCase())
         );
         expect(detectedColor).toBeDefined();
       }

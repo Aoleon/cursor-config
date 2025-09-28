@@ -1540,64 +1540,6 @@ export class MenuiserieDetectionRules {
   // ========================================
   // ORCHESTRATION ALERTES MÉTIER - PHASE 3.1.7.4
   // ========================================
-  
-  /**
-   * NOUVELLE MÉTHODE PRINCIPALE - évaluation seuils métier
-   */
-  async evaluateBusinessThresholds(): Promise<void> {
-    const startTime = Date.now();
-    this.logger.info('Démarrage évaluation seuils business');
-    
-    try {
-      // 1. RÉCUPÉRATION SEUILS ACTIFS
-      const activeThresholds = await this.storage.getActiveThresholds();
-      this.logger.info(`Évaluation ${activeThresholds.length} seuils actifs`);
-      
-      if (activeThresholds.length === 0) {
-        this.logger.info('Aucun seuil actif à évaluer');
-        return;
-      }
-      
-      // 2. GROUPEMENT SEUILS PAR TYPE POUR OPTIMISATION
-      const thresholdsByType = this.groupThresholdsByType(activeThresholds);
-      
-      // 3. ÉVALUATION PAR TYPE
-      const alertsCreated = [];
-      
-      for (const [thresholdKey, thresholds] of Object.entries(thresholdsByType)) {
-        try {
-          const typeAlerts = await this.evaluateThresholdType(thresholdKey as ThresholdKey, thresholds);
-          alertsCreated.push(...typeAlerts);
-          
-        } catch (error) {
-          this.logger.error(`Erreur évaluation seuil type ${thresholdKey}:`, error);
-          // Continue avec autres types
-        }
-      }
-      
-      // 4. RAPPORT FINAL
-      const duration = Date.now() - startTime;
-      this.logger.info(`Évaluation terminée: ${alertsCreated.length} alertes créées en ${duration}ms`);
-      
-      // 5. PUBLISH EVENT ÉVALUATION TERMINÉE (pour stats)
-      await this.eventBus.publish({
-        type: 'business_alert.evaluation_completed' as any,
-        payload: {
-          thresholds_evaluated: activeThresholds.length,
-          alerts_created: alertsCreated.length,
-          duration_ms: duration,
-          evaluated_at: new Date().toISOString()
-        },
-        affectedQueryKeys: [
-          ['/api/alerts', 'evaluation', 'stats']
-        ]
-      });
-      
-    } catch (error) {
-      this.logger.error('Erreur évaluation seuils business:', error);
-      throw error;
-    }
-  }
 
   private groupThresholdsByType(thresholds: AlertThreshold[]): Record<string, AlertThreshold[]> {
     return thresholds.reduce((acc, threshold) => {

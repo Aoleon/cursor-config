@@ -364,23 +364,6 @@ export class AIService {
     return Math.min(1.0, score);
   }
 
-  /**
-   * Détecte si c'est une requête spécifique au métier menuiserie
-   */
-  private isMenuiserieBusinessQuery(query: string, context: string): boolean {
-    const menuiserieKeywords = [
-      'fenêtre', 'porte', 'volet', 'menuiserie', 'pvc', 'bois', 'aluminium',
-      'pose', 'chantier', 'devis', 'fournisseur', 'matériau', 'finition',
-      'vitrage', 'dormant', 'ouvrant', 'serrurerie', 'quincaillerie'
-    ];
-
-    const queryLower = query.toLowerCase();
-    const contextLower = context.toLowerCase();
-    
-    return menuiserieKeywords.some(keyword => 
-      queryLower.includes(keyword) || contextLower.includes(keyword)
-    );
-  }
 
   // ========================================
   // EXÉCUTION DES REQUÊTES MODÈLES IA

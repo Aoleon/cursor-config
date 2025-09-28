@@ -8,6 +8,7 @@ import {
   projectReserves, savInterventions, savWarrantyClaims,
   metricsBusiness, tempsPose, aoContacts, projectContacts, supplierSpecializations,
   supplierQuoteSessions, aoLotSuppliers, supplierDocuments, supplierQuoteAnalysis,
+  equipmentBatteries, marginTargets, projectSubElements, classificationTags, entityTags, employeeLabels, employeeLabelAssignments,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -50,7 +51,14 @@ import {
   type SupplierQuoteSession, type InsertSupplierQuoteSession,
   type AoLotSupplier, type InsertAoLotSupplier,
   type SupplierDocument, type InsertSupplierDocument,
-  type SupplierQuoteAnalysis, type InsertSupplierQuoteAnalysis
+  type SupplierQuoteAnalysis, type InsertSupplierQuoteAnalysis,
+  type EquipmentBattery, type EquipmentBatteryInsert,
+  type MarginTarget, type MarginTargetInsert,
+  type ProjectSubElement, type ProjectSubElementInsert,
+  type ClassificationTag, type ClassificationTagInsert,
+  type EntityTag, type EntityTagInsert,
+  type EmployeeLabel, type EmployeeLabelInsert,
+  type EmployeeLabelAssignment, type EmployeeLabelAssignmentInsert
 } from "@shared/schema";
 import { db } from "./db";
 import type { EventBus } from "./eventBus";
@@ -228,6 +236,51 @@ export interface IStorage {
   // ========================================
   // MÉTHODES CRUD TABLES MONDAY.COM (CRITIQUE)
   // ========================================
+  
+  // Equipment Batteries operations (Nb Batterie)
+  getEquipmentBatteries(projectId?: string): Promise<EquipmentBattery[]>;
+  getEquipmentBattery(id: string): Promise<EquipmentBattery | undefined>;
+  createEquipmentBattery(battery: EquipmentBatteryInsert): Promise<EquipmentBattery>;
+  updateEquipmentBattery(id: string, battery: Partial<EquipmentBatteryInsert>): Promise<EquipmentBattery>;
+  deleteEquipmentBattery(id: string): Promise<void>;
+  
+  // Margin Targets operations (Objectif Marge H)
+  getMarginTargets(projectId?: string): Promise<MarginTarget[]>;
+  getMarginTarget(id: string): Promise<MarginTarget | undefined>;
+  createMarginTarget(target: MarginTargetInsert): Promise<MarginTarget>;
+  updateMarginTarget(id: string, target: Partial<MarginTargetInsert>): Promise<MarginTarget>;
+  deleteMarginTarget(id: string): Promise<void>;
+  
+  // Project Sub Elements operations (Sous-éléments)
+  getProjectSubElements(projectId?: string): Promise<ProjectSubElement[]>;
+  getProjectSubElement(id: string): Promise<ProjectSubElement | undefined>;
+  createProjectSubElement(element: ProjectSubElementInsert): Promise<ProjectSubElement>;
+  updateProjectSubElement(id: string, element: Partial<ProjectSubElementInsert>): Promise<ProjectSubElement>;
+  deleteProjectSubElement(id: string): Promise<void>;
+  
+  // Classification Tags operations (Hashtags)
+  getClassificationTags(category?: string): Promise<ClassificationTag[]>;
+  getClassificationTag(id: string): Promise<ClassificationTag | undefined>;
+  createClassificationTag(tag: ClassificationTagInsert): Promise<ClassificationTag>;
+  updateClassificationTag(id: string, tag: Partial<ClassificationTagInsert>): Promise<ClassificationTag>;
+  deleteClassificationTag(id: string): Promise<void>;
+  
+  // Entity Tags operations (Liaison Hashtags)
+  getEntityTags(entityType?: string, entityId?: string): Promise<EntityTag[]>;
+  createEntityTag(entityTag: EntityTagInsert): Promise<EntityTag>;
+  deleteEntityTag(id: string): Promise<void>;
+  
+  // Employee Labels operations (Label/Label 1)
+  getEmployeeLabels(category?: string): Promise<EmployeeLabel[]>;
+  getEmployeeLabel(id: string): Promise<EmployeeLabel | undefined>;
+  createEmployeeLabel(label: EmployeeLabelInsert): Promise<EmployeeLabel>;
+  updateEmployeeLabel(id: string, label: Partial<EmployeeLabelInsert>): Promise<EmployeeLabel>;
+  deleteEmployeeLabel(id: string): Promise<void>;
+  
+  // Employee Label Assignments operations (Liaison Label/Label 1)
+  getEmployeeLabelAssignments(userId?: string): Promise<EmployeeLabelAssignment[]>;
+  createEmployeeLabelAssignment(assignment: EmployeeLabelAssignmentInsert): Promise<EmployeeLabelAssignment>;
+  deleteEmployeeLabelAssignment(id: string): Promise<void>;
   
   // Métriques Business operations
   getMetricsBusiness(entityType?: string, entityId?: string): Promise<MetricsBusiness[]>;
@@ -753,7 +806,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     // AUTOMATISATION BATIGEST : Génération automatique du code chantier lors d'accord AO
-    if (offer.status && (offer.status === 'accord_ao' || offer.status === 'fin_etudes_validee')) {
+    if (offer.status && (offer.status === 'valide' || offer.status === 'fin_etudes_validee')) {
       console.log(`[WORKFLOW] 🤖 Accord AO détecté - Déclenchement génération automatique code Batigest pour offre ${id}`);
       
       // Génération asynchrone pour ne pas bloquer la réponse
@@ -2023,7 +2076,7 @@ export class DatabaseStorage implements IStorage {
   async getProjectTimelines(projectId: string): Promise<ProjectTimeline[]> {
     const timelines = Array.from(DatabaseStorage.projectTimelines.values())
       .filter(timeline => timeline.projectId === projectId)
-      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+      .sort((a, b) => (a.plannedStartDate?.getTime() || 0) - (b.plannedStartDate?.getTime() || 0));
     
     console.log(`[Storage] Récupération de ${timelines.length} timelines pour projet ${projectId}`);
     return timelines;
@@ -2031,7 +2084,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAllProjectTimelines(): Promise<ProjectTimeline[]> {
     const timelines = Array.from(DatabaseStorage.projectTimelines.values())
-      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+      .sort((a, b) => (a.plannedStartDate?.getTime() || 0) - (b.plannedStartDate?.getTime() || 0));
     
     console.log(`[Storage] Récupération de ${timelines.length} timelines totales`);
     return timelines;
@@ -2521,8 +2574,8 @@ export class DatabaseStorage implements IStorage {
           project_id: projects.id,
           planned_days: sql<number>`COALESCE(CAST(${projects.delaiContractuel} AS INTEGER), 90)`, // Délai contractuel ou 90j par défaut
           actual_days: sql<number>`CASE 
-            WHEN ${projects.startDate} IS NOT NULL AND ${projects.endDate} IS NOT NULL 
-            THEN EXTRACT(DAYS FROM ${projects.endDate} - ${projects.startDate})::INTEGER
+            WHEN ${projects.startDatePlanned} IS NOT NULL AND ${projects.endDatePlanned} IS NOT NULL 
+            THEN EXTRACT(DAYS FROM ${projects.endDatePlanned} - ${projects.startDatePlanned})::INTEGER
             ELSE 0
           END`,
           project_type: projects.menuiserieType,
@@ -2538,8 +2591,8 @@ export class DatabaseStorage implements IStorage {
             gte(projects.createdAt, new Date(range.start_date)),
             lte(projects.createdAt, new Date(range.end_date)),
             sql`${projects.status} IN ('chantier', 'sav')`, // Projets terminés ou en cours avancé
-            sql`${projects.startDate} IS NOT NULL`,
-            sql`${projects.endDate} IS NOT NULL`
+            sql`${projects.startDatePlanned} IS NOT NULL`,
+            sql`${projects.endDatePlanned} IS NOT NULL`
           )
         )
         .orderBy(desc(projects.createdAt));
@@ -2580,7 +2633,7 @@ export class DatabaseStorage implements IStorage {
         .select({
           month: sql<string>`DATE_TRUNC('month', ${beWorkload.createdAt})::date`,
           total_hours: sql<number>`SUM(CAST(${beWorkload.plannedHours} AS NUMERIC))`,
-          capacity_hours: sql<number>`SUM(CAST(${beWorkload.capacityHours} AS NUMERIC))`,
+          capacity_hours: sql<number>`SUM(CAST(${beWorkload.plannedHours} AS NUMERIC))`,
           projects_count: sql<number>`COUNT(DISTINCT ${beWorkload.userId})`
         })
         .from(beWorkload)
@@ -2596,20 +2649,20 @@ export class DatabaseStorage implements IStorage {
       // Compléter avec données projets pour durée moyenne
       const projectDurations = await db
         .select({
-          month: sql<string>`DATE_TRUNC('month', ${projects.startDate})::date`,
-          avg_duration: sql<number>`AVG(EXTRACT(DAYS FROM ${projects.endDate} - ${projects.startDate}))`
+          month: sql<string>`DATE_TRUNC('month', ${projects.startDatePlanned})::date`,
+          avg_duration: sql<number>`AVG(EXTRACT(DAYS FROM ${projects.endDatePlanned} - ${projects.startDatePlanned}))`
         })
         .from(projects)
         .where(
           and(
-            gte(projects.startDate, new Date(range.start_date)),
-            lte(projects.startDate, new Date(range.end_date)),
-            sql`${projects.startDate} IS NOT NULL`,
-            sql`${projects.endDate} IS NOT NULL`
+            gte(projects.startDatePlanned, new Date(range.start_date)),
+            lte(projects.startDatePlanned, new Date(range.end_date)),
+            sql`${projects.startDatePlanned} IS NOT NULL`,
+            sql`${projects.endDatePlanned} IS NOT NULL`
           )
         )
-        .groupBy(sql`DATE_TRUNC('month', ${projects.startDate})`)
-        .orderBy(sql`DATE_TRUNC('month', ${projects.startDate})`);
+        .groupBy(sql`DATE_TRUNC('month', ${projects.startDatePlanned})`)
+        .orderBy(sql`DATE_TRUNC('month', ${projects.startDatePlanned})`);
 
       // Créer un map pour les durées par mois
       const durationMap = new Map(
@@ -3106,7 +3159,7 @@ export class DatabaseStorage implements IStorage {
           if (analysis.qualityScore) {
             qualityScores.push(analysis.qualityScore);
           }
-          if (doc.documentType === 'quote' && doc.isPrimaryQuote) {
+          if (doc.documentType === 'devis' && doc.isMainQuote) {
             mainQuotePresent = true;
           }
         }
@@ -3836,92 +3889,7 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async getProjectDelayHistory(params: { start_date: string; end_date: string }): Promise<Array<{
-    project_id: string;
-    project_type: string;
-    planned_days: number;
-    actual_days: number;
-    delay_days: number;
-    completion_date: string;
-    responsible_user_id?: string;
-    complexity_factors: string[];
-  }>> {
-    try {
-      // Simulation de données historiques de délais pour le POC
-      const delayData = [];
-      const projectTypes = ['fenetre', 'porte', 'volet', 'portail'];
-      
-      for (let i = 0; i < 25; i++) {
-        const projectType = projectTypes[Math.floor(Math.random() * projectTypes.length)];
-        const plannedDays = 30 + Math.random() * 60;
-        const actualDays = plannedDays + (Math.random() - 0.7) * 20; // Tendance retards
-        const delayDays = Math.max(0, actualDays - plannedDays);
-        
-        delayData.push({
-          project_id: `proj_${i}`,
-          project_type: projectType,
-          planned_days: Math.round(plannedDays),
-          actual_days: Math.round(actualDays),
-          delay_days: Math.round(delayDays),
-          completion_date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-          responsible_user_id: `user_${Math.floor(Math.random() * 5)}`,
-          complexity_factors: ['standard']
-        });
-      }
 
-      return delayData;
-    } catch (error) {
-      console.error('[DatabaseStorage] Erreur getProjectDelayHistory:', error);
-      return [];
-    }
-  }
-
-  async getTeamLoadHistory(params: { start_date: string; end_date: string }): Promise<Array<{
-    user_id: string;
-    period: string;
-    utilization_rate: number;
-    hours_assigned: number;
-    hours_capacity: number;
-    efficiency_score: number;
-    project_count: number;
-  }>> {
-    try {
-      // Simulation charge équipe pour le POC
-      const teamData = [];
-      const userIds = ['user_1', 'user_2', 'user_3', 'user_4'];
-      
-      const fromDate = new Date(params.start_date);
-      const toDate = new Date(params.end_date);
-      const currentDate = new Date(fromDate);
-
-      while (currentDate <= toDate) {
-        const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-        
-        for (const userId of userIds) {
-          const hoursCapacity = 160; // 4 semaines * 40h
-          const utilizationRate = 60 + Math.random() * 35; // 60-95%
-          const hoursAssigned = Math.round(hoursCapacity * utilizationRate / 100);
-          
-          teamData.push({
-            user_id: userId,
-            period,
-            utilization_rate: Math.round(utilizationRate),
-            hours_assigned: hoursAssigned,
-            hours_capacity: hoursCapacity,
-            efficiency_score: Math.round(75 + Math.random() * 20),
-            project_count: Math.round(3 + Math.random() * 4)
-          });
-        }
-
-        currentDate.setMonth(currentDate.getMonth() + 1);
-      }
-
-      return teamData;
-    } catch (error) {
-      console.error('[DatabaseStorage] Erreur getTeamLoadHistory:', error);
-      return [];
-    }
-  }
 
   async getSectorBenchmarks(): Promise<{
     industry_avg_conversion: number;
@@ -5096,48 +5064,13 @@ export class MemStorage implements IStorage {
   // HELPER METHODS
   // ========================================
 
-  async getOfferById(id: string): Promise<Offer | undefined> {
-    return this.getOffer(id);
-  }
 
-  async getProjectsByOffer(offerId: string): Promise<Project[]> {
-    try {
-      const projects = await db.select().from(projects).where(eq(projects.offerId, offerId));
-      return projects;
-    } catch (error) {
-      logger.error('Erreur getProjectsByOffer:', error);
-      throw error;
-    }
-  }
 
   // ========================================
   // TECHNICAL SCORING CONFIGURATION
   // ========================================
 
-  async getScoringConfig(): Promise<TechnicalScoringConfig> {
-    // Configuration par défaut pour le POC
-    return {
-      materialCompatibility: {
-        pvc: { supportWeight: 'medium', thermalRating: 'low' },
-        alu: { supportWeight: 'high', thermalRating: 'high' },
-        bois: { supportWeight: 'medium', thermalRating: 'medium' }
-      },
-      performanceThresholds: {
-        thermal: { min: 0.8, max: 1.4 },
-        acoustic: { min: 30, max: 50 },
-        security: { min: 1, max: 5 }
-      },
-      riskFactors: {
-        dimensionLimits: { maxWidth: 3000, maxHeight: 2500 },
-        structuralConstraints: ['earthquake', 'wind', 'thermal']
-      }
-    };
-  }
 
-  async updateScoringConfig(config: TechnicalScoringConfig): Promise<void> {
-    // Pour le POC, on ne sauvegarde pas la config (en mémoire)
-    logger.info('Configuration scoring mise à jour (POC - en mémoire)');
-  }
 
   // ========================================
   // TECHNICAL ALERTS SYSTEM
@@ -5314,7 +5247,7 @@ export class MemStorage implements IStorage {
       const timelines = await db.select()
         .from(projectTimelines)
         .where(eq(projectTimelines.projectId, projectId))
-        .orderBy(projectTimelines.startDate);
+        .orderBy(projectTimelines.plannedStartDate);
       return timelines;
     } catch (error) {
       logger.error('Erreur getProjectTimelines:', error);
@@ -5822,6 +5755,356 @@ export class MemStorage implements IStorage {
       };
     } catch (error) {
       logger.error('Erreur getSectorBenchmarks:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // IMPLÉMENTATIONS CRUD TABLES MONDAY.COM (CRITIQUE)
+  // ========================================
+
+  // Equipment Batteries operations (Nb Batterie)
+  async getEquipmentBatteries(projectId?: string): Promise<EquipmentBattery[]> {
+    try {
+      if (projectId) {
+        return await db.select().from(equipmentBatteries).where(eq(equipmentBatteries.projectId, projectId));
+      }
+      return await db.select().from(equipmentBatteries);
+    } catch (error) {
+      logger.error('Erreur getEquipmentBatteries:', error);
+      return [];
+    }
+  }
+
+  async getEquipmentBattery(id: string): Promise<EquipmentBattery | undefined> {
+    try {
+      const [battery] = await db.select().from(equipmentBatteries).where(eq(equipmentBatteries.id, id));
+      return battery;
+    } catch (error) {
+      logger.error('Erreur getEquipmentBattery:', error);
+      return undefined;
+    }
+  }
+
+  async createEquipmentBattery(battery: EquipmentBatteryInsert): Promise<EquipmentBattery> {
+    try {
+      const [newBattery] = await db.insert(equipmentBatteries).values(battery).returning();
+      logger.info('Equipment Battery créée:', newBattery.id);
+      return newBattery;
+    } catch (error) {
+      logger.error('Erreur createEquipmentBattery:', error);
+      throw error;
+    }
+  }
+
+  async updateEquipmentBattery(id: string, battery: Partial<EquipmentBatteryInsert>): Promise<EquipmentBattery> {
+    try {
+      const [updated] = await db.update(equipmentBatteries).set(battery).where(eq(equipmentBatteries.id, id)).returning();
+      logger.info('Equipment Battery mise à jour:', id);
+      return updated;
+    } catch (error) {
+      logger.error('Erreur updateEquipmentBattery:', error);
+      throw error;
+    }
+  }
+
+  async deleteEquipmentBattery(id: string): Promise<void> {
+    try {
+      await db.delete(equipmentBatteries).where(eq(equipmentBatteries.id, id));
+      logger.info('Equipment Battery supprimée:', id);
+    } catch (error) {
+      logger.error('Erreur deleteEquipmentBattery:', error);
+      throw error;
+    }
+  }
+
+  // Margin Targets operations (Objectif Marge H)
+  async getMarginTargets(projectId?: string): Promise<MarginTarget[]> {
+    try {
+      if (projectId) {
+        return await db.select().from(marginTargets).where(eq(marginTargets.projectId, projectId));
+      }
+      return await db.select().from(marginTargets);
+    } catch (error) {
+      logger.error('Erreur getMarginTargets:', error);
+      return [];
+    }
+  }
+
+  async getMarginTarget(id: string): Promise<MarginTarget | undefined> {
+    try {
+      const [target] = await db.select().from(marginTargets).where(eq(marginTargets.id, id));
+      return target;
+    } catch (error) {
+      logger.error('Erreur getMarginTarget:', error);
+      return undefined;
+    }
+  }
+
+  async createMarginTarget(target: MarginTargetInsert): Promise<MarginTarget> {
+    try {
+      const [newTarget] = await db.insert(marginTargets).values(target).returning();
+      logger.info('Margin Target créé:', newTarget.id);
+      return newTarget;
+    } catch (error) {
+      logger.error('Erreur createMarginTarget:', error);
+      throw error;
+    }
+  }
+
+  async updateMarginTarget(id: string, target: Partial<MarginTargetInsert>): Promise<MarginTarget> {
+    try {
+      const [updated] = await db.update(marginTargets).set(target).where(eq(marginTargets.id, id)).returning();
+      logger.info('Margin Target mis à jour:', id);
+      return updated;
+    } catch (error) {
+      logger.error('Erreur updateMarginTarget:', error);
+      throw error;
+    }
+  }
+
+  async deleteMarginTarget(id: string): Promise<void> {
+    try {
+      await db.delete(marginTargets).where(eq(marginTargets.id, id));
+      logger.info('Margin Target supprimé:', id);
+    } catch (error) {
+      logger.error('Erreur deleteMarginTarget:', error);
+      throw error;
+    }
+  }
+
+  // Project Sub Elements operations (Sous-éléments)
+  async getProjectSubElements(projectId?: string): Promise<ProjectSubElement[]> {
+    try {
+      if (projectId) {
+        return await db.select().from(projectSubElements).where(eq(projectSubElements.projectId, projectId));
+      }
+      return await db.select().from(projectSubElements);
+    } catch (error) {
+      logger.error('Erreur getProjectSubElements:', error);
+      return [];
+    }
+  }
+
+  async getProjectSubElement(id: string): Promise<ProjectSubElement | undefined> {
+    try {
+      const [element] = await db.select().from(projectSubElements).where(eq(projectSubElements.id, id));
+      return element;
+    } catch (error) {
+      logger.error('Erreur getProjectSubElement:', error);
+      return undefined;
+    }
+  }
+
+  async createProjectSubElement(element: ProjectSubElementInsert): Promise<ProjectSubElement> {
+    try {
+      const [newElement] = await db.insert(projectSubElements).values(element).returning();
+      logger.info('Project Sub Element créé:', newElement.id);
+      return newElement;
+    } catch (error) {
+      logger.error('Erreur createProjectSubElement:', error);
+      throw error;
+    }
+  }
+
+  async updateProjectSubElement(id: string, element: Partial<ProjectSubElementInsert>): Promise<ProjectSubElement> {
+    try {
+      const [updated] = await db.update(projectSubElements).set(element).where(eq(projectSubElements.id, id)).returning();
+      logger.info('Project Sub Element mis à jour:', id);
+      return updated;
+    } catch (error) {
+      logger.error('Erreur updateProjectSubElement:', error);
+      throw error;
+    }
+  }
+
+  async deleteProjectSubElement(id: string): Promise<void> {
+    try {
+      await db.delete(projectSubElements).where(eq(projectSubElements.id, id));
+      logger.info('Project Sub Element supprimé:', id);
+    } catch (error) {
+      logger.error('Erreur deleteProjectSubElement:', error);
+      throw error;
+    }
+  }
+
+  // Classification Tags operations (Hashtags)
+  async getClassificationTags(category?: string): Promise<ClassificationTag[]> {
+    try {
+      if (category) {
+        return await db.select().from(classificationTags).where(eq(classificationTags.category, category));
+      }
+      return await db.select().from(classificationTags);
+    } catch (error) {
+      logger.error('Erreur getClassificationTags:', error);
+      return [];
+    }
+  }
+
+  async getClassificationTag(id: string): Promise<ClassificationTag | undefined> {
+    try {
+      const [tag] = await db.select().from(classificationTags).where(eq(classificationTags.id, id));
+      return tag;
+    } catch (error) {
+      logger.error('Erreur getClassificationTag:', error);
+      return undefined;
+    }
+  }
+
+  async createClassificationTag(tag: ClassificationTagInsert): Promise<ClassificationTag> {
+    try {
+      const [newTag] = await db.insert(classificationTags).values(tag).returning();
+      logger.info('Classification Tag créé:', newTag.id);
+      return newTag;
+    } catch (error) {
+      logger.error('Erreur createClassificationTag:', error);
+      throw error;
+    }
+  }
+
+  async updateClassificationTag(id: string, tag: Partial<ClassificationTagInsert>): Promise<ClassificationTag> {
+    try {
+      const [updated] = await db.update(classificationTags).set(tag).where(eq(classificationTags.id, id)).returning();
+      logger.info('Classification Tag mis à jour:', id);
+      return updated;
+    } catch (error) {
+      logger.error('Erreur updateClassificationTag:', error);
+      throw error;
+    }
+  }
+
+  async deleteClassificationTag(id: string): Promise<void> {
+    try {
+      await db.delete(classificationTags).where(eq(classificationTags.id, id));
+      logger.info('Classification Tag supprimé:', id);
+    } catch (error) {
+      logger.error('Erreur deleteClassificationTag:', error);
+      throw error;
+    }
+  }
+
+  // Entity Tags operations (Liaison Hashtags)
+  async getEntityTags(entityType?: string, entityId?: string): Promise<EntityTag[]> {
+    try {
+      let query = db.select().from(entityTags);
+      if (entityType && entityId) {
+        query = query.where(and(eq(entityTags.entityType, entityType), eq(entityTags.entityId, entityId)));
+      } else if (entityType) {
+        query = query.where(eq(entityTags.entityType, entityType));
+      }
+      return await query;
+    } catch (error) {
+      logger.error('Erreur getEntityTags:', error);
+      return [];
+    }
+  }
+
+  async createEntityTag(entityTag: EntityTagInsert): Promise<EntityTag> {
+    try {
+      const [newEntityTag] = await db.insert(entityTags).values(entityTag).returning();
+      logger.info('Entity Tag créé:', newEntityTag.id);
+      return newEntityTag;
+    } catch (error) {
+      logger.error('Erreur createEntityTag:', error);
+      throw error;
+    }
+  }
+
+  async deleteEntityTag(id: string): Promise<void> {
+    try {
+      await db.delete(entityTags).where(eq(entityTags.id, id));
+      logger.info('Entity Tag supprimé:', id);
+    } catch (error) {
+      logger.error('Erreur deleteEntityTag:', error);
+      throw error;
+    }
+  }
+
+  // Employee Labels operations (Label/Label 1)
+  async getEmployeeLabels(category?: string): Promise<EmployeeLabel[]> {
+    try {
+      if (category) {
+        return await db.select().from(employeeLabels).where(eq(employeeLabels.category, category));
+      }
+      return await db.select().from(employeeLabels);
+    } catch (error) {
+      logger.error('Erreur getEmployeeLabels:', error);
+      return [];
+    }
+  }
+
+  async getEmployeeLabel(id: string): Promise<EmployeeLabel | undefined> {
+    try {
+      const [label] = await db.select().from(employeeLabels).where(eq(employeeLabels.id, id));
+      return label;
+    } catch (error) {
+      logger.error('Erreur getEmployeeLabel:', error);
+      return undefined;
+    }
+  }
+
+  async createEmployeeLabel(label: EmployeeLabelInsert): Promise<EmployeeLabel> {
+    try {
+      const [newLabel] = await db.insert(employeeLabels).values(label).returning();
+      logger.info('Employee Label créé:', newLabel.id);
+      return newLabel;
+    } catch (error) {
+      logger.error('Erreur createEmployeeLabel:', error);
+      throw error;
+    }
+  }
+
+  async updateEmployeeLabel(id: string, label: Partial<EmployeeLabelInsert>): Promise<EmployeeLabel> {
+    try {
+      const [updated] = await db.update(employeeLabels).set(label).where(eq(employeeLabels.id, id)).returning();
+      logger.info('Employee Label mis à jour:', id);
+      return updated;
+    } catch (error) {
+      logger.error('Erreur updateEmployeeLabel:', error);
+      throw error;
+    }
+  }
+
+  async deleteEmployeeLabel(id: string): Promise<void> {
+    try {
+      await db.delete(employeeLabels).where(eq(employeeLabels.id, id));
+      logger.info('Employee Label supprimé:', id);
+    } catch (error) {
+      logger.error('Erreur deleteEmployeeLabel:', error);
+      throw error;
+    }
+  }
+
+  // Employee Label Assignments operations (Liaison Label/Label 1)
+  async getEmployeeLabelAssignments(userId?: string): Promise<EmployeeLabelAssignment[]> {
+    try {
+      if (userId) {
+        return await db.select().from(employeeLabelAssignments).where(eq(employeeLabelAssignments.userId, userId));
+      }
+      return await db.select().from(employeeLabelAssignments);
+    } catch (error) {
+      logger.error('Erreur getEmployeeLabelAssignments:', error);
+      return [];
+    }
+  }
+
+  async createEmployeeLabelAssignment(assignment: EmployeeLabelAssignmentInsert): Promise<EmployeeLabelAssignment> {
+    try {
+      const [newAssignment] = await db.insert(employeeLabelAssignments).values(assignment).returning();
+      logger.info('Employee Label Assignment créé:', newAssignment.id);
+      return newAssignment;
+    } catch (error) {
+      logger.error('Erreur createEmployeeLabelAssignment:', error);
+      throw error;
+    }
+  }
+
+  async deleteEmployeeLabelAssignment(id: string): Promise<void> {
+    try {
+      await db.delete(employeeLabelAssignments).where(eq(employeeLabelAssignments.id, id));
+      logger.info('Employee Label Assignment supprimé:', id);
+    } catch (error) {
+      logger.error('Erreur deleteEmployeeLabelAssignment:', error);
       throw error;
     }
   }

@@ -3678,7 +3678,7 @@ app.post("/api/projects/:id/calculate-timeline",
           constraintsApplied: constraints?.length || 0,
           totalPhases: timeline.length,
           hasWarnings: issues.some(issue => issue.severity === 'warning'),
-          hasErrors: issues.some(issue => issue.severity === 'error')
+          hasErrors: issues.some(issue => issue.severity === 'critical')
         }
       };
       
@@ -3718,7 +3718,7 @@ app.put("/api/projects/:id/recalculate-from/:phase",
       
       // Si propagation demandée, appliquer les changements
       if (propagateChanges) {
-        for (const effect of cascadeResult.affectedPhases) {
+        for (const effect of cascadeResult.updatedPhases) {
           // Mettre à jour les timelines dans le storage
           const existingTimelines = await storage.getProjectTimelines(projectId);
           const timelineToUpdate = existingTimelines.find(t => t.phase === effect.phase);
@@ -3727,7 +3727,7 @@ app.put("/api/projects/:id/recalculate-from/:phase",
             await storage.updateProjectTimeline(timelineToUpdate.id, {
               endDate: effect.newEndDate,
               lastCalculatedAt: new Date(),
-              calculationMethod: 'cascade_recalculation'
+              calculationMethod: 'automatic'
             });
           }
         }
@@ -3740,8 +3740,8 @@ app.put("/api/projects/:id/recalculate-from/:phase",
           recalculatedAt: new Date(),
           fromPhase: phase,
           newDate: newDate,
-          affectedPhasesCount: cascadeResult.affectedPhases.length,
-          totalImpactDays: cascadeResult.affectedPhases.reduce((sum, phase) => sum + (phase.impactDays || 0), 0)
+          affectedPhasesCount: cascadeResult.updatedPhases.length,
+          totalImpactDays: cascadeResult.updatedPhases.reduce((sum, phase) => sum + (phase.delayDays || 0), 0)
         }
       };
       
@@ -3909,7 +3909,7 @@ app.put("/api/date-alerts/:id/acknowledge",
       // Vérifier que l'alerte existe
       const existingAlert = await storage.getDateAlert(id);
       if (!existingAlert) {
-        throw createError.notFound( "Alerte non trouvée", { alertId: id });
+        throw createError.notFound("Alerte", id);
       }
       
       // Vérifier le statut actuel
@@ -3969,7 +3969,7 @@ app.put("/api/date-alerts/:id/resolve",
       // Vérifier que l'alerte existe
       const existingAlert = await storage.getDateAlert(id);
       if (!existingAlert) {
-        throw createError.notFound( "Alerte non trouvée", { alertId: id });
+        throw createError.notFound("Alerte", id);
       }
       
       // Résoudre l'alerte
@@ -4212,7 +4212,7 @@ app.post("/api/date-alerts/:id/escalate",
       // Vérifier que l'alerte existe
       const existingAlert = await storage.getDateAlert(id);
       if (!existingAlert) {
-        throw createError.notFound( "Alerte non trouvée", { alertId: id });
+        throw createError.notFound("Alerte", id);
       }
       
       // Vérifier que l'alerte peut être escaladée
@@ -9493,6 +9493,645 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
   
   console.log('[System] ✅ Routes administrateur montées sur /api/admin');
   console.log('[System] Services disponibles : AuditService ✅, EventBus ✅, Storage ✅');
+
+  // ========================================
+  // NOUVELLES ROUTES API MONDAY.COM - PHASE 2
+  // ========================================
+
+  // Routes Equipment Batteries (Nb Batterie)
+  app.get('/api/equipment-batteries',
+    isAuthenticated,
+    rateLimits.general,
+    validateQuery(z.object({
+      projectId: z.string().uuid().optional(),
+      limit: z.coerce.number().default(50),
+      offset: z.coerce.number().default(0)
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { projectId } = req.query;
+        const batteries = await storage.getEquipmentBatteries(projectId);
+        sendSuccess(res, batteries);
+      } catch (error) {
+        console.error('[Equipment Batteries] Erreur récupération:', error);
+        throw createError.database('Erreur lors de la récupération des batteries');
+      }
+    })
+  );
+
+  app.get('/api/equipment-batteries/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        const battery = await storage.getEquipmentBattery(id);
+        if (!battery) {
+          throw createError.notFound('Batterie', id);
+        }
+        sendSuccess(res, battery);
+      } catch (error) {
+        console.error('[Equipment Batteries] Erreur récupération batterie:', error);
+        throw error;
+      }
+    })
+  );
+
+  app.post('/api/equipment-batteries',
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(z.object({
+      name: z.string().min(1),
+      brand: z.string().optional(),
+      projectId: z.string().uuid(),
+      capacity: z.number().positive().optional(),
+      voltage: z.number().positive().optional(),
+      batteryType: z.string().optional(),
+      quantity: z.number().positive().default(1),
+      location: z.string().optional(),
+      status: z.enum(['active', 'maintenance', 'retired']).default('active'),
+      notes: z.string().optional()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const battery = await storage.createEquipmentBattery(req.body);
+        sendSuccess(res, battery, 'Batterie créée avec succès');
+      } catch (error) {
+        console.error('[Equipment Batteries] Erreur création:', error);
+        throw createError.database('Erreur lors de la création de la batterie');
+      }
+    })
+  );
+
+  app.put('/api/equipment-batteries/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      name: z.string().min(1).optional(),
+      brand: z.string().optional(),
+      capacity: z.number().positive().optional(),
+      voltage: z.number().positive().optional(),
+      batteryType: z.string().optional(),
+      quantity: z.number().positive().optional(),
+      location: z.string().optional(),
+      status: z.enum(['active', 'maintenance', 'retired']).optional(),
+      notes: z.string().optional()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        const battery = await storage.updateEquipmentBattery(id, req.body);
+        sendSuccess(res, battery, 'Batterie mise à jour avec succès');
+      } catch (error) {
+        console.error('[Equipment Batteries] Erreur mise à jour:', error);
+        throw createError.database('Erreur lors de la mise à jour de la batterie');
+      }
+    })
+  );
+
+  app.delete('/api/equipment-batteries/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteEquipmentBattery(id);
+        sendSuccess(res, null, 'Batterie supprimée avec succès');
+      } catch (error) {
+        console.error('[Equipment Batteries] Erreur suppression:', error);
+        throw createError.database('Erreur lors de la suppression de la batterie');
+      }
+    })
+  );
+
+  // Routes Margin Targets (Objectif Marge H)
+  app.get('/api/margin-targets',
+    isAuthenticated,
+    rateLimits.general,
+    validateQuery(z.object({
+      projectId: z.string().uuid().optional(),
+      userId: z.string().uuid().optional(),
+      teamId: z.string().uuid().optional(),
+      limit: z.coerce.number().default(50),
+      offset: z.coerce.number().default(0)
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { projectId } = req.query;
+        const targets = await storage.getMarginTargets(projectId);
+        sendSuccess(res, targets);
+      } catch (error) {
+        console.error('[Margin Targets] Erreur récupération:', error);
+        throw createError.database('Erreur lors de la récupération des objectifs de marge');
+      }
+    })
+  );
+
+  app.get('/api/margin-targets/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        const target = await storage.getMarginTarget(id);
+        if (!target) {
+          throw createError.notFound('Objectif de marge', id);
+        }
+        sendSuccess(res, target);
+      } catch (error) {
+        console.error('[Margin Targets] Erreur récupération objectif:', error);
+        throw error;
+      }
+    })
+  );
+
+  app.post('/api/margin-targets',
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(z.object({
+      name: z.string().min(1),
+      projectId: z.string().uuid().optional(),
+      userId: z.string().uuid().optional(),
+      teamId: z.string().uuid().optional(),
+      targetMarginPercentage: z.number().min(0).max(100),
+      targetPeriodStart: z.string().datetime(),
+      targetPeriodEnd: z.string().datetime(),
+      category: z.string().optional(),
+      description: z.string().optional(),
+      isActive: z.boolean().default(true)
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const target = await storage.createMarginTarget({
+          ...req.body,
+          targetPeriodStart: new Date(req.body.targetPeriodStart),
+          targetPeriodEnd: new Date(req.body.targetPeriodEnd)
+        });
+        sendSuccess(res, target, 'Objectif de marge créé avec succès');
+      } catch (error) {
+        console.error('[Margin Targets] Erreur création:', error);
+        throw createError.database('Erreur lors de la création de l\'objectif de marge');
+      }
+    })
+  );
+
+  app.put('/api/margin-targets/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      name: z.string().min(1).optional(),
+      targetMarginPercentage: z.number().min(0).max(100).optional(),
+      targetPeriodStart: z.string().datetime().optional(),
+      targetPeriodEnd: z.string().datetime().optional(),
+      category: z.string().optional(),
+      description: z.string().optional(),
+      isActive: z.boolean().optional()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        const updateData = { ...req.body };
+        if (req.body.targetPeriodStart) updateData.targetPeriodStart = new Date(req.body.targetPeriodStart);
+        if (req.body.targetPeriodEnd) updateData.targetPeriodEnd = new Date(req.body.targetPeriodEnd);
+        
+        const target = await storage.updateMarginTarget(id, updateData);
+        sendSuccess(res, target, 'Objectif de marge mis à jour avec succès');
+      } catch (error) {
+        console.error('[Margin Targets] Erreur mise à jour:', error);
+        throw createError.database('Erreur lors de la mise à jour de l\'objectif de marge');
+      }
+    })
+  );
+
+  app.delete('/api/margin-targets/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteMarginTarget(id);
+        sendSuccess(res, null, 'Objectif de marge supprimé avec succès');
+      } catch (error) {
+        console.error('[Margin Targets] Erreur suppression:', error);
+        throw createError.database('Erreur lors de la suppression de l\'objectif de marge');
+      }
+    })
+  );
+
+  // Routes Project Study Duration (Durée d'étude)
+  app.get('/api/projects/:id/study-duration',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id: projectId } = req.params;
+        const project = await storage.getProject(projectId);
+        if (!project) {
+          throw createError.notFound('Projet', projectId);
+        }
+        
+        // Retourner les informations de durée d'étude du projet
+        const studyDuration = {
+          projectId: project.id,
+          studyStartDate: project.studyStartDate,
+          studyEndDate: project.studyEndDate,
+          plannedStudyDuration: project.plannedStudyDuration,
+          actualStudyDuration: project.actualStudyDuration,
+          studyStatus: project.studyStatus,
+          studyNotes: project.studyNotes
+        };
+        
+        sendSuccess(res, studyDuration);
+      } catch (error) {
+        console.error('[Study Duration] Erreur récupération:', error);
+        throw error;
+      }
+    })
+  );
+
+  app.patch('/api/projects/:id/study-duration',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      studyStartDate: z.string().datetime().optional(),
+      studyEndDate: z.string().datetime().optional(),
+      plannedStudyDuration: z.number().positive().optional(),
+      actualStudyDuration: z.number().positive().optional(),
+      studyStatus: z.enum(['not_started', 'in_progress', 'completed', 'delayed']).optional(),
+      studyNotes: z.string().optional()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id: projectId } = req.params;
+        const updateData = { ...req.body };
+        
+        if (req.body.studyStartDate) updateData.studyStartDate = new Date(req.body.studyStartDate);
+        if (req.body.studyEndDate) updateData.studyEndDate = new Date(req.body.studyEndDate);
+        
+        const project = await storage.updateProject(projectId, updateData);
+        
+        const studyDuration = {
+          projectId: project.id,
+          studyStartDate: project.studyStartDate,
+          studyEndDate: project.studyEndDate,
+          plannedStudyDuration: project.plannedStudyDuration,
+          actualStudyDuration: project.actualStudyDuration,
+          studyStatus: project.studyStatus,
+          studyNotes: project.studyNotes
+        };
+        
+        sendSuccess(res, studyDuration, 'Durée d\'étude mise à jour avec succès');
+      } catch (error) {
+        console.error('[Study Duration] Erreur mise à jour:', error);
+        throw createError.database('Erreur lors de la mise à jour de la durée d\'étude');
+      }
+    })
+  );
+
+  // Routes Classification Tags (Hashtags)
+  app.get('/api/tags/classification',
+    isAuthenticated,
+    rateLimits.general,
+    validateQuery(z.object({
+      category: z.string().optional(),
+      limit: z.coerce.number().default(50),
+      offset: z.coerce.number().default(0)
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { category } = req.query;
+        const tags = await storage.getClassificationTags(category);
+        sendSuccess(res, tags);
+      } catch (error) {
+        console.error('[Classification Tags] Erreur récupération:', error);
+        throw createError.database('Erreur lors de la récupération des tags de classification');
+      }
+    })
+  );
+
+  app.get('/api/tags/classification/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        const tag = await storage.getClassificationTag(id);
+        if (!tag) {
+          throw createError.notFound('Tag de classification', id);
+        }
+        sendSuccess(res, tag);
+      } catch (error) {
+        console.error('[Classification Tags] Erreur récupération tag:', error);
+        throw error;
+      }
+    })
+  );
+
+  app.post('/api/tags/classification',
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(z.object({
+      name: z.string().min(1),
+      category: z.string().min(1),
+      color: z.string().optional(),
+      description: z.string().optional(),
+      isActive: z.boolean().default(true)
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const tag = await storage.createClassificationTag(req.body);
+        sendSuccess(res, tag, 'Tag de classification créé avec succès');
+      } catch (error) {
+        console.error('[Classification Tags] Erreur création:', error);
+        throw createError.database('Erreur lors de la création du tag de classification');
+      }
+    })
+  );
+
+  app.put('/api/tags/classification/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      name: z.string().min(1).optional(),
+      category: z.string().min(1).optional(),
+      color: z.string().optional(),
+      description: z.string().optional(),
+      isActive: z.boolean().optional()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        const tag = await storage.updateClassificationTag(id, req.body);
+        sendSuccess(res, tag, 'Tag de classification mis à jour avec succès');
+      } catch (error) {
+        console.error('[Classification Tags] Erreur mise à jour:', error);
+        throw createError.database('Erreur lors de la mise à jour du tag de classification');
+      }
+    })
+  );
+
+  app.delete('/api/tags/classification/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteClassificationTag(id);
+        sendSuccess(res, null, 'Tag de classification supprimé avec succès');
+      } catch (error) {
+        console.error('[Classification Tags] Erreur suppression:', error);
+        throw createError.database('Erreur lors de la suppression du tag de classification');
+      }
+    })
+  );
+
+  // Routes Entity Tags (Liaison Hashtags)
+  app.get('/api/tags/entity',
+    isAuthenticated,
+    rateLimits.general,
+    validateQuery(z.object({
+      entityType: z.string().optional(),
+      entityId: z.string().uuid().optional(),
+      limit: z.coerce.number().default(50),
+      offset: z.coerce.number().default(0)
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { entityType, entityId } = req.query;
+        const entityTags = await storage.getEntityTags(entityType, entityId);
+        sendSuccess(res, entityTags);
+      } catch (error) {
+        console.error('[Entity Tags] Erreur récupération:', error);
+        throw createError.database('Erreur lors de la récupération des liaisons de tags');
+      }
+    })
+  );
+
+  app.post('/api/tags/entity',
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(z.object({
+      entityType: z.string().min(1),
+      entityId: z.string().uuid(),
+      tagId: z.string().uuid(),
+      assignedBy: z.string().uuid().optional()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const entityTag = await storage.createEntityTag(req.body);
+        sendSuccess(res, entityTag, 'Liaison de tag créée avec succès');
+      } catch (error) {
+        console.error('[Entity Tags] Erreur création:', error);
+        throw createError.database('Erreur lors de la création de la liaison de tag');
+      }
+    })
+  );
+
+  app.delete('/api/tags/entity/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteEntityTag(id);
+        sendSuccess(res, null, 'Liaison de tag supprimée avec succès');
+      } catch (error) {
+        console.error('[Entity Tags] Erreur suppression:', error);
+        throw createError.database('Erreur lors de la suppression de la liaison de tag');
+      }
+    })
+  );
+
+  // Routes Employee Labels (Label/Label 1)
+  app.get('/api/employees/:id/labels',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id: userId } = req.params;
+        const labelAssignments = await storage.getEmployeeLabelAssignments(userId);
+        sendSuccess(res, labelAssignments);
+      } catch (error) {
+        console.error('[Employee Labels] Erreur récupération:', error);
+        throw createError.database('Erreur lors de la récupération des labels employé');
+      }
+    })
+  );
+
+  app.post('/api/employees/:id/labels',
+    isAuthenticated,
+    rateLimits.creation,
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      labelId: z.string().uuid(),
+      assignedBy: z.string().uuid().optional()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id: userId } = req.params;
+        const { labelId, assignedBy } = req.body;
+        
+        const assignment = await storage.createEmployeeLabelAssignment({
+          userId,
+          labelId,
+          assignedBy
+        });
+        
+        sendSuccess(res, assignment, 'Label employé assigné avec succès');
+      } catch (error) {
+        console.error('[Employee Labels] Erreur assignation:', error);
+        throw createError.database('Erreur lors de l\'assignation du label employé');
+      }
+    })
+  );
+
+  app.delete('/api/employees/:userId/labels/:labelId',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(z.object({
+      userId: z.string().uuid(),
+      labelId: z.string().uuid()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { labelId } = req.params;
+        await storage.deleteEmployeeLabelAssignment(labelId);
+        sendSuccess(res, null, 'Label employé supprimé avec succès');
+      } catch (error) {
+        console.error('[Employee Labels] Erreur suppression:', error);
+        throw createError.database('Erreur lors de la suppression du label employé');
+      }
+    })
+  );
+
+  // Routes Project Sub Elements (Sous-éléments)
+  app.get('/api/projects/:id/sub-elements',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id: projectId } = req.params;
+        const subElements = await storage.getProjectSubElements(projectId);
+        sendSuccess(res, subElements);
+      } catch (error) {
+        console.error('[Project Sub Elements] Erreur récupération:', error);
+        throw createError.database('Erreur lors de la récupération des sous-éléments du projet');
+      }
+    })
+  );
+
+  app.get('/api/project-sub-elements/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        const subElement = await storage.getProjectSubElement(id);
+        if (!subElement) {
+          throw createError.notFound('Sous-élément de projet', id);
+        }
+        sendSuccess(res, subElement);
+      } catch (error) {
+        console.error('[Project Sub Elements] Erreur récupération sous-élément:', error);
+        throw error;
+      }
+    })
+  );
+
+  app.post('/api/projects/:id/sub-elements',
+    isAuthenticated,
+    rateLimits.creation,
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      name: z.string().min(1),
+      category: z.string().min(1),
+      parentElementId: z.string().uuid().optional(),
+      description: z.string().optional(),
+      status: z.enum(['planned', 'in_progress', 'completed', 'cancelled']).default('planned'),
+      priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+      estimatedDuration: z.number().positive().optional(),
+      estimatedCost: z.number().positive().optional()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id: projectId } = req.params;
+        const subElement = await storage.createProjectSubElement({
+          ...req.body,
+          projectId
+        });
+        sendSuccess(res, subElement, 'Sous-élément de projet créé avec succès');
+      } catch (error) {
+        console.error('[Project Sub Elements] Erreur création:', error);
+        throw createError.database('Erreur lors de la création du sous-élément de projet');
+      }
+    })
+  );
+
+  app.put('/api/project-sub-elements/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      name: z.string().min(1).optional(),
+      category: z.string().min(1).optional(),
+      parentElementId: z.string().uuid().optional(),
+      description: z.string().optional(),
+      status: z.enum(['planned', 'in_progress', 'completed', 'cancelled']).optional(),
+      priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+      estimatedDuration: z.number().positive().optional(),
+      estimatedCost: z.number().positive().optional()
+    })),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        const subElement = await storage.updateProjectSubElement(id, req.body);
+        sendSuccess(res, subElement, 'Sous-élément de projet mis à jour avec succès');
+      } catch (error) {
+        console.error('[Project Sub Elements] Erreur mise à jour:', error);
+        throw createError.database('Erreur lors de la mise à jour du sous-élément de projet');
+      }
+    })
+  );
+
+  app.delete('/api/project-sub-elements/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteProjectSubElement(id);
+        sendSuccess(res, null, 'Sous-élément de projet supprimé avec succès');
+      } catch (error) {
+        console.error('[Project Sub Elements] Erreur suppression:', error);
+        throw createError.database('Erreur lors de la suppression du sous-élément de projet');
+      }
+    })
+  );
+
+  console.log('[System] ✅ Routes API Monday.com ajoutées:');
+  console.log('  - /api/equipment-batteries (CRUD)');
+  console.log('  - /api/margin-targets (CRUD)');
+  console.log('  - /api/projects/:id/study-duration (GET/PATCH)');
+  console.log('  - /api/tags/classification (CRUD)');
+  console.log('  - /api/tags/entity (CRUD)');
+  console.log('  - /api/employees/:id/labels (CRUD)');
+  console.log('  - /api/projects/:id/sub-elements (CRUD)');
   
   const httpServer = createServer(app);
   return httpServer;

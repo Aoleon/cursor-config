@@ -11,6 +11,13 @@ import { eventBus } from './eventBus';
 import { storage } from './storage-poc';
 // Import du moteur OCR contextuel pour amélioration intelligente
 import { contextualOCREngine, type ContextualOCRResult } from './services/ContextualOCREngine';
+// Import de la base de connaissance métier centralisée
+import { 
+  MATERIAL_PATTERNS, 
+  COLOR_PATTERNS, 
+  AO_PATTERNS, 
+  LINE_ITEM_PATTERNS 
+} from './services/MenuiserieKnowledgeBase';
 // Imports des types pour le contexte OCR
 import type { 
   AOFieldsExtracted, 
@@ -101,38 +108,16 @@ export interface SupplierQuoteOCRResult {
 
 
 
-// Patterns de reconnaissance pour les AO français (paramétrable)
-const AO_PATTERNS: Record<string, RegExp[]> = {
-  // Références d'AO
-  reference: [
-    /(?:appel d'offres?|ao|marché)\s*n?°?\s*:?\s*([a-z0-9\-_\/]+)/i,
-    /référence\s*:?\s*([a-z0-9\-_\/]+)/i,
-    /n°\s*([a-z0-9\-_\/]+)/i,
-  ],
-  
-  // Dates (formats français)
-  dates: [
-    /(?:date de remise|remise des offres|échéance)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
-    /(?:date limite|limite de remise)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
-    /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/g,
-  ],
-  
-  // Maître d'ouvrage
-  maitreOuvrage: [
-    /(?:maître d'ouvrage|maitre d'ouvrage|mo)\s*:?\s*([^\n]+)/i,
-    /(?:pour le compte de|client)\s*:?\s*([^\n]+)/i,
-  ],
-  
+// REMARQUE: Les patterns d'extraction (AO_PATTERNS, MATERIAL_PATTERNS, COLOR_PATTERNS, LINE_ITEM_PATTERNS)
+// sont maintenant centralisés dans server/services/MenuiserieKnowledgeBase.ts
+// Ils sont importés en haut de ce fichier pour une source unique de vérité
+
+// Patterns additionnels pour extraction AO étendus (non couverts par la base centralisée)
+const AO_EXTENDED_PATTERNS: Record<string, RegExp[]> = {
   // Localisation
   location: [
     /(?:lieu|localisation|adresse|site)\s*:?\s*([^\n]+)/i,
     /(?:travaux à|réalisation à|sis)\s*([^\n]+)/i,
-  ],
-  
-  // Montants
-  montant: [
-    /(?:montant|budget|estimation)\s*:?\s*([0-9\s]+)(?:€|\beuros?\b)/i,
-    /([0-9\s]+)\s*(?:€|\beuros?\b)/g,
   ],
   
   // Type de marché
@@ -164,12 +149,6 @@ const AO_PATTERNS: Record<string, RegExp[]> = {
     /(?:bureau d'études?|be|maître d'œuvre|moe)\s*:?\s*([^\n]+)/i,
   ],
   
-  // Contacts (emails, téléphones)
-  contact: [
-    /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
-    /(?:tél|téléphone|phone)\s*:?\s*([0-9\s\.\-\+]{10,})/i,
-  ],
-  
   // Lots (détection des sections de lots)
   lots: [
     /(?:lots?\s+concernés?|lots?\s*:)/i,
@@ -177,7 +156,7 @@ const AO_PATTERNS: Record<string, RegExp[]> = {
     /(?:\d{1,2}[a-z]?\s*[:\-])/i,
   ],
   
-  // Critères techniques spéciaux JLM - PATTERNS OPTIMISÉS
+  // Critères techniques spéciaux JLM
   batiment_passif: [
     /(b[âa]timent|maison|construction|logement)\s+(passif\w*|à\s+énergie\s+positive)/i,
     /passiv.?haus/i,
@@ -225,21 +204,12 @@ const AO_PATTERNS: Record<string, RegExp[]> = {
     /protection\s+incendie/i,
   ],
 
-  // NOUVEAUX CRITÈRES SPÉCIFIQUES JLM
   criteres_aev: [
     /\bAEV\s*:?\s*\w*\d+/i,
     /perméabilité\s+à\s+l['']air\s*:?\s*\w*[0-9]/i,
     /étanchéité\s+(à\s+l['']air|à\s+l['']eau|au\s+vent)/i,
     /classe\s*AEV\s*:?\s*\w*\d+/i,
     /test\s+d['']étanchéité/i,
-  ],
-
-  certifications: [
-    /\b(CE|NF|ACOTHERM|CEKAL|QUALIBAT)\b/i,
-    /certification\s+(AFNOR|CSTB)/i,
-    /marquage\s+CE/i,
-    /label\s+(RGE|Qualibat)/i,
-    /norme\s+(EN|NF)\s*\d+/i,
   ],
 
   menuiserie_specifique: [
@@ -260,11 +230,7 @@ const AO_PATTERNS: Record<string, RegExp[]> = {
   ],
 };
 
-// ========================================
-// PATTERNS POUR DEVIS FOURNISSEURS - EXTRACTION MÉTIER
-// ========================================
-
-// Patterns de reconnaissance pour les devis fournisseurs français
+// Patterns pour devis fournisseurs (spécifiques, non couverts par la base centralisée)
 const SUPPLIER_QUOTE_PATTERNS: Record<string, RegExp[]> = {
   // Informations fournisseur
   supplierName: [
@@ -362,62 +328,6 @@ const SUPPLIER_QUOTE_PATTERNS: Record<string, RegExp[]> = {
   thermalUw: [
     /(?:uw|coefficient thermique)\s*[<=]?\s*(\d+[,\.]\d+)/i,
   ],
-  
-  aevClassification: [
-    /(?:aev|a\*?\d+\s*e\*?\d+[a-z]?\s*v\*?[a-z]?\d+)/i,
-  ],
-  
-  // Certifications
-  certifications: [
-    /(?:certifié|certification|norme|conforme)\s+([A-Z0-9\s\-]+)/i,
-    /(?:CE|NF|CSTB|ACOTHERM|CEKAL)/g,
-  ],
-};
-
-// Patterns pour détecter les lignes de devis
-const LINE_ITEM_PATTERNS = {
-  // Détection des lignes avec quantité et prix
-  fullLine: /(\d+(?:[,\.]\d+)?)\s*(?:u|pcs?|m[²²]?|ml?)\s*[xX*]?\s*([^\d\n]+?)\s*((?:\d+(?:[,\.]\d+)?(?:\s*€)?|€\s*\d+(?:[,\.]\d+)?))/gi,
-  
-  // Détection des désignations de produits
-  designation: /^[\s-]*(.+?)(?:\s*\d+[,\.]\d+\s*€|\s*€\s*\d+[,\.]\d+|$)/,
-  
-  // Détection quantité/unité
-  quantityUnit: /(\d+(?:[,\.]\d+)?)\s*(u|pcs?|m[²²]?|ml?|kg|tonnes?)/i,
-  
-  // Détection prix unitaire et total
-  prices: /((?:\d+(?:[,\.]\d+)?(?:\s*€)?|€\s*\d+(?:[,\.]\d+)?))/g,
-  
-  // Références produits
-  reference: /(?:ref|référence|code)\s*:?\s*([A-Z0-9\-_]+)/i,
-};
-
-// ========================================
-// PATTERNS MATÉRIAUX ET COULEURS - EXTRACTION AVANCÉE OCR
-// ========================================
-
-// Patterns matériaux étendus pour détection sophistiquée - MENUISERIE FRANÇAISE
-const MATERIAL_PATTERNS: Record<string, RegExp> = {
-  pvc: /\b(?:PVC|P\.?V\.?C\.?|chlorure de polyvinyle|polychlorure de vinyle|vinyle)\b/gi,
-  bois: /\b(?:bois|chêne|hêtre|sapin|pin|frêne|érable|noyer|teck|iroko|douglas|mélèze|épicéa|châtaignier|orme|merisier|essence de bois|bois massif|bois lamellé|lamellé-collé|contreplaqué|multiplis)\b/gi,
-  aluminium: /\b(?:aluminium|alu|dural|alliage d'aluminium|alu laqué|alu anodisé)\b/gi,
-  acier: /\b(?:acier|steel|métal|fer|inox|inoxydable|galvanisé|galva|acier thermolaqué)\b/gi,
-  composite: /\b(?:composite|fibre de verre|stratifié|résine|matériau composite|sandwich|panneau composite)\b/gi,
-  mixte_bois_alu: /\b(?:mixte|bois.{0,20}alu|alu.{0,20}bois|hybride|bi-matière|menuiserie mixte)\b/gi,
-  inox: /\b(?:inox|inoxydable|stainless|acier inoxydable|AISI 304|AISI 316)\b/gi,
-  galva: /\b(?:galva|galvanisé|zinc|électro-galvanisé|zingage)\b/gi,
-  fibre_de_verre: /\b(?:fibre de verre|polyester|GRP|glass reinforced plastic)\b/gi,
-  polycarbonate: /\b(?:polycarbonate|lexan|makrolon)\b/gi,
-  verre: /\b(?:verre|vitrage|double vitrage|triple vitrage|verre feuilleté|verre trempé|verre sécurit)\b/gi,
-};
-
-// Patterns couleurs sophistiqués avec finitions - MENUISERIE FRANÇAISE
-const COLOR_PATTERNS = {
-  ralCodes: /\b(?:RAL|ral)[\s-]?(\d{4})\b/gi,
-  colorNames: /\b(?:blanc|noir|gris|anthracite|ivoire|beige|taupe|sable|bordeaux|vert|bleu|rouge|jaune|orange|marron|chêne doré|acajou|noyer|wengé|argent|bronze|cuivre|laiton|crème|champagne|titane|graphite|sépia|caramel|chocolat|moka|cappuccino|vanille|perle|nacre)\b/gi,
-  finishes: /\b(?:mat|matte?|satiné?|brillant|glossy|texturé?|sablé|anodisé|thermolaqué|laqué|plaxé|brossé|poli|grainé|martelé|structuré|lisse|effet bois|veiné|strié|lisse|rugueux|microtexturé|granité|metallic)\b/gi,
-  woodFinishes: /\b(?:chêne naturel|chêne doré|chêne rustique|pin naturel|douglas|mélèze|teinté wengé|teinté noyer|vernis incolore|lasure|saturateur|huile de lin)\b/gi,
-  specialFinishes: /\b(?:thermolaquage|anodisation|galvanisation à chaud|peinture époxy|traitement anti-corrosion|protection UV|finition marine)\b/gi,
 };
 
 export class OCRService {
@@ -1422,8 +1332,8 @@ Réponses publiées au plus tard le 22/03/2025
     const evidences: Record<string, string[]> = {};
     
     // Scanner pour bâtiment passif
-    if (AO_PATTERNS.batiment_passif) {
-      for (const pattern of AO_PATTERNS.batiment_passif) {
+    if (AO_EXTENDED_PATTERNS.batiment_passif) {
+      for (const pattern of AO_EXTENDED_PATTERNS.batiment_passif) {
         const matches = text.match(pattern);
         if (matches) {
           criteria.batimentPassif = true;
@@ -1434,8 +1344,8 @@ Réponses publiées au plus tard le 22/03/2025
     }
     
     // Scanner pour isolation thermique renforcée
-    if (AO_PATTERNS.isolation_renforcee) {
-      for (const pattern of AO_PATTERNS.isolation_renforcee) {
+    if (AO_EXTENDED_PATTERNS.isolation_renforcee) {
+      for (const pattern of AO_EXTENDED_PATTERNS.isolation_renforcee) {
         const matches = text.match(pattern);
         if (matches) {
           criteria.isolationRenforcee = true;
@@ -1446,8 +1356,8 @@ Réponses publiées au plus tard le 22/03/2025
     }
     
     // Scanner pour précadres
-    if (AO_PATTERNS.precadres) {
-      for (const pattern of AO_PATTERNS.precadres) {
+    if (AO_EXTENDED_PATTERNS.precadres) {
+      for (const pattern of AO_EXTENDED_PATTERNS.precadres) {
         const matches = text.match(pattern);
         if (matches) {
           criteria.precadres = true;
@@ -1458,8 +1368,8 @@ Réponses publiées au plus tard le 22/03/2025
     }
     
     // Scanner pour volets extérieurs
-    if (AO_PATTERNS.volets_exterieurs) {
-      for (const pattern of AO_PATTERNS.volets_exterieurs) {
+    if (AO_EXTENDED_PATTERNS.volets_exterieurs) {
+      for (const pattern of AO_EXTENDED_PATTERNS.volets_exterieurs) {
         const matches = text.match(pattern);
         if (matches) {
           criteria.voletsExterieurs = true;
@@ -1470,8 +1380,8 @@ Réponses publiées au plus tard le 22/03/2025
     }
     
     // Scanner pour coupe-feu
-    if (AO_PATTERNS.coupe_feu) {
-      for (const pattern of AO_PATTERNS.coupe_feu) {
+    if (AO_EXTENDED_PATTERNS.coupe_feu) {
+      for (const pattern of AO_EXTENDED_PATTERNS.coupe_feu) {
         const matches = text.match(pattern);
         if (matches) {
           criteria.coupeFeu = true;
@@ -1484,8 +1394,8 @@ Réponses publiées au plus tard le 22/03/2025
     // NOUVEAUX SCANNERS POUR CRITÈRES JLM SPÉCIFIQUES
     
     // Scanner pour critères AEV
-    if (AO_PATTERNS.criteres_aev) {
-      for (const pattern of AO_PATTERNS.criteres_aev) {
+    if (AO_EXTENDED_PATTERNS.criteres_aev) {
+      for (const pattern of AO_EXTENDED_PATTERNS.criteres_aev) {
         const matches = text.match(pattern);
         if (matches) {
           criteria.criteresAev = true;
@@ -1508,8 +1418,8 @@ Réponses publiées au plus tard le 22/03/2025
     }
     
     // Scanner pour spécificités menuiserie
-    if (AO_PATTERNS.menuiserie_specifique) {
-      for (const pattern of AO_PATTERNS.menuiserie_specifique) {
+    if (AO_EXTENDED_PATTERNS.menuiserie_specifique) {
+      for (const pattern of AO_EXTENDED_PATTERNS.menuiserie_specifique) {
         const matches = text.match(pattern);
         if (matches) {
           criteria.menuiserieSpecifique = true;
@@ -1520,8 +1430,8 @@ Réponses publiées au plus tard le 22/03/2025
     }
     
     // Scanner pour accessibilité PMR
-    if (AO_PATTERNS.accessibilite) {
-      for (const pattern of AO_PATTERNS.accessibilite) {
+    if (AO_EXTENDED_PATTERNS.accessibilite) {
+      for (const pattern of AO_EXTENDED_PATTERNS.accessibilite) {
         const matches = text.match(pattern);
         if (matches) {
           criteria.accessibilite = true;

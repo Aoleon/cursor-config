@@ -936,3 +936,134 @@ export function getTechnicalSynonyms(term: string): string[] {
   }
   return [term];
 }
+
+// ========================================
+// PATTERNS D'EXTRACTION OCR - CENTRALISÉS
+// ========================================
+
+/**
+ * Patterns matériaux pour extraction OCR
+ * Utilisés par ocrService.ts pour détecter les matériaux dans les documents
+ */
+export const MATERIAL_PATTERNS: Record<string, RegExp> = {
+  pvc: /\b(?:PVC|P\.?V\.?C\.?|chlorure de polyvinyle|polychlorure de vinyle|vinyle)\b/gi,
+  bois: /\b(?:bois|chêne|hêtre|sapin|pin|frêne|érable|noyer|teck|iroko|douglas|mélèze|épicéa|châtaignier|orme|merisier|essence de bois|bois massif|bois lamellé|lamellé-collé|contreplaqué|multiplis)\b/gi,
+  aluminium: /\b(?:aluminium|alu|dural|alliage d'aluminium|alu laqué|alu anodisé)\b/gi,
+  acier: /\b(?:acier|steel|métal|fer|inox|inoxydable|galvanisé|galva|acier thermolaqué)\b/gi,
+  composite: /\b(?:composite|fibre de verre|stratifié|résine|matériau composite|sandwich|panneau composite)\b/gi,
+  mixte_bois_alu: /\b(?:mixte|bois.{0,20}alu|alu.{0,20}bois|hybride|bi-matière|menuiserie mixte)\b/gi,
+  inox: /\b(?:inox|inoxydable|stainless|acier inoxydable|AISI 304|AISI 316)\b/gi,
+  galva: /\b(?:galva|galvanisé|zinc|électro-galvanisé|zingage)\b/gi,
+  fibre_de_verre: /\b(?:fibre de verre|polyester|GRP|glass reinforced plastic)\b/gi,
+  polycarbonate: /\b(?:polycarbonate|lexan|makrolon)\b/gi,
+  verre: /\b(?:verre|vitrage|double vitrage|triple vitrage|verre feuilleté|verre trempé|verre sécurit)\b/gi,
+};
+
+/**
+ * Patterns couleurs et finitions pour extraction OCR
+ * Utilisés par ocrService.ts pour détecter les couleurs dans les documents
+ */
+export const COLOR_PATTERNS = {
+  ralCodes: /\b(?:RAL|ral)[\s-]?(\d{4})\b/gi,
+  colorNames: /\b(?:blanc|noir|gris|anthracite|ivoire|beige|taupe|sable|bordeaux|vert|bleu|rouge|jaune|orange|marron|chêne doré|acajou|noyer|wengé|argent|bronze|cuivre|laiton|crème|champagne|titane|graphite|sépia|caramel|chocolat|moka|cappuccino|vanille|perle|nacre)\b/gi,
+  finishes: /\b(?:mat|matte?|satiné?|brillant|glossy|texturé?|sablé|anodisé|thermolaqué|laqué|plaxé|brossé|poli|grainé|martelé|structuré|lisse|effet bois|veiné|strié|lisse|rugueux|microtexturé|granité|metallic)\b/gi,
+  woodFinishes: /\b(?:chêne naturel|chêne doré|chêne rustique|pin naturel|douglas|mélèze|teinté wengé|teinté noyer|vernis incolore|lasure|saturateur|huile de lin)\b/gi,
+  specialFinishes: /\b(?:thermolaquage|anodisation|galvanisation à chaud|peinture époxy|traitement anti-corrosion|protection UV|finition marine)\b/gi,
+};
+
+/**
+ * Patterns d'extraction pour les Appels d'Offres (AO)
+ * Utilisés par ocrService.ts pour extraire les informations des documents AO
+ */
+export const AO_PATTERNS: Record<string, RegExp[]> = {
+  // Références d'AO
+  reference: [
+    /(?:appel d'offres?|ao|marché)\s*n?°?\s*:?\s*([a-z0-9\-_\/]+)/i,
+    /référence\s*:?\s*([a-z0-9\-_\/]+)/i,
+    /n°\s*([a-z0-9\-_\/]+)/i,
+  ],
+  
+  // Dates (formats français)
+  dates: [
+    /(?:date de remise|remise des offres|échéance)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
+    /(?:date limite|limite de remise)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
+    /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/g,
+  ],
+  
+  // Maître d'ouvrage
+  maitreOuvrage: [
+    /(?:maître d'ouvrage|maitre d'ouvrage|mo)\s*:?\s*([^\n]+)/i,
+    /(?:pour le compte de|client)\s*:?\s*([^\n]+)/i,
+  ],
+  
+  // Maître d'œuvre
+  maitreOeuvre: [
+    /(?:maître d'œuvre|maitre d'oeuvre|maître d'oeuvre|moe)\s*:?\s*([^\n]+)/i,
+    /(?:architecte)\s*:?\s*([^\n]+)/i,
+  ],
+  
+  // Adresses
+  adresse: [
+    /(?:adresse|lieu|site)\s*:?\s*([^\n]+)/i,
+    /(\d{1,3}[,\s]+(?:rue|avenue|boulevard|chemin|allée|place|impasse)[^\n]+)/i,
+  ],
+  
+  // Codes postaux et villes
+  codePostal: [
+    /\b(\d{5})\b/g,
+    /(?:code postal|cp)\s*:?\s*(\d{5})/i,
+  ],
+  
+  ville: [
+    /(?:ville)\s*:?\s*([^\n]+)/i,
+    /\d{5}\s+([A-Z][A-Za-zÀ-ÿ\s\-']+)/i,
+  ],
+  
+  // Contacts
+  email: [
+    /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/gi,
+  ],
+  
+  telephone: [
+    /(?:tél|téléphone|phone|mobile)\s*:?\s*((?:\+33|0)\s*[1-9](?:\s*\d{2}){4})/gi,
+    /((?:\+33|0)\s*[1-9](?:\s*\d{2}){4})/g,
+  ],
+  
+  // Montants et budgets
+  montant: [
+    /(?:montant|budget|coût|prix)\s*:?\s*([\d\s]+(?:,\d{2})?\s*€)/i,
+    /([\d\s]+(?:,\d{2})?\s*€)/g,
+  ],
+  
+  // Classification AEV
+  aevClassification: [
+    /(?:aev|a\*?\d+\s*e\*?\d+[a-z]?\s*v\*?[a-z]?\d+)/i,
+  ],
+  
+  // Certifications
+  certifications: [
+    /(?:certifié|certification|norme|conforme)\s+([A-Z0-9\s\-]+)/i,
+    /(?:CE|NF|CSTB|ACOTHERM|CEKAL)/g,
+  ],
+};
+
+/**
+ * Patterns pour détecter les lignes de devis
+ * Utilisés par ocrService.ts pour extraire les lignes de devis fournisseurs
+ */
+export const LINE_ITEM_PATTERNS = {
+  // Détection des lignes avec quantité et prix
+  fullLine: /(\d+(?:[,\.]\d+)?)\s*(?:u|pcs?|m[²²]?|ml?)\s*[xX*]?\s*([^\d\n]+?)\s*((?:\d+(?:[,\.]\d+)?(?:\s*€)?|€\s*\d+(?:[,\.]\d+)?))/gi,
+  
+  // Détection des désignations de produits
+  designation: /^[\s-]*(.+?)(?:\s*\d+[,\.]\d+\s*€|\s*€\s*\d+[,\.]\d+|$)/,
+  
+  // Détection quantité/unité
+  quantityUnit: /(\d+(?:[,\.]\d+)?)\s*(u|pcs?|m[²²]?|ml?|kg|tonnes?)/i,
+  
+  // Détection prix unitaire et total
+  prices: /((?:\d+(?:[,\.]\d+)?(?:\s*€)?|€\s*\d+(?:[,\.]\d+)?))/g,
+  
+  // Références produits
+  reference: /(?:ref|référence|code)\s*:?\s*([A-Z0-9\-_]+)/i,
+};

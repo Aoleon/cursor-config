@@ -94,6 +94,20 @@ The system implements a unique, evolving form that progresses through predefined
   - Nested try/catch for OCR status updates ensures reliable error state management
   - Document status automatically updated to 'error' on OCR failure with detailed error messages
 
+### OCR Knowledge Base Centralization (Sept 29, 2025)
+- **Single Source of Truth**: All OCR extraction patterns now centralized in `server/services/MenuiserieKnowledgeBase.ts`
+- **Patterns Centralized**:
+  - `MATERIAL_PATTERNS`: Material detection (PVC, bois, aluminium, acier, composite, etc.)
+  - `COLOR_PATTERNS`: Color and finish detection (RAL codes, color names, finishes)
+  - `AO_PATTERNS`: Tender document extraction (references, dates, contacts, certifications)
+  - `LINE_ITEM_PATTERNS`: Quote line item parsing (quantities, prices, designations)
+- **Architecture Benefits**:
+  - Eliminates pattern duplication across codebase
+  - Single location for all menuiserie domain knowledge maintenance
+  - Improved consistency between business rules and OCR extraction
+  - Easier pattern updates and maintenance
+- **Implementation**: `ocrService.ts` imports patterns from centralized knowledge base, with additional extended patterns (`AO_EXTENDED_PATTERNS`, `SUPPLIER_QUOTE_PATTERNS`) for specific use cases
+
 ## External Dependencies
 
 - **Database**: Neon serverless PostgreSQL

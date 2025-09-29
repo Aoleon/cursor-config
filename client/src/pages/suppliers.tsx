@@ -241,6 +241,11 @@ export default function Suppliers() {
     return <Badge variant={urgencyInfo.variant}>{urgencyInfo.label}</Badge>;
   };
 
+  // Filter suppliers based on status
+  const filteredSuppliers = suppliers.filter(supplier => 
+    statusFilter === "all" || supplier.status === statusFilter
+  );
+
   // Filter requests based on status
   const filteredRequests = supplierRequests.filter(request => 
     statusFilter === "all" || request.status === statusFilter
@@ -387,8 +392,8 @@ export default function Suppliers() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-on-surface-muted">Total Demandes</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-sm text-on-surface-muted">Total Fournisseurs</p>
+                <p className="text-2xl font-bold">{suppliers.length}</p>
               </div>
               <Truck className="w-8 h-8 text-primary" />
             </div>
@@ -398,10 +403,10 @@ export default function Suppliers() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-on-surface-muted">En Attente</p>
-                <p className="text-2xl font-bold text-warning">{stats.pending}</p>
+                <p className="text-sm text-on-surface-muted">Actifs</p>
+                <p className="text-2xl font-bold text-success">{suppliers.filter(s => s.status === 'actif').length}</p>
               </div>
-              <Clock className="w-8 h-8 text-warning" />
+              <Star className="w-8 h-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -409,10 +414,10 @@ export default function Suppliers() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-on-surface-muted">Reçus</p>
-                <p className="text-2xl font-bold text-success">{stats.received}</p>
+                <p className="text-sm text-on-surface-muted">Demandes Total</p>
+                <p className="text-2xl font-bold text-warning">{stats.total}</p>
               </div>
-              <Star className="w-8 h-8 text-success" />
+              <Clock className="w-8 h-8 text-warning" />
             </div>
           </CardContent>
         </Card>
@@ -429,13 +434,13 @@ export default function Suppliers() {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Suppliers List */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Truck className="w-5 h-5" />
-              Demandes de Devis
+              Liste des Fournisseurs
             </CardTitle>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-48">
@@ -443,77 +448,71 @@ export default function Suppliers() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="envoye">Envoyé</SelectItem>
-                <SelectItem value="en_attente">En Attente</SelectItem>
-                <SelectItem value="recu">Reçu</SelectItem>
-                <SelectItem value="refuse">Refusé</SelectItem>
+                <SelectItem value="actif">Actif</SelectItem>
+                <SelectItem value="inactif">Inactif</SelectItem>
+                <SelectItem value="suspendu">Suspendu</SelectItem>
+                <SelectItem value="blackliste">Blacklisté</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {suppliersLoading ? (
             <div className="text-center py-8 text-on-surface-muted">Chargement...</div>
-          ) : filteredRequests.length === 0 ? (
+          ) : filteredSuppliers.length === 0 ? (
             <div className="text-center py-8 text-on-surface-muted">
-              Aucune demande trouvée
+              Aucun fournisseur trouvé
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredRequests.map((request) => (
-                <Card key={request.id} className="hover:shadow-md transition-shadow">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredSuppliers.map((supplier) => (
+                <Card key={supplier.id} className="hover:shadow-md transition-shadow" data-testid={`card-supplier-${supplier.id}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-3 flex-1">
-                        <div className="flex items-center gap-3">
-                          <div className="font-medium text-lg">{request.supplierName}</div>
-                          {getStatusBadge(request.status)}
-                          {getUrgencyBadge(request.urgency)}
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div className="space-y-1">
-                            <p className="text-on-surface-muted">Offre: {request.offer?.reference || 'N/A'}</p>
-                            <p className="text-on-surface-muted">Client: {request.offer?.client || 'N/A'}</p>
-                            <p className="text-on-surface-muted">Catégorie: {request.productCategory}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-on-surface-muted">Demande: {new Date(request.requestDate).toLocaleDateString()}</p>
-                            {request.responseDate && (
-                              <p className="text-on-surface-muted">Réponse: {new Date(request.responseDate).toLocaleDateString()}</p>
-                            )}
-                            {request.estimatedAmount && (
-                              <p className="text-on-surface-muted">Montant: {parseFloat(request.estimatedAmount).toLocaleString()} €</p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-sm">{request.description}</p>
-                          {request.notes && (
-                            <div className="p-2 bg-surface rounded text-sm">
-                              <span className="font-medium">Notes: </span>
-                              {request.notes}
-                            </div>
-                          )}
-                        </div>
-
-                        {(request.contactEmail || request.contactPhone) && (
-                          <div className="flex items-center gap-4 text-sm text-on-surface-muted">
-                            {request.contactEmail && (
-                              <div className="flex items-center gap-1">
-                                <Mail className="w-4 h-4" />
-                                {request.contactEmail}
-                              </div>
-                            )}
-                            {request.contactPhone && (
-                              <div className="flex items-center gap-1">
-                                <Phone className="w-4 h-4" />
-                                {request.contactPhone}
-                              </div>
-                            )}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium text-lg" data-testid={`text-supplier-name-${supplier.id}`}>{supplier.name}</div>
+                        <Badge variant={supplier.status === 'actif' ? 'default' : 'secondary'} data-testid={`badge-status-${supplier.id}`}>
+                          {supplier.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm">
+                        {supplier.email && (
+                          <div className="flex items-center gap-2" data-testid={`text-email-${supplier.id}`}>
+                            <Mail className="w-4 h-4" />
+                            {supplier.email}
                           </div>
                         )}
+                        {supplier.phone && (
+                          <div className="flex items-center gap-2" data-testid={`text-phone-${supplier.id}`}>
+                            <Phone className="w-4 h-4" />
+                            {supplier.phone}
+                          </div>
+                        )}
+                        {supplier.address && (
+                          <div className="flex items-center gap-2" data-testid={`text-address-${supplier.id}`}>
+                            <MapPin className="w-4 h-4" />
+                            {supplier.address}
+                          </div>
+                        )}
+                      </div>
+
+                      {supplier.specialties && supplier.specialties.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">Spécialités:</p>
+                          <div className="flex flex-wrap gap-1" data-testid={`specialties-${supplier.id}`}>
+                            {supplier.specialties.map((specialty, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {specialty}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2 text-xs text-on-surface-muted">
+                        <div>Paiement: {supplier.paymentTerms || 30}j</div>
+                        <div>Livraison: {supplier.deliveryDelay || 15}j</div>
                       </div>
                     </div>
                   </CardContent>

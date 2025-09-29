@@ -1034,6 +1034,7 @@ export class AIService {
       // Log de requête détaillé pour audit
       const queryLog: InsertAiQueryLogs = {
         userId: "system", // TODO: récupérer l'userId réel
+        sessionId: null, // Propriété manquante ajoutée pour éviter l'erreur SQL
         queryHash: this.generateQueryHash(request),
         originalQuery: request.query,
         processedQuery: request.query, // TODO: implémenter le preprocessing

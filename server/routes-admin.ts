@@ -1157,5 +1157,64 @@ export function createAdminRoutes(
     }
   });
 
+  // ========================================
+  // ENDPOINT MONITORING POOL DE CONNEXIONS DB
+  // ========================================
+  
+  /**
+   * GET /api/admin/db-pool/stats
+   * Retourne les statistiques du pool de connexions PostgreSQL
+   * Utile pour monitoring et debug des performances
+   */
+  router.get("/db-pool/stats", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as AuthenticatedUser;
+      
+      // Import dynamique pour avoir les fonctions de monitoring
+      const { getPoolStats } = await import("./db");
+      
+      // Récupération des stats du pool
+      const poolStats = getPoolStats();
+      
+      // Log de la consultation
+      await auditService.logEvent({
+        userId: user.id,
+        userRole: user.role,
+        sessionId: req.sessionID,
+        eventType: 'admin.action',
+        resource: 'db_pool',
+        action: 'READ',
+        result: 'success',
+        severity: 'low',
+        metadata: {
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          poolStats
+        }
+      });
+      
+      res.json({
+        success: true,
+        data: {
+          pool: poolStats,
+          health: {
+            status: poolStats.waitingRequests > 10 ? 'warning' : 'healthy',
+            utilizationPercent: Math.round((poolStats.totalConnections - poolStats.idleConnections) / 25 * 100),
+            recommendation: poolStats.waitingRequests > 10 
+              ? 'Pool surchargé - Augmenter max connexions ou optimiser requêtes'
+              : 'Pool fonctionnel - Performance optimale'
+          },
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('[GET /admin/db-pool/stats] Erreur:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la récupération des stats du pool DB'
+      });
+    }
+  });
+
   return router;
 }

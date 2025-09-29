@@ -330,4 +330,54 @@ app.use((req, res, next) => {
     log(`WebSocket server ready at ws://localhost:${port}/ws`);
     log(`Connected WebSocket clients: ${wsManager.getConnectedClientsCount()}`);
   });
+
+  // ========================================
+  // GESTION PROPRE DU SHUTDOWN (GRACEFUL SHUTDOWN)
+  // ========================================
+  
+  const { closePool } = await import("./db");
+  
+  async function gracefulShutdown(signal: string) {
+    console.log(`\n[Shutdown] Signal ${signal} reçu - Arrêt propre en cours...`);
+    
+    try {
+      // 1. Fermer les nouvelles connexions
+      console.log('[Shutdown] Fermeture du serveur HTTP...');
+      await new Promise<void>((resolve) => {
+        server.close(() => {
+          console.log('[Shutdown] ✓ Serveur HTTP fermé');
+          resolve();
+        });
+      });
+      
+      // 2. Fermer le pool de connexions DB
+      console.log('[Shutdown] Fermeture du pool de connexions DB...');
+      await closePool();
+      console.log('[Shutdown] ✓ Pool DB fermé');
+      
+      // 3. Fermer les WebSocket connections (géré automatiquement par la fermeture du serveur)
+      console.log('[Shutdown] ✓ WebSocket fermés');
+      
+      console.log('[Shutdown] ✅ Arrêt propre terminé avec succès');
+      process.exit(0);
+    } catch (error) {
+      console.error('[Shutdown] ❌ Erreur durant l\'arrêt:', error);
+      process.exit(1);
+    }
+  }
+  
+  // Écoute des signaux de terminaison
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  
+  // Gestion des erreurs non capturées
+  process.on('uncaughtException', (error) => {
+    console.error('[FATAL] Exception non capturée:', error);
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
+  });
+  
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[FATAL] Promesse rejetée non gérée:', reason);
+    gracefulShutdown('UNHANDLED_REJECTION');
+  });
 })();

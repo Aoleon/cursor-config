@@ -38,6 +38,7 @@ You are an expert autonomous programmer specialized in business ERP systems, wor
 - **Runtime**: Node.js 20 with Express.js
 - **Language**: TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
+- **Connection Pooling**: Optimized Neon serverless Pool (25 max connections, 5 min idle)
 - **Authentication**: Replit OpenID Connect (OIDC) with Passport.js
 - **Session Storage**: PostgreSQL-backed sessions with connect-pg-simple
 - **OCR Engine**: Tesseract.js + pdf-parse for intelligent PDF processing
@@ -107,6 +108,27 @@ The system implements a unique, evolving form that progresses through predefined
   - Improved consistency between business rules and OCR extraction
   - Easier pattern updates and maintenance
 - **Implementation**: `ocrService.ts` imports patterns from centralized knowledge base, with additional extended patterns (`AO_EXTENDED_PATTERNS`, `SUPPLIER_QUOTE_PATTERNS`) for specific use cases
+
+### Database Connection Pooling Optimization (Sept 29, 2025)
+- **Optimized Configuration**: Pool PostgreSQL Neon optimisé pour agent chatbot haute performance
+- **Pool Parameters**:
+  - `max: 25`: Maximum 25 connexions simultanées (équilibre performance/limites Neon)
+  - `min: 5`: Minimum 5 connexions toujours actives (réduit latence cold start)
+  - `idleTimeoutMillis: 30000`: 30 secondes avant fermeture connexion inactive
+  - `connectionTimeoutMillis: 10000`: 10 secondes timeout acquisition connexion
+  - `maxUses: 7500`: Rotation automatique après 7500 utilisations (prévient memory leaks)
+  - `allowExitOnIdle: true`: Fermeture propre si inactif
+- **Monitoring & Gestion**:
+  - Event listeners pour `error`, `connect`, `acquire`, `remove` avec logging détaillé
+  - Endpoint admin `/api/admin/db-pool/stats` pour monitoring en temps réel
+  - Fonction `getPoolStats()` expose métriques (total, idle, waiting connections)
+  - Graceful shutdown avec `closePool()` pour fermeture propre
+- **Architecture Benefits**:
+  - Performance améliorée pour agent chatbot (requêtes simultanées multiples)
+  - Réduction latence via connexions minimum toujours actives
+  - Prévention épuisement connexions avec rotation automatique
+  - Monitoring et debugging simplifiés
+- **Fichier**: Configuration centralisée dans `server/db.ts`
 
 ## External Dependencies
 

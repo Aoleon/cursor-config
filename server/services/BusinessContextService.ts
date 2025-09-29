@@ -1411,6 +1411,7 @@ export class BusinessContextService {
         userRole: request.user_role,
         requestType: "generate_context",
         operationType: "context_generation", // Colonne manquante ajoutée avec valeur appropriée
+        success: error ? false : true, // Colonne success ajoutée - true sauf si erreur
         generationTimeMs: generationTime,
         cacheHit,
         schemasLoaded: context?.databaseSchemas.length || 0,

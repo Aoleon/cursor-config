@@ -45,8 +45,8 @@ import {
 const DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-20250514";  // Modèle Claude Sonnet 4 par défaut
 const DEFAULT_GPT_MODEL = "gpt-5";  // Modèle GPT-5 par défaut
 const CACHE_EXPIRY_HOURS = 24;  // Cache valide 24h
-const MAX_RETRY_ATTEMPTS = 3;
-const REQUEST_TIMEOUT_MS = 45000;  // 45 secondes timeout
+const MAX_RETRY_ATTEMPTS = 2;  // Réduit pour éviter les boucles longues
+const REQUEST_TIMEOUT_MS = 12000;  // 12 secondes timeout - Optimisé pour performance
 const RATE_LIMIT_PER_USER_PER_HOUR = 100;
 
 // Coûts estimés par token (en euros) - estimations approximatives
@@ -1691,8 +1691,17 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     warnings: string[];
   } {
     try {
-      // Nettoyer la réponse pour extraire le JSON
-      const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+      // Nettoyer la réponse pour extraire le JSON avec plusieurs stratégies
+      let cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+      
+      // Stratégie 1: Chercher le premier { et dernier } valides
+      const firstBrace = cleanedResponse.indexOf('{');
+      const lastBrace = cleanedResponse.lastIndexOf('}');
+      
+      if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
+        cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
+      }
+      
       const parsed = JSON.parse(cleanedResponse);
 
       return {
@@ -1702,16 +1711,19 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         warnings: Array.isArray(parsed.warnings) ? parsed.warnings : []
       };
     } catch (error) {
-      console.warn(`[AIService] Erreur parsing réponse IA:`, error);
+      console.warn(`[AIService] Erreur parsing réponse IA - tentative fallback:`, error);
       
-      // Fallback: essayer d'extraire le SQL brut
-      const sqlMatch = responseText.match(/SELECT[\s\S]*?;/i);
+      // Fallback: essayer d'extraire le SQL brut avec patterns multiples
+      const sqlMatch = responseText.match(/SELECT[\s\S]*?;/i) ||
+                      responseText.match(/INSERT[\s\S]*?;/i) ||
+                      responseText.match(/UPDATE[\s\S]*?;/i) ||
+                      responseText.match(/DELETE[\s\S]*?;/i);
       
       return {
-        sql: sqlMatch ? sqlMatch[0] : "",
-        explanation: "Erreur de parsing - réponse IA mal formatée",
-        confidence: 0.1,
-        warnings: ["Réponse IA mal formatée, SQL possiblement incomplet"]
+        sql: sqlMatch ? sqlMatch[0] : "SELECT 1 as status;", // SQL simple par défaut
+        explanation: "Réponse IA mal formatée - utilisation du fallback SQL",
+        confidence: 0.2,
+        warnings: ["Réponse IA mal formatée, fallback utilisé"]
       };
     }
   }

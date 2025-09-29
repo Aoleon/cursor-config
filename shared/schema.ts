@@ -5548,6 +5548,7 @@ export const businessContextMetricsLog = pgTable("business_context_metrics_log",
   userRole: varchar("user_role", { length: 50 }).notNull(),
   requestType: varchar("request_type", { length: 100 }).notNull(),
   operationType: varchar("operation_type", { length: 100 }).default("context_generation"), // Colonne manquante ajoutée
+  success: boolean("success").default(true), // Colonne manquante ajoutée pour logging
   generationTimeMs: integer("generation_time_ms").notNull(),
   cacheHit: boolean("cache_hit").notNull(),
   schemasLoaded: integer("schemas_loaded").notNull(),

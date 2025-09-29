@@ -33,7 +33,13 @@ export function validate(
       if (opts.stripUnknown) {
         validatedData = schema.parse(dataToValidate);
       } else {
-        validatedData = schema.strict().parse(dataToValidate);
+        // Pour le mode strict, nous devons nous assurer que le schema est un ZodObject
+        // Sinon, nous utilisons parse standard avec passthrough
+        if ('strict' in schema && typeof schema.strict === 'function') {
+          validatedData = (schema as any).strict().parse(dataToValidate);
+        } else {
+          validatedData = schema.parse(dataToValidate);
+        }
       }
 
       // Remplacer les données par les données validées
@@ -52,7 +58,7 @@ export function validate(
               field: issue.path.join('.'),
               message: issue.message,
               code: issue.code,
-              received: issue.received || 'undefined'
+              received: 'received' in issue ? (issue as any).received : 'undefined'
             }))
           }
         });
@@ -175,7 +181,7 @@ export function validateRequest(validations: {
             field: issue.path.join('.'),
             message: issue.message,
             code: issue.code,
-            received: issue.received || 'undefined'
+            received: 'received' in issue ? (issue as any).received : 'undefined'
           }))
         }))
       });

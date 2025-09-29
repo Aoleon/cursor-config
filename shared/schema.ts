@@ -4584,16 +4584,16 @@ export const snapshotRequestSchema = z.object({
 });
 
 export const metricQuerySchema = z.object({
-  metricType: z.enum(['conversion', 'delay', 'revenue', 'team_load', 'margin']),
+  metricType: z.enum(['conversion', 'delay', 'revenue', 'team_load', 'margin']).optional(),
   groupBy: z.enum(['user', 'department', 'project_type', 'month', 'phase']).optional(),
-  limit: z.number().min(1).max(100).default(20),
-  offset: z.number().min(0).default(0)
+  limit: z.string().regex(/^\d+$/).transform(Number).refine(val => val >= 1 && val <= 100, { message: "Must be between 1 and 100" }).default('20').or(z.number().min(1).max(100).default(20)),
+  offset: z.string().regex(/^\d+$/).transform(Number).refine(val => val >= 0, { message: "Must be >= 0" }).default('0').or(z.number().min(0).default(0))
 });
 
 export const benchmarkQuerySchema = z.object({
-  entityType: z.enum(['user', 'team', 'department']),
+  entityType: z.enum(['user', 'team', 'department']).optional().default('user'),
   entityId: z.string().optional(),
-  metricTypes: z.array(z.string()).optional(),
+  metricTypes: z.string().optional().transform((val) => val ? val.split(',') : undefined),
   period: z.string().optional()
 });
 
@@ -6002,13 +6002,17 @@ export const chatbotValidateRequestSchema = z.object({
 
 // Schéma pour GET /api/chatbot/history  
 export const chatbotHistoryRequestSchema = z.object({
-  limit: z.number().min(1).max(100).default(20),
-  offset: z.number().min(0).default(0),
+  limit: z.string().regex(/^\d+$/).transform(Number).refine(val => val >= 1 && val <= 100, { message: "Must be between 1 and 100" }).default('20').or(z.number().min(1).max(100).default(20)),
+  offset: z.string().regex(/^\d+$/).transform(Number).refine(val => val >= 0, { message: "Must be >= 0" }).default('0').or(z.number().min(0).default(0)),
   sessionId: z.string().optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  includeErrors: z.boolean().default(false),
-  includeSQL: z.boolean().default(false)
+  startDate: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), {
+    message: "Format de date invalide pour startDate"
+  }),
+  endDate: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), {
+    message: "Format de date invalide pour endDate"
+  }),
+  includeErrors: z.string().optional().transform((val) => val === 'true').or(z.boolean()).default(false),
+  includeSQL: z.string().optional().transform((val) => val === 'true').or(z.boolean()).default(false)
 });
 
 // Schéma pour POST /api/chatbot/feedback

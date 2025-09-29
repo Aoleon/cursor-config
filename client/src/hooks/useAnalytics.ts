@@ -84,7 +84,7 @@ export interface AlertMetrics {
 export function useKPIs(filters?: AnalyticsFilters) {
   return useQuery({
     queryKey: ['/api/analytics/kpis', filters],
-    select: (res) => res.data, // Unwrap { success, data, timestamp } -> data
+    select: (res: any) => res.data, // Unwrap { success, data, timestamp } -> data
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 5 * 60 * 1000, // Refresh automatique toutes les 5 minutes
   });
@@ -94,7 +94,7 @@ export function useKPIs(filters?: AnalyticsFilters) {
 export function useMetrics(type: MetricType, groupBy?: string, filters?: AnalyticsFilters) {
   return useQuery({
     queryKey: ['/api/analytics/metrics', { metricType: type, groupBy, ...filters }],
-    select: (res) => res.data, // Unwrap API response
+    select: (res: any) => res.data, // Unwrap API response
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }
@@ -103,7 +103,7 @@ export function useMetrics(type: MetricType, groupBy?: string, filters?: Analyti
 export function usePipelineMetrics(filters?: AnalyticsFilters) {
   return useQuery({
     queryKey: ['/api/analytics/pipeline', filters],
-    select: (res) => res.data, // Unwrap API response
+    select: (res: any) => res.data, // Unwrap API response
     staleTime: 15 * 60 * 1000, // 15 minutes
   });
 }
@@ -112,7 +112,7 @@ export function usePipelineMetrics(filters?: AnalyticsFilters) {
 export function useTeamMetrics(groupBy: 'user' | 'department' = 'user', filters?: AnalyticsFilters) {
   return useQuery({
     queryKey: ['/api/analytics/metrics', { metricType: 'team_load', groupBy, ...filters }],
-    select: (res) => res.data, // Unwrap API response
+    select: (res: any) => res.data, // Unwrap API response
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }
@@ -121,7 +121,7 @@ export function useTeamMetrics(groupBy: 'user' | 'department' = 'user', filters?
 export function useSnapshots(period?: string) {
   return useQuery({
     queryKey: ['/api/analytics/snapshots', { period }],
-    select: (res) => res.data, // Unwrap API response
+    select: (res: any) => res.data, // Unwrap API response
     staleTime: 30 * 60 * 1000, // 30 minutes
   });
 }
@@ -130,7 +130,7 @@ export function useSnapshots(period?: string) {
 export function useBenchmarks(entityType: string, entityId?: string) {
   return useQuery({
     queryKey: ['/api/analytics/benchmarks', { entityType, entityId }],
-    select: (res) => res.data, // Unwrap API response
+    select: (res: any) => res.data, // Unwrap API response
     staleTime: 15 * 60 * 1000, // 15 minutes
   });
 }
@@ -219,7 +219,7 @@ export function useExecutiveDashboard(filters?: AnalyticsFilters) {
 export function useRealtimeExecutiveData() {
   return useQuery({
     queryKey: ['/api/analytics/realtime'],
-    select: (res) => res.data, // Unwrap API response
+    select: (res: any) => res.data, // Unwrap API response
     refetchInterval: 2 * 60 * 1000, // 2 minutes
     staleTime: 1 * 60 * 1000, // 1 minute
   });
@@ -229,7 +229,7 @@ export function useRealtimeExecutiveData() {
 export function useExecutiveAlerts() {
   return useQuery({
     queryKey: ['/api/analytics/alerts'],
-    select: (res) => res.data, // Unwrap API response
+    select: (res: any) => res.data, // Unwrap API response
     refetchInterval: 3 * 60 * 1000, // 3 minutes
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
@@ -239,7 +239,7 @@ export function useExecutiveAlerts() {
 export function useConversionTrends(period: '1M' | '3M' | '6M' | '1Y' = '3M') {
   return useQuery({
     queryKey: ['/api/analytics/metrics', { metricType: 'conversion', groupBy: 'month', period }],
-    select: (res) => res.data, // Unwrap API response
+    select: (res: any) => res.data, // Unwrap API response
     staleTime: 30 * 60 * 1000, // 30 minutes - données moins volatiles
   });
 }
@@ -248,7 +248,7 @@ export function useConversionTrends(period: '1M' | '3M' | '6M' | '1Y' = '3M') {
 export function useMarginAnalysis() {
   return useQuery({
     queryKey: ['/api/analytics/metrics', { metricType: 'margin', groupBy: 'category' }],
-    select: (res) => res.data, // Unwrap API response
+    select: (res: any) => res.data, // Unwrap API response
     staleTime: 30 * 60 * 1000, // 30 minutes
   });
 }
@@ -257,7 +257,7 @@ export function useMarginAnalysis() {
 export function useBottleneckAnalysis() {
   return useQuery({
     queryKey: ['/api/analytics/bottlenecks'],
-    select: (res) => res.data, // Unwrap API response
+    select: (res: any) => res.data, // Unwrap API response
     staleTime: 20 * 60 * 1000, // 20 minutes
   });
 }

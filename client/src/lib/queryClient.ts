@@ -29,7 +29,42 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    // CORRECTION CRITIQUE : Supporter query keys hiérarchiques complètement
+    // Query keys format : [baseUrl] ou [baseUrl, ...pathSegments] ou [baseUrl, params]
+    const [baseUrl, ...additionalSegments] = queryKey;
+    let url = baseUrl as string;
+    
+    // Gérer les segments additionnels du path (ex: ['/api/chatbot/history', conversationId])
+    if (additionalSegments.length > 0) {
+      const lastSegment = additionalSegments[additionalSegments.length - 1];
+      
+      // Si le dernier segment est un objet, c'est des query params
+      if (lastSegment && typeof lastSegment === 'object' && !Array.isArray(lastSegment)) {
+        // Segments du path (tous sauf le dernier qui est params)
+        const pathSegments = additionalSegments.slice(0, -1);
+        if (pathSegments.length > 0) {
+          url += '/' + pathSegments.join('/');
+        }
+        
+        // Query parameters (dernier segment)
+        const params = lastSegment;
+        const searchParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+        const queryString = searchParams.toString();
+        if (queryString) {
+          url += `?${queryString}`;
+        }
+      } else {
+        // Tous les segments sont des parties du path
+        url += '/' + additionalSegments.join('/');
+      }
+    }
+    
+    const res = await fetch(url, {
       credentials: "include",
     });
 
@@ -43,7 +78,42 @@ export const getQueryFn: <T>(options: {
 
 // CORRECTIF SÉCURITÉ: Fetcher non-authentifié pour routes publiques
 export const getPublicQueryFn: QueryFunction<any> = async ({ queryKey }) => {
-  const res = await fetch(queryKey.join("/") as string, {
+  // CORRECTION CRITIQUE : Supporter query keys hiérarchiques complètement
+  // Query keys format : [baseUrl] ou [baseUrl, ...pathSegments] ou [baseUrl, params]
+  const [baseUrl, ...additionalSegments] = queryKey;
+  let url = baseUrl as string;
+  
+  // Gérer les segments additionnels du path (ex: ['/api/chatbot/history', conversationId])
+  if (additionalSegments.length > 0) {
+    const lastSegment = additionalSegments[additionalSegments.length - 1];
+    
+    // Si le dernier segment est un objet, c'est des query params
+    if (lastSegment && typeof lastSegment === 'object' && !Array.isArray(lastSegment)) {
+      // Segments du path (tous sauf le dernier qui est params)
+      const pathSegments = additionalSegments.slice(0, -1);
+      if (pathSegments.length > 0) {
+        url += '/' + pathSegments.join('/');
+      }
+      
+      // Query parameters (dernier segment)
+      const params = lastSegment;
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+    } else {
+      // Tous les segments sont des parties du path
+      url += '/' + additionalSegments.join('/');
+    }
+  }
+  
+  const res = await fetch(url, {
     // CORRECTIF CRITIQUE: Pas de credentials pour routes publiques
     credentials: "omit",
   });

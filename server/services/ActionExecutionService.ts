@@ -6,6 +6,7 @@ import { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { sql, eq, and, desc, gte, lte, asc, or } from "drizzle-orm";
 import crypto from "crypto";
+import { EventType } from "@shared/events";
 import type {
   ActionDefinition,
   ActionExecutionResult,
@@ -219,10 +220,10 @@ export class ActionExecutionService {
 
       return {
         hasActionIntention: bestMatch.confidence > 0.6,
-        actionType: bestMatch.type,
-        entity: bestMatch.entity,
+        actionType: bestMatch.type || undefined,
+        entity: bestMatch.entity || undefined,
         confidence: bestMatch.confidence,
-        operation: bestMatch.operation
+        operation: bestMatch.operation || undefined
       };
 
     } catch (error) {
@@ -260,11 +261,12 @@ Si ce n'est pas une action, retournez: null
 Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
 `;
 
-      const aiResponse = await this.aiService.generateQuery({
-        prompt: aiPrompt,
+      const aiResponse = await this.aiService.generateSQL({
+        query: aiPrompt,
         context: `Analyse d'intention d'action pour ${userRole}`,
-        targetModel: 'claude_sonnet_4',
-        maxTokens: 500
+        forceModel: 'claude_sonnet_4',
+        maxTokens: 500,
+        userRole: userRole as any
       });
 
       if (aiResponse.success && aiResponse.data?.query) {
@@ -302,7 +304,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       // 1. Validation RBAC préliminaire
       const rbacCheck = await this.rbacService.validateTableAccess({
         userId: request.userId,
-        role: request.userRole,
+        role: request.userRole as any,
         tableName: this.getTableNameForEntity(request.entity),
         action: this.mapActionTypeToRBACAction(request.type),
         contextValues: {}
@@ -341,7 +343,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           confirmationRequired: false,
           riskLevel: 'medium',
           error: {
-            type: 'validation',
+            type: 'permission',
             message: `Opération '${request.operation}' non supportée pour l'entité '${request.entity}'`
           }
         };
@@ -359,7 +361,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           confirmationRequired: false,
           riskLevel,
           error: {
-            type: 'validation',
+            type: 'permission',
             message: 'Paramètres d\'action invalides',
             details: parameterValidation.errors
           }
@@ -371,7 +373,6 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       expiresAt.setMinutes(expiresAt.getMinutes() + (request.expirationMinutes || DEFAULT_CONFIRMATION_TIMEOUT_MINUTES));
 
       const actionData: InsertAction = {
-        id: actionId,
         type: request.type,
         entity: request.entity,
         operation: request.operation,
@@ -396,7 +397,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         metadata: request.metadata || {}
       };
 
-      await db.insert(actions).values(actionData);
+      await db.insert(actions).values([actionData]);
 
       // 6. Création de la confirmation si requise
       let confirmationId: string | undefined;
@@ -423,13 +424,13 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       // 8. Publication d'événement temps réel
       this.eventBus.publish({
         id: crypto.randomUUID(),
-        type: 'ACTION_PROPOSED',
-        entity: 'action',
+        type: EventType.CHATBOT_QUERY_PROCESSED,
+        entity: 'system',
         entityId: actionId,
         severity: 'info',
         title: '⚡ Action Proposée',
         message: `Action ${request.operation} proposée pour ${request.entity}`,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         affectedQueryKeys: [
           ['/api/chatbot/action-history'],
           ['/api/chatbot/actions', request.userId]
@@ -475,7 +476,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         confirmationRequired: false,
         riskLevel: 'high',
         error: {
-          type: 'unknown',
+          type: 'validation',
           message: 'Erreur lors de la proposition d\'action'
         }
       };
@@ -508,7 +509,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           success: false,
           actionId: request.actionId,
           error: {
-            type: 'validation',
+            type: 'permission',
             message: 'Action introuvable'
           }
         };
@@ -533,7 +534,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           success: false,
           actionId: request.actionId,
           error: {
-            type: 'validation',
+            type: 'permission',
             message: `Action dans un état invalide: ${currentAction.status}`
           }
         };
@@ -558,7 +559,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           success: false,
           actionId: request.actionId,
           error: {
-            type: 'confirmation',
+            type: 'permission',
             message: 'Confirmation utilisateur requise'
           }
         };
@@ -567,7 +568,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       // 4. Re-validation RBAC au moment de l'exécution
       const rbacRecheck = await this.rbacService.validateTableAccess({
         userId: request.userId,
-        role: currentAction.userRole,
+        role: currentAction.userRole as any,
         tableName: this.getTableNameForEntity(currentAction.entity),
         action: this.mapActionTypeToRBACAction(currentAction.type),
         contextValues: {}
@@ -622,7 +623,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       await this.auditService.logEvent({
         userId: request.userId,
         userRole: currentAction.userRole,
-        sessionId: currentAction.sessionId,
+        sessionId: currentAction.sessionId || 'system',
         eventType: 'data.modification',
         result: executionResult.success ? 'success' : 'error',
         severity: executionResult.success ? 'medium' : 'high',
@@ -642,15 +643,15 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       // 9. Publication d'événement temps réel
       this.eventBus.publish({
         id: crypto.randomUUID(),
-        type: executionResult.success ? 'ACTION_EXECUTED' : 'ACTION_FAILED',
-        entity: currentAction.entity,
+        type: EventType.CHATBOT_QUERY_PROCESSED,
+        entity: 'system',
         entityId: executionResult.entityId || request.actionId,
         severity: executionResult.success ? 'info' : 'error',
         title: executionResult.success ? '✅ Action Exécutée' : '❌ Action Échouée',
         message: executionResult.success 
           ? `Action ${currentAction.operation} exécutée avec succès`
           : `Échec de l'action ${currentAction.operation}: ${executionResult.error?.message}`,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         affectedQueryKeys: [
           ['/api/chatbot/action-history'],
           [`/api/${currentAction.entity}s`], // Invalider le cache des entités affectées
@@ -749,7 +750,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
     if (!entityOps) return false;
     
     const typeOps = entityOps[actionType as keyof typeof entityOps];
-    return typeOps?.includes(operation) || false;
+    return typeOps?.includes(operation as any) || false;
   }
 
   private determineRiskLevel(operation: string): 'low' | 'medium' | 'high' {
@@ -814,7 +815,6 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
     expiresAt.setMinutes(expiresAt.getMinutes() + DEFAULT_CONFIRMATION_TIMEOUT_MINUTES);
 
     const confirmationData: InsertActionConfirmation = {
-      id: confirmationId,
       actionId,
       userId,
       status: 'pending',
@@ -823,7 +823,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       expiresAt
     };
 
-    await db.insert(actionConfirmations).values(confirmationData);
+    await db.insert(actionConfirmations).values([confirmationData]);
     return confirmationId;
   }
 
@@ -890,7 +890,6 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
 
       // Enregistrer l'historique
       const historyData: InsertActionHistory = {
-        id: crypto.randomUUID(),
         actionId,
         fromStatus: oldStatus,
         toStatus: status as any,
@@ -899,7 +898,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         success: true
       };
 
-      await db.insert(actionHistory).values(historyData);
+      await db.insert(actionHistory).values([historyData]);
 
     } catch (error) {
       console.error('[ActionExecutionService.updateActionStatus] Erreur:', error);
@@ -927,7 +926,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           return {
             success: false,
             error: {
-              type: 'validation',
+              type: 'permission',
               message: `Type d'entité non supporté: ${action.entity}`
             }
           };
@@ -949,7 +948,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       case 'create_offer':
         return await this.createOffer(action.parameters);
       case 'update_status':
-        return await this.updateOfferStatus(action.targetEntityId!, action.parameters.status);
+        return await this.updateOfferStatus(action.targetEntityId!, (action.parameters as any).status);
       case 'archive_offer':
         return await this.archiveOffer(action.targetEntityId!);
       case 'transform_to_project':
@@ -958,7 +957,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         return {
           success: false,
           error: {
-            type: 'validation',
+            type: 'permission',
             message: `Opération d'offre non supportée: ${action.operation}`
           }
         };
@@ -970,14 +969,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       case 'create_project':
         return await this.createProject(action.parameters);
       case 'update_status':
-        return await this.updateProjectStatus(action.targetEntityId!, action.parameters.status);
+        return await this.updateProjectStatus(action.targetEntityId!, (action.parameters as any).status);
       case 'archive_project':
         return await this.archiveProject(action.targetEntityId!);
       default:
         return {
           success: false,
           error: {
-            type: 'validation',
+            type: 'permission',
             message: `Opération de projet non supportée: ${action.operation}`
           }
         };
@@ -999,12 +998,12 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       case 'create_project_task':
         return await this.createProjectTask(action.parameters);
       case 'update_task_status':
-        return await this.updateTaskStatus(action.targetEntityId!, action.parameters.status);
+        return await this.updateTaskStatus(action.targetEntityId!, (action.parameters as any).status);
       default:
         return {
           success: false,
           error: {
-            type: 'validation',
+            type: 'permission',
             message: `Opération de tâche non supportée: ${action.operation}`
           }
         };
@@ -1047,13 +1046,13 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         location: parameters.location || '',
         menuiserieType: parameters.menuiserieType || 'fenetre',
         montantEstime: parameters.montantEstime ? parseFloat(parameters.montantEstime) : null,
-        status: 'brouillon',
+        status: 'brouillon' as any,
         responsibleUserId: parameters.responsibleUserId,
         departement: parameters.departement,
         source: parameters.source || 'website'
       };
 
-      await db.insert(offers).values(offerData);
+      await db.insert(offers).values([offerData]);
 
       return {
         success: true,
@@ -1134,7 +1133,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         return {
           success: false,
           error: {
-            type: 'validation',
+            type: 'permission',
             message: 'Offre introuvable'
           }
         };
@@ -1146,18 +1145,17 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
 
       // Créer le projet
       const projectData = {
-        id: projectId,
-        reference,
-        offerId: offer.id,
+        name: `Projet ${offer.client}`,
         client: offer.client,
         location: offer.location,
         montantTotal: offer.montantFinal || offer.montantEstime,
-        status: 'passation',
+        status: 'passation' as any,
         responsibleUserId: offer.responsibleUserId,
-        dateDebutPrevu: offer.demarragePrevu
+        dateDebutPrevu: offer.demarragePrevu,
+        offerId: offer.id
       };
 
-      await db.insert(projects).values(projectData);
+      await db.insert(projects).values([projectData]);
 
       // Mettre à jour l'offre
       await db
@@ -1197,18 +1195,17 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       const reference = `PROJ-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
 
       const projectData = {
-        id: projectId,
-        reference,
+        name: parameters.name || `Projet ${parameters.client}`,
         client: parameters.client,
         location: parameters.location || '',
         montantTotal: parameters.montantTotal ? parseFloat(parameters.montantTotal) : null,
-        status: 'passation',
+        status: 'passation' as any,
         responsibleUserId: parameters.responsibleUserId,
         offerId: parameters.offerId,
         dateDebutPrevu: parameters.dateDebutPrevu ? new Date(parameters.dateDebutPrevu) : null
       };
 
-      await db.insert(projects).values(projectData);
+      await db.insert(projects).values([projectData]);
 
       return {
         success: true,
@@ -1283,13 +1280,13 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         projectId: parameters.projectId,
         name: parameters.name,
         description: parameters.description,
-        status: 'a_faire',
+        status: 'a_faire' as any,
         assignedUserId: parameters.assignedUserId,
         dateEcheance: parameters.dateEcheance ? new Date(parameters.dateEcheance) : null,
         priority: parameters.priority || 'normale'
       };
 
-      await db.insert(projectTasks).values(taskData);
+      await db.insert(projectTasks).values([taskData]);
 
       return {
         success: true,

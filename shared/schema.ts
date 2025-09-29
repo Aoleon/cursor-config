@@ -542,12 +542,18 @@ export const contactLinkTypeEnum = pgEnum("contact_link_type", [
 
 // Étapes du pipeline chatbot pour tracing granulaire
 export const pipelineStepEnum = pgEnum("pipeline_step", [
-  "context_generation",    // Génération contexte business
-  "ai_model_selection",    // Sélection modèle IA optimal  
-  "sql_generation",        // Génération SQL par IA
-  "sql_execution",         // Exécution SQL en base
-  "response_formatting",   // Formatage réponse utilisateur
-  "cache_operations"       // Opérations cache (lecture/écriture)
+  "context_generation",           // Génération contexte business
+  "ai_model_selection",           // Sélection modèle IA optimal  
+  "sql_generation",               // Génération SQL par IA
+  "sql_execution",                // Exécution SQL en base
+  "response_formatting",          // Formatage réponse utilisateur
+  "cache_operations",             // Opérations cache (lecture/écriture)
+  // ÉTAPE 2 PHASE 3 PERFORMANCE : Nouveaux segments parallélisme
+  "context_and_model_parallel",   // Exécution parallèle contexte + modèle
+  "parallel_execution_time",      // Temps d'exécution parallèle total
+  "parallel_vs_sequential",       // Comparaison performance parallèle vs séquentiel
+  "circuit_breaker_check",        // Vérification circuit breakers
+  "fallback_sequential_trigger"   // Déclenchement fallback séquentiel
 ]);
 
 // Types d'alertes performance
@@ -7941,6 +7947,221 @@ export interface ContextGenerationResult {
     suggestedOptimizations: string[];
     relevanceWarnings: string[];
     dataGaps: string[];
+  };
+}
+
+// ========================================
+// PHASE 3 - SYSTÈME CONTEXTE ADAPTATIF TIÉRÉ
+// ========================================
+
+// Niveaux de contexte pour optimisation latence
+export const contextTierEnum = pgEnum("context_tier", [
+  "minimal",      // Requêtes simples (FAQ, statut) - 200-500 tokens
+  "standard",     // Requêtes business courantes - 1000-1500 tokens  
+  "comprehensive" // Requêtes complexes (analyses) - 3000+ tokens
+]);
+
+// Types de requêtes pour classification intelligente
+export const queryIntentEnum = pgEnum("query_intent", [
+  "status_check",    // Vérification statut simple
+  "basic_info",      // Information basique
+  "workflow_action", // Action workflow business
+  "data_analysis",   // Analyse de données
+  "report_generation", // Génération rapport
+  "complex_validation" // Validation complexe
+]);
+
+// Complexité requête utilisateur pour heuristiques
+export const userQueryComplexityEnum = pgEnum("user_query_complexity", [
+  "simple",    // Requête directe, 1 entité
+  "moderate",  // Requête multi-entités basique
+  "complex",   // Requête avec relations et calculs
+  "expert"     // Requête analytique avancée
+]);
+
+// Configuration profil contexte tiéré
+export interface ContextTierProfile {
+  tier: typeof contextTierEnum.enumValues[number];
+  entityType: AIContextualData['entityType'];
+  userRole: string;
+  
+  // Limites et contraintes
+  maxTokens: number;
+  maxRelationDepth: number;
+  maxHistoricalDays: number;
+  
+  // Types de contexte inclus selon priorité
+  priorityContextTypes: typeof contextTypeEnum.enumValues[number][];
+  optionalContextTypes: typeof contextTypeEnum.enumValues[number][];
+  
+  // Compression et optimisation
+  compressionStrategy: 'priority_based' | 'time_based' | 'relevance_based';
+  includeHistorical: boolean;
+  includePredictive: boolean;
+  
+  // Métriques business BTP/Menuiserie
+  criticalBusinessData: string[]; // Données critiques toujours incluses
+  contextualBusinessData: string[]; // Données selon contexte
+  
+  // Performance
+  targetBuildTimeMs: number;
+  fallbackToComprehensive: boolean;
+}
+
+// Résultat détection tier avec métriques
+export interface ContextTierDetectionResult {
+  detectedTier: typeof contextTierEnum.enumValues[number];
+  confidence: number; // 0-1, confiance dans la détection
+  
+  // Facteurs de décision
+  queryAnalysis: {
+    intent: typeof queryIntentEnum.enumValues[number];
+    complexity: typeof userQueryComplexityEnum.enumValues[number];
+    entityMentions: string[];
+    relationMentions: string[];
+    temporalMentions: string[];
+  };
+  
+  // Contexte utilisateur
+  userContext: {
+    role: string;
+    permissions: string[];
+    recentActivity: string[];
+    expertiseLevel: 'junior' | 'standard' | 'expert';
+  };
+  
+  // Métriques business
+  businessFactors: {
+    entityComplexity: number; // 0-1
+    relationsCount: number;
+    dataVolume: 'low' | 'medium' | 'high';
+    timeframe: 'current' | 'recent' | 'historical';
+  };
+  
+  // Recommandations
+  recommendedProfile: ContextTierProfile;
+  alternativeProfiles: ContextTierProfile[];
+  
+  // Performance prédite
+  estimatedTokens: number;
+  estimatedBuildTime: number;
+  potentialTokenSaving: number; // vs comprehensive
+}
+
+// Interface service tier avec heuristiques BTP/Menuiserie
+export interface ContextTierServiceInterface {
+  // Classification intelligente requête
+  detectContextTier(
+    query: string,
+    userContext: any,
+    entityType: AIContextualData['entityType']
+  ): Promise<ContextTierDetectionResult>;
+  
+  // Génération profils adaptés
+  getContextProfile(
+    tier: typeof contextTierEnum.enumValues[number],
+    entityType: AIContextualData['entityType'],
+    userRole: string
+  ): ContextTierProfile;
+  
+  // Compression intelligente selon priorités métier
+  compressContextByPriority(
+    fullContext: AIContextualData,
+    profile: ContextTierProfile
+  ): Promise<AIContextualData>;
+  
+  // Validation sécurité données critiques
+  validateMinimalContext(
+    context: AIContextualData,
+    profile: ContextTierProfile
+  ): boolean;
+  
+  // Métriques et performance
+  getPerformanceMetrics(): {
+    tierDistribution: Record<string, number>;
+    averageTokenReduction: number;
+    averageBuildTimeReduction: number;
+    fallbackRate: number;
+  };
+}
+
+// Configuration globale système tiéré
+export interface ContextTierSystemConfig {
+  // Feature flags
+  enabled: boolean;
+  fallbackToComprehensive: boolean;
+  detectionConfidenceThreshold: number; // 0-1
+  
+  // Profils par défaut
+  defaultProfiles: {
+    minimal: ContextTierProfile;
+    standard: ContextTierProfile;
+    comprehensive: ContextTierProfile;
+  };
+  
+  // Heuristiques spécialisées BTP/Menuiserie
+  btpHeuristics: {
+    keywordWeights: Record<string, number>;
+    entityPriorityMatrix: Record<string, string[]>;
+    roleCapabilities: Record<string, string[]>;
+  };
+  
+  // Limites système
+  maxTokensByTier: Record<string, number>;
+  maxBuildTimeMs: Record<string, number>;
+  
+  // Monitoring
+  enableMetrics: boolean;
+  enableAlerts: boolean;
+  performanceTargets: {
+    tokenReductionTarget: number; // %
+    buildTimeTarget: number; // ms
+    accuracyTarget: number; // %
+  };
+}
+
+// Extensions ContextGenerationConfig pour système tiéré
+export interface TieredContextGenerationConfig extends ContextGenerationConfig {
+  // Configuration tier
+  tierConfig?: {
+    forceTier?: typeof contextTierEnum.enumValues[number];
+    disableTierDetection?: boolean;
+    customProfile?: Partial<ContextTierProfile>;
+  };
+  
+  // Métriques tier
+  enableTierMetrics: boolean;
+  
+  // Sécurité et fallback
+  safetyConfig: {
+    enableFallback: boolean;
+    validateCriticalData: boolean;
+    minDataIntegrity: number; // 0-1
+  };
+}
+
+// Extensions ContextGenerationResult pour métriques tiérées
+export interface TieredContextGenerationResult extends ContextGenerationResult {
+  // Métriques tier
+  tierMetrics?: {
+    detectedTier: typeof contextTierEnum.enumValues[number];
+    appliedProfile: ContextTierProfile;
+    tierDetectionTimeMs: number;
+    compressionTimeMs: number;
+    
+    // Comparaison performance
+    originalTokenEstimate: number;
+    finalTokenCount: number;
+    tokenReductionPercentage: number;
+    
+    // Qualité et sécurité
+    dataIntegrityScore: number;
+    criticalDataPreserved: boolean;
+    fallbackUsed: boolean;
+    
+    // Business metrics spécialisés
+    btpDataPreserved: string[];
+    menuiserieContextMaintained: boolean;
   };
 }
 

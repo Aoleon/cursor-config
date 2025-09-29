@@ -9,8 +9,14 @@ import type {
   TemporalContext,
   AdministrativeContext,
   ContextGenerationConfig,
-  ContextGenerationResult
+  ContextGenerationResult,
+  TieredContextGenerationConfig,
+  TieredContextGenerationResult,
+  ContextTierProfile,
+  ContextTierDetectionResult
 } from "@shared/schema";
+import { ContextTierService } from "./ContextTierService";
+import { PerformanceMetricsService } from "./PerformanceMetricsService";
 
 import { 
   aos, offers, projects, suppliers, projectSuppliers, teams, teamMembers,
@@ -51,11 +57,18 @@ export interface EntityRelationMap {
 export class ContextBuilderService {
   private storage: IStorage;
   private queryMetrics: QueryExecutionMetrics;
+  private contextTierService: ContextTierService;
+  private performanceMetricsService?: PerformanceMetricsService;
 
   // Configuration optimisation
   private readonly MAX_RELATED_ENTITIES = 50;
   private readonly QUERY_TIMEOUT_MS = 5000;
   private readonly FRESHNESS_THRESHOLD_HOURS = 24;
+
+  // Configuration système tiéré - Phase 3
+  private readonly TIERED_SYSTEM_ENABLED = process.env.CONTEXT_TIERED_ENABLED !== 'false';
+  private readonly TIER_DETECTION_TIMEOUT_MS = 200; // Timeout court pour détection
+  private readonly FALLBACK_TO_COMPREHENSIVE = true;
 
   // Cache terminologie française spécialisée BTP/Menuiserie
   private readonly FRENCH_BTP_TERMINOLOGY = {
@@ -103,9 +116,13 @@ export class ContextBuilderService {
     'approval': 'visa'
   };
 
-  constructor(storage: IStorage) {
+  constructor(storage: IStorage, performanceMetricsService?: PerformanceMetricsService) {
     this.storage = storage;
     this.queryMetrics = this.initializeMetrics();
+    this.contextTierService = new ContextTierService(storage);
+    this.performanceMetricsService = performanceMetricsService;
+
+    console.log(`[ContextBuilder] Système tiéré ${this.TIERED_SYSTEM_ENABLED ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
   }
 
   // ========================================
@@ -114,6 +131,7 @@ export class ContextBuilderService {
 
   /**
    * Génère un contexte enrichi pour une entité donnée
+   * PHASE 3 : Intégration système tiéré pour optimisation latence
    */
   async buildContextualData(config: ContextGenerationConfig): Promise<ContextGenerationResult> {
     const startTime = Date.now();
@@ -122,47 +140,244 @@ export class ContextBuilderService {
     try {
       console.log(`[ContextBuilder] Génération contexte pour ${config.entityType}:${config.entityId}`);
 
-      // 1. Validation de la configuration
-      const validationResult = this.validateConfig(config);
-      if (!validationResult.valid) {
-        return this.buildErrorResult('validation', validationResult.message, {});
+      // PHASE 3 : Routage vers système tiéré si activé et configuration étendue
+      if (this.TIERED_SYSTEM_ENABLED && this.isTieredConfig(config)) {
+        const tieredConfig = config as TieredContextGenerationConfig;
+        return await this.buildTieredContext(tieredConfig);
       }
 
-      // 2. Construction du contexte principal
-      const contextData = await this.buildCoreContext(config);
-      
-      // 3. Enrichissement contextuel selon les types demandés
-      await this.enrichContextByTypes(contextData, config);
-      
-      // 4. Application de la compression si nécessaire
-      if (config.performance.compressionLevel !== "none") {
-        await this.applyContextCompression(contextData, config.performance.compressionLevel);
-      }
-
-      // 5. Génération des insights clés
-      contextData.keyInsights = await this.generateKeyInsights(contextData, config);
-      
-      // 6. Estimation finale des tokens
-      contextData.tokenEstimate = this.estimateTokens(contextData);
-
-      const executionTime = Date.now() - startTime;
-      
-      return {
-        success: true,
-        data: contextData,
-        performance: {
-          executionTimeMs: executionTime,
-          tablesQueried: this.queryMetrics.tablesQueried,
-          cacheHitRate: this.queryMetrics.cacheHits / this.queryMetrics.totalQueries,
-          dataFreshness: this.calculateDataFreshness(contextData),
-          compressionRatio: config.performance.compressionLevel !== "none" ? 0.7 : 1.0
-        }
-      };
+      // Système classique si tiéré désactivé ou configuration basique
+      return await this.buildClassicContext(config);
 
     } catch (error) {
       console.error(`[ContextBuilder] Erreur génération contexte:`, error);
       return this.buildErrorResult('unknown', 'Erreur interne lors de la génération', error);
     }
+  }
+
+  /**
+   * PHASE 3 : Construction contexte avec système tiéré adaptatif
+   */
+  async buildTieredContext(config: TieredContextGenerationConfig): Promise<TieredContextGenerationResult> {
+    const startTime = Date.now();
+    let traceId: string | undefined;
+
+    try {
+      console.log(`[ContextBuilder] Mode TIÉRÉ activé pour ${config.entityType}:${config.entityId}`);
+
+      // 1. Initialisation trace performance si service disponible
+      if (this.performanceMetricsService && config.enableTierMetrics) {
+        traceId = crypto.randomUUID();
+        this.performanceMetricsService.startPipelineTrace(
+          traceId, 
+          'system', // TODO: Récupérer userId réel
+          'system', // TODO: Récupérer userRole réel
+          `Context generation for ${config.entityType}:${config.entityId}`,
+          'complex' // TODO: Déterminer complexité
+        );
+        this.performanceMetricsService.startStep(traceId, 'context_generation');
+      }
+
+      // 2. Validation configuration
+      const validationResult = this.validateConfig(config);
+      if (!validationResult.valid) {
+        return this.buildTieredErrorResult('validation', validationResult.message, {});
+      }
+
+      // 3. DÉTECTION TIER - Étape critique Phase 3
+      let tierDetectionResult: ContextTierDetectionResult | undefined;
+      let selectedProfile: ContextTierProfile | undefined;
+
+      if (!config.tierConfig?.disableTierDetection && !config.tierConfig?.forceTier) {
+        if (traceId && this.performanceMetricsService) {
+          this.performanceMetricsService.startStep(traceId, 'context_tier_detection');
+        }
+
+        try {
+          // Détection intelligente du tier selon la requête
+          tierDetectionResult = await Promise.race([
+            this.contextTierService.detectContextTier(
+              config.query || `Context for ${config.entityType}`,
+              { role: 'system' }, // TODO: Contexte utilisateur réel
+              config.entityType
+            ),
+            new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Tier detection timeout')), this.TIER_DETECTION_TIMEOUT_MS)
+            )
+          ]);
+
+          selectedProfile = tierDetectionResult.recommendedProfile;
+
+          if (traceId && this.performanceMetricsService) {
+            this.performanceMetricsService.endStep(traceId, 'context_tier_detection', true, {
+              detectedTier: tierDetectionResult.detectedTier,
+              confidence: tierDetectionResult.confidence
+            });
+          }
+
+          console.log(`[ContextBuilder] Tier détecté: ${tierDetectionResult.detectedTier} (conf: ${tierDetectionResult.confidence.toFixed(2)})`);
+
+        } catch (error) {
+          console.warn(`[ContextBuilder] Échec détection tier, fallback COMPREHENSIVE:`, error);
+          
+          if (traceId && this.performanceMetricsService) {
+            this.performanceMetricsService.endStep(traceId, 'context_tier_detection', false, { error: error.message });
+          }
+
+          // Fallback vers COMPREHENSIVE
+          selectedProfile = this.contextTierService.getContextProfile('comprehensive', config.entityType, 'system');
+        }
+      } else {
+        // Tier forcé ou détection désactivée
+        const forcedTier = config.tierConfig?.forceTier || 'comprehensive';
+        selectedProfile = this.contextTierService.getContextProfile(forcedTier, config.entityType, 'system');
+        console.log(`[ContextBuilder] Tier forcé: ${forcedTier}`);
+      }
+
+      // 4. CONSTRUCTION SÉLECTIVE selon profil tier
+      if (traceId && this.performanceMetricsService) {
+        this.performanceMetricsService.startStep(traceId, 'context_build_selective');
+      }
+
+      const contextData = await this.buildSelectiveContext(config, selectedProfile);
+
+      if (traceId && this.performanceMetricsService) {
+        this.performanceMetricsService.endStep(traceId, 'context_build_selective', true, {
+          tier: selectedProfile.tier,
+          estimatedTokens: contextData.tokenEstimate
+        });
+      }
+
+      // 5. COMPRESSION INTELLIGENTE si nécessaire
+      if (selectedProfile.tier !== 'comprehensive') {
+        const compressedContext = await this.contextTierService.compressContextByPriority(
+          contextData, 
+          selectedProfile
+        );
+        Object.assign(contextData, compressedContext);
+      }
+
+      // 6. VALIDATION SÉCURITÉ données critiques
+      const dataIntegrityScore = this.validateContextIntegrity(contextData, selectedProfile);
+      const criticalDataPreserved = this.contextTierService.validateMinimalContext(contextData, selectedProfile);
+
+      // 7. Fallback si validation échoue
+      if (!criticalDataPreserved && this.FALLBACK_TO_COMPREHENSIVE && selectedProfile.tier !== 'comprehensive') {
+        console.warn(`[ContextBuilder] Échec validation tier ${selectedProfile.tier}, fallback COMPREHENSIVE`);
+        const fallbackProfile = this.contextTierService.getContextProfile('comprehensive', config.entityType, 'system');
+        const fallbackContext = await this.buildSelectiveContext(config, fallbackProfile);
+        Object.assign(contextData, fallbackContext);
+        selectedProfile = fallbackProfile;
+      }
+
+      // 8. Finalisation et métriques
+      const executionTime = Date.now() - startTime;
+
+      if (traceId && this.performanceMetricsService) {
+        this.performanceMetricsService.endStep(traceId, 'context_generation', true);
+        await this.performanceMetricsService.endPipelineTrace(
+          traceId, 'system', 'system', 
+          config.query || '', 'complex', true, false, 
+          { tier: selectedProfile.tier }
+        );
+      }
+
+      // Calcul métriques tier
+      const originalTokenEstimate = this.estimateComprehensiveTokens(config);
+      const tokenReductionPercentage = selectedProfile.tier !== 'comprehensive' 
+        ? ((originalTokenEstimate - contextData.tokenEstimate) / originalTokenEstimate) * 100 
+        : 0;
+
+      const result: TieredContextGenerationResult = {
+        success: true,
+        data: contextData,
+        performance: {
+          executionTimeMs: executionTime,
+          tablesQueried: this.queryMetrics.tablesQueried,
+          cacheHitRate: this.queryMetrics.cacheHits / (this.queryMetrics.totalQueries || 1),
+          dataFreshness: this.calculateDataFreshness(contextData),
+          compressionRatio: selectedProfile.tier !== 'comprehensive' ? (contextData.tokenEstimate / originalTokenEstimate) : 1.0
+        },
+        tierMetrics: {
+          detectedTier: selectedProfile.tier,
+          appliedProfile: selectedProfile,
+          tierDetectionTimeMs: tierDetectionResult ? 
+            (tierDetectionResult as any).detectionTimeMs || 0 : 0,
+          compressionTimeMs: 0, // TODO: Mesurer temps compression
+          originalTokenEstimate,
+          finalTokenCount: contextData.tokenEstimate,
+          tokenReductionPercentage,
+          dataIntegrityScore,
+          criticalDataPreserved,
+          fallbackUsed: selectedProfile.tier === 'comprehensive' && 
+                       (config.tierConfig?.forceTier !== 'comprehensive'),
+          btpDataPreserved: this.extractBtpDataKeys(contextData),
+          menuiserieContextMaintained: this.validateMenuiserieContext(contextData)
+        }
+      };
+
+      console.log(`[ContextBuilder] Contexte tiéré généré: ${selectedProfile.tier} (${executionTime}ms, ${contextData.tokenEstimate} tokens, ${tokenReductionPercentage.toFixed(1)}% réduction)`);
+
+      return result;
+
+    } catch (error) {
+      console.error(`[ContextBuilder] Erreur contexte tiéré:`, error);
+      
+      if (traceId && this.performanceMetricsService) {
+        this.performanceMetricsService.endStep(traceId, 'context_generation', false);
+        await this.performanceMetricsService.endPipelineTrace(
+          traceId, 'system', 'system', 
+          config.query || '', 'complex', false, false, 
+          { error: error.message }
+        );
+      }
+
+      return this.buildTieredErrorResult('unknown', 'Erreur système tiéré', error);
+    }
+  }
+
+  /**
+   * Construction contexte classique (système original)
+   */
+  async buildClassicContext(config: ContextGenerationConfig): Promise<ContextGenerationResult> {
+    console.log(`[ContextBuilder] Mode CLASSIQUE pour ${config.entityType}:${config.entityId}`);
+
+    // 1. Validation de la configuration
+    const validationResult = this.validateConfig(config);
+    if (!validationResult.valid) {
+      return this.buildErrorResult('validation', validationResult.message, {});
+    }
+
+    // 2. Construction du contexte principal
+    const contextData = await this.buildCoreContext(config);
+    
+    // 3. Enrichissement contextuel selon les types demandés
+    await this.enrichContextByTypes(contextData, config);
+    
+    // 4. Application de la compression si nécessaire
+    if (config.performance.compressionLevel !== "none") {
+      await this.applyContextCompression(contextData, config.performance.compressionLevel);
+    }
+
+    // 5. Génération des insights clés
+    contextData.keyInsights = await this.generateKeyInsights(contextData, config);
+    
+    // 6. Estimation finale des tokens
+    contextData.tokenEstimate = this.estimateTokens(contextData);
+
+    const executionTime = Date.now() - this.queryMetrics.executionTimeMs;
+    
+    return {
+      success: true,
+      data: contextData,
+      performance: {
+        executionTimeMs: executionTime,
+        tablesQueried: this.queryMetrics.tablesQueried,
+        cacheHitRate: this.queryMetrics.cacheHits / (this.queryMetrics.totalQueries || 1),
+        dataFreshness: this.calculateDataFreshness(contextData),
+        compressionRatio: config.performance.compressionLevel !== "none" ? 0.7 : 1.0
+      }
+    };
   }
 
   // ========================================
@@ -1478,19 +1693,760 @@ export class ContextBuilderService {
       'Protection UV pendant stockage'
     ];
   }
+
+  // ========================================
+  // MÉTHODES UTILITAIRES SYSTÈME TIÉRÉ - PHASE 3
+  // ========================================
+
+  /**
+   * Vérifie si la configuration est compatible avec le système tiéré
+   */
+  private isTieredConfig(config: ContextGenerationConfig): config is TieredContextGenerationConfig {
+    // Vérification présence propriétés étendues
+    const extendedConfig = config as any;
+    return (
+      extendedConfig.enableTierMetrics !== undefined ||
+      extendedConfig.tierConfig !== undefined ||
+      extendedConfig.safetyConfig !== undefined ||
+      extendedConfig.query !== undefined // Nécessaire pour détection tier
+    );
+  }
+
+  /**
+   * Construction sélective du contexte selon le profil tier
+   */
+  async buildSelectiveContext(
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<AIContextualData> {
+    
+    console.log(`[ContextBuilder] Construction sélective tier: ${profile.tier} (max ${profile.maxTokens} tokens)`);
+    
+    // 1. Initialisation contexte avec profil
+    const contextData: AIContextualData = {
+      entityType: config.entityType,
+      entityId: config.entityId,
+      requestId: crypto.randomUUID(),
+      contextTypes: profile.priorityContextTypes,
+      scope: this.mapProfileToScope(profile),
+      compressionLevel: this.mapProfileToCompression(profile.tier),
+      generationMetrics: {
+        totalTablesQueried: 0,
+        executionTimeMs: 0,
+        cachingUsed: false,
+        dataFreshnessScore: 0,
+        relevanceScore: 0
+      },
+      tokenEstimate: 0,
+      frenchTerminology: { ...this.FRENCH_BTP_TERMINOLOGY },
+      keyInsights: []
+    };
+
+    // 2. Construction core selon profil de profondeur
+    const limitedConfig = this.adaptConfigToProfile(config, profile);
+    
+    // 3. Construction selon type d'entité avec limitations
+    switch (config.entityType) {
+      case 'ao':
+        await this.buildAOContextLimited(contextData, limitedConfig, profile);
+        break;
+      case 'offer':
+        await this.buildOfferContextLimited(contextData, limitedConfig, profile);
+        break;
+      case 'project':
+        await this.buildProjectContextLimited(contextData, limitedConfig, profile);
+        break;
+      case 'supplier':
+        await this.buildSupplierContextLimited(contextData, limitedConfig, profile);
+        break;
+      case 'team':
+        await this.buildTeamContextLimited(contextData, limitedConfig, profile);
+        break;
+      case 'client':
+        await this.buildClientContextLimited(contextData, limitedConfig, profile);
+        break;
+    }
+
+    // 4. Enrichissement contextuel selon types prioritaires
+    await this.enrichContextSelectively(contextData, limitedConfig, profile);
+    
+    // 5. Génération insights adaptés au tier
+    contextData.keyInsights = await this.generateTieredInsights(contextData, profile);
+    
+    // 6. Estimation tokens
+    contextData.tokenEstimate = this.estimateTokens(contextData);
+    
+    console.log(`[ContextBuilder] Contexte sélectif construit: ${contextData.tokenEstimate} tokens estimés`);
+    
+    return contextData;
+  }
+
+  /**
+   * Adapte la configuration selon le profil tier
+   */
+  private adaptConfigToProfile(
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): ContextGenerationConfig {
+    
+    return {
+      ...config,
+      contextFilters: {
+        ...config.contextFilters,
+        includeTypes: profile.priorityContextTypes,
+        maxDepth: profile.maxRelationDepth
+      },
+      performance: {
+        ...config.performance,
+        maxTokens: profile.maxTokens,
+        freshnessThreshold: profile.maxHistoricalDays * 24 // heures
+      }
+    };
+  }
+
+  /**
+   * Mappe profil vers scope contexte
+   */
+  private mapProfileToScope(profile: ContextTierProfile): typeof contextScopeEnum.enumValues[number] {
+    switch (profile.tier) {
+      case 'minimal':
+        return 'entity_focused';
+      case 'standard':
+        return 'related_entities';
+      case 'comprehensive':
+        return 'domain_wide';
+      default:
+        return 'entity_focused';
+    }
+  }
+
+  /**
+   * Mappe tier vers niveau compression
+   */
+  private mapProfileToCompression(tier: typeof contextTierEnum.enumValues[number]): typeof compressionLevelEnum.enumValues[number] {
+    switch (tier) {
+      case 'minimal':
+        return 'high';
+      case 'standard':
+        return 'medium';
+      case 'comprehensive':
+        return 'none';
+      default:
+        return 'medium';
+    }
+  }
+
+  /**
+   * Construction AO avec limitations selon profil
+   */
+  private async buildAOContextLimited(
+    contextData: AIContextualData,
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    
+    // Version limitée de buildAOContext selon tier
+    const startTime = Date.now();
+    
+    try {
+      // Requête AO principale (toujours incluse)
+      const [aoResults] = await Promise.all([
+        db.select({
+          id: aos.id,
+          titre: aos.titre,
+          status: aos.status,
+          priority: aos.priority,
+          montantEstime: aos.montantEstime,
+          dateRemiseOffre: aos.dateRemiseOffre,
+          maitreOuvrageId: aos.maitreOuvrageId,
+          maitreOeuvreId: aos.maitreOeuvreId,
+          isPriority: aos.isPriority,
+          createdAt: aos.createdAt
+        })
+        .from(aos)
+        .where(eq(aos.id, config.entityId))
+        .limit(1)
+      ]);
+
+      const aoData = aoResults[0];
+      if (!aoData) {
+        console.warn(`[ContextBuilder] AO non trouvé: ${config.entityId}`);
+        return;
+      }
+
+      // Contexte business minimal (toujours inclus)
+      contextData.businessContext = {
+        currentPhase: aoData.status || 'inconnu',
+        completedPhases: this.extractCompletedPhases(aoData.status || ''),
+        nextMilestones: [],
+        financials: {
+          estimatedAmount: parseFloat(aoData.montantEstime?.toString() || '0')
+        },
+        projectClassification: {
+          size: this.assessProjectSize(parseFloat(aoData.montantEstime?.toString() || '0')),
+          complexity: 'standard',
+          priority: aoData.priority || 'normale',
+          riskLevel: 'medium'
+        },
+        menuiserieSpecifics: {
+          productTypes: [],
+          installationMethods: [],
+          qualityStandards: [],
+          commonIssues: []
+        }
+      };
+
+      // Relations étendues selon profil
+      if (profile.maxRelationDepth > 1) {
+        // Lots et offres seulement si profil le permet
+        const [lotsResults, offersResults] = await Promise.all([
+          db.select()
+            .from(aoLots)
+            .where(eq(aoLots.aoId, config.entityId))
+            .limit(profile.tier === 'minimal' ? 3 : 10),
+          
+          db.select({
+            id: offers.id,
+            status: offers.status,
+            montantEstime: offers.montantEstime,
+            createdAt: offers.createdAt
+          })
+          .from(offers)
+          .where(eq(offers.aoId, config.entityId))
+          .limit(profile.tier === 'minimal' ? 2 : 5)
+        ]);
+
+        // Intégration données relations dans le contexte
+        if (lotsResults.length > 0 && contextData.businessContext) {
+          contextData.businessContext.menuiserieSpecifics.productTypes = 
+            lotsResults.map(lot => lot.designation || 'Non spécifié').slice(0, 3);
+        }
+      }
+
+      // Contexte relationnel selon profil
+      if (profile.priorityContextTypes.includes('relationnel') && profile.maxRelationDepth > 0) {
+        await this.buildRelationalContextLimited(contextData, aoData, profile);
+      }
+
+      this.queryMetrics.executionTimeMs += Date.now() - startTime;
+
+    } catch (error) {
+      console.error(`[ContextBuilder] Erreur construction AO limitée:`, error);
+    }
+  }
+
+  /**
+   * Construction offre avec limitations selon profil  
+   */
+  private async buildOfferContextLimited(
+    contextData: AIContextualData,
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    // Implémentation similaire mais pour les offres
+    // Version simplifiée basée sur le profil tier
+    console.log(`[ContextBuilder] Construction offre limitée tier: ${profile.tier}`);
+    
+    // TODO: Implémenter selon pattern buildAOContextLimited
+  }
+
+  /**
+   * Construction projet avec limitations selon profil
+   */
+  private async buildProjectContextLimited(
+    contextData: AIContextualData,
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    // Implémentation similaire mais pour les projets
+    console.log(`[ContextBuilder] Construction projet limitée tier: ${profile.tier}`);
+    
+    // TODO: Implémenter selon pattern buildAOContextLimited
+  }
+
+  /**
+   * Construction fournisseur avec limitations selon profil
+   */
+  private async buildSupplierContextLimited(
+    contextData: AIContextualData,
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    console.log(`[ContextBuilder] Construction fournisseur limitée tier: ${profile.tier}`);
+    
+    // TODO: Implémenter selon pattern buildAOContextLimited
+  }
+
+  /**
+   * Construction équipe avec limitations selon profil
+   */
+  private async buildTeamContextLimited(
+    contextData: AIContextualData,
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    console.log(`[ContextBuilder] Construction équipe limitée tier: ${profile.tier}`);
+    
+    // TODO: Implémenter selon pattern buildAOContextLimited
+  }
+
+  /**
+   * Construction client avec limitations selon profil
+   */
+  private async buildClientContextLimited(
+    contextData: AIContextualData,
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    console.log(`[ContextBuilder] Construction client limitée tier: ${profile.tier}`);
+    
+    // TODO: Implémenter selon pattern buildAOContextLimited
+  }
+
+  /**
+   * Construction contexte relationnel limité
+   */
+  private async buildRelationalContextLimited(
+    contextData: AIContextualData,
+    mainData: any,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    
+    if (!contextData.relationalContext) {
+      contextData.relationalContext = {
+        mainActors: {
+          client: {
+            name: 'Non spécifié',
+            type: 'private',
+            recurrency: 'nouveau',
+            criticalRequirements: []
+          },
+          suppliers: []
+        },
+        collaborationHistory: {
+          withClient: {
+            previousProjects: 0,
+            successRate: 0,
+            averageMargin: 0
+          },
+          withSuppliers: {}
+        },
+        network: {
+          recommendedSuppliers: [],
+          blacklistedSuppliers: [],
+          strategicPartners: []
+        }
+      };
+    }
+
+    // Limitation selon profil
+    if (profile.tier === 'minimal') {
+      // Contexte minimal : juste les acteurs principaux
+      return;
+    }
+
+    // Enrichissement selon profondeur autorisée
+    if (profile.maxRelationDepth > 1) {
+      // Ajout données collaborations selon historique autorisé
+      const maxDays = profile.maxHistoricalDays;
+      // TODO: Requêtes limitées selon maxDays
+    }
+  }
+
+  /**
+   * Enrichissement contextuel sélectif selon profil
+   */
+  private async enrichContextSelectively(
+    contextData: AIContextualData,
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    
+    console.log(`[ContextBuilder] Enrichissement sélectif types: ${profile.priorityContextTypes.join(', ')}`);
+    
+    // Enrichissement seulement pour types prioritaires
+    for (const contextType of profile.priorityContextTypes) {
+      switch (contextType) {
+        case 'technique':
+          if (!contextData.technicalContext) {
+            await this.enrichTechnicalContextLimited(contextData, config, profile);
+          }
+          break;
+          
+        case 'temporel':
+          if (!contextData.temporalContext) {
+            await this.enrichTemporalContextLimited(contextData, config, profile);
+          }
+          break;
+          
+        case 'administratif':
+          if (!contextData.administrativeContext) {
+            await this.enrichAdministrativeContextLimited(contextData, config, profile);
+          }
+          break;
+      }
+    }
+  }
+
+  /**
+   * Enrichissement technique limité
+   */
+  private async enrichTechnicalContextLimited(
+    contextData: AIContextualData,
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    
+    contextData.technicalContext = {
+      materials: {
+        primary: [],
+        secondary: [],
+        finishes: [],
+        certifications: []
+      },
+      performance: {},
+      standards: {
+        dtu: [],
+        nf: [],
+        ce: [],
+        other: []
+      },
+      constraints: {}
+    };
+    
+    // Limitation selon tier
+    if (profile.tier === 'minimal') {
+      // Contexte technique très basique
+      contextData.technicalContext.materials.primary = ['Menuiserie standard'];
+      return;
+    }
+    
+    // TODO: Enrichissement selon profil
+  }
+
+  /**
+   * Enrichissement temporel limité
+   */
+  private async enrichTemporalContextLimited(
+    contextData: AIContextualData,
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    
+    contextData.temporalContext = {
+      timeline: {
+        projectStart: '',
+        estimatedEnd: '',
+        criticalDeadlines: []
+      },
+      temporalConstraints: {
+        seasonalFactors: [],
+        weatherDependencies: [],
+        resourceAvailability: {},
+        externalDependencies: []
+      },
+      delayHistory: {
+        averageProjectDuration: 0,
+        commonDelayFactors: [],
+        seasonalVariations: {}
+      },
+      alerts: []
+    };
+    
+    // TODO: Enrichissement selon profil et limites temporelles
+  }
+
+  /**
+   * Enrichissement administratif limité
+   */
+  private async enrichAdministrativeContextLimited(
+    contextData: AIContextualData,
+    config: ContextGenerationConfig,
+    profile: ContextTierProfile
+  ): Promise<void> {
+    
+    contextData.administrativeContext = {
+      requiredDocuments: {
+        completed: [],
+        pending: [],
+        missing: [],
+        upcoming: []
+      },
+      regulatory: {
+        permits: [],
+        inspections: []
+      },
+      internalProcesses: {
+        validationSteps: [],
+        qualityControls: []
+      },
+      insurance: {
+        coverage: [],
+        validUntil: '',
+        specificConditions: []
+      }
+    };
+    
+    // TODO: Enrichissement selon profil
+  }
+
+  /**
+   * Génération insights adaptés au tier
+   */
+  private async generateTieredInsights(
+    contextData: AIContextualData,
+    profile: ContextTierProfile
+  ): Promise<string[]> {
+    
+    const insights: string[] = [];
+    
+    // Insights selon tier
+    switch (profile.tier) {
+      case 'minimal':
+        insights.push(`Statut: ${contextData.businessContext?.currentPhase || 'Inconnu'}`);
+        if (contextData.businessContext?.financials?.estimatedAmount) {
+          insights.push(`Montant: ${contextData.businessContext.financials.estimatedAmount.toLocaleString('fr-FR')} €`);
+        }
+        break;
+        
+      case 'standard':
+        insights.push(`Phase: ${contextData.businessContext?.currentPhase || 'Inconnu'}`);
+        insights.push(`Priorité: ${contextData.businessContext?.projectClassification?.priority || 'Normale'}`);
+        if (contextData.relationalContext?.mainActors?.client) {
+          insights.push(`Client: ${contextData.relationalContext.mainActors.client.name}`);
+        }
+        break;
+        
+      case 'comprehensive':
+        // Insights complets comme dans le système original
+        return await this.generateKeyInsights(contextData, {} as ContextGenerationConfig);
+    }
+    
+    return insights.slice(0, profile.tier === 'minimal' ? 2 : 5);
+  }
+
+  /**
+   * Construit résultat d'erreur tiéré
+   */
+  private buildTieredErrorResult(
+    type: 'validation' | 'database' | 'timeout' | 'cache' | 'unknown',
+    message: string,
+    details: any
+  ): TieredContextGenerationResult {
+    
+    return {
+      success: false,
+      error: {
+        type,
+        message,
+        details
+      },
+      performance: {
+        executionTimeMs: 0,
+        tablesQueried: [],
+        cacheHitRate: 0,
+        dataFreshness: 0,
+        compressionRatio: 1.0
+      },
+      tierMetrics: {
+        detectedTier: 'comprehensive',
+        appliedProfile: this.contextTierService.getContextProfile('comprehensive', 'ao', 'system'),
+        tierDetectionTimeMs: 0,
+        compressionTimeMs: 0,
+        originalTokenEstimate: 0,
+        finalTokenCount: 0,
+        tokenReductionPercentage: 0,
+        dataIntegrityScore: 0,
+        criticalDataPreserved: false,
+        fallbackUsed: true,
+        btpDataPreserved: [],
+        menuiserieContextMaintained: false
+      }
+    };
+  }
+
+  /**
+   * Valide l'intégrité du contexte selon profil
+   */
+  private validateContextIntegrity(
+    contextData: AIContextualData,
+    profile: ContextTierProfile
+  ): number {
+    
+    let score = 0;
+    let checks = 0;
+    
+    // Vérifications critiques
+    if (contextData.entityType && contextData.entityId) {
+      score += 1;
+    }
+    checks += 1;
+    
+    if (contextData.businessContext?.currentPhase) {
+      score += 1;
+    }
+    checks += 1;
+    
+    if (contextData.frenchTerminology && Object.keys(contextData.frenchTerminology).length > 0) {
+      score += 1;
+    }
+    checks += 1;
+    
+    // Vérifications selon données critiques profil
+    profile.criticalBusinessData.forEach(dataKey => {
+      if (this.hasBusinessData(contextData, dataKey)) {
+        score += 1;
+      }
+      checks += 1;
+    });
+    
+    return checks > 0 ? score / checks : 0;
+  }
+
+  /**
+   * Vérifie présence donnée business critique
+   */
+  private hasBusinessData(contextData: AIContextualData, dataKey: string): boolean {
+    switch (dataKey) {
+      case 'status':
+        return !!contextData.businessContext?.currentPhase;
+      case 'dates_cles':
+        return !!contextData.temporalContext?.timeline?.criticalDeadlines?.length;
+      case 'responsables':
+        return !!contextData.relationalContext?.mainActors?.client?.name;
+      case 'montants':
+        return !!contextData.businessContext?.financials?.estimatedAmount;
+      case 'contacts_principaux':
+        return !!contextData.relationalContext?.mainActors;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Extrait clés données BTP préservées
+   */
+  private extractBtpDataKeys(contextData: AIContextualData): string[] {
+    const keys: string[] = [];
+    
+    if (contextData.businessContext?.menuiserieSpecifics?.productTypes?.length) {
+      keys.push('productTypes');
+    }
+    if (contextData.technicalContext?.materials?.primary?.length) {
+      keys.push('materials');
+    }
+    if (contextData.temporalContext?.timeline?.criticalDeadlines?.length) {
+      keys.push('deadlines');
+    }
+    if (contextData.relationalContext?.mainActors?.suppliers?.length) {
+      keys.push('suppliers');
+    }
+    
+    return keys;
+  }
+
+  /**
+   * Valide maintien contexte menuiserie
+   */
+  private validateMenuiserieContext(contextData: AIContextualData): boolean {
+    const hasMenuiserieTerms = contextData.frenchTerminology && 
+      (contextData.frenchTerminology['fenêtre'] || 
+       contextData.frenchTerminology['porte'] ||
+       contextData.frenchTerminology['pose']);
+    
+    const hasMenuiserieData = contextData.businessContext?.menuiserieSpecifics &&
+      (contextData.businessContext.menuiserieSpecifics.productTypes?.length > 0 ||
+       contextData.businessContext.menuiserieSpecifics.installationMethods?.length > 0);
+    
+    return !!(hasMenuiserieTerms || hasMenuiserieData);
+  }
+
+  /**
+   * Estime tokens pour contexte comprehensive (baseline)
+   */
+  private estimateComprehensiveTokens(config: ContextGenerationConfig): number {
+    // Estimation basée sur type d'entité et scope
+    const baseTokens = {
+      'ao': 3000,
+      'offer': 2500,
+      'project': 3500,
+      'supplier': 2000,
+      'team': 1500,
+      'client': 1800
+    };
+    
+    const scopeMultiplier = {
+      'entity_focused': 1.0,
+      'related_entities': 1.3,
+      'domain_wide': 1.6,
+      'historical': 2.0
+    };
+    
+    const baseForEntity = baseTokens[config.entityType] || 2500;
+    const multiplier = scopeMultiplier[config.contextFilters.scope] || 1.0;
+    
+    return Math.ceil(baseForEntity * multiplier);
+  }
+
+  /**
+   * Évalue taille projet selon montant
+   */
+  private assessProjectSize(amount: number): 'small' | 'medium' | 'large' {
+    if (amount < 50000) return 'small';
+    if (amount < 200000) return 'medium';
+    return 'large';
+  }
 }
 
 // ========================================
-// INSTANCE SINGLETON GLOBALE
+// INSTANCE SINGLETON GLOBALE - PHASE 3 INTÉGRATION
 // ========================================
 
 let globalContextBuilderService: ContextBuilderService | null = null;
 
-export function getContextBuilderService(storage: IStorage): ContextBuilderService {
+export function getContextBuilderService(
+  storage: IStorage, 
+  performanceMetricsService?: PerformanceMetricsService
+): ContextBuilderService {
   if (!globalContextBuilderService) {
-    globalContextBuilderService = new ContextBuilderService(storage);
+    globalContextBuilderService = new ContextBuilderService(storage, performanceMetricsService);
+    
+    // PHASE 3 : Initialisation monitoring système tiéré
+    if (performanceMetricsService) {
+      console.log('[ContextBuilder] Service initialisé avec métriques de performance');
+      
+      // Enregistrement segments personnalisés pour système tiéré
+      performanceMetricsService.registerCustomSegment('context_tier_detection', {
+        name: 'Détection Tier Contexte',
+        description: 'Classification intelligente du tier de contexte requis',
+        category: 'context_generation',
+        targetTimeMs: 200
+      });
+      
+      performanceMetricsService.registerCustomSegment('context_build_selective', {
+        name: 'Construction Contexte Sélective', 
+        description: 'Génération contexte selon profil tier détecté',
+        category: 'context_generation',
+        targetTimeMs: 2000
+      });
+
+      performanceMetricsService.registerCustomSegment('context_compression_intelligent', {
+        name: 'Compression Intelligente Contexte',
+        description: 'Compression contexte selon priorités métier BTP',
+        category: 'context_generation', 
+        targetTimeMs: 300
+      });
+    }
   }
   return globalContextBuilderService;
+}
+
+/**
+ * PHASE 3 : Réinitialisation forcée du service (utile pour tests et feature flags)
+ */
+export function resetContextBuilderService(): void {
+  globalContextBuilderService = null;
+  console.log('[ContextBuilder] Service réinitialisé - prêt pour nouvelle configuration');
 }
 
 export default ContextBuilderService;

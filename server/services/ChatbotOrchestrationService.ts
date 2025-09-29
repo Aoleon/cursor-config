@@ -120,14 +120,27 @@ export class ChatbotOrchestrationService {
   }
 
   // ========================================
-  // MÉTHODE PRINCIPALE - PIPELINE COMPLET CHATBOT
+  // MÉTHODE PRINCIPALE - PIPELINE CHATBOT AVEC PARALLÉLISME PAR DÉFAUT
   // ========================================
 
   /**
-   * Pipeline complet d'orchestration chatbot : NL → BusinessContext → AI → SQL → RBAC → Execution
-   * INSTRUMENTÉ pour tracing détaillé des performances
+   * Méthode principale du chatbot qui utilise le dispatch parallèle par défaut
+   * ÉTAPE 2 PHASE 3 PERFORMANCE : Réduction latence de ~3-7s → ~2.5s max
    */
   async processChatbotQuery(request: ChatbotQueryRequest): Promise<ChatbotQueryResponse> {
+    // Utilise la version parallèle par défaut
+    return await this.processQueryParallel(request);
+  }
+
+  // ========================================
+  // MÉTHODE OPTIMISÉE PARALLÈLE - ÉTAPE 2 PHASE 3 PERFORMANCE
+  // ========================================
+
+  /**
+   * Pipeline optimisé avec dispatch parallèle : Contexte + Modèle simultané
+   * OBJECTIF : Réduction latence de ~3-7s → ~2.5s max pour contexte+modèle
+   */
+  async processQueryParallel(request: ChatbotQueryRequest): Promise<ChatbotQueryResponse> {
     const startTime = Date.now();
     const conversationId = crypto.randomUUID();
     const sessionId = request.sessionId || crypto.randomUUID();
@@ -135,11 +148,9 @@ export class ChatbotOrchestrationService {
 
     let debugInfo: any = {};
     let rbacFiltersApplied: string[] = [];
-    let businessContextLoaded = false;
-    let aiRoutingDecision = "";
     let securityChecksPassed: string[] = [];
 
-    // === INSTRUMENTATION PERFORMANCE : Démarrage tracing pipeline orchestration ===
+    // === INSTRUMENTATION PERFORMANCE : Démarrage tracing pipeline parallèle ===
     this.performanceMetrics.startPipelineTrace(
       traceId, 
       request.userId, 
@@ -149,7 +160,552 @@ export class ChatbotOrchestrationService {
     );
 
     try {
-      console.log(`[ChatbotOrchestration] Démarrage requête ${conversationId} (trace: ${traceId}) pour ${request.userId} (${request.userRole})`);
+      console.log(`[ChatbotOrchestration] PARALLEL Démarrage requête ${conversationId} (trace: ${traceId}) pour ${request.userId} (${request.userRole})`);
+
+      // ========================================
+      // 1. VÉRIFICATION CIRCUIT BREAKER
+      // ========================================
+      this.performanceMetrics.startStep(traceId, 'circuit_breaker_check', { operation: 'parallel_availability_check' });
+      
+      const circuitBreakerStartTime = Date.now();
+      const circuitBreakerCheck = this.performanceMetrics.checkCircuitBreaker();
+      const circuitBreakerTime = Date.now() - circuitBreakerStartTime;
+      
+      if (!circuitBreakerCheck.allowed) {
+        console.warn(`[ChatbotOrchestration] Circuit breaker ouvert, fallback séquentiel: ${circuitBreakerCheck.reason}`);
+        
+        this.performanceMetrics.endStep(traceId, 'circuit_breaker_check', false, { 
+          circuitBreakerTime,
+          reason: circuitBreakerCheck.reason,
+          fallbackTriggered: true
+        });
+        
+        // Fallback vers méthode séquentielle
+        return await this.processChatbotQuerySequential(request, traceId, "circuit_breaker_open");
+      }
+      
+      this.performanceMetrics.endStep(traceId, 'circuit_breaker_check', true, { 
+        circuitBreakerTime,
+        status: 'circuit_closed'
+      });
+
+      // ========================================
+      // 2. DÉTECTION D'INTENTIONS D'ACTIONS (CONSERVÉ)
+      // ========================================
+      this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'action_detection' });
+      
+      const actionDetectionStartTime = Date.now();
+      const actionIntention = this.actionExecutionService.detectActionIntention(request.query);
+      const actionDetectionTime = Date.now() - actionDetectionStartTime;
+      
+      if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
+        console.log(`[ChatbotOrchestration] Action détectée: ${actionIntention.actionType} sur ${actionIntention.entity}`);
+        
+        this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
+          step: 'action_detected',
+          detectionTime: actionDetectionTime,
+          actionType: actionIntention.actionType,
+          confidence: actionIntention.confidence
+        });
+        
+        // Traitement actions (même logique que séquentiel)
+        const actionDefinition = await this.actionExecutionService.analyzeActionWithAI(request.query, request.userRole);
+        
+        if (actionDefinition) {
+          const proposeActionRequest: ProposeActionRequest = {
+            type: actionDefinition.type,
+            entity: actionDefinition.entity as any,
+            operation: actionDefinition.operation,
+            parameters: actionDefinition.parameters,
+            targetEntityId: actionDefinition.targetEntityId,
+            riskLevel: actionDefinition.risk_level,
+            confirmationRequired: actionDefinition.confirmation_required,
+            expirationMinutes: 30,
+            userId: request.userId,
+            userRole: request.userRole,
+            sessionId: request.sessionId,
+            conversationId,
+            metadata: { detectedViaQuery: true, confidence: actionIntention.confidence, parallelMode: true }
+          };
+
+          const actionProposal = await this.actionExecutionService.proposeAction(proposeActionRequest);
+
+          await this.performanceMetrics.endPipelineTrace(
+            traceId, request.userId, request.userRole, request.query, 
+            this.detectQueryComplexity(request.query), true, false, { 
+              actionFlow: true, 
+              actionType: actionIntention.actionType,
+              parallelMode: true
+            }
+          );
+
+          return this.createActionProposalResponse(
+            conversationId,
+            request.query,
+            actionProposal,
+            actionIntention,
+            request.userRole
+          );
+        }
+      }
+      
+      this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
+        step: 'action_detection_complete', 
+        detectionTime: actionDetectionTime,
+        actionDetected: false 
+      });
+
+      // ========================================
+      // 3. VALIDATION RBAC UTILISATEUR (CONSERVÉ MAIS OPTIMISÉ)
+      // ========================================
+      this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'rbac_validation' });
+      
+      const rbacStartTime = Date.now();
+      
+      const userPermissions = await this.rbacService.getUserPermissions(
+        request.userId, 
+        request.userRole
+      );
+
+      const rbacTime = Date.now() - rbacStartTime;
+
+      if (!userPermissions || Object.keys(userPermissions.permissions).length === 0) {
+        this.performanceMetrics.endStep(traceId, 'context_generation', false, { 
+          step: 'rbac_failed', 
+          rbacTime,
+          reason: 'insufficient_permissions'
+        });
+        
+        await this.performanceMetrics.endPipelineTrace(
+          traceId, request.userId, request.userRole, request.query, 
+          this.detectQueryComplexity(request.query), false, false, { 
+            rbacError: true,
+            parallelMode: true
+          }
+        );
+
+        return this.createErrorResponse(
+          conversationId,
+          request.query,
+          "rbac",
+          "Permissions insuffisantes pour utiliser le chatbot",
+          "Vous n'avez pas les permissions nécessaires pour poser cette question."
+        );
+      }
+
+      securityChecksPassed.push("rbac_permissions_validated");
+      this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
+        step: 'rbac_validated', 
+        rbacTime,
+        permissionsCount: Object.keys(userPermissions.permissions).length
+      });
+      
+      if (request.options?.includeDebugInfo) {
+        debugInfo.rbac_check_ms = rbacTime;
+      }
+
+      // ========================================
+      // 4. DISPATCH PARALLÈLE PRINCIPAL - CONTEXTE + MODÈLE
+      // ========================================
+      this.performanceMetrics.startParallelTrace(traceId, 'context_and_model_parallel');
+      
+      const parallelStartTime = Date.now();
+      
+      console.log(`[ChatbotOrchestration] Démarrage dispatch parallèle contexte + modèle`);
+
+      // Préparation des promesses parallèles
+      const businessContextRequest = {
+        userId: request.userId,
+        user_role: request.userRole,
+        query_hint: request.query,
+        complexity_preference: this.detectQueryComplexity(request.query),
+        focus_areas: this.detectFocusAreas(request.query),
+        include_temporal: true,
+        cache_duration_minutes: 60,
+        personalization_level: "advanced" as const
+      };
+
+      // EXÉCUTION PARALLÈLE avec Promise.allSettled et timeout
+      const parallelPromises = [
+        // Promise 1: Génération contexte business
+        this.businessContextService.generateBusinessContext(businessContextRequest),
+        // Promise 2: Sélection modèle IA indépendante
+        this.aiService.selectOptimalModelIndependent(
+          request.query, 
+          request.userRole, 
+          this.detectQueryComplexity(request.query)
+        )
+      ];
+
+      // Timeout de protection 5s max
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout parallèle 5s dépassé')), 5000)
+      );
+
+      const parallelResults = await Promise.race([
+        Promise.allSettled(parallelPromises),
+        timeoutPromise
+      ]) as PromiseSettledResult<any>[];
+
+      const parallelTime = Date.now() - parallelStartTime;
+
+      // Analyse des résultats parallèles
+      const [contextResult, modelResult] = parallelResults;
+      
+      const contextSuccess = contextResult.status === 'fulfilled' && contextResult.value.success;
+      const modelSuccess = modelResult.status === 'fulfilled' && modelResult.value.selectedModel;
+      
+      const contextTime = contextSuccess ? 
+        (contextResult.value.timings?.total || parallelTime) : parallelTime;
+      const modelTime = modelSuccess ? 
+        (modelResult.value.selectionTime || parallelTime) : parallelTime;
+
+      console.log(`[ChatbotOrchestration] Résultats parallèles - Context: ${contextSuccess ? 'OK' : 'FAIL'} (${contextTime}ms), Model: ${modelSuccess ? 'OK' : 'FAIL'} (${modelTime}ms), Total: ${parallelTime}ms`);
+
+      // Validation de réussite minimum
+      if (!contextSuccess && !modelSuccess) {
+        console.warn(`[ChatbotOrchestration] Échec total parallélisme, fallback séquentiel`);
+        
+        this.performanceMetrics.endParallelTrace(traceId, 'context_and_model_parallel', false, {
+          contextSuccess,
+          modelSuccess,
+          contextTime,
+          modelTime,
+          totalParallelTime: parallelTime
+        });
+        
+        // Fallback vers méthode séquentielle
+        return await this.processChatbotQuerySequential(request, traceId, "parallel_total_failure");
+      }
+
+      // Enregistrement succès parallèle
+      this.performanceMetrics.endParallelTrace(traceId, 'context_and_model_parallel', true, {
+        contextSuccess,
+        modelSuccess,
+        contextTime,
+        modelTime,
+        totalParallelTime: parallelTime
+      });
+
+      // Extraction des résultats utilisables
+      const businessContextResponse = contextSuccess ? contextResult.value : null;
+      const modelSelection = modelSuccess ? modelResult.value : null;
+      
+      debugInfo.parallel_execution = {
+        contextSuccess,
+        modelSuccess,
+        contextTime,
+        modelTime,
+        totalParallelTime: parallelTime,
+        timeSaving: Math.max(0, (contextTime + modelTime) - parallelTime)
+      };
+
+      // Fallback partiel si nécessaire
+      if (!contextSuccess) {
+        console.warn(`[ChatbotOrchestration] Contexte échoué, contexte minimal`);
+        // Continuer avec contexte minimal mais modèle OK
+      }
+      
+      if (!modelSuccess) {
+        console.warn(`[ChatbotOrchestration] Sélection modèle échouée, modèle par défaut`);
+        // Continuer avec modèle par défaut mais contexte OK
+      }
+
+      // ========================================
+      // 5. GÉNÉRATION ET EXÉCUTION SQL (IDENTIQUE SÉQUENTIEL)
+      // ========================================
+      this.performanceMetrics.startStep(traceId, 'sql_execution', { 
+        step: 'sql_generation_and_execution',
+        hasContext: !!businessContextResponse,
+        hasModelSelection: !!modelSelection,
+        parallelMode: true
+      });
+      
+      const sqlStartTime = Date.now();
+
+      const sqlQueryRequest = {
+        naturalLanguageQuery: request.query,
+        context: request.context || businessContextResponse?.context ? 
+          JSON.stringify(businessContextResponse.context) : undefined,
+        dryRun: request.options?.dryRun || false,
+        maxResults: request.options?.maxResults || 1000,
+        timeoutMs: request.options?.timeoutMs || 30000,
+        userId: request.userId,
+        userRole: request.userRole,
+        // Transmission sélection modèle si disponible
+        forceModel: modelSelection?.selectedModel
+      };
+
+      const sqlResult = await this.sqlEngineService.executeNaturalLanguageQuery(sqlQueryRequest);
+      const sqlGenerationTime = Date.now() - sqlStartTime;
+
+      if (!sqlResult.success) {
+        this.performanceMetrics.endStep(traceId, 'sql_execution', false, { 
+          sqlGenerationTime,
+          errorType: sqlResult.error?.type,
+          errorMessage: sqlResult.error?.message,
+          parallelMode: true
+        });
+        
+        await this.performanceMetrics.endPipelineTrace(
+          traceId, request.userId, request.userRole, request.query, 
+          this.detectQueryComplexity(request.query), false, false, { 
+            sqlError: true, 
+            errorType: sqlResult.error?.type,
+            parallelMode: true
+          }
+        );
+
+        await this.logConversation({
+          id: conversationId,
+          userId: request.userId,
+          userRole: request.userRole,
+          sessionId,
+          query: request.query,
+          response: { error: sqlResult.error },
+          sql: null,
+          results: null,
+          executionTimeMs: Date.now() - startTime,
+          confidence: null,
+          modelUsed: modelSelection?.selectedModel || null,
+          cacheHit: false,
+          errorOccurred: true,
+          errorType: sqlResult.error?.type,
+          dryRun: request.options?.dryRun || false,
+          createdAt: new Date()
+        });
+
+        return this.createErrorResponse(
+          conversationId,
+          request.query,
+          sqlResult.error?.type || "unknown",
+          sqlResult.error?.message || "Erreur lors de l'exécution de la requête",
+          this.generateUserFriendlyErrorMessage(sqlResult.error?.type || "unknown")
+        );
+      }
+
+      this.performanceMetrics.endStep(traceId, 'sql_execution', true, { 
+        sqlGenerationTime,
+        resultCount: sqlResult.results?.length || 0,
+        sqlLength: sqlResult.sql?.length || 0,
+        cacheHit: sqlResult.metadata?.cacheHit || false,
+        modelUsed: modelSelection?.selectedModel || sqlResult.metadata?.aiModelUsed,
+        parallelMode: true
+      });
+
+      // ========================================
+      // 6. GÉNÉRATION RÉPONSE CONVERSATIONNELLE (IDENTIQUE)
+      // ========================================
+      this.performanceMetrics.startStep(traceId, 'response_formatting', { 
+        resultCount: sqlResult.results?.length || 0,
+        parallelMode: true
+      });
+
+      const responseFormattingStartTime = Date.now();
+
+      const explanation = this.generateExplanation(
+        request.query,
+        sqlResult.results || [],
+        request.userRole
+      );
+
+      const suggestions = await this.generateContextualSuggestions(
+        request.userId,
+        request.userRole,
+        request.query,
+        sqlResult.results || []
+      );
+
+      const responseFormattingTime = Date.now() - responseFormattingStartTime;
+
+      this.performanceMetrics.endStep(traceId, 'response_formatting', true, { 
+        responseFormattingTime,
+        explanationLength: explanation.length,
+        suggestionsCount: suggestions.length,
+        parallelMode: true
+      });
+
+      // ========================================
+      // 7. LOGGING ET MÉTRIQUES FINALES
+      // ========================================
+      const totalExecutionTime = Date.now() - startTime;
+
+      // Finaliser le tracing complet avec succès parallèle
+      const detailedTimings = await this.performanceMetrics.endPipelineTrace(
+        traceId, request.userId, request.userRole, request.query, 
+        this.detectQueryComplexity(request.query), true, sqlResult.metadata?.cacheHit || false, {
+          modelUsed: modelSelection?.selectedModel || sqlResult.metadata?.aiModelUsed,
+          modelSelectionReason: modelSelection?.reason,
+          modelConfidence: modelSelection?.confidence,
+          resultCount: sqlResult.results?.length || 0,
+          sqlLength: sqlResult.sql?.length || 0,
+          businessContextLoaded: !!businessContextResponse,
+          rbacChecksPerformed: securityChecksPassed.length,
+          parallelMode: true,
+          parallelSuccess: true,
+          timeSavingMs: debugInfo.parallel_execution?.timeSaving || 0
+        }
+      );
+
+      await this.logConversation({
+        id: conversationId,
+        userId: request.userId,
+        userRole: request.userRole,
+        sessionId,
+        query: request.query,
+        response: {
+          explanation,
+          suggestions,
+          metadata: {
+            parallelMode: true,
+            modelSelection: modelSelection?.selectedModel,
+            modelReason: modelSelection?.reason,
+            contextSuccess: contextSuccess,
+            timingSavings: debugInfo.parallel_execution?.timeSaving || 0
+          }
+        },
+        sql: sqlResult.sql,
+        results: sqlResult.results,
+        executionTimeMs: totalExecutionTime,
+        confidence: modelSelection?.confidence || sqlResult.metadata?.confidence,
+        modelUsed: modelSelection?.selectedModel || sqlResult.metadata?.aiModelUsed,
+        cacheHit: sqlResult.metadata?.cacheHit || false,
+        errorOccurred: false,
+        errorType: null,
+        dryRun: request.options?.dryRun || false,
+        createdAt: new Date()
+      });
+
+      console.log(`[ChatbotOrchestration] PARALLEL Pipeline terminé en ${totalExecutionTime}ms (économie: ${debugInfo.parallel_execution?.timeSaving || 0}ms)`);
+
+      // Construire réponse finale
+      return {
+        success: true,
+        data: {
+          conversationId,
+          query: request.query,
+          explanation,
+          suggestions,
+          sql: request.options?.includeSql ? sqlResult.sql : undefined,
+          results: sqlResult.results,
+          metadata: {
+            executionTimeMs: totalExecutionTime,
+            modelUsed: modelSelection?.selectedModel || sqlResult.metadata?.aiModelUsed,
+            cacheHit: sqlResult.metadata?.cacheHit || false,
+            resultCount: sqlResult.results?.length || 0,
+            debugInfo: request.options?.includeDebugInfo ? {
+              ...debugInfo,
+              detailedTimings,
+              parallelMode: true,
+              modelSelection: {
+                model: modelSelection?.selectedModel,
+                reason: modelSelection?.reason,
+                confidence: modelSelection?.confidence,
+                appliedRules: modelSelection?.appliedRules
+              },
+              businessContext: {
+                loaded: !!businessContextResponse,
+                complexity: businessContextResponse?.context?.complexity || 'unknown'
+              }
+            } : undefined
+          }
+        }
+      };
+
+    } catch (error) {
+      console.error(`[ChatbotOrchestration] Erreur pipeline parallèle:`, error);
+      
+      // Enregistrer échec parallélisme
+      this.performanceMetrics.recordParallelismFailure();
+      
+      // Finaliser le tracing en erreur
+      await this.performanceMetrics.endPipelineTrace(
+        traceId, request.userId, request.userRole, request.query, 
+        this.detectQueryComplexity(request.query), false, false, { 
+          error: error instanceof Error ? error.message : String(error),
+          errorType: 'parallel_pipeline_error',
+          parallelMode: true
+        }
+      );
+      
+      // Fallback vers méthode séquentielle en cas d'erreur critique
+      console.log(`[ChatbotOrchestration] Fallback séquentiel après erreur parallèle`);
+      return await this.processChatbotQuerySequential(request, traceId, "parallel_exception");
+    }
+  }
+
+  // ========================================
+  // MÉTHODE SÉQUENTIELLE POUR FALLBACK
+  // ========================================
+
+  /**
+   * Méthode séquentielle de fallback (renommée de la méthode originale)
+   */
+  private async processChatbotQuerySequential(
+    request: ChatbotQueryRequest, 
+    existingTraceId?: string,
+    fallbackReason?: string
+  ): Promise<ChatbotQueryResponse> {
+    // Utiliser traceId existant ou en créer un nouveau
+    const traceId = existingTraceId || crypto.randomUUID();
+    
+    if (fallbackReason) {
+      this.performanceMetrics.startStep(traceId, 'fallback_sequential_trigger', { 
+        reason: fallbackReason,
+        fallbackFrom: 'parallel'
+      });
+      
+      const fallbackStartTime = Date.now();
+      
+      // Exécuter la logique séquentielle originale (copiée de processChatbotQuery)
+      const result = await this.processChatbotQueryOriginal(request, traceId);
+      
+      const fallbackTime = Date.now() - fallbackStartTime;
+      this.performanceMetrics.recordSequentialFallback(fallbackTime);
+      
+      this.performanceMetrics.endStep(traceId, 'fallback_sequential_trigger', true, { 
+        fallbackTime,
+        reason: fallbackReason
+      });
+      
+      return result;
+    } else {
+      return await this.processChatbotQueryOriginal(request, traceId);
+    }
+  }
+
+  // ========================================
+  // MÉTHODE PRINCIPALE - PIPELINE COMPLET CHATBOT (CONSERVÉE POUR FALLBACK)
+  // ========================================
+
+  /**
+   * Pipeline complet d'orchestration chatbot : NL → BusinessContext → AI → SQL → RBAC → Execution
+   * INSTRUMENTÉ pour tracing détaillé des performances
+   * RENOMMÉE pour servir de fallback à la méthode parallèle
+   */
+  private async processChatbotQueryOriginal(request: ChatbotQueryRequest, traceId?: string): Promise<ChatbotQueryResponse> {
+    const startTime = Date.now();
+    const conversationId = crypto.randomUUID();
+    const sessionId = request.sessionId || crypto.randomUUID();
+    const finalTraceId = traceId || crypto.randomUUID();
+
+    let debugInfo: any = {};
+    let rbacFiltersApplied: string[] = [];
+    let businessContextLoaded = false;
+    let aiRoutingDecision = "";
+    let securityChecksPassed: string[] = [];
+
+    // === INSTRUMENTATION PERFORMANCE : Démarrage tracing pipeline orchestration ===
+    this.performanceMetrics.startPipelineTrace(
+      finalTraceId, 
+      request.userId, 
+      request.userRole, 
+      request.query,
+      this.detectQueryComplexity(request.query)
+    );
+
+    try {
+      console.log(`[ChatbotOrchestration] Démarrage requête ${conversationId} (trace: ${finalTraceId}) pour ${request.userId} (${request.userRole})`);
 
       // ========================================
       // 1. DÉTECTION D'INTENTIONS D'ACTIONS - NOUVEAU PIPELINE

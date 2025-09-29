@@ -1736,6 +1736,676 @@ export class EventBus extends EventEmitter {
     this.subscriptions.clear();
     this.eventHistory = [];
     this.removeAllListeners();
+    
+    // ÉTAPE 3 : Cleanup preloading prédictif
+    this.cleanupPredictiveIntegration();
+  }
+
+  // ========================================
+  // ÉTAPE 3 PHASE 3 PERFORMANCE : BACKGROUND PRELOADING TASKS
+  // ========================================
+
+  // Intégration services prédictifs
+  private predictiveEngine: any = null;
+  private predictiveTriggersEnabled = true;
+  private businessHoursPreloadingEnabled = true;
+  private weekendWarmingEnabled = true;
+  
+  // Configuration cycles preloading
+  private businessHours = [8, 9, 10, 11, 14, 15, 16, 17]; // 8h-12h, 14h-18h
+  private peakBusinessHours = [9, 10, 11, 15, 16]; // Heures de pointe
+  private preloadingIntervals = new Map<string, NodeJS.Timeout>();
+  private backgroundTasksRunning = false;
+  
+  // Statistiques preloading background
+  private backgroundStats = {
+    totalTriggeredPreloads: 0,
+    businessHoursPreloads: 0,
+    weekendWarmingRuns: 0,
+    eventTriggeredPreloads: 0,
+    lastBusinessHoursRun: new Date(),
+    lastWeekendWarmingRun: new Date(),
+    averagePreloadLatency: 0,
+    failedBackgroundTasks: 0
+  };
+
+  /**
+   * Configure l'intégration avec PredictiveEngine pour déclencheurs automatiques
+   */
+  public integratePredictiveEngine(predictiveEngine: any): void {
+    this.predictiveEngine = predictiveEngine;
+    
+    console.log('[EventBus] Intégration PredictiveEngine activée pour déclencheurs automatiques');
+    
+    // Démarrer cycles background preloading
+    this.startBackgroundPreloadingCycles();
+    
+    // Configurer déclencheurs événementiels
+    this.setupPredictiveEventTriggers();
+  }
+
+  /**
+   * Démarre les cycles de preloading background intelligent
+   */
+  private startBackgroundPreloadingCycles(): void {
+    if (this.backgroundTasksRunning) return;
+    
+    this.backgroundTasksRunning = true;
+    console.log('[EventBus] Démarrage cycles preloading background...');
+
+    // 1. CYCLE BUSINESS HOURS PRELOADING (toutes les 30 minutes pendant horaires business)
+    const businessHoursInterval = setInterval(async () => {
+      if (this.businessHoursPreloadingEnabled && this.isCurrentlyBusinessHours()) {
+        await this.executeBusinessHoursPreloading();
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+    
+    this.preloadingIntervals.set('business_hours', businessHoursInterval);
+
+    // 2. CYCLE WEEKEND WARMING (samedi/dimanche matin pour préparation semaine)
+    const weekendWarmingInterval = setInterval(async () => {
+      if (this.weekendWarmingEnabled && this.isWeekendMorning()) {
+        await this.executeWeekendWarming();
+      }
+    }, 60 * 60 * 1000); // 1 heure
+    
+    this.preloadingIntervals.set('weekend_warming', weekendWarmingInterval);
+
+    // 3. CYCLE PEAK HOURS OPTIMIZATION (pendant heures de pointe)
+    const peakHoursInterval = setInterval(async () => {
+      if (this.isPeakBusinessHours()) {
+        await this.executePeakHoursOptimization();
+      }
+    }, 15 * 60 * 1000); // 15 minutes pendant pics
+    
+    this.preloadingIntervals.set('peak_hours', peakHoursInterval);
+
+    // 4. CYCLE NIGHTLY MAINTENANCE (préparation nuit pour jour suivant)
+    const nightlyMaintenanceInterval = setInterval(async () => {
+      if (this.isNightlyMaintenanceTime()) {
+        await this.executeNightlyMaintenance();
+      }
+    }, 2 * 60 * 60 * 1000); // 2 heures
+    
+    this.preloadingIntervals.set('nightly_maintenance', nightlyMaintenanceInterval);
+
+    console.log('[EventBus] Cycles preloading background configurés et démarrés');
+  }
+
+  /**
+   * Configure les déclencheurs prédictifs basés sur événements métier
+   */
+  private setupPredictiveEventTriggers(): void {
+    console.log('[EventBus] Configuration déclencheurs prédictifs événementiels...');
+
+    // Déclencheur AO : Prédict étude technique et fournisseurs
+    this.subscribe(async (event) => {
+      if (event.entity === 'ao' && (event.type === EventTypeEnum.AO_STATUS_CHANGED || event.type === EventTypeEnum.AO_CREATED)) {
+        await this.triggerAOWorkflowPreloading(event);
+      }
+    }, { 
+      entities: ['ao'],
+      eventTypes: [EventTypeEnum.AO_STATUS_CHANGED, EventTypeEnum.AO_CREATED]
+    });
+
+    // Déclencheur Offre : Prédict projet et planning
+    this.subscribe(async (event) => {
+      if (event.entity === 'offer' && event.type === EventTypeEnum.OFFER_SIGNED) {
+        await this.triggerOfferToProjectPreloading(event);
+      }
+    }, { 
+      entities: ['offer'],
+      eventTypes: [EventTypeEnum.OFFER_SIGNED, EventTypeEnum.OFFER_VALIDATED]
+    });
+
+    // Déclencheur Projet : Prédict chantier et équipes
+    this.subscribe(async (event) => {
+      if (event.entity === 'project' && event.type === EventTypeEnum.PROJECT_CREATED) {
+        await this.triggerProjectWorkflowPreloading(event);
+      }
+    }, { 
+      entities: ['project'],
+      eventTypes: [EventTypeEnum.PROJECT_CREATED, EventTypeEnum.PROJECT_STATUS_CHANGED]
+    });
+
+    // Déclencheur Tâche : Prédict projet context et dépendances
+    this.subscribe(async (event) => {
+      if (event.entity === 'task' && event.type === EventTypeEnum.TASK_STATUS_CHANGED) {
+        await this.triggerTaskRelatedPreloading(event);
+      }
+    }, { 
+      entities: ['task'],
+      eventTypes: [EventTypeEnum.TASK_STATUS_CHANGED, EventTypeEnum.TASK_OVERDUE]
+    });
+
+    // Déclencheur Analytics : Prédict dashboard refresh
+    this.subscribe(async (event) => {
+      if (event.entity === 'analytics' && event.type === EventTypeEnum.ANALYTICS_CALCULATED) {
+        await this.triggerAnalyticsDashboardPreloading(event);
+      }
+    }, { 
+      entities: ['analytics'],
+      eventTypes: [EventTypeEnum.ANALYTICS_CALCULATED]
+    });
+
+    console.log('[EventBus] Déclencheurs prédictifs événementiels configurés');
+  }
+
+  /**
+   * BUSINESS HOURS PRELOADING : Preloading intelligent pendant horaires business
+   */
+  private async executeBusinessHoursPreloading(): Promise<void> {
+    if (!this.predictiveEngine || !this.contextCacheService) return;
+
+    try {
+      const startTime = Date.now();
+      console.log('[EventBus] Exécution preloading business hours...');
+
+      // 1. GÉNÉRATION PRÉDICTIONS CONTEXT BUSINESS
+      const predictions = await this.predictiveEngine.predictNextEntityAccess();
+      const businessPredictions = predictions
+        .filter(p => p.confidence >= 65)
+        .slice(0, 8); // Top 8 prédictions business hours
+
+      // 2. PRELOADING CONTEXTES PRÉDITS
+      const preloadPromises = businessPredictions.map(async (prediction) => {
+        try {
+          const success = await this.contextCacheService.preloadContextByPrediction(
+            prediction.entityType,
+            prediction.entityId,
+            undefined,
+            'medium'
+          );
+          
+          if (success) {
+            this.backgroundStats.businessHoursPreloads++;
+            this.backgroundStats.totalTriggeredPreloads++;
+          }
+          
+          return success;
+        } catch (error) {
+          console.warn(`[EventBus] Erreur preloading business hours ${prediction.entityType}:${prediction.entityId}:`, error);
+          this.backgroundStats.failedBackgroundTasks++;
+          return false;
+        }
+      });
+
+      const results = await Promise.allSettled(preloadPromises);
+      const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
+
+      // 3. OPTIMISATION CACHE BUSINESS HOURS
+      await this.contextCacheService.integrateHeatMapData();
+
+      this.backgroundStats.lastBusinessHoursRun = new Date();
+      const duration = Date.now() - startTime;
+      this.backgroundStats.averagePreloadLatency = 
+        (this.backgroundStats.averagePreloadLatency + duration) / 2;
+
+      console.log(`[EventBus] Business hours preloading terminé: ${successCount}/${businessPredictions.length} succès en ${duration}ms`);
+
+    } catch (error) {
+      console.error('[EventBus] Erreur business hours preloading:', error);
+      this.backgroundStats.failedBackgroundTasks++;
+    }
+  }
+
+  /**
+   * WEEKEND WARMING : Préparation cache pour début de semaine
+   */
+  private async executeWeekendWarming(): Promise<void> {
+    if (!this.predictiveEngine || !this.contextCacheService) return;
+
+    try {
+      const startTime = Date.now();
+      console.log('[EventBus] Exécution weekend warming...');
+
+      // 1. GÉNÉRATION HEAT-MAP PRÉPARATOIRE
+      const heatMap = await this.predictiveEngine.generateEntityHeatMap();
+      
+      // 2. PRELOADING ENTITÉS POPULAIRES POUR LUNDI
+      const mondayEntities = heatMap.hotEntities
+        .filter(entity => entity.accessCount >= 10)
+        .slice(0, 12); // Top 12 pour préparation semaine
+
+      const warmingPromises = mondayEntities.map(async (entity) => {
+        try {
+          const success = await this.contextCacheService.preloadContextByPrediction(
+            entity.entityType,
+            entity.entityId,
+            undefined,
+            'low' // Priorité basse weekend
+          );
+          
+          if (success) {
+            this.backgroundStats.totalTriggeredPreloads++;
+          }
+          
+          return success;
+        } catch (error) {
+          console.warn(`[EventBus] Erreur weekend warming ${entity.entityType}:${entity.entityId}:`, error);
+          this.backgroundStats.failedBackgroundTasks++;
+          return false;
+        }
+      });
+
+      const results = await Promise.allSettled(warmingPromises);
+      const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
+
+      // 3. OPTIMISATION CACHE PRÉ-SEMAINE
+      await this.contextCacheService.optimizeLRUWithPredictiveScoring();
+
+      this.backgroundStats.weekendWarmingRuns++;
+      this.backgroundStats.lastWeekendWarmingRun = new Date();
+      const duration = Date.now() - startTime;
+
+      console.log(`[EventBus] Weekend warming terminé: ${successCount}/${mondayEntities.length} contextes préparés en ${duration}ms`);
+
+    } catch (error) {
+      console.error('[EventBus] Erreur weekend warming:', error);
+      this.backgroundStats.failedBackgroundTasks++;
+    }
+  }
+
+  /**
+   * PEAK HOURS OPTIMIZATION : Optimisation intensive pendant pics d'activité
+   */
+  private async executePeakHoursOptimization(): Promise<void> {
+    if (!this.predictiveEngine || !this.contextCacheService) return;
+
+    try {
+      console.log('[EventBus] Optimisation peak hours...');
+
+      // 1. PRÉDICTIONS HAUTE FRÉQUENCE
+      const predictions = await this.predictiveEngine.predictNextEntityAccess();
+      const highConfidencePredictions = predictions
+        .filter(p => p.confidence >= 80)
+        .slice(0, 5); // Focus sur prédictions très fiables
+
+      // 2. PRELOADING PRIORITAIRE
+      for (const prediction of highConfidencePredictions) {
+        try {
+          await this.contextCacheService.preloadContextByPrediction(
+            prediction.entityType,
+            prediction.entityId,
+            undefined,
+            'high' // Priorité haute peak hours
+          );
+          
+          this.backgroundStats.totalTriggeredPreloads++;
+        } catch (error) {
+          console.warn(`[EventBus] Erreur peak hours preloading:`, error);
+          this.backgroundStats.failedBackgroundTasks++;
+        }
+      }
+
+      // 3. ÉVICTION AGGRESSIVE ENTITÉS FROIDES
+      await this.contextCacheService.optimizeLRUWithPredictiveScoring();
+
+    } catch (error) {
+      console.error('[EventBus] Erreur peak hours optimization:', error);
+      this.backgroundStats.failedBackgroundTasks++;
+    }
+  }
+
+  /**
+   * NIGHTLY MAINTENANCE : Maintenance nocturne et préparation jour suivant
+   */
+  private async executeNightlyMaintenance(): Promise<void> {
+    if (!this.predictiveEngine || !this.contextCacheService) return;
+
+    try {
+      console.log('[EventBus] Maintenance nocturne...');
+
+      // 1. NETTOYAGE CACHE EXPIRÉ
+      await this.contextCacheService.cleanupExpiredEntries();
+
+      // 2. MISE À JOUR PATTERNS BTP
+      if (this.predictiveEngine.updateBTPPatterns) {
+        await this.predictiveEngine.updateBTPPatterns();
+      }
+
+      // 3. PRÉPARATION CONTEXTES JOUR SUIVANT
+      const tomorrowPredictions = await this.predictMorningWorkflows();
+      
+      for (const prediction of tomorrowPredictions.slice(0, 6)) {
+        try {
+          await this.contextCacheService.preloadContextByPrediction(
+            prediction.entityType,
+            prediction.entityId,
+            undefined,
+            'low' // Priorité basse maintenance nocturne
+          );
+        } catch (error) {
+          console.warn(`[EventBus] Erreur preload maintenance nocturne:`, error);
+        }
+      }
+
+      console.log('[EventBus] Maintenance nocturne terminée');
+
+    } catch (error) {
+      console.error('[EventBus] Erreur maintenance nocturne:', error);
+      this.backgroundStats.failedBackgroundTasks++;
+    }
+  }
+
+  // ========================================
+  // DÉCLENCHEURS ÉVÉNEMENTIELS SPÉCIALISÉS
+  // ========================================
+
+  /**
+   * Déclencheur AO : Prédict workflow étude technique
+   */
+  private async triggerAOWorkflowPreloading(event: RealtimeEvent): Promise<void> {
+    if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
+
+    try {
+      console.log(`[EventBus] Déclencheur AO workflow preloading: ${event.entityId}`);
+
+      // Prédict séquence AO → Étude technique → Chiffrage
+      const workflowPredictions = [
+        { type: 'etude_technique', delay: 20, priority: 'medium' },
+        { type: 'chiffrage', delay: 60, priority: 'medium' },
+        { type: 'supplier', delay: 30, priority: 'low' }
+      ];
+
+      for (const prediction of workflowPredictions) {
+        // Planifier preloading avec délai
+        setTimeout(async () => {
+          try {
+            await this.contextCacheService.preloadContextByPrediction(
+              prediction.type,
+              `PREDICTED_${event.entityId}_${prediction.type}`,
+              undefined,
+              prediction.priority as any
+            );
+            
+            this.backgroundStats.eventTriggeredPreloads++;
+            this.backgroundStats.totalTriggeredPreloads++;
+          } catch (error) {
+            console.warn(`[EventBus] Erreur preload AO workflow ${prediction.type}:`, error);
+            this.backgroundStats.failedBackgroundTasks++;
+          }
+        }, prediction.delay * 60 * 1000);
+      }
+
+    } catch (error) {
+      console.error('[EventBus] Erreur déclencheur AO workflow:', error);
+      this.backgroundStats.failedBackgroundTasks++;
+    }
+  }
+
+  /**
+   * Déclencheur Offre → Projet : Prédict planning et équipes
+   */
+  private async triggerOfferToProjectPreloading(event: RealtimeEvent): Promise<void> {
+    if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
+
+    try {
+      console.log(`[EventBus] Déclencheur Offre→Projet preloading: ${event.entityId}`);
+
+      // Prédict séquence Offre → Projet → Planning → Équipes
+      const projectWorkflow = [
+        { type: 'project', delay: 30, priority: 'high' },
+        { type: 'planning', delay: 60, priority: 'medium' },
+        { type: 'team', delay: 45, priority: 'medium' },
+        { type: 'approvisionnement', delay: 90, priority: 'low' }
+      ];
+
+      for (const prediction of projectWorkflow) {
+        setTimeout(async () => {
+          try {
+            await this.contextCacheService.preloadContextByPrediction(
+              prediction.type,
+              `PREDICTED_${event.entityId}_${prediction.type}`,
+              undefined,
+              prediction.priority as any
+            );
+            
+            this.backgroundStats.eventTriggeredPreloads++;
+            this.backgroundStats.totalTriggeredPreloads++;
+          } catch (error) {
+            console.warn(`[EventBus] Erreur preload offre→projet ${prediction.type}:`, error);
+            this.backgroundStats.failedBackgroundTasks++;
+          }
+        }, prediction.delay * 60 * 1000);
+      }
+
+    } catch (error) {
+      console.error('[EventBus] Erreur déclencheur offre→projet:', error);
+      this.backgroundStats.failedBackgroundTasks++;
+    }
+  }
+
+  /**
+   * Déclencheur Projet : Prédict chantier et livraison
+   */
+  private async triggerProjectWorkflowPreloading(event: RealtimeEvent): Promise<void> {
+    if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
+
+    try {
+      console.log(`[EventBus] Déclencheur Projet workflow preloading: ${event.entityId}`);
+
+      const constructionWorkflow = [
+        { type: 'chantier', delay: 180, priority: 'medium' },
+        { type: 'controle_qualite', delay: 240, priority: 'medium' },
+        { type: 'livraison', delay: 300, priority: 'low' }
+      ];
+
+      for (const prediction of constructionWorkflow) {
+        setTimeout(async () => {
+          try {
+            await this.contextCacheService.preloadContextByPrediction(
+              prediction.type,
+              `PREDICTED_${event.entityId}_${prediction.type}`,
+              undefined,
+              prediction.priority as any
+            );
+            
+            this.backgroundStats.eventTriggeredPreloads++;
+            this.backgroundStats.totalTriggeredPreloads++;
+          } catch (error) {
+            console.warn(`[EventBus] Erreur preload projet workflow ${prediction.type}:`, error);
+            this.backgroundStats.failedBackgroundTasks++;
+          }
+        }, prediction.delay * 60 * 1000);
+      }
+
+    } catch (error) {
+      console.error('[EventBus] Erreur déclencheur projet workflow:', error);
+      this.backgroundStats.failedBackgroundTasks++;
+    }
+  }
+
+  /**
+   * Déclencheur Tâche : Prédict contexte projet et dépendances
+   */
+  private async triggerTaskRelatedPreloading(event: RealtimeEvent): Promise<void> {
+    if (!this.predictiveTriggersEnabled || !this.contextCacheService || !event.projectId) return;
+
+    try {
+      console.log(`[EventBus] Déclencheur Tâche preloading: ${event.entityId} → ${event.projectId}`);
+
+      // Prédict contexte projet et équipe associée
+      await this.contextCacheService.preloadContextByPrediction(
+        'project',
+        event.projectId,
+        undefined,
+        'medium'
+      );
+      
+      // Prédict équipe si tâche terminée (probable accès suivant)
+      if (event.newStatus === 'termine') {
+        setTimeout(async () => {
+          await this.contextCacheService.preloadContextByPrediction(
+            'team',
+            `TEAM_${event.projectId}`,
+            undefined,
+            'low'
+          );
+        }, 10 * 60 * 1000); // 10 minutes après
+      }
+
+      this.backgroundStats.eventTriggeredPreloads += 2;
+      this.backgroundStats.totalTriggeredPreloads += 2;
+
+    } catch (error) {
+      console.error('[EventBus] Erreur déclencheur tâche:', error);
+      this.backgroundStats.failedBackgroundTasks++;
+    }
+  }
+
+  /**
+   * Déclencheur Analytics : Prédict dashboard refresh
+   */
+  private async triggerAnalyticsDashboardPreloading(event: RealtimeEvent): Promise<void> {
+    if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
+
+    try {
+      console.log(`[EventBus] Déclencheur Analytics dashboard preloading`);
+
+      // Prédict accès dashboard et KPIs
+      const dashboardContexts = [
+        { type: 'dashboard', delay: 5, priority: 'high' },
+        { type: 'kpi_summary', delay: 10, priority: 'medium' },
+        { type: 'analytics_detailed', delay: 15, priority: 'low' }
+      ];
+
+      for (const context of dashboardContexts) {
+        setTimeout(async () => {
+          try {
+            await this.contextCacheService.preloadContextByPrediction(
+              context.type,
+              'DASHBOARD_CONTEXT',
+              undefined,
+              context.priority as any
+            );
+            
+            this.backgroundStats.eventTriggeredPreloads++;
+            this.backgroundStats.totalTriggeredPreloads++;
+          } catch (error) {
+            console.warn(`[EventBus] Erreur preload analytics dashboard ${context.type}:`, error);
+            this.backgroundStats.failedBackgroundTasks++;
+          }
+        }, context.delay * 60 * 1000);
+      }
+
+    } catch (error) {
+      console.error('[EventBus] Erreur déclencheur analytics dashboard:', error);
+      this.backgroundStats.failedBackgroundTasks++;
+    }
+  }
+
+  // ========================================
+  // MÉTHODES HELPER BACKGROUND PRELOADING
+  // ========================================
+
+  /**
+   * Vérifie si nous sommes actuellement en horaires business
+   */
+  private isCurrentlyBusinessHours(): boolean {
+    const now = new Date();
+    const hour = now.getHours();
+    const day = now.getDay(); // 0 = dimanche, 6 = samedi
+    
+    // Lundi à vendredi seulement
+    if (day === 0 || day === 6) return false;
+    
+    return this.businessHours.includes(hour);
+  }
+
+  /**
+   * Vérifie si nous sommes en heures de pointe
+   */
+  private isPeakBusinessHours(): boolean {
+    if (!this.isCurrentlyBusinessHours()) return false;
+    
+    const hour = new Date().getHours();
+    return this.peakBusinessHours.includes(hour);
+  }
+
+  /**
+   * Vérifie si c'est le matin du weekend (samedi/dimanche 8h-10h)
+   */
+  private isWeekendMorning(): boolean {
+    const now = new Date();
+    const hour = now.getHours();
+    const day = now.getDay();
+    
+    return (day === 0 || day === 6) && hour >= 8 && hour <= 10;
+  }
+
+  /**
+   * Vérifie si c'est l'heure de maintenance nocturne (2h-4h)
+   */
+  private isNightlyMaintenanceTime(): boolean {
+    const hour = new Date().getHours();
+    return hour >= 2 && hour <= 4;
+  }
+
+  /**
+   * Prédit les workflows du matin pour préparation nocturne
+   */
+  private async predictMorningWorkflows(): Promise<any[]> {
+    // Simulation prédictions workflows matinaux
+    const tomorrowMorning = new Date();
+    tomorrowMorning.setDate(tomorrowMorning.getDate() + 1);
+    tomorrowMorning.setHours(8, 0, 0, 0);
+
+    return [
+      { entityType: 'dashboard', entityId: 'MORNING_DASHBOARD', confidence: 85 },
+      { entityType: 'ao', entityId: 'RECENT_AO_REVIEW', confidence: 80 },
+      { entityType: 'project', entityId: 'ACTIVE_PROJECTS', confidence: 75 },
+      { entityType: 'team', entityId: 'DAILY_PLANNING', confidence: 70 },
+      { entityType: 'analytics', entityId: 'DAILY_KPI', confidence: 65 },
+      { entityType: 'offer', entityId: 'PENDING_OFFERS', confidence: 60 }
+    ];
+  }
+
+  /**
+   * Active/désactive les déclencheurs prédictifs
+   */
+  public setPredictiveTriggersEnabled(enabled: boolean): void {
+    this.predictiveTriggersEnabled = enabled;
+    console.log(`[EventBus] Déclencheurs prédictifs ${enabled ? 'ACTIVÉS' : 'DÉSACTIVÉS'}`);
+  }
+
+  /**
+   * Active/désactive le preloading business hours
+   */
+  public setBusinessHoursPreloadingEnabled(enabled: boolean): void {
+    this.businessHoursPreloadingEnabled = enabled;
+    console.log(`[EventBus] Preloading business hours ${enabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+  }
+
+  /**
+   * Active/désactive le weekend warming
+   */
+  public setWeekendWarmingEnabled(enabled: boolean): void {
+    this.weekendWarmingEnabled = enabled;
+    console.log(`[EventBus] Weekend warming ${enabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+  }
+
+  /**
+   * Statistiques background preloading pour monitoring
+   */
+  public getBackgroundPreloadingStats(): typeof this.backgroundStats {
+    return { ...this.backgroundStats };
+  }
+
+  /**
+   * Nettoyage intégration prédictive
+   */
+  private cleanupPredictiveIntegration(): void {
+    // Arrêter tous les intervals
+    for (const [name, interval] of this.preloadingIntervals.entries()) {
+      clearInterval(interval);
+      console.log(`[EventBus] Interval ${name} arrêté`);
+    }
+    
+    this.preloadingIntervals.clear();
+    this.backgroundTasksRunning = false;
+    
+    console.log('[EventBus] Intégration prédictive nettoyée');
   }
 
 }

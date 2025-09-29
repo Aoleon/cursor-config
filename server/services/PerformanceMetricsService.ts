@@ -62,6 +62,21 @@ export interface DetailedTimings {
   responseFormatting: number;
   total: number;
   cacheOperations: number;
+  // ÉTAPE 2 PHASE 3 PERFORMANCE : Nouveaux timings parallélisme
+  contextAndModelParallel: number;
+  parallelExecutionTime: number;
+  sequentialFallbackTime: number;
+  circuitBreakerCheckTime: number;
+}
+
+export interface ParallelismMetrics {
+  parallelExecutionCount: number;
+  sequentialFallbackCount: number;
+  averageParallelTime: number;
+  averageSequentialTime: number;
+  timeSavingsPercent: number;
+  circuitBreakerTriggered: number;
+  parallelSuccessRate: number;
 }
 
 export interface PercentileStats {
@@ -100,6 +115,18 @@ export class PerformanceMetricsService {
   private activeTraces: Map<string, PipelineStepMetrics[]> = new Map();
   private realtimeMetrics: Map<string, PercentileStats> = new Map();
   private lastAlertTime: Map<string, Date> = new Map();
+  // ÉTAPE 2 PHASE 3 PERFORMANCE : Métriques parallélisme
+  private parallelismStats: ParallelismMetrics = {
+    parallelExecutionCount: 0,
+    sequentialFallbackCount: 0,
+    averageParallelTime: 0,
+    averageSequentialTime: 0,
+    timeSavingsPercent: 0,
+    circuitBreakerTriggered: 0,
+    parallelSuccessRate: 1.0
+  };
+  private circuitBreakerFailureCount: number = 0;
+  private circuitBreakerLastFailureTime: Date | null = null;
 
   constructor(storage: IStorage) {
     this.storage = storage;
@@ -240,6 +267,132 @@ export class PerformanceMetricsService {
   // CALCULS MÉTRIQUES AVANCÉES
   // ========================================
 
+  // ========================================
+  // MÉTHODES PARALLÉLISME - ÉTAPE 2 PHASE 3
+  // ========================================
+
+  /**
+   * Vérifie le circuit breaker pour autoriser l'exécution parallèle
+   */
+  checkCircuitBreaker(): { allowed: boolean; reason?: string } {
+    const now = new Date();
+    const failureThreshold = 3;
+    const timeoutMinutes = 5;
+
+    // Si plus de 3 échecs consécutifs dans les 5 dernières minutes
+    if (this.circuitBreakerFailureCount >= failureThreshold && 
+        this.circuitBreakerLastFailureTime &&
+        (now.getTime() - this.circuitBreakerLastFailureTime.getTime()) < (timeoutMinutes * 60 * 1000)) {
+      
+      return { 
+        allowed: false, 
+        reason: `Circuit breaker ouvert: ${this.circuitBreakerFailureCount} échecs consécutifs` 
+      };
+    }
+
+    // Reset du compteur si timeout dépassé
+    if (this.circuitBreakerLastFailureTime &&
+        (now.getTime() - this.circuitBreakerLastFailureTime.getTime()) >= (timeoutMinutes * 60 * 1000)) {
+      this.circuitBreakerFailureCount = 0;
+      this.circuitBreakerLastFailureTime = null;
+    }
+
+    return { allowed: true };
+  }
+
+  /**
+   * Enregistre un échec du parallélisme pour le circuit breaker
+   */
+  recordParallelismFailure(): void {
+    this.circuitBreakerFailureCount++;
+    this.circuitBreakerLastFailureTime = new Date();
+    this.parallelismStats.circuitBreakerTriggered++;
+    
+    console.warn(`[PerformanceMetrics] Échec parallélisme enregistré: ${this.circuitBreakerFailureCount} échecs consécutifs`);
+  }
+
+  /**
+   * Enregistre une réussite du parallélisme (reset circuit breaker)
+   */
+  recordParallelismSuccess(parallelTime: number): void {
+    this.circuitBreakerFailureCount = 0;
+    this.circuitBreakerLastFailureTime = null;
+    this.parallelismStats.parallelExecutionCount++;
+    
+    // Mise à jour moyenne mobile
+    const currentAvg = this.parallelismStats.averageParallelTime;
+    const count = this.parallelismStats.parallelExecutionCount;
+    this.parallelismStats.averageParallelTime = ((currentAvg * (count - 1)) + parallelTime) / count;
+    
+    // Calcul du taux de succès
+    const totalAttempts = this.parallelismStats.parallelExecutionCount + this.parallelismStats.sequentialFallbackCount;
+    this.parallelismStats.parallelSuccessRate = this.parallelismStats.parallelExecutionCount / totalAttempts;
+  }
+
+  /**
+   * Enregistre un fallback vers l'exécution séquentielle
+   */
+  recordSequentialFallback(sequentialTime: number): void {
+    this.parallelismStats.sequentialFallbackCount++;
+    
+    // Mise à jour moyenne mobile
+    const currentAvg = this.parallelismStats.averageSequentialTime;
+    const count = this.parallelismStats.sequentialFallbackCount;
+    this.parallelismStats.averageSequentialTime = ((currentAvg * (count - 1)) + sequentialTime) / count;
+    
+    // Calcul du pourcentage d'économie de temps
+    if (this.parallelismStats.averageParallelTime > 0 && this.parallelismStats.averageSequentialTime > 0) {
+      const savings = ((this.parallelismStats.averageSequentialTime - this.parallelismStats.averageParallelTime) / this.parallelismStats.averageSequentialTime) * 100;
+      this.parallelismStats.timeSavingsPercent = Math.max(0, savings);
+    }
+  }
+
+  /**
+   * Démarre un tracing parallèle spécialisé
+   */
+  startParallelTrace(traceId: string, operation: 'context_and_model_parallel'): void {
+    this.startStep(traceId, operation, { 
+      parallelismEnabled: true,
+      startTime: Date.now(),
+      circuitBreakerStatus: this.circuitBreakerFailureCount === 0 ? 'closed' : 'open'
+    });
+  }
+
+  /**
+   * Termine un tracing parallèle avec métriques détaillées
+   */
+  endParallelTrace(
+    traceId: string, 
+    operation: 'context_and_model_parallel',
+    success: boolean, 
+    parallelResults: {
+      contextSuccess: boolean;
+      modelSuccess: boolean;
+      contextTime: number;
+      modelTime: number;
+      totalParallelTime: number;
+    }
+  ): void {
+    this.endStep(traceId, operation, success, {
+      ...parallelResults,
+      timeSaving: Math.max(0, (parallelResults.contextTime + parallelResults.modelTime) - parallelResults.totalParallelTime),
+      parallelEfficiency: parallelResults.totalParallelTime / Math.max(parallelResults.contextTime, parallelResults.modelTime)
+    });
+
+    if (success) {
+      this.recordParallelismSuccess(parallelResults.totalParallelTime);
+    } else {
+      this.recordParallelismFailure();
+    }
+  }
+
+  /**
+   * Retourne les métriques de parallélisme actuelles
+   */
+  getParallelismMetrics(): ParallelismMetrics {
+    return { ...this.parallelismStats };
+  }
+
   /**
    * Calcule les timings détaillés à partir des traces d'étapes
    */
@@ -251,7 +404,12 @@ export class PerformanceMetricsService {
       sqlExecution: 0,
       responseFormatting: 0,
       total: 0,
-      cacheOperations: 0
+      cacheOperations: 0,
+      // ÉTAPE 2 PHASE 3 PERFORMANCE : Nouveaux timings parallélisme
+      contextAndModelParallel: 0,
+      parallelExecutionTime: 0,
+      sequentialFallbackTime: 0,
+      circuitBreakerCheckTime: 0
     };
 
     let earliestStart = Number.MAX_SAFE_INTEGER;
@@ -1094,6 +1252,556 @@ export class PerformanceMetricsService {
     });
 
     return recommendations;
+  }
+
+  // ========================================
+  // ÉTAPE 3 PHASE 3 PERFORMANCE : MÉTRIQUES PRELOADING PRÉDICTIF
+  // ========================================
+
+  // Tracking métriques preloading prédictif
+  private predictiveMetrics = {
+    // Cache Hit-Rate Tracking
+    cacheHitRate: {
+      baseline: 0.55,          // ~55% baseline estimé
+      current: 0.55,           // Hit-rate actuel
+      target: 0.70,            // ≥70% objectif
+      stretchGoal: 0.80,       // 80% pour requêtes fréquentes
+      upliftPercent: 0,        // % d'amélioration vs baseline
+      lastCalculated: new Date(),
+      history: [] as Array<{ timestamp: Date; rate: number; type: 'baseline' | 'predictive' }>
+    },
+    
+    // Latency Reduction Tracking
+    latencyReduction: {
+      baselineLatencyMs: 25000,  // 25s baseline
+      currentLatencyMs: 25000,   // Latence actuelle
+      targetReductionPercent: 35, // ≥35% réduction
+      actualReductionPercent: 0,  // % réduction actuel
+      preloadedContextLatency: 0, // Latence avec contexte preloaded
+      cacheMissRecoveryMs: 500,   // <500ms fallback
+      commonQueriesReduction: 0,  // Réduction pour requêtes courantes
+      peakHoursPerformance: 1.0,  // Facteur performance heures pointe
+      lastMeasured: new Date()
+    },
+
+    // Prediction Accuracy Monitoring
+    predictionAccuracy: {
+      targetAccuracy: 60,        // >60% accuracy minimum
+      currentAccuracy: 0,        // Accuracy actuel
+      totalPredictions: 0,       // Nombre total prédictions
+      correctPredictions: 0,     // Prédictions correctes
+      falsePositives: 0,         // Prédictions erronées
+      missedOpportunities: 0,    // Occasions manquées
+      confidenceDistribution: {  // Distribution par confiance
+        high: { total: 0, correct: 0 },    // ≥80% confiance
+        medium: { total: 0, correct: 0 },  // 60-79% confiance  
+        low: { total: 0, correct: 0 }      // <60% confiance
+      },
+      patternRecognition: {
+        btpWorkflows: { accuracy: 0, count: 0 },
+        userRolePatterns: { accuracy: 0, count: 0 },
+        seasonalPatterns: { accuracy: 0, count: 0 },
+        businessHours: { accuracy: 0, count: 0 }
+      },
+      lastEvaluated: new Date()
+    },
+
+    // Preloading Specific Metrics
+    preloadingStats: {
+      totalPreloadAttempts: 0,
+      successfulPreloads: 0,
+      failedPreloads: 0,
+      preloadHitRate: 0,        // % preloads utilisés
+      averagePreloadTime: 0,    // Temps moyen preloading
+      backgroundTasksExecuted: 0,
+      businessHoursPreloads: 0,
+      weekendWarmingRuns: 0,
+      eventTriggeredPreloads: 0,
+      memoryOptimizations: 0,
+      lastPreloadCycle: new Date()
+    },
+
+    // Performance Targets Status
+    targetsStatus: {
+      cacheHitRateAchieved: false,     // ≥70% atteint
+      latencyReductionAchieved: false, // ≥35% atteint
+      predictionAccuracyAchieved: false, // >60% atteint
+      overallGoalProgress: 0,          // % progression vers 25s→10s
+      performanceScore: 0,             // Score global 0-100
+      lastEvaluation: new Date()
+    }
+  };
+
+  // Historique métriques pour tendances
+  private metricsHistory: Array<{
+    timestamp: Date;
+    cacheHitRate: number;
+    averageLatency: number;
+    predictionAccuracy: number;
+    performanceScore: number;
+  }> = [];
+
+  /**
+   * TRACKING CACHE HIT-RATE avec objectif ≥70%
+   */
+  async trackCacheHitRate(cacheHit: boolean, queryType: 'common' | 'complex' | 'rare' = 'common'): Promise<void> {
+    try {
+      // Mise à jour compteurs
+      if (cacheHit) {
+        this.predictiveMetrics.preloadingStats.successfulPreloads++;
+      } else {
+        this.predictiveMetrics.preloadingStats.failedPreloads++;
+      }
+      
+      this.predictiveMetrics.preloadingStats.totalPreloadAttempts++;
+
+      // Calcul hit-rate actuel
+      const totalAttempts = this.predictiveMetrics.preloadingStats.totalPreloadAttempts;
+      if (totalAttempts > 0) {
+        this.predictiveMetrics.cacheHitRate.current = 
+          this.predictiveMetrics.preloadingStats.successfulPreloads / totalAttempts;
+        
+        // Calcul uplift vs baseline
+        this.predictiveMetrics.cacheHitRate.upliftPercent = 
+          ((this.predictiveMetrics.cacheHitRate.current - this.predictiveMetrics.cacheHitRate.baseline) / 
+           this.predictiveMetrics.cacheHitRate.baseline) * 100;
+      }
+
+      // Historique pour tendances
+      this.predictiveMetrics.cacheHitRate.history.push({
+        timestamp: new Date(),
+        rate: this.predictiveMetrics.cacheHitRate.current,
+        type: 'predictive'
+      });
+
+      // Garder seulement les 100 dernières mesures
+      if (this.predictiveMetrics.cacheHitRate.history.length > 100) {
+        this.predictiveMetrics.cacheHitRate.history = 
+          this.predictiveMetrics.cacheHitRate.history.slice(-100);
+      }
+
+      this.predictiveMetrics.cacheHitRate.lastCalculated = new Date();
+
+      // Vérification objectif atteint
+      this.predictiveMetrics.targetsStatus.cacheHitRateAchieved = 
+        this.predictiveMetrics.cacheHitRate.current >= this.predictiveMetrics.cacheHitRate.target;
+
+      // Log progression importante
+      if (this.predictiveMetrics.cacheHitRate.upliftPercent >= 20) {
+        console.log(`[PerformanceMetrics] 🎯 OBJECTIF CACHE HIT-RATE ATTEINT: ${(this.predictiveMetrics.cacheHitRate.current * 100).toFixed(1)}% (+${this.predictiveMetrics.cacheHitRate.upliftPercent.toFixed(1)}%)`);
+      }
+
+    } catch (error) {
+      console.error('[PerformanceMetrics] Erreur tracking cache hit-rate:', error);
+    }
+  }
+
+  /**
+   * TRACKING LATENCY REDUCTION avec objectif ≥35%
+   */
+  async trackLatencyReduction(
+    actualLatencyMs: number, 
+    wasPreloaded: boolean = false,
+    queryType: 'common' | 'complex' | 'rare' = 'common'
+  ): Promise<void> {
+    try {
+      // Mise à jour latence actuelle
+      this.predictiveMetrics.latencyReduction.currentLatencyMs = actualLatencyMs;
+
+      // Calcul réduction par rapport à baseline
+      const baseline = this.predictiveMetrics.latencyReduction.baselineLatencyMs;
+      this.predictiveMetrics.latencyReduction.actualReductionPercent = 
+        ((baseline - actualLatencyMs) / baseline) * 100;
+
+      // Tracking latence contexte preloaded
+      if (wasPreloaded) {
+        const currentPreloadedLatency = this.predictiveMetrics.latencyReduction.preloadedContextLatency;
+        this.predictiveMetrics.latencyReduction.preloadedContextLatency = 
+          currentPreloadedLatency === 0 ? actualLatencyMs : (currentPreloadedLatency + actualLatencyMs) / 2;
+      }
+
+      // Tracking spécifique requêtes courantes
+      if (queryType === 'common') {
+        this.predictiveMetrics.latencyReduction.commonQueriesReduction = 
+          this.predictiveMetrics.latencyReduction.actualReductionPercent;
+      }
+
+      // Ajustement performance heures pointe
+      const hour = new Date().getHours();
+      const isPeakHours = [9, 10, 11, 15, 16].includes(hour);
+      if (isPeakHours) {
+        const peakReduction = Math.min(100, this.predictiveMetrics.latencyReduction.actualReductionPercent);
+        this.predictiveMetrics.latencyReduction.peakHoursPerformance = peakReduction / 35; // Normalisé par objectif 35%
+      }
+
+      this.predictiveMetrics.latencyReduction.lastMeasured = new Date();
+
+      // Vérification objectif atteint
+      this.predictiveMetrics.targetsStatus.latencyReductionAchieved = 
+        this.predictiveMetrics.latencyReduction.actualReductionPercent >= 
+        this.predictiveMetrics.latencyReduction.targetReductionPercent;
+
+      // Log progression importante
+      if (this.predictiveMetrics.latencyReduction.actualReductionPercent >= 35) {
+        console.log(`[PerformanceMetrics] 🚀 OBJECTIF LATENCY REDUCTION ATTEINT: ${this.predictiveMetrics.latencyReduction.actualReductionPercent.toFixed(1)}% (${actualLatencyMs}ms vs ${baseline}ms baseline)`);
+      }
+
+    } catch (error) {
+      console.error('[PerformanceMetrics] Erreur tracking latency reduction:', error);
+    }
+  }
+
+  /**
+   * TRACKING PREDICTION ACCURACY avec objectif >60%
+   */
+  async trackPredictionAccuracy(
+    prediction: any,
+    wasCorrect: boolean,
+    patternType: 'btpWorkflows' | 'userRolePatterns' | 'seasonalPatterns' | 'businessHours' = 'btpWorkflows'
+  ): Promise<void> {
+    try {
+      // Mise à jour compteurs globaux
+      this.predictiveMetrics.predictionAccuracy.totalPredictions++;
+      
+      if (wasCorrect) {
+        this.predictiveMetrics.predictionAccuracy.correctPredictions++;
+      } else {
+        this.predictiveMetrics.predictionAccuracy.falsePositives++;
+      }
+
+      // Calcul accuracy global
+      if (this.predictiveMetrics.predictionAccuracy.totalPredictions > 0) {
+        this.predictiveMetrics.predictionAccuracy.currentAccuracy = 
+          (this.predictiveMetrics.predictionAccuracy.correctPredictions / 
+           this.predictiveMetrics.predictionAccuracy.totalPredictions) * 100;
+      }
+
+      // Tracking par niveau de confiance
+      const confidence = prediction.confidence || 50;
+      let confidenceLevel: 'high' | 'medium' | 'low';
+      
+      if (confidence >= 80) {
+        confidenceLevel = 'high';
+      } else if (confidence >= 60) {
+        confidenceLevel = 'medium';
+      } else {
+        confidenceLevel = 'low';
+      }
+
+      this.predictiveMetrics.predictionAccuracy.confidenceDistribution[confidenceLevel].total++;
+      if (wasCorrect) {
+        this.predictiveMetrics.predictionAccuracy.confidenceDistribution[confidenceLevel].correct++;
+      }
+
+      // Tracking par type de pattern
+      this.predictiveMetrics.predictionAccuracy.patternRecognition[patternType].count++;
+      if (wasCorrect) {
+        this.predictiveMetrics.predictionAccuracy.patternRecognition[patternType].accuracy = 
+          (this.predictiveMetrics.predictionAccuracy.patternRecognition[patternType].accuracy * 
+           (this.predictiveMetrics.predictionAccuracy.patternRecognition[patternType].count - 1) + 
+           (wasCorrect ? 100 : 0)) / 
+          this.predictiveMetrics.predictionAccuracy.patternRecognition[patternType].count;
+      }
+
+      this.predictiveMetrics.predictionAccuracy.lastEvaluated = new Date();
+
+      // Vérification objectif atteint
+      this.predictiveMetrics.targetsStatus.predictionAccuracyAchieved = 
+        this.predictiveMetrics.predictionAccuracy.currentAccuracy >= 
+        this.predictiveMetrics.predictionAccuracy.targetAccuracy;
+
+      // Log progression importante
+      if (this.predictiveMetrics.predictionAccuracy.currentAccuracy >= 60) {
+        console.log(`[PerformanceMetrics] 🎯 OBJECTIF PREDICTION ACCURACY ATTEINT: ${this.predictiveMetrics.predictionAccuracy.currentAccuracy.toFixed(1)}%`);
+      }
+
+    } catch (error) {
+      console.error('[PerformanceMetrics] Erreur tracking prediction accuracy:', error);
+    }
+  }
+
+  /**
+   * TRACKING PRELOADING OPERATIONS spécialisé
+   */
+  async trackPreloadingOperation(
+    operation: 'attempt' | 'success' | 'failure' | 'background_cycle' | 'event_triggered',
+    duration?: number,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    try {
+      const stats = this.predictiveMetrics.preloadingStats;
+      
+      switch (operation) {
+        case 'attempt':
+          stats.totalPreloadAttempts++;
+          break;
+          
+        case 'success':
+          stats.successfulPreloads++;
+          if (duration) {
+            stats.averagePreloadTime = stats.averagePreloadTime === 0 ? 
+              duration : (stats.averagePreloadTime + duration) / 2;
+          }
+          break;
+          
+        case 'failure':
+          stats.failedPreloads++;
+          break;
+          
+        case 'background_cycle':
+          stats.backgroundTasksExecuted++;
+          if (metadata?.type === 'business_hours') {
+            stats.businessHoursPreloads++;
+          } else if (metadata?.type === 'weekend_warming') {
+            stats.weekendWarmingRuns++;
+          }
+          break;
+          
+        case 'event_triggered':
+          stats.eventTriggeredPreloads++;
+          break;
+      }
+
+      // Calcul hit-rate preloading
+      if (stats.totalPreloadAttempts > 0) {
+        stats.preloadHitRate = (stats.successfulPreloads / stats.totalPreloadAttempts) * 100;
+      }
+
+      stats.lastPreloadCycle = new Date();
+
+    } catch (error) {
+      console.error('[PerformanceMetrics] Erreur tracking preloading operation:', error);
+    }
+  }
+
+  /**
+   * ÉVALUATION GLOBALE PROGRESSION OBJECTIFS
+   */
+  async evaluateOverallProgress(): Promise<void> {
+    try {
+      const targets = this.predictiveMetrics.targetsStatus;
+      
+      // Calcul progression globale vers objectif 25s→10s
+      const baselineLatency = this.predictiveMetrics.latencyReduction.baselineLatencyMs;
+      const currentLatency = this.predictiveMetrics.latencyReduction.currentLatencyMs;
+      const targetLatency = 10000; // 10s objectif final
+      
+      const maxPossibleReduction = baselineLatency - targetLatency; // 15s possible
+      const actualReduction = baselineLatency - currentLatency;
+      
+      targets.overallGoalProgress = Math.min(100, (actualReduction / maxPossibleReduction) * 100);
+
+      // Calcul score performance global (0-100)
+      let performanceScore = 0;
+      
+      // Cache hit-rate (40% du score)
+      const cacheScore = Math.min(100, (this.predictiveMetrics.cacheHitRate.current / this.predictiveMetrics.cacheHitRate.target) * 100);
+      performanceScore += cacheScore * 0.4;
+      
+      // Latency reduction (35% du score)
+      const latencyScore = Math.min(100, (this.predictiveMetrics.latencyReduction.actualReductionPercent / this.predictiveMetrics.latencyReduction.targetReductionPercent) * 100);
+      performanceScore += latencyScore * 0.35;
+      
+      // Prediction accuracy (25% du score)
+      const accuracyScore = Math.min(100, (this.predictiveMetrics.predictionAccuracy.currentAccuracy / this.predictiveMetrics.predictionAccuracy.targetAccuracy) * 100);
+      performanceScore += accuracyScore * 0.25;
+      
+      targets.performanceScore = Math.round(performanceScore);
+      targets.lastEvaluation = new Date();
+
+      // Ajout à l'historique
+      this.metricsHistory.push({
+        timestamp: new Date(),
+        cacheHitRate: this.predictiveMetrics.cacheHitRate.current * 100,
+        averageLatency: currentLatency,
+        predictionAccuracy: this.predictiveMetrics.predictionAccuracy.currentAccuracy,
+        performanceScore: targets.performanceScore
+      });
+
+      // Garder seulement les 50 dernières évaluations
+      if (this.metricsHistory.length > 50) {
+        this.metricsHistory = this.metricsHistory.slice(-50);
+      }
+
+      // Log achievements majeurs
+      if (targets.cacheHitRateAchieved && targets.latencyReductionAchieved && targets.predictionAccuracyAchieved) {
+        console.log(`[PerformanceMetrics] 🏆 TOUS LES OBJECTIFS ATTEINTS! Score: ${targets.performanceScore}/100, Progression: ${targets.overallGoalProgress.toFixed(1)}%`);
+      }
+
+    } catch (error) {
+      console.error('[PerformanceMetrics] Erreur évaluation progression globale:', error);
+    }
+  }
+
+  /**
+   * RAPPORT COMPLET MÉTRIQUES PRELOADING
+   */
+  async getPreloadingMetricsReport(): Promise<any> {
+    try {
+      await this.evaluateOverallProgress();
+      
+      return {
+        cacheHitRate: {
+          current: this.predictiveMetrics.cacheHitRate.current,
+          target: this.predictiveMetrics.cacheHitRate.target,
+          baseline: this.predictiveMetrics.cacheHitRate.baseline,
+          upliftPercent: this.predictiveMetrics.cacheHitRate.upliftPercent,
+          achieved: this.predictiveMetrics.targetsStatus.cacheHitRateAchieved,
+          trend: this.predictiveMetrics.cacheHitRate.history.slice(-10)
+        },
+        
+        latencyReduction: {
+          currentLatencyMs: this.predictiveMetrics.latencyReduction.currentLatencyMs,
+          baselineLatencyMs: this.predictiveMetrics.latencyReduction.baselineLatencyMs,
+          reductionPercent: this.predictiveMetrics.latencyReduction.actualReductionPercent,
+          targetPercent: this.predictiveMetrics.latencyReduction.targetReductionPercent,
+          achieved: this.predictiveMetrics.targetsStatus.latencyReductionAchieved,
+          preloadedContextLatency: this.predictiveMetrics.latencyReduction.preloadedContextLatency,
+          commonQueriesReduction: this.predictiveMetrics.latencyReduction.commonQueriesReduction
+        },
+        
+        predictionAccuracy: {
+          currentPercent: this.predictiveMetrics.predictionAccuracy.currentAccuracy,
+          targetPercent: this.predictiveMetrics.predictionAccuracy.targetAccuracy,
+          achieved: this.predictiveMetrics.targetsStatus.predictionAccuracyAchieved,
+          totalPredictions: this.predictiveMetrics.predictionAccuracy.totalPredictions,
+          correctPredictions: this.predictiveMetrics.predictionAccuracy.correctPredictions,
+          confidenceDistribution: this.predictiveMetrics.predictionAccuracy.confidenceDistribution,
+          patternRecognition: this.predictiveMetrics.predictionAccuracy.patternRecognition
+        },
+        
+        preloadingOperations: {
+          ...this.predictiveMetrics.preloadingStats
+        },
+        
+        overallProgress: {
+          performanceScore: this.predictiveMetrics.targetsStatus.performanceScore,
+          goalProgress: this.predictiveMetrics.targetsStatus.overallGoalProgress,
+          allTargetsAchieved: this.predictiveMetrics.targetsStatus.cacheHitRateAchieved && 
+                            this.predictiveMetrics.targetsStatus.latencyReductionAchieved && 
+                            this.predictiveMetrics.targetsStatus.predictionAccuracyAchieved
+        },
+        
+        trends: {
+          history: this.metricsHistory.slice(-20),
+          recommendation: this.generatePreloadingRecommendations()
+        }
+      };
+
+    } catch (error) {
+      console.error('[PerformanceMetrics] Erreur rapport métriques preloading:', error);
+      return null;
+    }
+  }
+
+  /**
+   * RECOMMANDATIONS OPTIMISATION PRELOADING
+   */
+  private generatePreloadingRecommendations(): string[] {
+    const recommendations: string[] = [];
+    const hitRate = this.predictiveMetrics.cacheHitRate.current;
+    const latencyReduction = this.predictiveMetrics.latencyReduction.actualReductionPercent;
+    const accuracy = this.predictiveMetrics.predictionAccuracy.currentAccuracy;
+
+    // Recommandations Cache Hit-Rate
+    if (hitRate < 0.60) {
+      recommendations.push('🎯 Cache Hit-Rate critique: Augmenter agressivité preloading et réviser patterns prédictifs');
+    } else if (hitRate < 0.70) {
+      recommendations.push('⚡ Optimiser algorithmes prédiction et étendre preloading business hours');
+    }
+
+    // Recommandations Latency Reduction  
+    if (latencyReduction < 25) {
+      recommendations.push('🚀 Latence élevée: Activer preloading weekend warming et optimiser contextes preloadés');
+    } else if (latencyReduction < 35) {
+      recommendations.push('⏱️ Améliorer délais prédiction et augmenter parallélisme background tasks');
+    }
+
+    // Recommandations Prediction Accuracy
+    if (accuracy < 50) {
+      recommendations.push('🧠 Accuracy faible: Réviser patterns BTP et ajuster seuils confiance');
+    } else if (accuracy < 60) {
+      recommendations.push('🎯 Affiner reconnaissance patterns utilisateur et saisonnalité menuiserie');
+    }
+
+    // Recommandations générales
+    if (hitRate >= 0.70 && latencyReduction >= 35 && accuracy >= 60) {
+      recommendations.push('🏆 Objectifs atteints! Maintenir performance et explorer optimisations avancées');
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * RESET MÉTRIQUES (pour tests)
+   */
+  resetPredictiveMetrics(): void {
+    this.predictiveMetrics = {
+      cacheHitRate: {
+        baseline: 0.55,
+        current: 0.55,
+        target: 0.70,
+        stretchGoal: 0.80,
+        upliftPercent: 0,
+        lastCalculated: new Date(),
+        history: []
+      },
+      latencyReduction: {
+        baselineLatencyMs: 25000,
+        currentLatencyMs: 25000,
+        targetReductionPercent: 35,
+        actualReductionPercent: 0,
+        preloadedContextLatency: 0,
+        cacheMissRecoveryMs: 500,
+        commonQueriesReduction: 0,
+        peakHoursPerformance: 1.0,
+        lastMeasured: new Date()
+      },
+      predictionAccuracy: {
+        targetAccuracy: 60,
+        currentAccuracy: 0,
+        totalPredictions: 0,
+        correctPredictions: 0,
+        falsePositives: 0,
+        missedOpportunities: 0,
+        confidenceDistribution: {
+          high: { total: 0, correct: 0 },
+          medium: { total: 0, correct: 0 },
+          low: { total: 0, correct: 0 }
+        },
+        patternRecognition: {
+          btpWorkflows: { accuracy: 0, count: 0 },
+          userRolePatterns: { accuracy: 0, count: 0 },
+          seasonalPatterns: { accuracy: 0, count: 0 },
+          businessHours: { accuracy: 0, count: 0 }
+        },
+        lastEvaluated: new Date()
+      },
+      preloadingStats: {
+        totalPreloadAttempts: 0,
+        successfulPreloads: 0,
+        failedPreloads: 0,
+        preloadHitRate: 0,
+        averagePreloadTime: 0,
+        backgroundTasksExecuted: 0,
+        businessHoursPreloads: 0,
+        weekendWarmingRuns: 0,
+        eventTriggeredPreloads: 0,
+        memoryOptimizations: 0,
+        lastPreloadCycle: new Date()
+      },
+      targetsStatus: {
+        cacheHitRateAchieved: false,
+        latencyReductionAchieved: false,
+        predictionAccuracyAchieved: false,
+        overallGoalProgress: 0,
+        performanceScore: 0,
+        lastEvaluation: new Date()
+      }
+    };
+    
+    this.metricsHistory = [];
+    console.log('[PerformanceMetrics] Métriques prédictives réinitialisées');
   }
 }
 

@@ -105,6 +105,7 @@ export interface ChatbotHistoryItem {
 // INTERFACES ACTIONS SÉCURISÉES - NOUVEAU SYSTÈME
 // ========================================
 
+// CORRECTION CRITIQUE : ActionProposal complet avec toutes les métadonnées
 export interface ActionProposal {
   action_id: string;
   confirmation_required: boolean;
@@ -112,6 +113,12 @@ export interface ActionProposal {
   risk_level: 'low' | 'medium' | 'high';
   estimated_time?: number;
   warnings?: string[];
+  // NOUVEAUX CHAMPS CRITIQUES : Métadonnées réelles de l'action
+  type: 'create' | 'update' | 'delete' | 'business_action';
+  entity: 'offer' | 'project' | 'ao' | 'contact' | 'task' | 'supplier' | 'milestone';
+  operation: string;
+  parameters: Record<string, any>;
+  targetEntityId?: string;
 }
 
 export interface ChatbotQueryResponseWithAction extends ChatbotQueryResponse {

@@ -103,6 +103,191 @@ export class AIService {
   }
 
   // ========================================
+  // SÉLECTION MODÈLE OPTIMISÉE PARALLÈLE - ÉTAPE 2 PHASE 3
+  // ========================================
+
+  /**
+   * Sélection de modèle optimisée indépendante du contexte complet
+   * OPTIMISATION PHASE 3 : Permet dispatch parallèle contexte + modèle
+   */
+  async selectOptimalModelIndependent(
+    query: string, 
+    userRole: string, 
+    complexity?: string
+  ): Promise<ModelSelectionResult> {
+    const appliedRules: string[] = [];
+    let selectedModel: "claude_sonnet_4" | "gpt_5" = "claude_sonnet_4"; // Défaut Claude
+    let reason = "Modèle par défaut (rapport qualité/prix)";
+    let confidence = 0.7;
+
+    // Règle 1: Complexité explicite
+    if (complexity === "complex" || complexity === "expert") {
+      selectedModel = "gpt_5";
+      reason = "Requête complexe → GPT-5 pour précision maximale";
+      confidence = 0.85;
+      appliedRules.push("complexity_based");
+    }
+
+    // Règle 2: Détection de complexité automatique par taille et mots-clés SANS contexte
+    const complexityScore = this.analyzeQueryComplexityIndependent(query);
+    if (complexityScore > 0.7) {
+      selectedModel = "gpt_5";
+      reason = "Complexité détectée automatiquement → GPT-5";
+      confidence = Math.min(0.9, complexityScore);
+      appliedRules.push("auto_complexity_detection_independent");
+    }
+
+    // Règle 3: Contexte métier menuiserie enrichi → Claude pour meilleur contexte français
+    if (this.isMenuiserieBusinessQueryIndependent(query)) {
+      selectedModel = "claude_sonnet_4";
+      reason = "Requête métier menuiserie → Claude (meilleur contexte domaine BTP français)";
+      confidence = 0.85;
+      appliedRules.push("menuiserie_specialization_independent");
+    }
+    
+    // Règle 4: Analyses prédictives complexes → GPT-5 pour ML avancé
+    if (this.containsPredictiveKeywords(query)) {
+      selectedModel = "gpt_5";
+      reason = "Analyse prédictive complexe → GPT-5 (capacités ML avancées)";
+      confidence = 0.9;
+      appliedRules.push("predictive_specialization");
+    }
+    
+    // Règle 5: Requêtes multi-entités complexes → GPT-5
+    const entityCount = this.countEntityReferences(query);
+    if (entityCount >= 3) {
+      selectedModel = "gpt_5";
+      reason = "Requête multi-entités complexe → GPT-5 (meilleure corrélation)";
+      confidence = 0.85;
+      appliedRules.push("multi_entity_complexity");
+    }
+
+    // Règle 6: Adaptation selon rôle utilisateur
+    if (userRole.includes('chef') || userRole.includes('directeur') || userRole.includes('admin')) {
+      if (selectedModel === "claude_sonnet_4") {
+        selectedModel = "gpt_5";
+        reason = "Rôle expert + " + reason.split('→')[1] + " → GPT-5 pour analyses avancées";
+        confidence = Math.min(1.0, confidence + 0.1);
+        appliedRules.push("expert_role_boost");
+      }
+    }
+
+    // Règle 7: Si pas de GPT disponible → Claude obligatoire
+    if (!this.openai && selectedModel === "gpt_5") {
+      selectedModel = "claude_sonnet_4";
+      reason = "GPT-5 non disponible → Fallback Claude avec boost contexte";
+      confidence = 0.65;
+      appliedRules.push("gpt_unavailable_fallback", "claude_contextual_boost");
+    }
+
+    return {
+      selectedModel,
+      reason,
+      confidence,
+      appliedRules,
+      fallbackAvailable: this.openai ? true : selectedModel === "claude_sonnet_4"
+    };
+  }
+
+  /**
+   * Analyse complexité requête SANS contexte complet (optimisé parallélisme)
+   */
+  private analyzeQueryComplexityIndependent(query: string): number {
+    let score = 0.0;
+    const queryLower = query.toLowerCase();
+
+    // Longueur de la requête
+    if (query.length > 100) score += 0.2;
+    if (query.length > 300) score += 0.3;
+
+    // Mots-clés SQL complexes
+    const complexSQLKeywords = [
+      'join', 'inner join', 'left join', 'right join', 'outer join',
+      'subquery', 'exists', 'case when', 'having', 'window function',
+      'partition by', 'over', 'cte', 'with', 'recursive',
+      'union', 'intersect', 'except', 'coalesce'
+    ];
+    
+    for (const keyword of complexSQLKeywords) {
+      if (queryLower.includes(keyword)) {
+        score += 0.15;
+      }
+    }
+
+    // Analyses complexes
+    const complexAnalysisKeywords = [
+      'corrélation', 'régression', 'tendance', 'prévision', 'forecast',
+      'analyse', 'rentabilité', 'marge', 'performance', 'benchmark',
+      'comparaison', 'évolution', 'statistique', 'agrégation complexe'
+    ];
+
+    for (const keyword of complexAnalysisKeywords) {
+      if (queryLower.includes(keyword)) {
+        score += 0.2;
+      }
+    }
+
+    // Questions multiples et conjonctions complexes
+    const questionMarks = (query.match(/\?/g) || []).length;
+    const conjunctions = (query.match(/\b(et|ou|mais|donc|car|ni|or)\b/gi) || []).length;
+    score += (questionMarks * 0.1) + (conjunctions * 0.15);
+
+    // Limiter à 1.0
+    return Math.min(1.0, score);
+  }
+
+  /**
+   * Détection métier menuiserie SANS contexte complet (optimisé)
+   */
+  private isMenuiserieBusinessQueryIndependent(query: string): boolean {
+    const queryLower = query.toLowerCase();
+    
+    // Score de pertinence métier (simplifié sans contexte)
+    let metierScore = 0;
+    
+    // === VOCABULAIRE MÉTIER BTP/MENUISERIE (poids fort) ===
+    const metierKeywords = [
+      // Produits spécialisés
+      'menuiserie', 'fenêtre', 'porte', 'volet', 'ouverture', 'huisserie', 'fermeture',
+      'dormant', 'ouvrant', 'vitrage', 'quincaillerie', 'seuil', 'calfeutrement',
+      // Matériaux techniques
+      'pvc', 'bois', 'aluminium', 'acier', 'composite', 'mixte', 'thermolaqué', 'anodisé',
+      // Workflow BTP
+      'appel d\'offres', 'ao', 'devis', 'cctp', 'dpgf', 'visa', 'réception', 'sav',
+      'pose', 'chantier', 'livraison', 'installation', 'métré', 'étanchéité',
+      // Acteurs spécialisés
+      'maître d\'ouvrage', 'maître d\'œuvre', 'fournisseur', 'sous-traitant', 'poseur',
+      // Normes et certifications
+      'dtu', 'cekal', 'ce', 'aev', 'rt2020', 're2020', 'conformité', 'certification',
+      // Spécificités JLM
+      'mext', 'mint', 'boulogne', 'nord', 'pas-de-calais'
+    ];
+    
+    metierKeywords.forEach(keyword => {
+      if (queryLower.includes(keyword)) {
+        metierScore += keyword.length > 5 ? 2 : 1; // Bonus pour mots techniques longs
+      }
+    });
+    
+    // === PATTERNS MÉTIER FRANÇAIS (bonus) ===
+    const frenchBusinessPatterns = [
+      /\b(projet|chantier|offre)[s]?\s+#?\d+/,
+      /\b(rentabil|marge)[a-z]*\b/,
+      /\b(délai|planning|retard)[s]?\b/,
+      /\b(59|62)\b/, // Départements
+      /\bral\s?\d{4}\b/, // Couleurs
+      /\b\d+\s*(mm|cm|m)\b/ // Dimensions
+    ];
+    
+    frenchBusinessPatterns.forEach(pattern => {
+      if (pattern.test(queryLower)) metierScore += 1.5;
+    });
+    
+    // Seuil ajusté pour détection sans contexte
+    return metierScore >= 2.5; // Seuil plus bas car pas de contexte enrichi
+  }
+
+  // ========================================
   // MÉTHODE PRINCIPALE - GÉNÉRATION SQL INTELLIGENTE
   // ========================================
 

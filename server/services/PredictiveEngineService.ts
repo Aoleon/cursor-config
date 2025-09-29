@@ -1,5 +1,6 @@
 import { IStorage, DateRange, MetricFilters } from "../storage-poc";
 import { AnalyticsService } from "./AnalyticsService";
+import { getSafetyGuardsService } from "./SafetyGuardsService";
 import type { 
   Project, ProjectStatus, User, Offer
 } from "@shared/schema";
@@ -174,6 +175,89 @@ export interface SectorBenchmark {
 }
 
 // ========================================
+// ÉTAPE 3 PHASE 3 PERFORMANCE : PRELOADING PRÉDICTIF
+// ========================================
+
+// Types pour Heat-Map entités
+export interface EntityAccessEntry {
+  entityType: 'ao' | 'offer' | 'project' | 'user' | 'document';
+  entityId: string;
+  accessCount: number;
+  lastAccessTime: number; // Timestamp
+  hourlyDistribution: number[]; // 24 heures
+  weeklyPattern: number[]; // 7 jours
+  userAccessFrequency: Record<string, number>; // userId -> fréquence
+  contextComplexity: 'low' | 'medium' | 'high'; // Complexité du contexte
+}
+
+export interface EntityHeatMap {
+  hotEntities: EntityAccessEntry[]; // Entités populaires récentes
+  coldEntities: string[]; // Entités à éviter cache
+  accessTrends: Record<string, number[]>; // Tendances d'accès temporelles
+  peakHours: number[]; // Heures de pointe d'accès (0-23)
+  businessHoursMultiplier: number; // Multiplicateur horaires business
+  seasonalFactor: number; // Facteur saisonnier menuiserie
+}
+
+// Types pour Pattern Analysis
+export interface UserAccessPattern {
+  userId: string;
+  userRole: 'admin' | 'technicien_be' | 'commercial' | 'other';
+  typicalSequences: string[][]; // Séquences d'accès typiques
+  averageSessionDuration: number; // Minutes
+  frequentEntityTypes: Record<string, number>; // Type entité -> pourcentage
+  timeOfDayPreference: number[]; // Répartition horaire
+  workflowPatterns: BTPWorkflowPattern[];
+}
+
+export interface BTPWorkflowPattern {
+  name: string; // 'AO_to_Offer', 'Offer_to_Project', etc.
+  sequence: string[]; // ['ao:123', 'study', 'offer:456', 'project:789']
+  averageTimeBetweenSteps: number[]; // Minutes entre chaque étape
+  successRate: number; // Pourcentage de complétion
+  seasonalVariation: Record<string, number>; // Variation par mois
+  complexityImpact: Record<string, number>; // Impact selon complexité
+}
+
+// Types pour Preloading Tasks
+export interface PreloadingTask {
+  id: string;
+  entityType: string;
+  entityId: string;
+  predictedAccessTime: number; // Timestamp prévu
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  confidence: number; // 0-100
+  triggerEvent?: string; // Événement déclencheur
+  estimatedExecutionTime: number; // Millisecondes
+  maxRetries: number;
+  contextConfig: any; // Configuration contexte à preloader
+}
+
+export interface PreloadingSchedule {
+  activeTasks: PreloadingTask[];
+  scheduledTasks: PreloadingTask[];
+  completedTasks: PreloadingTask[];
+  failedTasks: PreloadingTask[];
+  businessHoursSchedule: PreloadingTask[]; // Tâches horaires business
+  adaptiveSchedule: PreloadingTask[]; // Tâches adaptatives
+}
+
+// Types pour prédictions d'accès
+export interface AccessPrediction {
+  entityType: string;
+  entityId: string;
+  predictedAccessTime: number; // Timestamp
+  confidence: number; // 0-100
+  triggerPattern: string; // Pattern déclencheur
+  contextRequirements: string[]; // Types de contexte nécessaires
+  userContext: {
+    userId?: string;
+    role?: string;
+    currentWorkflow?: string;
+  };
+}
+
+// ========================================
 // CACHE INTERFACE
 // ========================================
 
@@ -194,16 +278,55 @@ export class PredictiveEngineService {
   private cache: Map<string, CacheEntry<any>>;
   private readonly CACHE_TTL_MINUTES = 30;
   private readonly CACHE_MAX_SIZE = 1000;
+  
+  // ÉTAPE 3 PHASE 3 PERFORMANCE : Safety Guards intégration
+  private safetyGuards: any;
+
+  // ÉTAPE 3 PHASE 3 PERFORMANCE : Preloading prédictif
+  private entityAccessLog: Map<string, EntityAccessEntry> = new Map();
+  private userAccessPatterns: Map<string, UserAccessPattern> = new Map();
+  private btpWorkflowPatterns: Map<string, BTPWorkflowPattern> = new Map();
+  private preloadingSchedule: PreloadingSchedule;
+  private contextCacheService: any = null; // Référence vers ContextCacheService
+  
+  // Configuration preloading
+  private readonly HEATMAP_RETENTION_HOURS = 72; // 3 jours
+  private readonly PATTERN_ANALYSIS_WINDOW_DAYS = 30;
+  private readonly PRELOADING_CONFIDENCE_THRESHOLD = 60; // Minimum 60%
+  private readonly MAX_CONCURRENT_PRELOADS = 5;
+  private readonly BUSINESS_HOURS = [8, 9, 10, 11, 14, 15, 16, 17]; // 8h-12h, 14h-18h
+  
+  // Safety guards
+  private preloadingEnabled = true;
+  private currentPreloadingLoad = 0;
+  private lastPatternUpdate = 0;
 
   constructor(storage: IStorage, analyticsService: AnalyticsService) {
     this.storage = storage;
     this.analyticsService = analyticsService;
     this.cache = new Map();
     
+    // ÉTAPE 3 PHASE 3 PERFORMANCE : Intégration SafetyGuards
+    this.safetyGuards = getSafetyGuardsService(storage);
+    
+    // Initialisation preloading schedule
+    this.preloadingSchedule = {
+      activeTasks: [],
+      scheduledTasks: [],
+      completedTasks: [],
+      failedTasks: [],
+      businessHoursSchedule: [],
+      adaptiveSchedule: []
+    };
+    
     // Cleanup cache périodique
     setInterval(() => this.cleanupCache(), 5 * 60 * 1000); // Toutes les 5 minutes
     
-    console.log('[PredictiveEngine] Service initialisé avec cache TTL:', this.CACHE_TTL_MINUTES, 'minutes');
+    // ÉTAPE 3 : Cleanup et mise à jour patterns
+    setInterval(() => this.cleanupEntityAccess(), 30 * 60 * 1000); // Toutes les 30 minutes
+    setInterval(() => this.updateBTPPatterns(), 2 * 60 * 60 * 1000); // Toutes les 2 heures
+    
+    console.log('[PredictiveEngine] Service initialisé avec preloading prédictif activé');
   }
 
   // ========================================
@@ -1220,5 +1343,1303 @@ export class PredictiveEngineService {
       console.error('[PredictiveEngine] Erreur récupération historique délais:', error);
       return [];
     }
+  }
+
+  // ========================================
+  // ÉTAPE 3 PHASE 3 PERFORMANCE : PRELOADING PRÉDICTIF
+  // ========================================
+
+  /**
+   * Intégration avec ContextCacheService pour preloading
+   */
+  public integrateWithContextCache(contextCacheService: any): void {
+    this.contextCacheService = contextCacheService;
+    console.log('[PredictiveEngine] Intégration ContextCacheService activée pour preloading');
+  }
+
+  /**
+   * MÉTHODE PRINCIPALE 1 : Génération Heat-Map des entités
+   * Analyse les accès récents aux entités pour identifier les patterns d'accès
+   */
+  async generateEntityHeatMap(): Promise<EntityHeatMap> {
+    const cacheKey = 'entity_heatmap_current';
+    const cached = this.getCachedEntry<EntityHeatMap>(cacheKey);
+    
+    if (cached) {
+      console.log('[PredictiveEngine] Cache hit pour entity heatmap');
+      return cached;
+    }
+
+    try {
+      console.log('[PredictiveEngine] Génération heat-map entités...');
+      
+      // 1. ANALYSE ENTITÉS POPULAIRES RÉCENTES
+      const now = Date.now();
+      const cutoffTime = now - (this.HEATMAP_RETENTION_HOURS * 60 * 60 * 1000);
+      
+      const hotEntities: EntityAccessEntry[] = [];
+      const coldEntities: string[] = [];
+      const accessTrends: Record<string, number[]> = {};
+      
+      // Analyser les logs d'accès
+      for (const [entityKey, accessEntry] of this.entityAccessLog.entries()) {
+        if (accessEntry.lastAccessTime > cutoffTime) {
+          // Entité active récente
+          if (accessEntry.accessCount >= 5) { // Seuil pour entité "chaude"
+            hotEntities.push(accessEntry);
+          }
+          
+          // Analyse tendances
+          const trend = this.calculateAccessTrend(accessEntry);
+          accessTrends[entityKey] = trend;
+        } else {
+          // Entité froide à éviter en cache
+          coldEntities.push(entityKey);
+        }
+      }
+
+      // 2. IDENTIFICATION HEURES DE POINTE
+      const peakHours = this.identifyPeakHours(hotEntities);
+      
+      // 3. CALCUL MULTIPLICATEURS BUSINESS
+      const businessHoursMultiplier = this.calculateBusinessHoursMultiplier();
+      const seasonalFactor = this.calculateSeasonalFactor();
+      
+      // 4. TRI PAR POPULARITÉ ET RÉCENCE
+      hotEntities.sort((a, b) => {
+        const scoreA = this.calculateEntityPopularityScore(a);
+        const scoreB = this.calculateEntityPopularityScore(b);
+        return scoreB - scoreA;
+      });
+
+      const heatMap: EntityHeatMap = {
+        hotEntities: hotEntities.slice(0, 50), // Top 50 entités chaudes
+        coldEntities: coldEntities.slice(0, 100), // Top 100 entités froides
+        accessTrends,
+        peakHours,
+        businessHoursMultiplier,
+        seasonalFactor
+      };
+
+      // 5. MISE EN CACHE
+      this.setCacheEntry(cacheKey, heatMap, 15); // Cache 15 minutes
+
+      console.log(`[PredictiveEngine] Heat-map générée: ${hotEntities.length} entités chaudes, ${coldEntities.length} froides`);
+      return heatMap;
+
+    } catch (error) {
+      console.error('[PredictiveEngine] Erreur génération heat-map:', error);
+      
+      // Fallback heat-map vide
+      return {
+        hotEntities: [],
+        coldEntities: [],
+        accessTrends: {},
+        peakHours: this.BUSINESS_HOURS,
+        businessHoursMultiplier: 1.0,
+        seasonalFactor: 1.0
+      };
+    }
+  }
+
+  /**
+   * MÉTHODE PRINCIPALE 2 : Prédiction d'accès aux entités
+   * Prédit les prochains accès selon les patterns utilisateur BTP
+   */
+  async predictNextEntityAccess(
+    userId?: string,
+    currentContext?: { entityType: string; entityId: string; workflow?: string }
+  ): Promise<AccessPrediction[]> {
+    try {
+      console.log('[PredictiveEngine] Prédiction accès entités pour utilisateur:', userId);
+      
+      const predictions: AccessPrediction[] = [];
+      const now = Date.now();
+      
+      // 1. RÉCUPÉRATION PATTERNS UTILISATEUR
+      const userPattern = userId ? this.userAccessPatterns.get(userId) : null;
+      
+      if (userPattern) {
+        // Prédictions basées sur patterns utilisateur spécifiques
+        const userPredictions = await this.predictFromUserPatterns(userPattern, currentContext, now);
+        predictions.push(...userPredictions);
+      }
+      
+      // 2. PRÉDICTIONS WORKFLOWS BTP TYPIQUES
+      const workflowPredictions = await this.predictFromBTPWorkflows(currentContext, now);
+      predictions.push(...workflowPredictions);
+      
+      // 3. PRÉDICTIONS SAISONNALITÉ ET TIMING
+      const temporalPredictions = await this.predictFromTemporalPatterns(now);
+      predictions.push(...temporalPredictions);
+      
+      // 4. PRÉDICTIONS BASED ON HEAT-MAP
+      const heatMapPredictions = await this.predictFromHeatMap(now);
+      predictions.push(...heatMapPredictions);
+      
+      // 5. FILTRAGE ET SCORING
+      const filteredPredictions = predictions
+        .filter(p => p.confidence >= this.PRELOADING_CONFIDENCE_THRESHOLD)
+        .sort((a, b) => b.confidence - a.confidence)
+        .slice(0, 20); // Top 20 prédictions
+
+      console.log(`[PredictiveEngine] ${filteredPredictions.length} prédictions générées (confiance ≥${this.PRELOADING_CONFIDENCE_THRESHOLD}%)`);
+      return filteredPredictions;
+
+    } catch (error) {
+      console.error('[PredictiveEngine] Erreur prédiction accès:', error);
+      return [];
+    }
+  }
+
+  /**
+   * MÉTHODE PRINCIPALE 3 : Programmation des tâches de preloading
+   * Planifie les tâches de preloading background adaptatif
+   */
+  async schedulePreloadTasks(predictions: AccessPrediction[]): Promise<void> {
+    if (!this.preloadingEnabled || !this.contextCacheService) {
+      console.log('[PredictiveEngine] Preloading désactivé ou ContextCache non disponible');
+      return;
+    }
+
+    try {
+      console.log('[PredictiveEngine] Programmation tâches preloading pour', predictions.length, 'prédictions');
+      
+      const now = Date.now();
+      const newTasks: PreloadingTask[] = [];
+      
+      // 1. CRÉATION TÂCHES SELON PRÉDICTIONS
+      for (const prediction of predictions) {
+        // Vérifier si pas déjà en cours ou programmée
+        const existingTask = this.preloadingSchedule.activeTasks
+          .concat(this.preloadingSchedule.scheduledTasks)
+          .find(t => t.entityType === prediction.entityType && t.entityId === prediction.entityId);
+          
+        if (existingTask) {
+          continue; // Éviter duplicatas
+        }
+        
+        // Calculer timing optimal
+        const delay = Math.max(0, prediction.predictedAccessTime - now - (30 * 1000)); // 30s avant accès prévu
+        
+        const task: PreloadingTask = {
+          id: `preload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          entityType: prediction.entityType,
+          entityId: prediction.entityId,
+          predictedAccessTime: prediction.predictedAccessTime,
+          priority: this.calculateTaskPriority(prediction),
+          confidence: prediction.confidence,
+          triggerEvent: prediction.triggerPattern,
+          estimatedExecutionTime: this.estimatePreloadTime(prediction),
+          maxRetries: 2,
+          contextConfig: this.generateContextConfig(prediction)
+        };
+        
+        newTasks.push(task);
+      }
+      
+      // 2. AJOUT AUX SCHEDULES APPROPRIÉS
+      for (const task of newTasks) {
+        if (this.isBusinessHours(task.predictedAccessTime)) {
+          this.preloadingSchedule.businessHoursSchedule.push(task);
+        } else {
+          this.preloadingSchedule.adaptiveSchedule.push(task);
+        }
+        
+        this.preloadingSchedule.scheduledTasks.push(task);
+      }
+      
+      // 3. DÉMARRAGE EXÉCUTION IMMÉDIATE DES TÂCHES PRIORITAIRES
+      await this.executeHighPriorityTasks();
+      
+      // 4. PROGRAMMATION TÂCHES DIFFÉRÉES
+      this.scheduleDelayedTasks();
+      
+      console.log(`[PredictiveEngine] ${newTasks.length} nouvelles tâches programmées`);
+
+    } catch (error) {
+      console.error('[PredictiveEngine] Erreur programmation tâches preloading:', error);
+    }
+  }
+
+  /**
+   * Enregistre un accès à une entité pour le tracking
+   */
+  public recordEntityAccess(
+    entityType: string,
+    entityId: string,
+    userId?: string,
+    contextComplexity: 'low' | 'medium' | 'high' = 'medium'
+  ): void {
+    const entityKey = `${entityType}:${entityId}`;
+    const now = Date.now();
+    const currentHour = new Date().getHours();
+    const currentDay = new Date().getDay();
+    
+    let entry = this.entityAccessLog.get(entityKey);
+    
+    if (!entry) {
+      entry = {
+        entityType: entityType as any,
+        entityId,
+        accessCount: 0,
+        lastAccessTime: now,
+        hourlyDistribution: new Array(24).fill(0),
+        weeklyPattern: new Array(7).fill(0),
+        userAccessFrequency: {},
+        contextComplexity
+      };
+    }
+    
+    // Mise à jour statistiques
+    entry.accessCount++;
+    entry.lastAccessTime = now;
+    entry.hourlyDistribution[currentHour]++;
+    entry.weeklyPattern[currentDay]++;
+    
+    if (userId) {
+      entry.userAccessFrequency[userId] = (entry.userAccessFrequency[userId] || 0) + 1;
+    }
+    
+    this.entityAccessLog.set(entityKey, entry);
+    
+    // Mise à jour patterns utilisateur si applicable
+    if (userId) {
+      this.updateUserAccessPattern(userId, entityType, entityId, now);
+    }
+  }
+
+  // ========================================
+  // MÉTHODES HELPER POUR PRELOADING PRÉDICTIF
+  // ========================================
+
+  /**
+   * Calcule le score de popularité d'une entité
+   */
+  private calculateEntityPopularityScore(entry: EntityAccessEntry): number {
+    const now = Date.now();
+    const ageHours = (now - entry.lastAccessTime) / (60 * 60 * 1000);
+    
+    // Score basé sur accès récents et fréquence
+    const recencyScore = Math.max(0, 100 - (ageHours * 2)); // Dégrade avec le temps
+    const frequencyScore = Math.min(100, entry.accessCount * 5); // Max 100
+    const complexityBonus = entry.contextComplexity === 'high' ? 20 : 
+                          entry.contextComplexity === 'medium' ? 10 : 0;
+    
+    return recencyScore * 0.4 + frequencyScore * 0.4 + complexityBonus * 0.2;
+  }
+
+  /**
+   * Identifie les heures de pointe d'accès
+   */
+  private identifyPeakHours(hotEntities: EntityAccessEntry[]): number[] {
+    const hourlyTotals = new Array(24).fill(0);
+    
+    for (const entity of hotEntities) {
+      for (let hour = 0; hour < 24; hour++) {
+        hourlyTotals[hour] += entity.hourlyDistribution[hour];
+      }
+    }
+    
+    // Identifier heures avec >75% du pic d'activité
+    const maxActivity = Math.max(...hourlyTotals);
+    const threshold = maxActivity * 0.75;
+    
+    const peakHours: number[] = [];
+    for (let hour = 0; hour < 24; hour++) {
+      if (hourlyTotals[hour] >= threshold) {
+        peakHours.push(hour);
+      }
+    }
+    
+    return peakHours.length > 0 ? peakHours : this.BUSINESS_HOURS;
+  }
+
+  /**
+   * Calcule la tendance d'accès d'une entité
+   */
+  private calculateAccessTrend(entry: EntityAccessEntry): number[] {
+    // Simuler tendance sur les 7 derniers jours
+    const trend: number[] = [];
+    const now = Date.now();
+    
+    for (let i = 6; i >= 0; i--) {
+      const dayAccess = entry.weeklyPattern[new Date(now - i * 24 * 60 * 60 * 1000).getDay()];
+      trend.push(dayAccess);
+    }
+    
+    return trend;
+  }
+
+  /**
+   * Calcule multiplicateur horaires business
+   */
+  private calculateBusinessHoursMultiplier(): number {
+    const currentHour = new Date().getHours();
+    
+    if (this.BUSINESS_HOURS.includes(currentHour)) {
+      return 1.5; // 50% de boost pendant horaires business
+    }
+    
+    return 1.0;
+  }
+
+  /**
+   * Calcule facteur saisonnier menuiserie
+   */
+  private calculateSeasonalFactor(): number {
+    const currentMonth = new Date().getMonth();
+    
+    // Saisonnalité menuiserie française
+    const seasonalFactors = {
+      0: 0.8,  // Janvier - ralenti post-fêtes
+      1: 0.9,  // Février
+      2: 1.1,  // Mars - reprise activité
+      3: 1.2,  // Avril - pic printanier
+      4: 1.3,  // Mai - forte activité
+      5: 1.1,  // Juin
+      6: 0.8,  // Juillet - vacances été
+      7: 0.7,  // Août - congés
+      8: 1.2,  // Septembre - reprise forte
+      9: 1.3,  // Octobre - pic automnal
+      10: 1.1, // Novembre
+      11: 0.9  // Décembre - ralenti fêtes
+    };
+    
+    return seasonalFactors[currentMonth] || 1.0;
+  }
+
+  /**
+   * Met à jour les patterns d'accès utilisateur
+   */
+  private updateUserAccessPattern(userId: string, entityType: string, entityId: string, timestamp: number): void {
+    let pattern = this.userAccessPatterns.get(userId);
+    
+    if (!pattern) {
+      pattern = {
+        userId,
+        userRole: 'other', // À déterminer via storage si nécessaire
+        typicalSequences: [],
+        averageSessionDuration: 0,
+        frequentEntityTypes: {},
+        timeOfDayPreference: new Array(24).fill(0),
+        workflowPatterns: []
+      };
+    }
+    
+    // Mise à jour fréquence types d'entités
+    pattern.frequentEntityTypes[entityType] = (pattern.frequentEntityTypes[entityType] || 0) + 1;
+    
+    // Mise à jour préférences horaires
+    const hour = new Date(timestamp).getHours();
+    pattern.timeOfDayPreference[hour]++;
+    
+    this.userAccessPatterns.set(userId, pattern);
+  }
+
+  /**
+   * Prédit accès basé sur patterns utilisateur
+   */
+  private async predictFromUserPatterns(
+    userPattern: UserAccessPattern,
+    currentContext: any,
+    now: number
+  ): Promise<AccessPrediction[]> {
+    const predictions: AccessPrediction[] = [];
+    
+    // Analyser séquences typiques de cet utilisateur
+    for (const sequence of userPattern.typicalSequences) {
+      if (currentContext && sequence.includes(`${currentContext.entityType}:${currentContext.entityId}`)) {
+        // Identifier prochaine étape probable dans la séquence
+        const currentIndex = sequence.findIndex(s => s === `${currentContext.entityType}:${currentContext.entityId}`);
+        if (currentIndex >= 0 && currentIndex < sequence.length - 1) {
+          const nextStep = sequence[currentIndex + 1];
+          const [nextEntityType, nextEntityId] = nextStep.split(':');
+          
+          predictions.push({
+            entityType: nextEntityType,
+            entityId: nextEntityId,
+            predictedAccessTime: now + (5 * 60 * 1000), // 5 minutes
+            confidence: 75,
+            triggerPattern: 'user_sequence',
+            contextRequirements: ['comprehensive'],
+            userContext: {
+              userId: userPattern.userId,
+              role: userPattern.userRole,
+              currentWorkflow: currentContext.workflow
+            }
+          });
+        }
+      }
+    }
+    
+    return predictions;
+  }
+
+  /**
+   * ÉTAPE 3 BUSINESS PATTERN RECOGNITION : Prédit accès basé sur workflows BTP typiques
+   * Analyse sophistiquée des séquences métier menuiserie française
+   */
+  private async predictFromBTPWorkflows(currentContext: any, now: number): Promise<AccessPrediction[]> {
+    const predictions: AccessPrediction[] = [];
+    
+    if (!currentContext) return predictions;
+    
+    // 1. WORKFLOWS BTP MENUISERIE FRANÇAISE SOPHISTIQUÉS
+    const menuiserieWorkflows = {
+      // Séquence complète AO → Projet → Chantier
+      'ao_initial_study': {
+        from: 'ao',
+        to: 'etude_technique',
+        avgDelayMinutes: 20,
+        confidence: 85,
+        seasonalMultiplier: this.getSeasonalMultiplier('study'),
+        userRoleMultiplier: { 'technicien_be': 1.2, 'admin': 1.0, 'commercial': 0.8 }
+      },
+      'study_to_chiffrage': {
+        from: 'etude_technique',
+        to: 'chiffrage',
+        avgDelayMinutes: 45,
+        confidence: 82,
+        complexity: 'high',
+        businessHoursDependency: true
+      },
+      'chiffrage_to_offer': {
+        from: 'chiffrage',
+        to: 'offer',
+        avgDelayMinutes: 60,
+        confidence: 78,
+        requiresValidation: true,
+        userRoleMultiplier: { 'commercial': 1.3, 'admin': 1.1, 'technicien_be': 0.7 }
+      },
+      'offer_negotiation': {
+        from: 'offer',
+        to: 'negotiation',
+        avgDelayMinutes: 90,
+        confidence: 70,
+        clientInteractionRequired: true
+      },
+      'offer_to_project': {
+        from: 'offer',
+        to: 'project',
+        avgDelayMinutes: 120,
+        confidence: 75,
+        dependsOnAcceptation: true,
+        seasonalMultiplier: this.getSeasonalMultiplier('project_start')
+      },
+      'project_to_planning': {
+        from: 'project',
+        to: 'planning',
+        avgDelayMinutes: 30,
+        confidence: 80,
+        userRoleMultiplier: { 'admin': 1.2, 'technicien_be': 1.0, 'commercial': 0.6 }
+      },
+      'planning_to_approvisionnement': {
+        from: 'planning',
+        to: 'approvisionnement',
+        avgDelayMinutes: 60,
+        confidence: 85,
+        supplierDependency: true
+      },
+      'approvisionnement_to_chantier': {
+        from: 'approvisionnement',
+        to: 'chantier',
+        avgDelayMinutes: 180,
+        confidence: 75,
+        weatherDependency: true,
+        seasonalMultiplier: this.getSeasonalMultiplier('construction')
+      },
+      'chantier_to_quality_control': {
+        from: 'chantier',
+        to: 'controle_qualite',
+        avgDelayMinutes: 45,
+        confidence: 88,
+        qualityCheckRequired: true
+      },
+      'quality_to_livraison': {
+        from: 'controle_qualite',
+        to: 'livraison',
+        avgDelayMinutes: 30,
+        confidence: 90,
+        finalStep: true
+      },
+
+      // Workflows parallèles et alternatifs
+      'ao_to_supplier_check': {
+        from: 'ao',
+        to: 'supplier',
+        avgDelayMinutes: 25,
+        confidence: 65,
+        parallelWorkflow: true
+      },
+      'project_to_team_assignment': {
+        from: 'project',
+        to: 'team',
+        avgDelayMinutes: 15,
+        confidence: 82,
+        resourceAllocation: true
+      },
+      'offer_to_client_meeting': {
+        from: 'offer',
+        to: 'client_meeting',
+        avgDelayMinutes: 240,
+        confidence: 60,
+        schedulingDependent: true
+      }
+    };
+
+    // 2. ANALYSE CONTEXTE ACTUEL ET PRÉDICTIONS
+    for (const [workflowName, workflow] of Object.entries(menuiserieWorkflows)) {
+      if (currentContext.entityType === workflow.from || 
+          this.isWorkflowContextMatch(currentContext, workflow)) {
+        
+        // Calcul confiance ajustée selon facteurs
+        let adjustedConfidence = workflow.confidence;
+        
+        // Ajustement saisonnier
+        if (workflow.seasonalMultiplier) {
+          adjustedConfidence *= workflow.seasonalMultiplier;
+        }
+        
+        // Ajustement selon rôle utilisateur
+        if (workflow.userRoleMultiplier && currentContext.userRole) {
+          const roleMultiplier = workflow.userRoleMultiplier[currentContext.userRole] || 1.0;
+          adjustedConfidence *= roleMultiplier;
+        }
+        
+        // Ajustement horaires business
+        if (workflow.businessHoursDependency) {
+          const businessFactor = this.isBusinessHours(now) ? 1.2 : 0.7;
+          adjustedConfidence *= businessFactor;
+        }
+        
+        // Calcul délai ajusté
+        let adjustedDelay = workflow.avgDelayMinutes;
+        
+        // Ajustement selon charge système
+        if (workflow.complexity === 'high') {
+          adjustedDelay *= this.getSystemLoadMultiplier();
+        }
+        
+        // Ajustement saisonnier délai
+        if (workflow.seasonalMultiplier) {
+          adjustedDelay *= workflow.seasonalMultiplier;
+        }
+
+        const prediction: AccessPrediction = {
+          entityType: workflow.to,
+          entityId: await this.predictEntityId(workflow.to, currentContext),
+          predictedAccessTime: now + (adjustedDelay * 60 * 1000),
+          confidence: Math.min(95, Math.max(50, adjustedConfidence)),
+          triggerPattern: `menuiserie_workflow_${workflowName}`,
+          contextRequirements: this.determineContextRequirements(workflow),
+          userContext: {
+            userId: currentContext.userId,
+            role: currentContext.userRole,
+            currentWorkflow: workflowName
+          }
+        };
+
+        // Métadonnées BTP spécialisées
+        (prediction as any).btpMetadata = {
+          workflowStage: workflow.to,
+          estimatedDuration: this.estimateWorkflowStageDuration(workflow.to),
+          dependencies: this.getWorkflowDependencies(workflow),
+          criticalPath: this.isOnCriticalPath(workflowName),
+          resourceRequirements: this.getResourceRequirements(workflow.to)
+        };
+
+        predictions.push(prediction);
+      }
+    }
+
+    // 3. PRÉDICTIONS PATTERNS UTILISATEUR SPÉCIALISÉS
+    const userRolePredictions = await this.predictFromUserRolePatterns(currentContext, now);
+    predictions.push(...userRolePredictions);
+
+    // 4. PRÉDICTIONS SAISONNALITÉ MENUISERIE
+    const seasonalPredictions = await this.predictFromSeasonalPatterns(currentContext, now);
+    predictions.push(...seasonalPredictions);
+
+    return predictions;
+  }
+
+  /**
+   * Prédictions basées sur patterns spécifiques aux rôles utilisateur BTP
+   */
+  private async predictFromUserRolePatterns(currentContext: any, now: number): Promise<AccessPrediction[]> {
+    const predictions: AccessPrediction[] = [];
+    const userRole = currentContext.userRole || 'other';
+    
+    const rolePatterns = {
+      'admin': {
+        morningRoutine: ['dashboard', 'ao', 'project', 'team'],
+        afternoonRoutine: ['report', 'planning', 'supplier'],
+        preferredHours: [8, 9, 10, 14, 15, 16],
+        avgSessionDuration: 45,
+        multitaskingProbability: 0.8
+      },
+      'technicien_be': {
+        morningRoutine: ['ao', 'etude_technique', 'chiffrage'],
+        afternoonRoutine: ['planning', 'technical_validation', 'supplier'],
+        preferredHours: [8, 9, 10, 11, 14, 15],
+        avgSessionDuration: 60,
+        technicalFocus: true,
+        deepWorkPeriods: [9, 10, 14, 15]
+      },
+      'commercial': {
+        morningRoutine: ['ao', 'client', 'offer'],
+        afternoonRoutine: ['client_meeting', 'offer', 'negotiation'],
+        preferredHours: [9, 10, 11, 14, 15, 16, 17],
+        avgSessionDuration: 30,
+        clientInteractionFocus: true,
+        travelTime: [11, 12, 16, 17]
+      },
+      'chef_chantier': {
+        morningRoutine: ['chantier', 'planning', 'team'],
+        afternoonRoutine: ['chantier', 'progress_report', 'quality_control'],
+        preferredHours: [7, 8, 9, 13, 14, 15],
+        avgSessionDuration: 20,
+        fieldWorkFocus: true,
+        mobileAccess: true
+      }
+    };
+
+    const pattern = rolePatterns[userRole];
+    if (!pattern) return predictions;
+
+    const currentHour = new Date(now).getHours();
+    
+    // Prédictions selon routine matinale/après-midi
+    const isAfternoon = currentHour >= 14;
+    const routine = isAfternoon ? pattern.afternoonRoutine : pattern.morningRoutine;
+    
+    for (let i = 0; i < routine.length; i++) {
+      const nextEntityType = routine[i];
+      const baseDelay = (i + 1) * 15; // 15 min entre chaque étape
+      
+      let confidence = 70 - (i * 10); // Décroissance confiance
+      
+      // Boost confiance si dans heures préférées
+      if (pattern.preferredHours.includes(currentHour)) {
+        confidence += 15;
+      }
+      
+      // Boost pour focus spécialisés
+      if (pattern.technicalFocus && ['etude_technique', 'chiffrage', 'planning'].includes(nextEntityType)) {
+        confidence += 10;
+      }
+      if (pattern.clientInteractionFocus && ['client', 'offer', 'negotiation'].includes(nextEntityType)) {
+        confidence += 10;
+      }
+      
+      predictions.push({
+        entityType: nextEntityType,
+        entityId: await this.predictEntityId(nextEntityType, currentContext),
+        predictedAccessTime: now + (baseDelay * 60 * 1000),
+        confidence: Math.min(90, confidence),
+        triggerPattern: `user_role_${userRole}_routine`,
+        contextRequirements: pattern.technicalFocus ? ['comprehensive'] : ['standard'],
+        userContext: {
+          userId: currentContext.userId,
+          role: userRole,
+          currentWorkflow: `${userRole}_routine`
+        }
+      });
+    }
+
+    return predictions;
+  }
+
+  /**
+   * Prédictions saisonnalité spécifique menuiserie française
+   */
+  private async predictFromSeasonalPatterns(currentContext: any, now: number): Promise<AccessPrediction[]> {
+    const predictions: AccessPrediction[] = [];
+    const currentMonth = new Date(now).getMonth();
+    const currentHour = new Date(now).getHours();
+    
+    // Patterns saisonniers menuiserie française
+    const seasonalBehaviors = {
+      // Printemps - forte activité
+      spring: {
+        months: [2, 3, 4], // Mars, Avril, Mai
+        peakEntities: ['ao', 'etude_technique', 'offer'],
+        averageIncrease: 1.3,
+        preferredStartTimes: [8, 9],
+        extendedHours: true
+      },
+      // Été - vacances mais urgences
+      summer: {
+        months: [5, 6, 7], // Juin, Juillet, Août
+        peakEntities: ['chantier', 'livraison'],
+        averageIncrease: 0.7,
+        reducedHours: [12, 13, 14, 15], // Pause déjeuner étendue
+        urgencyMode: true
+      },
+      // Automne - pic d'activité pré-hiver
+      autumn: {
+        months: [8, 9, 10], // Sept, Oct, Nov
+        peakEntities: ['ao', 'project', 'planning', 'chantier'],
+        averageIncrease: 1.4,
+        intensiveMode: true,
+        extendedHours: true
+      },
+      // Hiver - ralentissement et planification
+      winter: {
+        months: [11, 0, 1], // Déc, Jan, Fév
+        peakEntities: ['planning', 'etude_technique', 'formation'],
+        averageIncrease: 0.8,
+        planningFocus: true,
+        shortenedDays: true
+      }
+    };
+
+    // Identifier saison actuelle
+    let currentSeason = null;
+    for (const [season, config] of Object.entries(seasonalBehaviors)) {
+      if (config.months.includes(currentMonth)) {
+        currentSeason = { name: season, config };
+        break;
+      }
+    }
+
+    if (!currentSeason) return predictions;
+
+    const { config } = currentSeason;
+
+    // Prédictions selon comportements saisonniers
+    for (const entityType of config.peakEntities) {
+      let confidence = 65 * config.averageIncrease;
+      let delay = 30; // Délai de base 30 minutes
+
+      // Ajustements selon heure
+      if (config.preferredStartTimes?.includes(currentHour)) {
+        confidence += 15;
+        delay = 15; // Plus rapide aux heures préférées
+      }
+
+      if (config.reducedHours?.includes(currentHour)) {
+        confidence *= 0.6; // Réduction pendant pause déjeuner été
+        delay *= 2;
+      }
+
+      if (config.extendedHours && (currentHour >= 18 || currentHour <= 7)) {
+        confidence *= 1.2; // Boost heures étendues printemps/automne
+      }
+
+      // Mode urgence été
+      if (config.urgencyMode && entityType === 'chantier') {
+        confidence += 20;
+        delay *= 0.5;
+      }
+
+      // Focus planification hiver
+      if (config.planningFocus && ['planning', 'etude_technique'].includes(entityType)) {
+        confidence += 15;
+      }
+
+      predictions.push({
+        entityType,
+        entityId: await this.predictEntityId(entityType, currentContext),
+        predictedAccessTime: now + (delay * 60 * 1000),
+        confidence: Math.min(95, Math.max(50, confidence)),
+        triggerPattern: `seasonal_${currentSeason.name}_${entityType}`,
+        contextRequirements: config.intensiveMode ? ['comprehensive'] : ['standard'],
+        userContext: {
+          userId: currentContext.userId,
+          currentWorkflow: `seasonal_${currentSeason.name}`
+        }
+      });
+    }
+
+    // Prédictions spéciales événements calendaires
+    const specialEvents = this.getSpecialEventPredictions(now, currentMonth);
+    predictions.push(...specialEvents);
+
+    return predictions;
+  }
+
+  // ========================================
+  // MÉTHODES HELPER BUSINESS PATTERN RECOGNITION
+  // ========================================
+
+  /**
+   * Obtient multiplicateur saisonnier pour type d'activité
+   */
+  private getSeasonalMultiplier(activityType: string): number {
+    const currentMonth = new Date().getMonth();
+    
+    const seasonalFactors = {
+      'study': {
+        0: 0.8, 1: 0.9, 2: 1.2, 3: 1.3, 4: 1.4, 5: 1.1,
+        6: 0.7, 7: 0.6, 8: 1.3, 9: 1.4, 10: 1.2, 11: 0.9
+      },
+      'project_start': {
+        0: 0.7, 1: 0.8, 2: 1.1, 3: 1.3, 4: 1.4, 5: 1.2,
+        6: 0.9, 7: 0.8, 8: 1.3, 9: 1.4, 10: 1.1, 11: 0.8
+      },
+      'construction': {
+        0: 0.6, 1: 0.7, 2: 1.0, 3: 1.2, 4: 1.4, 5: 1.3,
+        6: 1.1, 7: 0.9, 8: 1.2, 9: 1.3, 10: 1.0, 11: 0.7
+      }
+    };
+
+    return seasonalFactors[activityType]?.[currentMonth] || 1.0;
+  }
+
+  /**
+   * Vérifie correspondance contexte avec workflow
+   */
+  private isWorkflowContextMatch(context: any, workflow: any): boolean {
+    // Vérifications spécialisées selon type de workflow
+    if (workflow.requiresValidation && context.userRole !== 'admin' && context.userRole !== 'commercial') {
+      return false;
+    }
+    
+    if (workflow.supplierDependency && !context.hasSupplierAccess) {
+      return false;
+    }
+    
+    if (workflow.qualityCheckRequired && context.userRole === 'commercial') {
+      return false; // Commercial ne fait pas contrôle qualité
+    }
+    
+    return true;
+  }
+
+  /**
+   * Prédit ID entité selon type et contexte
+   */
+  private async predictEntityId(entityType: string, context: any): Promise<string> {
+    // Logique prédiction ID selon relations métier
+    if (context.entityId && context.entityType) {
+      // Relations directes
+      if (entityType === 'offer' && context.entityType === 'ao') {
+        return `OFFER_${context.entityId}_${Date.now()}`;
+      }
+      if (entityType === 'project' && context.entityType === 'offer') {
+        return `PROJECT_${context.entityId}_${Date.now()}`;
+      }
+      if (entityType === 'chantier' && context.entityType === 'project') {
+        return `CHANTIER_${context.entityId}_${Date.now()}`;
+      }
+    }
+    
+    // ID générique avec timestamp
+    return `${entityType.toUpperCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  }
+
+  /**
+   * Calcule multiplicateur charge système
+   */
+  private getSystemLoadMultiplier(): number {
+    // Simulation - en prod, vérifier CPU/mémoire réels
+    const currentHour = new Date().getHours();
+    
+    // Heures de pointe = charge élevée
+    if ([9, 10, 11, 14, 15, 16].includes(currentHour)) {
+      return 1.3; // 30% plus lent
+    }
+    
+    // Heures creuses = charge normale
+    return 1.0;
+  }
+
+  /**
+   * Détermine exigences contexte selon workflow
+   */
+  private determineContextRequirements(workflow: any): string[] {
+    const requirements: string[] = ['standard'];
+    
+    if (workflow.complexity === 'high') {
+      requirements.push('comprehensive');
+    }
+    
+    if (workflow.technicalFocus) {
+      requirements.push('technical');
+    }
+    
+    if (workflow.clientInteractionRequired) {
+      requirements.push('relational');
+    }
+    
+    if (workflow.supplierDependency) {
+      requirements.push('business');
+    }
+    
+    return [...new Set(requirements)];
+  }
+
+  /**
+   * Estime durée étape workflow
+   */
+  private estimateWorkflowStageDuration(stage: string): number {
+    const durations = {
+      'etude_technique': 120, // 2h
+      'chiffrage': 90,       // 1.5h
+      'offer': 60,           // 1h
+      'planning': 45,        // 45min
+      'chantier': 480,       // 8h (journée)
+      'controle_qualite': 30, // 30min
+      'livraison': 60        // 1h
+    };
+    
+    return durations[stage] || 60; // Default 1h
+  }
+
+  /**
+   * Obtient dépendances workflow
+   */
+  private getWorkflowDependencies(workflow: any): string[] {
+    const deps: string[] = [];
+    
+    if (workflow.supplierDependency) deps.push('supplier_availability');
+    if (workflow.weatherDependency) deps.push('weather_conditions');
+    if (workflow.businessHoursDependency) deps.push('business_hours');
+    if (workflow.requiresValidation) deps.push('management_approval');
+    if (workflow.clientInteractionRequired) deps.push('client_availability');
+    
+    return deps;
+  }
+
+  /**
+   * Vérifie si workflow est sur chemin critique
+   */
+  private isOnCriticalPath(workflowName: string): boolean {
+    const criticalWorkflows = [
+      'ao_initial_study',
+      'study_to_chiffrage', 
+      'chiffrage_to_offer',
+      'offer_to_project',
+      'project_to_planning',
+      'planning_to_approvisionnement'
+    ];
+    
+    return criticalWorkflows.includes(workflowName);
+  }
+
+  /**
+   * Obtient exigences ressources pour étape
+   */
+  private getResourceRequirements(stage: string): string[] {
+    const requirements = {
+      'etude_technique': ['technicien_be', 'logiciel_cao'],
+      'chiffrage': ['technicien_be', 'base_prix'],
+      'offer': ['commercial', 'templates'],
+      'planning': ['chef_projet', 'planning_software'],
+      'chantier': ['chef_chantier', 'equipe', 'materiaux'],
+      'controle_qualite': ['controleur', 'outils_mesure']
+    };
+    
+    return requirements[stage] || [];
+  }
+
+  /**
+   * Prédictions événements calendaires spéciaux
+   */
+  private getSpecialEventPredictions(now: number, month: number): AccessPrediction[] {
+    const predictions: AccessPrediction[] = [];
+    const day = new Date(now).getDate();
+    
+    // Fin de mois - reports et bilans
+    if (day >= 25) {
+      predictions.push({
+        entityType: 'report',
+        entityId: `MONTHLY_REPORT_${month + 1}`,
+        predictedAccessTime: now + (60 * 60 * 1000), // 1h
+        confidence: 80,
+        triggerPattern: 'end_of_month_reports',
+        contextRequirements: ['business'],
+        userContext: {}
+      });
+    }
+    
+    // Début trimestre - planification
+    if ([0, 3, 6, 9].includes(month) && day <= 5) {
+      predictions.push({
+        entityType: 'planning',
+        entityId: `QUARTERLY_PLANNING_Q${Math.floor(month / 3) + 1}`,
+        predictedAccessTime: now + (30 * 60 * 1000), // 30min
+        confidence: 75,
+        triggerPattern: 'quarterly_planning',
+        contextRequirements: ['comprehensive'],
+        userContext: {}
+      });
+    }
+    
+    return predictions;
+  }
+
+  /**
+   * Prédit accès basé sur patterns temporels
+   */
+  private async predictFromTemporalPatterns(now: number): Promise<AccessPrediction[]> {
+    const predictions: AccessPrediction[] = [];
+    const currentHour = new Date().getHours();
+    
+    // Prédictions horaires business
+    if (this.BUSINESS_HOURS.includes(currentHour)) {
+      // Pendant heures business, préloader entités populaires
+      const heatMap = await this.generateEntityHeatMap();
+      
+      for (const hotEntity of heatMap.hotEntities.slice(0, 5)) {
+        predictions.push({
+          entityType: hotEntity.entityType,
+          entityId: hotEntity.entityId,
+          predictedAccessTime: now + (10 * 60 * 1000), // 10 minutes
+          confidence: 60,
+          triggerPattern: 'business_hours',
+          contextRequirements: ['minimal'],
+          userContext: {}
+        });
+      }
+    }
+    
+    return predictions;
+  }
+
+  /**
+   * Prédit accès basé sur heat-map actuelle
+   */
+  private async predictFromHeatMap(now: number): Promise<AccessPrediction[]> {
+    const predictions: AccessPrediction[] = [];
+    
+    try {
+      const heatMap = await this.generateEntityHeatMap();
+      
+      // Préloader entités avec tendance croissante
+      for (const [entityKey, trend] of Object.entries(heatMap.accessTrends)) {
+        const [entityType, entityId] = entityKey.split(':');
+        
+        // Détecter tendance croissante
+        if (trend.length >= 3) {
+          const recent = trend.slice(-3);
+          const isIncreasing = recent[2] > recent[1] && recent[1] > recent[0];
+          
+          if (isIncreasing) {
+            predictions.push({
+              entityType,
+              entityId,
+              predictedAccessTime: now + (20 * 60 * 1000), // 20 minutes
+              confidence: 65,
+              triggerPattern: 'trending_up',
+              contextRequirements: ['standard'],
+              userContext: {}
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[PredictiveEngine] Erreur prédiction heat-map:', error);
+    }
+    
+    return predictions;
+  }
+
+  /**
+   * Calcule priorité d'une tâche de preloading
+   */
+  private calculateTaskPriority(prediction: AccessPrediction): 'low' | 'medium' | 'high' | 'critical' {
+    if (prediction.confidence >= 90) return 'critical';
+    if (prediction.confidence >= 80) return 'high';
+    if (prediction.confidence >= 70) return 'medium';
+    return 'low';
+  }
+
+  /**
+   * Estime temps d'exécution preloading
+   */
+  private estimatePreloadTime(prediction: AccessPrediction): number {
+    const complexityMap = {
+      'minimal': 500,     // 500ms
+      'standard': 1500,   // 1.5s
+      'comprehensive': 3000 // 3s
+    };
+    
+    const maxComplexity = Math.max(...prediction.contextRequirements.map(req => 
+      complexityMap[req] || 1000
+    ));
+    
+    return maxComplexity;
+  }
+
+  /**
+   * Génère configuration contexte pour preloading
+   */
+  private generateContextConfig(prediction: AccessPrediction): any {
+    return {
+      complexity: prediction.contextRequirements.includes('comprehensive') ? 'comprehensive' :
+                 prediction.contextRequirements.includes('standard') ? 'standard' : 'minimal',
+      priority: prediction.confidence >= 80 ? 'high' : 'normal',
+      timeout: 5000, // 5s timeout
+      retryOnError: true
+    };
+  }
+
+  /**
+   * Vérifie si timestamp correspond aux horaires business
+   */
+  private isBusinessHours(timestamp: number): boolean {
+    const hour = new Date(timestamp).getHours();
+    return this.BUSINESS_HOURS.includes(hour);
+  }
+
+  /**
+   * Exécute immédiatement les tâches haute priorité
+   */
+  private async executeHighPriorityTasks(): Promise<void> {
+    if (!this.contextCacheService || this.currentPreloadingLoad >= this.MAX_CONCURRENT_PRELOADS) {
+      return;
+    }
+    
+    const highPriorityTasks = this.preloadingSchedule.scheduledTasks
+      .filter(task => task.priority === 'critical' || task.priority === 'high')
+      .slice(0, this.MAX_CONCURRENT_PRELOADS - this.currentPreloadingLoad);
+    
+    for (const task of highPriorityTasks) {
+      this.executePreloadTask(task).catch(error => {
+        console.error(`[PredictiveEngine] Erreur tâche preloading ${task.id}:`, error);
+      });
+    }
+  }
+
+  /**
+   * Exécute une tâche de preloading individuelle
+   */
+  private async executePreloadTask(task: PreloadingTask): Promise<void> {
+    if (this.currentPreloadingLoad >= this.MAX_CONCURRENT_PRELOADS) {
+      return;
+    }
+    
+    this.currentPreloadingLoad++;
+    
+    try {
+      // Déplacer vers tâches actives
+      this.preloadingSchedule.activeTasks.push(task);
+      this.preloadingSchedule.scheduledTasks = this.preloadingSchedule.scheduledTasks
+        .filter(t => t.id !== task.id);
+      
+      console.log(`[PredictiveEngine] Exécution preloading ${task.entityType}:${task.entityId}`);
+      
+      // Appel ContextCacheService pour preloading (si intégré)
+      if (this.contextCacheService && this.contextCacheService.preloadContextByPrediction) {
+        await this.contextCacheService.preloadContextByPrediction(
+          task.entityType,
+          task.entityId,
+          task.contextConfig
+        );
+      }
+      
+      // Marquer comme complétée
+      this.preloadingSchedule.completedTasks.push(task);
+      this.preloadingSchedule.activeTasks = this.preloadingSchedule.activeTasks
+        .filter(t => t.id !== task.id);
+      
+      console.log(`[PredictiveEngine] Preloading complété: ${task.entityType}:${task.entityId}`);
+      
+    } catch (error) {
+      console.error(`[PredictiveEngine] Erreur preloading ${task.id}:`, error);
+      
+      // Marquer comme échouée
+      this.preloadingSchedule.failedTasks.push(task);
+      this.preloadingSchedule.activeTasks = this.preloadingSchedule.activeTasks
+        .filter(t => t.id !== task.id);
+      
+    } finally {
+      this.currentPreloadingLoad--;
+    }
+  }
+
+  /**
+   * Programme les tâches différées selon timing optimal
+   */
+  private scheduleDelayedTasks(): void {
+    const delayedTasks = this.preloadingSchedule.scheduledTasks
+      .filter(task => task.priority !== 'critical' && task.priority !== 'high');
+    
+    for (const task of delayedTasks) {
+      const delay = Math.max(0, task.predictedAccessTime - Date.now() - (30 * 1000));
+      
+      setTimeout(() => {
+        this.executePreloadTask(task).catch(error => {
+          console.error(`[PredictiveEngine] Erreur tâche différée ${task.id}:`, error);
+        });
+      }, delay);
+    }
+  }
+
+  /**
+   * Nettoyage périodique logs d'accès entités
+   */
+  private cleanupEntityAccess(): void {
+    const now = Date.now();
+    const cutoffTime = now - (this.HEATMAP_RETENTION_HOURS * 60 * 60 * 1000);
+    let deletedCount = 0;
+    
+    for (const [key, entry] of this.entityAccessLog.entries()) {
+      if (entry.lastAccessTime < cutoffTime) {
+        this.entityAccessLog.delete(key);
+        deletedCount++;
+      }
+    }
+    
+    if (deletedCount > 0) {
+      console.log(`[PredictiveEngine] Cleanup accès entités: ${deletedCount} entrées supprimées`);
+    }
+  }
+
+  /**
+   * Mise à jour périodique patterns BTP
+   */
+  private async updateBTPPatterns(): Promise<void> {
+    const now = Date.now();
+    
+    // Éviter updates trop fréquentes
+    if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum
+      return;
+    }
+    
+    try {
+      console.log('[PredictiveEngine] Mise à jour patterns BTP...');
+      
+      // Analyser workflows récents pour mise à jour patterns
+      // (Implémentation simplifiée pour POC)
+      
+      this.lastPatternUpdate = now;
+      console.log('[PredictiveEngine] Patterns BTP mis à jour');
+      
+    } catch (error) {
+      console.error('[PredictiveEngine] Erreur mise à jour patterns BTP:', error);
+    }
+  }
+
+  /**
+   * Désactive/active le preloading selon charge système
+   */
+  public setPreloadingEnabled(enabled: boolean): void {
+    this.preloadingEnabled = enabled;
+    console.log(`[PredictiveEngine] Preloading ${enabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+  }
+
+  /**
+   * Statistiques preloading pour monitoring
+   */
+  public getPreloadingStats(): {
+    active: number;
+    scheduled: number;
+    completed: number;
+    failed: number;
+    currentLoad: number;
+    enabled: boolean;
+  } {
+    return {
+      active: this.preloadingSchedule.activeTasks.length,
+      scheduled: this.preloadingSchedule.scheduledTasks.length,
+      completed: this.preloadingSchedule.completedTasks.length,
+      failed: this.preloadingSchedule.failedTasks.length,
+      currentLoad: this.currentPreloadingLoad,
+      enabled: this.preloadingEnabled
+    };
   }
 }

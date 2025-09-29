@@ -778,15 +778,16 @@ export default function ChatbotSidebar({ isOpen, onToggle }: ChatbotSidebarProps
       if (response.action_proposal && response.success) {
         console.log('Action détectée dans la réponse chatbot:', response.action_proposal);
         
-        // Stocker l'action en attente pour confirmation
+        // CORRECTION CRITIQUE : Utiliser les vraies métadonnées de action_proposal
+        // Plus de hard-coding ! Toutes les données viennent du backend
         const actionDetails = {
-          type: response.action_proposal.action_type || 'unknown',
-          entity: response.action_proposal.entity || 'unknown', 
-          operation: response.action_proposal.operation || 'unknown',
+          type: response.action_proposal.type,
+          entity: response.action_proposal.entity,
+          operation: response.action_proposal.operation,
           parameters: response.action_proposal.parameters || {},
           riskLevel: response.action_proposal.risk_level,
           estimatedTime: response.action_proposal.estimated_time,
-          warnings: response.action_proposal.warnings
+          warnings: response.action_proposal.warnings || []
         };
 
         setPendingAction({
@@ -855,10 +856,15 @@ export default function ChatbotSidebar({ isOpen, onToggle }: ChatbotSidebarProps
     try {
       console.log('Confirmation d\'action:', actionId);
       
+      // CORRECTION CRITIQUE : Inclure paramètres dans ExecuteActionRequest
       const executeRequest: ExecuteActionRequest = {
         actionId,
         confirmationId: pendingAction.proposal.confirmation_id,
-        userConfirmation: true
+        parameters: {
+          ...pendingAction.details.parameters,
+          userConfirmation: true,
+          executionTimestamp: new Date().toISOString()
+        }
       };
 
       const result = await executeAction.mutateAsync(executeRequest);
@@ -974,7 +980,10 @@ export default function ChatbotSidebar({ isOpen, onToggle }: ChatbotSidebarProps
   );
 
   const renderSuggestions = () => {
-    const displaySuggestions = suggestions || roleSuggestions;
+    // CORRECTION CRITIQUE : Guard fallback suggestions - vérifier si array vide aussi
+    const displaySuggestions = (suggestions && Array.isArray(suggestions) && suggestions.length > 0) 
+                               ? suggestions 
+                               : (roleSuggestions || []);
     
     if (suggestionsLoading) {
       return (

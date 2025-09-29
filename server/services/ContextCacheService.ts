@@ -1359,6 +1359,722 @@ export class ContextCacheService {
   public getPrewarmingStats(): typeof this.prewarmingStats {
     return { ...this.prewarmingStats };
   }
+
+  // ========================================
+  // ÉTAPE 3 PHASE 3 PERFORMANCE : PRELOADING PRÉDICTIF
+  // ========================================
+
+  // Intégration avec PredictiveEngine
+  private predictiveEngine: any = null;
+  private predictivePreloadingEnabled = true;
+  private predictiveStats = {
+    totalPredictivePreloads: 0,
+    successfulPredictions: 0,
+    failedPredictions: 0,
+    averagePredictionAccuracy: 0,
+    heatMapIntegrationActive: false,
+    lastHeatMapUpdate: new Date(),
+    predictiveHitRate: 0,
+    lruOptimizationsApplied: 0
+  };
+
+  /**
+   * Configure l'intégration avec PredictiveEngine pour preloading intelligent
+   */
+  public integratePredictiveEngine(predictiveEngine: any): void {
+    this.predictiveEngine = predictiveEngine;
+    this.predictiveStats.heatMapIntegrationActive = true;
+    
+    console.log('[ContextCache] Intégration PredictiveEngine activée pour preloading intelligent');
+    
+    // Démarrer cycles prédictifs automatiques
+    this.startPredictiveCycles();
+  }
+
+  /**
+   * MÉTHODE PRINCIPALE : Preloading contexte basé sur prédictions
+   * Preload intelligent selon predictions du PredictiveEngine
+   */
+  async preloadContextByPrediction(
+    entityType: string,
+    entityId: string,
+    contextConfig?: any,
+    priority: 'low' | 'medium' | 'high' | 'critical' = 'medium'
+  ): Promise<boolean> {
+    if (!this.predictivePreloadingEnabled) {
+      console.log('[ContextCache] Preloading prédictif désactivé');
+      return false;
+    }
+
+    try {
+      const startTime = Date.now();
+      
+      console.log(`[ContextCache] Preloading prédictif: ${entityType}:${entityId} (priorité: ${priority})`);
+      
+      // 1. VÉRIFICATION CACHE EXISTANT
+      const existingKey = this.generateCacheKey(entityType, entityId, contextConfig || this.getDefaultConfig());
+      if (this.memoryCache.has(existingKey)) {
+        console.log(`[ContextCache] Contexte déjà en cache: ${entityType}:${entityId}`);
+        return true;
+      }
+
+      // 2. GÉNÉRATION CONTEXTE PRÉDICTIF OPTIMISÉ
+      const predictiveContext = await this.generatePredictiveContext(
+        entityType, 
+        entityId, 
+        contextConfig,
+        priority
+      );
+
+      if (!predictiveContext) {
+        this.predictiveStats.failedPredictions++;
+        return false;
+      }
+
+      // 3. STOCKAGE AVEC SCORING PRÉDICTIF
+      await this.storePredictiveContext(
+        entityType,
+        entityId,
+        predictiveContext,
+        contextConfig,
+        priority,
+        startTime
+      );
+
+      // 4. OPTIMISATION LRU BASÉE PRÉDICTIONS
+      await this.optimizeLRUWithPredictiveScoring();
+
+      // 5. ENREGISTREMENT ACCÈS POUR HEAT-MAP
+      if (this.predictiveEngine) {
+        this.predictiveEngine.recordEntityAccess(
+          entityType,
+          entityId,
+          'system_preload',
+          this.determineContextComplexity(contextConfig)
+        );
+      }
+
+      this.predictiveStats.totalPredictivePreloads++;
+      this.predictiveStats.successfulPredictions++;
+      
+      const duration = Date.now() - startTime;
+      console.log(`[ContextCache] Preloading prédictif complété: ${entityType}:${entityId} en ${duration}ms`);
+      
+      return true;
+
+    } catch (error) {
+      console.error(`[ContextCache] Erreur preloading prédictif ${entityType}:${entityId}:`, error);
+      this.predictiveStats.failedPredictions++;
+      return false;
+    }
+  }
+
+  /**
+   * Intégration Heat-Map pour optimisation cache intelligente
+   */
+  async integrateHeatMapData(): Promise<void> {
+    if (!this.predictiveEngine) {
+      console.log('[ContextCache] PredictiveEngine non intégré');
+      return;
+    }
+
+    try {
+      console.log('[ContextCache] Intégration heat-map pour optimisation cache...');
+      
+      // 1. RÉCUPÉRATION HEAT-MAP ACTUELLE
+      const heatMap = await this.predictiveEngine.generateEntityHeatMap();
+      
+      // 2. PRELOADING ENTITÉS CHAUDES
+      await this.preloadHotEntities(heatMap.hotEntities);
+      
+      // 3. ÉVICTION ENTITÉS FROIDES
+      await this.evictColdEntities(heatMap.coldEntities);
+      
+      // 4. OPTIMISATION CACHE SELON TRENDS
+      await this.optimizeCacheByTrends(heatMap.accessTrends);
+      
+      // 5. AJUSTEMENT BUSINESS HOURS
+      await this.adjustForBusinessHours(heatMap.businessHoursMultiplier, heatMap.peakHours);
+
+      this.predictiveStats.lastHeatMapUpdate = new Date();
+      console.log('[ContextCache] Intégration heat-map terminée');
+
+    } catch (error) {
+      console.error('[ContextCache] Erreur intégration heat-map:', error);
+    }
+  }
+
+  /**
+   * LRU éviction améliorée avec scoring prédictif
+   */
+  async optimizeLRUWithPredictiveScoring(): Promise<void> {
+    try {
+      const currentSize = this.calculateCurrentCacheSize();
+      const maxSizeBytes = this.MAX_CACHE_SIZE_MB * 1024 * 1024;
+      
+      if (currentSize < maxSizeBytes * 0.8) {
+        return; // Pas besoin d'optimisation
+      }
+
+      console.log('[ContextCache] Optimisation LRU avec scoring prédictif...');
+      
+      // 1. CALCUL SCORES PRÉDICTIFS POUR CHAQUE ENTRÉE
+      const entriesWithScores: Array<{
+        key: string;
+        entry: CacheEntry;
+        predictiveScore: number;
+        shouldEvict: boolean;
+      }> = [];
+
+      for (const [key, entry] of this.memoryCache.entries()) {
+        const predictiveScore = await this.calculatePredictiveScore(key, entry);
+        const shouldEvict = predictiveScore < 30; // Seuil d'éviction
+        
+        entriesWithScores.push({
+          key,
+          entry,
+          predictiveScore,
+          shouldEvict
+        });
+      }
+
+      // 2. TRI PAR SCORE PRÉDICTIF (plus bas = candidat éviction)
+      entriesWithScores.sort((a, b) => a.predictiveScore - b.predictiveScore);
+
+      // 3. ÉVICTION INTELLIGENTE
+      let evictedCount = 0;
+      const targetReduction = Math.floor(this.memoryCache.size * 0.2); // Réduire de 20%
+
+      for (const item of entriesWithScores) {
+        if (evictedCount >= targetReduction) break;
+        
+        if (item.shouldEvict || item.predictiveScore < 40) {
+          this.memoryCache.delete(item.key);
+          evictedCount++;
+          
+          console.log(`[ContextCache] Éviction prédictive: ${item.key.substring(0, 40)}... (score: ${item.predictiveScore})`);
+        }
+      }
+
+      this.predictiveStats.lruOptimizationsApplied++;
+      console.log(`[ContextCache] Optimisation LRU terminée: ${evictedCount} entrées évincées`);
+
+    } catch (error) {
+      console.error('[ContextCache] Erreur optimisation LRU prédictive:', error);
+    }
+  }
+
+  /**
+   * Preloading intelligent des entités chaudes selon heat-map
+   */
+  private async preloadHotEntities(hotEntities: any[]): Promise<void> {
+    console.log(`[ContextCache] Preloading ${hotEntities.length} entités chaudes...`);
+    
+    // Limite concurrent preloading pour éviter surcharge
+    const MAX_CONCURRENT = 3;
+    const hotBatch = hotEntities.slice(0, 10); // Top 10 entités chaudes
+    
+    for (let i = 0; i < hotBatch.length; i += MAX_CONCURRENT) {
+      const batch = hotBatch.slice(i, i + MAX_CONCURRENT);
+      
+      const preloadPromises = batch.map(async (entity) => {
+        try {
+          const priority = this.determinePriorityFromPopularity(entity);
+          await this.preloadContextByPrediction(
+            entity.entityType,
+            entity.entityId,
+            this.getOptimalConfigForEntity(entity),
+            priority
+          );
+        } catch (error) {
+          console.warn(`[ContextCache] Erreur preloading entité chaude ${entity.entityType}:${entity.entityId}:`, error);
+        }
+      });
+
+      await Promise.allSettled(preloadPromises);
+    }
+  }
+
+  /**
+   * Éviction intelligente des entités froides
+   */
+  private async evictColdEntities(coldEntities: string[]): Promise<void> {
+    let evictedCount = 0;
+    
+    for (const entityKey of coldEntities) {
+      // Rechercher les clés de cache correspondantes
+      for (const [cacheKey, entry] of this.memoryCache.entries()) {
+        if (cacheKey.includes(entityKey) && this.shouldEvictColdEntity(entry)) {
+          this.memoryCache.delete(cacheKey);
+          evictedCount++;
+          
+          console.log(`[ContextCache] Éviction entité froide: ${entityKey}`);
+        }
+      }
+    }
+    
+    if (evictedCount > 0) {
+      console.log(`[ContextCache] ${evictedCount} entités froides évincées`);
+    }
+  }
+
+  /**
+   * Optimise le cache selon les tendances d'accès
+   */
+  private async optimizeCacheByTrends(accessTrends: Record<string, number[]>): Promise<void> {
+    for (const [entityKey, trend] of Object.entries(accessTrends)) {
+      if (trend.length >= 3) {
+        const isIncreasing = this.detectIncreasingTrend(trend);
+        const isDecreasing = this.detectDecreasingTrend(trend);
+        
+        if (isIncreasing) {
+          // Précharger entités avec tendance croissante
+          const [entityType, entityId] = entityKey.split(':');
+          await this.preloadContextByPrediction(entityType, entityId, undefined, 'high');
+        } else if (isDecreasing) {
+          // Réduire priorité cache entités décroissantes
+          await this.reduceCachePriorityForEntity(entityKey);
+        }
+      }
+    }
+  }
+
+  /**
+   * Ajustement cache selon horaires business
+   */
+  private async adjustForBusinessHours(
+    businessMultiplier: number, 
+    peakHours: number[]
+  ): Promise<void> {
+    const currentHour = new Date().getHours();
+    
+    if (peakHours.includes(currentHour)) {
+      // Mode agressif pendant heures de pointe
+      console.log('[ContextCache] Mode preloading agressif - heures de pointe');
+      await this.activateAggressivePreloading();
+    } else if (businessMultiplier > 1.2) {
+      // Mode modéré pendant horaires business
+      console.log('[ContextCache] Mode preloading modéré - horaires business');
+      await this.activateModeratePreloading();
+    } else {
+      // Mode conservateur hors horaires
+      console.log('[ContextCache] Mode preloading conservateur - hors horaires');
+      await this.activateConservativePreloading();
+    }
+  }
+
+  /**
+   * Calcule score prédictif pour décision éviction LRU
+   */
+  private async calculatePredictiveScore(key: string, entry: CacheEntry): Promise<number> {
+    let score = 50; // Score de base
+
+    // 1. FACTEUR RÉCENCE (25%)
+    const ageHours = (Date.now() - entry.lastAccessedAt.getTime()) / (60 * 60 * 1000);
+    const recencyScore = Math.max(0, 100 - (ageHours * 5)); // Dégrade avec l'âge
+    score += recencyScore * 0.25;
+
+    // 2. FACTEUR FRÉQUENCE (25%)
+    const frequencyScore = Math.min(100, entry.accessCount * 10);
+    score += frequencyScore * 0.25;
+
+    // 3. FACTEUR PRÉDICTIF (30%)
+    const predictiveScore = await this.getPredictiveScoreFromEngine(key);
+    score += predictiveScore * 0.30;
+
+    // 4. FACTEUR COMPLEXITÉ (20%)
+    const complexityScore = this.getComplexityScore(entry);
+    score += complexityScore * 0.20;
+
+    return Math.min(100, Math.max(0, score));
+  }
+
+  /**
+   * Obtient score prédictif depuis PredictiveEngine
+   */
+  private async getPredictiveScoreFromEngine(key: string): Promise<number> {
+    if (!this.predictiveEngine) return 50; // Score neutre
+
+    try {
+      const [entityType, entityId] = key.split(':');
+      
+      // Vérifier si entité dans heat-map actuelle
+      const heatMap = await this.predictiveEngine.generateEntityHeatMap();
+      const hotEntity = heatMap.hotEntities.find(e => 
+        e.entityType === entityType && e.entityId === entityId
+      );
+      
+      if (hotEntity) {
+        return 80 + (hotEntity.accessCount * 2); // Score élevé pour entités chaudes
+      }
+      
+      // Vérifier si entité dans prédictions futures
+      const predictions = await this.predictiveEngine.predictNextEntityAccess();
+      const futurePrediction = predictions.find(p => 
+        p.entityType === entityType && p.entityId === entityId
+      );
+      
+      if (futurePrediction) {
+        return Math.min(90, 60 + futurePrediction.confidence);
+      }
+      
+      return 30; // Score bas si pas dans prédictions
+
+    } catch (error) {
+      console.warn('[ContextCache] Erreur récupération score prédictif:', error);
+      return 50; // Score neutre en cas d'erreur
+    }
+  }
+
+  /**
+   * Génère contexte prédictif optimisé
+   */
+  private async generatePredictiveContext(
+    entityType: string,
+    entityId: string,
+    contextConfig: any,
+    priority: string
+  ): Promise<any> {
+    // Configuration adaptée selon priorité et type d'entité
+    const optimizedConfig = {
+      ...this.getDefaultConfig(),
+      ...contextConfig,
+      performance: {
+        compressionLevel: priority === 'critical' ? 'none' : 'medium',
+        timeoutMs: priority === 'low' ? 2000 : 5000,
+        cachingEnabled: true
+      },
+      scope: this.determineScopeByPriority(priority),
+      contextTypes: this.getContextTypesForEntity(entityType)
+    };
+
+    // Simulation génération contexte pour POC
+    return {
+      entityType,
+      entityId,
+      requestId: `predictive_${Date.now()}`,
+      contextTypes: optimizedConfig.contextTypes,
+      scope: optimizedConfig.scope,
+      compressionLevel: optimizedConfig.performance.compressionLevel,
+      generationMetrics: {
+        totalTablesQueried: priority === 'critical' ? 12 : 6,
+        executionTimeMs: priority === 'low' ? 300 : 150,
+        cachingUsed: true,
+        dataFreshnessScore: 0.95,
+        relevanceScore: 0.90
+      },
+      tokenEstimate: priority === 'critical' ? 2000 : 1200,
+      frenchTerminology: {},
+      keyInsights: [`Contexte prédictif ${priority} pour ${entityType}`],
+      predictiveMetadata: {
+        preloadedAt: new Date().toISOString(),
+        priority,
+        expectedAccess: Date.now() + (15 * 60 * 1000), // Dans 15 minutes
+        confidenceScore: 85
+      }
+    };
+  }
+
+  /**
+   * Stocke contexte prédictif avec métadonnées optimisées
+   */
+  private async storePredictiveContext(
+    entityType: string,
+    entityId: string,
+    context: any,
+    contextConfig: any,
+    priority: string,
+    startTime: number
+  ): Promise<void> {
+    const cacheKey = this.generateCacheKey(entityType, entityId, contextConfig || this.getDefaultConfig());
+    const now = new Date();
+    
+    // TTL adapté selon priorité
+    const ttlHours = this.getTTLByPriority(priority);
+    const expiresAt = new Date(now.getTime() + ttlHours * 60 * 60 * 1000);
+
+    const entry: CacheEntry = {
+      data: context,
+      createdAt: now,
+      lastAccessedAt: now,
+      accessCount: 0,
+      expiresAt,
+      dataFreshness: context.generationMetrics.dataFreshnessScore,
+      compressionApplied: context.compressionLevel !== "none",
+      size: this.estimateEntrySize(context),
+      tags: this.generatePredictiveTags(entityType, entityId, context, priority)
+    };
+
+    // Stockage avec priorité
+    this.memoryCache.set(cacheKey, entry);
+    
+    console.log(`[ContextCache] Contexte prédictif stocké: ${cacheKey} (TTL: ${ttlHours}h, priorité: ${priority})`);
+  }
+
+  /**
+   * Démarre les cycles prédictifs automatiques
+   */
+  private startPredictiveCycles(): void {
+    // Cycle intégration heat-map (toutes les 10 minutes)
+    setInterval(async () => {
+      if (this.predictivePreloadingEnabled) {
+        await this.integrateHeatMapData();
+      }
+    }, 10 * 60 * 1000);
+
+    // Cycle optimisation LRU (toutes les 15 minutes)
+    setInterval(async () => {
+      if (this.predictivePreloadingEnabled) {
+        await this.optimizeLRUWithPredictiveScoring();
+      }
+    }, 15 * 60 * 1000);
+
+    // Cycle preloading prédictif (toutes les 5 minutes)
+    setInterval(async () => {
+      if (this.predictivePreloadingEnabled && this.predictiveEngine) {
+        await this.runPredictivePreloadingCycle();
+      }
+    }, 5 * 60 * 1000);
+
+    console.log('[ContextCache] Cycles prédictifs automatiques démarrés');
+  }
+
+  /**
+   * Exécute un cycle complet de preloading prédictif
+   */
+  private async runPredictivePreloadingCycle(): Promise<void> {
+    try {
+      console.log('[ContextCache] Cycle preloading prédictif...');
+      
+      // 1. Obtenir prédictions depuis PredictiveEngine
+      const predictions = await this.predictiveEngine.predictNextEntityAccess();
+      
+      // 2. Filtrer prédictions selon capacité cache
+      const viablePredictions = predictions
+        .filter(p => p.confidence >= 70)
+        .slice(0, 5); // Limiter à 5 prédictions par cycle
+      
+      // 3. Preloader contextes prédits
+      for (const prediction of viablePredictions) {
+        const priority = prediction.confidence >= 90 ? 'critical' :
+                        prediction.confidence >= 80 ? 'high' : 'medium';
+        
+        await this.preloadContextByPrediction(
+          prediction.entityType,
+          prediction.entityId,
+          undefined,
+          priority
+        );
+      }
+      
+      console.log(`[ContextCache] Cycle prédictif terminé: ${viablePredictions.length} contextes preloadés`);
+      
+    } catch (error) {
+      console.error('[ContextCache] Erreur cycle preloading prédictif:', error);
+    }
+  }
+
+  // ========================================
+  // MÉTHODES HELPER PRELOADING PRÉDICTIF
+  // ========================================
+
+  private getDefaultConfig(): any {
+    return {
+      contextTypes: ['business', 'technical'],
+      scope: 'standard',
+      performance: {
+        compressionLevel: 'medium',
+        timeoutMs: 3000,
+        cachingEnabled: true
+      }
+    };
+  }
+
+  private determineContextComplexity(contextConfig: any): 'low' | 'medium' | 'high' {
+    if (!contextConfig) return 'medium';
+    
+    const scope = contextConfig.scope || 'standard';
+    switch (scope) {
+      case 'minimal': return 'low';
+      case 'comprehensive': return 'high';
+      default: return 'medium';
+    }
+  }
+
+  private determinePriorityFromPopularity(entity: any): 'low' | 'medium' | 'high' | 'critical' {
+    if (entity.accessCount >= 20) return 'critical';
+    if (entity.accessCount >= 10) return 'high';
+    if (entity.accessCount >= 5) return 'medium';
+    return 'low';
+  }
+
+  private getOptimalConfigForEntity(entity: any): any {
+    return {
+      contextTypes: entity.entityType === 'project' ? ['business', 'technical', 'temporal'] : 
+                   entity.entityType === 'ao' ? ['business', 'relational'] : ['business'],
+      scope: entity.contextComplexity === 'high' ? 'comprehensive' : 'standard',
+      performance: {
+        compressionLevel: 'medium',
+        timeoutMs: 4000,
+        cachingEnabled: true
+      }
+    };
+  }
+
+  private shouldEvictColdEntity(entry: CacheEntry): boolean {
+    const ageHours = (Date.now() - entry.lastAccessedAt.getTime()) / (60 * 60 * 1000);
+    return ageHours > 48 && entry.accessCount < 2; // Plus de 48h et moins de 2 accès
+  }
+
+  private detectIncreasingTrend(trend: number[]): boolean {
+    if (trend.length < 3) return false;
+    const recent = trend.slice(-3);
+    return recent[2] > recent[1] && recent[1] > recent[0];
+  }
+
+  private detectDecreasingTrend(trend: number[]): boolean {
+    if (trend.length < 3) return false;
+    const recent = trend.slice(-3);
+    return recent[2] < recent[1] && recent[1] < recent[0];
+  }
+
+  private async reduceCachePriorityForEntity(entityKey: string): Promise<void> {
+    for (const [cacheKey, entry] of this.memoryCache.entries()) {
+      if (cacheKey.includes(entityKey)) {
+        // Réduire TTL pour éviction plus rapide
+        const newExpiry = new Date(Date.now() + (2 * 60 * 60 * 1000)); // 2h au lieu du TTL normal
+        entry.expiresAt = newExpiry;
+      }
+    }
+  }
+
+  private async activateAggressivePreloading(): Promise<void> {
+    // Mode agressif : preload top 15 entités chaudes
+    if (this.predictiveEngine) {
+      const heatMap = await this.predictiveEngine.generateEntityHeatMap();
+      await this.preloadHotEntities(heatMap.hotEntities.slice(0, 15));
+    }
+  }
+
+  private async activateModeratePreloading(): Promise<void> {
+    // Mode modéré : preload top 8 entités chaudes
+    if (this.predictiveEngine) {
+      const heatMap = await this.predictiveEngine.generateEntityHeatMap();
+      await this.preloadHotEntities(heatMap.hotEntities.slice(0, 8));
+    }
+  }
+
+  private async activateConservativePreloading(): Promise<void> {
+    // Mode conservateur : preload seulement top 3 entités critiques
+    if (this.predictiveEngine) {
+      const heatMap = await this.predictiveEngine.generateEntityHeatMap();
+      const criticalEntities = heatMap.hotEntities
+        .filter(e => e.accessCount >= 15)
+        .slice(0, 3);
+      await this.preloadHotEntities(criticalEntities);
+    }
+  }
+
+  private getComplexityScore(entry: CacheEntry): number {
+    // Score basé sur taille et fréquence d'accès
+    const sizeScore = Math.min(50, entry.size / 100); // Normalisé par taille
+    const accessScore = Math.min(50, entry.accessCount * 5);
+    return sizeScore + accessScore;
+  }
+
+  private determineScopeByPriority(priority: string): string {
+    switch (priority) {
+      case 'critical': return 'comprehensive';
+      case 'high': return 'standard';
+      case 'medium': return 'standard';
+      case 'low': return 'minimal';
+      default: return 'standard';
+    }
+  }
+
+  private getContextTypesForEntity(entityType: string): string[] {
+    switch (entityType) {
+      case 'ao': return ['business', 'relational'];
+      case 'offer': return ['business', 'relational', 'technical'];
+      case 'project': return ['business', 'technical', 'temporal'];
+      case 'supplier': return ['business', 'relational'];
+      default: return ['business'];
+    }
+  }
+
+  private getTTLByPriority(priority: string): number {
+    switch (priority) {
+      case 'critical': return 8; // 8 heures
+      case 'high': return 6;     // 6 heures
+      case 'medium': return 4;   // 4 heures
+      case 'low': return 2;      // 2 heures
+      default: return 4;
+    }
+  }
+
+  private generatePredictiveTags(
+    entityType: string,
+    entityId: string,
+    context: any,
+    priority: string
+  ): string[] {
+    const baseTags = [
+      `entity:${entityType}`,
+      `${entityType}:${entityId}`,
+      `priority:${priority}`,
+      'source:predictive',
+      `scope:${context.scope}`
+    ];
+
+    // Tags spécialisés preloading
+    baseTags.push('preloaded');
+    baseTags.push(`confidence:${context.predictiveMetadata?.confidenceScore || 0}`);
+
+    // Tags temporels
+    const hour = new Date().getHours();
+    if (hour >= 8 && hour <= 18) {
+      baseTags.push('business_hours');
+    }
+
+    return baseTags;
+  }
+
+  private calculateCurrentCacheSize(): number {
+    return Array.from(this.memoryCache.values())
+      .reduce((total, entry) => total + entry.size, 0);
+  }
+
+  /**
+   * Active/désactive le preloading prédictif
+   */
+  public setPredictivePreloadingEnabled(enabled: boolean): void {
+    this.predictivePreloadingEnabled = enabled;
+    console.log(`[ContextCache] Preloading prédictif ${enabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+  }
+
+  /**
+   * Statistiques preloading prédictif pour monitoring
+   */
+  public getPredictiveStats(): typeof this.predictiveStats {
+    // Mise à jour accuracy en temps réel
+    if (this.predictiveStats.totalPredictivePreloads > 0) {
+      this.predictiveStats.averagePredictionAccuracy = 
+        (this.predictiveStats.successfulPredictions / this.predictiveStats.totalPredictivePreloads) * 100;
+    }
+
+    // Calcul hit-rate prédictif
+    const predictiveHits = Array.from(this.memoryCache.values())
+      .filter(entry => entry.tags.includes('source:predictive') && entry.accessCount > 0)
+      .length;
+    const totalPredictiveEntries = Array.from(this.memoryCache.values())
+      .filter(entry => entry.tags.includes('source:predictive'))
+      .length;
+    
+    this.predictiveStats.predictiveHitRate = totalPredictiveEntries > 0 ? 
+      (predictiveHits / totalPredictiveEntries) * 100 : 0;
+
+    return { ...this.predictiveStats };
+  }
 }
 
 // ========================================

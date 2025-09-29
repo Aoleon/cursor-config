@@ -8630,7 +8630,97 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
           status: 'uploaded'
         });
         
-        sendSuccess(res, document, 'Document uploadé avec succès');
+        // NOUVEAU: Déclencher automatiquement l'analyse OCR si c'est un devis (PDF)
+        if (documentType === 'quote' && file.mimetype === 'application/pdf') {
+          console.log(`[OCR Auto-Trigger] Démarrage analyse OCR automatique pour document ${document.id}`);
+          
+          try {
+            // Lancer l'analyse OCR en arrière-plan (sans bloquer la réponse)
+            setImmediate(async () => {
+              let analysis: any = null;
+              try {
+                // Créer une analyse OCR en statut 'in_progress'
+                analysis = await storage.createSupplierQuoteAnalysis({
+                  documentId: document.id,
+                  sessionId: session.id,
+                  aoLotId: session.aoLotId,
+                  supplierId: session.supplierId,
+                  status: 'in_progress',
+                  extractedText: '',
+                  processedFields: {},
+                  qualityScore: 0,
+                  completenessScore: 0
+                });
+                
+                // Exécuter l'analyse OCR
+                const ocrService = new OCRService();
+                const pdfBuffer = file.buffer;
+                
+                const ocrResult = await ocrService.processSupplierQuote(
+                  pdfBuffer,
+                  document.id,
+                  session.id,
+                  session.aoLotId
+                );
+                
+                // Mettre à jour l'analyse avec les résultats
+                await storage.updateSupplierQuoteAnalysis(analysis.id, {
+                  status: 'completed',
+                  extractedText: ocrResult.extractedText,
+                  processedFields: ocrResult.processedFields,
+                  qualityScore: ocrResult.qualityScore,
+                  completenessScore: ocrResult.completenessScore,
+                  confidence: ocrResult.confidence,
+                  rawOcrData: ocrResult.rawData
+                });
+                
+                // Mettre à jour le statut du document
+                await storage.updateSupplierDocument(document.id, {
+                  status: 'analyzed'
+                });
+                
+                console.log(`[OCR Auto-Trigger] ✅ Analyse OCR terminée avec succès pour document ${document.id}`);
+                
+                // Émettre un événement pour notifier le système
+                eventBus.emit({
+                  type: 'supplier_quote.analyzed',
+                  entity: 'supplier_quote',
+                  entityId: document.id,
+                  userId: 'system',
+                  data: {
+                    documentId: document.id,
+                    analysisId: analysis.id,
+                    qualityScore: ocrResult.qualityScore,
+                    completenessScore: ocrResult.completenessScore
+                  }
+                });
+                
+              } catch (ocrError) {
+                console.error(`[OCR Auto-Trigger] ❌ Erreur analyse OCR pour document ${document.id}:`, ocrError);
+                
+                // Mettre à jour l'analyse en statut 'failed'
+                if (analysis) {
+                  await storage.updateSupplierQuoteAnalysis(analysis.id, {
+                    status: 'failed',
+                    errorMessage: ocrError instanceof Error ? ocrError.message : 'Erreur inconnue'
+                  });
+                }
+                
+                // Mettre à jour le statut du document
+                await storage.updateSupplierDocument(document.id, {
+                  status: 'pending'
+                });
+              }
+            });
+            
+            console.log(`[OCR Auto-Trigger] Analyse OCR lancée en arrière-plan pour document ${document.id}`);
+          } catch (error) {
+            console.error(`[OCR Auto-Trigger] Erreur lors du lancement de l'analyse OCR:`, error);
+            // Ne pas bloquer la réponse même si l'OCR échoue
+          }
+        }
+        
+        sendSuccess(res, document, 'Document uploadé avec succès. Analyse OCR en cours...');
       } catch (error) {
         console.error('[Supplier Workflow] Erreur upload document:', error);
         throw createError.database('Erreur lors de l\'upload du document');

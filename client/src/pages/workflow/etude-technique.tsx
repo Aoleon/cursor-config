@@ -21,13 +21,13 @@ import {
 export default function EtudeTechnique() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedAO, setSelectedAO] = useState<string | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
 
-  // Récupérer les AOs en étude technique
-  const { data: aos, isLoading, error } = useQuery({
-    queryKey: ["/api/aos/etude"],
+  // Récupérer les Offers en étude technique
+  const { data: offers, isLoading, error } = useQuery({
+    queryKey: ["/api/offers", { status: "etude_technique" }],
     queryFn: async () => {
-      const response = await fetch("/api/aos/etude");
+      const response = await fetch("/api/offers?status=etude_technique");
       if (!response.ok) {
         throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
       }
@@ -40,27 +40,27 @@ export default function EtudeTechnique() {
 
   // Mutation pour valider l'étude technique
   const validateEtudeMutation = useMutation({
-    mutationFn: async (aoId: string) => {
+    mutationFn: async (offerId: string) => {
       const response = await apiRequest(
         "POST",
-        `/api/aos/${aoId}/validate-etude`,
+        `/api/offers/${offerId}/request-suppliers`,
         { 
-          status: "chiffrage",
+          status: "en_attente_fournisseurs",
           validatedBy: "current-user",
           validatedAt: new Date()
         }
       );
       return response.json();
     },
-    onSuccess: (data, aoId) => {
+    onSuccess: (data, offerId) => {
       // Invalider les queries reliées
-      queryClient.invalidateQueries({ queryKey: ["/api/aos/etude"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/aos/chiffrage"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "etude_technique" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "en_attente_fournisseurs" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
       
       toast({
         title: "Étude technique validée",
-        description: "Le dossier passe en phase de chiffrage",
+        description: "Le dossier passe en demande de prix fournisseurs",
       });
     },
     onError: (error) => {
@@ -72,7 +72,7 @@ export default function EtudeTechnique() {
     }
   });
 
-  const getActionButtons = (ao: any) => {
+  const getActionButtons = (offer: any) => {
     const actions = [];
 
     // Actions toujours disponibles en étude
@@ -81,7 +81,7 @@ export default function EtudeTechnique() {
         key="edit"
         variant="outline" 
         size="sm"
-        onClick={() => handleEditAO(ao.id)}
+        onClick={() => handleEditOffer(offer.id)}
       >
         <Edit className="h-4 w-4 mr-2" />
         Modifier les détails techniques
@@ -93,7 +93,7 @@ export default function EtudeTechnique() {
         key="analyze"
         variant="outline" 
         size="sm"
-        onClick={() => handleAnalyzeDocs(ao.id)}
+        onClick={() => handleAnalyzeDocs(offer.id)}
       >
         <FileSearch className="h-4 w-4 mr-2" />
         Analyser CCTP/Plans
@@ -102,18 +102,18 @@ export default function EtudeTechnique() {
 
     // Vérifier les conditions pour passer au chiffrage
     const canProceedToChiffrage = 
-      ao.cctpAnalyzed && 
-      ao.technicalDetailsComplete &&
-      ao.lotsValidated;
+      offer.cctpAnalyzed && 
+      offer.technicalDetailsComplete &&
+      offer.lotsValidated;
 
     if (canProceedToChiffrage) {
       actions.push(
         <Button 
           key="validate"
           size="sm"
-          onClick={() => validateEtudeMutation.mutate(ao.id)}
+          onClick={() => validateEtudeMutation.mutate(offer.id)}
           disabled={validateEtudeMutation.isPending}
-          data-testid={`button-validate-etude-${ao.id}`}
+          data-testid={`button-validate-etude-${offer.id}`}
         >
           <CheckCircle className="h-4 w-4 mr-2" />
           {validateEtudeMutation.isPending ? 'Validation...' : 'Valider et passer au chiffrage'}
@@ -136,14 +136,14 @@ export default function EtudeTechnique() {
     return actions;
   };
 
-  const handleEditAO = (aoId: string) => {
+  const handleEditOffer = (offerId: string) => {
     // Navigation vers la page d'édition avec les champs techniques débloqués
-    window.location.href = `/aos/${aoId}/edit?mode=technical`;
+    window.location.href = `/offers/${offerId}/edit?mode=technical`;
   };
 
-  const handleAnalyzeDocs = (aoId: string) => {
+  const handleAnalyzeDocs = (offerId: string) => {
     // Ouvrir l'interface d'analyse des documents techniques
-    setSelectedAO(aoId);
+    setSelectedOffer(offerId);
     toast({
       title: "Analyse des documents",
       description: "Ouverture de l'interface d'analyse CCTP/Plans",
@@ -168,7 +168,7 @@ export default function EtudeTechnique() {
                 <CardTitle className="text-sm font-medium">En étude</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{aos?.length || 0}</div>
+                <div className="text-2xl font-bold">{offers?.length || 0}</div>
                 <p className="text-xs text-muted-foreground">Dossiers actifs</p>
               </CardContent>
             </Card>
@@ -179,7 +179,7 @@ export default function EtudeTechnique() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-600">
-                  {aos?.filter((ao: any) => !ao.cctpAnalyzed).length || 0}
+                  {offers?.filter((offer: any) => !offer.cctpAnalyzed).length || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">Documents techniques</p>
               </CardContent>
@@ -191,7 +191,7 @@ export default function EtudeTechnique() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {aos?.filter((ao: any) => ao.technicalDetailsComplete).length || 0}
+                  {offers?.filter((offer: any) => offer.technicalDetailsComplete).length || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">Études complètes</p>
               </CardContent>
@@ -213,14 +213,14 @@ export default function EtudeTechnique() {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Dossiers en étude technique</span>
-                <Badge variant="secondary">{aos?.length || 0} dossiers</Badge>
+                <Badge variant="secondary">{offers?.length || 0} dossiers</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                  <p>Chargement des AOs en étude technique...</p>
+                  <p>Chargement des offres en étude technique...</p>
                 </div>
               ) : error ? (
                 <div className="text-center py-8 text-red-500">
@@ -236,29 +236,29 @@ export default function EtudeTechnique() {
                     Réessayer
                   </Button>
                 </div>
-              ) : aos?.length === 0 ? (
+              ) : offers?.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   Aucun dossier en étude technique actuellement
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {aos?.map((ao: any) => (
+                  {offers?.map((offer: any) => (
                     <div 
-                      key={ao.id} 
+                      key={offer.id} 
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h3 className="font-semibold text-lg">{ao.reference}</h3>
-                          <p className="text-sm text-gray-600">{ao.client}</p>
-                          <p className="text-sm text-gray-500">{ao.location}</p>
+                          <h3 className="font-semibold text-lg">{offer.reference}</h3>
+                          <p className="text-sm text-gray-600">{offer.client}</p>
+                          <p className="text-sm text-gray-500">{offer.location}</p>
                         </div>
                         <div className="text-right">
-                          <Badge variant={ao.priority === "urgent" ? "destructive" : "default"}>
-                            {ao.priority === "urgent" ? "Urgent" : "Normal"}
+                          <Badge variant={offer.priority === "urgent" ? "destructive" : "default"}>
+                            {offer.priority === "urgent" ? "Urgent" : "Normal"}
                           </Badge>
                           <p className="text-sm text-gray-500 mt-1">
-                            Depuis {ao.daysInStudy || 0} jours
+                            Depuis {offer.daysInStudy || 0} jours
                           </p>
                         </div>
                       </div>

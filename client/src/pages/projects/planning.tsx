@@ -19,9 +19,14 @@ export default function ProjectPlanningPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient(); // OPTIMISÉ: Hook au lieu du module-level queryClient
 
-  // Récupérer les projets
+  // Récupérer les projets en phase de planification
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
-    queryKey: ['/api', 'projects'],
+    queryKey: ['/api', 'projects', { status: 'planification' }],
+    queryFn: async () => {
+      const response = await fetch('/api/projects?status=planification');
+      if (!response.ok) throw new Error('Failed to fetch planning projects');
+      return response.json();
+    },
   });
 
   // Récupérer toutes les tâches pour les jalons

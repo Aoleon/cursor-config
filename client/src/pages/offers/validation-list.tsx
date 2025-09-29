@@ -25,8 +25,8 @@ export default function ValidationList() {
     },
     onSuccess: (data, offerId) => {
       // Invalider les queries reliées
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", "validation"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", "transform"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "en_attente_validation" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "fin_etudes_validee" }] });
       queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
       
       toast({
@@ -45,17 +45,21 @@ export default function ValidationList() {
 
   // Récupérer les offres en attente de validation
   const { data: offers = [], isLoading, error } = useQuery({
-    queryKey: ["/api/offers", "validation"],
+    queryKey: ["/api/offers", { status: "en_attente_validation" }],
     queryFn: async () => {
       console.log("🔍 Chargement des offres en attente de validation...");
       try {
-        const response = await fetch("/api/offers?status=en_cours_chiffrage,en_attente_validation");
-        if (!response.ok) {
-          throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
-        }
-        const data = await response.json();
-        console.log("✅ Données reçues:", data?.length, "offres à valider");
-        return data || [];
+        // Récupérer uniquement les offres en statut "en_attente_validation"
+        // Une offre doit passer explicitement de "en_cours_chiffrage" à "en_attente_validation"
+        // quand le chiffrage est terminé et elle est prête pour validation
+        const response = await fetch("/api/offers?status=en_attente_validation");
+        const offersData = await response.json();
+        
+        console.log("✅ Données reçues:", {
+          attenteValidation: offersData?.length || 0,
+          total: offersData?.length || 0
+        });
+        return offersData || [];
       } catch (err) {
         console.error("❌ Erreur lors de la récupération des offres:", err);
         throw err;
@@ -68,8 +72,7 @@ export default function ValidationList() {
   // Fonction pour obtenir le badge de statut
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      'en_cours_chiffrage': { label: 'Chiffrage terminé', variant: 'default' as const, color: 'text-blue-600' },
-      'en_attente_validation': { label: 'En attente bouclage', variant: 'secondary' as const, color: 'text-orange-600' },
+      'en_attente_validation': { label: 'Prêt pour validation', variant: 'secondary' as const, color: 'text-orange-600' },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { 
       label: status, 
@@ -97,8 +100,8 @@ export default function ValidationList() {
   // Calcul des statistiques
   const stats = {
     total: offers.length,
-    chiffrageTermine: offers.filter((offer: any) => offer.status === 'en_cours_chiffrage').length,
-    enAttenteValidation: offers.filter((offer: any) => offer.status === 'en_attente_validation').length,
+    // Toutes les offres sont en attente de validation puisque c'est le seul statut récupéré
+    enAttenteValidation: offers.length,
     retard: offers.filter((offer: any) => {
       if (!offer.deadlineDate) return false;
       return new Date(offer.deadlineDate) < new Date();
@@ -150,31 +153,7 @@ export default function ValidationList() {
       </div>
 
       {/* Cartes de statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-on-surface">
-              {stats.total}
-            </div>
-            <p className="text-xs text-muted-foreground">Offres à valider</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Chiffrage terminé</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {stats.chiffrageTermine}
-            </div>
-            <p className="text-xs text-muted-foreground">Prêts à valider</p>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">En attente validation</CardTitle>
@@ -183,7 +162,7 @@ export default function ValidationList() {
             <div className="text-2xl font-bold text-orange-600">
               {stats.enAttenteValidation}
             </div>
-            <p className="text-xs text-muted-foreground">Bouclage en cours</p>
+            <p className="text-xs text-muted-foreground">Dossiers à valider</p>
           </CardContent>
         </Card>
 
@@ -198,6 +177,18 @@ export default function ValidationList() {
             <p className="text-xs text-muted-foreground">Échéance dépassée</p>
           </CardContent>
         </Card>
+        
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Prêts pour validation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.total}
+            </div>
+            <p className="text-xs text-muted-foreground">Chiffrage terminé</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Liste des offres */}
@@ -210,7 +201,7 @@ export default function ValidationList() {
               <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-on-surface mb-2">Aucune offre à valider</h3>
               <p className="text-on-surface-muted mb-4">
-                Toutes les offres sont soit en cours de chiffrage, soit déjà validées.
+                Aucune offre n'est actuellement en attente de validation. Les offres en cours de chiffrage apparaîtront ici une fois le chiffrage terminé.
               </p>
               <Button variant="outline" onClick={() => window.location.href = "/offers"}>
                 Voir toutes les offres
@@ -302,7 +293,7 @@ export default function ValidationList() {
                         Voir détails
                       </Button>
                       
-                      {(offer.status === 'fin_etudes' || offer.status === 'chiffrage_termine') && !offer.finEtudesValidatedAt && (
+                      {offer.status === 'en_attente_validation' && !offer.finEtudesValidatedAt && (
                         <Button 
                           size="sm"
                           onClick={() => validateStudiesMutation.mutate(offer.id)}

@@ -138,7 +138,7 @@ export interface IStorage {
   deleteOffer(id: string): Promise<void>;
   
   // Project operations - 5 étapes POC
-  getProjects(): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]>;
+  getProjects(search?: string, status?: string): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]>;
   getProject(id: string): Promise<(Project & { responsibleUser?: User; offer?: Offer }) | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, project: Partial<InsertProject>): Promise<Project>;
@@ -877,11 +877,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Project operations (5 étapes POC)
-  async getProjects(): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]> {
-    const baseProjects = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  async getProjects(search?: string, status?: string): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]> {
+    let query = db.select().from(projects).orderBy(desc(projects.createdAt));
+    
+    // Filtrage par statut si fourni
+    if (status) {
+      query = query.where(eq(projects.status, status));
+    }
+    
+    const baseProjects = await query;
+
+    let filteredProjects = baseProjects;
+    
+    // Filtrage par recherche si fournie
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredProjects = baseProjects.filter(project =>
+        project.name?.toLowerCase().includes(searchLower) ||
+        project.client?.toLowerCase().includes(searchLower) ||
+        project.location?.toLowerCase().includes(searchLower) ||
+        project.description?.toLowerCase().includes(searchLower)
+      );
+    }
 
     const result = [];
-    for (const project of baseProjects) {
+    for (const project of filteredProjects) {
       let responsibleUser = undefined;
       let offer = undefined;
 
@@ -3449,7 +3469,7 @@ export class MemStorage implements IStorage {
     throw new Error("MemStorage: deleteOffer not implemented for POC");
   }
 
-  async getProjects(): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]> {
+  async getProjects(search?: string, status?: string): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]> {
     return [];
   }
 

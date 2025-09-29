@@ -24,9 +24,10 @@ export default function ChiffrageList() {
       return response.json();
     },
     onSuccess: (data, offerId) => {
-      // Invalider les queries reliées
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", "chiffrage"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/aos/chiffrage"] });
+      // Invalider les queries reliées avec les nouvelles clés cohérentes
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: ["en_attente_fournisseurs", "en_cours_chiffrage"] }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "en_attente_fournisseurs" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "en_cours_chiffrage" }] });
       queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
       
       toast({
@@ -45,18 +46,23 @@ export default function ChiffrageList() {
 
   // Récupérer les offres prêtes pour chiffrage et en cours de chiffrage
   const { data: offers = [], isLoading, error } = useQuery({
-    queryKey: ["/api/offers", "chiffrage"],
+    queryKey: ["/api/offers", { status: ["en_attente_fournisseurs", "en_cours_chiffrage"] }],
     queryFn: async () => {
       console.log("🔍 Chargement des offres pour chiffrage...");
       try {
-        // Récupérer les offres avec les statuts appropriés pour le workflow chiffrage
-        const response = await fetch("/api/offers?status=en_attente_fournisseurs,en_cours_chiffrage");
-        if (!response.ok) {
-          throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
-        }
-        const data = await response.json();
-        console.log("✅ Données reçues:", data?.length, "offres pour chiffrage");
-        return data || [];
+        // Récupérer les offres prêtes à chiffrer ET en cours de chiffrage
+        const [offersAttenteFournisseurs, offersEnCoursChiffrage] = await Promise.all([
+          fetch("/api/offers?status=en_attente_fournisseurs").then(r => r.json()),
+          fetch("/api/offers?status=en_cours_chiffrage").then(r => r.json())
+        ]);
+        
+        const allOffers = [...(offersAttenteFournisseurs || []), ...(offersEnCoursChiffrage || [])];
+        console.log("✅ Données reçues:", {
+          pretAChiffrer: offersAttenteFournisseurs?.length || 0,
+          enCoursChiffrage: offersEnCoursChiffrage?.length || 0,
+          total: allOffers.length
+        });
+        return allOffers;
       } catch (err) {
         console.error("❌ Erreur lors de la récupération des offres:", err);
         throw err;

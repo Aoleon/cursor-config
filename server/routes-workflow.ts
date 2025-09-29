@@ -3,6 +3,19 @@ import { storage } from "./storage-poc";
 import { EventType, createRealtimeEvent, commonQueryKeys } from '../shared/events';
 import type { EventBus } from './eventBus';
 import { isAuthenticated } from "./replitAuth";
+import { validateQuery, asyncHandler } from "./middleware/validation";
+import { sendSuccess } from "./middleware/errorHandler";
+import { z } from "zod";
+
+// Schéma de validation pour les statuts de projet dans le workflow
+const projectStatusValues = [
+  "passation", "etude", "visa_architecte", "planification", 
+  "approvisionnement", "chantier", "sav"
+] as const;
+
+const workflowProjectsQuerySchema = z.object({
+  status: z.enum(projectStatusValues).optional()
+});
 
 export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
@@ -167,8 +180,10 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
 
   // Récupérer les projets par statut
-  app.get("/api/projects", isAuthenticated, async (req, res) => {
-    try {
+  app.get("/api/projects", 
+    isAuthenticated, 
+    validateQuery(workflowProjectsQuerySchema),
+    asyncHandler(async (req, res) => {
       const { status } = req.query;
       const projects = await storage.getProjects();
       
@@ -231,11 +246,9 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         ? enrichedProjects.filter((p: any) => p.status === status)
         : enrichedProjects;
       
-      res.json(filteredProjects);
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors de la récupération des projets" });
-    }
-  });
+      sendSuccess(res, filteredProjects);
+    })
+  );
 
   // Route spécifique pour les données de planification des projets
   app.get("/api/projects/planning", isAuthenticated, async (req, res) => {

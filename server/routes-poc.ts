@@ -91,6 +91,28 @@ const ocrService = new OCRService();
 // Instance unique du service d'intelligence temporelle
 const dateIntelligenceService = new DateIntelligenceService(storage as IStorage);
 
+// Schémas de validation pour les paramètres de query - Status Validation
+const offerStatusValues = [
+  "brouillon", "etude_technique", "en_attente_fournisseurs", "en_cours_chiffrage",
+  "en_attente_validation", "fin_etudes_validee", "valide", "signe", 
+  "transforme_en_projet", "termine", "archive"
+] as const;
+
+const projectStatusValues = [
+  "passation", "etude", "visa_architecte", "planification", 
+  "approvisionnement", "chantier", "sav"
+] as const;
+
+const offersQuerySchema = z.object({
+  search: z.string().optional(),
+  status: z.enum(offerStatusValues).optional()
+});
+
+const projectsQuerySchema = z.object({
+  search: z.string().optional(), 
+  status: z.enum(projectStatusValues).optional()
+});
+
 // Importation et instances des services de détection d'alertes - Phase 2.3
 import { DateAlertDetectionService, MenuiserieDetectionRules } from "./services/DateAlertDetectionService";
 import { PeriodicDetectionScheduler } from "./services/PeriodicDetectionScheduler";
@@ -958,19 +980,21 @@ app.post("/api/ocr/add-pattern",
 // OFFER ROUTES - Cœur du POC (Dossiers d'Offre & Chiffrage)
 // ========================================
 
-app.get("/api/offers", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/offers", 
+  isAuthenticated, 
+  validateQuery(offersQuerySchema),
+  asyncHandler(async (req, res) => {
     const { search, status } = req.query;
+    
+    // Validation réussie : status est garanti valide ou undefined
     const offers = await storage.getOffers(
       search as string, 
       status as string
     );
-    res.json(offers);
-  } catch (error: any) {
-    console.error("Error fetching offers:", error);
-    res.status(500).json({ message: "Failed to fetch offers" });
-  }
-});
+    
+    sendSuccess(res, offers);
+  })
+);
 
 // Nouvelle route : Demandes fournisseurs (workflow ajusté)
 app.get("/api/offers/suppliers-pending", isAuthenticated, async (req, res) => {
@@ -1591,15 +1615,21 @@ app.get('/api/projects/config',
   })
 );
 
-app.get("/api/projects", isAuthenticated, async (req, res) => {
-  try {
-    const projects = await storage.getProjects();
-    res.json(projects);
-  } catch (error) {
-    console.error("Error fetching projects:", error);
-    res.status(500).json({ message: "Failed to fetch projects" });
-  }
-});
+app.get("/api/projects", 
+  isAuthenticated, 
+  validateQuery(projectsQuerySchema),
+  asyncHandler(async (req, res) => {
+    const { search, status } = req.query;
+    
+    // Validation réussie : status est garanti valide ou undefined
+    const projects = await storage.getProjects(
+      search as string, 
+      status as string
+    );
+    
+    sendSuccess(res, projects);
+  })
+);
 
 app.get("/api/projects/:id", isAuthenticated, async (req, res) => {
   try {

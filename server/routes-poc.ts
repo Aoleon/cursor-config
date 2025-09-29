@@ -10,7 +10,7 @@ import { rateLimits, secureFileUpload } from "./middleware/security";
 import { sendSuccess, sendPaginatedSuccess, createError, asyncHandler } from "./middleware/errorHandler";
 import { 
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
-  insertProjectTaskSchema, insertSupplierRequestSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
+  insertProjectTaskSchema, insertSupplierRequestSchema, insertSupplierSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
   insertChiffrageElementSchema, insertDpgfDocumentSchema, insertValidationMilestoneSchema, insertVisaArchitecteSchema,
   technicalScoringConfigSchema, type TechnicalScoringConfig, type SpecialCriteria,
   insertTechnicalAlertSchema, bypassTechnicalAlertSchema, technicalAlertsFilterSchema,
@@ -2444,6 +2444,70 @@ app.delete("/api/contacts-maitre-oeuvre/:contactId", isAuthenticated, async (req
     res.status(500).json({ message: "Failed to delete contact" });
   }
 });
+
+// ========================================
+// SUPPLIER ROUTES - Gestion des fournisseurs
+// ========================================
+
+const suppliersQuerySchema = z.object({
+  search: z.string().optional(),
+  status: z.enum(["actif", "inactif", "suspendu", "blackliste"]).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20)
+});
+
+app.get("/api/suppliers/", 
+  isAuthenticated, 
+  validateQuery(suppliersQuerySchema),
+  asyncHandler(async (req, res) => {
+    const { search, status, page, limit } = req.query;
+    
+    const suppliers = await storage.getSuppliers(
+      search as string, 
+      status as string
+    );
+    
+    // Application de la pagination côté serveur
+    const offset = (page - 1) * limit;
+    const paginatedSuppliers = suppliers.slice(offset, offset + limit);
+    const total = suppliers.length;
+    const totalPages = Math.ceil(total / limit);
+    
+    sendPaginatedSuccess(res, paginatedSuppliers, {
+      page,
+      limit,
+      total
+    });
+  })
+);
+
+app.post("/api/suppliers/", 
+  isAuthenticated, 
+  validateBody(insertSupplierSchema),
+  asyncHandler(async (req, res) => {
+    const supplier = await storage.createSupplier(req.body);
+    sendSuccess(res, supplier, 201);
+  })
+);
+
+app.patch("/api/suppliers/:id", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  validateBody(insertSupplierSchema.partial()),
+  asyncHandler(async (req, res) => {
+    const supplier = await storage.updateSupplier(req.params.id, req.body);
+    sendSuccess(res, supplier);
+  })
+);
+
+app.delete("/api/suppliers/:id", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  asyncHandler(async (req, res) => {
+    await storage.deleteSupplier(req.params.id);
+    sendSuccess(res, { message: "Supplier deleted successfully" });
+  })
+);
 
 // ========================================
 // SUPPLIER REQUEST ROUTES - Demandes prix simplifiées

@@ -3,8 +3,8 @@ import { storage } from "./storage-poc";
 import { EventType, createRealtimeEvent, commonQueryKeys } from '../shared/events';
 import type { EventBus } from './eventBus';
 import { isAuthenticated } from "./replitAuth";
-import { validateQuery, asyncHandler } from "./middleware/validation";
-import { sendSuccess } from "./middleware/errorHandler";
+import { validateQuery } from "./middleware/validation";
+import { sendSuccess, asyncHandler } from "./middleware/errorHandler";
 import { z } from "zod";
 
 // Schéma de validation pour les statuts de projet dans le workflow

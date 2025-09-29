@@ -1,6 +1,6 @@
-import { eq, desc, and, sql, gte, lte, count, sum, avg, ne } from "drizzle-orm";
+import { eq, desc, and, sql, gte, lte, count, sum, avg, ne, ilike } from "drizzle-orm";
 import { 
-  users, aos, offers, projects, projectTasks, supplierRequests, teamResources, beWorkload,
+  users, aos, offers, projects, projectTasks, suppliers, supplierRequests, teamResources, beWorkload,
   chiffrageElements, dpgfDocuments, aoLots, maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre,
   validationMilestones, visaArchitecte, technicalAlerts, technicalAlertHistory,
   projectTimelines, dateIntelligenceRules, dateAlerts, businessMetrics, kpiSnapshots, performanceBenchmarks,
@@ -14,6 +14,7 @@ import {
   type Offer, type InsertOffer,
   type Project, type InsertProject,
   type ProjectTask, type InsertProjectTask,
+  type Supplier, type InsertSupplier,
   type SupplierRequest, type InsertSupplierRequest,
   type TeamResource, type InsertTeamResource,
   type BeWorkload, type InsertBeWorkload,
@@ -148,6 +149,13 @@ export interface IStorage {
   getAllTasks(): Promise<(ProjectTask & { assignedUser?: User })[]>;
   createProjectTask(task: InsertProjectTask): Promise<ProjectTask>;
   updateProjectTask(id: string, task: Partial<InsertProjectTask>): Promise<ProjectTask>;
+  
+  // Supplier operations - Gestion des fournisseurs
+  getSuppliers(search?: string, status?: string): Promise<Supplier[]>;
+  getSupplier(id: string): Promise<Supplier | undefined>;
+  createSupplier(supplier: InsertSupplier): Promise<Supplier>;
+  updateSupplier(id: string, supplier: Partial<InsertSupplier>): Promise<Supplier>;
+  deleteSupplier(id: string): Promise<void>;
   
   // Supplier request operations - Demandes prix simplifiées
   getSupplierRequests(offerId?: string): Promise<SupplierRequest[]>;
@@ -1020,6 +1028,51 @@ export class DatabaseStorage implements IStorage {
       .where(eq(projectTasks.id, id))
       .returning();
     return updatedTask;
+  }
+
+  // Supplier operations (gestion des fournisseurs)
+  async getSuppliers(search?: string, status?: string): Promise<Supplier[]> {
+    let query = db.select().from(suppliers);
+    
+    if (search || status) {
+      const conditions = [];
+      if (search) {
+        // Utilisation sécurisée avec ilike() plutôt que sql template
+        conditions.push(ilike(suppliers.name, `%${search}%`));
+      }
+      if (status) {
+        conditions.push(eq(suppliers.status, status as any));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions));
+      }
+    }
+    
+    return await query.orderBy(desc(suppliers.createdAt));
+  }
+
+  async getSupplier(id: string): Promise<Supplier | undefined> {
+    const result = await db.select().from(suppliers).where(eq(suppliers.id, id));
+    return result[0];
+  }
+
+  async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
+    const [newSupplier] = await db.insert(suppliers).values(supplier).returning();
+    return newSupplier;
+  }
+
+  async updateSupplier(id: string, supplier: Partial<InsertSupplier>): Promise<Supplier> {
+    const [updatedSupplier] = await db
+      .update(suppliers)
+      .set({ ...supplier, updatedAt: new Date() })
+      .where(eq(suppliers.id, id))
+      .returning();
+    return updatedSupplier;
+  }
+
+  async deleteSupplier(id: string): Promise<void> {
+    await db.delete(suppliers).where(eq(suppliers.id, id));
   }
 
   // Supplier request operations (demandes prix simplifiées)
@@ -3499,6 +3552,96 @@ export class MemStorage implements IStorage {
 
   async updateProjectTask(id: string, task: Partial<InsertProjectTask>): Promise<ProjectTask> {
     throw new Error("MemStorage: updateProjectTask not implemented for POC");
+  }
+
+  // MemStorage pour Suppliers - Implémentation complète pour tests/dev
+  private suppliers: Map<string, Supplier> = new Map();
+  private supplierIdCounter = 1;
+
+  async getSuppliers(search?: string, status?: string): Promise<Supplier[]> {
+    let suppliers = Array.from(this.suppliers.values());
+    
+    // Filtrage par recherche (nom)
+    if (search) {
+      const searchLower = search.toLowerCase();
+      suppliers = suppliers.filter(supplier => 
+        supplier.name.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Filtrage par statut
+    if (status) {
+      suppliers = suppliers.filter(supplier => supplier.status === status);
+    }
+    
+    // Tri par date de création (desc)
+    return suppliers.sort((a, b) => 
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+  }
+
+  async getSupplier(id: string): Promise<Supplier | undefined> {
+    return this.suppliers.get(id);
+  }
+
+  async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
+    const id = `supplier-mem-${this.supplierIdCounter++}`;
+    const now = new Date();
+    
+    const newSupplier: Supplier = {
+      id,
+      name: supplier.name,
+      contact: supplier.contact || null,
+      email: supplier.email || null,
+      phone: supplier.phone || null,
+      address: supplier.address || null,
+      siret: supplier.siret || null,
+      specialties: supplier.specialties || [],
+      status: supplier.status || 'actif',
+      capacities: supplier.capacities || {},
+      avgResponseTime: supplier.avgResponseTime || 0,
+      paymentTerms: supplier.paymentTerms || 30,
+      deliveryDelay: supplier.deliveryDelay || 15,
+      rating: supplier.rating || '0',
+      totalOrders: supplier.totalOrders || 0,
+      createdAt: now,
+      updatedAt: now,
+      city: supplier.city || null,
+      clientIds: supplier.clientIds || [],
+      tags: supplier.tags || []
+    };
+    
+    this.suppliers.set(id, newSupplier);
+    logger.info(`MemStorage: Supplier créé avec succès`, { id, name: newSupplier.name });
+    return newSupplier;
+  }
+
+  async updateSupplier(id: string, supplier: Partial<InsertSupplier>): Promise<Supplier> {
+    const existing = this.suppliers.get(id);
+    if (!existing) {
+      throw new Error(`Supplier avec ID ${id} introuvable`);
+    }
+    
+    const updated: Supplier = {
+      ...existing,
+      ...supplier,
+      id, // Préserver l'ID
+      updatedAt: new Date()
+    };
+    
+    this.suppliers.set(id, updated);
+    logger.info(`MemStorage: Supplier mis à jour avec succès`, { id, name: updated.name });
+    return updated;
+  }
+
+  async deleteSupplier(id: string): Promise<void> {
+    const existing = this.suppliers.get(id);
+    if (!existing) {
+      throw new Error(`Supplier avec ID ${id} introuvable`);
+    }
+    
+    this.suppliers.delete(id);
+    logger.info(`MemStorage: Supplier supprimé avec succès`, { id, name: existing.name });
   }
 
   async getSupplierRequests(offerId?: string): Promise<SupplierRequest[]> {

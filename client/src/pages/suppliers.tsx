@@ -83,6 +83,17 @@ interface NewSupplierRequest {
   notes?: string;
 }
 
+interface PaginatedSuppliersResponse {
+  success: boolean;
+  data: Supplier[];
+  timestamp: string;
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
 export default function Suppliers() {
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
@@ -92,9 +103,12 @@ export default function Suppliers() {
   const queryClient = useQueryClient();
 
   // Fetch suppliers
-  const { data: suppliers = [], isLoading: suppliersLoading } = useQuery<Supplier[]>({
+  const { data: suppliersResponse, isLoading: suppliersLoading } = useQuery<PaginatedSuppliersResponse>({
     queryKey: ['/api/suppliers/'],
   });
+  
+  const suppliers = suppliersResponse?.data || [];
+  const suppliersMeta = suppliersResponse?.meta;
 
   // Fetch supplier requests
   const { data: supplierRequests = [], isLoading } = useQuery<SupplierRequest[]>({

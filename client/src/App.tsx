@@ -147,13 +147,14 @@ function Router() {
       <Route path="/offers" component={() => <ProtectedRoute component={Offers} />} />
       <Route path="/create-offer" component={() => <ProtectedRoute component={CreateOffer} />} />
       <Route path="/create-ao" component={() => <ProtectedRoute component={CreateAO} />} />
-      <Route path="/offers/:id" component={() => <ProtectedRoute component={OfferDetail} />} />
-      <Route path="/offers/:id/edit" component={() => <ProtectedRoute component={AoDetail} />} />
-      <Route path="/offers/:id/chiffrage" component={() => <ProtectedRoute component={Chiffrage} />} />
-      {/* Sous-étapes des Appels d'Offres */}
+      {/* Sous-étapes des Appels d'Offres - Routes statiques AVANT routes dynamiques */}
       <Route path="/offers/validation" component={() => <ProtectedRoute component={ValidationList} />} />
       <Route path="/offers/transform" component={() => <ProtectedRoute component={TransformList} />} />
       <Route path="/offers/chiffrage" component={() => <ProtectedRoute component={ChiffrageList} />} />
+      {/* Routes dynamiques avec :id APRÈS les routes statiques */}
+      <Route path="/offers/:id" component={() => <ProtectedRoute component={OfferDetail} />} />
+      <Route path="/offers/:id/edit" component={() => <ProtectedRoute component={AoDetail} />} />
+      <Route path="/offers/:id/chiffrage" component={() => <ProtectedRoute component={Chiffrage} />} />
       <Route path="/offers/create" component={() => <ProtectedRoute component={CreateAO} />} />
       <Route path="/offers/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
       <Route path="/projects" component={() => <ProtectedRoute component={Projects} />} />

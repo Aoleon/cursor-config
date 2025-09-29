@@ -138,6 +138,7 @@ function Router() {
         <Redirect to="/workflow/etude-technique" />
       </Route>
       <Route path="/aos/:id" component={() => <ProtectedRoute component={AoDetail} />} />
+      <Route path="/aos/:id/edit" component={() => <ProtectedRoute component={AoDetail} />} />
       {/* Route pour la comparaison des devis fournisseurs */}
       <Route path="/comparaison-devis/:aoLotId" component={() => <ProtectedRoute component={ComparaisonDevis} />} />
       

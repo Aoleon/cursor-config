@@ -65,10 +65,16 @@ const getStatusLabel = (status?: string) => {
 
 export default function AoDetail() {
   const { toast } = useToast();
-  const [_, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { id } = useParams();
   const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
+  
+  // Récupérer le paramètre mode depuis l'URL
+  const searchParams = new URLSearchParams(window.location.search);
+  const mode = searchParams.get('mode');
+  const isTechnicalMode = mode === 'technical';
+  
+  const [isEditing, setIsEditing] = useState(isTechnicalMode);
   const [isSaving, setIsSaving] = useState(false);
   const [lots, setLots] = useState<Lot[]>([]);
   const [activeTab, setActiveTab] = useState("informations");

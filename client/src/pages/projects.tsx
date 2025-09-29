@@ -7,9 +7,10 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, User, Euro, Kanban, Users, Home, ExternalLink } from "lucide-react";
+import { Calendar, MapPin, User, Euro, Kanban, Users, Home, ExternalLink, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import KanbanBoard from "@/components/projects/kanban-board";
@@ -104,15 +105,25 @@ export default function Projects() {
               {projects.map((project: any) => (
                 <Card 
                   key={project.id} 
-                  className="hover:shadow-card-hover transition-shadow cursor-pointer"
-                  onClick={() => setLocation(`/projects/${project.id}`)}
+                  className="hover:shadow-card-hover transition-shadow"
                 >
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{project.name}</CardTitle>
-                      <Badge className={getStatusColor(project.status)}>
-                        {getStatusLabel(project.status)}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(project.status)}>
+                          {getStatusLabel(project.status)}
+                        </Badge>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setLocation(`/projects/${project.id}`)}
+                          data-testid={`button-view-detail-${project.id}`}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Voir le détail
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">

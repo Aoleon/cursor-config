@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ import {
 export default function Chiffrage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Récupérer les offres en chiffrage
   const { data: offers, isLoading, error } = useQuery({
@@ -167,7 +169,7 @@ export default function Chiffrage() {
   const handleOpenCalculator = (offerId: string) => {
     console.log("🧮 Ouverture du calculateur pour l'offre:", offerId);
     try {
-      window.location.href = `/offers/${offerId}/chiffrage`;
+      setLocation(`/offers/${offerId}/chiffrage`);
     } catch (err) {
       console.error("❌ Erreur ouverture calculateur:", err);
       toast({

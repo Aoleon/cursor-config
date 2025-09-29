@@ -671,7 +671,7 @@ export default function GanttChart({
 
       <CardContent>
         {/* En-tête du calendrier */}
-        <div className="grid grid-cols-10 gap-1 mb-4">
+        <div className="grid grid-cols-9 gap-1 mb-4">
           <div className="col-span-3 text-sm font-medium text-gray-700 p-2">
             Projet / Tâche
           </div>
@@ -703,9 +703,6 @@ export default function GanttChart({
               ))
             )}
           </div>
-          <div className="col-span-1 text-sm font-medium text-gray-700 p-2 text-center">
-            Niveau
-          </div>
         </div>
 
         {/* Zone principale du Gantt avec drag/drop */}
@@ -728,7 +725,7 @@ export default function GanttChart({
             const itemWorkload = itemWorkloads[item.id];
             
             return (
-              <div key={item.id} className="grid grid-cols-10 gap-1 group">
+              <div key={item.id} className="grid grid-cols-9 gap-1 group">
                 {/* Nom de l'élément avec hiérarchie */}
                 <div className="col-span-3 flex items-center justify-between p-2">
                   <div className="flex items-center space-x-1">
@@ -836,19 +833,6 @@ export default function GanttChart({
                     </div>
                   )}
                 </div>
-
-                {/* Niveau hiérarchique ou statut */}
-                <div className="col-span-1 flex items-center justify-center">
-                  {enableHierarchy && (item as HierarchyItem).level > 0 ? (
-                    <Badge variant="outline" className="text-xs px-1 py-0">
-                      L{(item as HierarchyItem).level}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs">
-                      {item.progress !== undefined ? `${item.progress}%` : '-'}
-                    </Badge>
-                  )}
-                </div>
               </div>
             );
           })}
@@ -856,7 +840,7 @@ export default function GanttChart({
 
         {/* Ligne des effectifs nécessaires selon typologie des tâches */}
         <div className="mt-6 border-t border-gray-300 pt-4">
-          <div className="grid grid-cols-10 gap-1 mb-2">
+          <div className="grid grid-cols-9 gap-1 mb-2">
             <div className="col-span-3 text-sm font-medium text-gray-700 p-2">
               <div className="flex items-center space-x-2">
                 <Users className="h-4 w-4 text-blue-600" />
@@ -1034,14 +1018,6 @@ export default function GanttChart({
                     return avgStaff.toFixed(1);
                   })()} pers.
                 </div>
-              </div>
-            </div>
-            <div className="col-span-1 flex flex-col items-center justify-center space-y-1">
-              <Badge variant="secondary" className="text-xs">
-                {totalEstimatedPersons} ETP
-              </Badge>
-              <div className="text-xs text-gray-500 text-center">
-                Total requis
               </div>
             </div>
           </div>

@@ -8611,18 +8611,34 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
           throw createError.forbidden('Quota d\'uploads atteint');
         }
         
-        // Stocker le fichier (à implémenter avec le service object storage)
-        const fileName = `${session.id}_${Date.now()}_${file.originalname}`;
-        const filePath = `supplier-quotes/${fileName}`;
+        // CRITICAL: Persister le fichier dans Object Storage AVANT tout traitement
+        console.log(`[Supplier Workflow] Stockage du fichier dans Object Storage...`);
+        const objectStorageService = new ObjectStorageService();
         
-        // Créer l'enregistrement du document
+        const { filePath, objectUrl } = await objectStorageService.uploadSupplierDocument(
+          file.buffer,
+          session.id,
+          file.originalname,
+          file.mimetype,
+          {
+            'session-id': session.id,
+            'supplier-id': session.supplierId,
+            'ao-lot-id': session.aoLotId,
+            'document-type': documentType,
+            'uploaded-at': new Date().toISOString()
+          }
+        );
+        
+        console.log(`[Supplier Workflow] ✅ Fichier stocké avec succès: ${filePath}`);
+        
+        // Créer l'enregistrement du document avec le chemin Object Storage
         const document = await storage.createSupplierDocument({
           sessionId: session.id,
           supplierId: session.supplierId,
           aoLotId: session.aoLotId,
           documentType,
           fileName: file.originalname,
-          filePath,
+          filePath, // Chemin Object Storage persistant
           fileSize: file.size,
           mimeType: file.mimetype,
           description,

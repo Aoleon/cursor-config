@@ -314,6 +314,71 @@ export class ObjectStorageService {
       ttlSec: 900,
     });
   }
+
+  // Upload supplier document directly from Buffer - SECURITY HARDENED
+  async uploadSupplierDocument(
+    fileBuffer: Buffer,
+    sessionId: string,
+    fileName: string,
+    mimeType: string,
+    metadata?: Record<string, string>
+  ): Promise<{ filePath: string; objectUrl: string }> {
+    // SECURITY: Sanitize file name
+    const sanitizedFileName = sanitizeFileName(fileName);
+    
+    // SECURITY: Validate session ID format
+    if (!sessionId || typeof sessionId !== 'string' || sessionId.length < 10) {
+      throw new Error('Invalid session ID format');
+    }
+
+    const privateObjectDir = this.getPrivateObjectDir();
+    
+    // Create unique file path for supplier documents
+    const timestamp = Date.now();
+    const filePath = `${privateObjectDir}/supplier-quotes/${sessionId}/${timestamp}_${sanitizedFileName}`;
+    
+    console.log(`[ObjectStorage] Uploading supplier document: session=${sessionId}, file=${sanitizedFileName}, size=${fileBuffer.length} bytes`);
+    
+    const { bucketName, objectName } = parseObjectPath(filePath);
+
+    // Get signed URL for upload
+    const uploadUrl = await signObjectURL({
+      bucketName,
+      objectName,
+      method: "PUT",
+      ttlSec: 300, // 5 minutes for upload
+    });
+
+    // Upload file using signed URL
+    const headers: Record<string, string> = {
+      'Content-Type': mimeType,
+      'Content-Length': fileBuffer.length.toString(),
+    };
+
+    // Add custom metadata if provided
+    if (metadata) {
+      for (const [key, value] of Object.entries(metadata)) {
+        headers[`x-goog-meta-${key}`] = value;
+      }
+    }
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      body: fileBuffer,
+      headers,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(`Failed to upload file: ${uploadResponse.status} ${uploadResponse.statusText}`);
+    }
+
+    console.log(`[ObjectStorage] ✅ Supplier document uploaded successfully: ${filePath}`);
+
+    return {
+      filePath,
+      objectUrl: filePath, // Return full path for internal use
+    };
+  }
 }
 
 function parseObjectPath(path: string): {

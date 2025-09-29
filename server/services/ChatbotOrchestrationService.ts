@@ -567,7 +567,7 @@ export class ChatbotOrchestrationService {
         sql: sqlResult.sql,
         results: sqlResult.results,
         executionTimeMs: totalExecutionTime,
-        confidence: modelSelection?.confidence || sqlResult.metadata?.confidence,
+        confidence: (modelSelection?.confidence || sqlResult.confidence || 0).toString(),
         modelUsed: modelSelection?.selectedModel || sqlResult.metadata?.aiModelUsed,
         cacheHit: sqlResult.metadata?.cacheHit || false,
         errorOccurred: false,
@@ -578,38 +578,31 @@ export class ChatbotOrchestrationService {
 
       console.log(`[ChatbotOrchestration] PARALLEL Pipeline terminé en ${totalExecutionTime}ms (économie: ${debugInfo.parallel_execution?.timeSaving || 0}ms)`);
 
-      // Construire réponse finale
+      // Construire réponse finale selon interface ChatbotQueryResponse
       return {
         success: true,
-        data: {
-          conversationId,
-          query: request.query,
-          explanation,
-          suggestions,
-          sql: request.options?.includeSql ? sqlResult.sql : undefined,
-          results: sqlResult.results,
-          metadata: {
-            executionTimeMs: totalExecutionTime,
-            modelUsed: modelSelection?.selectedModel || sqlResult.metadata?.aiModelUsed,
-            cacheHit: sqlResult.metadata?.cacheHit || false,
-            resultCount: sqlResult.results?.length || 0,
-            debugInfo: request.options?.includeDebugInfo ? {
-              ...debugInfo,
-              detailedTimings,
-              parallelMode: true,
-              modelSelection: {
-                model: modelSelection?.selectedModel,
-                reason: modelSelection?.reason,
-                confidence: modelSelection?.confidence,
-                appliedRules: modelSelection?.appliedRules
-              },
-              businessContext: {
-                loaded: !!businessContextResponse,
-                complexity: businessContextResponse?.context?.complexity || 'unknown'
-              }
-            } : undefined
+        conversation_id: conversationId,
+        query: request.query,
+        explanation,
+        suggestions,
+        sql: this.shouldIncludeSQL(request.userRole) ? sqlResult.sql : undefined,
+        results: sqlResult.results || [],
+        confidence: sqlResult.confidence || 0,
+        execution_time_ms: totalExecutionTime,
+        model_used: modelSelection?.selectedModel || sqlResult.metadata?.aiModelUsed,
+        cache_hit: sqlResult.metadata?.cacheHit || false,
+        debug_info: request.options?.includeDebugInfo ? {
+          rbac_filters_applied: sqlResult.rbacFiltersApplied || [],
+          business_context_loaded: !!businessContextResponse,
+          ai_routing_decision: modelSelection?.selectedModel || sqlResult.metadata?.aiModelUsed || "unknown",
+          security_checks_passed: securityChecksPassed,
+          performance_metrics: {
+            context_generation_ms: debugInfo.parallel_execution?.contextTime || 0,
+            sql_generation_ms: debugInfo.parallel_execution?.modelTime || 0,
+            query_execution_ms: sqlResult.executionTime || 0,
+            total_orchestration_ms: totalExecutionTime
           }
-        }
+        } : undefined
       };
 
     } catch (error) {
@@ -1004,7 +997,7 @@ export class ChatbotOrchestrationService {
         sql: sqlResult.sql,
         results: sqlResult.results,
         executionTimeMs: totalExecutionTime,
-        confidence: sqlResult.confidence !== null && sqlResult.confidence !== undefined ? parseFloat(sqlResult.confidence.toString()) : 0,
+        confidence: (sqlResult.confidence || 0).toString(),
         modelUsed: sqlResult.metadata?.aiModelUsed || null,
         cacheHit: sqlResult.metadata?.cacheHit || false,
         errorOccurred: false,
@@ -1019,7 +1012,7 @@ export class ChatbotOrchestrationService {
         "query",
         totalExecutionTime,
         true,
-        sqlResult.metadata?.tokensUsed || 0 // Utiliser les tokens du résultat SQL
+        0 // Tokens non disponibles dans metadata, utiliser 0
       );
 
       // ========================================
@@ -1028,10 +1021,10 @@ export class ChatbotOrchestrationService {
       const { createRealtimeEvent, EventType } = await import("@shared/events");
       await this.eventBus.publish(createRealtimeEvent({
         type: EventType.CHATBOT_QUERY_PROCESSED,
-        entity: 'chatbot',
+        entity: 'system',
         entityId: conversationId,
         severity: 'info',
-        affectedQueryKeys: ['/api/chatbot/conversations'],
+        affectedQueryKeys: [['/api/chatbot/conversations']],
         userId: request.userId,
         metadata: {
           userRole: request.userRole,
@@ -1070,38 +1063,17 @@ export class ChatbotOrchestrationService {
           performance_metrics: {
             context_generation_ms: debugInfo.context_generation_ms || 0,
             sql_generation_ms: sqlGenerationTime,
-            response_formatting_ms: responseFormattingTime,
+            // response_formatting_ms supprimé car non défini dans interface
             query_execution_ms: sqlResult.executionTime || 0,
             total_orchestration_ms: totalExecutionTime
           },
-          // === NOUVELLES MÉTRIQUES DÉTAILLÉES ===
-          detailed_timings: detailedTimings,
-          trace_id: traceId,
-          pipeline_steps_breakdown: {
-            action_detection_time: actionDetectionTime || 0,
-            rbac_validation_time: debugInfo.rbac_check_ms || 0,
-            business_context_time: debugInfo.context_generation_ms || 0,
-            sql_execution_time: sqlGenerationTime,
-            response_formatting_time: responseFormattingTime
-          }
+          // === MÉTRIQUES PIPELINE SUPPRIMÉES ===
+          // detailed_timings et autres métriques supprimées car non définies dans interface debug_info
         };
       }
 
-      // === ENRICHISSEMENT RÉPONSE AVEC MÉTRIQUES PERFORMANCE ===
-      response.performance_trace = {
-        trace_id: traceId,
-        detailed_timings: detailedTimings,
-        cache_performance: {
-          hit: sqlResult.metadata?.cacheHit || false,
-          retrieval_time_ms: sqlResult.metadata?.cacheRetrievalTime || 0
-        },
-        complexity_detected: this.detectQueryComplexity(request.query),
-        slo_compliance: {
-          target_ms: this.getSLOTargetForComplexity(this.detectQueryComplexity(request.query)),
-          actual_ms: totalExecutionTime,
-          compliant: totalExecutionTime <= this.getSLOTargetForComplexity(this.detectQueryComplexity(request.query))
-        }
-      };
+      // === ENRICHISSEMENT RÉPONSE SUPPRIMÉ ===
+      // performance_trace supprimé car non défini dans interface ChatbotQueryResponse
 
       return response;
 
@@ -1552,10 +1524,10 @@ export class ChatbotOrchestrationService {
         const { createRealtimeEvent, EventType } = await import("@shared/events");
         await this.eventBus.publish(createRealtimeEvent({
           type: EventType.CHATBOT_FEEDBACK_RECEIVED,
-          entity: 'chatbot',
+          entity: 'system',
           entityId: request.conversationId,
           severity: request.rating >= 4 ? 'info' : 'warning',
-          affectedQueryKeys: ['/api/chatbot/feedback'],
+          affectedQueryKeys: [['/api/chatbot/feedback']],
           userId: request.userId,
           metadata: {
             userRole: conv.userRole,
@@ -1709,7 +1681,7 @@ export class ChatbotOrchestrationService {
         errorCount: success ? 0 : 1,
         avgResponseTimeMs: responseTime,
         totalTokensUsed: tokensUsed,
-        estimatedCost: parseFloat("0.0000") // TODO: calculer le coût réel
+        estimatedCost: "0.0000" // TODO: calculer le coût réel - convertir en string
       });
     } catch (error) {
       console.error("[ChatbotOrchestration] Erreur logging métriques:", error);
@@ -2006,7 +1978,7 @@ export class ChatbotOrchestrationService {
         confirmationRequired: false,
         riskLevel: 'high',
         error: {
-          type: 'execution',
+          type: 'business_rule',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
         }
       };
@@ -2085,7 +2057,7 @@ export class ChatbotOrchestrationService {
         total: 0,
         hasMore: false,
         error: {
-          type: 'execution',
+          type: 'query',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
         }
       };

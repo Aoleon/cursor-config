@@ -303,7 +303,7 @@ export class AIService {
     // === INSTRUMENTATION PERFORMANCE : Démarrage tracing pipeline ===
     this.performanceMetrics.startPipelineTrace(
       traceId, 
-      request.userId || 'system', 
+      'system', 
       request.userRole, 
       request.query,
       request.complexity || 'simple'
@@ -317,7 +317,7 @@ export class AIService {
       if (!sanitizedRequest.success) {
         this.performanceMetrics.endStep(traceId, 'context_generation', false, { error: 'validation_failed' });
         await this.performanceMetrics.endPipelineTrace(
-          traceId, request.userId || 'system', request.userRole, request.query, 
+          traceId, 'system', request.userRole, request.query, 
           request.complexity || 'simple', false, false, { validationError: true }
         );
         return sanitizedRequest;
@@ -342,7 +342,7 @@ export class AIService {
           
           // Fin du tracing avec succès cache
           const detailedTimings = await this.performanceMetrics.endPipelineTrace(
-            traceId, request.userId || 'system', request.userRole, request.query, 
+            traceId, 'system', request.userRole, request.query, 
             request.complexity || 'simple', true, true, { fromCache: true, cacheTime }
           );
 
@@ -395,7 +395,7 @@ export class AIService {
         generationTime: sqlGenerationTime,
         tokensUsed: sqlResult.data?.tokensUsed || 0,
         modelUsed: modelSelection.selectedModel,
-        sqlLength: sqlResult.data?.sql?.length || 0
+        sqlLength: sqlResult.data?.sqlGenerated?.length || 0
       });
 
       // === ÉTAPE 5: OPÉRATIONS CACHE (ÉCRITURE) ===
@@ -418,13 +418,18 @@ export class AIService {
       }
 
       // === ÉTAPE 6: FORMATAGE RÉPONSE ===
-      this.performanceMetrics.startStep(traceId, 'response_formatting', { resultCount: sqlResult.data?.results?.length || 0 });
+      this.performanceMetrics.startStep(traceId, 'response_formatting', { resultCount: 0 });
       
       const responseFormatStartTime = Date.now();
       
       // Préparation réponse avec métriques enrichies
       const responseData = {
         ...sqlResult.data,
+        query: sqlResult.data?.query || request.query, // S'assurer que query est toujours défini
+        modelUsed: sqlResult.data?.modelUsed || modelSelection.selectedModel, // S'assurer que modelUsed est toujours défini
+        tokensUsed: sqlResult.data?.tokensUsed || 0, // S'assurer que tokensUsed est toujours défini
+        responseTimeMs: sqlResult.data?.responseTimeMs || (Date.now() - startTime), // S'assurer que responseTimeMs est toujours défini
+        fromCache: sqlResult.data?.fromCache || false, // S'assurer que fromCache est toujours défini
         performanceMetrics: {
           modelSelectionTime,
           sqlGenerationTime,
@@ -439,11 +444,11 @@ export class AIService {
 
       // === FIN DU TRACING PIPELINE ===
       const detailedTimings = await this.performanceMetrics.endPipelineTrace(
-        traceId, request.userId || 'system', request.userRole, request.query, 
+        traceId, 'system', request.userRole, request.query, 
         request.complexity || 'simple', sqlResult.success, false, {
           modelUsed: modelSelection.selectedModel,
           tokensUsed: sqlResult.data?.tokensUsed || 0,
-          sqlLength: sqlResult.data?.sql?.length || 0
+          sqlLength: sqlResult.data?.sqlGenerated?.length || 0
         }
       );
 
@@ -461,17 +466,7 @@ export class AIService {
       return {
         ...sqlResult,
         data: {
-          ...responseData,
-          performanceTrace: {
-            traceId,
-            detailedTimings,
-            cacheHit: false,
-            stepBreakdown: {
-              modelSelection: modelSelectionTime,
-              sqlGeneration: sqlGenerationTime,
-              responseFormatting: responseFormatTime
-            }
-          }
+          ...responseData
         }
       };
 
@@ -480,7 +475,7 @@ export class AIService {
       
       // Finaliser le tracing en erreur
       await this.performanceMetrics.endPipelineTrace(
-        traceId, request.userId || 'system', request.userRole, request.query, 
+        traceId, 'system', request.userRole, request.query, 
         request.complexity || 'simple', false, false, { 
           error: error instanceof Error ? error.message : String(error),
           errorType: 'unknown'
@@ -496,8 +491,7 @@ export class AIService {
           type: "unknown",
           message: "Erreur interne du service IA",
           details: error instanceof Error ? error.message : String(error),
-          fallbackAttempted: false,
-          traceId // Inclure traceId pour debug
+          fallbackAttempted: false
         }
       };
     }
@@ -1326,34 +1320,27 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         if (ttc.materials && ttc.materials.primary.length > 0) {
           enrichedPrompt += `\n🔧 TECHNIQUE OCR-Enrichi: Matériaux ${ttc.materials.primary.join(', ')}`;
           
-          // Couleurs détectées via OCR
-          if (ttc.materials.colors && ttc.materials.colors.length > 0) {
-            enrichedPrompt += ` | Couleurs ${ttc.materials.colors.slice(0, 3).join(', ')}`;
-          }
+          // Note: couleurs détectées via OCR seraient dans une extension future
           
-          // Dimensions et spécifications OCR
-          if (ttc.specifications && ttc.specifications.dimensions) {
-            const dims = ttc.specifications.dimensions;
-            enrichedPrompt += `\n  📐 Dimensions OCR: ${dims.length > 0 ? dims.slice(0, 2).join(' × ') : 'Non spécifiées'}`;
-          }
+          // Note: spécifications détaillées seraient dans une extension future
           
-          // Références techniques détectées
-          if (ttc.references && ttc.references.length > 0) {
-            enrichedPrompt += `\n  📝 Références détectées: ${ttc.references.slice(0, 3).join(', ')}`;
-          }
+          // Note: références techniques seraient dans une extension future
         }
       }
       
       // === CONTEXTE ADMINISTRATIF ET RÉGLEMENTAIRE ===
       if (contextualData.administrativeContext) {
         const ac = contextualData.administrativeContext;
-        if (ac.permits && ac.permits.length > 0) {
-          const activePermits = ac.permits.filter(p => p.status === 'active').length;
-          enrichedPrompt += `\n📋 ADMINISTRATIF: ${ac.permits.length} autorisations (${activePermits} actives)`;
+        // Utiliser les propriétés qui existent réellement dans AdministrativeContext
+        if (ac.regulatory?.permits && ac.regulatory.permits.length > 0) {
+          const activePermits = ac.regulatory.permits.filter(p => p.status === 'obtained').length;
+          enrichedPrompt += `\n📋 ADMINISTRATIF: ${ac.regulatory.permits.length} autorisations (${activePermits} obtenues)`;
         }
-        if (ac.compliance && ac.compliance.length > 0) {
-          const complianceRate = (ac.compliance.filter(c => c.status === 'compliant').length / ac.compliance.length) * 100;
-          enrichedPrompt += `\n  ✅ Conformité: ${Math.round(complianceRate)}% (${ac.compliance.length} contrôles)`;
+        if (ac.requiredDocuments) {
+          const completed = ac.requiredDocuments.completed?.length || 0;
+          const total = (ac.requiredDocuments.completed?.length || 0) + (ac.requiredDocuments.pending?.length || 0);
+          const complianceRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+          enrichedPrompt += `\n  ✅ Documents: ${complianceRate}% complétés (${completed}/${total})`;
         }
       }
       
@@ -1549,7 +1536,7 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     const deptCodes = queryUpper.match(/\b(59|62)\b/g);
     if (deptCodes) codes.push(...deptCodes.map(c => `Département ${c}`));
     
-    return [...new Set(codes)]; // Dédoublonner
+    return Array.from(new Set(codes)); // Dédoublonner
   }
   
   /**

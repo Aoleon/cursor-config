@@ -56,12 +56,12 @@ const navigation: NavigationItem[] = [
   { name: "Dashboard Dirigeant", href: "/dashboard/executive", icon: BarChart3 },
   { name: "Dashboard BE", href: "/dashboard/be", icon: Settings },
   
-  // ============= WORKFLOW AVANT-VENTE ============= //
+  // ============= GESTION OFFRES ============= //
   { 
-    name: "Workflow AO", 
-    href: "/workflow/etude-technique", 
-    icon: FolderOpen,
-    relatedPaths: ["/workflow", "/offers/chiffrage", "/offers/validation", "/offers/transform", "/supplier-requests"],
+    name: "Gestion Offres", 
+    href: "/offers", 
+    icon: ClipboardList,
+    relatedPaths: ["/offers", "/workflow", "/offers/chiffrage", "/offers/validation", "/offers/transform", "/supplier-requests"],
     subItems: [
       { name: "Étude technique", href: "/workflow/etude-technique", icon: FileText, description: "Analyse AO et faisabilité" },
       { name: "Demandes fournisseurs", href: "/supplier-requests", icon: Send, description: "Sollicitation prix fournisseurs" },
@@ -70,9 +70,6 @@ const navigation: NavigationItem[] = [
       { name: "Transformation", href: "/offers/transform", icon: ArrowRight, description: "Conversion en projet" },
     ]
   },
-  
-  // ============= GESTION OFFRES ============= //
-  { name: "Gestion Offres", href: "/offers", icon: ClipboardList, relatedPaths: ["/offers"] },
   
   // ============= PROJETS POST-SIGNATURE ============= //
   { 

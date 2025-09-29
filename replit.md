@@ -41,6 +41,7 @@ You are an expert autonomous programmer specialized in business ERP systems, wor
 - **Authentication**: Replit OpenID Connect (OIDC) with Passport.js
 - **Session Storage**: PostgreSQL-backed sessions with connect-pg-simple
 - **OCR Engine**: Tesseract.js + pdf-parse for intelligent PDF processing
+- **Object Storage**: Replit Object Storage with persistent file management for supplier documents
 
 ### Critical Design Principles
 - **Full-Stack Type Safety**: Shared TypeScript schemas ensure type consistency.
@@ -70,9 +71,33 @@ The system implements a unique, evolving form that progresses through predefined
 - **Comprehensive Testing Policy**: Every feature requires testing across Backend, Routes, Frontend Logic, and UI layers.
 - **Coverage Standards**: Minimum 85% backend, 80% frontend. 100% for critical paths.
 
+## Recent Improvements (Sept 2025)
+
+### Supplier Document Management & OCR Integration
+- **Persistent File Storage**: Implemented `uploadSupplierDocument` method in ObjectStorageService for durable file persistence
+- **Auto OCR Trigger**: Upload endpoint now automatically triggers OCR analysis after successful document storage
+- **Architecture Improvement**: Files are persisted in Object Storage BEFORE any processing, ensuring data durability
+- **Security**: Sanitized filenames, validated session IDs, and metadata tracking for all supplier documents
+- **Storage Path**: `/supplier-quotes/{sessionId}/{timestamp}_{filename}` structure for organized file management
+
+### Technical Implementation Details
+- **ObjectStorageService.uploadSupplierDocument()**: New method accepting Buffer, sessionId, fileName, mimeType, and optional metadata
+- **Automatic OCR**: Quote PDFs trigger `processSupplierQuote()` immediately after upload via `setImmediate`
+- **Metadata Tracking**: Session ID, supplier ID, AO lot ID, document type, and upload timestamp stored with each file
+- **Security Enhancements**:
+  - Server-side MIME type validation prevents unauthorized file types (PDF, Word, Excel, images, text, ZIP only)
+  - Filename sanitization and extension validation in ObjectStorageService
+  - Session token verification and expiration checks
+- **Error Handling & Robustness**:
+  - OCR async trigger uses IIFE (Immediately Invoked Function Expression) pattern with comprehensive catch blocks
+  - Prevents unhandled promise rejections through multi-level error capture
+  - Nested try/catch for OCR status updates ensures reliable error state management
+  - Document status automatically updated to 'error' on OCR failure with detailed error messages
+
 ## External Dependencies
 
 - **Database**: Neon serverless PostgreSQL
+- **Object Storage**: Replit Object Storage (bucket: replit-objstore-940c2d14-de0c-4b57-b84c-b4b33a27cafe)
 - **Frontend Libraries**: `@tanstack/react-query`, `@radix-ui/*`, `react-hook-form`, `wouter`
 - **Authentication**: `passport`, `openid-client`, `express-session`, `connect-pg-simple`
 - **Testing Tools**: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `@playwright/test`, `supertest`, `msw`, `jsdom`, `happy-dom`

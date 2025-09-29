@@ -8611,6 +8611,24 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
           throw createError.forbidden('Quota d\'uploads atteint');
         }
         
+        // SECURITY: Valider le MIME type côté serveur
+        const allowedMimeTypes = [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'text/plain',
+          'application/zip'
+        ];
+        
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          throw createError.badRequest(`Type de fichier non autorisé: ${file.mimetype}. Types acceptés: PDF, Word, Excel, images, texte, ZIP`);
+        }
+        
         // CRITICAL: Persister le fichier dans Object Storage AVANT tout traitement
         console.log(`[Supplier Workflow] Stockage du fichier dans Object Storage...`);
         const objectStorageService = new ObjectStorageService();
@@ -8650,9 +8668,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         if (documentType === 'quote' && file.mimetype === 'application/pdf') {
           console.log(`[OCR Auto-Trigger] Démarrage analyse OCR automatique pour document ${document.id}`);
           
-          try {
-            // Lancer l'analyse OCR en arrière-plan (sans bloquer la réponse)
-            setImmediate(async () => {
+          // Lancer l'analyse OCR en arrière-plan avec gestion complète des erreurs
+          setImmediate(() => {
+            (async () => {
               let analysis: any = null;
               try {
                 // Créer une analyse OCR en statut 'in_progress'
@@ -8714,26 +8732,28 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
               } catch (ocrError) {
                 console.error(`[OCR Auto-Trigger] ❌ Erreur analyse OCR pour document ${document.id}:`, ocrError);
                 
-                // Mettre à jour l'analyse en statut 'failed'
-                if (analysis) {
-                  await storage.updateSupplierQuoteAnalysis(analysis.id, {
-                    status: 'failed',
-                    errorMessage: ocrError instanceof Error ? ocrError.message : 'Erreur inconnue'
+                // Mettre à jour l'analyse en statut 'failed' avec gestion d'erreur
+                try {
+                  if (analysis) {
+                    await storage.updateSupplierQuoteAnalysis(analysis.id, {
+                      status: 'failed',
+                      errorMessage: ocrError instanceof Error ? ocrError.message : 'Erreur inconnue'
+                    });
+                  }
+                  
+                  // Mettre à jour le statut du document
+                  await storage.updateSupplierDocument(document.id, {
+                    status: 'error'
                   });
+                } catch (updateError) {
+                  console.error(`[OCR Auto-Trigger] ❌ Impossible de mettre à jour le statut:`, updateError);
                 }
-                
-                // Mettre à jour le statut du document
-                await storage.updateSupplierDocument(document.id, {
-                  status: 'pending'
-                });
               }
+            })().catch((err) => {
+              // Capture finale des erreurs non gérées de l'IIFE async
+              console.error(`[OCR Auto-Trigger] ❌ Erreur non capturée dans le processus OCR:`, err);
             });
-            
-            console.log(`[OCR Auto-Trigger] Analyse OCR lancée en arrière-plan pour document ${document.id}`);
-          } catch (error) {
-            console.error(`[OCR Auto-Trigger] Erreur lors du lancement de l'analyse OCR:`, error);
-            // Ne pas bloquer la réponse même si l'OCR échoue
-          }
+          });
         }
         
         sendSuccess(res, document, 'Document uploadé avec succès. Analyse OCR en cours...');

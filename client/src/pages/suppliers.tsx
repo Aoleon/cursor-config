@@ -111,17 +111,18 @@ export default function Suppliers() {
   const suppliersMeta = suppliersResponse?.meta;
 
   // Fetch supplier requests
-  const { data: supplierRequests = [], isLoading } = useQuery<SupplierRequest[]>({
+  const { data: supplierRequestsData, isLoading } = useQuery<any>({
     queryKey: ['/api/supplier-requests/'],
   });
+  const supplierRequests = supplierRequestsData?.data || [];
 
   // Fetch offers for dropdown
-  const { data: offers = [] } = useQuery({
+  const { data: offersData } = useQuery<any>({
     queryKey: ['/api/offers/'],
-    select: (data: any[]) => data.filter(offer => 
-      ['nouveau', 'en_chiffrage', 'en_validation'].includes(offer.status)
-    ),
   });
+  const offers = (offersData?.data || []).filter((offer: any) => 
+    ['nouveau', 'en_chiffrage', 'en_validation'].includes(offer.status)
+  );
 
   // Create supplier mutation
   const createSupplierMutation = useMutation({
@@ -247,15 +248,15 @@ export default function Suppliers() {
   );
 
   // Filter requests based on status
-  const filteredRequests = supplierRequests.filter(request => 
+  const filteredRequests = supplierRequests.filter((request: SupplierRequest) => 
     statusFilter === "all" || request.status === statusFilter
   );
 
   // Calculate statistics
   const stats = {
     total: supplierRequests.length,
-    pending: supplierRequests.filter(r => r.status === 'en_attente').length,
-    received: supplierRequests.filter(r => r.status === 'recu').length,
+    pending: supplierRequests.filter((r: SupplierRequest) => r.status === 'en_attente').length,
+    received: supplierRequests.filter((r: SupplierRequest) => r.status === 'recu').length,
     avgResponseTime: 3.2, // Placeholder - calculate based on real data
   };
 

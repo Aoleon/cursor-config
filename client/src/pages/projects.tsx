@@ -21,9 +21,12 @@ export default function Projects() {
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
   // Authentication temporarily disabled for development
-  const { data: projects = [], isLoading: projectsLoading, error } = useQuery<any[]>({
+  const { data: projectsData, isLoading: projectsLoading, error } = useQuery<any>({
     queryKey: ["/api/projects"],
   });
+  
+  // Extraire les données du format API { success: true, data: [...] }
+  const projects = projectsData?.data || [];
 
   const getStatusColor = (status: string) => {
     switch (status) {

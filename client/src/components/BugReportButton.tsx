@@ -380,10 +380,6 @@ export default function BugReportButton() {
       userRole: user?.role || undefined,
       timestamp: new Date(),
       consoleLogs: formattedLogs,
-      // Inclure des statistiques sur les logs
-      errorCount: errorLogs.length,
-      warningCount: warnLogs.length,
-      totalLogsCount: logsCount,
     };
 
     submitBugReportMutation.mutate(automaticData);

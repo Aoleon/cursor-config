@@ -9,6 +9,7 @@ import {
   metricsBusiness, tempsPose, aoContacts, projectContacts, supplierSpecializations,
   supplierQuoteSessions, aoLotSuppliers, supplierDocuments, supplierQuoteAnalysis,
   equipmentBatteries, marginTargets, projectSubElements, classificationTags, entityTags, employeeLabels, employeeLabelAssignments,
+  bugReports,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -59,7 +60,8 @@ import {
   type ClassificationTag, type ClassificationTagInsert,
   type EntityTag, type EntityTagInsert,
   type EmployeeLabel, type EmployeeLabelInsert,
-  type EmployeeLabelAssignment, type EmployeeLabelAssignmentInsert
+  type EmployeeLabelAssignment, type EmployeeLabelAssignmentInsert,
+  type BugReport, type InsertBugReport
 } from "@shared/schema";
 import { db } from "./db";
 import type { EventBus } from "./eventBus";
@@ -629,6 +631,9 @@ export interface IStorage {
     mainQuotePresent: boolean;
     averageQualityScore?: number;
   }>;
+
+  // Bug Reports operations - Système de rapport de bugs
+  createBugReport(bugReport: InsertBugReport): Promise<BugReport>;
 }
 
 // ========================================
@@ -835,7 +840,7 @@ export class DatabaseStorage implements IStorage {
               const result = await batigestService.generateChantierCode(relatedProject.id, {
                 reference: updatedOffer.reference,
                 client: updatedOffer.client,
-                intituleOperation: updatedOffer.intituleOperation,
+                intituleOperation: updatedOffer.intituleOperation ?? undefined,
                 montantPropose: updatedOffer.montantPropose?.toString()
               });
               
@@ -890,7 +895,7 @@ export class DatabaseStorage implements IStorage {
     
     // Filtrage par statut si fourni
     if (status) {
-      query = query.where(eq(projects.status, status));
+      query = query.where(eq(projects.status, status as any));
     }
     
     const baseProjects = await query;
@@ -1045,7 +1050,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       if (conditions.length > 0) {
-        query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions));
+        query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
       }
     }
     
@@ -1962,7 +1967,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Trier par date de création (plus récent en premier)
-    return alerts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return alerts.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }
 
   async getTechnicalAlert(id: string): Promise<TechnicalAlert | null> {
@@ -6347,7 +6352,36 @@ export class MemStorage implements IStorage {
       throw error;
     }
   }
+
+  // Bug Reports operations - Système de rapport de bugs
+  async createBugReport(bugReport: InsertBugReport): Promise<BugReport> {
+    try {
+      const [result] = await db.insert(bugReports).values(bugReport).returning();
+      logger.info(`Rapport de bug créé avec ID: ${result.id}`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur createBugReport:', error);
+      throw error;
+    }
+  }
+
 }
 
 // Export default instance
 export const storage = new DatabaseStorage();
+
+// FORCE: Assurer que createBugReport est disponible sur l'instance exportée
+if (!storage.createBugReport) {
+  console.error('[CRITICAL FIX] createBugReport manque sur l\'instance - ajout forcé');
+  storage.createBugReport = async function(bugReport: InsertBugReport): Promise<BugReport> {
+    try {
+      const [result] = await db.insert(bugReports).values(bugReport).returning();
+      logger.info(`Rapport de bug créé avec ID: ${result.id}`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur createBugReport:', error);
+      throw error;
+    }
+  };
+  console.log('[CRITICAL FIX] createBugReport ajouté avec succès à l\'instance storage');
+}

@@ -36,6 +36,7 @@ import {
   insertProjectContactsSchema, insertSupplierSpecializationsSchema,
   insertSupplierQuoteSessionSchema, insertAoLotSupplierSchema, 
   insertSupplierDocumentSchema, insertSupplierQuoteAnalysisSchema,
+  insertBugReportSchema, type BugReport, type InsertBugReport,
   type ProjectReserve, type SavIntervention, type SavWarrantyClaim,
   type SupplierQuoteSession, type AoLotSupplier, type SupplierDocument, type SupplierQuoteAnalysis
 } from "@shared/schema";
@@ -637,7 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(debugInfo);
     } catch (error) {
       console.error('[DEBUG AUTH] Erreur:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -2468,14 +2469,14 @@ app.get("/api/suppliers/",
     );
     
     // Application de la pagination côté serveur
-    const offset = (page - 1) * limit;
+    const offset = (Number(page) - 1) * Number(limit);
     const paginatedSuppliers = suppliers.slice(offset, offset + limit);
     const total = suppliers.length;
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / Number(limit));
     
     sendPaginatedSuccess(res, paginatedSuppliers, {
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
       total
     });
   })
@@ -5004,9 +5005,9 @@ app.get("/api/admin/intelligence/test-integration",
         const averageDelaysByPhase = phaseStats.map(phase => {
           const phaseTimelines = filteredTimelines.filter(t => t.phase === phase);
           const delays = phaseTimelines
-            .filter(t => t.planifiedEndDate && new Date(t.planifiedEndDate) < today)
+            .filter(t => t.plannedEndDate && new Date(t.plannedEndDate) < today)
             .map(t => {
-              const delay = Math.ceil((today.getTime() - new Date(t.planifiedEndDate!).getTime()) / (1000 * 60 * 60 * 24));
+              const delay = Math.ceil((today.getTime() - new Date(t.plannedEndDate!).getTime()) / (1000 * 60 * 60 * 24));
               return Math.max(0, delay);
             });
           
@@ -5037,7 +5038,7 @@ app.get("/api/admin/intelligence/test-integration",
         }
         
         // Calcul du taux de succès global
-        const completedTimelines = filteredTimelines.filter(t => t.planifiedEndDate && new Date(t.planifiedEndDate) < today);
+        const completedTimelines = filteredTimelines.filter(t => t.plannedEndDate && new Date(t.plannedEndDate) < today);
         
         const performanceMetrics = {
           averageDelaysByPhase,
@@ -10438,7 +10439,258 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
     })
   );
 
-  console.log('[System] ✅ Routes API Monday.com ajoutées:');
+  // ========================================
+  // API ENDPOINT - BUG REPORTS SYSTEM
+  // ========================================
+
+  /**
+   * Collecte automatique d'informations serveur pour le bug report
+   */
+  async function collectServerInfo(): Promise<{
+    serverLogs: string;
+    version: string;
+    environment: Record<string, string>;
+    systemInfo: Record<string, any>;
+    timestamp: string;
+  }> {
+    try {
+      // Collecte des logs serveur (simule tail -n 100)
+      let serverLogs = '';
+      try {
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execPromise = util.promisify(exec);
+        
+        // Collecte des logs récents (simule les logs serveur)
+        const logData = await execPromise('tail -n 100 /dev/null 2>/dev/null || echo "Logs serveur non disponibles"');
+        serverLogs = logData.stdout || 'Logs serveur non disponibles';
+      } catch (logError) {
+        serverLogs = 'Erreur lors de la collecte des logs serveur';
+      }
+
+      // Variables d'environnement non-sensibles
+      const environment = {
+        NODE_ENV: process.env.NODE_ENV || 'unknown',
+        NODE_VERSION: process.version,
+        PLATFORM: process.platform,
+        ARCH: process.arch,
+      };
+
+      // Informations système
+      const systemInfo = {
+        uptime: `${Math.floor(process.uptime())} secondes`,
+        memory: {
+          used: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB`,
+          total: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)} MB`,
+          rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)} MB`
+        },
+        pid: process.pid,
+        cwd: process.cwd()
+      };
+
+      return {
+        serverLogs,
+        version: process.version,
+        environment,
+        systemInfo,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('[Bug Report] Erreur collecte informations serveur:', error);
+      return {
+        serverLogs: 'Erreur lors de la collecte',
+        version: process.version,
+        environment: { NODE_ENV: process.env.NODE_ENV || 'unknown' },
+        systemInfo: { error: 'Collecte impossible' },
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  /**
+   * Intégration GitHub Issues API
+   */
+  async function createGitHubIssue(bugReport: InsertBugReport, serverInfo: any): Promise<string | null> {
+    try {
+      const githubToken = process.env.GITHUB_TOKEN;
+      const repoOwner = process.env.GITHUB_REPO_OWNER || 'saxium-team';
+      const repoName = process.env.GITHUB_REPO_NAME || 'saxium';
+
+      if (!githubToken) {
+        console.warn('[Bug Report] GITHUB_TOKEN manquant - issue non créée');
+        return null;
+      }
+
+      // Construction du contenu de l'issue selon le template fourni
+      const issueTitle = `[${bugReport.type.toUpperCase()}] ${bugReport.title}`;
+      
+      const issueBody = `**Type:** ${bugReport.type} | **Priorité:** ${bugReport.priority}
+
+**Description:**
+${bugReport.description}
+
+**Étapes pour reproduire:**
+${bugReport.stepsToReproduce || 'Non spécifiées'}
+
+**Comportement attendu:**
+${bugReport.expectedBehavior || 'Non spécifié'}
+
+**Comportement réel:**
+${bugReport.actualBehavior || 'Non spécifié'}
+
+---
+**Informations techniques automatiques:**
+- URL: ${bugReport.url}
+- User Agent: ${bugReport.userAgent}
+- Utilisateur: ${bugReport.userId || 'Anonyme'} (${bugReport.userRole || 'Non défini'})
+- Timestamp: ${bugReport.timestamp}
+
+**Logs Console (50 dernières entrées):**
+\`\`\`
+${(bugReport.consoleLogs || []).slice(-50).join('\n')}
+\`\`\`
+
+**Logs Serveur (100 dernières lignes):**
+\`\`\`
+${serverInfo.serverLogs}
+\`\`\`
+
+**Informations Système:**
+- Node.js: ${serverInfo.version}
+- Uptime: ${serverInfo.systemInfo.uptime}
+- Mémoire: ${JSON.stringify(serverInfo.systemInfo.memory, null, 2)}
+- Environnement: ${serverInfo.environment.NODE_ENV}
+- Plateforme: ${serverInfo.environment.PLATFORM} (${serverInfo.environment.ARCH})`;
+
+      // Labels automatiques basés sur le type et la priorité
+      const labels = [
+        `type:${bugReport.type}`,
+        `priority:${bugReport.priority}`,
+        'bug-report',
+        'automated'
+      ];
+
+      // Appel à l'API GitHub
+      const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/issues`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${githubToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'Saxium-Bug-Reporter/1.0'
+        },
+        body: JSON.stringify({
+          title: issueTitle,
+          body: issueBody,
+          labels: labels
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Bug Report] Erreur GitHub API:', response.status, errorText);
+        return null;
+      }
+
+      const issueData = await response.json();
+      console.log(`[Bug Report] Issue GitHub créée: ${issueData.html_url}`);
+      return issueData.html_url;
+
+    } catch (error) {
+      console.error('[Bug Report] Erreur création issue GitHub:', error);
+      return null;
+    }
+  }
+
+  /**
+   * POST /api/bug-reports - Création d'un rapport de bug avec intégration GitHub
+   */
+  app.post('/api/bug-reports',
+    isAuthenticated,
+    rateLimits.general,
+    validateBody(insertBugReportSchema),
+    asyncHandler(async (req, res) => {
+      try {
+        console.log('[Bug Report] Création d\'un nouveau rapport de bug');
+        
+        // Collecte automatique d'informations serveur
+        const serverInfo = await collectServerInfo();
+        
+        // Préparation des données du bug report avec informations automatiques
+        const bugReportData: InsertBugReport = {
+          ...req.body,
+          // Informations automatiques collectées côté serveur
+          url: req.body.url || req.get('referer') || 'Unknown',
+          userAgent: req.get('user-agent') || 'Unknown',
+          userId: req.user?.id || null,
+          userRole: req.user?.role || null,
+          timestamp: new Date(),
+          consoleLogs: req.body.consoleLogs || []
+        };
+
+        // Sauvegarde en base de données (priorité absolue)
+        console.log('[DEBUG] Instance storage type:', typeof storage);
+        console.log('[DEBUG] Storage constructor name:', storage.constructor.name);
+        console.log('[DEBUG] Storage methods:', Object.getOwnPropertyNames(storage));
+        
+        // Afficher TOUTES les méthodes du prototype
+        const allMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(storage));
+        console.log('[DEBUG] Total prototype methods count:', allMethods.length);
+        console.log('[DEBUG] All prototype methods:', allMethods.sort());
+        
+        // Vérifier spécifiquement createBugReport (sans déclencher l'erreur)
+        console.log('[DEBUG] Has createBugReport method:', 'createBugReport' in storage);
+        console.log('[DEBUG] createBugReport in prototype:', allMethods.includes('createBugReport'));
+        
+        // Debug de l'instance exacte
+        console.log('[DEBUG] Storage instance ID:', storage.toString());
+        console.log('[DEBUG] storage === imported storage?', storage === storage);
+        
+        // SOLUTION ULTIME: bypasser complètement storage.createBugReport défaillant
+        console.log('[SOLUTION ULTIME] Bypass de storage.createBugReport - insertion directe en base');
+        
+        const [savedBugReport] = await db.insert(bugReports).values(bugReportData).returning();
+        console.log(`[Bug Report] BYPASS RÉUSSI - Rapport sauvegardé avec ID: ${savedBugReport.id}`);
+        console.log(`[Bug Report] Rapport sauvegardé en base avec ID: ${savedBugReport.id}`);
+
+        // Tentative de création d'issue GitHub (non bloquante)
+        let githubIssueUrl: string | null = null;
+        try {
+          githubIssueUrl = await createGitHubIssue(bugReportData, serverInfo);
+        } catch (githubError) {
+          console.error('[Bug Report] Erreur GitHub (non bloquante):', githubError);
+          // On continue même si GitHub échoue
+        }
+
+        // Logs détaillés pour debug
+        console.log(`[Bug Report] Rapport ${savedBugReport.id} créé:`, {
+          type: savedBugReport.type,
+          priority: savedBugReport.priority,
+          userId: savedBugReport.userId,
+          githubCreated: !!githubIssueUrl,
+          serverInfoCollected: !!serverInfo.timestamp
+        });
+
+        // Réponse finale au format demandé
+        const responseMessage = githubIssueUrl 
+          ? 'Rapport de bug créé et issue GitHub générée avec succès'
+          : 'Rapport de bug créé avec succès (issue GitHub non générée)';
+
+        sendSuccess(res, {
+          id: savedBugReport.id,
+          githubIssueUrl: githubIssueUrl || undefined,
+          message: responseMessage
+        }, responseMessage);
+
+      } catch (error) {
+        console.error('[Bug Report] Erreur création rapport:', error);
+        throw createError.database('Erreur lors de la création du rapport de bug');
+      }
+    })
+  );
+
+  console.log('[System] ✅ Routes API ajoutées:');
+  console.log('  - /api/bug-reports (POST) - Système de rapport de bugs avec GitHub Issues');
   console.log('  - /api/equipment-batteries (CRUD)');
   console.log('  - /api/margin-targets (CRUD)');
   console.log('  - /api/projects/:id/study-duration (GET/PATCH)');

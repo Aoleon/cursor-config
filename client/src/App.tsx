@@ -60,6 +60,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import SupplierPortal from "@/pages/supplier-portal";
 // Import de la comparaison des devis
 import ComparaisonDevis from "@/pages/comparaison-devis";
+import BugReportButton from "@/components/BugReportButton";
 
 function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -216,6 +217,7 @@ function App() {
           <WebSocketProvider>
             <DateAlertsProvider enableRealtimeToasts={true}>
               <Toaster />
+              <BugReportButton />
               <Router />
             </DateAlertsProvider>
           </WebSocketProvider>

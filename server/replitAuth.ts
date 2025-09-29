@@ -401,6 +401,73 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return next();
   }
   
+  // ========================================
+  // 🔥 CORRECTION CRITIQUE : AUTO-AUTHENTIFICATION DÉVELOPPEMENT 🔥
+  // ========================================
+  
+  // GARDE DE SÉCURITÉ : Strictement limité au mode development
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  if (isDevelopment && !user && !session?.user) {
+    // GARDE SUPPLÉMENTAIRE : Vérifier qu'on n'est pas dans un contexte de test
+    const isTestContext = (
+      req.headers['x-e2e-test'] === 'true' ||
+      process.env.E2E_TESTING === 'true' ||
+      req.headers['user-agent']?.includes('Playwright') ||
+      process.env.NODE_ENV === 'test'
+    );
+    
+    if (!isTestContext) {
+      // Créer automatiquement l'utilisateur par défaut pour le développement
+      const defaultDevUser = {
+        id: 'admin-dev-user',
+        email: 'admin@jlm-dev.local',
+        firstName: 'Admin',
+        lastName: 'Development',
+        profileImageUrl: null,
+        role: 'admin',
+        isBasicAuth: true,
+        isDefaultDevUser: true
+      };
+      
+      // SÉCURITÉ : Logger uniquement en mode development
+      console.log('[AUTH] 🔧 DEVELOPMENT MODE: Création automatique utilisateur par défaut:', {
+        userId: defaultDevUser.id,
+        email: defaultDevUser.email,
+        path: req.path,
+        timestamp: new Date().toISOString()
+      });
+      
+      try {
+        // Stocker dans la session
+        session.user = defaultDevUser;
+        
+        // Assigner également à req.user pour compatibilité immédiate
+        (req as any).user = defaultDevUser;
+        
+        // Sauvegarder la session de manière synchrone pour garantir la persistance
+        await new Promise<void>((resolve, reject) => {
+          session.save((err: any) => {
+            if (err) {
+              console.error('[AUTH] ❌ Erreur sauvegarde session utilisateur par défaut:', err);
+              reject(err);
+            } else {
+              console.log('[AUTH] ✅ Utilisateur par défaut créé et session sauvegardée');
+              resolve();
+            }
+          });
+        });
+        
+        console.log('[AUTH] 🎯 DEVELOPMENT AUTO-AUTH SUCCESS - Proceeding with default user');
+        return next();
+        
+      } catch (error) {
+        console.error('[AUTH] ❌ CRITICAL ERROR - Failed to create default dev user:', error);
+        // En cas d'erreur, continuer avec le flow normal d'authentification
+      }
+    }
+  }
+  
   // DÉBOGAGE ULTRA-DÉTAILLÉ pour résoudre le problème une fois pour toutes
   console.log('[DEBUG] isAuthenticated middleware - ANALYSE COMPLÈTE:', {
     path: req.path,

@@ -8874,3 +8874,82 @@ export interface CachePerformanceMetrics {
   memoryHits: number;
   dbHits: number;
 }
+
+// ========================================
+// ENUMS POUR RAPPORT DE BUGS - PHASE ALPHA
+// ========================================
+
+// Types de bugs pour la phase Alpha
+export const bugTypeEnum = pgEnum("bug_type", [
+  "interface", "performance", "functionality", "crash", "other"
+]);
+
+// Priorités des bugs pour la phase Alpha
+export const bugPriorityEnum = pgEnum("bug_priority", [
+  "low", "medium", "high", "critical"
+]);
+
+// Statuts des bugs pour workflow de résolution
+export const bugStatusEnum = pgEnum("bug_status", [
+  "open", "in_progress", "resolved", "closed"
+]);
+
+// ========================================
+// TABLES POUR RAPPORT DE BUGS - PHASE ALPHA
+// ========================================
+
+// Table des rapports de bugs pour la phase Alpha
+export const bugReports = pgTable("bug_reports", {
+  id: varchar("id", { length: 36 }).primaryKey().notNull().default(sql`gen_random_uuid()`),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  type: bugTypeEnum("type").notNull(),
+  priority: bugPriorityEnum("priority").notNull(),
+  stepsToReproduce: text("steps_to_reproduce"),
+  expectedBehavior: text("expected_behavior"),
+  actualBehavior: text("actual_behavior"),
+  
+  // Informations automatiques collectées
+  url: text("url").notNull(),
+  userAgent: text("user_agent").notNull(),
+  userId: varchar("user_id", { length: 21 }),
+  userRole: varchar("user_role", { length: 50 }),
+  timestamp: timestamp("timestamp").notNull().default(sql`now()`),
+  
+  // Logs et informations système
+  consoleLogs: text("console_logs").array().notNull().default(sql`'{}'::text[]`),
+  serverLogs: text("server_logs"),
+  systemInfo: text("system_info"),
+  
+  // Intégration GitHub
+  githubIssueUrl: text("github_issue_url"),
+  githubIssueNumber: integer("github_issue_number"),
+  
+  // Métadonnées
+  status: bugStatusEnum("status").notNull().default("open"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// ========================================
+// SCHEMAS ZOD POUR RAPPORT DE BUGS
+// ========================================
+
+export const insertBugReportSchema = createInsertSchema(bugReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  timestamp: z.coerce.date()
+});
+
+// ========================================
+// TYPES TYPESCRIPT POUR RAPPORT DE BUGS
+// ========================================
+
+export type BugType = typeof bugTypeEnum.enumValues[number];
+export type BugPriority = typeof bugPriorityEnum.enumValues[number];
+export type BugStatus = typeof bugStatusEnum.enumValues[number];
+
+export type BugReport = typeof bugReports.$inferSelect;
+export type InsertBugReport = z.infer<typeof insertBugReportSchema>;

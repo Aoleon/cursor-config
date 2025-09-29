@@ -2104,11 +2104,11 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
 // GET /api/aos/:aoId/lots - Récupérer les lots d'un AO (avec données OCR)
 app.get("/api/aos/:aoId/lots", isAuthenticated, async (req, res) => {
   try {
-    // Récupérer les lots directement de la base de données (table lots créée par le test)
+    // Récupérer les lots directement de la base de données (table ao_lots)
     const result = await db.execute(sql`
       SELECT id, numero, designation, menuiserie_type as "menuiserieType", 
              montant_estime as "montantEstime", is_selected as "isSelected", comment
-      FROM lots 
+      FROM ao_lots 
       WHERE ao_id = ${req.params.aoId}
       ORDER BY numero
     `);

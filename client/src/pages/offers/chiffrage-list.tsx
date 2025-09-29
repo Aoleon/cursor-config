@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 export default function ChiffrageList() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Mutation pour démarrer le chiffrage d'une offre
   const startChiffrageMutation = useMutation({
@@ -151,7 +153,7 @@ export default function ChiffrageList() {
             Liste des offres en attente de chiffrage détaillé
           </p>
         </div>
-        <Button onClick={() => window.location.href = "/create-ao"}>
+        <Button onClick={() => setLocation("/create-ao")}>
           <FolderOpen className="h-4 w-4 mr-2" />
           Nouvelle offre
         </Button>
@@ -224,7 +226,7 @@ export default function ChiffrageList() {
               <p className="text-gray-600 mb-4">
                 Toutes les offres sont soit en cours de traitement, soit déjà chiffrées.
               </p>
-              <Button variant="outline" onClick={() => window.location.href = "/offers"}>
+              <Button variant="outline" onClick={() => setLocation("/offers")}>
                 Voir toutes les offres
               </Button>
             </CardContent>
@@ -283,7 +285,7 @@ export default function ChiffrageList() {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => window.location.href = `/offers/${offer.id}`}
+                      onClick={() => setLocation(`/offers/${offer.id}`)}
                       data-testid={`button-view-offer-${offer.id}`}
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -292,7 +294,7 @@ export default function ChiffrageList() {
                     
                     <Button 
                       size="sm"
-                      onClick={() => window.location.href = `/offers/${offer.id}/chiffrage`}
+                      onClick={() => setLocation(`/offers/${offer.id}/chiffrage`)}
                       data-testid={`button-chiffrage-${offer.id}`}
                     >
                       <Calculator className="h-4 w-4 mr-2" />

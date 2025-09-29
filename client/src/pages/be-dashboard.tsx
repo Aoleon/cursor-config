@@ -17,26 +17,52 @@ import {
 } from "lucide-react";
 import WorkloadPlanner from "@/components/projects/workload-planner";
 import MilestoneTracker from "@/components/validation/milestone-tracker";
+import { selectOffers, selectBeWorkload } from "@/lib/api-helpers";
+
+// Types pour les données BE Dashboard
+type BeWorkloadItem = {
+  id: string;
+  userId: string;
+  userName: string;
+  loadPercentage: string;
+  assignedOffers: number;
+  department: string;
+};
+
+type OfferItem = {
+  id: string;
+  reference: string;
+  client: string;
+  status: string;
+  estimatedAmount: number;
+  isPriority: boolean;
+  responsibleUser?: {
+    firstName: string;
+    lastName: string;
+  };
+};
 
 export default function BEDashboard() {
   // Fetch BE workload data for overview
-  const { data: beWorkload = [], isLoading } = useQuery<any[]>({
+  const { data: beWorkload = [], isLoading } = useQuery<BeWorkloadItem[]>({
     queryKey: ['/api/be-workload/'],
+    select: selectBeWorkload
   });
 
   // Fetch offers data for BE statistics
-  const { data: offers = [] } = useQuery<any[]>({
+  const { data: offers = [] } = useQuery<OfferItem[]>({
     queryKey: ['/api/offers/'],
+    select: selectOffers
   });
 
   // Calculate BE statistics
   const beStats = {
     totalOffers: offers.length,
-    inProgress: offers.filter((offer: any) => offer.status === 'en_chiffrage').length,
-    priority: offers.filter((offer: any) => offer.isPriority).length,
-    overloaded: beWorkload.filter((w: any) => parseFloat(w.loadPercentage) > 100).length,
+    inProgress: offers.filter((offer: OfferItem) => offer.status === 'en_chiffrage').length,
+    priority: offers.filter((offer: OfferItem) => offer.isPriority).length,
+    overloaded: beWorkload.filter((w: BeWorkloadItem) => parseFloat(w.loadPercentage) > 100).length,
     avgWorkload: beWorkload.length > 0 
-      ? Math.round(beWorkload.reduce((acc: number, w: any) => acc + parseFloat(w.loadPercentage), 0) / beWorkload.length)
+      ? Math.round(beWorkload.reduce((acc: number, w: BeWorkloadItem) => acc + parseFloat(w.loadPercentage), 0) / beWorkload.length)
       : 0
   };
 
@@ -143,7 +169,7 @@ export default function BEDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {offers.filter((offer: any) => offer.isPriority).map((offer: any) => (
+                    {offers.filter((offer: OfferItem) => offer.isPriority).map((offer: OfferItem) => (
                       <div key={offer.id} className="border rounded-lg p-4 bg-red-50 border-red-200">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-3">
@@ -173,7 +199,7 @@ export default function BEDashboard() {
                       </div>
                     ))}
                     
-                    {offers.filter((offer: any) => offer.isPriority).length === 0 && (
+                    {offers.filter((offer: OfferItem) => offer.isPriority).length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p>Aucune offre prioritaire actuellement</p>

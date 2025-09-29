@@ -42,6 +42,58 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { selectOffers, selectMilestones, selectUsers } from '@/lib/api-helpers';
+
+// Types pour Milestone Tracker
+type OfferItem = {
+  id: string;
+  reference: string;
+  client: string;
+  status: string;
+  estimatedAmount: number;
+  isPriority: boolean;
+  responsibleUser?: {
+    firstName: string;
+    lastName: string;
+  };
+};
+
+type MilestoneItem = {
+  id: string;
+  offerId: string;
+  milestoneType: string;
+  title: string;
+  status: string;
+  expectedCompletionDate?: string;
+  assignedUserId?: string;
+  validationComment?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type UserItem = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+};
+
+type CreateMilestoneData = {
+  offerId: string;
+  milestoneType: string;
+  title: string;
+  description: string;
+  expectedCompletionDate: string;
+  assignedUserId: string;
+  status: string;
+};
+
+type ValidateMilestoneData = {
+  milestoneId: string;
+  status: string;
+  comment: string;
+};
 
 interface MilestoneTrackerProps {
   offerId?: string;
@@ -50,32 +102,35 @@ interface MilestoneTrackerProps {
 export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
   const [selectedOfferId, setSelectedOfferId] = useState<string>(offerId || '');
   const [isValidationDialogOpen, setIsValidationDialogOpen] = useState(false);
-  const [milestoneToValidate, setMilestoneToValidate] = useState<any>(null);
-  const [milestoneToReject, setMilestoneToReject] = useState<any>(null);
+  const [milestoneToValidate, setMilestoneToValidate] = useState<MilestoneItem | null>(null);
+  const [milestoneToReject, setMilestoneToReject] = useState<MilestoneItem | null>(null);
   const { toast } = useToast();
 
   // Fetch offers for selection
-  const { data: offers = [] } = useQuery<any[]>({
+  const { data: offers = [] } = useQuery<OfferItem[]>({
     queryKey: ['/api/offers/'],
+    select: selectOffers
   });
 
   // Fetch validation milestones
-  const { data: milestones = [] } = useQuery<any[]>({
+  const { data: milestones = [] } = useQuery<MilestoneItem[]>({
     queryKey: ['/api/validation-milestones/', selectedOfferId],
     enabled: !!selectedOfferId,
+    select: selectMilestones
   });
 
   // Fetch users for validation assignment
-  const { data: users = [] } = useQuery<any[]>({
+  const { data: users = [] } = useQuery<UserItem[]>({
     queryKey: ['/api/users/'],
+    select: selectUsers
   });
 
   // Get selected offer details
-  const selectedOffer = offers.find((offer: any) => offer.id === selectedOfferId);
+  const selectedOffer = offers.find((offer: OfferItem) => offer.id === selectedOfferId);
 
   // Create validation milestone mutation
   const createMilestoneMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: CreateMilestoneData) => {
       return apiRequest('POST', `/api/validation-milestones/`, data);
     },
     onSuccess: () => {
@@ -87,7 +142,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
         description: "Le jalon de validation a été enregistré avec succès.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Erreur",
         description: "Impossible de valider le jalon. Veuillez réessayer.",
@@ -98,7 +153,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
 
   // Validate milestone mutation
   const validateMilestoneMutation = useMutation({
-    mutationFn: async ({ milestoneId, status, comment }: any) => {
+    mutationFn: async ({ milestoneId, status, comment }: ValidateMilestoneData) => {
       return apiRequest('PATCH', `/api/validation-milestones/${milestoneId}`, { status, validationComment: comment });
     },
     onSuccess: () => {

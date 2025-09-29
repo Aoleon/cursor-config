@@ -25,6 +25,11 @@ interface SessionData {
       };
     };
   };
+  user?: {
+    id?: string;
+    email?: string;
+    isBasicAuth?: boolean;
+  };
 }
 
 export class WebSocketManager {
@@ -170,9 +175,17 @@ export class WebSocketManager {
 
         log(`WebSocket: Session found, passport data: ${JSON.stringify(sessionData.passport || {})}`);
 
-        const userId = sessionData.passport?.user?.claims?.sub;
+        // Chercher l'ID utilisateur dans les données Passport ou Basic Auth
+        let userId = sessionData.passport?.user?.claims?.sub;
+        
+        // Si pas trouvé dans Passport, chercher dans basic auth
+        if (!userId && sessionData.user?.isBasicAuth) {
+          userId = sessionData.user.id;
+          log(`WebSocket: Using basic auth user ID: ${userId}`);
+        }
+        
         if (!userId) {
-          log('WebSocket: No user ID found in session');
+          log('WebSocket: No user ID found in session (neither Passport nor Basic Auth)');
           this.sendMessage(ws, {
             type: 'auth_error',
             message: 'User not authenticated'

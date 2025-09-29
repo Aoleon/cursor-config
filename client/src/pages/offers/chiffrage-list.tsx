@@ -53,12 +53,16 @@ export default function ChiffrageList() {
       console.log("🔍 Chargement des offres pour chiffrage...");
       try {
         // Récupérer les offres prêtes à chiffrer ET en cours de chiffrage
-        const [offersAttenteFournisseurs, offersEnCoursChiffrage] = await Promise.all([
+        const [resAttente, resEnCours] = await Promise.all([
           fetch("/api/offers?status=en_attente_fournisseurs").then(r => r.json()),
           fetch("/api/offers?status=en_cours_chiffrage").then(r => r.json())
         ]);
         
-        const allOffers = [...(offersAttenteFournisseurs || []), ...(offersEnCoursChiffrage || [])];
+        // Extraire les données des réponses formatées avec sendSuccess
+        const offersAttenteFournisseurs = resAttente?.data || [];
+        const offersEnCoursChiffrage = resEnCours?.data || [];
+        
+        const allOffers = [...offersAttenteFournisseurs, ...offersEnCoursChiffrage];
         console.log("✅ Données reçues:", {
           pretAChiffrer: offersAttenteFournisseurs?.length || 0,
           enCoursChiffrage: offersEnCoursChiffrage?.length || 0,

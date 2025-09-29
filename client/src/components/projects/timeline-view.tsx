@@ -20,11 +20,12 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"list" | "gantt">("list");
 
-  const { data: projects = [], isLoading: projectsLoading } = useQuery<any[]>({
+  const { data: projectsData, isLoading: projectsLoading } = useQuery<any>({
     queryKey: ["/api/projects"],
   });
+  const projects = projectsData?.data || [];
 
-  const { data: allTasks = [], isLoading: tasksLoading } = useQuery<(ProjectTask & { assignedUser?: User })[]>({
+  const { data: allTasksData, isLoading: tasksLoading } = useQuery<any>({
     queryKey: ["/api/tasks/all"],
     queryFn: async () => {
       const response = await fetch("/api/tasks/all");
@@ -32,6 +33,7 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
       return response.json();
     },
   });
+  const allTasks = allTasksData?.data || [];
 
   const filteredProjects = selectedProjectId 
     ? projects.filter(p => p.id === selectedProjectId)

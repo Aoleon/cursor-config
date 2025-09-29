@@ -253,7 +253,7 @@ export default function ProjectSupply() {
                     return (
                       <Card
                         key={project.id}
-                        className="hover:shadow-lg transition-shadow cursor-pointer"
+                        className="hover:shadow-lg transition-shadow cursor-default"
                         data-testid={`project-card-${project.id}`}
                       >
                         <CardHeader>
@@ -266,6 +266,15 @@ export default function ProjectSupply() {
                               <Badge className={getUrgencyColor(urgency)}>
                                 {getUrgencyLabel(urgency)}
                               </Badge>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setLocation(`/projects/${project.id}`)}
+                                data-testid={`button-detail-${project.id}`}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                Voir le détail
+                              </Button>
                             </div>
                           </div>
                         </CardHeader>
@@ -402,7 +411,7 @@ export default function ProjectSupply() {
                           return (
                             <div
                               key={project.id}
-                              className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50"
+                              className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50 cursor-default hover:bg-red-100 transition-colors"
                               data-testid={`urgent-project-${project.id}`}
                             >
                               <div>
@@ -419,7 +428,8 @@ export default function ProjectSupply() {
                                   onClick={() => setLocation(`/projects/${project.id}`)}
                                   data-testid={`button-urgent-view-${project.id}`}
                                 >
-                                  Voir
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  Voir le détail
                                 </Button>
                               </div>
                             </div>
@@ -451,7 +461,7 @@ export default function ProjectSupply() {
                         .map(project => (
                           <div
                             key={project.id}
-                            className="flex items-center justify-between p-4 border border-green-200 rounded-lg bg-green-50"
+                            className="flex items-center justify-between p-4 border border-green-200 rounded-lg bg-green-50 cursor-default hover:bg-green-100 transition-colors"
                             data-testid={`ready-project-${project.id}`}
                           >
                             <div>
@@ -468,7 +478,8 @@ export default function ProjectSupply() {
                                 onClick={() => setLocation(`/projects/${project.id}`)}
                                 data-testid={`button-ready-view-${project.id}`}
                               >
-                                Voir
+                                <Eye className="w-4 h-4 mr-1" />
+                                Voir le détail
                               </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>

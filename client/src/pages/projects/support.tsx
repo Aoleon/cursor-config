@@ -277,7 +277,7 @@ export default function ProjectSupport() {
                     return (
                       <Card
                         key={project.id}
-                        className="hover:shadow-lg transition-shadow cursor-pointer"
+                        className="hover:shadow-lg transition-shadow cursor-default"
                         data-testid={`project-card-${project.id}`}
                       >
                         <CardHeader>
@@ -290,6 +290,15 @@ export default function ProjectSupport() {
                               <Badge className={getWarrantyColor(warrantyStatus)}>
                                 {getWarrantyLabel(warrantyStatus)}
                               </Badge>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setLocation(`/projects/${project.id}`)}
+                                data-testid={`button-detail-${project.id}`}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                Voir le détail
+                              </Button>
                             </div>
                           </div>
                         </CardHeader>
@@ -506,7 +515,11 @@ export default function ProjectSupport() {
                 {supportProjects.map((project) => {
                   const warrantyStatus = getWarrantyStatus(project);
                   return (
-                    <Card key={project.id} data-testid={`warranty-card-${project.id}`}>
+                    <Card 
+                      key={project.id} 
+                      data-testid={`warranty-card-${project.id}`}
+                      className="cursor-default hover:shadow-lg transition-shadow"
+                    >
                       <CardHeader>
                         <CardTitle className="text-base">{project.name}</CardTitle>
                       </CardHeader>
@@ -531,6 +544,17 @@ export default function ProjectSupport() {
                           <p>• Garantie décennale: 10 ans</p>
                           <p>• Maintenance préventive recommandée</p>
                         </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setLocation(`/projects/${project.id}`)}
+                          className="w-full"
+                          data-testid={`button-warranty-detail-${project.id}`}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Voir le détail
+                        </Button>
                       </CardContent>
                     </Card>
                   );

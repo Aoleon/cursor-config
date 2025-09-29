@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiRequest } from '@/lib/queryClient'
 import { useToast } from '@/hooks/use-toast'
+import { useLocation } from 'wouter'
 import { 
   Calendar, 
   Clock, 
@@ -65,6 +66,7 @@ interface ProjectCardProps {
 
 function ProjectCard({ project, onStatusChange }: ProjectCardProps) {
   const [isDragging, setIsDragging] = useState(false)
+  const [, setLocation] = useLocation()
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true)
@@ -74,6 +76,13 @@ function ProjectCard({ project, onStatusChange }: ProjectCardProps) {
 
   const handleDragEnd = () => {
     setIsDragging(false)
+  }
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Ne navigue que si on n'est pas en train de faire un drag
+    if (!isDragging) {
+      setLocation(`/projects/${project.id}`)
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -92,7 +101,8 @@ function ProjectCard({ project, onStatusChange }: ProjectCardProps) {
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className={`cursor-move transition-all duration-200 hover:shadow-md ${
+      onClick={handleCardClick}
+      className={`cursor-move hover:cursor-pointer transition-all duration-200 hover:shadow-md ${
         isDragging ? 'opacity-50 scale-95' : ''
       }`}
     >

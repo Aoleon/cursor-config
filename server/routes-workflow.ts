@@ -39,14 +39,24 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   app.post("/api/aos/:id/validate-etude", isAuthenticated, async (req, res) => {
     try {
       const aoId = req.params.id;
-      // Simulation de validation - dans un cas réel, on mettrait à jour le statut en BDD
+      
+      // Vérifier que l'AO existe
+      const existingAo = await storage.getAo(aoId);
+      if (!existingAo) {
+        return res.status(404).json({ error: "AO non trouvé" });
+      }
+      
+      // Mettre à jour le statut en base de données - UNIQUEMENT l'AO spécifié
+      await storage.updateAo(aoId, { status: 'en_cours_chiffrage' });
+      
       res.json({ 
         success: true, 
         message: "Étude technique validée, passage au chiffrage",
         aoId,
-        newStatus: 'chiffrage'
+        newStatus: 'en_cours_chiffrage'
       });
     } catch (error) {
+      console.error('Erreur lors de la validation de l\'étude:', error);
       res.status(500).json({ error: "Erreur lors de la validation de l'étude" });
     }
   });

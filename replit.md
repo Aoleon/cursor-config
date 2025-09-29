@@ -74,6 +74,15 @@ The system implements a unique, evolving form that progresses through predefined
 
 ## Recent Improvements (Sept 2025)
 
+### Gantt Chart Performance Optimizations & Bug Fixes (Sept 29, 2025)
+- **Critical Fix - Timeline View Integration**: Fixed timeline-view.tsx missing database persistence - replaced console.log handler with proper updateProjectMutation and updateTaskMutation using apiRequest
+- **Critical Fix - apiRequest Signature**: Corrected argument order from `apiRequest(url, method, data)` to `apiRequest(method, url, data)` preventing 404 errors
+- **Performance Optimization - Single PATCH on Mouseup**: Refactored useGanttDrag resize system to guarantee exactly ONE PATCH request per resize operation instead of dozens during drag
+  - **Architecture**: `resizeInitialDatesRef` captures dates at mousedown, `resizeFinalDateRef` stores cursor position during mousemove, `handleMouseUp` combines and persists ONCE
+  - **Benefits**: Eliminates race conditions, prevents database write spam, ensures data consistency, maintains 60fps visual fluidity
+- **Testing**: Comprehensive Playwright validation confirms single PATCH per operation with correct dates persisted to database
+- **Files Modified**: `client/src/components/projects/timeline-view.tsx`, `client/src/hooks/useGanttDrag.ts`
+
 ### Supplier Document Management & OCR Integration
 - **Persistent File Storage**: Implemented `uploadSupplierDocument` method in ObjectStorageService for durable file persistence
 - **Auto OCR Trigger**: Upload endpoint now automatically triggers OCR analysis after successful document storage

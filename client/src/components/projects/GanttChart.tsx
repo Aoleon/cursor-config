@@ -354,9 +354,9 @@ export default function GanttChart({
   // allGanttItems sont de type GanttItem[] (sans ces propriétés)
   const displayItems = enableHierarchy ? visibleItems : allGanttItems;
   
-  // CRITIQUE : Créer des versions filtrées pour les fonctions qui nécessitent des dates valides
-  const safeDisplayItems = displayItems.filter(hasValidDates);
-  const safeAllGanttItems = allGanttItems.filter(hasValidDates);
+  // CRITIQUE : Créer des versions filtrées pour les fonctions qui nécessitent des dates valides (mémorisé)
+  const safeDisplayItems = useMemo(() => displayItems.filter(hasValidDates), [displayItems, hasValidDates]);
+  const safeAllGanttItems = useMemo(() => allGanttItems.filter(hasValidDates), [allGanttItems, hasValidDates]);
 
   // Hook pour les calculs de workload (utiliser displayItems qui peut être hiérarchique ou plat)
   const {
@@ -464,8 +464,8 @@ export default function GanttChart({
     return isAfter(now, item.endDate) && item.status !== 'termine' && item.status !== 'completed';
   }, []);
 
-  // Gestion des liaisons de dépendances
-  const handleItemClick = (itemId: string) => {
+  // Gestion des liaisons de dépendances (mémorisé pour éviter re-renders)
+  const handleItemClick = useCallback((itemId: string) => {
     if (linkMode) {
       if (!linkFromId) {
         setLinkFromId(itemId);
@@ -485,10 +485,10 @@ export default function GanttChart({
         setLinkMode(false);
       }
     }
-  };
+  }, [linkMode, linkFromId, onDependencyCreate, toast]);
 
-  // Gestion du double-clic pour créer une tâche
-  const handleDoubleClick = (e: React.MouseEvent) => {
+  // Gestion du double-clic pour créer une tâche (mémorisé)
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     if (!ganttRef.current) return;
     
     const rect = ganttRef.current.getBoundingClientRect();
@@ -501,10 +501,10 @@ export default function GanttChart({
       setNewTaskDate(clickedDate);
       setShowCreateDialog(true);
     }
-  };
+  }, [periodInfo.totalDays, periodInfo.periodStart]);
 
-  // Créer une nouvelle tâche
-  const handleCreateTask = () => {
+  // Créer une nouvelle tâche (mémorisé)
+  const handleCreateTask = useCallback(() => {
     if (!newTaskName || !newTaskProject) {
       toast({
         title: "Erreur",
@@ -542,7 +542,7 @@ export default function GanttChart({
       title: "Tâche créée",
       description: `${newTaskType === 'milestone' ? 'Jalon' : 'Tâche'} "${newTaskName}" ajouté(e) au planning`,
     });
-  };
+  }, [newTaskName, newTaskProject, newTaskDate, newTaskType, onTaskCreate, toast]);
 
   return (
     <Card className="w-full" data-testid={dataTestId}>

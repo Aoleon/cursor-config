@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, ChevronRight, Calendar, User as UserIcon, Clock, MapPin, Folder, Target } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isWithinInterval, differenceInDays, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import GanttChart from "@/components/projects/GanttChart";
 import type { ProjectTask, User } from "@shared/schema";
 
@@ -19,11 +21,61 @@ interface TimelineViewProps {
 export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"list" | "gantt">("list");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: projectsData, isLoading: projectsLoading } = useQuery<any>({
     queryKey: ["/api/projects"],
   });
   const projects = projectsData?.data || [];
+  
+  // Mutation pour mettre à jour les dates des projets
+  const updateProjectMutation = useMutation({
+    mutationFn: async ({ projectId, startDate, endDate }: { projectId: string; startDate: Date; endDate: Date }) => {
+      return await apiRequest('PATCH', `/api/projects/${projectId}`, {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({
+        title: "Projet mis à jour",
+        description: "Les dates du projet ont été modifiées avec succès.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour les dates du projet.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation pour mettre à jour les dates des tâches
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ taskId, startDate, endDate }: { taskId: string; startDate: Date; endDate: Date }) => {
+      return await apiRequest('PATCH', `/api/tasks/${taskId}`, {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/all"] });
+      toast({
+        title: "Tâche mise à jour",
+        description: "Les dates de la tâche ont été modifiées avec succès.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour les dates de la tâche.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: allTasksData, isLoading: tasksLoading } = useQuery<any>({
     queryKey: ["/api/tasks/all"],
@@ -288,8 +340,19 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
             projects={filteredProjects}
             milestones={[]} 
             onDateUpdate={(itemId, newStartDate, newEndDate, type) => {
-              // Handler pour mise à jour des dates
-              console.log(`Date update: ${itemId}, ${type}, ${newStartDate} - ${newEndDate}`);
+              if (type === 'project') {
+                updateProjectMutation.mutate({
+                  projectId: itemId,
+                  startDate: newStartDate,
+                  endDate: newEndDate,
+                });
+              } else {
+                updateTaskMutation.mutate({
+                  taskId: itemId,
+                  startDate: newStartDate,
+                  endDate: newEndDate,
+                });
+              }
             }}
             enableRealtime={true}
             data-testid="timeline-gantt-chart"

@@ -110,7 +110,7 @@ export function useGanttDrag({
     if (!draggedItem) return null;
     
     const item = ganttItems.find(i => i.id === draggedItem);
-    if (!item) return null;
+    if (!item || !item.startDate || !item.endDate) return null;
     
     const { date: newStartDate, isOutOfBounds, side } = getDateFromPosition(clientX, true);
     const duration = differenceInDays(item.endDate, item.startDate);
@@ -236,7 +236,7 @@ export function useGanttDrag({
     const { date: newStartDate } = getDateFromPosition(e.clientX, true);
     const item = ganttItems.find(i => i.id === draggedItem);
     
-    if (item && onDateUpdate) {
+    if (item && item.startDate && item.endDate && onDateUpdate) {
       const duration = differenceInDays(item.endDate, item.startDate);
       const newEndDate = addDays(newStartDate, duration);
       
@@ -271,36 +271,121 @@ export function useGanttDrag({
   // Gestion du resize start
   const handleResizeStart = useCallback((e: React.MouseEvent, itemId: string, handle: 'start' | 'end') => {
     e.stopPropagation();
+    
+    // Stocker les dates initiales de l'item au début du resize
+    const item = ganttItems.find(i => i.id === itemId);
+    if (item && item.startDate && item.endDate) {
+      resizeInitialDatesRef.current = {
+        startDate: item.startDate,
+        endDate: item.endDate
+      };
+      resizeFinalDateRef.current = null;
+    }
+    
     setResizeItem({ id: itemId, handle });
-  }, []);
+  }, [ganttItems]);
 
-  // Gestion du resize via mouse move
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (resizeItem && ganttRef.current) {
-      const { date: newDate, isOutOfBounds } = getDateFromPosition(e.clientX, false);
-      
-      // Pour le resize, on reste dans les bornes visibles
-      if (!isOutOfBounds) {
-        const item = ganttItems.find(i => i.id === resizeItem.id);
-        
-        if (item && onDateUpdate) {
-          if (resizeItem.handle === 'start') {
-            if (isBefore(newDate, item.endDate)) {
-              onDateUpdate(resizeItem.id, newDate, item.endDate, item.type);
-            }
-          } else {
-            if (isAfter(newDate, item.startDate)) {
-              onDateUpdate(resizeItem.id, item.startDate, newDate, item.type);
-            }
-          }
+  // Resize handler avec requestAnimationFrame et queue pour garantir le dernier événement
+  const resizeFrameRef = useRef<number | null>(null);
+  const lastResizeTimeRef = useRef<number>(0);
+  const pendingResizeEventRef = useRef<MouseEvent | null>(null);
+  const resizeInitialDatesRef = useRef<{ startDate: Date; endDate: Date } | null>(null);
+  const resizeFinalDateRef = useRef<Date | null>(null);
+  const RESIZE_THROTTLE_MS = 16; // ~60fps (1000/60)
+  
+  // Fonction pour traiter un événement resize (calcul de la nouvelle date du curseur)
+  const processResizeEvent = useCallback((clientX: number) => {
+    if (!resizeItem || !ganttRef.current || !resizeInitialDatesRef.current) return;
+    
+    const { date: newDate, isOutOfBounds } = getDateFromPosition(clientX, false);
+    
+    // Pour le resize, on reste dans les bornes visibles
+    if (!isOutOfBounds) {
+      // Valider la nouvelle date selon le handle
+      if (resizeItem.handle === 'start') {
+        if (isBefore(newDate, resizeInitialDatesRef.current.endDate)) {
+          resizeFinalDateRef.current = newDate;
+        }
+      } else {
+        if (isAfter(newDate, resizeInitialDatesRef.current.startDate)) {
+          resizeFinalDateRef.current = newDate;
         }
       }
     }
-  }, [resizeItem, ganttItems, onDateUpdate, getDateFromPosition]);
+  }, [resizeItem, getDateFromPosition]);
+  
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (resizeItem && ganttRef.current) {
+      // Stocker le dernier événement pour garantir qu'il ne soit pas perdu
+      pendingResizeEventRef.current = e;
+      
+      // Annuler le frame précédent si existe
+      if (resizeFrameRef.current) {
+        cancelAnimationFrame(resizeFrameRef.current);
+      }
+      
+      // Utiliser requestAnimationFrame pour fluidité maximale
+      resizeFrameRef.current = requestAnimationFrame(() => {
+        const now = performance.now();
+        
+        // Si throttle actif, reprogrammer pour plus tard
+        if (now - lastResizeTimeRef.current < RESIZE_THROTTLE_MS) {
+          // Reprogrammer pour traiter l'événement en attente
+          resizeFrameRef.current = requestAnimationFrame(() => {
+            if (pendingResizeEventRef.current) {
+              processResizeEvent(pendingResizeEventRef.current.clientX);
+              lastResizeTimeRef.current = performance.now();
+              pendingResizeEventRef.current = null;
+            }
+          });
+          return;
+        }
+        
+        // Traiter l'événement immédiatement
+        lastResizeTimeRef.current = now;
+        processResizeEvent(e.clientX);
+        pendingResizeEventRef.current = null;
+      });
+    }
+  }, [resizeItem, processResizeEvent]);
 
   const handleMouseUp = useCallback(() => {
+    // Annuler tout frame en attente
+    if (resizeFrameRef.current) {
+      cancelAnimationFrame(resizeFrameRef.current);
+      resizeFrameRef.current = null;
+    }
+    
+    // CRITIQUE : Flush le dernier événement en attente pour calculer la position finale
+    if (pendingResizeEventRef.current) {
+      processResizeEvent(pendingResizeEventRef.current.clientX);
+      pendingResizeEventRef.current = null;
+    }
+    
+    // PERSISTER UNE SEULE FOIS avec les dates finales calculées
+    if (resizeFinalDateRef.current && resizeInitialDatesRef.current && resizeItem && onDateUpdate) {
+      const item = ganttItems.find(i => i.id === resizeItem.id);
+      if (item) {
+        let newStartDate = resizeInitialDatesRef.current.startDate;
+        let newEndDate = resizeInitialDatesRef.current.endDate;
+        
+        // Appliquer la modification selon le handle
+        if (resizeItem.handle === 'start') {
+          newStartDate = resizeFinalDateRef.current;
+        } else {
+          newEndDate = resizeFinalDateRef.current;
+        }
+        
+        // Appel UNIQUE à onDateUpdate pour persister
+        onDateUpdate(resizeItem.id, newStartDate, newEndDate, item.type);
+      }
+    }
+    
+    // Nettoyer les refs
+    resizeInitialDatesRef.current = null;
+    resizeFinalDateRef.current = null;
     setResizeItem(null);
-  }, []);
+  }, [processResizeEvent, resizeItem, onDateUpdate, ganttItems]);
 
   // Effect pour gérer les événements mouse pour le resize
   useEffect(() => {
@@ -320,6 +405,9 @@ export function useGanttDrag({
     return () => {
       if (navigationTimeoutRef.current) {
         clearTimeout(navigationTimeoutRef.current);
+      }
+      if (resizeFrameRef.current) {
+        cancelAnimationFrame(resizeFrameRef.current);
       }
     };
   }, []);

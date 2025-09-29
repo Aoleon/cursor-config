@@ -4933,6 +4933,7 @@ export const aiQueryTypeEnum = pgEnum("ai_query_type", [
 export const aiQueryCache = pgTable("ai_query_cache", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   queryHash: varchar("query_hash").notNull().unique(), // Hash de la requête + contexte
+  cacheKey: varchar("cache_key"), // Clé de cache - nullable pour résoudre contrainte NULL
   query: text("query").notNull(),
   context: text("context").notNull(),
   userRole: varchar("user_role").notNull(),
@@ -5546,6 +5547,7 @@ export const businessContextMetricsLog = pgTable("business_context_metrics_log",
   userId: varchar("user_id", { length: 255 }).notNull(),
   userRole: varchar("user_role", { length: 50 }).notNull(),
   requestType: varchar("request_type", { length: 100 }).notNull(),
+  operationType: varchar("operation_type", { length: 100 }).default("context_generation"), // Colonne manquante ajoutée
   generationTimeMs: integer("generation_time_ms").notNull(),
   cacheHit: boolean("cache_hit").notNull(),
   schemasLoaded: integer("schemas_loaded").notNull(),
@@ -8733,6 +8735,7 @@ export const performanceAlerts = pgTable("performance_alerts", {
   severity: performanceAlertSeverityEnum("severity").notNull(),
   
   title: varchar("title").notNull(),
+  message: text("message"), // Colonne manquante ajoutée - nullable
   description: text("description"),
   
   // Valeurs seuil vs réelle

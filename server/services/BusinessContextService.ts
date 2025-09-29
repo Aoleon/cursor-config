@@ -1410,6 +1410,7 @@ export class BusinessContextService {
         userId: request.userId,
         userRole: request.user_role,
         requestType: "generate_context",
+        operationType: "context_generation", // Colonne manquante ajoutée avec valeur appropriée
         generationTimeMs: generationTime,
         cacheHit,
         schemasLoaded: context?.databaseSchemas.length || 0,

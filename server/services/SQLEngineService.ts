@@ -387,12 +387,26 @@ INSTRUCTIONS DE BASE:
     console.log(`[SQLSecurity] SQL à valider: ${sql.substring(0, 200)}${sql.length > 200 ? '...' : ''}`);
 
     try {
-      // 0. NETTOYAGE SQL : Retirer commentaires qui font échouer le parser
-      const cleanedSQL = sql
-        .split('\n')
-        .map(line => line.replace(/--.*$/, '').trim()) // Retire commentaires --
-        .filter(line => line.length > 0) // Retire lignes vides
-        .join(' ');
+      // 0. NETTOYAGE SQL COMPLET : Retirer TOUS les commentaires et normaliser
+      let cleanedSQL = sql;
+      try {
+        cleanedSQL = sql
+          // Retirer commentaires multi-lignes /* */
+          .replace(/\/\*[\s\S]*?\*\//g, ' ')
+          // Retirer commentaires simples --
+          .split('\n')
+          .map(line => line.replace(/--.*$/, '').trim())
+          .filter(line => line.length > 0)
+          .join(' ')
+          // Normaliser les espaces multiples
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        console.log(`[SQLSecurity] ✓ SQL nettoyé (${cleanedSQL.length} chars): ${cleanedSQL.substring(0, 150)}${cleanedSQL.length > 150 ? '...' : ''}`);
+      } catch (cleanError) {
+        console.warn(`[SQLSecurity] Erreur nettoyage SQL, utilisation SQL brut: ${cleanError}`);
+        cleanedSQL = sql.trim();
+      }
       
       // 1. ANALYSE AST COMPLÈTE avec node-sql-parser
       console.log(`[SQLSecurity] Étape 1: Parsing AST avec node-sql-parser...`);

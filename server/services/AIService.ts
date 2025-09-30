@@ -765,7 +765,7 @@ export class AIService {
     const response = await Promise.race([
       this.anthropic.messages.create({
         model: DEFAULT_CLAUDE_MODEL,
-        max_tokens: request.maxTokens || 2048,
+        max_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
         messages: [{ role: 'user', content: userPrompt }],
         system: systemPrompt,
       }),
@@ -818,7 +818,7 @@ export class AIService {
           { role: "user", content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: request.maxTokens || 2048,
+        max_completion_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
       }),
       new Promise((_, reject) => 
         setTimeout(() => reject(new Error(`Timeout OpenAI après ${REQUEST_TIMEOUT_MS}ms`)), REQUEST_TIMEOUT_MS)

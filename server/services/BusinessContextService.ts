@@ -539,7 +539,7 @@ export class BusinessContextService {
     
     // Filtrer uniquement les tables pertinentes
     return fullSchemas.filter(schema => 
-      tableNames.some(tableName => schema.table_name.toLowerCase() === tableName.toLowerCase())
+      tableNames.some(tableName => schema.tableName?.toLowerCase() === tableName.toLowerCase())
     );
   }
   
@@ -551,7 +551,7 @@ export class BusinessContextService {
     
     // Filtrer exemples contenant les tables pertinentes (max 2)
     return allExamples
-      .filter(ex => tableNames.some(table => ex.sql_query.toLowerCase().includes(table.toLowerCase())))
+      .filter(ex => tableNames.some(table => ex.sqlQuery?.toLowerCase().includes(table.toLowerCase())))
       .slice(0, 2);
   }
 

@@ -77,6 +77,23 @@ All OCR extraction patterns for materials, colors, tender documents, and line it
 ### Database Connection Pooling Optimization
 The PostgreSQL Neon connection pool is configured for high performance with `max: 25`, `min: 5`, `idleTimeoutMillis: 30000`, `connectionTimeoutMillis: 10000`, and `maxUses: 7500` to balance performance, reduce latency, and prevent connection exhaustion.
 
+### AI Chatbot SQL Generation - Recent Fixes (Sept 2025)
+**Issue Resolved:** SQL query truncation causing chatbot HTTP 500 errors
+- **Root Cause:** Prompt instruction "Max output: 300 tokens" forced mid-statement truncation (e.g., `COUNT(CASE WHEN status = 'sav' THEN` without closing)
+- **Fixes Applied:**
+  1. Removed "Max output: 300 tokens" limit from prompt (SQLEngineService.ts)
+  2. Increased maxTokens from 4096 to 8192 for complete SQL generation
+  3. AI cache re-enabled with versioning (`PROMPT_VERSION` in context) for auto-invalidation
+  4. Added performance guardrails: default 12-month timeframe, max 3 joins, no window functions
+  5. Increased timeout 30s→45s temporarily (workaround for slow queries)
+
+**Current Status:** SQL generation now complete and functional. Performance optimization ongoing.
+
+**Performance Recommendations (Future Work):**
+1. **EXPLAIN Preflight Gate:** Implement cost/row threshold checks before execution; re-prompt if plan too expensive
+2. **Programmatic Enforcement:** AST-level validation and injection of constraints (12-month window, join limits) beyond prompt instructions
+3. **Enhanced Observability:** Structured logging with traceId, SQL hash, execution metrics, and EXPLAIN output capture
+
 ## External Dependencies
 
 - **Database**: Neon serverless PostgreSQL

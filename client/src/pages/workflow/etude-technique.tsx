@@ -266,26 +266,26 @@ export default function EtudeTechnique() {
                       {/* Indicateurs de progression */}
                       <div className="grid grid-cols-4 gap-2 mb-3">
                         <div className="flex items-center">
-                          <FileText className={`h-4 w-4 mr-1 ${ao.cctpAnalyzed ? 'text-green-600' : 'text-gray-400'}`} />
+                          <FileText className={`h-4 w-4 mr-1 ${offer.cctpAnalyzed ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">CCTP analysé</span>
                         </div>
                         <div className="flex items-center">
-                          <Wrench className={`h-4 w-4 mr-1 ${ao.technicalDetailsComplete ? 'text-green-600' : 'text-gray-400'}`} />
+                          <Wrench className={`h-4 w-4 mr-1 ${offer.technicalDetailsComplete ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Détails techniques</span>
                         </div>
                         <div className="flex items-center">
-                          <FileSearch className={`h-4 w-4 mr-1 ${ao.plansAnalyzed ? 'text-green-600' : 'text-gray-400'}`} />
+                          <FileSearch className={`h-4 w-4 mr-1 ${offer.plansAnalyzed ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Plans analysés</span>
                         </div>
                         <div className="flex items-center">
-                          <CheckCircle className={`h-4 w-4 mr-1 ${ao.lotsValidated ? 'text-green-600' : 'text-gray-400'}`} />
+                          <CheckCircle className={`h-4 w-4 mr-1 ${offer.lotsValidated ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Lots validés</span>
                         </div>
                       </div>
 
                       {/* Actions contextuelles */}
                       <div className="flex gap-2 justify-end">
-                        {getActionButtons(ao)}
+                        {getActionButtons(offer)}
                       </div>
                     </div>
                   ))}

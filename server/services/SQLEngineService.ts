@@ -198,7 +198,8 @@ export class SQLEngineService {
           };
         }
 
-        results = execResult.results || [];
+        // Sanitize results pour JSON serialization (BigInt → string)
+        results = this.sanitizeResultsForJSON(execResult.results || []);
         executionTime = execResult.executionTime || 0;
       }
 
@@ -933,5 +934,50 @@ Contraintes:
       rbacFiltersInfo,
       exampleQueries
     };
+  }
+
+  /**
+   * Sanitize SQL results pour JSON serialization
+   * Convertit BigInt → string, Date → ISO, Buffer → base64
+   */
+  private sanitizeResultsForJSON(results: any[]): any[] {
+    return results.map(row => this.sanitizeValueForJSON(row));
+  }
+
+  private sanitizeValueForJSON(value: any): any {
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    // BigInt → string (cause principale du 500)
+    if (typeof value === 'bigint') {
+      return value.toString();
+    }
+
+    // Date → ISO string
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    // Buffer → base64
+    if (Buffer.isBuffer(value)) {
+      return value.toString('base64');
+    }
+
+    // Object/Array → récursif
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) {
+        return value.map(item => this.sanitizeValueForJSON(item));
+      }
+      
+      const sanitized: Record<string, any> = {};
+      for (const [key, val] of Object.entries(value)) {
+        sanitized[key] = this.sanitizeValueForJSON(val);
+      }
+      return sanitized;
+    }
+
+    // Primitives (string, number, boolean) → inchangés
+    return value;
   }
 }

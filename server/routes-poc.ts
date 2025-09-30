@@ -6940,15 +6940,28 @@ app.post("/api/chatbot/query",
     // Pipeline complet d'orchestration chatbot
     const result = await chatbotOrchestrationService.processChatbotQuery(chatbotRequest);
 
+    // JSON replacer pour gérer BigInt serialization de manière globale
+    const safeJsonReplacer = (_: string, value: any) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+      return value;
+    };
+
     if (result.success) {
-      res.status(200).json(result);
+      res.setHeader('Content-Type', 'application/json');
+      res.status(200).send(JSON.stringify(result, safeJsonReplacer));
     } else {
       // Gestion d'erreur gracieuse selon le type
       const statusCode = result.error?.type === 'rbac' ? 403 :
                         result.error?.type === 'validation' ? 400 :
                         result.error?.type === 'timeout' ? 408 : 500;
       
-      res.status(statusCode).json(result);
+      res.setHeader('Content-Type', 'application/json');
+      res.status(statusCode).send(JSON.stringify(result, safeJsonReplacer));
     }
   })
 );

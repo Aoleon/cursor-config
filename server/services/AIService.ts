@@ -46,7 +46,7 @@ const DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-20250514";  // Modèle Claude Sonn
 const DEFAULT_GPT_MODEL = "gpt-5";  // Modèle GPT-5 par défaut
 const CACHE_EXPIRY_HOURS = 24;  // Cache valide 24h
 const MAX_RETRY_ATTEMPTS = 2;  // Réduit pour éviter les boucles longues
-const REQUEST_TIMEOUT_MS = 12000;  // 12 secondes timeout - Optimisé pour performance
+const REQUEST_TIMEOUT_MS = 35000;  // 35 secondes timeout pour requêtes complexes
 const RATE_LIMIT_PER_USER_PER_HOUR = 100;
 
 // Coûts estimés par token (en euros) - estimations approximatives

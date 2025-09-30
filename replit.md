@@ -94,6 +94,18 @@ The PostgreSQL Neon connection pool is configured for high performance with `max
 2. **Programmatic Enforcement:** AST-level validation and injection of constraints (12-month window, join limits) beyond prompt instructions
 3. **Enhanced Observability:** Structured logging with traceId, SQL hash, execution metrics, and EXPLAIN output capture
 
+### Maintenabilité - Nouveaux Utilitaires (Sept 2025)
+**Améliorations de l'architecture pour meilleure maintenabilité:**
+- **Logger Structuré** (`server/utils/logger.ts`): Service de logging unifié avec niveaux (debug/info/warn/error/fatal), contexte enrichi, et format adaptatif dev/prod
+- **Utilitaires Partagés** (`server/utils/shared-utils.ts`): Fonctions communes pour dates, montants, cache, performance, collections - élimine duplication de code
+- **Gestionnaire d'Erreurs** (`server/utils/error-handler.ts`): Erreurs typées (ValidationError, NotFoundError, etc.), wrappers async, retry intelligent, format API unifié
+- **Documentation** (`server/utils/README-UTILS.md`): Guide complet d'utilisation avec exemples de migration
+
+**Problèmes Identifiés (À Adresser):**
+- 27 services avec 33,650 lignes - plusieurs fonctions >150 lignes à refactoriser
+- Logging non structuré - des centaines de console.log à migrer progressivement vers le nouveau logger
+- Patterns de cache/performance dupliqués à centraliser via shared-utils
+
 ## External Dependencies
 
 - **Database**: Neon serverless PostgreSQL

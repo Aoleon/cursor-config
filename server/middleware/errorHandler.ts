@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodError, ZodIssue } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { logger } from "../utils/logger";
+import { formatErrorResponse, ValidationError, NotFoundError, AuthenticationError, AppError as UtilsAppError } from "../utils/error-handler";
 
 // Interface pour les erreurs Multer
 interface MulterError extends Error {
@@ -113,11 +115,9 @@ export const createError = {
 // Logger d'erreurs avec différents niveaux
 export class ErrorLogger {
   static logError(error: Error, req?: Request, additionalInfo?: any) {
-    const timestamp = new Date().toISOString();
     const errorInfo = {
-      timestamp,
       message: error.message,
-      stack: error.stack,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       url: req?.originalUrl,
       method: req?.method,
       userAgent: req?.get('User-Agent'),
@@ -127,18 +127,29 @@ export class ErrorLogger {
 
     if (error instanceof AppError) {
       if (error.statusCode >= 500) {
-        console.error('🔴 ERREUR SERVEUR:', errorInfo);
+        logger.error('ERREUR SERVEUR', errorInfo);
       } else if (error.statusCode >= 400) {
-        console.warn('🟡 ERREUR CLIENT:', errorInfo);
+        logger.warn('ERREUR CLIENT', errorInfo);
+      }
+    } else if (error instanceof ValidationError || error instanceof NotFoundError || error instanceof AuthenticationError) {
+      logger.warn('ERREUR CLIENT (nouvelle API)', errorInfo);
+    } else if (error instanceof UtilsAppError) {
+      if (error.statusCode >= 500) {
+        logger.error('ERREUR SERVEUR (nouvelle API)', errorInfo);
+      } else {
+        logger.warn('ERREUR CLIENT (nouvelle API)', errorInfo);
       }
     } else {
-      console.error('🔴 ERREUR NON GÉRÉE:', errorInfo);
+      logger.error('ERREUR NON GÉRÉE', errorInfo);
     }
   }
 
   static logValidationError(error: ZodError, req?: Request) {
     const validationError = fromZodError(error);
-    this.logError(new Error(validationError.message), req, {
+    logger.warn('ERREUR VALIDATION', {
+      message: validationError.message,
+      url: req?.originalUrl,
+      method: req?.method,
       type: 'VALIDATION',
       issues: error.issues
     });
@@ -158,6 +169,32 @@ export function errorHandler(
   // Si les headers sont déjà envoyés, déléguer à Express
   if (res.headersSent) {
     return next(err);
+  }
+
+  // Gestion des nouvelles erreurs typées (de error-handler.ts)
+  if (err instanceof ValidationError) {
+    const formatted = formatErrorResponse(err, { operation: 'validation', path: req.originalUrl });
+    res.status(400).json(formatted);
+    return;
+  }
+
+  if (err instanceof NotFoundError) {
+    const formatted = formatErrorResponse(err, { operation: 'resource_lookup', path: req.originalUrl });
+    res.status(404).json(formatted);
+    return;
+  }
+
+  if (err instanceof AuthenticationError) {
+    const formatted = formatErrorResponse(err, { operation: 'authentication', path: req.originalUrl });
+    res.status(401).json(formatted);
+    return;
+  }
+
+  // Gestion des autres erreurs typées de utils/error-handler.ts
+  if (err instanceof UtilsAppError) {
+    const formatted = formatErrorResponse(err, { operation: req.method, path: req.originalUrl });
+    res.status(err.statusCode).json(formatted);
+    return;
   }
 
   const timestamp = new Date().toISOString();

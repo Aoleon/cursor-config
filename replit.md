@@ -1,7 +1,7 @@
 # Saxium - Business Management System
 
 ## Overview
-Saxium POC is a specialized digitalization application for business management, focusing on project-based companies. The POC application aims to digitalize and optimize the management of offer dossiers, cost estimation, and project/planning tracking. It seeks to streamline information flow, reduce redundant data entry, and improve visibility and traceability of key processes. The scope is strictly limited to the POC to validate critical information flows between the Design Office and the field, focusing on eliminating double data entry and establishing formal validation milestones. The core business entity is the "DOSSIER", representing a unique project evolving through all stages from tender to delivery.
+Saxium POC is a specialized digitalization application for business management, focusing on project-based companies in the French carpentry domain. The application aims to optimize the management of offer dossiers, cost estimation, and project/planning tracking. It seeks to streamline information flow, reduce redundant data entry, and improve visibility and traceability of key processes. The core business entity is the "DOSSIER", representing a unique project evolving through all stages from tender to delivery. The project aims to validate critical information flows between the Design Office and the field, focusing on eliminating double data entry and establishing formal validation milestones.
 
 ## User Preferences
 You are an expert autonomous programmer specialized in business ERP systems, working on Saxium's comprehensive business management platform.
@@ -25,24 +25,24 @@ You are an expert autonomous programmer specialized in business ERP systems, wor
 
 ## System Architecture
 
-### Frontend Architecture
+### Frontend
 - **Framework**: React 18 with TypeScript
 - **Routing**: Wouter
 - **State Management**: TanStack Query v5
 - **UI Library**: Radix UI primitives + shadcn/ui
-- **Styling**: Tailwind CSS with custom design tokens
+- **Styling**: Tailwind CSS
 - **Form Management**: React Hook Form + Zod
 - **Build System**: Vite
 
-### Backend Architecture
+### Backend
 - **Runtime**: Node.js 20 with Express.js
 - **Language**: TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
-- **Connection Pooling**: Optimized Neon serverless Pool (25 max connections, 5 min idle)
+- **Connection Pooling**: Optimized Neon serverless Pool
 - **Authentication**: Replit OpenID Connect (OIDC) with Passport.js
 - **Session Storage**: PostgreSQL-backed sessions with connect-pg-simple
 - **OCR Engine**: Tesseract.js + pdf-parse for intelligent PDF processing
-- **Object Storage**: Replit Object Storage with persistent file management for supplier documents
+- **Object Storage**: Replit Object Storage for persistent file management
 
 ### Critical Design Principles
 - **Full-Stack Type Safety**: Shared TypeScript schemas ensure type consistency.
@@ -50,125 +50,38 @@ You are an expert autonomous programmer specialized in business ERP systems, wor
 - **French Carpentry Domain Modeling**: Business entities directly model carpentry workflows.
 - **Session-Based Authentication**: Secure, scalable user management.
 - **Optimistic UI Updates**: TanStack Query provides immediate UI feedback.
-- **Single Form Evolution**: The initial tender (AO) form is the ONLY form that evolves through all workflow stages. No data re-entry, no form duplication. Progressive field addition with validation locking prevents modification of previously validated data. This principle ensures zero redundant data entry and progressive data locking.
+- **Single Form Evolution**: The initial tender (AO) form is the ONLY form that evolves through all workflow stages, preventing data re-entry and ensuring progressive data locking.
 
 ### Core Functionalities (POC Scope)
-- **User Management**: Simple authentication for Design Office/Field roles with workload indicators.
-- **Tender (AO) Sheets**: Assisted data retrieval and OCR import (35+ fields) to prevent double entry.
-- **Offer Dossiers & Cost Estimation**: Assisted data retrieval from AO, simplified estimation module (or simulated Batigest connection), DPGF (Detailed Price Breakdown) editing, Design Office status tracking.
+- **User Management**: Simple authentication for Design Office/Field roles.
+- **Tender (AO) Sheets**: Assisted data retrieval and OCR import.
+- **Offer Dossiers & Cost Estimation**: Assisted data retrieval from AO, simplified estimation, DPGF editing, Design Office status tracking.
 - **Supplier Price Requests**: Simplified, read-only requests linked to projects.
-- **Project Management**: Five key stages: Study, Planning, Supply (simple), Construction Site, After-Sales Service (simple).
-- **Shared Planning**: Simplified Gantt chart, visual alerts for milestones, drag-and-drop tasks.
-- **Team Management**: Visualization of internal/subcontractor resources, simplified workload.
+- **Project Management**: Five key stages: Study, Planning, Supply, Construction Site, After-Sales Service.
+- **Shared Planning**: Simplified Gantt chart, visual alerts, drag-and-drop tasks.
+- **Team Management**: Visualization of internal/subcontractor resources.
 
 ### Workflow Management
-The system implements a unique, evolving form that progresses through predefined stages: AO → Cost Estimation → Project → Teams → Delivery. Each stage has a dedicated view with context-specific actions and progressive data locking. An intelligent OCR import function is integrated for automatic PDF analysis and field pre-filling.
+The system implements a unique, evolving form that progresses through predefined stages: AO → Cost Estimation → Project → Teams → Delivery, with context-specific actions and progressive data locking. An intelligent OCR import function is integrated for automatic PDF analysis and field pre-filling.
 
 ### Test Architecture & Software Quality
 - **Backend Testing**: Vitest + Supertest for unit and API integration tests.
 - **Frontend Testing**: Testing Library React + Vitest for components and hooks.
 - **E2E Testing**: Playwright for end-to-end testing.
 - **API Mocking**: MSW (Mock Service Worker).
-- **Comprehensive Testing Policy**: Every feature requires testing across Backend, Routes, Frontend Logic, and UI layers.
-- **Coverage Standards**: Minimum 85% backend, 80% frontend. 100% for critical paths.
+- **Comprehensive Testing Policy**: Every feature requires testing across Backend, Routes, Frontend Logic, and UI layers, with minimum 85% backend and 80% frontend coverage.
 
-## Recent Improvements (Sept 2025)
+### OCR Knowledge Base Centralization
+All OCR extraction patterns for materials, colors, tender documents, and line items are centralized in `server/services/MenuiserieKnowledgeBase.ts` for consistency and easier maintenance.
 
-### Chatbot BigInt Serialization Fix & SQL Security Investigation (Sept 30, 2025)
-- **Root Cause Identified**: Initial 500 errors were NOT caused by BigInt serialization
-  - Pipeline completes successfully: `[Chatbot] Pipeline terminé pour admin-dev-user, success: false`
-  - Error type is SQL security validation: `errorType: security`
-  - JSON serialization works correctly: `[Chatbot] JSON stringifié (577 bytes) - Envoi 500`
-- **BigInt Protection Implemented (Defense-in-Depth)**:
-  - **Layer 1**: `SQLEngineService.sanitizeResultsForJSON()` converts BigInt → string, Date → ISO, Buffer → base64
-  - **Layer 2**: Route handler `safeJsonReplacer()` provides global BigInt handling as fallback
-  - Both layers ensure PostgreSQL COUNT/SUM aggregates never cause serialization errors
-- **Enhanced Logging**: Added verbose diagnostics in `/api/chatbot/query` route handler
-  - Logs pipeline completion status and success/failure
-  - Logs error types and status codes
-  - Logs JSON stringification success/failure with byte counts
-  - Captures serialization errors with detailed context
-- **SQL Security Architecture Clarified**:
-  - `validateSQLSecurity()` in SQLEngineService enforces strict read-only policy
-  - `ALLOWED_BUSINESS_TABLES`: ['offers', 'projects', 'suppliers', 'ao_documents', 'project_tasks', 'team_resources', 'chiffrage_elements', 'validation_milestones', 'project_timelines', 'date_alerts', 'business_alerts', 'users']
-  - AST parsing with node-sql-parser validates all SQL before execution
-  - Security violations: non-SELECT statements, unauthorized tables/columns, injection patterns
-- **Known Issue - SQL Parsing Failures**: Some AI-generated SQL queries fail AST parsing
-  - Parsing errors trigger `SQL invalide ou malformé` security violation
-  - Even valid-looking SQL can be rejected if parser fails
-  - Requires further investigation into AI prompt engineering or parser configuration
-- **Files Modified**: `server/routes-poc.ts`, `server/services/SQLEngineService.ts`
-
-### Gantt Chart Performance Optimizations & Bug Fixes (Sept 29, 2025)
-- **Critical Fix - Timeline View Integration**: Fixed timeline-view.tsx missing database persistence - replaced console.log handler with proper updateProjectMutation and updateTaskMutation using apiRequest
-- **Critical Fix - apiRequest Signature**: Corrected argument order from `apiRequest(url, method, data)` to `apiRequest(method, url, data)` preventing 404 errors
-- **Performance Optimization - Single PATCH on Mouseup**: Refactored useGanttDrag resize system to guarantee exactly ONE PATCH request per resize operation instead of dozens during drag
-  - **Architecture**: `resizeInitialDatesRef` captures dates at mousedown, `resizeFinalDateRef` stores cursor position during mousemove, `handleMouseUp` combines and persists ONCE
-  - **Benefits**: Eliminates race conditions, prevents database write spam, ensures data consistency, maintains 60fps visual fluidity
-- **Testing**: Comprehensive Playwright validation confirms single PATCH per operation with correct dates persisted to database
-- **Files Modified**: `client/src/components/projects/timeline-view.tsx`, `client/src/hooks/useGanttDrag.ts`
-
-### Supplier Document Management & OCR Integration
-- **Persistent File Storage**: Implemented `uploadSupplierDocument` method in ObjectStorageService for durable file persistence
-- **Auto OCR Trigger**: Upload endpoint now automatically triggers OCR analysis after successful document storage
-- **Architecture Improvement**: Files are persisted in Object Storage BEFORE any processing, ensuring data durability
-- **Security**: Sanitized filenames, validated session IDs, and metadata tracking for all supplier documents
-- **Storage Path**: `/supplier-quotes/{sessionId}/{timestamp}_{filename}` structure for organized file management
-
-### Technical Implementation Details
-- **ObjectStorageService.uploadSupplierDocument()**: New method accepting Buffer, sessionId, fileName, mimeType, and optional metadata
-- **Automatic OCR**: Quote PDFs trigger `processSupplierQuote()` immediately after upload via `setImmediate`
-- **Metadata Tracking**: Session ID, supplier ID, AO lot ID, document type, and upload timestamp stored with each file
-- **Security Enhancements**:
-  - Server-side MIME type validation prevents unauthorized file types (PDF, Word, Excel, images, text, ZIP only)
-  - Filename sanitization and extension validation in ObjectStorageService
-  - Session token verification and expiration checks
-- **Error Handling & Robustness**:
-  - OCR async trigger uses IIFE (Immediately Invoked Function Expression) pattern with comprehensive catch blocks
-  - Prevents unhandled promise rejections through multi-level error capture
-  - Nested try/catch for OCR status updates ensures reliable error state management
-  - Document status automatically updated to 'error' on OCR failure with detailed error messages
-
-### OCR Knowledge Base Centralization (Sept 29, 2025)
-- **Single Source of Truth**: All OCR extraction patterns now centralized in `server/services/MenuiserieKnowledgeBase.ts`
-- **Patterns Centralized**:
-  - `MATERIAL_PATTERNS`: Material detection (PVC, bois, aluminium, acier, composite, etc.)
-  - `COLOR_PATTERNS`: Color and finish detection (RAL codes, color names, finishes)
-  - `AO_PATTERNS`: Tender document extraction (references, dates, contacts, certifications)
-  - `LINE_ITEM_PATTERNS`: Quote line item parsing (quantities, prices, designations)
-- **Architecture Benefits**:
-  - Eliminates pattern duplication across codebase
-  - Single location for all menuiserie domain knowledge maintenance
-  - Improved consistency between business rules and OCR extraction
-  - Easier pattern updates and maintenance
-- **Implementation**: `ocrService.ts` imports patterns from centralized knowledge base, with additional extended patterns (`AO_EXTENDED_PATTERNS`, `SUPPLIER_QUOTE_PATTERNS`) for specific use cases
-
-### Database Connection Pooling Optimization (Sept 29, 2025)
-- **Optimized Configuration**: Pool PostgreSQL Neon optimisé pour agent chatbot haute performance
-- **Pool Parameters**:
-  - `max: 25`: Maximum 25 connexions simultanées (équilibre performance/limites Neon)
-  - `min: 5`: Minimum 5 connexions toujours actives (réduit latence cold start)
-  - `idleTimeoutMillis: 30000`: 30 secondes avant fermeture connexion inactive
-  - `connectionTimeoutMillis: 10000`: 10 secondes timeout acquisition connexion
-  - `maxUses: 7500`: Rotation automatique après 7500 utilisations (prévient memory leaks)
-  - `allowExitOnIdle: true`: Fermeture propre si inactif
-- **Monitoring & Gestion**:
-  - Event listeners pour `error`, `connect`, `acquire`, `remove` avec logging détaillé
-  - Endpoint admin `/api/admin/db-pool/stats` pour monitoring en temps réel
-  - Fonction `getPoolStats()` expose métriques (total, idle, waiting connections)
-  - Graceful shutdown avec `closePool()` pour fermeture propre
-- **Architecture Benefits**:
-  - Performance améliorée pour agent chatbot (requêtes simultanées multiples)
-  - Réduction latence via connexions minimum toujours actives
-  - Prévention épuisement connexions avec rotation automatique
-  - Monitoring et debugging simplifiés
-- **Fichier**: Configuration centralisée dans `server/db.ts`
+### Database Connection Pooling Optimization
+The PostgreSQL Neon connection pool is configured for high performance with `max: 25`, `min: 5`, `idleTimeoutMillis: 30000`, `connectionTimeoutMillis: 10000`, and `maxUses: 7500` to balance performance, reduce latency, and prevent connection exhaustion.
 
 ## External Dependencies
 
 - **Database**: Neon serverless PostgreSQL
-- **Object Storage**: Replit Object Storage (bucket: replit-objstore-940c2d14-de0c-4b57-b84c-b4b33a27cafe)
+- **Object Storage**: Replit Object Storage
 - **Frontend Libraries**: `@tanstack/react-query`, `@radix-ui/*`, `react-hook-form`, `wouter`
 - **Authentication**: `passport`, `openid-client`, `express-session`, `connect-pg-simple`
-- **Testing Tools**: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `@playwright/test`, `supertest`, `msw`, `jsdom`, `happy-dom`
+- **Testing Tools**: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `@playwright/test`, `supertest`, `msw`
 - **Build & Language Tools**: `vite`, `typescript`, `tailwindcss`, `drizzle-kit`, `tsx`

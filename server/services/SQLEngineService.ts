@@ -387,9 +387,16 @@ INSTRUCTIONS DE BASE:
     console.log(`[SQLSecurity] SQL à valider: ${sql.substring(0, 200)}${sql.length > 200 ? '...' : ''}`);
 
     try {
+      // 0. NETTOYAGE SQL : Retirer commentaires qui font échouer le parser
+      const cleanedSQL = sql
+        .split('\n')
+        .map(line => line.replace(/--.*$/, '').trim()) // Retire commentaires --
+        .filter(line => line.length > 0) // Retire lignes vides
+        .join(' ');
+      
       // 1. ANALYSE AST COMPLÈTE avec node-sql-parser
       console.log(`[SQLSecurity] Étape 1: Parsing AST avec node-sql-parser...`);
-      const ast = sqlParser.astify(sql, { database: 'postgresql' });
+      const ast = sqlParser.astify(cleanedSQL, { database: 'postgresql' });
       console.log(`[SQLSecurity] ✓ Parsing AST réussi`);
       
       // 2. ENFORCEMENT READ-ONLY STRICT

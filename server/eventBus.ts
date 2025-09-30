@@ -41,18 +41,34 @@ export class EventBus extends EventEmitter {
    */
   public publish(event: RealtimeEvent): void {
     try {
+      // PROTECTION: Valider l'événement avant publication
+      if (!event || typeof event !== 'object') {
+        log(`EventBus: Event invalide ignoré (not an object)`);
+        return;
+      }
+      
+      // Assurer que les propriétés critiques existent
+      const validatedEvent = {
+        ...event,
+        type: event.type || 'unknown',
+        entity: event.entity || 'unknown',
+        entityId: event.entityId || 'unknown',
+        severity: event.severity || 'info',
+        timestamp: event.timestamp || new Date().toISOString(),
+      };
+      
       // Ajouter à l'historique
-      this.addToHistory(event);
+      this.addToHistory(validatedEvent);
       
       // PHASE 2 PERFORMANCE: Invalidation cache automatique
       if (this.cacheInvalidationEnabled && this.contextCacheService) {
-        this.processAutomaticCacheInvalidation(event);
+        this.processAutomaticCacheInvalidation(validatedEvent);
       }
       
       // Émettre l'événement
-      this.emit('event', event);
+      this.emit('event', validatedEvent);
       
-      log(`EventBus: Published event ${event.type} for ${event.entity}:${event.entityId}`);
+      log(`EventBus: Published event ${validatedEvent.type} for ${validatedEvent.entity}:${validatedEvent.entityId}`);
     } catch (error) {
       log(`EventBus: Error publishing event: ${error}`);
     }

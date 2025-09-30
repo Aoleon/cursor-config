@@ -33,7 +33,7 @@ import type {
 
 const MAX_RESULTS_DEFAULT = 1000;
 const MAX_RESULTS_ADMIN = 10000;
-const QUERY_TIMEOUT_DEFAULT = 30000; // 30 secondes
+const QUERY_TIMEOUT_DEFAULT = 45000; // 45 secondes (temporaire - TODO: optimiser SQL pour <20s)
 const QUERY_TIMEOUT_COMPLEX = 60000; // 60 secondes pour requêtes complexes
 
 // Instance parser SQL pour analyse AST
@@ -116,13 +116,17 @@ export class SQLEngineService {
       const enrichedContext = await this.buildIntelligentContext(request);
 
       // 3. Génération SQL via IA (optimisé pour performance <15s)
+      // Version du prompt pour invalidation cache automatique si prompt change
+      const PROMPT_VERSION = "v2_perf_guardrails_2025"; // Incrémentez si vous changez les guardrails
+      const versionedContext = `[PROMPT_VERSION:${PROMPT_VERSION}]\n${enrichedContext}`;
+      
       const aiRequest: AiQueryRequest = {
         query: request.naturalLanguageQuery,
-        context: enrichedContext,
+        context: versionedContext, // Inclut version pour cache automatique invalidation
         userRole: request.userRole,
         complexity: this.detectQueryComplexity(request.naturalLanguageQuery),
         queryType: "text_to_sql",
-        useCache: false, // TEMP: Désactivé pour éviter cache avec ancien prompt 300 tokens
+        useCache: !request.dryRun, // Réactivé avec prompt versionné
         maxTokens: 8192 // Aligné avec AIService pour requêtes SQL complexes
       };
 
@@ -321,7 +325,7 @@ export class SQLEngineService {
       // Ajout du contexte utilisateur s'il existe
       const userContext = request.context ? `\nCONTEXTE UTILISATEUR:\n${request.context}\n` : "";
 
-      // Instructions techniques pour génération SQL (strictes, concises)
+      // Instructions techniques pour génération SQL (strictes, concises + performance guardrails)
       const sqlInstructions = `
 CRITICAL RULES (MANDATORY):
 1. Return a single SELECT SQL query ONLY
@@ -332,6 +336,15 @@ CRITICAL RULES (MANDATORY):
 6. Ensure all CASE statements are properly closed with END
 7. Query MUST end with a semicolon (;)
 8. Do NOT truncate - generate complete, valid SQL
+
+PERFORMANCE GUARDRAILS (MANDATORY - Target <3s execution):
+9. DEFAULT timeframe: WHERE date >= NOW() - INTERVAL '12 months' (if no timeframe in user query)
+10. MAXIMUM 3 joins - minimize table joins, use CTEs if needed
+11. AVOID window functions (ROW_NUMBER, RANK, LEAD, LAG) - use subqueries instead
+12. AVOID correlated subqueries - prefer EXISTS or JOINs
+13. ENSURE selective predicates on indexed columns (date, status, project_id, responsable_user_id)
+14. NO CROSS joins, NO SELECT *
+15. Prefer pre-aggregated data when available
 `;
 
       return `${userContext}

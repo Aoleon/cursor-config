@@ -211,13 +211,10 @@ export function useChatbotQuery() {
 
   return useMutation({
     mutationFn: async (request: ChatbotQueryRequest): Promise<ChatbotQueryResponse> => {
-      // Construction du payload avec options nested (respect contrat backend)
+      // Construction du payload selon le schéma backend (userId, userRole, sessionId extraits côté serveur)
       const payload: any = {
         query: request.query,
-        context: request.context,
-        sessionId: request.sessionId,
-        userId: user?.id,
-        userRole: user?.role || 'technicien_be'
+        context: request.context
       };
 
       // Ajout des options nested si présentes

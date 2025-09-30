@@ -281,16 +281,52 @@ return withErrorHandling(
 ## ⚠️ Plan de Migration
 
 ### Unification Error Handling
-Le nouveau `error-handler.ts` coexiste avec `middleware/errorHandler.ts`. Plan:
-1. **Phase 1**: Adopter logger structuré dans nouveaux services
-2. **Phase 2**: Utiliser wrappers (withErrorHandling, asyncHandler) nouveaux services
-3. **Phase 3**: Mettre à jour middleware Express pour utiliser formatErrorResponse
-4. **Phase 4**: Déprécier createError du middleware, migrer vers classes typées
+Le nouveau `error-handler.ts` est maintenant unifié avec `middleware/errorHandler.ts`. 
+
+**✅ Phase 1 TERMINÉE**: Logger structuré adopté dans errorHandler middleware
+**✅ Phase 2 TERMINÉE**: Middleware utilise formatErrorResponse pour erreurs typées
+**✅ Phase 3 TERMINÉE**: Routes AI migrées vers asyncHandler + erreurs typées
+**🔄 Phase 4 EN COURS**: Migration progressive des autres routes vers nouveaux patterns
+
+### Patterns Appliqués (Exemple: routes AI)
+
+#### Route avec asyncHandler
+```typescript
+import { asyncHandler } from '../utils/error-handler';
+import { logger } from '../utils/logger';
+
+router.post('/api/ai/analyze', asyncHandler(async (req, res) => {
+  const { projectId, data } = req.body;
+  
+  if (!projectId) {
+    throw new ValidationError('projectId requis');
+  }
+  
+  logger.info('[AI] Analyse démarrée', { 
+    userId: req.user?.id, 
+    metadata: { projectId } 
+  });
+  
+  const result = await aiService.analyze(projectId, data);
+  res.json({ success: true, data: result });
+}));
+```
+
+#### Middleware ErrorHandler
+Le middleware catch automatiquement:
+- **ValidationError** → 400 + formatErrorResponse()
+- **NotFoundError** → 404 + formatErrorResponse()  
+- **AuthenticationError** → 401 + formatErrorResponse()
+- **UtilsAppError** (toutes les autres) → statusCode + formatErrorResponse()
+- **ZodError** → 400 + détails validation
+- **Erreurs legacy** → backward compatible
 
 ### Services Prioritaires à Migrer
-1. DateIntelligenceService (fonctions >150 lignes, nombreux console.log)
-2. MondayProductionFinalService (duplication parsing/transformation)
-3. AnalyticsService (cache/performance non centralisés)
+1. ✅ **AI Service Routes** (MIGRÉ - 13 routes) - Pattern de référence
+2. 🔄 **DateIntelligenceService** - Fonctions >150 lignes, nombreux console.log
+3. 🔄 **MondayProductionFinalService** - Duplication parsing/transformation
+4. 🔄 **AnalyticsService** - Cache/performance non centralisés
+5. 🔄 **Autres routes** - 20+ fichiers restants
 
 ### Console.log → Logger
 Utiliser ESLint rule pour interdire console.* dans server/:

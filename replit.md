@@ -74,6 +74,31 @@ The system implements a unique, evolving form that progresses through predefined
 
 ## Recent Improvements (Sept 2025)
 
+### Chatbot BigInt Serialization Fix & SQL Security Investigation (Sept 30, 2025)
+- **Root Cause Identified**: Initial 500 errors were NOT caused by BigInt serialization
+  - Pipeline completes successfully: `[Chatbot] Pipeline terminé pour admin-dev-user, success: false`
+  - Error type is SQL security validation: `errorType: security`
+  - JSON serialization works correctly: `[Chatbot] JSON stringifié (577 bytes) - Envoi 500`
+- **BigInt Protection Implemented (Defense-in-Depth)**:
+  - **Layer 1**: `SQLEngineService.sanitizeResultsForJSON()` converts BigInt → string, Date → ISO, Buffer → base64
+  - **Layer 2**: Route handler `safeJsonReplacer()` provides global BigInt handling as fallback
+  - Both layers ensure PostgreSQL COUNT/SUM aggregates never cause serialization errors
+- **Enhanced Logging**: Added verbose diagnostics in `/api/chatbot/query` route handler
+  - Logs pipeline completion status and success/failure
+  - Logs error types and status codes
+  - Logs JSON stringification success/failure with byte counts
+  - Captures serialization errors with detailed context
+- **SQL Security Architecture Clarified**:
+  - `validateSQLSecurity()` in SQLEngineService enforces strict read-only policy
+  - `ALLOWED_BUSINESS_TABLES`: ['offers', 'projects', 'suppliers', 'ao_documents', 'project_tasks', 'team_resources', 'chiffrage_elements', 'validation_milestones', 'project_timelines', 'date_alerts', 'business_alerts', 'users']
+  - AST parsing with node-sql-parser validates all SQL before execution
+  - Security violations: non-SELECT statements, unauthorized tables/columns, injection patterns
+- **Known Issue - SQL Parsing Failures**: Some AI-generated SQL queries fail AST parsing
+  - Parsing errors trigger `SQL invalide ou malformé` security violation
+  - Even valid-looking SQL can be rejected if parser fails
+  - Requires further investigation into AI prompt engineering or parser configuration
+- **Files Modified**: `server/routes-poc.ts`, `server/services/SQLEngineService.ts`
+
 ### Gantt Chart Performance Optimizations & Bug Fixes (Sept 29, 2025)
 - **Critical Fix - Timeline View Integration**: Fixed timeline-view.tsx missing database persistence - replaced console.log handler with proper updateProjectMutation and updateTaskMutation using apiRequest
 - **Critical Fix - apiRequest Signature**: Corrected argument order from `apiRequest(url, method, data)` to `apiRequest(method, url, data)` preventing 404 errors

@@ -6939,6 +6939,7 @@ app.post("/api/chatbot/query",
 
     // Pipeline complet d'orchestration chatbot
     const result = await chatbotOrchestrationService.processChatbotQuery(chatbotRequest);
+    console.log(`[Chatbot] Pipeline terminé pour ${userId}, success: ${result.success}`);
 
     // JSON replacer pour gérer BigInt serialization de manière globale
     const safeJsonReplacer = (_: string, value: any) => {
@@ -6951,17 +6952,36 @@ app.post("/api/chatbot/query",
       return value;
     };
 
-    if (result.success) {
-      res.setHeader('Content-Type', 'application/json');
-      res.status(200).send(JSON.stringify(result, safeJsonReplacer));
-    } else {
-      // Gestion d'erreur gracieuse selon le type
-      const statusCode = result.error?.type === 'rbac' ? 403 :
-                        result.error?.type === 'validation' ? 400 :
-                        result.error?.type === 'timeout' ? 408 : 500;
-      
-      res.setHeader('Content-Type', 'application/json');
-      res.status(statusCode).send(JSON.stringify(result, safeJsonReplacer));
+    try {
+      if (result.success) {
+        console.log(`[Chatbot] Préparation réponse success pour ${userId}`);
+        res.setHeader('Content-Type', 'application/json');
+        const jsonResponse = JSON.stringify(result, safeJsonReplacer);
+        console.log(`[Chatbot] JSON stringifié (${jsonResponse.length} bytes) - Envoi 200`);
+        res.status(200).send(jsonResponse);
+      } else {
+        // Gestion d'erreur gracieuse selon le type
+        const statusCode = result.error?.type === 'rbac' ? 403 :
+                          result.error?.type === 'validation' ? 400 :
+                          result.error?.type === 'timeout' ? 408 : 500;
+        
+        console.log(`[Chatbot] Préparation réponse error pour ${userId}, statusCode: ${statusCode}, errorType: ${result.error?.type}`);
+        res.setHeader('Content-Type', 'application/json');
+        const jsonResponse = JSON.stringify(result, safeJsonReplacer);
+        console.log(`[Chatbot] JSON stringifié (${jsonResponse.length} bytes) - Envoi ${statusCode}`);
+        res.status(statusCode).send(jsonResponse);
+      }
+    } catch (serializationError) {
+      console.error(`[Chatbot] ERREUR CRITIQUE sérialisation JSON pour ${userId}:`, serializationError);
+      console.error(`[Chatbot] Type result.success: ${typeof result.success}`);
+      console.error(`[Chatbot] Result keys: ${Object.keys(result).join(', ')}`);
+      res.status(500).json({
+        success: false,
+        error: {
+          type: 'serialization',
+          message: 'Erreur de sérialisation de la réponse'
+        }
+      });
     }
   })
 );

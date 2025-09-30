@@ -47,9 +47,11 @@ export default function ValidationBE() {
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
-        const data = await response.json();
+        const result = await response.json();
+        // L'API retourne { success: true, data: [...] }
+        const data = Array.isArray(result) ? result : (result?.data || []);
         console.log("✅ Données reçues:", data?.length, "offres en attente de validation");
-        return data || [];
+        return data;
       } catch (err) {
         console.error("❌ Erreur lors de la récupération des offres:", err);
         throw err;

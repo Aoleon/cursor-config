@@ -53,13 +53,16 @@ export default function ValidationList() {
         // Une offre doit passer explicitement de "en_cours_chiffrage" à "en_attente_validation"
         // quand le chiffrage est terminé et elle est prête pour validation
         const response = await fetch("/api/offers?status=en_attente_validation");
-        const offersData = await response.json();
+        const result = await response.json();
+        
+        // L'API retourne { success: true, data: [...] }
+        const offersData = Array.isArray(result) ? result : (result?.data || []);
         
         console.log("✅ Données reçues:", {
           attenteValidation: offersData?.length || 0,
           total: offersData?.length || 0
         });
-        return offersData || [];
+        return offersData;
       } catch (err) {
         console.error("❌ Erreur lors de la récupération des offres:", err);
         throw err;

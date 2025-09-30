@@ -1691,11 +1691,34 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     confidence: number;
     warnings: string[];
   } {
-    try {
-      // Nettoyer la réponse pour extraire le JSON avec plusieurs stratégies
-      let cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    // Nettoyer la réponse (retirer les markdown blocks)
+    let cleanedResponse = responseText
+      .replace(/```sql\n?|\n?```/g, '')
+      .replace(/```json\n?|\n?```/g, '')
+      .replace(/```\n?|\n?```/g, '')
+      .trim();
+    
+    // STRATÉGIE 1: Détecter SQL pur (mode sql_minimal)
+    // Si la réponse commence par SELECT/INSERT/UPDATE/DELETE, c'est du SQL pur
+    const sqlKeywords = /^\s*(SELECT|INSERT|UPDATE|DELETE|WITH)/i;
+    if (sqlKeywords.test(cleanedResponse)) {
+      console.log('[AIService] Réponse SQL pure détectée (mode optimisé)');
       
-      // Stratégie 1: Chercher le premier { et dernier } valides
+      // Extraire le SQL (avec ou sans point-virgule)
+      const sqlMatch = cleanedResponse.match(/^(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*/i);
+      const sql = sqlMatch ? sqlMatch[0].trim() : cleanedResponse.trim();
+      
+      return {
+        sql,
+        explanation: "Requête SQL générée en mode optimisé",
+        confidence: 0.9,
+        warnings: []
+      };
+    }
+    
+    // STRATÉGIE 2: Tenter parsing JSON (mode standard)
+    try {
+      // Chercher le premier { et dernier } valides
       const firstBrace = cleanedResponse.indexOf('{');
       const lastBrace = cleanedResponse.lastIndexOf('}');
       
@@ -1712,16 +1735,16 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         warnings: Array.isArray(parsed.warnings) ? parsed.warnings : []
       };
     } catch (error) {
-      console.warn(`[AIService] Erreur parsing réponse IA - tentative fallback:`, error);
+      console.warn(`[AIService] Erreur parsing réponse IA - tentative fallback final:`, error);
       
-      // Fallback: essayer d'extraire le SQL brut avec patterns multiples
-      const sqlMatch = responseText.match(/SELECT[\s\S]*?;/i) ||
-                      responseText.match(/INSERT[\s\S]*?;/i) ||
-                      responseText.match(/UPDATE[\s\S]*?;/i) ||
-                      responseText.match(/DELETE[\s\S]*?;/i);
+      // STRATÉGIE 3: Fallback - chercher du SQL n'importe où dans la réponse
+      const sqlMatch = responseText.match(/SELECT[\s\S]*?(?:;|$)/i) ||
+                      responseText.match(/INSERT[\s\S]*?(?:;|$)/i) ||
+                      responseText.match(/UPDATE[\s\S]*?(?:;|$)/i) ||
+                      responseText.match(/DELETE[\s\S]*?(?:;|$)/i);
       
       return {
-        sql: sqlMatch ? sqlMatch[0] : "SELECT 1 as status;", // SQL simple par défaut
+        sql: sqlMatch ? sqlMatch[0].trim() : "SELECT 1 as status;",
         explanation: "Réponse IA mal formatée - utilisation du fallback SQL",
         confidence: 0.2,
         warnings: ["Réponse IA mal formatée, fallback utilisé"]

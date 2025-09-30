@@ -657,21 +657,33 @@ INSTRUCTIONS DE BASE:
       // Limitation des résultats si pas déjà présente
       const limitedSQL = this.ensureLimitClause(sql, maxResults);
 
-      // Exécution avec timeout
+      // Exécution avec timeout nettoyable (évite unhandled rejection)
+      let timeoutId: NodeJS.Timeout | null = null;
+      
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Query timeout')), timeoutMs);
+        timeoutId = setTimeout(() => reject(new Error('Query timeout')), timeoutMs);
       });
 
-      const queryPromise = db.execute(sql`${limitedSQL}`, parameters);
+      const queryPromise = db.execute(sql.raw(limitedSQL));
       
-      const results = await Promise.race([queryPromise, timeoutPromise]) as any[];
-      const executionTime = Date.now() - startTime;
+      try {
+        const results = await Promise.race([queryPromise, timeoutPromise]) as any[];
+        
+        // Nettoyer le timeout si la requête réussit avant
+        if (timeoutId) clearTimeout(timeoutId);
+        
+        const executionTime = Date.now() - startTime;
 
-      return {
-        success: true,
-        results: Array.isArray(results) ? results : [results],
-        executionTime
-      };
+        return {
+          success: true,
+          results: Array.isArray(results) ? results : [results],
+          executionTime
+        };
+      } catch (raceError) {
+        // Nettoyer le timeout même en cas d'erreur
+        if (timeoutId) clearTimeout(timeoutId);
+        throw raceError;
+      }
 
     } catch (error) {
       return {

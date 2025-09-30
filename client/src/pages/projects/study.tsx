@@ -41,7 +41,9 @@ export default function ProjectStudy() {
     queryFn: async () => {
       const response = await fetch("/api/projects?status=etude");
       if (!response.ok) throw new Error("Failed to fetch study projects");
-      return response.json();
+      const result = await response.json();
+      // L'API retourne { success: true, data: [...] }
+      return Array.isArray(result) ? result : (result?.data || []);
     },
   });
 

@@ -55,7 +55,9 @@ export default function ProjectSupport() {
     queryFn: async () => {
       const response = await fetch("/api/projects?status=sav");
       if (!response.ok) throw new Error("Failed to fetch support projects");
-      return response.json();
+      const result = await response.json();
+      // L'API retourne { success: true, data: [...] }
+      return Array.isArray(result) ? result : (result?.data || []);
     },
   });
 

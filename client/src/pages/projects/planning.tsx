@@ -25,7 +25,9 @@ export default function ProjectPlanningPage() {
     queryFn: async () => {
       const response = await fetch('/api/projects?status=planification');
       if (!response.ok) throw new Error('Failed to fetch planning projects');
-      return response.json();
+      const result = await response.json();
+      // L'API retourne { success: true, data: [...] }
+      return Array.isArray(result) ? result : (result?.data || []);
     },
   });
 

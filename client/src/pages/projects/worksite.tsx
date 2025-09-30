@@ -44,7 +44,9 @@ export default function ProjectWorksite() {
     queryFn: async () => {
       const response = await fetch("/api/projects?status=chantier");
       if (!response.ok) throw new Error("Failed to fetch worksite projects");
-      return response.json();
+      const result = await response.json();
+      // L'API retourne { success: true, data: [...] }
+      return Array.isArray(result) ? result : (result?.data || []);
     },
   });
 

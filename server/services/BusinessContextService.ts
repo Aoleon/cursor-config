@@ -405,6 +405,12 @@ export class BusinessContextService {
    * Construit le contexte métier complet avec tous les éléments
    */
   private async buildEnrichedBusinessContext(request: BusinessContextRequest): Promise<BusinessContext> {
+    // Mode SQL minimal : contexte ultra-light pour génération SQL rapide
+    if (request.generation_mode === 'sql_minimal') {
+      return await this.buildMinimalSQLContext(request);
+    }
+    
+    // Mode full : contexte complet (comportement par défaut)
     // 1. Chargement des schémas de base de données enrichis
     const databaseSchemas = await this.loadEnrichedDatabaseSchemas(request.user_role);
     
@@ -445,6 +451,108 @@ export class BusinessContextService {
       temporal_context,
       cache_metadata
     };
+  }
+  
+  /**
+   * Contexte SQL minimal : résolveur intent→tables + schémas limités UNIQUEMENT
+   * Performance: <100ms | Tokens: <2k | Pour génération SQL rapide
+   */
+  private async buildMinimalSQLContext(request: BusinessContextRequest): Promise<BusinessContext> {
+    // 1. Résolution intent → tables pertinentes (heuristique rapide)
+    const relevantTables = this.resolveIntentToTables(request.query_hint || '');
+    
+    // 2. Schémas limités aux tables pertinentes UNIQUEMENT (top 3 max)
+    const minimalSchemas = await this.loadMinimalSchemas(relevantTables.slice(0, 3));
+    
+    // 3. RBAC minimal (sécurité obligatoire)
+    const roleSpecificConstraints = await this.buildRBACContext(request.userId, request.user_role);
+    
+    // 4. 1-2 exemples SQL courts max
+    const minimalExamples = await this.selectMinimalSQLExamples(relevantTables);
+    
+    // 5. Base connaissances BTP minimale (termes→colonnes uniquement)
+    const minimalDomain = this.getMinimalDomainKnowledge();
+    
+    // 6. PAS de calendrier BTP, PAS de suggestions, PAS de contexte temporel
+    const cache_metadata = {
+      generated_at: new Date(),
+      expires_at: new Date(Date.now() + 15 * 60 * 1000), // Cache court 15min
+      cache_key: this.generateCacheKey(request),
+      version: CONTEXT_VERSION + '-sql-minimal'
+    };
+
+    return {
+      databaseSchemas: minimalSchemas,
+      businessExamples: minimalExamples,
+      domainKnowledge: minimalDomain,
+      roleSpecificConstraints,
+      suggestedQueries: [], // Vide
+      temporal_context: {
+        current_season: '', // Vide
+        active_constraints: [], // Vide
+        upcoming_deadlines: [], // Vide
+        peak_periods: [] // Vide
+      },
+      cache_metadata
+    };
+  }
+  
+  /**
+   * Résolveur intent→tables : map mots-clés vers tables SQL pertinentes
+   */
+  private resolveIntentToTables(queryHint: string): string[] {
+    const hint = queryHint.toLowerCase();
+    const tables: Set<string> = new Set();
+    
+    // Mapping mots-clés → tables (heuristique)
+    const intentMap: Record<string, string[]> = {
+      'budget|rentabilité|marge|coût|prix|tarif|devis|chiffrage': ['offers', 'projects', 'chiffrage_elements', 'ao_lots'],
+      'projet|planning|délai|échéance|livraison': ['projects', 'timelines', 'tasks'],
+      'équipe|ressource|employé|main-d\'oeuvre': ['employees', 'employee_assignments', 'teams'],
+      'fournisseur|approvisionnement|commande': ['suppliers', 'supplier_quotes', 'ao_lots'],
+      'client|ao|appel d\'offre|tender': ['ao_sheets', 'ao_lots', 'offers'],
+      'tâche|activité|suivi': ['tasks', 'timelines', 'projects'],
+      'matériau|composant': ['chiffrage_elements', 'ao_lots']
+    };
+    
+    // Matcher les patterns
+    for (const [pattern, tablesToAdd] of Object.entries(intentMap)) {
+      const regex = new RegExp(pattern, 'i');
+      if (regex.test(hint)) {
+        tablesToAdd.forEach(t => tables.add(t));
+      }
+    }
+    
+    // Fallback: si aucune table trouvée, retourner tables principales
+    if (tables.size === 0) {
+      return ['projects', 'offers', 'ao_sheets'];
+    }
+    
+    return Array.from(tables);
+  }
+  
+  /**
+   * Charge schémas minimaux pour tables spécifiées uniquement
+   */
+  private async loadMinimalSchemas(tableNames: string[]): Promise<SchemaWithDescriptions[]> {
+    const fullSchemas = await this.loadEnrichedDatabaseSchemas('admin');
+    
+    // Filtrer uniquement les tables pertinentes
+    return fullSchemas.filter(schema => 
+      tableNames.some(tableName => schema.table_name.toLowerCase() === tableName.toLowerCase())
+    );
+  }
+  
+  /**
+   * Sélectionne 1-2 exemples SQL courts pour les tables pertinentes
+   */
+  private async selectMinimalSQLExamples(tableNames: string[]): Promise<QueryExample[]> {
+    const allExamples = await this.selectRelevantBusinessExamples('admin', undefined, 'simple');
+    
+    // Filtrer exemples contenant les tables pertinentes (max 2)
+    return allExamples
+      .filter(ex => tableNames.some(table => ex.sql_query.toLowerCase().includes(table.toLowerCase())))
+      .slice(0, 2);
   }
 
   // ========================================
@@ -1446,11 +1554,12 @@ export class BusinessContextService {
         userId,
         user_role: userRole,
         query_hint: naturalLanguageQuery,
-        complexity_preference: "adaptive" as any,
+        complexity_preference: "simple",
         focus_areas: [],
-        include_temporal: true,
-        cache_duration_minutes: 30, // Cache plus court pour SQL
-        personalization_level: "basic"
+        include_temporal: false, // Pas de contexte temporel en mode SQL
+        cache_duration_minutes: 15, // Cache court 15min pour SQL
+        personalization_level: "basic",
+        generation_mode: "sql_minimal" // Mode ultra-light pour génération SQL rapide
       };
 
       const response = await this.generateBusinessContext(request);

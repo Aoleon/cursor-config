@@ -5403,7 +5403,8 @@ export const businessContextRequestSchema = z.object({
   focus_areas: z.array(z.enum(["planning", "finances", "ressources", "qualite", "performance", "alertes"])).optional(),
   include_temporal: z.boolean().default(true),
   cache_duration_minutes: z.number().min(1).max(120).default(60),
-  personalization_level: z.enum(["basic", "advanced", "expert"]).default("basic")
+  personalization_level: z.enum(["basic", "advanced", "expert"]).default("basic"),
+  generation_mode: z.enum(["full", "sql_minimal"]).default("full")
 });
 
 export const contextEnrichmentRequestSchema = z.object({

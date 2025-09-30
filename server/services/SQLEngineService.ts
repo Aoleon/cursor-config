@@ -115,7 +115,7 @@ export class SQLEngineService {
       // 2. Construction du contexte intelligent métier
       const enrichedContext = await this.buildIntelligentContext(request);
 
-      // 3. Génération SQL via IA
+      // 3. Génération SQL via IA (optimisé pour performance <15s)
       const aiRequest: AiQueryRequest = {
         query: request.naturalLanguageQuery,
         context: enrichedContext,
@@ -123,7 +123,7 @@ export class SQLEngineService {
         complexity: this.detectQueryComplexity(request.naturalLanguageQuery),
         queryType: "text_to_sql",
         useCache: !request.dryRun,
-        maxTokens: 4096
+        maxTokens: 512 // Réduit de 4096 → 512 (SQL = <300 tokens typiques)
       };
 
       const aiResponse = await this.aiService.generateSQL(aiRequest);
@@ -315,21 +315,16 @@ export class SQLEngineService {
       // Ajout du contexte utilisateur s'il existe
       const userContext = request.context ? `\nCONTEXTE UTILISATEUR:\n${request.context}\n` : "";
 
-      // Instructions techniques pour génération SQL
+      // Instructions techniques pour génération SQL (strictes, concises)
       const sqlInstructions = `
-INSTRUCTIONS TECHNIQUES SQL:
-- Générer UNIQUEMENT du SQL SELECT (read-only strict)
-- Utiliser paramètres ($1, $2...) pour valeurs dynamiques 
-- Limiter résultats avec LIMIT ${request.userRole === 'admin' ? MAX_RESULTS_ADMIN : MAX_RESULTS_DEFAULT}
-- Format de sortie: PostgreSQL standard
-- Gestion des erreurs: SQL syntaxiquement correct obligatoire
-- Optimisation: INDEX sur colonnes de filtrage principales
-
-SÉCURITÉ ET RBAC:
-- Appliquer filtres user_id automatiques sauf admin
-- Respecter contraintes de rôle définies dans le contexte métier
-- Éviter exposition données sensibles selon rôle
-- Validation types et contraintes métier avant exécution
+CRITICAL RULES (MANDATORY):
+1. Return a single SELECT SQL query ONLY
+2. NO commentary, NO explanations, NO markdown formatting
+3. PostgreSQL syntax, read-only strict
+4. LIMIT ${request.userRole === 'admin' ? MAX_RESULTS_ADMIN : MAX_RESULTS_DEFAULT}
+5. Apply RBAC filters from context
+6. Stop at first semicolon (;)
+7. Max output: 300 tokens
 `;
 
       return `${userContext}

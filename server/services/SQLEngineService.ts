@@ -383,36 +383,57 @@ INSTRUCTIONS DE BASE:
     const allowedTables: string[] = [];
     const allowedColumns: string[] = [];
 
+    console.log(`[SQLSecurity] Validation SQL pour ${userId} (${userRole})`);
+    console.log(`[SQLSecurity] SQL à valider: ${sql.substring(0, 200)}${sql.length > 200 ? '...' : ''}`);
+
     try {
       // 1. ANALYSE AST COMPLÈTE avec node-sql-parser
+      console.log(`[SQLSecurity] Étape 1: Parsing AST avec node-sql-parser...`);
       const ast = sqlParser.astify(sql, { database: 'postgresql' });
+      console.log(`[SQLSecurity] ✓ Parsing AST réussi`);
       
       // 2. ENFORCEMENT READ-ONLY STRICT
       const astArray = Array.isArray(ast) ? ast : [ast];
+      console.log(`[SQLSecurity] Étape 2: Vérification READ-ONLY (${astArray.length} statement(s))...`);
+      
       for (const statement of astArray) {
         // Vérifier que TOUTES les statements sont SELECT
         if (statement.type !== 'select') {
-          violations.push(`Opération dangereuse détectée: ${statement.type.toUpperCase()}. Seuls les SELECT sont autorisés.`);
+          const violation = `Opération dangereuse détectée: ${statement.type.toUpperCase()}. Seuls les SELECT sont autorisés.`;
+          console.log(`[SQLSecurity] ✗ ${violation}`);
+          violations.push(violation);
           continue;
         }
+        console.log(`[SQLSecurity] ✓ Statement type: SELECT`);
 
         // 3. EXTRACTION ET VALIDATION DES TABLES
+        console.log(`[SQLSecurity] Étape 3: Validation des tables...`);
         const tablesInQuery = this.extractTablesFromAST(statement);
+        console.log(`[SQLSecurity] Tables extraites: [${tablesInQuery.join(', ')}]`);
+        
         for (const tableName of tablesInQuery) {
           if (ALLOWED_BUSINESS_TABLES.includes(tableName)) {
             allowedTables.push(tableName);
+            console.log(`[SQLSecurity] ✓ Table autorisée: ${tableName}`);
           } else {
-            violations.push(`Table non autorisée: ${tableName}`);
+            const violation = `Table non autorisée: ${tableName}`;
+            console.log(`[SQLSecurity] ✗ ${violation}`);
+            violations.push(violation);
           }
         }
 
         // 4. COLUMN WHITELISTING ET VALIDATION
+        console.log(`[SQLSecurity] Étape 4: Validation des colonnes...`);
         const columnsInQuery = this.extractColumnsFromAST(statement);
+        console.log(`[SQLSecurity] Colonnes extraites: ${columnsInQuery.length} colonne(s)`);
+        
         for (const { table, column } of columnsInQuery) {
           // Vérifier colonnes sensibles
           if (table && SENSITIVE_COLUMNS[table]?.includes(column)) {
             if (userRole !== 'admin') {
-              violations.push(`Colonne sensible non autorisée pour rôle ${userRole}: ${table}.${column}`);
+              const violation = `Colonne sensible non autorisée pour rôle ${userRole}: ${table}.${column}`;
+              console.log(`[SQLSecurity] ✗ ${violation}`);
+              violations.push(violation);
               continue;
             }
           }
@@ -420,19 +441,46 @@ INSTRUCTIONS DE BASE:
         }
 
         // 5. DÉTECTION INJECTIONS AVANCÉES VIA AST
+        console.log(`[SQLSecurity] Étape 5: Détection patterns d'injection...`);
+        const injectionViolationsBefore = violations.length;
         this.detectAdvancedInjectionPatterns(statement, violations);
+        if (violations.length > injectionViolationsBefore) {
+          console.log(`[SQLSecurity] ✗ Patterns d'injection détectés: ${violations.slice(injectionViolationsBefore).join(', ')}`);
+        } else {
+          console.log(`[SQLSecurity] ✓ Aucun pattern d'injection détecté`);
+        }
 
         // 6. VALIDATION CONTRAINTES MÉTIER
+        console.log(`[SQLSecurity] Étape 6: Validation contraintes métier...`);
+        const businessViolationsBefore = violations.length;
         this.validateBusinessConstraints(statement, userRole, violations);
+        if (violations.length > businessViolationsBefore) {
+          console.log(`[SQLSecurity] ✗ Contraintes métier violées: ${violations.slice(businessViolationsBefore).join(', ')}`);
+        } else {
+          console.log(`[SQLSecurity] ✓ Contraintes métier respectées`);
+        }
       }
 
     } catch (parseError) {
       // Si parsing échoue, c'est potentiellement malicieux
-      violations.push(`SQL invalide ou malformé: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+      const violation = `SQL invalide ou malformé: ${parseError instanceof Error ? parseError.message : String(parseError)}`;
+      console.log(`[SQLSecurity] ✗ ERREUR PARSING: ${violation}`);
+      console.log(`[SQLSecurity] SQL problématique: ${sql}`);
+      violations.push(violation);
     }
 
+    const isSecure = violations.length === 0;
+    console.log(`[SQLSecurity] ═══════════════════════════════════════════`);
+    console.log(`[SQLSecurity] Résultat final: ${isSecure ? '✓ SÉCURISÉ' : '✗ REJETÉ'}`);
+    console.log(`[SQLSecurity] Violations: ${violations.length}`);
+    if (violations.length > 0) {
+      console.log(`[SQLSecurity] Détail violations:`);
+      violations.forEach((v, i) => console.log(`[SQLSecurity]   ${i + 1}. ${v}`));
+    }
+    console.log(`[SQLSecurity] ═══════════════════════════════════════════`);
+
     return {
-      isSecure: violations.length === 0,
+      isSecure,
       allowedTables: [...new Set(allowedTables)], // Déduplique
       allowedColumns: [...new Set(allowedColumns)],
       securityViolations: violations

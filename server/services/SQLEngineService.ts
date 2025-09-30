@@ -122,8 +122,8 @@ export class SQLEngineService {
         userRole: request.userRole,
         complexity: this.detectQueryComplexity(request.naturalLanguageQuery),
         queryType: "text_to_sql",
-        useCache: !request.dryRun,
-        maxTokens: 512 // Réduit de 4096 → 512 (SQL = <300 tokens typiques)
+        useCache: false, // TEMP: Désactivé pour éviter cache avec ancien prompt 300 tokens
+        maxTokens: 8192 // Aligné avec AIService pour requêtes SQL complexes
       };
 
       const aiResponse = await this.aiService.generateSQL(aiRequest);
@@ -139,6 +139,11 @@ export class SQLEngineService {
       }
 
       const generatedSQL = aiResponse.data.sqlGenerated;
+      
+      console.log(`[SQLEngine] ========================================`);
+      console.log(`[SQLEngine] SQL GÉNÉRÉ PAR L'IA (longueur: ${generatedSQL.length} chars):`);
+      console.log(`[SQLEngine] ${generatedSQL}`);
+      console.log(`[SQLEngine] ========================================`);
 
       // 4. Parsing et validation sécurité SQL
       const securityCheck = await this.validateSQLSecurity(generatedSQL, request.userId, request.userRole);
@@ -324,8 +329,9 @@ CRITICAL RULES (MANDATORY):
 3. PostgreSQL syntax, read-only strict
 4. LIMIT ${request.userRole === 'admin' ? MAX_RESULTS_ADMIN : MAX_RESULTS_DEFAULT}
 5. Apply RBAC filters from context
-6. Stop at first semicolon (;)
-7. Max output: 300 tokens
+6. Ensure all CASE statements are properly closed with END
+7. Query MUST end with a semicolon (;)
+8. Do NOT truncate - generate complete, valid SQL
 `;
 
       return `${userContext}

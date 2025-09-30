@@ -112,32 +112,32 @@ export class EventBus extends EventEmitter {
    */
   private matchesFilter(event: RealtimeEvent, filter: EventFilter): boolean {
     // Filtrer par types d'événements
-    if (filter.eventTypes && !filter.eventTypes.includes(event.type)) {
+    if (filter.eventTypes && Array.isArray(filter.eventTypes) && !filter.eventTypes.includes(event.type)) {
       return false;
     }
 
     // Filtrer par entités
-    if (filter.entities && !filter.entities.includes(event.entity)) {
+    if (filter.entities && Array.isArray(filter.entities) && !filter.entities.includes(event.entity)) {
       return false;
     }
 
     // Filtrer par IDs d'entité
-    if (filter.entityIds && !filter.entityIds.includes(event.entityId)) {
+    if (filter.entityIds && Array.isArray(filter.entityIds) && !filter.entityIds.includes(event.entityId)) {
       return false;
     }
 
     // Filtrer par projets
-    if (filter.projectIds && event.projectId && !filter.projectIds.includes(event.projectId)) {
+    if (filter.projectIds && Array.isArray(filter.projectIds) && event.projectId && !filter.projectIds.includes(event.projectId)) {
       return false;
     }
 
     // Filtrer par offres
-    if (filter.offerIds && event.offerId && !filter.offerIds.includes(event.offerId)) {
+    if (filter.offerIds && Array.isArray(filter.offerIds) && event.offerId && !filter.offerIds.includes(event.offerId)) {
       return false;
     }
 
     // Filtrer par sévérité
-    if (filter.severities && !filter.severities.includes(event.severity)) {
+    if (filter.severities && Array.isArray(filter.severities) && !filter.severities.includes(event.severity)) {
       return false;
     }
 

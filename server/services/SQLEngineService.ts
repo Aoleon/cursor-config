@@ -706,14 +706,27 @@ INSTRUCTIONS DE BASE:
       // Limitation des résultats si pas déjà présente
       const limitedSQL = this.ensureLimitClause(sql, maxResults);
 
-      // Exécution avec timeout nettoyable (évite unhandled rejection)
+      // Exécution avec timeout robuste (évite unhandled rejection)
       let timeoutId: NodeJS.Timeout | null = null;
+      let isTimedOut = false;
       
-      const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Query timeout')), timeoutMs);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          isTimedOut = true;
+          reject(new Error('Query timeout'));
+        }, timeoutMs);
       });
 
-      const queryPromise = db.execute(sql.raw(limitedSQL));
+      // Créer la promesse de requête avec gestion d'erreur explicite
+      const queryPromise = db.execute(sql.raw(limitedSQL)).catch(err => {
+        // Si la requête échoue après le timeout, on ignore l'erreur
+        // car elle sera déjà gérée par le timeout
+        if (isTimedOut) {
+          console.log('[SQLEngine] Query échouée après timeout (ignorée):', err.message);
+          return null;
+        }
+        throw err;
+      });
       
       try {
         const results = await Promise.race([queryPromise, timeoutPromise]) as any[];

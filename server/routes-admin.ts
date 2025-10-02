@@ -6,6 +6,8 @@ import { IStorage } from "./storage-poc";
 import { AuditService } from "./services/AuditService";
 import { EventBus } from "./eventBus";
 import { isAuthenticated } from "./replitAuth";
+import { asyncHandler, ValidationError, NotFoundError } from "./utils/error-handler";
+import { logger } from "./utils/logger";
 import { mondaySimpleSeed } from "./seeders/mondaySeed-simple";
 import { 
   auditLogsQuerySchema, 
@@ -162,7 +164,12 @@ const requireAdminPermissions = (requiredPermissions: string[] = ['admin.full_ac
 
       next();
     } catch (error) {
-      console.error('[requireAdminPermissions] Erreur:', error);
+      logger.error('[requireAdminPermissions] Erreur vérification permissions', { 
+        metadata: { 
+          error: error instanceof Error ? error.message : String(error),
+          path: req.path
+        }
+      });
       res.status(500).json({ 
         success: false, 
         error: 'Erreur de vérification des permissions' 
@@ -221,100 +228,68 @@ export function createAdminRoutes(
   // ========================================
   // 1. GET /api/admin/audit/logs - Logs audit paginés avec filtres
   // ========================================
-  router.get('/audit/logs', async (req, res) => {
-    try {
-      const startTime = Date.now();
-      
-      // Validation des paramètres
-      const queryValidation = auditLogsQuerySchema.safeParse(req.query);
-      if (!queryValidation.success) {
-        return res.status(400).json({
-          success: false,
-          error: 'Paramètres de requête invalides',
-          details: queryValidation.error.errors
-        });
-      }
-
-      const query: AuditLogsQuery = queryValidation.data;
-      
-      // Récupérer les logs d'audit
-      const result = await auditService.getAuditLogs({
-        ...query,
-        includeArchived: false
-      });
-      
-      const executionTime = Date.now() - startTime;
-
-      // Log de l'accès aux logs d'audit
-      await auditService.logEvent({
-        userId: (req.user as AuthenticatedUser).id,
-        userRole: (req.user as AuthenticatedUser).role,
-        sessionId: req.sessionID,
-        eventType: 'admin.action',
-        resource: 'audit_logs',
-        action: 'READ',
-        result: 'success',
-        severity: 'low',
-        metadata: {
-          ip: req.ip,
-          userAgent: req.get('User-Agent'),
-          executionTimeMs: executionTime,
-          recordsReturned: result.logs.length,
-          totalRecords: result.total,
-          filters: query
-        }
-      });
-
-      res.json({
-        success: true,
-        data: result,
-        execution_time_ms: executionTime
-      });
-
-    } catch (error) {
-      console.error('[GET /admin/audit/logs] Erreur:', error);
-      
-      await auditService.logEvent({
-        userId: (req.user as AuthenticatedUser)?.id || 'unknown',
-        userRole: (req.user as AuthenticatedUser)?.role || 'unknown',
-        sessionId: req.sessionID,
-        eventType: 'system.error',
-        resource: 'audit_logs',
-        action: 'READ',
-        result: 'error',
-        severity: 'medium',
-        errorDetails: { message: error instanceof Error ? error.message : 'Unknown error' },
-        metadata: { ip: req.ip, userAgent: req.get('User-Agent') }
-      });
-
-      res.status(500).json({
-        success: false,
-        error: 'Erreur lors de la récupération des logs d\'audit'
-      });
+  router.get('/audit/logs', asyncHandler(async (req, res) => {
+    const startTime = Date.now();
+    
+    // Validation des paramètres
+    const queryValidation = auditLogsQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+      throw new ValidationError('Paramètres de requête invalides');
     }
-  });
+
+    const query: AuditLogsQuery = queryValidation.data;
+    
+    // Récupérer les logs d'audit
+    const result = await auditService.getAuditLogs({
+      ...query,
+      includeArchived: false
+    });
+    
+    const executionTime = Date.now() - startTime;
+
+    // Log de l'accès aux logs d'audit
+    await auditService.logEvent({
+      userId: (req.user as AuthenticatedUser).id,
+      userRole: (req.user as AuthenticatedUser).role,
+      sessionId: req.sessionID,
+      eventType: 'admin.action',
+      resource: 'audit_logs',
+      action: 'READ',
+      result: 'success',
+      severity: 'low',
+      metadata: {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        executionTimeMs: executionTime,
+        recordsReturned: result.logs.length,
+        totalRecords: result.total,
+        filters: query
+      }
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      execution_time_ms: executionTime
+    });
+  }));
 
   // ========================================
   // 2. GET /api/admin/security/alerts - Alertes sécurité actives
   // ========================================
-  router.get('/security/alerts', async (req, res) => {
-    try {
-      const startTime = Date.now();
-      
-      // Validation des paramètres
-      const queryValidation = securityAlertsQuerySchema.safeParse(req.query);
-      if (!queryValidation.success) {
-        return res.status(400).json({
-          success: false,
-          error: 'Paramètres de requête invalides',
-          details: queryValidation.error.errors
-        });
-      }
+  router.get('/security/alerts', asyncHandler(async (req, res) => {
+    const startTime = Date.now();
+    
+    // Validation des paramètres
+    const queryValidation = securityAlertsQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+      throw new ValidationError('Paramètres de requête invalides');
+    }
 
-      const query: SecurityAlertsQuery = queryValidation.data;
+    const query: SecurityAlertsQuery = queryValidation.data;
       
-      // Récupérer les alertes de sécurité
-      const result = await auditService.getSecurityAlerts(query);
+    // Récupérer les alertes de sécurité
+    const result = await auditService.getSecurityAlerts(query);
       
       const executionTime = Date.now() - startTime;
 
@@ -338,41 +313,17 @@ export function createAdminRoutes(
         }
       });
 
-      res.json({
-        success: true,
-        data: result,
-        execution_time_ms: executionTime
-      });
-
-    } catch (error) {
-      console.error('[GET /admin/security/alerts] Erreur:', error);
-      
-      await auditService.logEvent({
-        userId: (req.user as AuthenticatedUser)?.id || 'unknown',
-        userRole: (req.user as AuthenticatedUser)?.role || 'unknown',
-        sessionId: req.sessionID,
-        eventType: 'system.error',
-        resource: 'security_alerts',
-        action: 'READ',
-        result: 'error',
-        severity: 'medium',
-        errorDetails: { message: error instanceof Error ? error.message : 'Unknown error' },
-        metadata: { ip: req.ip, userAgent: req.get('User-Agent') }
-      });
-
-      res.status(500).json({
-        success: false,
-        error: 'Erreur lors de la récupération des alertes de sécurité'
-      });
-    }
-  });
+    res.json({
+      success: true,
+      data: result,
+      execution_time_ms: executionTime
+    });
+  }));
 
   // ========================================
   // 3. GET /api/admin/metrics/overview - Métriques globales usage
   // ========================================
-  router.get('/metrics/overview', async (req, res) => {
-    try {
-      const startTime = Date.now();
+  router.get('/metrics/overview', asyncHandler(async (req, res) => {
       
       // Validation des paramètres
       const queryValidation = adminMetricsQuerySchema.safeParse(req.query);
@@ -386,10 +337,10 @@ export function createAdminRoutes(
 
       const { timeRange, includeBreakdown } = queryValidation.data;
       
-      // Récupérer métriques de sécurité
+    // Récupérer métriques de sécurité
       const securityMetrics = await auditService.getSecurityMetrics(timeRange);
       
-      // Récupérer analytics chatbot
+    // Récupérer analytics chatbot
       const chatbotAnalytics = await auditService.getChatbotAnalytics(timeRange);
       
       // Métriques additionnelles via base de données
@@ -467,32 +418,11 @@ export function createAdminRoutes(
       });
 
     } catch (error) {
-      console.error('[GET /admin/metrics/overview] Erreur:', error);
-      
-      await auditService.logEvent({
-        userId: (req.user as AuthenticatedUser)?.id || 'unknown',
-        userRole: (req.user as AuthenticatedUser)?.role || 'unknown',
-        sessionId: req.sessionID,
-        eventType: 'system.error',
-        resource: 'metrics_overview',
-        action: 'READ',
-        result: 'error',
-        severity: 'medium',
-        errorDetails: { message: error instanceof Error ? error.message : 'Unknown error' },
-        metadata: { ip: req.ip, userAgent: req.get('User-Agent') }
-      });
-
-      res.status(500).json({
-        success: false,
-        error: 'Erreur lors de la récupération des métriques'
-      });
-    }
-  });
 
   // ========================================
   // 4. POST /api/admin/security/resolve - Marquer alerte comme résolue
   // ========================================
-  router.post('/security/resolve', async (req, res) => {
+  router.post("/security/resolve", asyncHandler(async (req, res) => {
     try {
       const startTime = Date.now();
       
@@ -558,7 +488,7 @@ export function createAdminRoutes(
       });
 
     } catch (error) {
-      console.error('[POST /admin/security/resolve] Erreur:', error);
+      logger.error('[POST /admin/security/resolve] Erreur:', { metadata: { error: error instanceof Error ? error.message : String(error) } });
       
       await auditService.logEvent({
         userId: (req.user as AuthenticatedUser)?.id || 'unknown',
@@ -694,7 +624,7 @@ export function createAdminRoutes(
       }
 
     } catch (error) {
-      console.error('[GET /admin/users/activity] Erreur:', error);
+      logger.error('[GET /admin/users/activity] Erreur:', { metadata: { error: error instanceof Error ? error.message : String(error) } });
       
       await auditService.logEvent({
         userId: (req.user as AuthenticatedUser)?.id || 'unknown',
@@ -850,7 +780,7 @@ export function createAdminRoutes(
       });
 
     } catch (error) {
-      console.error('[GET /admin/chatbot/analytics] Erreur:', error);
+      logger.error('[GET /admin/chatbot/analytics] Erreur:', { metadata: { error: error instanceof Error ? error.message : String(error) } });
       
       await auditService.logEvent({
         userId: (req.user as AuthenticatedUser)?.id || 'unknown',
@@ -964,7 +894,7 @@ export function createAdminRoutes(
       res.send(exportData);
 
     } catch (error) {
-      console.error('[POST /admin/export] Erreur:', error);
+      logger.error('[POST /admin/export] Erreur:', { metadata: { error: error instanceof Error ? error.message : String(error) } });
       
       await auditService.logEvent({
         userId: (req.user as AuthenticatedUser)?.id || 'unknown',
@@ -1130,7 +1060,7 @@ export function createAdminRoutes(
 
     } catch (error) {
       const executionTime = Date.now() - startTime;
-      console.error('[POST /admin/seed/monday] Erreur:', error);
+      logger.error('[POST /admin/seed/monday] Erreur:', { metadata: { error: error instanceof Error ? error.message : String(error) } });
       
       await auditService.logEvent({
         userId: (req.user as AuthenticatedUser)?.id || 'unknown',
@@ -1208,7 +1138,7 @@ export function createAdminRoutes(
         }
       });
     } catch (error) {
-      console.error('[GET /admin/db-pool/stats] Erreur:', error);
+      logger.error('[GET /admin/db-pool/stats] Erreur:', { metadata: { error: error instanceof Error ? error.message : String(error) } });
       res.status(500).json({
         success: false,
         error: 'Erreur lors de la récupération des stats du pool DB'

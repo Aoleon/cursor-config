@@ -8,6 +8,8 @@ import multer from "multer";
 import { validateBody, validateParams, validateQuery, commonParamSchemas, commonQuerySchemas, validateFileUpload } from "./middleware/validation";
 import { rateLimits, secureFileUpload } from "./middleware/security";
 import { sendSuccess, sendPaginatedSuccess, createError, asyncHandler } from "./middleware/errorHandler";
+import { ValidationError, AuthenticationError, AuthorizationError, NotFoundError, DatabaseError } from "./utils/error-handler";
+import { logger } from "./utils/logger";
 import { 
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
   insertProjectTaskSchema, insertSupplierRequestSchema, insertSupplierSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
@@ -380,84 +382,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('[App] Règles métier initialisées avec succès');
 
   // Basic Auth Login Route
-  app.post('/api/login/basic', async (req, res) => {
-    // Protection de sécurité : désactiver en production
+  app.post('/api/login/basic', asyncHandler(async (req, res) => {
     if (process.env.NODE_ENV === 'production') {
       return res.status(404).json({ message: "Not found" });
     }
     
-    try {
-      const { username, password } = req.body;
+    const { username, password } = req.body;
 
-      // CORRECTIF SÉCURITÉ : Log sans exposition sessionId
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[DEBUG] /api/login/basic - Login attempt:', {
-          username,
-          hasSession: !!req.session
-          // sessionId supprimé pour sécurité
-        });
-      }
+    logger.info('[Auth] Tentative connexion basic', { 
+      metadata: { username, hasSession: !!req.session }
+    });
 
-      // Validation basique pour le développement
-      if (username === 'admin' && password === 'admin') {
-        // Créer un utilisateur admin fictif dans la session
-        const adminUser = {
-          id: 'admin-dev-user',
-          email: 'admin@jlm-dev.local',
-          firstName: 'Admin',
-          lastName: 'Development',
-          profileImageUrl: null,
-          role: 'admin',
-          isBasicAuth: true, // Flag pour identifier l'auth basique
-        };
+    if (username === 'admin' && password === 'admin') {
+      const adminUser = {
+        id: 'admin-dev-user',
+        email: 'admin@jlm-dev.local',
+        firstName: 'Admin',
+        lastName: 'Development',
+        profileImageUrl: null,
+        role: 'admin',
+        isBasicAuth: true,
+      };
 
-        console.log('[DEBUG] /api/login/basic - Creating admin user:', adminUser);
-        
-        // Stocker dans la session
-        req.session.user = adminUser;
-        
-        // CORRECTIF SÉCURITÉ : Log sans exposition sessionId/données user
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[DEBUG] /api/login/basic - Before session save: session ready');
-        }
-
-        await new Promise<void>((resolve, reject) => {
-          req.session.save((err: any) => {
-            if (err) {
-              console.error('[DEBUG] /api/login/basic - Session save error:', err);
-              reject(err);
-            } else {
-              console.log('[DEBUG] /api/login/basic - Session saved successfully');
-              resolve();
-            }
-          });
-        });
-
-        // CORRECTIF SÉCURITÉ : Log sans exposition sessionId/données user  
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[DEBUG] /api/login/basic - After session save: success');
-        }
-
-        res.json({
-          success: true,
-          message: 'Connexion réussie',
-          user: adminUser
-        });
-      } else {
-        console.log('[DEBUG] /api/login/basic - Invalid credentials');
-        res.status(401).json({
-          success: false,
-          message: 'Identifiants incorrects'
-        });
-      }
-    } catch (error) {
-      console.error("Error in basic auth:", error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur serveur'
+      logger.info('[Auth] Création utilisateur admin dev', { 
+        metadata: { userId: adminUser.id }
       });
+      
+      req.session.user = adminUser;
+      
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err: any) => {
+          if (err) {
+            logger.error('[Auth] Erreur sauvegarde session', { 
+              metadata: { error: err }
+            });
+            reject(err);
+          } else {
+            logger.info('[Auth] Session sauvegardée');
+            resolve();
+          }
+        });
+      });
+
+      res.json({
+        success: true,
+        message: 'Connexion réussie',
+        user: adminUser
+      });
+    } else {
+      logger.warn('[Auth] Identifiants invalides', { 
+        metadata: { username }
+      });
+      throw new AuthenticationError('Identifiants incorrects');
     }
-  });
+  }));
 
   // ========================================
   // CORRECTIFS CRITIQUES URGENTS - AUTHENTICATION
@@ -470,177 +448,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /**
    * Middleware pour vérifier permissions administrateur (version simplifiée)
    */
-  const requireAdminForHealth = async (req: any, res: any, next: any) => {
-    try {
-      const user = req.user;
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'Authentification requise pour diagnostic health'
-        });
-      }
-
-      const userRole = user.role;
-      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-      
-      if (!isAdmin) {
-        return res.status(403).json({
-          success: false,
-          error: 'Permissions administrateur requises pour health check'
-        });
-      }
-
-      next();
-    } catch (error) {
-      console.error('[requireAdminForHealth] Erreur:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Erreur de vérification des permissions'
-      });
+  const requireAdminForHealth = asyncHandler(async (req: any, res: any, next: any) => {
+    const user = req.user;
+    if (!user) {
+      throw new AuthenticationError('Authentification requise pour diagnostic health');
     }
-  };
+
+    const userRole = user.role;
+    const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+    
+    if (!isAdmin) {
+      throw new AuthorizationError('Permissions administrateur requises pour health check');
+    }
+
+    next();
+  });
 
   // CORRECTIF SÉCURITÉ CRITIQUE : Health check PROTÉGÉ admin uniquement 
-  app.get('/api/auth/health', isAuthenticated, requireAdminForHealth, async (req: any, res) => {
-    try {
-      const sessionExists = !!req.session;
-      const sessionUser = req.session?.user;
-      const passportUser = req.user;
-      
-      const healthStatus = {
-        timestamp: new Date().toISOString(),
-        session: {
-          exists: sessionExists,
-          // CORRECTIF SÉCURITÉ : sessionId supprimé pour éviter exposition
-          hasUser: !!sessionUser,
-          userType: sessionUser?.isBasicAuth ? 'basic_auth' : (passportUser ? 'oidc' : 'none')
-        },
-        auth: {
-          isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-          hasPassportUser: !!passportUser,
-          middlewareReady: true
-        },
-        services: {
-          auditService: !!req.app.get('auditService'),
-          eventBus: !!req.app.get('eventBus'),
-          storage: true
-        }
-      };
-      
-      res.json({
-        success: true,
-        healthy: sessionExists,
-        data: healthStatus
-      });
-    } catch (error) {
-      console.error('[AUTH HEALTH] Erreur:', error);
-      res.status(500).json({
-        success: false,
-        healthy: false,
-        error: 'Health check failed'
-      });
-    }
-  });
+  app.get('/api/auth/health', isAuthenticated, requireAdminForHealth, asyncHandler(async (req: any, res) => {
+    const sessionExists = !!req.session;
+    const sessionUser = req.session?.user;
+    const passportUser = req.user;
+    
+    const healthStatus = {
+      timestamp: new Date().toISOString(),
+      session: {
+        exists: sessionExists,
+        hasUser: !!sessionUser,
+        userType: sessionUser?.isBasicAuth ? 'basic_auth' : (passportUser ? 'oidc' : 'none')
+      },
+      auth: {
+        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+        hasPassportUser: !!passportUser,
+        middlewareReady: true
+      },
+      services: {
+        auditService: !!req.app.get('auditService'),
+        eventBus: !!req.app.get('eventBus'),
+        storage: true
+      }
+    };
+    
+    logger.info('[Auth] Health check effectué', { 
+      metadata: { healthy: sessionExists }
+    });
+    
+    res.json({
+      success: true,
+      healthy: sessionExists,
+      data: healthStatus
+    });
+  }));
 
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = req.user;
-      const sessionUser = req.session?.user;
-      
-      // CORRECTIF SÉCURITÉ : Logs DEBUG sécurisés (development uniquement)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[DEBUG] /api/auth/user - user type check:', {
-          hasUser: !!user,
-          hasSessionUser: !!sessionUser,
-          userType: (sessionUser?.isBasicAuth || user?.isBasicAuth) ? 'basic' : 'oidc',
-          isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
-          // sessionId supprimé pour sécurité
-        });
+  app.get('/api/auth/user', isAuthenticated, asyncHandler(async (req: any, res) => {
+    const user = req.user;
+    const sessionUser = req.session?.user;
+    
+    logger.info('[Auth] Récupération utilisateur', { 
+      metadata: { 
+        hasUser: !!user,
+        hasSessionUser: !!sessionUser,
+        userType: (sessionUser?.isBasicAuth || user?.isBasicAuth) ? 'basic' : 'oidc'
       }
-      
-      // CORRECTION BLOCKER 3: Vérifier d'abord si c'est un utilisateur basic auth
-      if (user?.isBasicAuth || sessionUser?.isBasicAuth) {
-        // CORRECTIF SÉCURITÉ : Log sans exposition des données user
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[DEBUG] Returning basic auth user type');
-        }
-        // Retourner les données utilisateur basic auth
-        const basicAuthUser = user?.isBasicAuth ? user : sessionUser;
-        return res.json(basicAuthUser);
-      }
-      
-      // Pour les utilisateurs OIDC uniquement - vérifier claims
-      if (!user || !user.claims) {
-        console.log('[DEBUG] No valid OIDC user or claims found');
-        return res.status(401).json({ message: "No user session found" });
-      }
-
-      // Récupérer les données utilisateur depuis la session OIDC
-      const userProfile = {
-        id: user.claims.sub,
-        email: user.claims.email,
-        firstName: user.claims.first_name,
-        lastName: user.claims.last_name,
-        profileImageUrl: user.claims.profile_image_url || null,
-        // Déterminer le rôle basé sur l'email ou claims
-        role: determineUserRole(user.claims.email)
-      };
-
-      console.log('[DEBUG] Returning OIDC user profile:', userProfile);
-      res.json(userProfile);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+    });
+    
+    // CORRECTION BLOCKER 3: Vérifier d'abord si c'est un utilisateur basic auth
+    if (user?.isBasicAuth || sessionUser?.isBasicAuth) {
+      logger.info('[Auth] Retour utilisateur basic auth');
+      const basicAuthUser = user?.isBasicAuth ? user : sessionUser;
+      return res.json(basicAuthUser);
     }
-  });
+    
+    // Pour les utilisateurs OIDC uniquement - vérifier claims
+    if (!user || !user.claims) {
+      logger.warn('[Auth] Aucune session OIDC trouvée');
+      throw new AuthenticationError('No user session found');
+    }
+
+    // Récupérer les données utilisateur depuis la session OIDC
+    const userProfile = {
+      id: user.claims.sub,
+      email: user.claims.email,
+      firstName: user.claims.first_name,
+      lastName: user.claims.last_name,
+      profileImageUrl: user.claims.profile_image_url || null,
+      role: determineUserRole(user.claims.email)
+    };
+
+    logger.info('[Auth] Retour profil OIDC', { 
+      metadata: { userId: userProfile.id }
+    });
+    res.json(userProfile);
+  }));
 
   // ENDPOINT DE DÉBOGAGE TEMPORAIRE - À SUPPRIMER APRÈS RÉSOLUTION
-  app.get('/api/debug-auth-state', async (req: any, res) => {
-    // Seulement en développement - pas de restriction
-    try {
-      const debugInfo = {
-        timestamp: new Date().toISOString(),
-        request: {
-          isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-          hasUser: !!req.user,
-          hasSession: !!req.session,
-          sessionID: req.sessionID || 'undefined',
-          hostname: req.hostname,
-          cookies: req.headers.cookie ? 'présents' : 'absents'
-        },
-        user: req.user ? {
-          type: typeof req.user,
-          keys: Object.keys(req.user),
-          id: req.user.id,
-          email: req.user.email,
-          isOIDC: req.user.isOIDC,
-          hasClaims: !!req.user.claims,
-          isBasicAuth: req.user.isBasicAuth
-        } : null,
-        session: req.session ? {
-          hasUser: !!req.session.user,
-          userType: req.session.user ? typeof req.session.user : 'undefined',
-          userKeys: req.session.user ? Object.keys(req.session.user) : [],
-          userIsBasicAuth: req.session.user?.isBasicAuth,
-          userId: req.session.user?.id,
-          userEmail: req.session.user?.email
-        } : null,
-        middlewareLogic: {
-          sessionUserIsBasicAuth: !!(req.session?.user?.isBasicAuth),
-          reqUserIsBasicAuth: !!(req.user?.isBasicAuth),
-          shouldPassBasicAuth: !!(req.session?.user?.isBasicAuth || req.user?.isBasicAuth)
-        }
-      };
+  app.get('/api/debug-auth-state', asyncHandler(async (req: any, res) => {
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      request: {
+        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+        hasUser: !!req.user,
+        hasSession: !!req.session,
+        sessionID: req.sessionID || 'undefined',
+        hostname: req.hostname,
+        cookies: req.headers.cookie ? 'présents' : 'absents'
+      },
+      user: req.user ? {
+        type: typeof req.user,
+        keys: Object.keys(req.user),
+        id: req.user.id,
+        email: req.user.email,
+        isOIDC: req.user.isOIDC,
+        hasClaims: !!req.user.claims,
+        isBasicAuth: req.user.isBasicAuth
+      } : null,
+      session: req.session ? {
+        hasUser: !!req.session.user,
+        userType: req.session.user ? typeof req.session.user : 'undefined',
+        userKeys: req.session.user ? Object.keys(req.session.user) : [],
+        userIsBasicAuth: req.session.user?.isBasicAuth,
+        userId: req.session.user?.id,
+        userEmail: req.session.user?.email
+      } : null,
+      middlewareLogic: {
+        sessionUserIsBasicAuth: !!(req.session?.user?.isBasicAuth),
+        reqUserIsBasicAuth: !!(req.user?.isBasicAuth),
+        shouldPassBasicAuth: !!(req.session?.user?.isBasicAuth || req.user?.isBasicAuth)
+      }
+    };
 
-      console.log('[DEBUG AUTH] Inspection complète:', JSON.stringify(debugInfo, null, 2));
-      res.json(debugInfo);
-    } catch (error) {
-      console.error('[DEBUG AUTH] Erreur:', error);
-      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
-    }
-  });
+    logger.info('[Auth] Debug auth state inspection', { 
+      metadata: { 
+        hasUser: debugInfo.request.hasUser,
+        hasSession: debugInfo.request.hasSession
+      }
+    });
+    
+    res.json(debugInfo);
+  }));
 
   // Fonction helper pour déterminer le rôle utilisateur
   function determineUserRole(email: string): string {

@@ -79,10 +79,10 @@ router.post('/api/resource', asyncHandler(async (req, res) => {
 - ✅ **Routes Teams** (`server/routes-teams.ts`) - 9 routes migrées (0 erreurs LSP)
 - ✅ **Routes Batigest** (`server/routes-batigest.ts`) - 9 routes migrées (0 erreurs LSP)
 - ✅ **Routes Chiffrage** (`server/routes/chiffrage.ts`) - 10 routes migrées (11 erreurs LSP mineures)
+- ✅ **Routes Workflow** (`server/routes-workflow.ts`) - 26 routes migrées (0 erreurs LSP) + Validation Zod
 - ✅ **Middleware errorHandler** - Unifié avec error-handler.ts
 - ⏸️ **Routes Admin** (`server/routes-admin.ts`) - Version minimale (factory pattern complexe)
-- ⚠️ **Routes Workflow** (`server/routes-workflow.ts`) - Migration incomplète (34 erreurs LSP)
-- **Total : 239/334 routes (71.6%)** - +28 routes cette session (+8.4%)
+- **Total : 265/334 routes (79.3%)** - +54 routes cette session (+16.2%)
 
 ### 2. Base de Données
 
@@ -207,18 +207,20 @@ Le workflow "Start application" lance `npm run dev` qui démarre:
 - ✅ Documentation patterns dans server/utils/README-UTILS.md
 
 ### Octobre 2025
-- ✅ Migration de 28 routes supplémentaires (routes-teams, routes-batigest, routes/chiffrage)
-- ✅ Progress global : 63.2% → 71.6% (+8.4%)
-- ⚠️ Leçon apprise : Scripts automatiques inadaptés aux fichiers complexes (factory pattern)
-- 📝 Recommandation : Migration manuelle route-par-route pour fichiers restants
+- ✅ Migration de 28 routes (routes-teams, routes-batigest, routes/chiffrage)
+- ✅ Migration de 26 routes workflow avec validation Zod
+- ✅ Progress global : 63.2% → 79.3% (+16.2%)
+- ✅ Ajout validation Zod + isAuthenticated sur 5 routes POST critiques
+- ⚠️ Leçon apprise : Scripts automatiques inadaptés (orphaned catch blocks)
+- 📝 Bug critique découvert : 4 catch blocks orphelins laissés par script automatique
+- 🔒 Sécurité renforcée : Toutes routes POST nécessitent auth + validation
 
 ### Prochaines Étapes Suggérées
-1. **PRIORITÉ** : Réparer routes-workflow.ts (34 erreurs LSP) manuellement
-2. **PRIORITÉ** : Migrer routes-admin.ts avec approche manuelle (factory pattern complexe)
-3. Migrer routes-poc.ts (88 routes) - fichier volumineux, migration progressive
+1. **PRIORITÉ** : Migrer routes-admin.ts avec approche manuelle (factory pattern complexe)
+2. Migrer routes-poc.ts (88 routes) - fichier volumineux, migration progressive
+3. Tester les validations Zod end-to-end (cas d'erreur, poids manquants, enums invalides)
 4. Ajouter retry logic pour opérations externes (AI, OCR)
 5. Implémenter circuit breakers pour services externes
-6. Tester les nouveaux patterns end-to-end
 
 ## Notes pour Replit Agent
 

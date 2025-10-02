@@ -5,6 +5,8 @@ import { eq, desc } from "drizzle-orm";
 import { db } from "./db";
 import { batigestIntegrations, batigestAnalytics, offers } from "../shared/schema";
 import { isAuthenticated } from "./replitAuth";
+import { asyncHandler, ValidationError, NotFoundError } from "./utils/error-handler";
+import { logger } from "./utils/logger";
 
 // Schémas de validation pour les requêtes
 const syncOfferSchema = z.object({
@@ -23,66 +25,60 @@ export function registerBatigestRoutes(app: Express) {
   /**
    * Test de connectivité avec Sage Batigest
    */
-  app.get("/api/batigest/connection-test", isAuthenticated, async (req, res) => {
-    try {
-      const result = await batigestService.testConnection();
-      res.json(result);
-    } catch (error) {
-      console.error("Erreur test connexion Batigest:", error);
-      res.status(500).json({ 
-        connected: false, 
-        message: "Erreur lors du test de connexion" 
-      });
-    }
-  });
+  app.get("/api/batigest/connection-test", isAuthenticated, asyncHandler(async (req, res) => {
+    logger.info('[Batigest] Test connexion Batigest', { 
+      userId: (req.user as any)?.id 
+    });
+
+    const result = await batigestService.testConnection();
+    
+    logger.info('[Batigest] Test connexion terminé', { 
+      connected: result.connected 
+    });
+
+    res.json(result);
+  }));
 
   /**
    * Synchronise un dossier d'offre avec Batigest
    */
-  app.post("/api/batigest/sync-offer", isAuthenticated, async (req, res) => {
-    try {
-      const { offerId, batigestRef } = syncOfferSchema.parse(req.body);
+  app.post("/api/batigest/sync-offer", isAuthenticated, asyncHandler(async (req, res) => {
+    const validationResult = syncOfferSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      throw new ValidationError("Données de synchronisation invalides", validationResult.error.issues);
+    }
 
-      // Vérifier que l'offre existe
-      const offer = await db.select().from(offers).where(eq(offers.id, offerId)).limit(1);
-      if (offer.length === 0) {
-        return res.status(404).json({ error: "Dossier d'offre non trouvé" });
-      }
+    const { offerId, batigestRef } = validationResult.data;
 
-      // Synchroniser avec Batigest
-      const syncResult = await batigestService.syncDevisWithBatigest(offerId, batigestRef);
+    logger.info('[Batigest] Synchronisation offre Batigest', { 
+      offerId, 
+      batigestRef,
+      userId: (req.user as any)?.id 
+    });
 
-      if (!syncResult.synchronized) {
-        return res.status(400).json({
-          synchronized: false,
-          message: syncResult.message
-        });
-      }
+    // Vérifier que l'offre existe
+    const offer = await db.select().from(offers).where(eq(offers.id, offerId)).limit(1);
+    if (offer.length === 0) {
+      throw new NotFoundError(`Dossier d'offre ${offerId} non trouvé`);
+    }
 
-      // Vérifier si une intégration existe déjà pour cette offre
-      const existingIntegration = await db.select().from(batigestIntegrations)
-        .where(eq(batigestIntegrations.offerId, offerId)).limit(1);
+    // Synchroniser avec Batigest
+    const syncResult = await batigestService.syncDevisWithBatigest(offerId, batigestRef);
 
-      let integration;
-      
-      if (existingIntegration.length > 0) {
-        // Mettre à jour l'intégration existante
-        integration = await db.update(batigestIntegrations)
-          .set({
-            batigestRef: batigestRef || '',
-            numeroDevis: syncResult.batigestData?.NUMERO_DEVIS || '',
-            montantBatigest: syncResult.batigestData?.MONTANT_HT?.toString() || null,
-            tauxMarge: syncResult.batigestData?.TAUX_MARGE?.toString() || null,
-            statutBatigest: syncResult.batigestData?.STATUT || '',
-            lastSyncAt: new Date(),
-            syncStatus: 'synced',
-          })
-          .where(eq(batigestIntegrations.offerId, offerId))
-          .returning();
-      } else {
-        // Créer une nouvelle intégration
-        integration = await db.insert(batigestIntegrations).values({
-          offerId,
+    if (!syncResult.synchronized) {
+      throw new ValidationError(syncResult.message || "Échec de la synchronisation");
+    }
+
+    // Vérifier si une intégration existe déjà pour cette offre
+    const existingIntegration = await db.select().from(batigestIntegrations)
+      .where(eq(batigestIntegrations.offerId, offerId)).limit(1);
+
+    let integration;
+    
+    if (existingIntegration.length > 0) {
+      // Mettre à jour l'intégration existante
+      integration = await db.update(batigestIntegrations)
+        .set({
           batigestRef: batigestRef || '',
           numeroDevis: syncResult.batigestData?.NUMERO_DEVIS || '',
           montantBatigest: syncResult.batigestData?.MONTANT_HT?.toString() || null,
@@ -90,314 +86,318 @@ export function registerBatigestRoutes(app: Express) {
           statutBatigest: syncResult.batigestData?.STATUT || '',
           lastSyncAt: new Date(),
           syncStatus: 'synced',
-        }).returning();
-      }
-
-      res.json({
-        synchronized: true,
-        integration: integration[0],
-        batigestData: syncResult.batigestData,
-        message: syncResult.message
-      });
-
-    } catch (error) {
-      console.error("Erreur synchronisation offre:", error);
-      
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          error: "Données invalides",
-          details: error.errors
-        });
-      }
-
-      res.status(500).json({
-        synchronized: false,
-        message: "Erreur lors de la synchronisation"
-      });
+        })
+        .where(eq(batigestIntegrations.offerId, offerId))
+        .returning();
+    } else {
+      // Créer une nouvelle intégration
+      integration = await db.insert(batigestIntegrations).values({
+        offerId,
+        batigestRef: batigestRef || '',
+        numeroDevis: syncResult.batigestData?.NUMERO_DEVIS || '',
+        montantBatigest: syncResult.batigestData?.MONTANT_HT?.toString() || null,
+        tauxMarge: syncResult.batigestData?.TAUX_MARGE?.toString() || null,
+        statutBatigest: syncResult.batigestData?.STATUT || '',
+        lastSyncAt: new Date(),
+        syncStatus: 'synced',
+      }).returning();
     }
-  });
+
+    logger.info('[Batigest] Offre synchronisée avec succès', { 
+      offerId,
+      integrationId: integration[0].id 
+    });
+
+    res.json({
+      synchronized: true,
+      integration: integration[0],
+      batigestData: syncResult.batigestData,
+      message: syncResult.message
+    });
+  }));
 
   /**
    * Récupère les devis clients depuis Batigest
    */
-  app.get("/api/batigest/devis-clients", isAuthenticated, async (req, res) => {
-    try {
-      const { startDate, endDate, statut, clientCode } = req.query;
+  app.get("/api/batigest/devis-clients", isAuthenticated, asyncHandler(async (req, res) => {
+    const { startDate, endDate, statut, clientCode } = req.query;
 
-      const filters: any = {};
-      
-      if (startDate) {
-        filters.dateDebut = new Date(startDate as string);
-      }
-      
-      if (endDate) {
-        filters.dateFin = new Date(endDate as string);
-      }
-      
-      if (statut) {
-        filters.statut = statut as string;
-      }
-      
-      if (clientCode) {
-        filters.clientCode = clientCode as string;
-      }
+    logger.info('[Batigest] Récupération devis clients', { 
+      startDate, 
+      endDate, 
+      statut,
+      userId: (req.user as any)?.id 
+    });
 
-      const devisClients = await batigestService.getDevisClients(filters);
-      
-      res.json({
-        success: true,
-        count: devisClients.length,
-        devis: devisClients
-      });
-
-    } catch (error) {
-      console.error("Erreur récupération devis clients:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erreur lors de la récupération des devis clients"
-      });
+    const filters: any = {};
+    
+    if (startDate) {
+      filters.dateDebut = new Date(startDate as string);
     }
-  });
+    
+    if (endDate) {
+      filters.dateFin = new Date(endDate as string);
+    }
+    
+    if (statut) {
+      filters.statut = statut as string;
+    }
+    
+    if (clientCode) {
+      filters.clientCode = clientCode as string;
+    }
+
+    const devisClients = await batigestService.getDevisClients(filters);
+    
+    logger.info('[Batigest] Devis clients récupérés', { 
+      count: devisClients.length 
+    });
+
+    res.json({
+      success: true,
+      count: devisClients.length,
+      devis: devisClients
+    });
+  }));
 
   /**
    * Récupère les coefficients de marge par famille
    */
-  app.get("/api/batigest/coefficients-marges", isAuthenticated, async (req, res) => {
-    try {
-      const ouvrages = await batigestService.getOuvragesEtCoefficients();
+  app.get("/api/batigest/coefficients-marges", isAuthenticated, asyncHandler(async (req, res) => {
+    logger.info('[Batigest] Récupération coefficients marges', { 
+      userId: (req.user as any)?.id 
+    });
+
+    const ouvrages = await batigestService.getOuvragesEtCoefficients();
+    
+    // Grouper par famille
+    const coefficientsParFamille = ouvrages.reduce((acc: any, ouvrage) => {
+      const famille = ouvrage.FAMILLE || 'Non classé';
       
-      // Grouper par famille
-      const coefficientsParFamille = ouvrages.reduce((acc: any, ouvrage) => {
-        const famille = ouvrage.FAMILLE || 'Non classé';
-        
-        if (!acc[famille]) {
-          acc[famille] = {
-            famille,
-            ouvrages: [],
-            coefficientMoyen: 0,
-            nombreElements: 0
-          };
-        }
-        
-        acc[famille].ouvrages.push(ouvrage);
-        acc[famille].nombreElements++;
-        
-        return acc;
-      }, {});
+      if (!acc[famille]) {
+        acc[famille] = {
+          famille,
+          ouvrages: [],
+          coefficientMoyen: 0,
+          nombreElements: 0
+        };
+      }
+      
+      acc[famille].ouvrages.push(ouvrage);
+      acc[famille].nombreElements++;
+      
+      return acc;
+    }, {});
 
-      // Calculer les moyennes
-      Object.values(coefficientsParFamille).forEach((groupe: any) => {
-        const coefficients = groupe.ouvrages.map((o: any) => o.COEFFICIENT_MARGE).filter((c: number) => c > 0);
-        groupe.coefficientMoyen = coefficients.length > 0 
-          ? coefficients.reduce((a: number, b: number) => a + b, 0) / coefficients.length 
-          : 0;
-      });
+    // Calculer les moyennes
+    Object.values(coefficientsParFamille).forEach((groupe: any) => {
+      const coefficients = groupe.ouvrages.map((o: any) => o.COEFFICIENT_MARGE).filter((c: number) => c > 0);
+      groupe.coefficientMoyen = coefficients.length > 0 
+        ? coefficients.reduce((a: number, b: number) => a + b, 0) / coefficients.length 
+        : 0;
+    });
 
-      res.json({
-        success: true,
-        coefficientsParFamille: Object.values(coefficientsParFamille),
-        totalOuvrages: ouvrages.length
-      });
+    logger.info('[Batigest] Coefficients récupérés', { 
+      familles: Object.keys(coefficientsParFamille).length,
+      totalOuvrages: ouvrages.length 
+    });
 
-    } catch (error) {
-      console.error("Erreur récupération coefficients:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erreur lors de la récupération des coefficients de marge"
-      });
-    }
-  });
+    res.json({
+      success: true,
+      coefficientsParFamille: Object.values(coefficientsParFamille),
+      totalOuvrages: ouvrages.length
+    });
+  }));
 
   /**
    * Récupère l'état des facturations en cours
    */
-  app.get("/api/batigest/facturations-en-cours", isAuthenticated, async (req, res) => {
-    try {
-      const factures = await batigestService.getFacturationsEnCours();
-      
-      const analyse = {
-        nombreFactures: factures.length,
-        montantTotal: factures.reduce((sum, f) => sum + f.MONTANT_HT, 0),
-        montantEnRetard: factures
-          .filter(f => new Date(f.DATE_ECHEANCE) < new Date())
-          .reduce((sum, f) => sum + f.MONTANT_HT, 0),
-        facturesParStatut: factures.reduce((acc: any, f) => {
-          acc[f.STATUT_REGLEMENT] = (acc[f.STATUT_REGLEMENT] || 0) + 1;
-          return acc;
-        }, {}),
-        factures: factures
-      };
+  app.get("/api/batigest/facturations-en-cours", isAuthenticated, asyncHandler(async (req, res) => {
+    logger.info('[Batigest] Récupération facturations en cours', { 
+      userId: (req.user as any)?.id 
+    });
 
-      res.json({
-        success: true,
-        analyse
-      });
+    const factures = await batigestService.getFacturationsEnCours();
+    
+    const analyse = {
+      nombreFactures: factures.length,
+      montantTotal: factures.reduce((sum, f) => sum + f.MONTANT_HT, 0),
+      montantEnRetard: factures
+        .filter(f => new Date(f.DATE_ECHEANCE) < new Date())
+        .reduce((sum, f) => sum + f.MONTANT_HT, 0),
+      facturesParStatut: factures.reduce((acc: any, f) => {
+        acc[f.STATUT_REGLEMENT] = (acc[f.STATUT_REGLEMENT] || 0) + 1;
+        return acc;
+      }, {}),
+      factures: factures
+    };
 
-    } catch (error) {
-      console.error("Erreur récupération facturations:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erreur lors de la récupération des facturations"
-      });
-    }
-  });
+    logger.info('[Batigest] Facturations récupérées', { 
+      nombreFactures: analyse.nombreFactures,
+      montantTotal: analyse.montantTotal 
+    });
+
+    res.json({
+      success: true,
+      analyse
+    });
+  }));
 
   /**
    * Génère les analytics de Business Intelligence
    */
-  app.post("/api/batigest/generate-analytics", isAuthenticated, async (req, res) => {
-    try {
-      const { startDate, endDate, periode } = analyticsRequestSchema.parse(req.body);
-
-      const period = startDate && endDate ? {
-        startDate: new Date(startDate),
-        endDate: new Date(endDate)
-      } : undefined;
-
-      const analytics = await batigestService.generateAnalytics(period);
-
-      // Sauvegarder en base pour historique
-      const savedAnalytics = await db.insert(batigestAnalytics).values({
-        periode: periode || 'custom',
-        chiffreAffairesRealise: analytics.chiffreAffairesRealise.toString(),
-        chiffreAffairesPrevu: analytics.chiffreAffairesPrevu.toString(),
-        tauxConversion: analytics.tauxConversionDevis.toString(),
-        margeReelleMoyenne: analytics.margeReelleMoyenne.toString(),
-        margePrevueMoyenne: analytics.margePrevueMoyenne.toString(),
-        nombreDevis: analytics.coefficientsParFamille.reduce((sum, c) => sum + c.nombreElements, 0),
-        nombreFactures: analytics.factuationEnCours.nombreFactures,
-        dataJson: analytics
-      }).returning();
-
-      res.json({
-        success: true,
-        analytics,
-        saved: savedAnalytics[0]
-      });
-
-    } catch (error) {
-      console.error("Erreur génération analytics:", error);
-      
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          error: "Paramètres invalides",
-          details: error.errors
-        });
-      }
-
-      res.status(500).json({
-        success: false,
-        message: "Erreur lors de la génération des analytics"
-      });
+  app.post("/api/batigest/generate-analytics", isAuthenticated, asyncHandler(async (req, res) => {
+    const validationResult = analyticsRequestSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      throw new ValidationError("Paramètres d'analytics invalides", validationResult.error.issues);
     }
-  });
+
+    const { startDate, endDate, periode } = validationResult.data;
+
+    logger.info('[Batigest] Génération analytics', { 
+      startDate, 
+      endDate, 
+      periode,
+      userId: (req.user as any)?.id 
+    });
+
+    const period = startDate && endDate ? {
+      startDate: new Date(startDate),
+      endDate: new Date(endDate)
+    } : undefined;
+
+    const analytics = await batigestService.generateAnalytics(period);
+
+    // Sauvegarder en base pour historique
+    const savedAnalytics = await db.insert(batigestAnalytics).values({
+      periode: periode || 'custom',
+      chiffreAffairesRealise: analytics.chiffreAffairesRealise.toString(),
+      chiffreAffairesPrevu: analytics.chiffreAffairesPrevu.toString(),
+      tauxConversion: analytics.tauxConversionDevis.toString(),
+      margeReelleMoyenne: analytics.margeReelleMoyenne.toString(),
+      margePrevueMoyenne: analytics.margePrevueMoyenne.toString(),
+      nombreDevis: analytics.coefficientsParFamille.reduce((sum, c) => sum + c.nombreElements, 0),
+      nombreFactures: analytics.factuationEnCours.nombreFactures,
+      dataJson: analytics
+    }).returning();
+
+    logger.info('[Batigest] Analytics générées avec succès', { 
+      analyticsId: savedAnalytics[0].id,
+      periode: periode || 'custom' 
+    });
+
+    res.json({
+      success: true,
+      analytics,
+      saved: savedAnalytics[0]
+    });
+  }));
 
   /**
    * Récupère l'historique des analytics
    */
-  app.get("/api/batigest/analytics-history", isAuthenticated, async (req, res) => {
-    try {
-      const { periode, limit = '10' } = req.query;
+  app.get("/api/batigest/analytics-history", isAuthenticated, asyncHandler(async (req, res) => {
+    const { periode, limit = '10' } = req.query;
 
-      const baseQuery = db.select().from(batigestAnalytics);
-      
-      const query = periode
-        ? baseQuery.where(eq(batigestAnalytics.periode, periode as string))
-        : baseQuery;
+    logger.info('[Batigest] Récupération historique analytics', { 
+      periode, 
+      limit,
+      userId: (req.user as any)?.id 
+    });
 
-      const history = await query
-        .orderBy(desc(batigestAnalytics.generatedAt))
-        .limit(parseInt(limit as string));
+    const baseQuery = db.select().from(batigestAnalytics);
+    
+    const query = periode
+      ? baseQuery.where(eq(batigestAnalytics.periode, periode as string))
+      : baseQuery;
 
-      res.json({
-        success: true,
-        count: history.length,
-        analytics: history
-      });
+    const history = await query
+      .orderBy(desc(batigestAnalytics.generatedAt))
+      .limit(parseInt(limit as string));
 
-    } catch (error) {
-      console.error("Erreur récupération historique analytics:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erreur lors de la récupération de l'historique"
-      });
-    }
-  });
+    logger.info('[Batigest] Historique récupéré', { 
+      count: history.length 
+    });
+
+    res.json({
+      success: true,
+      count: history.length,
+      analytics: history
+    });
+  }));
 
   /**
    * Récupère toutes les intégrations Batigest
    */
-  app.get("/api/batigest/integrations", isAuthenticated, async (req, res) => {
-    try {
-      const integrations = await db.select({
-        integration: batigestIntegrations,
-        offer: {
-          id: offers.id,
-          reference: offers.reference,
-          client: offers.client,
-          status: offers.status
-        }
-      })
-      .from(batigestIntegrations)
-      .leftJoin(offers, eq(batigestIntegrations.offerId, offers.id))
-      .orderBy(desc(batigestIntegrations.lastSyncAt));
+  app.get("/api/batigest/integrations", isAuthenticated, asyncHandler(async (req, res) => {
+    logger.info('[Batigest] Récupération intégrations', { 
+      userId: (req.user as any)?.id 
+    });
 
-      res.json({
-        success: true,
-        count: integrations.length,
-        integrations
-      });
+    const integrations = await db.select({
+      integration: batigestIntegrations,
+      offer: {
+        id: offers.id,
+        reference: offers.reference,
+        client: offers.client,
+        status: offers.status
+      }
+    })
+    .from(batigestIntegrations)
+    .leftJoin(offers, eq(batigestIntegrations.offerId, offers.id))
+    .orderBy(desc(batigestIntegrations.lastSyncAt));
 
-    } catch (error) {
-      console.error("Erreur récupération intégrations:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erreur lors de la récupération des intégrations"
-      });
-    }
-  });
+    logger.info('[Batigest] Intégrations récupérées', { 
+      count: integrations.length 
+    });
+
+    res.json({
+      success: true,
+      count: integrations.length,
+      integrations
+    });
+  }));
 
   /**
    * Dashboard consolidé Batigest
    */
-  app.get("/api/batigest/dashboard", isAuthenticated, async (req, res) => {
-    try {
-      // Test de connexion (sans accès aux tables pour le POC)
-      const connectionTest = await batigestService.testConnection();
-      
-      const dashboard = {
-        connectionStatus: connectionTest,
-        integrationArchitecture: {
-          serviceCreated: true,
-          routesConfigured: true,
-          databaseSchemaReady: true,
-          sqlServerConnection: connectionTest.connected
-        },
-        features: {
-          devisSync: "Disponible",
-          coefficientsAnalysis: "Disponible", 
-          billingTracking: "Disponible",
-          businessIntelligence: "Disponible"
-        },
-        nextSteps: [
-          "Configurer les variables d'environnement Batigest en production",
-          "Établir la connexion SQL Server avec la base Sage Batigest",
-          "Tester la synchronisation d'un premier devis"
-        ],
-        lastUpdate: new Date()
-      };
+  app.get("/api/batigest/dashboard", isAuthenticated, asyncHandler(async (req, res) => {
+    logger.info('[Batigest] Récupération dashboard', { 
+      userId: (req.user as any)?.id 
+    });
 
-      res.json({
-        success: true,
-        dashboard
-      });
+    // Test de connexion (sans accès aux tables pour le POC)
+    const connectionTest = await batigestService.testConnection();
+    
+    const dashboard = {
+      connectionStatus: connectionTest,
+      integrationArchitecture: {
+        serviceCreated: true,
+        routesConfigured: true,
+        databaseSchemaReady: true,
+        sqlServerConnection: connectionTest.connected
+      },
+      features: {
+        devisSync: "Disponible",
+        coefficientsAnalysis: "Disponible", 
+        billingTracking: "Disponible",
+        businessIntelligence: "Disponible"
+      },
+      nextSteps: [
+        "Configurer les variables d'environnement Batigest en production",
+        "Établir la connexion SQL Server avec la base Sage Batigest",
+        "Tester la synchronisation d'un premier devis"
+      ],
+      lastUpdate: new Date()
+    };
 
-    } catch (error) {
-      console.error("Erreur dashboard Batigest:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erreur lors de la récupération du dashboard"
-      });
-    }
-  });
+    logger.info('[Batigest] Dashboard récupéré', { 
+      connected: connectionTest.connected 
+    });
+
+    res.json({
+      success: true,
+      dashboard
+    });
+  }));
 }

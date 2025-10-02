@@ -3,7 +3,7 @@ import { storage } from "./storage-poc";
 import { EventType, createRealtimeEvent, commonQueryKeys } from '../shared/events';
 import type { EventBus } from './eventBus';
 import { isAuthenticated } from "./replitAuth";
-import { validateQuery } from "./middleware/validation";
+import { validateQuery, validateBody } from "./middleware/validation";
 import { sendSuccess, asyncHandler } from "./middleware/errorHandler";
 import { z } from "zod";
 import { logger } from "./utils/logger";
@@ -14,8 +14,56 @@ const projectStatusValues = [
   "approvisionnement", "chantier", "sav"
 ] as const;
 
+const priorityLevelValues = [
+  "tres_faible", "faible", "normale", "elevee", "critique"
+] as const;
+
 const workflowProjectsQuerySchema = z.object({
   status: z.enum(projectStatusValues).optional()
+});
+
+const sendDevisSchema = z.object({
+  method: z.string().min(1, "Méthode d'envoi requise")
+});
+
+const projectIssueSchema = z.object({
+  issue: z.string().min(1, "Description du problème requise")
+});
+
+const recalculatePrioritiesSchema = z.object({
+  montantWeight: z.number().min(0).max(100),
+  delaiWeight: z.number().min(0).max(100),
+  typeClientWeight: z.number().min(0).max(100),
+  complexiteWeight: z.number().min(0).max(100),
+  chargeBeWeight: z.number().min(0).max(100),
+  risqueWeight: z.number().min(0).max(100),
+  strategiqueWeight: z.number().min(0).max(100)
+});
+
+const priorityOverrideSchema = z.object({
+  priorityLevel: z.enum(priorityLevelValues),
+  reason: z.string().min(1, "Raison du changement requise")
+});
+
+const priorityConfigSchema = z.object({
+  weights: z.object({
+    montantWeight: z.number().min(0).max(100),
+    delaiWeight: z.number().min(0).max(100),
+    typeClientWeight: z.number().min(0).max(100),
+    complexiteWeight: z.number().min(0).max(100),
+    chargeBeWeight: z.number().min(0).max(100),
+    risqueWeight: z.number().min(0).max(100),
+    strategiqueWeight: z.number().min(0).max(100)
+  }).optional(),
+  thresholds: z.object({
+    critique: z.number().min(0).max(100),
+    elevee: z.number().min(0).max(100),
+    normale: z.number().min(0).max(100),
+    faible: z.number().min(0).max(100)
+  }).optional(),
+  autoRecalculate: z.boolean().optional(),
+  alertsEnabled: z.boolean().optional(),
+  notificationChannels: z.array(z.string()).optional()
 });
 
 export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
@@ -140,7 +188,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     res.json(devisReady);
   }));
 
-  app.post("/api/aos/:id/send-devis", isAuthenticated, asyncHandler(async (req, res) => {
+  app.post("/api/aos/:id/send-devis", isAuthenticated, validateBody(sendDevisSchema), asyncHandler(async (req, res) => {
     const { method } = req.body;
     const aoId = req.params.id;
     
@@ -348,7 +396,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     });
   }));
 
-  app.post("/api/projects/:id/issue", isAuthenticated, asyncHandler(async (req, res) => {
+  app.post("/api/projects/:id/issue", isAuthenticated, validateBody(projectIssueSchema), asyncHandler(async (req, res) => {
     const { issue } = req.body;
     const projectId = req.params.id;
     
@@ -563,7 +611,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     res.json(priorities);
   }));
 
-  app.post("/api/priorities/recalculate", asyncHandler(async (req, res) => {
+  app.post("/api/priorities/recalculate", isAuthenticated, validateBody(recalculatePrioritiesSchema), asyncHandler(async (req, res) => {
     const { 
       montantWeight, 
       delaiWeight, 
@@ -616,13 +664,9 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     });
   }));
 
-  app.post("/api/priorities/:itemId/override", asyncHandler(async (req, res) => {
+  app.post("/api/priorities/:itemId/override", isAuthenticated, validateBody(priorityOverrideSchema), asyncHandler(async (req, res) => {
     const { itemId } = req.params;
     const { priorityLevel, reason } = req.body;
-    
-    if (!['tres_faible', 'faible', 'normale', 'elevee', 'critique'].includes(priorityLevel)) {
-      throw new ValidationError("Niveau de priorité invalide");
-    }
     
     if (eventBus) {
       const overrideEvent = createRealtimeEvent({
@@ -822,7 +866,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     res.json(config);
   }));
 
-  app.post("/api/priorities/config", asyncHandler(async (req, res) => {
+  app.post("/api/priorities/config", isAuthenticated, validateBody(priorityConfigSchema), asyncHandler(async (req, res) => {
     const { weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels } = req.body;
     
     if (weights) {

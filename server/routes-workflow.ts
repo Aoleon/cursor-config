@@ -6,6 +6,8 @@ import { isAuthenticated } from "./replitAuth";
 import { validateQuery } from "./middleware/validation";
 import { sendSuccess, asyncHandler } from "./middleware/errorHandler";
 import { z } from "zod";
+import { logger } from "./utils/logger";
+import { ValidationError, NotFoundError, DatabaseError } from "./utils/error-handler";
 
 // Schéma de validation pour les statuts de projet dans le workflow
 const projectStatusValues = [
@@ -23,8 +25,8 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
   
   // Récupérer les AOs en étude technique
-  app.get("/api/aos/etude", isAuthenticated, async (req, res) => {
-    try {
+  app.get("/api/aos/etude", isAuthenticated, asyncHandler(async (req, res) => {
+    
       const aos = await storage.getAos();
       // Filtrer les AOs simulés en étude technique
       const aosEtude = aos.filter((ao: any) => 
@@ -43,20 +45,17 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       }));
       
       res.json(enrichedAos);
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors de la récupération des AOs en étude" });
-    }
-  });
+    }));
 
   // Valider l'étude technique d'un AO
-  app.post("/api/aos/:id/validate-etude", isAuthenticated, async (req, res) => {
-    try {
+  app.post("/api/aos/:id/validate-etude", isAuthenticated, asyncHandler(async (req, res) => {
+    
       const aoId = req.params.id;
       
       // Vérifier que l'AO existe
       const existingAo = await storage.getAo(aoId);
       if (!existingAo) {
-        return res.status(404).json({ error: "AO non trouvé" });
+        throw new NotFoundError("AO non trouvé");
       }
       
       // Mettre à jour le statut en base de données - UNIQUEMENT l'AO spécifié
@@ -68,19 +67,15 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         aoId,
         newStatus: 'en_cours_chiffrage'
       });
-    } catch (error) {
-      console.error('Erreur lors de la validation de l\'étude:', error);
-      res.status(500).json({ error: "Erreur lors de la validation de l'étude" });
-    }
-  });
+    }));
 
   // ========================================
   // ROUTES CHIFFRAGE
   // ========================================
 
   // Récupérer les AOs en chiffrage
-  app.get("/api/aos/chiffrage", isAuthenticated, async (req, res) => {
-    try {
+  app.get("/api/aos/chiffrage", isAuthenticated, asyncHandler(async (req, res) => {
+    
       const aos = await storage.getAos();
       // Enrichir avec données de chiffrage
       const aosChiffrage = aos.map((ao: any) => ({
@@ -100,32 +95,26 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       }));
       
       res.json(aosChiffrage.filter((ao: any) => ao.status !== 'draft'));
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors de la récupération des AOs en chiffrage" });
-    }
-  });
+    }));
 
   // Valider le chiffrage
-  app.post("/api/aos/:id/validate-chiffrage", isAuthenticated, async (req, res) => {
-    try {
+  app.post("/api/aos/:id/validate-chiffrage", isAuthenticated, asyncHandler(async (req, res) => {
+    
       res.json({ 
         success: true, 
         message: "Chiffrage validé, devis prêt à envoyer",
         aoId: req.params.id,
         newStatus: 'devis_pret'
       });
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors de la validation du chiffrage" });
-    }
-  });
+    }));
 
   // ========================================
   // ROUTES ENVOI DEVIS
   // ========================================
 
   // Récupérer les devis prêts
-  app.get("/api/aos/devis-ready", isAuthenticated, async (req, res) => {
-    try {
+  app.get("/api/aos/devis-ready", isAuthenticated, asyncHandler(async (req, res) => {
+    
       const aos = await storage.getAos();
       const devisReady = aos.map((ao: any) => ({
         ...ao,
@@ -141,14 +130,11 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       }));
       
       res.json(devisReady);
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors de la récupération des devis" });
-    }
-  });
+    }));
 
   // Envoyer un devis
-  app.post("/api/aos/:id/send-devis", isAuthenticated, async (req, res) => {
-    try {
+  app.post("/api/aos/:id/send-devis", isAuthenticated, asyncHandler(async (req, res) => {
+    
       const { method } = req.body;
       res.json({ 
         success: true, 
@@ -156,24 +142,18 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         aoId: req.params.id,
         sentAt: new Date()
       });
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors de l'envoi du devis" });
-    }
-  });
+    }));
 
   // Relancer un client
-  app.post("/api/aos/:id/relance", isAuthenticated, async (req, res) => {
-    try {
+  app.post("/api/aos/:id/relance", isAuthenticated, asyncHandler(async (req, res) => {
+    
       res.json({ 
         success: true, 
         message: "Relance client effectuée",
         aoId: req.params.id,
         relanceDate: new Date()
       });
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors de la relance" });
-    }
-  });
+    }));
 
   // ========================================
   // ROUTES PROJETS & PLANIFICATION
@@ -251,8 +231,8 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   );
 
   // Route spécifique pour les données de planification des projets
-  app.get("/api/projects/planning", isAuthenticated, async (req, res) => {
-    try {
+  app.get("/api/projects/planning", isAuthenticated, asyncHandler(async (req, res) => {
+    
       const projects = await storage.getProjects();
       
       // Enrichir les projets avec des données spécifiques à la planification
@@ -304,28 +284,22 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       }));
       
       res.json(planningData);
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors de la récupération des données de planification" });
-    }
-  });
+    }));
 
   // Valider la planification
-  app.post("/api/projects/:id/validate-planning", isAuthenticated, async (req, res) => {
-    try {
+  app.post("/api/projects/:id/validate-planning", isAuthenticated, asyncHandler(async (req, res) => {
+    
       res.json({ 
         success: true, 
         message: "Planification validée",
         projectId: req.params.id,
         newStatus: 'approvisionnement'
       });
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors de la validation de la planification" });
-    }
-  });
+    }));
 
   // Démarrer un chantier
-  app.post("/api/projects/:id/start-chantier", isAuthenticated, async (req, res) => {
-    try {
+  app.post("/api/projects/:id/start-chantier", isAuthenticated, asyncHandler(async (req, res) => {
+    
       res.json({ 
         success: true, 
         message: "Chantier démarré",
@@ -333,14 +307,11 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         newStatus: 'chantier',
         startedAt: new Date()
       });
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors du démarrage du chantier" });
-    }
-  });
+    }));
 
   // Terminer un chantier
-  app.post("/api/projects/:id/finish", isAuthenticated, async (req, res) => {
-    try {
+  app.post("/api/projects/:id/finish", isAuthenticated, asyncHandler(async (req, res) => {
+    
       res.json({ 
         success: true, 
         message: "Chantier terminé, passage en SAV",
@@ -348,14 +319,11 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         newStatus: 'sav',
         finishedAt: new Date()
       });
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors de la fin du chantier" });
-    }
-  });
+    }));
 
   // Signaler un problème sur chantier
-  app.post("/api/projects/:id/issue", isAuthenticated, async (req, res) => {
-    try {
+  app.post("/api/projects/:id/issue", isAuthenticated, asyncHandler(async (req, res) => {
+    
       const { issue } = req.body;
       res.json({ 
         success: true, 
@@ -364,10 +332,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         issue,
         reportedAt: new Date()
       });
-    } catch (error) {
-      res.status(500).json({ error: "Erreur lors du signalement du problème" });
-    }
-  });
+    }));
 
   // Routes pour les aperçus et téléchargements
   app.get("/api/aos/:id/dpgf/preview", (req, res) => {
@@ -412,8 +377,8 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
 
   // Récupérer toutes les priorités avec enrichissement des données
-  app.get("/api/priorities", async (req, res) => {
-    try {
+  app.get("/api/priorities", asyncHandler(async (req, res) => {
+    
       const offers = await storage.getOffers();
       const projects = await storage.getProjects();
       
@@ -537,15 +502,11 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       ];
 
       res.json(priorities);
-    } catch (error) {
-      console.error('Erreur priorities:', error);
-      res.status(500).json({ error: "Erreur lors de la récupération des priorités" });
-    }
   });
 
   // Recalculer les priorités avec de nouveaux poids
-  app.post("/api/priorities/recalculate", async (req, res) => {
-    try {
+  app.post("/api/priorities/recalculate", asyncHandler(async (req, res) => {
+    
       const { 
         montantWeight, 
         delaiWeight, 
@@ -599,19 +560,19 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         recalculatedAt: new Date()
       });
     } catch (error) {
-      console.error('Erreur recalcul priorités:', error);
+      logger.error("Erreur recalcul priorités:", { metadata: { error: error instanceof Error ? error.message : String(error) } });
       res.status(500).json({ error: "Erreur lors du recalcul des priorités" });
     }
   });
 
   // Forcer la priorité manuellement
-  app.post("/api/priorities/:itemId/override", async (req, res) => {
-    try {
+  app.post("/api/priorities/:itemId/override", asyncHandler(async (req, res) => {
+    
       const { itemId } = req.params;
       const { priorityLevel, reason } = req.body;
       
       if (!['tres_faible', 'faible', 'normale', 'elevee', 'critique'].includes(priorityLevel)) {
-        return res.status(400).json({ error: "Niveau de priorité invalide" });
+        throw new ValidationError("Niveau de priorité invalide");
       }
       
       // Émettre événement de priorité forcée
@@ -644,14 +605,14 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         overrideAt: new Date()
       });
     } catch (error) {
-      console.error('Erreur override priorité:', error);
+      logger.error("Erreur override priorité:", { metadata: { error: error instanceof Error ? error.message : String(error) } });
       res.status(500).json({ error: "Erreur lors du forçage de priorité" });
     }
   });
 
   // Obtenir l'historique des priorités d'un élément
-  app.get("/api/priorities/:itemId/history", async (req, res) => {
-    try {
+  app.get("/api/priorities/:itemId/history", asyncHandler(async (req, res) => {
+    
       const { itemId } = req.params;
       
       // Simuler un historique de changements
@@ -683,15 +644,11 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       ];
       
       res.json(history);
-    } catch (error) {
-      console.error('Erreur historique priorité:', error);
-      res.status(500).json({ error: "Erreur lors de la récupération de l'historique" });
-    }
   });
 
   // Obtenir les alertes de priorité critique
-  app.get("/api/priorities/alerts", async (req, res) => {
-    try {
+  app.get("/api/priorities/alerts", asyncHandler(async (req, res) => {
+    
       // Simuler des alertes critiques
       const alerts = [
         {
@@ -721,15 +678,11 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       ];
       
       res.json(alerts);
-    } catch (error) {
-      console.error('Erreur alertes priorité:', error);
-      res.status(500).json({ error: "Erreur lors de la récupération des alertes" });
-    }
   });
 
   // Marquer une alerte comme vue/résolue
-  app.post("/api/priorities/alerts/:alertId/dismiss", async (req, res) => {
-    try {
+  app.post("/api/priorities/alerts/:alertId/dismiss", asyncHandler(async (req, res) => {
+    
       const { alertId } = req.params;
       
       // Émettre événement de mise à jour des alertes
@@ -756,14 +709,14 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         dismissedBy: "user"
       });
     } catch (error) {
-      console.error('Erreur dismiss alerte:', error);
+      logger.error("Erreur dismiss alerte:", { metadata: { error: error instanceof Error ? error.message : String(error) } });
       res.status(500).json({ error: "Erreur lors de la suppression de l'alerte" });
     }
   });
 
   // Obtenir les statistiques de priorité
-  app.get("/api/priorities/stats", async (req, res) => {
-    try {
+  app.get("/api/priorities/stats", asyncHandler(async (req, res) => {
+    
       const offers = await storage.getOffers();
       const projects = await storage.getProjects();
       
@@ -789,15 +742,11 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       };
       
       res.json(stats);
-    } catch (error) {
-      console.error('Erreur stats priorité:', error);
-      res.status(500).json({ error: "Erreur lors de la récupération des statistiques" });
-    }
   });
 
   // Configuration des règles de priorité
-  app.get("/api/priorities/config", async (req, res) => {
-    try {
+  app.get("/api/priorities/config", asyncHandler(async (req, res) => {
+    
       const config = {
         weights: {
           montantWeight: 25,
@@ -822,22 +771,18 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       };
       
       res.json(config);
-    } catch (error) {
-      console.error('Erreur config priorité:', error);
-      res.status(500).json({ error: "Erreur lors de la récupération de la configuration" });
-    }
   });
 
   // Sauvegarder la configuration des règles de priorité
-  app.post("/api/priorities/config", async (req, res) => {
-    try {
+  app.post("/api/priorities/config", asyncHandler(async (req, res) => {
+    
       const { weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels } = req.body;
       
       // Validation basique
       if (weights) {
         const totalWeight = Object.values(weights).reduce((sum: number, weight: any) => sum + weight, 0);
         if (Math.abs(totalWeight - 100) > 0.01) {
-          return res.status(400).json({ error: "La somme des poids doit être égale à 100%" });
+          throw new ValidationError("La somme des poids doit être égale à 100%");
         }
       }
       
@@ -868,7 +813,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         }
       });
     } catch (error) {
-      console.error('Erreur save config priorité:', error);
+      logger.error("Erreur save config priorité:", { metadata: { error: error instanceof Error ? error.message : String(error) } });
       res.status(500).json({ error: "Erreur lors de la sauvegarde de la configuration" });
     }
   });

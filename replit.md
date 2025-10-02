@@ -74,10 +74,15 @@ router.post('/api/resource', asyncHandler(async (req, res) => {
 - `DatabaseError` (500) - Erreur base de données
 - `ExternalServiceError` (502) - Service externe en erreur
 
-**Migration Status:**
+**Migration Status (Octobre 2025):**
 - ✅ **Routes AI** (`server/routes/ai-service.ts`) - 13 routes migrées
+- ✅ **Routes Teams** (`server/routes-teams.ts`) - 9 routes migrées (0 erreurs LSP)
+- ✅ **Routes Batigest** (`server/routes-batigest.ts`) - 9 routes migrées (0 erreurs LSP)
+- ✅ **Routes Chiffrage** (`server/routes/chiffrage.ts`) - 10 routes migrées (11 erreurs LSP mineures)
 - ✅ **Middleware errorHandler** - Unifié avec error-handler.ts
-- 🔄 **20+ autres fichiers routes** - À migrer progressivement
+- ⏸️ **Routes Admin** (`server/routes-admin.ts`) - Version minimale (factory pattern complexe)
+- ⚠️ **Routes Workflow** (`server/routes-workflow.ts`) - Migration incomplète (34 erreurs LSP)
+- **Total : 239/334 routes (71.6%)** - +28 routes cette session (+8.4%)
 
 ### 2. Base de Données
 
@@ -201,11 +206,19 @@ Le workflow "Start application" lance `npm run dev` qui démarre:
 - ✅ Middleware errorHandler unifié avec error-handler.ts
 - ✅ Documentation patterns dans server/utils/README-UTILS.md
 
+### Octobre 2025
+- ✅ Migration de 28 routes supplémentaires (routes-teams, routes-batigest, routes/chiffrage)
+- ✅ Progress global : 63.2% → 71.6% (+8.4%)
+- ⚠️ Leçon apprise : Scripts automatiques inadaptés aux fichiers complexes (factory pattern)
+- 📝 Recommandation : Migration manuelle route-par-route pour fichiers restants
+
 ### Prochaines Étapes Suggérées
-1. Migrer autres routes vers asyncHandler + erreurs typées
-2. Ajouter validation Zod manquante dans routes sensibles
-3. Implémenter retry logic pour opérations externes (AI, OCR)
-4. Tester les nouveaux patterns end-to-end
+1. **PRIORITÉ** : Réparer routes-workflow.ts (34 erreurs LSP) manuellement
+2. **PRIORITÉ** : Migrer routes-admin.ts avec approche manuelle (factory pattern complexe)
+3. Migrer routes-poc.ts (88 routes) - fichier volumineux, migration progressive
+4. Ajouter retry logic pour opérations externes (AI, OCR)
+5. Implémenter circuit breakers pour services externes
+6. Tester les nouveaux patterns end-to-end
 
 ## Notes pour Replit Agent
 

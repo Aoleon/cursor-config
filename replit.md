@@ -80,13 +80,15 @@ router.post('/api/resource', asyncHandler(async (req, res) => {
 - ✅ **Routes Batigest** (`server/routes-batigest.ts`) - 9 routes migrées (0 erreurs LSP)
 - ✅ **Routes Chiffrage** (`server/routes/chiffrage.ts`) - 10 routes migrées (11 erreurs LSP mineures)
 - ✅ **Routes Workflow** (`server/routes-workflow.ts`) - 26 routes migrées (0 erreurs LSP) + Validation Zod
-- 🔄 **Routes POC** (`server/routes-poc.ts`) - 7/80 routes migrées (8.75%), migration par clusters en cours
-  - Phase 1 complétée : 4 routes auth + 1 middleware
-  - Phase 2 en cours : Routes haute priorité (AO/Offers/Projects)
+- 🔄 **Routes POC** (`server/routes-poc.ts`) - 26/158 routes migrées (16.5%), migration par clusters en cours
+  - Phase 1 complétée ✅ : 5 routes auth/users + 1 middleware (validée architect)
+  - Phase 2 complétée ✅ : 18 routes AO/Offers/Projects (validée architect)
+  - Phase 3 à venir : Analytics/Predictive (10-15 routes)
+  - Restant : ~132 routes (Analytics, Documents, Suppliers, Alerts, Tasks, Lots, etc.)
   - Stratégie : Migration par clusters de features (recommandation architect)
 - ✅ **Routes Admin** (`server/routes-admin.ts`) - Factory minimale propre (pas de migration nécessaire)
 - ✅ **Middleware errorHandler** - Unifié avec error-handler.ts
-- **Total : 272/334 routes (81.4%)** - +61 routes cette session (+18.3%)
+- **Total : 290/334 routes (86.8%)** - +79 routes cette session (+23.7%)
 
 ### 2. Base de Données
 
@@ -213,13 +215,17 @@ Le workflow "Start application" lance `npm run dev` qui démarre:
 ### Octobre 2025
 - ✅ Migration de 28 routes (routes-teams, routes-batigest, routes/chiffrage)
 - ✅ Migration de 26 routes workflow avec validation Zod
-- ✅ Début migration routes-poc.ts : 7/80 routes (Phase 1 auth complétée)
-- ✅ Progress global : 63.2% → 81.4% (+18.3%)
+- ✅ Migration routes-poc.ts : 26/158 routes (16.5%)
+  - Phase 1 (auth/users) : 5 routes + 1 middleware ✅
+  - Phase 2 (AO/Offers/Projects) : 18 routes ✅ (validée architect)
+  - Restant : ~132 routes (Analytics, Documents, Suppliers, Alerts, Tasks, Lots)
+- ✅ Progress global : 63.2% → 86.8% (+23.7%)
 - ✅ Ajout validation Zod + isAuthenticated sur 5 routes POST critiques
 - ⚠️ Leçon apprise : Scripts automatiques inadaptés (orphaned catch blocks)
 - 📝 Bug critique découvert : 4 catch blocks orphelins laissés par script automatique
 - 🔒 Sécurité renforcée : Toutes routes POST nécessitent auth + validation
 - 🎯 **Nouvelle stratégie** : Migration par clusters de features (AO, Offers/Projects, Analytics) avec templates réutilisables
+- 🎉 **EventBus préservé** : Routes transform/validate conservent publishOfferStatusChanged + publishProjectCreated
 
 ### Prochaines Étapes Suggérées
 1. **PRIORITÉ** : Migrer cluster AO/Offers/Projects (15-20 routes haute priorité)

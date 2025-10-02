@@ -688,33 +688,37 @@ app.post("/api/aos",
   rateLimits.creation,
   validateBody(insertAoSchema),
   asyncHandler(async (req, res) => {
-    try {
-      // Préparer les données avec les champs calculés
-      let aoData: any = { ...req.body };
-      
-      // Si une date de sortie AO est fournie, calculer automatiquement la date limite de remise
-      if (aoData.dateSortieAO) {
-        const dateLimiteCalculee = calculerDateLimiteRemiseAuto(aoData.dateSortieAO, 30);
-        if (dateLimiteCalculee) {
-          aoData.dateLimiteRemise = dateLimiteCalculee;
-          
-          // Calculer la date de rendu AO (J-15)
-          const dateRenduCalculee = calculerDateRemiseJ15(dateLimiteCalculee);
-          if (dateRenduCalculee) {
-            aoData.dateRenduAO = dateRenduCalculee;
-          }
-          
-          console.log(`[AO Creation] Dates calculées automatiquement:
-            - Date sortie: ${aoData.dateSortieAO}
-            - Date limite remise: ${dateLimiteCalculee.toISOString()}
-            - Date rendu AO: ${dateRenduCalculee ? dateRenduCalculee.toISOString() : 'N/A'}`);
+    // Préparer les données avec les champs calculés
+    let aoData: any = { ...req.body };
+    
+    // Si une date de sortie AO est fournie, calculer automatiquement la date limite de remise
+    if (aoData.dateSortieAO) {
+      const dateLimiteCalculee = calculerDateLimiteRemiseAuto(aoData.dateSortieAO, 30);
+      if (dateLimiteCalculee) {
+        aoData.dateLimiteRemise = dateLimiteCalculee;
+        
+        // Calculer la date de rendu AO (J-15)
+        const dateRenduCalculee = calculerDateRemiseJ15(dateLimiteCalculee);
+        if (dateRenduCalculee) {
+          aoData.dateRenduAO = dateRenduCalculee;
         }
+        
+        logger.info('[AO] Dates calculées automatiquement', {
+          metadata: {
+            dateSortie: aoData.dateSortieAO,
+            dateLimiteRemise: dateLimiteCalculee.toISOString(),
+            dateRenduAO: dateRenduCalculee ? dateRenduCalculee.toISOString() : 'N/A'
+          }
+        });
       }
-      
+    }
+    
+    // Gestion spécifique des erreurs de contrainte d'unicité personnalisées
+    try {
       const ao = await storage.createAo(aoData);
+      logger.info('[AO] AO créé', { metadata: { aoId: ao.id, reference: ao.reference } });
       sendSuccess(res, ao, 201);
     } catch (error: any) {
-      // Gestion spécifique des erreurs de contrainte d'unicité personnalisées
       if (error.code === 'DUPLICATE_REFERENCE') {
         throw createError.conflict(error.message, {
           field: error.field,
@@ -729,7 +733,6 @@ app.post("/api/aos",
         });
       }
       
-      // Re-lancer l'erreur pour la gestion générique
       throw error;
     }
   })
@@ -940,143 +943,133 @@ app.get("/api/offers",
 );
 
 // Nouvelle route : Demandes fournisseurs (workflow ajusté)
-app.get("/api/offers/suppliers-pending", isAuthenticated, async (req, res) => {
-  try {
-    const offers = await storage.getOffers(undefined, "en_attente_fournisseurs");
-    
-    // Enrichir avec données de demandes fournisseurs
-    const enrichedOffers = offers.map(offer => ({
-      ...offer,
-      supplierRequestsCount: Math.floor(Math.random() * 5) + 1,
-      supplierResponsesReceived: Math.floor(Math.random() * 3),
-      averageDelay: Math.floor(Math.random() * 10) + 3,
-      readyForChiffrage: Math.random() > 0.3,
-      missingPrices: Math.random() > 0.7 ? ["Fenêtres PVC", "Volets"] : [],
-    }));
-    
-    res.json(enrichedOffers);
-  } catch (error: any) {
-    console.error("Error fetching offers pending suppliers:", error);
-    res.status(500).json({ message: "Failed to fetch offers pending suppliers" });
-  }
-});
+app.get("/api/offers/suppliers-pending", isAuthenticated, asyncHandler(async (req, res) => {
+  const offers = await storage.getOffers(undefined, "en_attente_fournisseurs");
+  
+  // Enrichir avec données de demandes fournisseurs
+  const enrichedOffers = offers.map(offer => ({
+    ...offer,
+    supplierRequestsCount: Math.floor(Math.random() * 5) + 1,
+    supplierResponsesReceived: Math.floor(Math.random() * 3),
+    averageDelay: Math.floor(Math.random() * 10) + 3,
+    readyForChiffrage: Math.random() > 0.3,
+    missingPrices: Math.random() > 0.7 ? ["Fenêtres PVC", "Volets"] : [],
+  }));
+  
+  logger.info('[Offers] Offres en attente fournisseurs récupérées', { 
+    metadata: { count: enrichedOffers.length }
+  });
+  
+  res.json(enrichedOffers);
+}));
 
 // Nouvelle route : Valider passage vers chiffrage
-app.post("/api/offers/:id/start-chiffrage", isAuthenticated, async (req, res) => {
-  try {
-    const offer = await storage.getOffer(req.params.id);
-    if (!offer) {
-      return res.status(404).json({ message: "Offer not found" });
-    }
-    
-    // Vérifier que l'offre est en attente de fournisseurs
-    if (offer.status !== "en_attente_fournisseurs") {
-      return res.status(400).json({ 
-        message: "L'offre doit être en attente de fournisseurs pour démarrer le chiffrage" 
-      });
-    }
-    
-    // Passer au statut chiffrage maintenant qu'on a les prix d'achat
-    const updatedOffer = await storage.updateOffer(req.params.id, {
-      status: "en_cours_chiffrage",
-      updatedAt: new Date()
-    });
-    
-    res.json({
-      success: true,
-      offer: updatedOffer,
-      message: "Chiffrage démarré avec les prix fournisseurs"
-    });
-  } catch (error: any) {
-    console.error("Error starting chiffrage:", error);
-    res.status(500).json({ message: "Failed to start chiffrage" });
+app.post("/api/offers/:id/start-chiffrage", isAuthenticated, asyncHandler(async (req, res) => {
+  const offer = await storage.getOffer(req.params.id);
+  if (!offer) {
+    throw new NotFoundError('Offre', req.params.id);
   }
-});
+  
+  // Vérifier que l'offre est en attente de fournisseurs
+  if (offer.status !== "en_attente_fournisseurs") {
+    throw new ValidationError("L'offre doit être en attente de fournisseurs pour démarrer le chiffrage");
+  }
+  
+  // Passer au statut chiffrage maintenant qu'on a les prix d'achat
+  const updatedOffer = await storage.updateOffer(req.params.id, {
+    status: "en_cours_chiffrage",
+    updatedAt: new Date()
+  });
+  
+  logger.info('[Offers] Chiffrage démarré', { 
+    metadata: { offerId: req.params.id }
+  });
+  
+  res.json({
+    success: true,
+    offer: updatedOffer,
+    message: "Chiffrage démarré avec les prix fournisseurs"
+  });
+}));
 
 // Nouvelle route : Valider étude technique vers demandes fournisseurs
-app.post("/api/offers/:id/request-suppliers", isAuthenticated, async (req, res) => {
-  try {
-    const offer = await storage.getOffer(req.params.id);
-    if (!offer) {
-      return res.status(404).json({ message: "Offer not found" });
-    }
-    
-    // Vérifier que l'offre est en étude technique
-    if (offer.status !== "etude_technique") {
-      return res.status(400).json({ 
-        message: "L'offre doit être en étude technique pour envoyer les demandes fournisseurs" 
-      });
-    }
-    
-    // Passer au statut en attente fournisseurs
-    const updatedOffer = await storage.updateOffer(req.params.id, {
-      status: "en_attente_fournisseurs",
-      updatedAt: new Date()
-    });
-    
-    res.json({
-      success: true,
-      offer: updatedOffer,
-      message: "Demandes fournisseurs envoyées"
-    });
-  } catch (error: any) {
-    console.error("Error requesting suppliers:", error);
-    res.status(500).json({ message: "Failed to request suppliers" });
+app.post("/api/offers/:id/request-suppliers", isAuthenticated, asyncHandler(async (req, res) => {
+  const offer = await storage.getOffer(req.params.id);
+  if (!offer) {
+    throw new NotFoundError('Offre', req.params.id);
   }
-});
+  
+  // Vérifier que l'offre est en étude technique
+  if (offer.status !== "etude_technique") {
+    throw new ValidationError("L'offre doit être en étude technique pour envoyer les demandes fournisseurs");
+  }
+  
+  // Passer au statut en attente fournisseurs
+  const updatedOffer = await storage.updateOffer(req.params.id, {
+    status: "en_attente_fournisseurs",
+    updatedAt: new Date()
+  });
+  
+  logger.info('[Offers] Demandes fournisseurs envoyées', { 
+    metadata: { offerId: req.params.id }
+  });
+  
+  res.json({
+    success: true,
+    offer: updatedOffer,
+    message: "Demandes fournisseurs envoyées"
+  });
+}));
 
 // Route pour valider la fin d'études d'une offre
-app.post("/api/offers/:id/validate-studies", isAuthenticated, async (req, res) => {
-  try {
-    const offer = await storage.getOffer(req.params.id);
-    if (!offer) {
-      return res.status(404).json({ message: "Offer not found" });
-    }
-    
-    // Vérifier que l'offre est dans un état valide pour validation d'études
-    if (offer.status !== "brouillon" && offer.status !== "etude_technique") {
-      return res.status(400).json({ 
-        message: "L'offre doit être en brouillon ou en étude technique pour valider les études" 
-      });
-    }
-    
-    // Mettre à jour le statut vers etude technique validée
-    const updatedOffer = await storage.updateOffer(req.params.id, {
-      status: "etude_technique",
-      updatedAt: new Date()
-    });
-    
-    res.json({
-      success: true,
-      offer: updatedOffer,
-      message: "Études techniques validées avec succès"
-    });
-  } catch (error: any) {
-    console.error("Error validating studies:", error);
-    res.status(500).json({ message: "Failed to validate studies" });
+app.post("/api/offers/:id/validate-studies", isAuthenticated, asyncHandler(async (req, res) => {
+  const offer = await storage.getOffer(req.params.id);
+  if (!offer) {
+    throw new NotFoundError('Offre', req.params.id);
   }
-});
+  
+  // Vérifier que l'offre est dans un état valide pour validation d'études
+  if (offer.status !== "brouillon" && offer.status !== "etude_technique") {
+    throw new ValidationError("L'offre doit être en brouillon ou en étude technique pour valider les études");
+  }
+  
+  // Mettre à jour le statut vers etude technique validée
+  const updatedOffer = await storage.updateOffer(req.params.id, {
+    status: "etude_technique",
+    updatedAt: new Date()
+  });
+  
+  logger.info('[Offers] Études techniques validées', { 
+    metadata: { offerId: req.params.id }
+  });
+  
+  res.json({
+    success: true,
+    offer: updatedOffer,
+    message: "Études techniques validées avec succès"
+  });
+}));
 
-app.get("/api/offers/:id", isAuthenticated, async (req, res) => {
-  try {
-    // D'abord essayer de trouver l'offre par son ID
-    let offer = await storage.getOffer(req.params.id);
-    
-    // Si pas trouvé, essayer de trouver une offre avec ce aoId (pour la compatibilité navigation AO->Offre)
-    if (!offer) {
-      const offers = await storage.getOffers();
-      offer = offers.find(o => o.aoId === req.params.id);
-    }
-    
-    if (!offer) {
-      return res.status(404).json({ message: "Offer not found" });
-    }
-    res.json(offer);
-  } catch (error) {
-    console.error("Error fetching offer:", error);
-    res.status(500).json({ message: "Failed to fetch offer" });
+app.get("/api/offers/:id", isAuthenticated, asyncHandler(async (req, res) => {
+  // D'abord essayer de trouver l'offre par son ID
+  let offer = await storage.getOffer(req.params.id);
+  
+  // Si pas trouvé, essayer de trouver une offre avec ce aoId (pour la compatibilité navigation AO->Offre)
+  if (!offer) {
+    const offers = await storage.getOffers();
+    offer = offers.find(o => o.aoId === req.params.id);
   }
-});
+  
+  if (!offer) {
+    throw new NotFoundError('Offre', req.params.id);
+  }
+  
+  logger.info('[Offers] Offre récupérée', { 
+    metadata: { offerId: req.params.id }
+  });
+  
+  res.json(offer);
+}));
 
 app.post("/api/offers", 
   isAuthenticated,
@@ -1109,9 +1102,8 @@ app.post("/api/offers",
 );
 
 // Endpoint enrichi pour créer offre avec arborescence documentaire (audit JLM)
-app.post("/api/offers/create-with-structure", isAuthenticated, async (req, res) => {
-  try {
-    const { uploadedFiles, creationMethod, ...offerData } = req.body;
+app.post("/api/offers/create-with-structure", isAuthenticated, asyncHandler(async (req, res) => {
+  const { uploadedFiles, creationMethod, ...offerData } = req.body;
     
     // Convertir les dates et données comme l'endpoint existant
     const processedData = {
@@ -1164,23 +1156,16 @@ app.post("/api/offers/create-with-structure", isAuthenticated, async (req, res) 
       }
     };
     
+    logger.info('[Offers] Offre créée avec structure documentaire', { 
+      metadata: { offerId: offer.id, phase: documentStructure.phase }
+    });
+    
     res.status(201).json({ 
       ...offer, 
       documentStructure,
       message: "Offre créée avec arborescence documentaire JLM - Formulaire unique évolutif activé"
     });
-  } catch (error: any) {
-    console.error("Error creating offer with structure:", error);
-    if (error.name === 'ZodError') {
-      res.status(400).json({ 
-        message: "Validation error", 
-        errors: error.errors 
-      });
-    } else {
-      res.status(500).json({ message: "Failed to create offer with document structure" });
-    }
-  }
-});
+  }));
 
 app.patch("/api/offers/:id", 
   isAuthenticated,
@@ -1197,289 +1182,283 @@ app.patch("/api/offers/:id",
 );
 
 // Transformer une offre signée en projet
-app.post("/api/offers/:id/convert-to-project", isAuthenticated, async (req, res) => {
-  try {
-    const offer = await storage.getOffer(req.params.id);
-    if (!offer) {
-      return res.status(404).json({ message: "Offer not found" });
-    }
+app.post("/api/offers/:id/convert-to-project", isAuthenticated, asyncHandler(async (req, res) => {
+  const offer = await storage.getOffer(req.params.id);
+  if (!offer) {
+    throw new NotFoundError('Offre', req.params.id);
+  }
 
-    if (offer.status !== "signe") {
-      return res.status(400).json({ message: "Only signed offers can be converted to projects" });
-    }
+  if (offer.status !== "signe") {
+    throw new ValidationError("Seules les offres signées peuvent être converties en projets");
+  }
 
-    // Créer le projet basé sur l'offre
-    const projectData = {
-      offerId: offer.id,
-      name: `Projet ${offer.client} - ${offer.location}`,
-      client: offer.client,
-      location: offer.location,
-      status: "etude" as const,
-      budget: offer.montantFinal || offer.montantEstime,
-      responsibleUserId: offer.responsibleUserId,
+  // Créer le projet basé sur l'offre
+  const projectData = {
+    offerId: offer.id,
+    name: `Projet ${offer.client} - ${offer.location}`,
+    client: offer.client,
+    location: offer.location,
+    status: "etude" as const,
+    budget: offer.montantFinal || offer.montantEstime,
+    responsibleUserId: offer.responsibleUserId,
+    startDate: new Date(),
+    endDate: null,
+    description: `Projet créé automatiquement à partir de l'offre ${offer.reference}`,
+  };
+
+  const project = await storage.createProject(projectData);
+
+  // Mettre à jour le statut de l'offre
+  await storage.updateOffer(offer.id, { status: "transforme_en_projet" });
+
+  // Créer les tâches de base du projet (5 étapes)
+  const baseTasks = [
+    {
+      projectId: project.id,
+      name: "Phase d'Étude",
+      description: "Finalisation des études techniques",
+      status: "en_cours" as const,
+      priority: "haute" as const,
       startDate: new Date(),
-      endDate: null,
-      description: `Projet créé automatiquement à partir de l'offre ${offer.reference}`,
-    };
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 jours
+      assignedUserId: offer.responsibleUserId,
+    },
+    {
+      projectId: project.id,
+      name: "Planification",
+      description: "Planification des ressources et du planning",
+      status: "a_faire" as const,
+      priority: "moyenne" as const,
+      startDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // +8 jours
+      endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // +14 jours
+    },
+    {
+      projectId: project.id,
+      name: "Approvisionnement",
+      description: "Commande et réception des matériaux",
+      status: "a_faire" as const,
+      priority: "moyenne" as const,
+      startDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // +15 jours
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 jours
+    },
+    {
+      projectId: project.id,
+      name: "Chantier",
+      description: "Pose et installation sur site",
+      status: "a_faire" as const,
+      priority: "haute" as const,
+      startDate: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000), // +31 jours
+      endDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000), // +45 jours
+    },
+    {
+      projectId: project.id,
+      name: "SAV et Finalisation",
+      description: "Service après-vente et finalisation",
+      status: "a_faire" as const,
+      priority: "faible" as const,
+      startDate: new Date(Date.now() + 46 * 24 * 60 * 60 * 1000), // +46 jours
+      endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // +60 jours
+    },
+  ];
 
-    const project = await storage.createProject(projectData);
-
-    // Mettre à jour le statut de l'offre
-    await storage.updateOffer(offer.id, { status: "transforme_en_projet" });
-
-    // Créer les tâches de base du projet (5 étapes)
-    const baseTasks = [
-      {
-        projectId: project.id,
-        name: "Phase d'Étude",
-        description: "Finalisation des études techniques",
-        status: "en_cours" as const,
-        priority: "haute" as const,
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 jours
-        assignedUserId: offer.responsibleUserId,
-      },
-      {
-        projectId: project.id,
-        name: "Planification",
-        description: "Planification des ressources et du planning",
-        status: "a_faire" as const,
-        priority: "moyenne" as const,
-        startDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // +8 jours
-        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // +14 jours
-      },
-      {
-        projectId: project.id,
-        name: "Approvisionnement",
-        description: "Commande et réception des matériaux",
-        status: "a_faire" as const,
-        priority: "moyenne" as const,
-        startDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // +15 jours
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 jours
-      },
-      {
-        projectId: project.id,
-        name: "Chantier",
-        description: "Pose et installation sur site",
-        status: "a_faire" as const,
-        priority: "haute" as const,
-        startDate: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000), // +31 jours
-        endDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000), // +45 jours
-      },
-      {
-        projectId: project.id,
-        name: "SAV et Finalisation",
-        description: "Service après-vente et finalisation",
-        status: "a_faire" as const,
-        priority: "faible" as const,
-        startDate: new Date(Date.now() + 46 * 24 * 60 * 60 * 1000), // +46 jours
-        endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // +60 jours
-      },
-    ];
-
-    // Créer toutes les tâches
-    for (const taskData of baseTasks) {
-      await storage.createProjectTask(taskData);
-    }
-
-    res.status(201).json({ 
-      project, 
-      message: "Offer successfully converted to project with base tasks created" 
-    });
-  } catch (error) {
-    console.error("Error converting offer to project:", error);
-    res.status(500).json({ message: "Failed to convert offer to project" });
+  // Créer toutes les tâches
+  for (const taskData of baseTasks) {
+    await storage.createProjectTask(taskData);
   }
-});
 
-app.delete("/api/offers/:id", isAuthenticated, async (req, res) => {
-  try {
-    await storage.deleteOffer(req.params.id);
-    res.status(204).send();
-  } catch (error) {
-    console.error("Error deleting offer:", error);
-    res.status(500).json({ message: "Failed to delete offer" });
-  }
-});
+  logger.info('[Offers] Offre convertie en projet avec tâches', { 
+    metadata: { offerId: offer.id, projectId: project.id, tasksCount: baseTasks.length }
+  });
 
-// Validation jalon Fin d'études (spécifique POC)
-app.patch("/api/offers/:id/validate-studies", isAuthenticated, async (req, res) => {
-  try {
-    const { finEtudesValidatedAt, status } = req.body;
-    
-    // Trouver l'offre par son ID ou par aoId (même logique que GET /api/offers/:id)
-    let offer = await storage.getOffer(req.params.id);
-    if (!offer) {
-      const offers = await storage.getOffers();
-      offer = offers.find(o => o.aoId === req.params.id);
-    }
-    
-    if (!offer) {
-      return res.status(404).json({ message: "Offer not found" });
-    }
-    
-    // Mettre à jour l'offre avec son vrai ID
-    const prevStatus = offer.status;
-    const newStatus = status || 'fin_etudes_validee';
-    
-    const updatedOffer = await storage.updateOffer(offer.id, {
-      finEtudesValidatedAt: finEtudesValidatedAt ? new Date(finEtudesValidatedAt) : new Date(),
-      finEtudesValidatedBy: 'user-be-1', // TODO: Use real auth when available
-      status: newStatus
-    });
-    
-    // Emit validation event
-    const eventBus = app.get('eventBus') as EventBus;
-    eventBus.publishOfferValidated({
-      offerId: updatedOffer.id,
-      reference: updatedOffer.reference,
-      userId: 'user-be-1', // TODO: Use real auth
-      validationType: 'fin_etudes'
-    });
-    
-    res.json(updatedOffer);
-  } catch (error) {
-    console.error("Error validating studies:", error);
-    res.status(500).json({ message: "Failed to validate studies" });
+  res.status(201).json({ 
+    project, 
+    message: "Offer successfully converted to project with base tasks created" 
+  });
+}));
+
+app.delete("/api/offers/:id", isAuthenticated, asyncHandler(async (req, res) => {
+  await storage.deleteOffer(req.params.id);
+  logger.info('[Offers] Offre supprimée', { 
+    metadata: { offerId: req.params.id }
+  });
+  res.status(204).send();
+}));
+
+// Validation jalon Fin d'études (spécifique POC) - Version complète avec eventBus
+app.patch("/api/offers/:id/validate-studies", isAuthenticated, asyncHandler(async (req, res) => {
+  const { finEtudesValidatedAt, status } = req.body;
+  
+  // Trouver l'offre par son ID ou par aoId (même logique que GET /api/offers/:id)
+  let offer = await storage.getOffer(req.params.id);
+  if (!offer) {
+    const offers = await storage.getOffers();
+    offer = offers.find(o => o.aoId === req.params.id);
   }
-});
+  
+  if (!offer) {
+    throw new NotFoundError('Offre', req.params.id);
+  }
+  
+  // Mettre à jour l'offre avec son vrai ID
+  const newStatus = status || 'fin_etudes_validee';
+  
+  const updatedOffer = await storage.updateOffer(offer.id, {
+    finEtudesValidatedAt: finEtudesValidatedAt ? new Date(finEtudesValidatedAt) : new Date(),
+    finEtudesValidatedBy: 'user-be-1', // TODO: Use real auth when available
+    status: newStatus
+  });
+  
+  // Emit validation event
+  const eventBus = app.get('eventBus') as EventBus;
+  eventBus.publishOfferValidated({
+    offerId: updatedOffer.id,
+    reference: updatedOffer.reference,
+    userId: 'user-be-1', // TODO: Use real auth
+    validationType: 'fin_etudes'
+  });
+  
+  logger.info('[Offers] Études validées avec eventBus', { 
+    metadata: { offerId: updatedOffer.id, status: newStatus }
+  });
+  
+  res.json(updatedOffer);
+}));
 
 // Transformation AO → Projet (principe formulaire unique évolutif)
-app.post("/api/offers/:id/transform-to-project", isAuthenticated, async (req, res) => {
-  try {
-    const offerId = req.params.id;
-    const offer = await storage.getOffer(offerId);
-    
-    if (!offer) {
-      return res.status(404).json({ message: "Offer not found" });
-    }
-
-    if (!offer.finEtudesValidatedAt) {
-      return res.status(400).json({ message: "Studies must be validated before transformation" });
-    }
-
-    if (offer.status === "transforme_en_projet") {
-      return res.status(400).json({ message: "Offer already transformed to project" });
-    }
-
-    // Créer le projet avec les données de l'offre (principe formulaire unique évolutif)
-    const projectData = {
-      offerId: offer.id,
-      name: `Projet ${offer.reference}`,
-      client: offer.client,
-      location: offer.location,
-      description: offer.intituleOperation || `Projet issu de l'offre ${offer.reference} - ${offer.client}`,
-      status: "etude" as const,
-      startDate: new Date(),
-      estimatedEndDate: offer.deadline 
-        ? new Date(offer.deadline.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 jours après deadline
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours par défaut
-      responsibleUserId: offer.responsibleUserId,
-      chefTravaux: offer.responsibleUserId, // Responsable devient chef de travaux par défaut
-      progressPercentage: 0
-    };
-
-    const project = await storage.createProject(projectData);
-
-    // Créer les tâches de base pour les 5 étapes POC
-    const baseTasks = [
-      {
-        projectId: project.id,
-        name: "Étude technique",
-        description: "Validation technique du projet",
-        status: "en_cours" as const,
-        assignedUserId: offer.responsibleUserId,
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
-        estimatedHours: "40.00",
-        position: 1,
-        isJalon: true
-      },
-      {
-        projectId: project.id,
-        name: "Planification",
-        description: "Élaboration du planning détaillé",
-        status: "a_faire" as const,
-        assignedUserId: offer.responsibleUserId,
-        startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        estimatedHours: "16.00",
-        position: 2,
-        isJalon: true
-      },
-      {
-        projectId: project.id,
-        name: "Approvisionnement",
-        description: "Commandes et livraisons",
-        status: "a_faire" as const,
-        startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
-        estimatedHours: "8.00",
-        position: 3,
-        isJalon: false
-      },
-      {
-        projectId: project.id,
-        name: "Chantier",
-        description: "Réalisation des travaux",
-        status: "a_faire" as const,
-        startDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
-        endDate: projectData.estimatedEndDate,
-        estimatedHours: offer.montantEstime ? (parseFloat(offer.montantEstime) / 50).toFixed(2) : "80.00", // Estimation heures basée sur montant/taux horaire
-        position: 4,
-        isJalon: true
-      },
-      {
-        projectId: project.id,
-        name: "SAV / Réception",
-        description: "Réception et service après-vente",
-        status: "a_faire" as const,
-        startDate: projectData.estimatedEndDate,
-        endDate: new Date(projectData.estimatedEndDate.getTime() + 7 * 24 * 60 * 60 * 1000),
-        estimatedHours: "8.00",
-        position: 5,
-        isJalon: true
-      }
-    ];
-
-    // Créer toutes les tâches
-    for (const taskData of baseTasks) {
-      await storage.createProjectTask(taskData);
-    }
-
-    // Mettre à jour le statut de l'offre
-    const transformedOffer = await storage.updateOffer(offerId, {
-      status: "transforme_en_projet"
-    });
-
-    // Emit offer transformation event
-    const eventBus = app.get('eventBus') as EventBus;
-    eventBus.publishOfferStatusChanged({
-      offerId: offerId,
-      reference: offer.reference,
-      prevStatus: 'fin_etudes_validee',
-      newStatus: 'transforme_en_projet',
-      userId: 'user-be-1', // TODO: Use real auth
-      projectId: project.id
-    });
-
-    // Emit project creation event  
-    eventBus.publishProjectCreated({
-      projectId: project.id,
-      name: project.name,
-      offerId: offerId,
-      userId: 'user-be-1' // TODO: Use real auth
-    });
-
-    res.status(201).json({ 
-      projectId: project.id,
-      message: "Offer successfully transformed to project with base tasks created" 
-    });
-  } catch (error) {
-    console.error("Error transforming offer to project:", error);
-    res.status(500).json({ message: "Failed to transform offer to project" });
+app.post("/api/offers/:id/transform-to-project", isAuthenticated, asyncHandler(async (req, res) => {
+  const offerId = req.params.id;
+  const offer = await storage.getOffer(offerId);
+  
+  if (!offer) {
+    throw new NotFoundError('Offre', offerId);
   }
-});
+
+  if (!offer.finEtudesValidatedAt) {
+    throw new ValidationError("Les études doivent être validées avant la transformation");
+  }
+
+  if (offer.status === "transforme_en_projet") {
+    throw new ValidationError("L'offre a déjà été transformée en projet");
+  }
+
+  // Créer le projet avec les données de l'offre (principe formulaire unique évolutif)
+  const projectData = {
+    offerId: offer.id,
+    name: `Projet ${offer.reference}`,
+    client: offer.client,
+    location: offer.location,
+    description: offer.intituleOperation || `Projet issu de l'offre ${offer.reference} - ${offer.client}`,
+    status: "etude" as const,
+    startDate: new Date(),
+    estimatedEndDate: offer.deadline 
+      ? new Date(offer.deadline.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 jours après deadline
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours par défaut
+    responsibleUserId: offer.responsibleUserId,
+    chefTravaux: offer.responsibleUserId, // Responsable devient chef de travaux par défaut
+    progressPercentage: 0
+  };
+
+  const project = await storage.createProject(projectData);
+
+  // Créer les tâches de base pour les 5 étapes POC
+  const baseTasks = [
+    {
+      projectId: project.id,
+      name: "Étude technique",
+      description: "Validation technique du projet",
+      status: "en_cours" as const,
+      assignedUserId: offer.responsibleUserId,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
+      estimatedHours: "40.00",
+      position: 1,
+      isJalon: true
+    },
+    {
+      projectId: project.id,
+      name: "Planification",
+      description: "Élaboration du planning détaillé",
+      status: "a_faire" as const,
+      assignedUserId: offer.responsibleUserId,
+      startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      estimatedHours: "16.00",
+      position: 2,
+      isJalon: true
+    },
+    {
+      projectId: project.id,
+      name: "Approvisionnement",
+      description: "Commandes et livraisons",
+      status: "a_faire" as const,
+      startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      endDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+      estimatedHours: "8.00",
+      position: 3,
+      isJalon: false
+    },
+    {
+      projectId: project.id,
+      name: "Chantier",
+      description: "Réalisation des travaux",
+      status: "a_faire" as const,
+      startDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+      endDate: projectData.estimatedEndDate,
+      estimatedHours: offer.montantEstime ? (parseFloat(offer.montantEstime) / 50).toFixed(2) : "80.00", // Estimation heures basée sur montant/taux horaire
+      position: 4,
+      isJalon: true
+    },
+    {
+      projectId: project.id,
+      name: "SAV / Réception",
+      description: "Réception et service après-vente",
+      status: "a_faire" as const,
+      startDate: projectData.estimatedEndDate,
+      endDate: new Date(projectData.estimatedEndDate.getTime() + 7 * 24 * 60 * 60 * 1000),
+      estimatedHours: "8.00",
+      position: 5,
+      isJalon: true
+    }
+  ];
+
+  // Créer toutes les tâches
+  for (const taskData of baseTasks) {
+    await storage.createProjectTask(taskData);
+  }
+
+  // Mettre à jour le statut de l'offre
+  await storage.updateOffer(offerId, {
+    status: "transforme_en_projet"
+  });
+
+  // Emit offer transformation event
+  const eventBus = app.get('eventBus') as EventBus;
+  eventBus.publishOfferStatusChanged({
+    offerId: offerId,
+    reference: offer.reference,
+    prevStatus: 'fin_etudes_validee',
+    newStatus: 'transforme_en_projet',
+    userId: 'user-be-1', // TODO: Use real auth
+    projectId: project.id
+  });
+
+  // Emit project creation event  
+  eventBus.publishProjectCreated({
+    projectId: project.id,
+    name: project.name,
+    offerId: offerId,
+    userId: 'user-be-1' // TODO: Use real auth
+  });
+
+  logger.info('[Offers] Offre transformée en projet avec tâches + eventBus', { 
+    metadata: { offerId, projectId: project.id, tasksCount: baseTasks.length }
+  });
+
+  res.status(201).json({ 
+    projectId: project.id,
+    message: "Offer successfully transformed to project with base tasks created" 
+  });
+}));
 
 // ========================================
 // HELPER FUNCTIONS - Date conversion

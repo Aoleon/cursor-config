@@ -45,7 +45,7 @@ export function registerBatigestRoutes(app: Express) {
   app.post("/api/batigest/sync-offer", isAuthenticated, asyncHandler(async (req, res) => {
     const validationResult = syncOfferSchema.safeParse(req.body);
     if (!validationResult.success) {
-      throw new ValidationError("Données de synchronisation invalides", validationResult.error.issues);
+      throw new ValidationError("Données de synchronisation invalides");
     }
 
     const { offerId, batigestRef } = validationResult.data;
@@ -249,7 +249,7 @@ export function registerBatigestRoutes(app: Express) {
   app.post("/api/batigest/generate-analytics", isAuthenticated, asyncHandler(async (req, res) => {
     const validationResult = analyticsRequestSchema.safeParse(req.body);
     if (!validationResult.success) {
-      throw new ValidationError("Paramètres d'analytics invalides", validationResult.error.issues);
+      throw new ValidationError("Paramètres d'analytics invalides");
     }
 
     const { startDate, endDate, periode } = validationResult.data;

@@ -34,15 +34,14 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { offerId } = req.params;
     
     logger.info('[Chiffrage] Récupération éléments chiffrage', { 
-      offerId,
-      userId: (req.user as any)?.id 
+      userId: (req.user as any)?.id,
+      metadata: { offerId }
     });
     
     const elements = await storage.getChiffrageElementsByOffer(offerId);
     
     logger.info('[Chiffrage] Éléments récupérés', { 
-      offerId,
-      count: elements.length 
+      metadata: { offerId, count: elements.length }
     });
     
     res.json(elements);
@@ -53,8 +52,8 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { offerId } = req.params;
     
     logger.info('[Chiffrage] Création élément chiffrage', { 
-      offerId,
-      userId: (req.user as any)?.id 
+      userId: (req.user as any)?.id,
+      metadata: { offerId }
     });
     
     // Validation des données
@@ -64,14 +63,13 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     });
 
     if (!validationResult.success) {
-      throw new ValidationError("Données d'élément de chiffrage invalides", validationResult.error.issues);
+      throw new ValidationError("Données d'élément de chiffrage invalides");
     }
 
     const element = await storage.createChiffrageElement(validationResult.data);
     
     logger.info('[Chiffrage] Élément créé', { 
-      offerId,
-      elementId: element.id 
+      metadata: { offerId, elementId: element.id }
     });
     
     res.status(201).json(element);
@@ -82,23 +80,21 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { offerId, elementId } = req.params;
     
     logger.info('[Chiffrage] Modification élément chiffrage', { 
-      offerId,
-      elementId,
-      userId: (req.user as any)?.id 
+      userId: (req.user as any)?.id,
+      metadata: { offerId, elementId }
     });
     
     // Validation des données (sans offerId car déjà défini)
     const validationResult = insertChiffrageElementSchema.partial().safeParse(req.body);
 
     if (!validationResult.success) {
-      throw new ValidationError("Données de modification invalides", validationResult.error.issues);
+      throw new ValidationError("Données de modification invalides");
     }
 
     const element = await storage.updateChiffrageElement(elementId, validationResult.data);
     
     logger.info('[Chiffrage] Élément modifié', { 
-      offerId,
-      elementId 
+      metadata: { offerId, elementId }
     });
     
     res.json(element);
@@ -109,16 +105,14 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { offerId, elementId } = req.params;
     
     logger.info('[Chiffrage] Suppression élément chiffrage', { 
-      offerId,
-      elementId,
-      userId: (req.user as any)?.id 
+      userId: (req.user as any)?.id,
+      metadata: { offerId, elementId }
     });
     
     await storage.deleteChiffrageElement(elementId);
     
     logger.info('[Chiffrage] Élément supprimé', { 
-      offerId,
-      elementId 
+      metadata: { offerId, elementId }
     });
     
     res.status(204).send();
@@ -153,7 +147,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     // Validation des paramètres avec Zod
     const validationResult = dpgfParamsSchema.safeParse(req.body);
     if (!validationResult.success) {
-      throw new ValidationError("Paramètres DPGF invalides", validationResult.error.issues);
+      throw new ValidationError("Paramètres DPGF invalides");
     }
 
     const { includeOptional, tvaPercentage } = validationResult.data;
@@ -195,7 +189,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const serializedData = DpgfComputeService.serializeForStorage(dpgfData);
 
     // Génération du PDF
-    logger.info('[Chiffrage] Génération PDF DPGF', { offerId });
+    logger.info('[Chiffrage] Génération PDF DPGF', { metadata: { offerId } });
     const pdfResult = await PdfGeneratorService.generateDpgfPdf(dpgfData);
     
     // Vérifier s'il existe déjà un DPGF pour cette offre
@@ -253,7 +247,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     // Validation des paramètres query avec Zod
     const validationResult = dpgfQuerySchema.safeParse(req.query);
     if (!validationResult.success) {
-      throw new ValidationError("Paramètres de prévisualisation invalides", validationResult.error.issues);
+      throw new ValidationError("Paramètres de prévisualisation invalides");
     }
 
     const { includeOptional, tvaPercentage } = validationResult.data;
@@ -291,7 +285,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     // Générer le HTML de prévisualisation
     const htmlPreview = await PdfGeneratorService.generateDpgfPreview(dpgfData);
 
-    logger.info('[Chiffrage] Prévisualisation générée', { offerId });
+    logger.info('[Chiffrage] Prévisualisation générée', { metadata: { offerId } });
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(htmlPreview);
@@ -304,7 +298,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     // Validation des paramètres query avec Zod
     const validationResult = dpgfQuerySchema.safeParse(req.query);
     if (!validationResult.success) {
-      throw new ValidationError("Paramètres de téléchargement invalides", validationResult.error.issues);
+      throw new ValidationError("Paramètres de téléchargement invalides");
     }
 
     const { includeOptional, tvaPercentage } = validationResult.data;

@@ -138,7 +138,7 @@ export function registerTeamsRoutes(app: Express) {
     const validationResult = insertTeamSchema.safeParse(req.body);
     
     if (!validationResult.success) {
-      throw new ValidationError("Données d'équipe invalides", validationResult.error.issues);
+      throw new ValidationError("Données d'équipe invalides");
     }
 
     const teamData = validationResult.data;
@@ -194,7 +194,7 @@ export function registerTeamsRoutes(app: Express) {
     const validationResult = insertTeamSchema.partial().safeParse(req.body);
     
     if (!validationResult.success) {
-      throw new ValidationError("Données de modification invalides", validationResult.error.issues);
+      throw new ValidationError("Données de modification invalides");
     }
 
     const teamData = validationResult.data;
@@ -255,7 +255,7 @@ export function registerTeamsRoutes(app: Express) {
       },
     });
 
-    logger.info('[Teams] Équipe modifiée avec succès', { teamId });
+    logger.info('[Teams] Équipe modifiée avec succès', { metadata: { teamId } });
 
     res.json(team);
   }));
@@ -329,7 +329,7 @@ export function registerTeamsRoutes(app: Express) {
     });
     
     if (!validationResult.success) {
-      throw new ValidationError("Données de membre invalides", validationResult.error.issues);
+      throw new ValidationError("Données de membre invalides");
     }
 
     const memberData = validationResult.data;
@@ -424,7 +424,7 @@ export function registerTeamsRoutes(app: Express) {
     const validationResult = insertTeamMemberSchema.partial().safeParse(req.body);
     
     if (!validationResult.success) {
-      throw new ValidationError("Données de modification invalides", validationResult.error.issues);
+      throw new ValidationError("Données de modification invalides");
     }
 
     const memberData = validationResult.data;
@@ -471,7 +471,7 @@ export function registerTeamsRoutes(app: Express) {
       },
     });
 
-    logger.info('[Teams] Membre modifié avec succès', { teamId, memberId });
+    logger.info('[Teams] Membre modifié avec succès', { metadata: { teamId }, memberId });
 
     res.json(member);
   }));
@@ -509,7 +509,7 @@ export function registerTeamsRoutes(app: Express) {
       })
       .where(eq(teamMembers.id, memberId));
 
-    logger.info('[Teams] Membre retiré avec succès', { teamId, memberId });
+    logger.info('[Teams] Membre retiré avec succès', { metadata: { teamId }, memberId });
 
     res.json({ message: "Membre retiré de l'équipe avec succès" });
   }));

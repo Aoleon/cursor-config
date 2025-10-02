@@ -608,15 +608,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 // USER ROUTES - Gestion utilisateurs POC
 // ========================================
 
-app.get("/api/users", isAuthenticated, async (req, res) => {
-  try {
-    const users = await storage.getUsers();
-    res.json(users);
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ message: "Failed to fetch users" });
-  }
-});
+app.get("/api/users", isAuthenticated, asyncHandler(async (req, res) => {
+  const users = await storage.getUsers();
+  logger.info('[Users] Liste utilisateurs récupérée', { 
+    metadata: { count: users.length }
+  });
+  res.json(users);
+}));
 
 app.get("/api/users/:id", 
   isAuthenticated, 
@@ -648,33 +646,30 @@ app.get("/api/aos",
 // ========================================
 // CORRECTIF CRITIQUE : Placer AVANT l'endpoint générique /api/aos/:id
 // pour éviter que "etude" soit interprété comme un UUID
-app.get("/api/aos/etude", isAuthenticated, async (req, res) => {
-  try {
-    const aos = await storage.getAos();
-    // Filtrer les AOs en étude technique
-    const aosEtude = aos.filter((ao: any) => 
-      ao.status === 'etude' || ao.status === 'en_cours_chiffrage'
-    );
-    
-    // Enrichir avec métadonnées d'étude technique
-    const enrichedAos = aosEtude.map((ao: any) => ({
-      ...ao,
-      cctpAnalyzed: Math.random() > 0.3,
-      technicalDetailsComplete: Math.random() > 0.4,
-      plansAnalyzed: Math.random() > 0.5,
-      lotsValidated: Math.random() > 0.3,
-      daysInStudy: Math.floor(Math.random() * 10),
-      priority: Math.random() > 0.7 ? 'urgent' : 'normal'
-    }));
-    
-    res.json(enrichedAos);
-  } catch (error) {
-    console.error("Erreur /api/aos/etude:", error);
-    res.status(500).json({ 
-      error: "Erreur lors de la récupération des AOs en étude" 
-    });
-  }
-});
+app.get("/api/aos/etude", isAuthenticated, asyncHandler(async (req, res) => {
+  const aos = await storage.getAos();
+  // Filtrer les AOs en étude technique
+  const aosEtude = aos.filter((ao: any) => 
+    ao.status === 'etude' || ao.status === 'en_cours_chiffrage'
+  );
+  
+  // Enrichir avec métadonnées d'étude technique
+  const enrichedAos = aosEtude.map((ao: any) => ({
+    ...ao,
+    cctpAnalyzed: Math.random() > 0.3,
+    technicalDetailsComplete: Math.random() > 0.4,
+    plansAnalyzed: Math.random() > 0.5,
+    lotsValidated: Math.random() > 0.3,
+    daysInStudy: Math.floor(Math.random() * 10),
+    priority: Math.random() > 0.7 ? 'urgent' : 'normal'
+  }));
+  
+  logger.info('[AO] AOs en étude récupérés', { 
+    metadata: { count: enrichedAos.length }
+  });
+  
+  res.json(enrichedAos);
+}));
 
 app.get("/api/aos/:id", 
   isAuthenticated,
@@ -1579,18 +1574,16 @@ app.get("/api/projects",
   })
 );
 
-app.get("/api/projects/:id", isAuthenticated, async (req, res) => {
-  try {
-    const project = await storage.getProject(req.params.id);
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
-    res.json(project);
-  } catch (error) {
-    console.error("Error fetching project:", error);
-    res.status(500).json({ message: "Failed to fetch project" });
+app.get("/api/projects/:id", isAuthenticated, asyncHandler(async (req, res) => {
+  const project = await storage.getProject(req.params.id);
+  if (!project) {
+    throw new NotFoundError('Projet', req.params.id);
   }
-});
+  logger.info('[Projects] Projet récupéré', { 
+    metadata: { projectId: req.params.id }
+  });
+  res.json(project);
+}));
 
 app.post("/api/projects", isAuthenticated, async (req, res) => {
   try {

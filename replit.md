@@ -80,9 +80,13 @@ router.post('/api/resource', asyncHandler(async (req, res) => {
 - ✅ **Routes Batigest** (`server/routes-batigest.ts`) - 9 routes migrées (0 erreurs LSP)
 - ✅ **Routes Chiffrage** (`server/routes/chiffrage.ts`) - 10 routes migrées (11 erreurs LSP mineures)
 - ✅ **Routes Workflow** (`server/routes-workflow.ts`) - 26 routes migrées (0 erreurs LSP) + Validation Zod
+- 🔄 **Routes POC** (`server/routes-poc.ts`) - 7/80 routes migrées (8.75%), migration par clusters en cours
+  - Phase 1 complétée : 4 routes auth + 1 middleware
+  - Phase 2 en cours : Routes haute priorité (AO/Offers/Projects)
+  - Stratégie : Migration par clusters de features (recommandation architect)
+- ✅ **Routes Admin** (`server/routes-admin.ts`) - Factory minimale propre (pas de migration nécessaire)
 - ✅ **Middleware errorHandler** - Unifié avec error-handler.ts
-- ⏸️ **Routes Admin** (`server/routes-admin.ts`) - Version minimale (factory pattern complexe)
-- **Total : 265/334 routes (79.3%)** - +54 routes cette session (+16.2%)
+- **Total : 272/334 routes (81.4%)** - +61 routes cette session (+18.3%)
 
 ### 2. Base de Données
 
@@ -209,18 +213,21 @@ Le workflow "Start application" lance `npm run dev` qui démarre:
 ### Octobre 2025
 - ✅ Migration de 28 routes (routes-teams, routes-batigest, routes/chiffrage)
 - ✅ Migration de 26 routes workflow avec validation Zod
-- ✅ Progress global : 63.2% → 79.3% (+16.2%)
+- ✅ Début migration routes-poc.ts : 7/80 routes (Phase 1 auth complétée)
+- ✅ Progress global : 63.2% → 81.4% (+18.3%)
 - ✅ Ajout validation Zod + isAuthenticated sur 5 routes POST critiques
 - ⚠️ Leçon apprise : Scripts automatiques inadaptés (orphaned catch blocks)
 - 📝 Bug critique découvert : 4 catch blocks orphelins laissés par script automatique
 - 🔒 Sécurité renforcée : Toutes routes POST nécessitent auth + validation
+- 🎯 **Nouvelle stratégie** : Migration par clusters de features (AO, Offers/Projects, Analytics) avec templates réutilisables
 
 ### Prochaines Étapes Suggérées
-1. **PRIORITÉ** : Migrer routes-admin.ts avec approche manuelle (factory pattern complexe)
-2. Migrer routes-poc.ts (88 routes) - fichier volumineux, migration progressive
-3. Tester les validations Zod end-to-end (cas d'erreur, poids manquants, enums invalides)
-4. Ajouter retry logic pour opérations externes (AI, OCR)
-5. Implémenter circuit breakers pour services externes
+1. **PRIORITÉ** : Migrer cluster AO/Offers/Projects (15-20 routes haute priorité)
+2. Migrer cluster Analytics/Predictive (10-15 routes)
+3. Migrer clusters restants Documents/Suppliers/Alerts par batch
+4. Tester les validations Zod end-to-end (cas d'erreur, poids manquants, enums invalides)
+5. Ajouter retry logic pour opérations externes (AI, OCR)
+6. Implémenter circuit breakers pour services externes
 
 ## Notes pour Replit Agent
 

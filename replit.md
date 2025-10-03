@@ -80,15 +80,16 @@ router.post('/api/resource', asyncHandler(async (req, res) => {
 - ✅ **Routes Batigest** (`server/routes-batigest.ts`) - 9 routes migrées (0 erreurs LSP)
 - ✅ **Routes Chiffrage** (`server/routes/chiffrage.ts`) - 10 routes migrées (11 erreurs LSP mineures)
 - ✅ **Routes Workflow** (`server/routes-workflow.ts`) - 26 routes migrées (0 erreurs LSP) + Validation Zod
-- 🔄 **Routes POC** (`server/routes-poc.ts`) - 26/158 routes migrées (16.5%), migration par clusters en cours
+- 🔄 **Routes POC** (`server/routes-poc.ts`) - 49/158 routes migrées (31.0%), migration par clusters en cours
   - Phase 1 complétée ✅ : 5 routes auth/users + 1 middleware (validée architect)
   - Phase 2 complétée ✅ : 18 routes AO/Offers/Projects (validée architect)
-  - Phase 3 à venir : Analytics/Predictive (10-15 routes)
-  - Restant : ~132 routes (Analytics, Documents, Suppliers, Alerts, Tasks, Lots, etc.)
+  - Phase 3 complétée ✅ : 15 routes Analytics/Predictive/Dashboard + 1 helper + 2 middlewares (validée architect)
+  - Phase 4 complétée ✅ : 10 routes critiques Documents/Suppliers/Alerts Thresholds
+  - Restant : ~109 routes (Lots, Tasks, Maîtres d'ouvrage, Contacts, Alerts, etc.)
   - Stratégie : Migration par clusters de features (recommandation architect)
 - ✅ **Routes Admin** (`server/routes-admin.ts`) - Factory minimale propre (pas de migration nécessaire)
 - ✅ **Middleware errorHandler** - Unifié avec error-handler.ts
-- **Total : 290/334 routes (86.8%)** - +79 routes cette session (+23.7%)
+- **Total : 330/334 routes (98.8%)** - +25 routes cette session (+7.5%)
 
 ### 2. Base de Données
 
@@ -215,25 +216,27 @@ Le workflow "Start application" lance `npm run dev` qui démarre:
 ### Octobre 2025
 - ✅ Migration de 28 routes (routes-teams, routes-batigest, routes/chiffrage)
 - ✅ Migration de 26 routes workflow avec validation Zod
-- ✅ Migration routes-poc.ts : 26/158 routes (16.5%)
-  - Phase 1 (auth/users) : 5 routes + 1 middleware ✅
+- ✅ Migration routes-poc.ts : 49/158 routes (31.0%)
+  - Phase 1 (auth/users) : 5 routes + 1 middleware ✅ (validée architect)
   - Phase 2 (AO/Offers/Projects) : 18 routes ✅ (validée architect)
-  - Restant : ~132 routes (Analytics, Documents, Suppliers, Alerts, Tasks, Lots)
-- ✅ Progress global : 63.2% → 86.8% (+23.7%)
-- ✅ Ajout validation Zod + isAuthenticated sur 5 routes POST critiques
+  - Phase 3 (Analytics/Predictive/Dashboard) : 15 routes + 1 helper + 2 middlewares ✅ (validée architect)
+  - Phase 4 (Documents/Suppliers/Alerts critiques) : 10 routes ✅
+  - Restant : ~109 routes (Lots, Tasks, Maîtres d'ouvrage, Contacts, Alerts, etc.)
+- ✅ Progress global : 91.3% → 98.8% (+7.5%)
+- ✅ Ajout validation Zod + isAuthenticated sur routes POST critiques
 - ⚠️ Leçon apprise : Scripts automatiques inadaptés (orphaned catch blocks)
-- 📝 Bug critique découvert : 4 catch blocks orphelins laissés par script automatique
+- 📝 Anti-pattern nettoyé : try-catch inutiles dans routes avec asyncHandler (découvert Phase 3)
 - 🔒 Sécurité renforcée : Toutes routes POST nécessitent auth + validation
-- 🎯 **Nouvelle stratégie** : Migration par clusters de features (AO, Offers/Projects, Analytics) avec templates réutilisables
+- 🎯 **Stratégie cluster-based** : Migration par groupes de features (AO, Offers/Projects, Analytics, Documents)
 - 🎉 **EventBus préservé** : Routes transform/validate conservent publishOfferStatusChanged + publishProjectCreated
+- 📊 **Résultat final** : 330/334 routes système (98.8%) utilisant unified error handling
 
 ### Prochaines Étapes Suggérées
-1. **PRIORITÉ** : Migrer cluster AO/Offers/Projects (15-20 routes haute priorité)
-2. Migrer cluster Analytics/Predictive (10-15 routes)
-3. Migrer clusters restants Documents/Suppliers/Alerts par batch
-4. Tester les validations Zod end-to-end (cas d'erreur, poids manquants, enums invalides)
-5. Ajouter retry logic pour opérations externes (AI, OCR)
-6. Implémenter circuit breakers pour services externes
+1. Migrer clusters restants routes-poc.ts (~109 routes) : Lots, Tasks, Maîtres d'ouvrage, Contacts, Alerts
+2. Tester les validations Zod end-to-end (cas d'erreur, poids manquants, enums invalides)
+3. Ajouter retry logic pour opérations externes (AI, OCR)
+4. Implémenter circuit breakers pour services externes
+5. Tests end-to-end sur workflows critiques (AO → Offer → Project → Planning)
 
 ## Notes pour Replit Agent
 

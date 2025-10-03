@@ -2950,71 +2950,57 @@ const kpiParamsSchema = z.object({
   segment: z.string().optional()
 });
 
-app.get("/api/dashboard/kpis", async (req, res) => {
-  try {
-    // Validation des paramètres de requête
-    const parseResult = kpiParamsSchema.safeParse(req.query);
-    if (!parseResult.success) {
-      return res.status(400).json({ 
-        message: "Paramètres invalides",
-        errors: parseResult.error.flatten().fieldErrors 
-      });
-    }
-
-    const { from, to, granularity, segment } = parseResult.data;
-
-    // Validation des dates
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    
-    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-      return res.status(400).json({ 
-        message: "Format de date invalide. Utilisez le format ISO (YYYY-MM-DD)" 
-      });
-    }
-
-    if (fromDate >= toDate) {
-      return res.status(400).json({ 
-        message: "La date de début doit être antérieure à la date de fin" 
-      });
-    }
-
-    // Limitation de la plage pour éviter les requêtes trop lourdes
-    const daysDifference = (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24);
-    if (daysDifference > 365) {
-      return res.status(400).json({ 
-        message: "Plage maximale autorisée : 365 jours" 
-      });
-    }
-
-    // Calcul des KPIs consolidés
-    const kpis = await storage.getConsolidatedKpis({
-      from,
-      to,
-      granularity,
-      segment
-    });
-
-    // Ajout métadonnées de réponse
-    res.json({
-      ...kpis,
-      metadata: {
-        period: { from, to },
-        granularity,
-        calculatedAt: new Date().toISOString(),
-        dataPoints: kpis.timeSeries.length,
-        segment: segment || "all"
-      }
-    });
-
-  } catch (error) {
-    console.error("Error fetching consolidated KPIs:", error);
-    res.status(500).json({ 
-      message: "Erreur lors du calcul des KPIs",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    });
+app.get("/api/dashboard/kpis", asyncHandler(async (req, res) => {
+  // Validation des paramètres de requête
+  const parseResult = kpiParamsSchema.safeParse(req.query);
+  if (!parseResult.success) {
+    throw new ValidationError("Paramètres invalides", parseResult.error.flatten().fieldErrors);
   }
-});
+
+  const { from, to, granularity, segment } = parseResult.data;
+
+  // Validation des dates
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+  
+  if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+    throw new ValidationError("Format de date invalide. Utilisez le format ISO (YYYY-MM-DD)");
+  }
+
+  if (fromDate >= toDate) {
+    throw new ValidationError("La date de début doit être antérieure à la date de fin");
+  }
+
+  // Limitation de la plage pour éviter les requêtes trop lourdes
+  const daysDifference = (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24);
+  if (daysDifference > 365) {
+    throw new ValidationError("Plage maximale autorisée : 365 jours");
+  }
+
+  // Calcul des KPIs consolidés
+  const kpis = await storage.getConsolidatedKpis({
+    from,
+    to,
+    granularity,
+    segment
+  });
+
+  logger.info('[Dashboard] KPIs consolidés calculés', { 
+    metadata: { from, to, granularity, dataPoints: kpis.timeSeries.length }
+  });
+
+  // Ajout métadonnées de réponse
+  res.json({
+    ...kpis,
+    metadata: {
+      period: { from, to },
+      granularity,
+      calculatedAt: new Date().toISOString(),
+      dataPoints: kpis.timeSeries.length,
+      segment: segment || "all"
+    }
+  });
+}));
 
 // ========================================
 // QUOTATIONS ROUTES - Compatibilité avec page pricing (mapping vers chiffrage)
@@ -5218,20 +5204,16 @@ app.get('/api/analytics/kpis',
   isAuthenticated, 
   validateQuery(analyticsFiltersSchema.partial()),
   asyncHandler(async (req, res) => {
-    try {
-      const filters = req.query;
-      const kpis = await analyticsService.getRealtimeKPIs(filters);
-      
-      sendSuccess(res, {
-        ...kpis,
-        timestamp: new Date(),
-        cacheStatus: 'fresh'
-      });
-      
-    } catch (error: any) {
-      console.error('Erreur récupération KPIs temps réel:', error);
-      throw createError.database( 'Erreur lors de la récupération des KPIs temps réel');
-    }
+    const filters = req.query;
+    const kpis = await analyticsService.getRealtimeKPIs(filters);
+    
+    logger.info('[Analytics] KPIs temps réel récupérés', { metadata: { filtersApplied: Object.keys(filters).length } });
+    
+    sendSuccess(res, {
+      ...kpis,
+      timestamp: new Date(),
+      cacheStatus: 'fresh'
+    });
   })
 );
 
@@ -5240,42 +5222,38 @@ app.get('/api/analytics/metrics',
   isAuthenticated, 
   validateQuery(metricQuerySchema),
   asyncHandler(async (req, res) => {
-    try {
-      const query = req.query as any;
-      const dateRange = query.period ? parsePeriod(query.period) : getDefaultPeriod();
-      
-      let metrics;
-      switch (query.metricType) {
-        case 'conversion':
-          metrics = await analyticsService.conversionCalculatorAPI.calculateAOToOfferConversion(dateRange);
-          break;
-        case 'delay': 
-          metrics = await analyticsService.delayCalculatorAPI.calculateAverageDelays(dateRange, query.groupBy || 'phase');
-          break;
-        case 'revenue':
-          metrics = await analyticsService.revenueCalculatorAPI.calculateRevenueForecast(dateRange);
-          break;
-        case 'team_load':
-          metrics = await analyticsService.teamLoadCalculatorAPI.calculateTeamLoad(dateRange);
-          break;
-        case 'margin':
-          metrics = await analyticsService.marginCalculatorAPI.calculateMarginAnalysis(dateRange);
-          break;
-        default:
-          throw createError.badRequest('Type de métrique non supporté');
-      }
-      
-      sendSuccess(res, {
-        metrics,
-        query,
-        dateRange,
-        total: Array.isArray(metrics) ? metrics.length : 1
-      });
-      
-    } catch (error: any) {
-      console.error('Erreur récupération métriques business:', error);
-      throw createError.database( 'Erreur lors de la récupération des métriques business');
+    const query = req.query as any;
+    const dateRange = query.period ? parsePeriod(query.period) : getDefaultPeriod();
+    
+    let metrics;
+    switch (query.metricType) {
+      case 'conversion':
+        metrics = await analyticsService.conversionCalculatorAPI.calculateAOToOfferConversion(dateRange);
+        break;
+      case 'delay': 
+        metrics = await analyticsService.delayCalculatorAPI.calculateAverageDelays(dateRange, query.groupBy || 'phase');
+        break;
+      case 'revenue':
+        metrics = await analyticsService.revenueCalculatorAPI.calculateRevenueForecast(dateRange);
+        break;
+      case 'team_load':
+        metrics = await analyticsService.teamLoadCalculatorAPI.calculateTeamLoad(dateRange);
+        break;
+      case 'margin':
+        metrics = await analyticsService.marginCalculatorAPI.calculateMarginAnalysis(dateRange);
+        break;
+      default:
+        throw new ValidationError('Type de métrique non supporté');
     }
+    
+    logger.info('[Analytics] Métriques business calculées', { metadata: { metricType: query.metricType } });
+    
+    sendSuccess(res, {
+      metrics,
+      query,
+      dateRange,
+      total: Array.isArray(metrics) ? metrics.length : 1
+    });
   })
 );
 
@@ -5283,27 +5261,23 @@ app.get('/api/analytics/metrics',
 app.get('/api/analytics/snapshots', 
   isAuthenticated,
   asyncHandler(async (req, res) => {
-    try {
-      const { period, limit = 10, offset = 0 } = req.query;
-      const dateRange = period ? parsePeriod(period as string) : getLastMonths(3);
-      
-      const snapshots = await storage.getKPISnapshots(dateRange, Number(limit));
-      const latest = await storage.getLatestKPISnapshot();
-      
-      sendSuccess(res, {
-        snapshots: snapshots.slice(Number(offset)),
-        latest: latest,
-        pagination: {
-          total: snapshots.length,
-          limit: Number(limit),
-          offset: Number(offset)
-        }
-      });
-      
-    } catch (error: any) {
-      console.error('Erreur récupération snapshots:', error);
-      throw createError.database( 'Erreur lors de la récupération des snapshots historiques');
-    }
+    const { period, limit = 10, offset = 0 } = req.query;
+    const dateRange = period ? parsePeriod(period as string) : getLastMonths(3);
+    
+    const snapshots = await storage.getKPISnapshots(dateRange, Number(limit));
+    const latest = await storage.getLatestKPISnapshot();
+    
+    logger.info('[Analytics] Snapshots historiques récupérés', { metadata: { count: snapshots.length } });
+    
+    sendSuccess(res, {
+      snapshots: snapshots.slice(Number(offset)),
+      latest: latest,
+      pagination: {
+        total: snapshots.length,
+        limit: Number(limit),
+        offset: Number(offset)
+      }
+    });
   })
 );
 
@@ -5312,21 +5286,17 @@ app.get('/api/analytics/benchmarks',
   isAuthenticated,
   validateQuery(benchmarkQuerySchema),
   asyncHandler(async (req, res) => {
-    try {
-      const query = req.query as any;
-      const benchmarks = await storage.getBenchmarks(query.entityType, query.entityId);
-      const topPerformers = await storage.getTopPerformers('conversion_rate', 5);
-      
-      sendSuccess(res, {
-        benchmarks,
-        topPerformers,
-        entityType: query.entityType
-      }, "Benchmarks de performance récupérés avec succès");
-      
-    } catch (error: any) {
-      console.error('Erreur récupération benchmarks:', error);
-      throw createError.database( 'Erreur lors de la récupération des benchmarks de performance');
-    }
+    const query = req.query as any;
+    const benchmarks = await storage.getBenchmarks(query.entityType, query.entityId);
+    const topPerformers = await storage.getTopPerformers('conversion_rate', 5);
+    
+    logger.info('[Analytics] Benchmarks performance récupérés', { metadata: { entityType: query.entityType } });
+    
+    sendSuccess(res, {
+      benchmarks,
+      topPerformers,
+      entityType: query.entityType
+    }, "Benchmarks de performance récupérés avec succès");
   })
 );
 
@@ -5335,24 +5305,20 @@ app.post('/api/analytics/snapshot',
   isAuthenticated,
   validateBody(snapshotRequestSchema),
   asyncHandler(async (req, res) => {
-    try {
-      const request = req.body;
-      const snapshot = await analyticsService.generateKPISnapshot(request.period);
-      
-      // Publication événement analytics calculés
-      eventBus.publishAnalyticsCalculated({
-        snapshotId: snapshot.id,
-        period: request.period,
-        userId: (req as any).user.id,
-        kpiCount: Object.keys(snapshot).length - 3 // Exclure metadata
-      });
-      
-      sendSuccess(res, snapshot, 201);
-      
-    } catch (error: any) {
-      console.error('Erreur génération snapshot:', error);
-      throw createError.database( 'Erreur lors de la génération du snapshot analytics');
-    }
+    const request = req.body;
+    const snapshot = await analyticsService.generateKPISnapshot(request.period);
+    
+    // Publication événement analytics calculés
+    eventBus.publishAnalyticsCalculated({
+      snapshotId: snapshot.id,
+      period: request.period,
+      userId: (req as any).user.id,
+      kpiCount: Object.keys(snapshot).length - 3 // Exclure metadata
+    });
+    
+    logger.info('[Analytics] Snapshot KPI généré + eventBus', { metadata: { snapshotId: snapshot.id, period: request.period } });
+    
+    sendSuccess(res, snapshot, 201);
   })
 );
 
@@ -5361,43 +5327,39 @@ app.get('/api/analytics/pipeline',
   isAuthenticated,
   validateQuery(analyticsFiltersSchema.partial()),
   asyncHandler(async (req, res) => {
-    try {
-      const query = req.query || {};
-      const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
-      const dateRange = timeRange ? 
-        { from: new Date(timeRange.startDate), to: new Date(timeRange.endDate) } :
-        getDefaultPeriod();
-      
-      // Calculer les métriques de pipeline en utilisant les services existants
-      const [conversionData, revenueData] = await Promise.all([
-        analyticsService.conversionCalculatorAPI.calculateAOToOfferConversion(dateRange),
-        analyticsService.revenueCalculatorAPI.calculateRevenueForecast(dateRange)
-      ]);
-      
-      // Agréger les données depuis storage
-      const aos = await storage.getAos();
-      const offers = await storage.getOffers();
-      const projects = await storage.getProjects();
-      
-      const pipeline = {
-        ao_count: aos.length,
-        ao_total_value: aos.reduce((sum, ao) => sum + (ao.estimatedBudget || 0), 0),
-        offer_count: offers.length,
-        offer_total_value: offers.reduce((sum, offer) => sum + (offer.totalAmount || 0), 0),
-        project_count: projects.length,
-        project_total_value: projects.reduce((sum, project) => sum + (project.budgetEstimated || 0), 0),
-        ao_to_offer_rate: offers.length / Math.max(aos.length, 1) * 100,
-        offer_to_project_rate: projects.length / Math.max(offers.length, 1) * 100,
-        global_conversion_rate: projects.length / Math.max(aos.length, 1) * 100,
-        forecast_3_months: revenueData.forecastData || []
-      };
-      
-      sendSuccess(res, pipeline);
-      
-    } catch (error: any) {
-      console.error('Erreur récupération pipeline:', error);
-      throw createError.database( 'Erreur lors de la récupération des métriques de pipeline');
-    }
+    const query = req.query || {};
+    const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
+    const dateRange = timeRange ? 
+      { from: new Date(timeRange.startDate), to: new Date(timeRange.endDate) } :
+      getDefaultPeriod();
+    
+    // Calculer les métriques de pipeline en utilisant les services existants
+    const [conversionData, revenueData] = await Promise.all([
+      analyticsService.conversionCalculatorAPI.calculateAOToOfferConversion(dateRange),
+      analyticsService.revenueCalculatorAPI.calculateRevenueForecast(dateRange)
+    ]);
+    
+    // Agréger les données depuis storage
+    const aos = await storage.getAos();
+    const offers = await storage.getOffers();
+    const projects = await storage.getProjects();
+    
+    const pipeline = {
+      ao_count: aos.length,
+      ao_total_value: aos.reduce((sum, ao) => sum + (ao.estimatedBudget || 0), 0),
+      offer_count: offers.length,
+      offer_total_value: offers.reduce((sum, offer) => sum + (offer.totalAmount || 0), 0),
+      project_count: projects.length,
+      project_total_value: projects.reduce((sum, project) => sum + (project.budgetEstimated || 0), 0),
+      ao_to_offer_rate: offers.length / Math.max(aos.length, 1) * 100,
+      offer_to_project_rate: projects.length / Math.max(offers.length, 1) * 100,
+      global_conversion_rate: projects.length / Math.max(aos.length, 1) * 100,
+      forecast_3_months: revenueData.forecastData || []
+    };
+    
+    logger.info('[Analytics] Métriques pipeline calculées', { metadata: { aoCount: aos.length, offerCount: offers.length, projectCount: projects.length } });
+    
+    sendSuccess(res, pipeline);
   })
 );
 
@@ -5405,21 +5367,17 @@ app.get('/api/analytics/pipeline',
 app.get('/api/analytics/realtime', 
   isAuthenticated,
   asyncHandler(async (req, res) => {
-    try {
-      // Réutiliser les KPIs temps réel existants
-      const kpis = await analyticsService.getRealtimeKPIs({});
-      
-      sendSuccess(res, {
-        ...kpis,
-        timestamp: new Date(),
-        refresh_interval: 2 * 60 * 1000, // 2 minutes
-        data_freshness: 'realtime'
-      }, "Données temps réel récupérées avec succès");
-      
-    } catch (error: any) {
-      console.error('Erreur récupération données temps réel:', error);
-      throw createError.database( 'Erreur lors de la récupération des données temps réel');
-    }
+    // Réutiliser les KPIs temps réel existants
+    const kpis = await analyticsService.getRealtimeKPIs({});
+    
+    logger.info('[Analytics] Données temps réel récupérées', { metadata: { dataFreshness: 'realtime' } });
+    
+    sendSuccess(res, {
+      ...kpis,
+      timestamp: new Date(),
+      refresh_interval: 2 * 60 * 1000, // 2 minutes
+      data_freshness: 'realtime'
+    }, "Données temps réel récupérées avec succès");
   })
 );
 
@@ -5499,51 +5457,49 @@ app.get('/api/analytics/alerts',
 app.get('/api/analytics/bottlenecks', 
   isAuthenticated,
   asyncHandler(async (req, res) => {
-    try {
-      // Analyser les goulots d'étranglement en regardant les délais et charges
-      const [projects, offers, tasks] = await Promise.all([
-        storage.getProjects(),
-        storage.getOffers(),
-        storage.getAllTasks()
-      ]);
+    // Analyser les goulots d'étranglement en regardant les délais et charges
+    const [projects, offers, tasks] = await Promise.all([
+      storage.getProjects(),
+      storage.getOffers(),
+      storage.getAllTasks()
+    ]);
+    
+    // Identifier les phases qui prennent le plus de temps
+    const phaseDelays = tasks.reduce((acc, task) => {
+      const phase = task.name || 'Inconnu';
+      const delay = task.endDate && task.startDate ? 
+        (new Date(task.endDate).getTime() - new Date(task.startDate).getTime()) / (1000 * 60 * 60 * 24) : 0;
       
-      // Identifier les phases qui prennent le plus de temps
-      const phaseDelays = tasks.reduce((acc, task) => {
-        const phase = task.name || 'Inconnu';
-        const delay = task.endDate && task.startDate ? 
-          (new Date(task.endDate).getTime() - new Date(task.startDate).getTime()) / (1000 * 60 * 60 * 24) : 0;
-        
-        if (!acc[phase]) acc[phase] = { total: 0, count: 0 };
-        acc[phase].total += delay;
-        acc[phase].count += 1;
-        return acc;
-      }, {} as Record<string, { total: number; count: number }>);
-      
-      const bottlenecks = Object.entries(phaseDelays).map(([phase, data]) => ({
-        phase,
-        avg_delay: data.total / data.count,
-        frequency: data.count,
-        impact_score: (data.total / data.count) * data.count,
-        recommendations: [
-          'Réviser la planification',
-          'Allouer plus de ressources',
-          'Automatiser certaines tâches'
-        ]
-      })).sort((a, b) => b.impact_score - a.impact_score).slice(0, 5);
-      
-      sendSuccess(res, {
-        bottlenecks,
-        summary: {
-          total_analyzed: tasks.length,
-          critical_phases: bottlenecks.filter(b => b.impact_score > 10).length,
-          avg_overall_delay: Object.values(phaseDelays).reduce((sum, p) => sum + p.total, 0) / tasks.length || 0
-        }
-      }, "Analyse des goulots d'étranglement terminée");
-      
-    } catch (error: any) {
-      console.error('Erreur analyse goulots:', error);
-      throw createError.database( 'Erreur lors de l\'analyse des goulots d\'étranglement');
-    }
+      if (!acc[phase]) acc[phase] = { total: 0, count: 0 };
+      acc[phase].total += delay;
+      acc[phase].count += 1;
+      return acc;
+    }, {} as Record<string, { total: number; count: number }>);
+    
+    const bottlenecks = Object.entries(phaseDelays).map(([phase, data]) => ({
+      phase,
+      avg_delay: data.total / data.count,
+      frequency: data.count,
+      impact_score: (data.total / data.count) * data.count,
+      recommendations: [
+        'Réviser la planification',
+        'Allouer plus de ressources',
+        'Automatiser certaines tâches'
+      ]
+    })).sort((a, b) => b.impact_score - a.impact_score).slice(0, 5);
+    
+    logger.info('[Analytics] Analyse goulots d\'étranglement complétée', { 
+      metadata: { tasksAnalyzed: tasks.length, criticalPhases: bottlenecks.length }
+    });
+    
+    sendSuccess(res, {
+      bottlenecks,
+      summary: {
+        total_analyzed: tasks.length,
+        critical_phases: bottlenecks.filter(b => b.impact_score > 10).length,
+        avg_overall_delay: Object.values(phaseDelays).reduce((sum, p) => sum + p.total, 0) / tasks.length || 0
+      }
+    }, "Analyse des goulots d'étranglement terminée");
   })
 );
 
@@ -5551,51 +5507,47 @@ app.get('/api/analytics/bottlenecks',
 app.post('/api/analytics/export', 
   isAuthenticated,
   asyncHandler(async (req, res) => {
-    try {
-      const { format = 'pdf' } = req.body;
+    const { format = 'pdf' } = req.body;
+    
+    if (format === 'pdf') {
+      // Générer un PDF simple avec jsPDF
+      const jsPDF = require('jspdf');
+      const doc = new jsPDF();
       
-      if (format === 'pdf') {
-        // Générer un PDF simple avec jsPDF
-        const jsPDF = require('jspdf');
-        const doc = new jsPDF();
-        
-        // En-tête
-        doc.setFontSize(20);
-        doc.text('Rapport Dashboard Dirigeant', 20, 30);
-        
-        doc.setFontSize(12);
-        doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 20, 50);
-        
-        // Récupérer les KPIs actuels
-        const kpis = await analyticsService.getRealtimeKPIs({});
-        
-        // Ajouter les KPIs au PDF
-        let yPos = 70;
-        doc.text('KPIs Principaux:', 20, yPos);
-        yPos += 20;
-        
-        doc.text(`• Taux de conversion: ${kpis.conversion_rate_offer_to_project || 'N/A'}%`, 30, yPos);
-        yPos += 15;
-        doc.text(`• CA prévisionnel: ${kpis.total_revenue_forecast || 'N/A'} €`, 30, yPos);
-        yPos += 15;
-        doc.text(`• Délai moyen: ${kpis.avg_delay_days || 'N/A'} jours`, 30, yPos);
-        yPos += 15;
-        doc.text(`• Charge équipes: ${kpis.avg_team_load_percentage || 'N/A'}%`, 30, yPos);
-        
-        // Convertir en buffer
-        const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename=rapport-dirigeant.pdf');
-        res.send(pdfBuffer);
-        
-      } else {
-        throw createError.badRequest('Format non supporté. Utilisez "pdf".');
-      }
+      // En-tête
+      doc.setFontSize(20);
+      doc.text('Rapport Dashboard Dirigeant', 20, 30);
       
-    } catch (error: any) {
-      console.error('Erreur génération export:', error);
-      throw createError.database( 'Erreur lors de la génération du rapport');
+      doc.setFontSize(12);
+      doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 20, 50);
+      
+      // Récupérer les KPIs actuels
+      const kpis = await analyticsService.getRealtimeKPIs({});
+      
+      // Ajouter les KPIs au PDF
+      let yPos = 70;
+      doc.text('KPIs Principaux:', 20, yPos);
+      yPos += 20;
+      
+      doc.text(`• Taux de conversion: ${kpis.conversion_rate_offer_to_project || 'N/A'}%`, 30, yPos);
+      yPos += 15;
+      doc.text(`• CA prévisionnel: ${kpis.total_revenue_forecast || 'N/A'} €`, 30, yPos);
+      yPos += 15;
+      doc.text(`• Délai moyen: ${kpis.avg_delay_days || 'N/A'} jours`, 30, yPos);
+      yPos += 15;
+      doc.text(`• Charge équipes: ${kpis.avg_team_load_percentage || 'N/A'}%`, 30, yPos);
+      
+      // Convertir en buffer
+      const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+      
+      logger.info('[Analytics] Rapport PDF généré', { metadata: { format: 'pdf' } });
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=rapport-dirigeant.pdf');
+      res.send(pdfBuffer);
+      
+    } else {
+      throw new ValidationError('Format non supporté. Utilisez "pdf".');
     }
   })
 );
@@ -5637,33 +5589,27 @@ app.get('/api/predictive/revenue',
   isAuthenticated, 
   validateQuery(predictiveRangeQuerySchema),
   asyncHandler(async (req, res) => {
-    try {
-      const params = req.query as any;
-      
-      // Appel service predictive
-      const forecasts = await predictiveEngineService.forecastRevenue(params);
-      
-      // Response standardisée
-      res.json({
-        success: true,
-        data: forecasts,
-        metadata: {
-          generated_at: new Date().toISOString(),
-          forecast_horizon_months: params.forecast_months,
-          method_used: params.method || 'exp_smoothing',
-          confidence_threshold: params.confidence_threshold
-        },
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error: any) {
-      console.error('Erreur /api/predictive/revenue:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur interne serveur',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
+    const params = req.query as any;
+    
+    // Appel service predictive
+    const forecasts = await predictiveEngineService.forecastRevenue(params);
+    
+    logger.info('[Predictive] Prévision revenus générée', { 
+      metadata: { forecastMonths: params.forecast_months, method: params.method }
+    });
+    
+    // Response standardisée
+    res.json({
+      success: true,
+      data: forecasts,
+      metadata: {
+        generated_at: new Date().toISOString(),
+        forecast_horizon_months: params.forecast_months,
+        method_used: params.method || 'exp_smoothing',
+        confidence_threshold: params.confidence_threshold
+      },
+      timestamp: new Date().toISOString()
+    });
   })
 );
 
@@ -5672,35 +5618,30 @@ app.get('/api/predictive/risks',
   isAuthenticated, 
   validateQuery(riskQueryParamsSchema),
   asyncHandler(async (req, res) => {
-    try {
-      const params = req.query as any;
-      
-      // Appel détection risques
-      const risks = await predictiveEngineService.detectProjectRisks(params);
-      
-      // Métriques agregées
-      const summary = {
-        total_projects_analyzed: risks.length,
-        high_risk_count: risks.filter(r => r.risk_score >= 70).length,
-        critical_risk_count: risks.filter(r => r.risk_score >= 90).length,
-        avg_risk_score: risks.reduce((sum, r) => sum + r.risk_score, 0) / risks.length || 0
-      };
-      
-      // Response avec summary
-      res.json({
-        success: true,
-        data: risks,
-        summary,
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error: any) {
-      console.error('Erreur /api/predictive/risks:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur analyse risques'
-      });
-    }
+    const params = req.query as any;
+    
+    // Appel détection risques
+    const risks = await predictiveEngineService.detectProjectRisks(params);
+    
+    // Métriques agregées
+    const summary = {
+      total_projects_analyzed: risks.length,
+      high_risk_count: risks.filter(r => r.risk_score >= 70).length,
+      critical_risk_count: risks.filter(r => r.risk_score >= 90).length,
+      avg_risk_score: risks.reduce((sum, r) => sum + r.risk_score, 0) / risks.length || 0
+    };
+    
+    logger.info('[Predictive] Analyse risques projets complétée', { 
+      metadata: { projectsAnalyzed: risks.length, highRisk: summary.high_risk_count }
+    });
+    
+    // Response avec summary
+    res.json({
+      success: true,
+      data: risks,
+      summary,
+      timestamp: new Date().toISOString()
+    });
   })
 );
 
@@ -5709,54 +5650,49 @@ app.get('/api/predictive/recommendations',
   isAuthenticated, 
   validateQuery(businessContextSchema),
   asyncHandler(async (req, res) => {
-    try {
-      // Contexte business (à partir session/user)
-      const businessContext = {
-        user_role: req.session?.user?.role || 'user',
-        current_period: new Date().toISOString().split('T')[0],
-        focus_areas: (req.query.focus_areas as string)?.split(',') || ['revenue', 'cost', 'planning']
-      };
-      
-      // Génération recommandations
-      const recommendations = await predictiveEngineService.generateRecommendations(businessContext);
-      
-      // Filtrage par priorité
-      const priority = req.query.priority as string;
-      const filteredRecs = priority 
-        ? recommendations.filter(r => r.priority === priority)
-        : recommendations;
-      
-      // Groupement par catégorie
-      const groupedByCategory = filteredRecs.reduce((acc, rec) => {
-        acc[rec.category] = acc[rec.category] || [];
-        acc[rec.category].push(rec);
-        return acc;
-      }, {} as Record<string, typeof recommendations>);
-      
-      // Response structurée
-      res.json({
-        success: true,
-        data: filteredRecs,
-        grouped_by_category: groupedByCategory,
-        summary: {
-          total_recommendations: filteredRecs.length,
-          by_priority: {
-            urgent: filteredRecs.filter(r => r.priority === 'urgent').length,
-            high: filteredRecs.filter(r => r.priority === 'high').length,
-            medium: filteredRecs.filter(r => r.priority === 'medium').length,
-            low: filteredRecs.filter(r => r.priority === 'low').length
-          }
-        },
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error: any) {
-      console.error('Erreur /api/predictive/recommendations:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur génération recommandations'
-      });
-    }
+    // Contexte business (à partir session/user)
+    const businessContext = {
+      user_role: req.session?.user?.role || 'user',
+      current_period: new Date().toISOString().split('T')[0],
+      focus_areas: (req.query.focus_areas as string)?.split(',') || ['revenue', 'cost', 'planning']
+    };
+    
+    // Génération recommandations
+    const recommendations = await predictiveEngineService.generateRecommendations(businessContext);
+    
+    // Filtrage par priorité
+    const priority = req.query.priority as string;
+    const filteredRecs = priority 
+      ? recommendations.filter(r => r.priority === priority)
+      : recommendations;
+    
+    // Groupement par catégorie
+    const groupedByCategory = filteredRecs.reduce((acc, rec) => {
+      acc[rec.category] = acc[rec.category] || [];
+      acc[rec.category].push(rec);
+      return acc;
+    }, {} as Record<string, typeof recommendations>);
+    
+    logger.info('[Predictive] Recommandations business générées', { 
+      metadata: { total: filteredRecs.length, urgent: filteredRecs.filter(r => r.priority === 'urgent').length }
+    });
+    
+    // Response structurée
+    res.json({
+      success: true,
+      data: filteredRecs,
+      grouped_by_category: groupedByCategory,
+      summary: {
+        total_recommendations: filteredRecs.length,
+        by_priority: {
+          urgent: filteredRecs.filter(r => r.priority === 'urgent').length,
+          high: filteredRecs.filter(r => r.priority === 'high').length,
+          medium: filteredRecs.filter(r => r.priority === 'medium').length,
+          low: filteredRecs.filter(r => r.priority === 'low').length
+        }
+      },
+      timestamp: new Date().toISOString()
+    });
   })
 );
 
@@ -5765,37 +5701,32 @@ app.post('/api/predictive/snapshots',
   isAuthenticated, 
   validateBody(snapshotSaveSchema),
   asyncHandler(async (req, res) => {
-    try {
-      const { forecast_type, data, params, notes } = req.body;
-      
-      // Sauvegarde snapshot
-      const snapshotId = await predictiveEngineService.saveForecastSnapshot({
-        forecast_data: data,
-        generated_at: new Date().toISOString(),
-        params,
-        type: forecast_type,
-        notes,
-        user_id: req.session?.user?.id
-      });
-      
-      // Response success
-      res.status(201).json({
-        success: true,
-        data: {
-          snapshot_id: snapshotId,
-          created_at: new Date().toISOString()
-        },
-        message: 'Snapshot sauvegardé avec succès',
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error: any) {
-      console.error('Erreur /api/predictive/snapshots:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur sauvegarde snapshot'
-      });
-    }
+    const { forecast_type, data, params, notes } = req.body;
+    
+    // Sauvegarde snapshot
+    const snapshotId = await predictiveEngineService.saveForecastSnapshot({
+      forecast_data: data,
+      generated_at: new Date().toISOString(),
+      params,
+      type: forecast_type,
+      notes,
+      user_id: req.session?.user?.id
+    });
+    
+    logger.info('[Predictive] Snapshot prévisionnel sauvegardé', { 
+      metadata: { snapshotId, forecastType: forecast_type }
+    });
+    
+    // Response success
+    res.status(201).json({
+      success: true,
+      data: {
+        snapshot_id: snapshotId,
+        created_at: new Date().toISOString()
+      },
+      message: 'Snapshot sauvegardé avec succès',
+      timestamp: new Date().toISOString()
+    });
   })
 );
 
@@ -5804,35 +5735,30 @@ app.get('/api/predictive/snapshots',
   isAuthenticated, 
   validateQuery(snapshotListSchema),
   asyncHandler(async (req, res) => {
-    try {
-      const params = req.query as any;
-      
-      // Récupération snapshots
-      const snapshots = await predictiveEngineService.listForecastSnapshots({
+    const params = req.query as any;
+    
+    // Récupération snapshots
+    const snapshots = await predictiveEngineService.listForecastSnapshots({
+      limit: params.limit,
+      type: params.type,
+      user_id: req.session?.user?.id
+    });
+    
+    logger.info('[Predictive] Liste snapshots récupérée', { 
+      metadata: { count: snapshots.length, type: params.type }
+    });
+    
+    // Response paginée
+    res.json({
+      success: true,
+      data: snapshots,
+      pagination: {
         limit: params.limit,
-        type: params.type,
-        user_id: req.session?.user?.id
-      });
-      
-      // Response paginée
-      res.json({
-        success: true,
-        data: snapshots,
-        pagination: {
-          limit: params.limit,
-          total: snapshots.length,
-          has_more: snapshots.length === params.limit
-        },
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error: any) {
-      console.error('Erreur /api/predictive/snapshots list:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur récupération snapshots'
-      });
-    }
+        total: snapshots.length,
+        has_more: snapshots.length === params.limit
+      },
+      timestamp: new Date().toISOString()
+    });
   })
 );
 

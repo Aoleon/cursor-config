@@ -367,7 +367,7 @@ async function calculateMondayUsersCount(storage: IStorage): Promise<number> {
     );
     return usersWithMondayData.length;
   } catch (error) {
-    console.error('[Monday Dashboard] Erreur calcul utilisateurs:', error);
+    logger.warn('[Dashboard] Erreur calcul utilisateurs Monday (fallback: 0)', { error });
     return 0;
   }
 }
@@ -2087,15 +2087,17 @@ app.delete("/api/aos/:aoId/lots/:lotId", isAuthenticated, async (req, res) => {
 // ========================================
 
 // GET /api/aos/:aoId/documents - Lister les documents d'un AO
-app.get("/api/aos/:aoId/documents", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/aos/:aoId/documents", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.aoId),
+  asyncHandler(async (req, res) => {
     const aoId = req.params.aoId;
     const objectStorage = new ObjectStorageService();
     
     // Créer la structure de dossiers si elle n'existe pas
     const ao = await storage.getAo(aoId);
     if (!ao) {
-      return res.status(404).json({ message: "AO not found" });
+      throw new NotFoundError("AO introuvable");
     }
     
     await objectStorage.createOfferDocumentStructure(aoId, ao.reference);
@@ -2108,65 +2110,61 @@ app.get("/api/aos/:aoId/documents", isAuthenticated, async (req, res) => {
       "03-Devis-pieces-administratives": []
     };
     
+    logger.info('[Documents] Liste documents AO récupérée', { metadata: { aoId } });
+    
     res.json(documents);
-  } catch (error) {
-    console.error("Error fetching AO documents:", error);
-    res.status(500).json({ message: "Failed to fetch AO documents" });
-  }
-});
+  })
+);
 
 // POST /api/aos/:aoId/documents/upload-url - Obtenir l'URL d'upload pour un document
-app.post("/api/aos/:aoId/documents/upload-url", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/aos/:aoId/documents/upload-url", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.aoId),
+  asyncHandler(async (req, res) => {
     const aoId = req.params.aoId;
     const { folderName, fileName } = req.body;
     
     if (!folderName || !fileName) {
-      return res.status(400).json({ 
-        message: "folderName and fileName are required",
-        details: "Both folderName and fileName must be provided in the request body"
-      });
+      throw new ValidationError("folderName et fileName requis");
     }
     
     // Security validation is now handled inside ObjectStorageService.getOfferFileUploadURL
     // This ensures all validation is centralized and cannot be bypassed
     const objectStorage = new ObjectStorageService();
-    const uploadUrl = await objectStorage.getOfferFileUploadURL(aoId, folderName, fileName);
     
-    // Return the sanitized values (they might have been modified for security)
-    res.json({ 
-      uploadUrl, 
-      message: "Upload URL generated successfully", 
-      security: "File and folder names have been validated and sanitized" 
-    });
-  } catch (error: any) {
-    console.error("Error generating upload URL:", error);
-    
-    // Handle security validation errors with specific error messages
-    if (error.message && (
-        error.message.includes('Invalid folder name') ||
-        error.message.includes('File name') ||
-        error.message.includes('File extension not allowed') ||
-        error.message.includes('Invalid offer ID')
-    )) {
-      return res.status(400).json({ 
-        message: "Security validation failed", 
-        details: error.message,
-        type: "validation_error" 
+    try {
+      const uploadUrl = await objectStorage.getOfferFileUploadURL(aoId, folderName, fileName);
+      
+      logger.info('[Documents] URL upload générée', { metadata: { aoId, folderName, fileName } });
+      
+      // Return the sanitized values (they might have been modified for security)
+      res.json({ 
+        uploadUrl, 
+        message: "Upload URL generated successfully", 
+        security: "File and folder names have been validated and sanitized" 
       });
+      
+    } catch (error: any) {
+      // Handle security validation errors with specific error messages
+      if (error.message && (
+          error.message.includes('Invalid folder name') ||
+          error.message.includes('File name') ||
+          error.message.includes('File extension not allowed') ||
+          error.message.includes('Invalid offer ID')
+      )) {
+        throw new ValidationError(error.message);
+      }
+      
+      throw error;
     }
-    
-    // Generic server error for unexpected issues
-    res.status(500).json({ 
-      message: "Failed to generate upload URL",
-      details: "An unexpected error occurred while processing your request"
-    });
-  }
-});
+  })
+);
 
 // POST /api/aos/:aoId/documents - Confirmer l'upload d'un document
-app.post("/api/aos/:aoId/documents", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/aos/:aoId/documents", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.aoId),
+  asyncHandler(async (req, res) => {
     const aoId = req.params.aoId;
     const { folderName, fileName, fileSize, uploadedUrl } = req.body;
     
@@ -2183,12 +2181,11 @@ app.post("/api/aos/:aoId/documents", isAuthenticated, async (req, res) => {
       uploadedUrl
     };
     
+    logger.info('[Documents] Upload document confirmé', { metadata: { aoId, fileName, fileSize } });
+    
     res.json(documentInfo);
-  } catch (error) {
-    console.error("Error confirming document upload:", error);
-    res.status(500).json({ message: "Failed to confirm document upload" });
-  }
-});
+  })
+);
 
 // ========================================
 // MAITRES D'OUVRAGE ROUTES - Gestion contacts réutilisables
@@ -2433,38 +2430,42 @@ app.delete("/api/suppliers/:id",
 // SUPPLIER REQUEST ROUTES - Demandes prix simplifiées
 // ========================================
 
-app.get("/api/supplier-requests", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/supplier-requests", 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
     const { offerId } = req.query;
     const requests = await storage.getSupplierRequests(offerId as string);
+    
+    logger.info('[SupplierRequests] Demandes prix récupérées', { metadata: { offerId, count: requests.length } });
+    
     res.json(requests);
-  } catch (error) {
-    console.error("Error fetching supplier requests:", error);
-    res.status(500).json({ message: "Failed to fetch supplier requests" });
-  }
-});
+  })
+);
 
-app.post("/api/supplier-requests", isAuthenticated, async (req, res) => {
-  try {
-    const validatedData = insertSupplierRequestSchema.parse(req.body);
-    const request = await storage.createSupplierRequest(validatedData);
+app.post("/api/supplier-requests", 
+  isAuthenticated, 
+  validateBody(insertSupplierRequestSchema),
+  asyncHandler(async (req, res) => {
+    const request = await storage.createSupplierRequest(req.body);
+    
+    logger.info('[SupplierRequests] Demande prix créée', { metadata: { requestId: request.id, offerId: request.offerId } });
+    
     res.status(201).json(request);
-  } catch (error) {
-    console.error("Error creating supplier request:", error);
-    res.status(500).json({ message: "Failed to create supplier request" });
-  }
-});
+  })
+);
 
-app.patch("/api/supplier-requests/:id", isAuthenticated, async (req, res) => {
-  try {
-    const partialData = insertSupplierRequestSchema.partial().parse(req.body);
-    const request = await storage.updateSupplierRequest(req.params.id, partialData);
+app.patch("/api/supplier-requests/:id", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  validateBody(insertSupplierRequestSchema.partial()),
+  asyncHandler(async (req, res) => {
+    const request = await storage.updateSupplierRequest(req.params.id, req.body);
+    
+    logger.info('[SupplierRequests] Demande prix mise à jour', { metadata: { requestId: req.params.id } });
+    
     res.json(request);
-  } catch (error) {
-    console.error("Error updating supplier request:", error);
-    res.status(500).json({ message: "Failed to update supplier request" });
-  }
-});
+  })
+);
 
 // Récupérer les demandes fournisseurs pour une offre spécifique
 app.get("/api/offers/:offerId/supplier-requests", isAuthenticated, async (req, res) => {
@@ -5191,7 +5192,9 @@ const analyticsLogger = (req: any, res: any, next: any) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    console.log(`Analytics API: ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+    logger.info(`[Analytics] API request`, { 
+      metadata: { method: req.method, path: req.path, status: res.statusCode, duration }
+    });
   });
   next();
 };
@@ -5575,7 +5578,9 @@ const predictiveLogger = (req: any, res: any, next: any) => {
   
   res.on('finish', () => {
     const duration = Date.now() - start;
-    console.log(`Predictive API: ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+    logger.info(`[Predictive] API request`, { 
+      metadata: { method: req.method, path: req.path, status: res.statusCode, duration }
+    });
   });
   
   next();
@@ -5844,36 +5849,31 @@ const calculateAlertsTrends = (alerts: BusinessAlert[]) => {
 // ========================================
 
 // 1. GET /api/alerts/thresholds - Liste Seuils
-app.get('/api/alerts/thresholds', isAuthenticated, async (req: any, res) => {
-  try {
-    // 1. VALIDATION QUERY PARAMS
-    const queryValidation = z.object({
-      is_active: z.coerce.boolean().optional(),
-      threshold_key: z.enum([
-        'profitability_margin', 'team_utilization_rate', 'deadline_days_remaining',
-        'predictive_risk_score', 'revenue_forecast_confidence', 'project_delay_days',
-        'budget_overrun_percentage'
-      ]).optional(),
-      scope_type: z.enum(['global', 'project', 'team', 'period']).optional(),
-      created_by: z.string().optional(),
-      limit: z.coerce.number().min(1).max(100).default(20),
-      offset: z.coerce.number().min(0).default(0)
-    }).safeParse(req.query);
+const thresholdsQuerySchema = z.object({
+  is_active: z.coerce.boolean().optional(),
+  threshold_key: z.enum([
+    'profitability_margin', 'team_utilization_rate', 'deadline_days_remaining',
+    'predictive_risk_score', 'revenue_forecast_confidence', 'project_delay_days',
+    'budget_overrun_percentage'
+  ]).optional(),
+  scope_type: z.enum(['global', 'project', 'team', 'period']).optional(),
+  created_by: z.string().optional(),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  offset: z.coerce.number().min(0).default(0)
+});
+
+app.get('/api/alerts/thresholds', 
+  isAuthenticated, 
+  validateQuery(thresholdsQuerySchema),
+  asyncHandler(async (req: any, res) => {
+    const params = req.query;
     
-    if (!queryValidation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Paramètres requête invalides',
-        errors: queryValidation.error.format()
-      });
-    }
-    
-    const params = queryValidation.data;
-    
-    // 2. RÉCUPÉRATION SEUILS
+    // RÉCUPÉRATION SEUILS
     const result = await storage.listThresholds(params);
     
-    // 3. RESPONSE PAGINÉE
+    logger.info('[Alerts] Seuils récupérés', { metadata: { total: result.total, limit: params.limit } });
+    
+    // RESPONSE PAGINÉE
     res.json({
       success: true,
       data: result.thresholds,
@@ -5885,46 +5885,30 @@ app.get('/api/alerts/thresholds', isAuthenticated, async (req: any, res) => {
       },
       timestamp: new Date().toISOString()
     });
-    
-  } catch (error) {
-    console.error('Erreur /api/alerts/thresholds:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur récupération seuils'
-    });
-  }
-});
+  })
+);
 
 // 2. POST /api/alerts/thresholds - Création Seuil
-app.post('/api/alerts/thresholds', isAuthenticated, async (req: any, res) => {
-  try {
-    // 1. RBAC - Vérification rôle
+app.post('/api/alerts/thresholds', 
+  isAuthenticated, 
+  validateBody(insertAlertThresholdSchema),
+  asyncHandler(async (req: any, res) => {
+    // RBAC - Vérification rôle
     if (!['admin', 'executive'].includes(req.user?.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès refusé - Rôle admin ou executive requis'
-      });
-    }
-    
-    // 2. VALIDATION BODY
-    const bodyValidation = insertAlertThresholdSchema.safeParse(req.body);
-    if (!bodyValidation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Données seuil invalides',
-        errors: bodyValidation.error.format()
-      });
+      throw new AuthorizationError('Accès refusé - Rôle admin ou executive requis');
     }
     
     const thresholdData = {
-      ...bodyValidation.data,
+      ...req.body,
       createdBy: req.user.id
     };
     
-    // 3. CRÉATION SEUIL
+    // CRÉATION SEUIL
     const thresholdId = await storage.createThreshold(thresholdData);
     
-    // 4. RESPONSE SUCCESS
+    logger.info('[Alerts] Seuil créé', { metadata: { thresholdId, createdBy: req.user.id } });
+    
+    // RESPONSE SUCCESS
     res.status(201).json({
       success: true,
       data: {
@@ -5934,123 +5918,79 @@ app.post('/api/alerts/thresholds', isAuthenticated, async (req: any, res) => {
       message: 'Seuil créé avec succès',
       timestamp: new Date().toISOString()
     });
-    
-  } catch (error) {
-    console.error('Erreur /api/alerts/thresholds POST:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur création seuil'
-    });
-  }
-});
+  })
+);
 
 // 3. PATCH /api/alerts/thresholds/:id - Mise à jour Seuil
-app.patch('/api/alerts/thresholds/:id', isAuthenticated, async (req: any, res) => {
-  try {
-    // 1. RBAC
+app.patch('/api/alerts/thresholds/:id', 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  validateBody(updateAlertThresholdSchema),
+  asyncHandler(async (req: any, res) => {
+    // RBAC
     if (!['admin', 'executive'].includes(req.user?.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès refusé - Rôle admin ou executive requis'
-      });
+      throw new AuthorizationError('Accès refusé - Rôle admin ou executive requis');
     }
     
-    // 2. VALIDATION PARAMS
     const thresholdId = req.params.id;
-    if (!thresholdId) {
-      return res.status(400).json({
-        success: false,
-        message: 'ID seuil requis'
-      });
-    }
     
-    // 3. VALIDATION BODY
-    const bodyValidation = updateAlertThresholdSchema.safeParse(req.body);
-    if (!bodyValidation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Données mise à jour invalides',
-        errors: bodyValidation.error.format()
-      });
-    }
-    
-    // 4. VÉRIFICATION EXISTENCE
+    // VÉRIFICATION EXISTENCE
     const existingThreshold = await storage.getThresholdById(thresholdId);
     if (!existingThreshold) {
-      return res.status(404).json({
-        success: false,
-        message: 'Seuil non trouvé'
-      });
+      throw new NotFoundError('Seuil non trouvé');
     }
     
-    // 5. MISE À JOUR
-    const success = await storage.updateThreshold(thresholdId, bodyValidation.data);
+    // MISE À JOUR
+    const success = await storage.updateThreshold(thresholdId, req.body);
     
-    if (success) {
-      res.json({
-        success: true,
-        data: {
-          threshold_id: thresholdId,
-          updated_at: new Date().toISOString()
-        },
-        message: 'Seuil mis à jour avec succès',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Échec mise à jour seuil'
-      });
+    if (!success) {
+      throw new DatabaseError('Échec mise à jour seuil');
     }
     
-  } catch (error) {
-    console.error('Erreur /api/alerts/thresholds PATCH:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur mise à jour seuil'
+    logger.info('[Alerts] Seuil mis à jour', { metadata: { thresholdId } });
+    
+    res.json({
+      success: true,
+      data: {
+        threshold_id: thresholdId,
+        updated_at: new Date().toISOString()
+      },
+      message: 'Seuil mis à jour avec succès',
+      timestamp: new Date().toISOString()
     });
-  }
-});
+  })
+);
 
 // 4. DELETE /api/alerts/thresholds/:id - Désactivation Seuil
-app.delete('/api/alerts/thresholds/:id', isAuthenticated, async (req: any, res) => {
-  try {
-    // 1. RBAC
+app.delete('/api/alerts/thresholds/:id', 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  asyncHandler(async (req: any, res) => {
+    // RBAC
     if (!['admin', 'executive'].includes(req.user?.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès refusé - Rôle admin ou executive requis'
-      });
+      throw new AuthorizationError('Accès refusé - Rôle admin ou executive requis');
     }
     
-    // 2. DÉSACTIVATION (soft delete)
+    // DÉSACTIVATION (soft delete)
     const success = await storage.deactivateThreshold(req.params.id);
     
-    if (success) {
-      res.json({
-        success: true,
-        data: {
-          threshold_id: req.params.id,
-          deactivated_at: new Date().toISOString()
-        },
-        message: 'Seuil désactivé avec succès',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(404).json({
-        success: false,
-        message: 'Seuil non trouvé'
-      });
+    if (!success) {
+      throw new NotFoundError('Seuil non trouvé');
     }
     
-  } catch (error) {
-    console.error('Erreur /api/alerts/thresholds DELETE:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur désactivation seuil'
+    logger.info('[Alerts] Seuil désactivé', { metadata: { thresholdId: req.params.id } });
+    
+    res.json({
+      success: true,
+      data: {
+        threshold_id: req.params.id,
+        deactivated_at: new Date().toISOString()
+      },
+      message: 'Seuil désactivé avec succès',
+      timestamp: new Date().toISOString()
     });
-  }
-});
+  })
+);
 
 // ========================================
 // B. ENDPOINTS GESTION ALERTES

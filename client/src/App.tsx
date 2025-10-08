@@ -35,12 +35,12 @@ import ProjectSupport from "@/pages/projects/support";
 import ValidationList from "@/pages/offers/validation-list";
 import TransformList from "@/pages/offers/transform-list";
 import ChiffrageList from "@/pages/offers/chiffrage-list";
-// Import des pages workflow - TODO: Create components
+// Import des pages workflow
 import EtudeTechnique from "@/pages/workflow/etude-technique";
-// import ChiffrageWorkflow from "@/pages/workflow/chiffrage";
-// import EnvoiDevis from "@/pages/workflow/envoi-devis";
-// import PlanificationWorkflow from "@/pages/workflow/planification";
-// import ChantierWorkflow from "@/pages/workflow/chantier";
+import ChiffrageWorkflow from "@/pages/workflow/chiffrage";
+import EnvoiDevis from "@/pages/workflow/envoi-devis";
+import PlanificationWorkflow from "@/pages/workflow/planification";
+import ChantierWorkflow from "@/pages/workflow/chantier";
 // import ValidationBE from "@/pages/validation-be"; // Not used
 import SupplierRequests from "@/pages/supplier-requests";
 import BatigestPage from "@/pages/batigest";
@@ -131,10 +131,10 @@ function Router() {
       </Route>
       {/* ============= WORKFLOW - Processus avant-vente AO → Offre ============= */}
       <Route path="/workflow/etude-technique" component={() => <ProtectedRoute component={EtudeTechnique} />} />
-      {/* Routes workflow supplémentaires à implémenter en Phase 3.2 */}
-      {/* <Route path="/workflow/chiffrage" component={() => <ProtectedRoute component={ChiffrageWorkflow} />} /> */}
-      {/* <Route path="/workflow/envoi-devis" component={() => <ProtectedRoute component={EnvoiDevis} />} /> */}
-      {/* <Route path="/workflow/planification" component={() => <ProtectedRoute component={PlanificationWorkflow} />} /> */}
+      <Route path="/workflow/chiffrage" component={() => <ProtectedRoute component={ChiffrageWorkflow} />} />
+      <Route path="/workflow/envoi-devis" component={() => <ProtectedRoute component={EnvoiDevis} />} />
+      <Route path="/workflow/planification" component={() => <ProtectedRoute component={PlanificationWorkflow} />} />
+      <Route path="/workflow/chantier" component={() => <ProtectedRoute component={ChantierWorkflow} />} />
       
       {/* ============= APPELS D'OFFRE - Redirections vers workflow cohérent ============= */}
       <Route path="/aos">

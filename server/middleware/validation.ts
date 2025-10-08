@@ -88,6 +88,18 @@ export const commonParamSchemas = {
     id: z.string().uuid().optional()
   }),
 
+  projectId: z.object({
+    projectId: z.string().uuid('Project ID invalide - doit être un UUID valide')
+  }),
+
+  aoId: z.object({
+    aoId: z.string().uuid('AO ID invalide - doit être un UUID valide')
+  }),
+
+  offerId: z.object({
+    offerId: z.string().uuid('Offer ID invalide - doit être un UUID valide')
+  }),
+
   // Pagination commune
   pagination: z.object({
     page: z.string().regex(/^\d+$/).transform(Number).default('1'),

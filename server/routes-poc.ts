@@ -1564,29 +1564,27 @@ app.get("/api/projects/:id", isAuthenticated, asyncHandler(async (req, res) => {
   res.json(project);
 }));
 
-app.post("/api/projects", isAuthenticated, async (req, res) => {
-  try {
-    console.log('Raw request body:', JSON.stringify(req.body, null, 2));
-    
+app.post("/api/projects", 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
     // Convert string dates to Date objects before validation - WITH EXPLICIT HANDLING
     const projectData = { ...req.body };
     
     // 🔧 FIX: Récupérer les données manquantes depuis l'offre si offerId est fourni
     if (projectData.offerId) {
-      console.log('🔍 Récupération des données de l\'offre:', projectData.offerId);
+      logger.info('[Projects] Récupération données offre', { metadata: { offerId: projectData.offerId } });
       
       const offer = await storage.getOffer(projectData.offerId);
       if (!offer) {
-        return res.status(400).json({ 
-          message: "Offer not found",
-          offerId: projectData.offerId 
-        });
+        throw new NotFoundError('Offre', projectData.offerId);
       }
       
-      console.log('✅ Offre trouvée:', {
-        reference: offer.reference,
-        client: offer.client,
-        location: offer.location
+      logger.debug('[Projects] Offre trouvée', { 
+        metadata: { 
+          reference: offer.reference, 
+          client: offer.client, 
+          location: offer.location 
+        } 
       });
       
       // Compléter les champs requis depuis l'offre
@@ -1611,113 +1609,93 @@ app.post("/api/projects", isAuthenticated, async (req, res) => {
         projectData.budget = offer.montantFinal.toString();
       }
       
-      console.log('✅ Données complétées depuis l\'offre:', {
-        name: projectData.name,
-        client: projectData.client,
-        location: projectData.location
-      });
-      
       // Supprimer le champ title qui n'existe pas dans le schéma
       delete projectData.title;
     }
     
-    // Manual conversion for debugging
+    // Manual conversion for dates and budget
     if (projectData.startDate && typeof projectData.startDate === 'string') {
       projectData.startDate = new Date(projectData.startDate);
-      console.log('Converted startDate:', projectData.startDate);
     }
     
     if (projectData.endDate && typeof projectData.endDate === 'string') {
       projectData.endDate = new Date(projectData.endDate);
-      console.log('Converted endDate:', projectData.endDate);
     }
     
     if (projectData.budget && typeof projectData.budget === 'number') {
       projectData.budget = projectData.budget.toString();
-      console.log('Converted budget to string:', projectData.budget);
     }
-    
-    console.log('Data after conversion and completion:', JSON.stringify(projectData, null, 2));
     
     // Validate the data
     const validatedData = insertProjectSchema.parse(projectData);
     const project = await storage.createProject(validatedData);
     
-    console.log('Project created successfully:', project.id);
+    logger.info('[Projects] Projet créé', { metadata: { projectId: project.id, name: project.name } });
+    
     res.status(201).json(project);
-  } catch (error: any) {
-    console.error("Error creating project:", error);
-    
-    // Return proper validation errors
-    if (error.name === 'ZodError') {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: error.errors
-      });
-    }
-    
-    res.status(500).json({ message: "Failed to create project", error: error.message });
-  }
-});
+  })
+);
 
-app.patch("/api/projects/:id", isAuthenticated, async (req, res) => {
-  try {
+app.patch("/api/projects/:id", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  asyncHandler(async (req, res) => {
     // Convert string dates to Date objects before validation
     const convertedData = convertDatesInObject(req.body);
     convertedData.updatedAt = new Date();
     
-    console.log('Updating project with data:', JSON.stringify(convertedData, null, 2));
-    
     // RÈGLE CRITIQUE : Vérification VISA Architecte avant passage en planification
     if (convertedData.status === 'planification') {
-      console.log(`[VISA_GATING] 🔒 Vérification VISA Architecte requise pour projet ${req.params.id}`);
+      logger.info('[VISA_GATING] Vérification VISA Architecte requise', { metadata: { projectId: req.params.id } });
       
-      try {
-        // Récupérer le projet actuel pour vérifier le statut précédent
-        const currentProject = await storage.getProject(req.params.id);
-        if (!currentProject) {
-          return res.status(404).json({ message: "Project not found" });
+      // Récupérer le projet actuel pour vérifier le statut précédent
+      const currentProject = await storage.getProject(req.params.id);
+      if (!currentProject) {
+        throw new NotFoundError('Projet', req.params.id);
+      }
+      
+      // Vérifier seulement si on CHANGE vers planification (pas si on est déjà en planification)
+      if (currentProject.status !== 'planification') {
+        // Vérifier qu'au moins un VISA Architecte valide existe pour ce projet
+        const visaList = await storage.getVisaArchitecte(req.params.id);
+        const validVisa = visaList.find(visa => visa.status === 'valide' && visa.accordeLe);
+        
+        if (!validVisa) {
+          logger.warn('[VISA_GATING] Passage planification bloqué - Aucun VISA valide', { 
+            metadata: { 
+              projectId: req.params.id,
+              visaCount: visaList.length,
+              validVisaCount: visaList.filter(v => v.status === 'valide').length
+            } 
+          });
+          
+          return res.status(403).json({
+            message: "Impossible de passer en planification : VISA Architecte requis",
+            error: "VISA_REQUIRED",
+            details: "Un VISA Architecte valide est obligatoire avant de passer en phase de planification",
+            currentVisaCount: visaList.length,
+            validVisaCount: visaList.filter(v => v.status === 'valide').length,
+            requireAction: "Créer et valider un VISA Architecte avant de continuer"
+          });
         }
         
-        // Vérifier seulement si on CHANGE vers planification (pas si on est déjà en planification)
-        if (currentProject.status !== 'planification') {
-          // Vérifier qu'au moins un VISA Architecte valide existe pour ce projet
-          const visaList = await storage.getVisaArchitecte(req.params.id);
-          const validVisa = visaList.find(visa => visa.status === 'valide' && visa.accordeLe);
+        // Vérifier que le VISA n'est pas expiré
+        if (validVisa.expireLe && new Date(validVisa.expireLe) < new Date()) {
+          logger.warn('[VISA_GATING] Passage planification bloqué - VISA expiré', { 
+            metadata: { projectId: req.params.id, expiredAt: validVisa.expireLe } 
+          });
           
-          if (!validVisa) {
-            console.log(`[VISA_GATING] ❌ Passage en planification bloqué - Aucun VISA Architecte valide pour projet ${req.params.id}`);
-            return res.status(403).json({
-              message: "Impossible de passer en planification : VISA Architecte requis",
-              error: "VISA_REQUIRED",
-              details: "Un VISA Architecte valide est obligatoire avant de passer en phase de planification",
-              currentVisaCount: visaList.length,
-              validVisaCount: visaList.filter(v => v.status === 'valide').length,
-              requireAction: "Créer et valider un VISA Architecte avant de continuer"
-            });
-          }
-          
-          // Vérifier que le VISA n'est pas expiré
-          if (validVisa.expireLe && new Date(validVisa.expireLe) < new Date()) {
-            console.log(`[VISA_GATING] ❌ Passage en planification bloqué - VISA Architecte expiré pour projet ${req.params.id}`);
-            return res.status(403).json({
-              message: "Impossible de passer en planification : VISA Architecte expiré",
-              error: "VISA_EXPIRED",
-              details: `Le VISA Architecte a expiré le ${new Date(validVisa.expireLe).toLocaleDateString('fr-FR')}`,
-              expiredAt: validVisa.expireLe,
-              requireAction: "Renouveler le VISA Architecte avant de continuer"
-            });
-          }
-          
-          console.log(`[VISA_GATING] ✅ VISA Architecte valide trouvé - Autorisation passage planification pour projet ${req.params.id}`);
+          return res.status(403).json({
+            message: "Impossible de passer en planification : VISA Architecte expiré",
+            error: "VISA_EXPIRED",
+            details: `Le VISA Architecte a expiré le ${new Date(validVisa.expireLe).toLocaleDateString('fr-FR')}`,
+            expiredAt: validVisa.expireLe,
+            requireAction: "Renouveler le VISA Architecte avant de continuer"
+          });
         }
         
-      } catch (visaError) {
-        console.error('[VISA_GATING] ❌ Erreur lors de la vérification VISA:', visaError);
-        return res.status(500).json({
-          message: "Erreur lors de la vérification du VISA Architecte",
-          error: "VISA_CHECK_FAILED",
-          details: "Impossible de vérifier les VISA Architecte - Contactez l'administrateur"
+        logger.info('[VISA_GATING] VISA Architecte valide trouvé - Autorisation passage planification', { 
+          metadata: { projectId: req.params.id } 
         });
       }
     }
@@ -1725,47 +1703,38 @@ app.patch("/api/projects/:id", isAuthenticated, async (req, res) => {
     const partialData = insertProjectSchema.partial().parse(convertedData);
     const project = await storage.updateProject(req.params.id, partialData);
     
-    console.log('Project updated successfully:', project.id);
-    
     // Log spécial pour changement de statut avec contrôle VISA
-    if (convertedData.status && convertedData.status !== 'planification') {
-      console.log(`[PROJECT_STATUS] ✅ Statut projet ${req.params.id} mis à jour vers: ${convertedData.status}`);
-    } else if (convertedData.status === 'planification') {
-      console.log(`[PROJECT_STATUS] ✅ Statut projet ${req.params.id} mis à jour vers: planification (VISA validé)`);
-    }
-    
-    res.json(project);
-  } catch (error: any) {
-    console.error("Error updating project:", error);
-    
-    // Return proper validation errors
-    if (error.name === 'ZodError') {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: error.errors
+    if (convertedData.status) {
+      const statusInfo = convertedData.status === 'planification' ? 'planification (VISA validé)' : convertedData.status;
+      logger.info('[Projects] Statut projet mis à jour', { 
+        metadata: { projectId: req.params.id, newStatus: statusInfo } 
       });
     }
     
-    res.status(500).json({ message: "Failed to update project", error: error.message });
-  }
-});
+    res.json(project);
+  })
+);
 
 // ========================================
 // PROJECT TASK ROUTES - Planning partagé
 // ========================================
 
-app.get("/api/projects/:projectId/tasks", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/projects/:projectId/tasks", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.projectId),
+  asyncHandler(async (req, res) => {
     const tasks = await storage.getProjectTasks(req.params.projectId);
+    
+    logger.info('[Tasks] Tâches projet récupérées', { metadata: { projectId: req.params.projectId, count: tasks.length } });
+    
     res.json(tasks);
-  } catch (error) {
-    console.error("Error fetching project tasks:", error);
-    res.status(500).json({ message: "Failed to fetch project tasks" });
-  }
-});
+  })
+);
 
-app.post("/api/projects/:projectId/tasks", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/projects/:projectId/tasks", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.projectId),
+  asyncHandler(async (req, res) => {
     // Convert string dates to Date objects
     const taskData = {
       ...req.body,
@@ -1774,86 +1743,54 @@ app.post("/api/projects/:projectId/tasks", isAuthenticated, async (req, res) => 
     };
     
     const convertedData = convertDatesInObject(taskData);
-    
-    console.log('Creating task with data:', JSON.stringify(convertedData, null, 2));
-    
     const validatedData = insertProjectTaskSchema.parse(convertedData);
     const task = await storage.createProjectTask(validatedData);
     
-    console.log('Task created successfully:', task.id);
+    logger.info('[Tasks] Tâche créée', { metadata: { taskId: task.id, projectId: req.params.projectId, name: task.name } });
+    
     res.status(201).json(task);
-  } catch (error: any) {
-    console.error("Error creating project task:", error);
-    
-    // Return proper validation errors
-    if (error.name === 'ZodError') {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: error.errors
-      });
-    }
-    
-    res.status(500).json({ message: "Failed to create project task", error: error.message });
-  }
-});
+  })
+);
 
-app.patch("/api/tasks/:id", isAuthenticated, async (req, res) => {
-  try {
+app.patch("/api/tasks/:id", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  asyncHandler(async (req, res) => {
     // Convert string dates to Date objects before validation
     const convertedData = convertDatesInObject(req.body);
     convertedData.updatedAt = new Date();
     
-    console.log('Updating task with data:', JSON.stringify(convertedData, null, 2));
-    
     const partialData = insertProjectTaskSchema.partial().parse(convertedData);
     const task = await storage.updateProjectTask(req.params.id, partialData);
     
-    console.log('Task updated successfully:', task.id);
+    logger.info('[Tasks] Tâche mise à jour', { metadata: { taskId: req.params.id } });
+    
     res.json(task);
-  } catch (error) {
-    console.error("Error updating project task:", error);
-    res.status(500).json({ message: "Failed to update project task" });
-  }
-});
+  })
+);
 
 // Récupérer toutes les tâches pour la timeline
-app.get("/api/tasks/all", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/tasks/all", 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
     const allTasks = await storage.getAllTasks();
     
-    // 🔍 DEBUG FINAL - Log des données API pour résoudre bug hiérarchique
-    console.log('🔍 API /api/tasks/all - Raw Data:', {
-      totalTasks: allTasks.length,
-      tasksWithParentId: allTasks.filter(t => t.parentTaskId).length,
-      tasksWithProjectId: allTasks.filter(t => t.projectId).length,
-      sampleTasks: allTasks.slice(0, 3).map(t => ({
-        id: t.id,
-        name: t.name,
-        parentTaskId: t.parentTaskId,
-        projectId: t.projectId,
-        parentTaskIdType: typeof t.parentTaskId,
-        projectIdType: typeof t.projectId
-      })),
-      allTasksDetailed: allTasks.map(t => ({
-        id: t.id,
-        name: t.name,
-        parentTaskId: t.parentTaskId,
-        projectId: t.projectId,
-        startDate: t.startDate,
-        endDate: t.endDate
-      }))
+    logger.debug('[Tasks] Toutes tâches récupérées', { 
+      metadata: { 
+        total: allTasks.length,
+        withParentId: allTasks.filter(t => t.parentTaskId).length,
+        withProjectId: allTasks.filter(t => t.projectId).length
+      } 
     });
     
     res.json(allTasks);
-  } catch (error) {
-    console.error("Error fetching all tasks:", error);
-    res.status(500).json({ message: "Failed to fetch all tasks" });
-  }
-});
+  })
+);
 
 // Route pour créer des données de test complètes pour le planning Gantt
-app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/test-data/planning", 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
     // Créer d'abord des projets de test avec dates
     const testProjects = [
       {
@@ -1895,8 +1832,8 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
         description: "Diagnostic des menuiseries existantes et conception des nouvelles installations",
         status: "termine" as const,
         priority: "haute" as const,
-        startDate: new Date(2025, 0, 15), // 15 janvier 2025
-        endDate: new Date(2025, 0, 25), // 25 janvier 2025
+        startDate: new Date(2025, 0, 15),
+        endDate: new Date(2025, 0, 25),
         assignedUserId: "user-be-1",
         progress: 100,
       },
@@ -1906,8 +1843,8 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
         description: "Organisation des travaux pendant les vacances scolaires",
         status: "termine" as const,
         priority: "haute" as const,
-        startDate: new Date(2025, 0, 26), // 26 janvier 2025
-        endDate: new Date(2025, 1, 5), // 5 février 2025
+        startDate: new Date(2025, 0, 26),
+        endDate: new Date(2025, 1, 5),
         assignedUserId: "user-be-2",
         progress: 100,
       },
@@ -1917,8 +1854,8 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
         description: "Commande et livraison des menuiseries sur mesure",
         status: "en_cours" as const,
         priority: "moyenne" as const,
-        startDate: new Date(2025, 1, 6), // 6 février 2025
-        endDate: new Date(2025, 2, 1), // 1 mars 2025
+        startDate: new Date(2025, 1, 6),
+        endDate: new Date(2025, 2, 1),
         assignedUserId: "user-be-1",
         progress: 60,
       },
@@ -1928,8 +1865,8 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
         description: "Remplacement des fenêtres des salles de classe",
         status: "a_faire" as const,
         priority: "haute" as const,
-        startDate: new Date(2025, 2, 2), // 2 mars 2025
-        endDate: new Date(2025, 3, 15), // 15 avril 2025
+        startDate: new Date(2025, 2, 2),
+        endDate: new Date(2025, 3, 15),
         assignedUserId: "user-be-2",
         progress: 0,
       },
@@ -1939,8 +1876,8 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
         description: "Installation des portes coulissantes du préau",
         status: "a_faire" as const,
         priority: "moyenne" as const,
-        startDate: new Date(2025, 3, 16), // 16 avril 2025
-        endDate: new Date(2025, 4, 5), // 5 mai 2025
+        startDate: new Date(2025, 3, 16),
+        endDate: new Date(2025, 4, 5),
         assignedUserId: "user-be-1",
         progress: 0,
       },
@@ -1950,8 +1887,8 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
         description: "Contrôles qualité et réception des travaux",
         status: "a_faire" as const,
         priority: "faible" as const,
-        startDate: new Date(2025, 4, 6), // 6 mai 2025
-        endDate: new Date(2025, 4, 20), // 20 mai 2025
+        startDate: new Date(2025, 4, 6),
+        endDate: new Date(2025, 4, 20),
         assignedUserId: "user-be-2",
         progress: 0,
       },
@@ -1972,8 +1909,8 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
         name: "Études Techniques",
         description: "Validation technique et conception",
         status: "termine" as const,
-        startDate: new Date(2025, 1, 1), // 1 février 2025
-        endDate: new Date(2025, 1, 15), // 15 février 2025
+        startDate: new Date(2025, 1, 1),
+        endDate: new Date(2025, 1, 15),
         assignedUserId: "test-user-1",
         isJalon: true
       },
@@ -1982,8 +1919,8 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
         name: "Commande Matériaux",
         description: "Commande des menuiseries",
         status: "en_cours" as const,
-        startDate: new Date(2025, 1, 16), // 16 février 2025
-        endDate: new Date(2025, 2, 15), // 15 mars 2025
+        startDate: new Date(2025, 1, 16),
+        endDate: new Date(2025, 2, 15),
         assignedUserId: "test-user-1",
         isJalon: true
       },
@@ -1992,8 +1929,8 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
         name: "Installation Chantier",
         description: "Pose des menuiseries",
         status: "a_faire" as const,
-        startDate: new Date(2025, 2, 16), // 16 mars 2025
-        endDate: new Date(2025, 4, 30), // 30 mai 2025
+        startDate: new Date(2025, 2, 16),
+        endDate: new Date(2025, 4, 30),
         assignedUserId: "test-user-1",
         isJalon: true
       }
@@ -2005,16 +1942,20 @@ app.post("/api/test-data/planning", isAuthenticated, async (req, res) => {
       createdTasks2.push(task);
     }
 
+    logger.info('[TestData] Données planning test créées', { 
+      metadata: { 
+        projectsCreated: createdProjects.length, 
+        tasksCreated: createdTasks.length + createdTasks2.length 
+      } 
+    });
+
     res.json({
       projects: createdProjects,
       tasks: [...createdTasks, ...createdTasks2],
       message: "Données de test complètes créées pour le planning Gantt"
     });
-  } catch (error) {
-    console.error("Error creating test tasks:", error);
-    res.status(500).json({ message: "Failed to create test tasks" });
-  }
-});
+  })
+);
 
 // ========================================
 // AO LOTS ROUTES - Gestion des lots d'AO

@@ -2597,67 +2597,73 @@ app.get("/api/projects/:projectId/can-proceed-to-planning",
 // TEAM RESOURCE ROUTES - Gestion équipes simplifiée
 // ========================================
 
-app.get("/api/team-resources", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/team-resources", 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
     const { projectId } = req.query;
     const resources = await storage.getTeamResources(projectId as string);
+    
+    logger.info('[TeamResources] Ressources récupérées', { metadata: { projectId, count: resources.length } });
+    
     res.json(resources);
-  } catch (error) {
-    console.error("Error fetching team resources:", error);
-    res.status(500).json({ message: "Failed to fetch team resources" });
-  }
-});
+  })
+);
 
-app.post("/api/team-resources", isAuthenticated, async (req, res) => {
-  try {
-    const validatedData = insertTeamResourceSchema.parse(req.body);
-    const resource = await storage.createTeamResource(validatedData);
+app.post("/api/team-resources", 
+  isAuthenticated, 
+  validateBody(insertTeamResourceSchema),
+  asyncHandler(async (req, res) => {
+    const resource = await storage.createTeamResource(req.body);
+    
+    logger.info('[TeamResources] Ressource créée', { metadata: { resourceId: resource.id } });
+    
     res.status(201).json(resource);
-  } catch (error) {
-    console.error("Error creating team resource:", error);
-    res.status(500).json({ message: "Failed to create team resource" });
-  }
-});
+  })
+);
 
-app.patch("/api/team-resources/:id", isAuthenticated, async (req, res) => {
-  try {
-    const partialData = insertTeamResourceSchema.partial().parse(req.body);
-    const resource = await storage.updateTeamResource(req.params.id, partialData);
+app.patch("/api/team-resources/:id", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  validateBody(insertTeamResourceSchema.partial()),
+  asyncHandler(async (req, res) => {
+    const resource = await storage.updateTeamResource(req.params.id, req.body);
+    
+    logger.info('[TeamResources] Ressource mise à jour', { metadata: { resourceId: req.params.id } });
+    
     res.json(resource);
-  } catch (error) {
-    console.error("Error updating team resource:", error);
-    res.status(500).json({ message: "Failed to update team resource" });
-  }
-});
+  })
+);
 
 // ========================================
 // BE WORKLOAD ROUTES - Indicateurs charge BE
 // ========================================
 
-app.get("/api/be-workload", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/be-workload", 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
     const { weekNumber, year } = req.query;
     const workload = await storage.getBeWorkload(
       weekNumber ? parseInt(weekNumber as string) : undefined,
       year ? parseInt(year as string) : undefined
     );
+    
+    logger.info('[BEWorkload] Charge BE récupérée', { metadata: { weekNumber, year, count: workload.length } });
+    
     res.json(workload);
-  } catch (error) {
-    console.error("Error fetching BE workload:", error);
-    res.status(500).json({ message: "Failed to fetch BE workload" });
-  }
-});
+  })
+);
 
-app.post("/api/be-workload", isAuthenticated, async (req, res) => {
-  try {
-    const validatedData = insertBeWorkloadSchema.parse(req.body);
-    const workload = await storage.createOrUpdateBeWorkload(validatedData);
+app.post("/api/be-workload", 
+  isAuthenticated, 
+  validateBody(insertBeWorkloadSchema),
+  asyncHandler(async (req, res) => {
+    const workload = await storage.createOrUpdateBeWorkload(req.body);
+    
+    logger.info('[BEWorkload] Charge BE créée/mise à jour', { metadata: { workloadId: workload.id, weekNumber: workload.weekNumber } });
+    
     res.status(201).json(workload);
-  } catch (error) {
-    console.error("Error creating/updating BE workload:", error);
-    res.status(500).json({ message: "Failed to create/update BE workload" });
-  }
-});
+  })
+);
 
 // ========================================
 // OBJECT STORAGE ROUTES - Gestion documentaire
@@ -5978,31 +5984,25 @@ app.delete('/api/alerts/thresholds/:id',
 // ========================================
 
 // 5. GET /api/alerts - Liste Alertes Business
-app.get('/api/alerts', isAuthenticated, async (req: any, res) => {
-  try {
-    // 1. VALIDATION QUERY
-    const queryValidation = alertsQuerySchema.safeParse(req.query);
-    if (!queryValidation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Paramètres filtres invalides',
-        errors: queryValidation.error.format()
-      });
-    }
+app.get('/api/alerts', 
+  isAuthenticated, 
+  validateQuery(alertsQuerySchema),
+  asyncHandler(async (req: any, res) => {
+    const query = { ...req.query };
     
-    const query = queryValidation.data;
-    
-    // 2. FILTRAGE PAR RÔLE USER
+    // FILTRAGE PAR RÔLE USER (RBAC)
     if (req.user?.role === 'user') {
       // Utilisateurs normaux voient seulement alertes assignées ou scope project
       query.assignedTo = req.user.id;
     }
     
-    // 3. RÉCUPÉRATION ALERTES
+    // RÉCUPÉRATION ALERTES
     // @ts-ignore - Phase 6+ feature not yet implemented
     const result = await storage.listBusinessAlerts(query);
     
-    // 4. RESPONSE ENRICHIE
+    logger.info('[BusinessAlerts] Alertes récupérées', { metadata: { total: result.total, userRole: req.user?.role, limit: query.limit } });
+    
+    // RESPONSE ENRICHIE
     res.json({
       success: true,
       data: result.alerts,
@@ -6016,189 +6016,126 @@ app.get('/api/alerts', isAuthenticated, async (req: any, res) => {
       filters_applied: query,
       timestamp: new Date().toISOString()
     });
-    
-  } catch (error) {
-    console.error('Erreur /api/alerts:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur récupération alertes'
-    });
-  }
-});
+  })
+);
 
 // 6. POST /api/alerts/:id/acknowledge - Accusé Réception
-app.post('/api/alerts/:id/acknowledge', isAuthenticated, async (req: any, res) => {
-  try {
-    // 1. VALIDATION PARAMS
+app.post('/api/alerts/:id/acknowledge', 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  validateBody(z.object({
+    notes: z.string().max(500).optional()
+  })),
+  asyncHandler(async (req: any, res) => {
     const alertId = req.params.id;
     const userId = req.user.id;
     
-    // 2. VALIDATION BODY (optionnel)
-    const bodyValidation = z.object({
-      notes: z.string().max(500).optional()
-    }).safeParse(req.body);
-    
-    if (!bodyValidation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Notes invalides',
-        errors: bodyValidation.error.format()
-      });
-    }
-    
-    // 3. VÉRIFICATION ALERTE EXISTE
+    // VÉRIFICATION ALERTE EXISTE
     // @ts-ignore - Phase 6+ feature not yet implemented
     const alert = await storage.getBusinessAlertById(alertId);
     if (!alert) {
-      return res.status(404).json({
-        success: false,
-        message: 'Alerte non trouvée'
-      });
+      throw new NotFoundError('Alerte non trouvée');
     }
     
-    // 4. VÉRIFICATION STATUT
+    // VÉRIFICATION STATUT
     if (alert.status !== 'open') {
-      return res.status(400).json({
-        success: false,
-        message: `Alerte déjà ${alert.status}`
-      });
+      throw new ValidationError(`Alerte déjà ${alert.status}`);
     }
     
-    // 5. ACKNOWLEDGMENT
-    const success = await storage.acknowledgeAlert(alertId, userId, bodyValidation.data.notes);
+    // ACKNOWLEDGMENT
+    const success = await storage.acknowledgeAlert(alertId, userId, req.body.notes);
     
-    if (success) {
-      res.json({
-        success: true,
-        data: {
-          alert_id: alertId,
-          acknowledged_by: userId,
-          acknowledged_at: new Date().toISOString(),
-          previous_status: 'open',
-          new_status: 'acknowledged'
-        },
-        message: 'Alerte accusée réception',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Échec accusé réception'
-      });
+    if (!success) {
+      throw new DatabaseError('Échec accusé réception');
     }
     
-  } catch (error) {
-    console.error('Erreur /api/alerts acknowledge:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur accusé réception alerte'
+    logger.info('[BusinessAlerts] Alerte accusée réception', { metadata: { alertId, userId } });
+    
+    res.json({
+      success: true,
+      data: {
+        alert_id: alertId,
+        acknowledged_by: userId,
+        acknowledged_at: new Date().toISOString(),
+        previous_status: 'open',
+        new_status: 'acknowledged'
+      },
+      message: 'Alerte accusée réception',
+      timestamp: new Date().toISOString()
     });
-  }
-});
+  })
+);
 
 // 7. POST /api/alerts/:id/resolve - Résolution Alerte
-app.post('/api/alerts/:id/resolve', isAuthenticated, async (req: any, res) => {
-  try {
-    // 1. VALIDATION BODY REQUISE
-    const bodyValidation = z.object({
-      resolution_notes: z.string().min(10).max(1000)
-    }).safeParse(req.body);
-    
-    if (!bodyValidation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Notes résolution requises (10-1000 caractères)',
-        errors: bodyValidation.error.format()
-      });
-    }
-    
+app.post('/api/alerts/:id/resolve', 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  validateBody(z.object({
+    resolution_notes: z.string().min(10).max(1000)
+  })),
+  asyncHandler(async (req: any, res) => {
     const alertId = req.params.id;
     const userId = req.user.id;
     
-    // 2. VÉRIFICATION ALERTE
+    // VÉRIFICATION ALERTE
     // @ts-ignore - Phase 6+ feature not yet implemented
     const alert = await storage.getBusinessAlertById(alertId);
     if (!alert) {
-      return res.status(404).json({
-        success: false,
-        message: 'Alerte non trouvée'
-      });
+      throw new NotFoundError('Alerte non trouvée');
     }
     
-    // 3. VÉRIFICATION STATUT (doit être ack ou in_progress)
+    // VÉRIFICATION STATUT (doit être ack ou in_progress)
     if (!['acknowledged', 'in_progress'].includes(alert.status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Impossible résoudre alerte avec statut ${alert.status}`
-      });
+      throw new ValidationError(`Impossible résoudre alerte avec statut ${alert.status}`);
     }
     
-    // 4. RÉSOLUTION
+    // RÉSOLUTION
     const success = await storage.resolveAlert(
       alertId, 
       userId, 
-      bodyValidation.data.resolution_notes
+      req.body.resolution_notes
     );
     
-    if (success) {
-      res.json({
-        success: true,
-        data: {
-          alert_id: alertId,
-          resolved_by: userId,
-          resolved_at: new Date().toISOString(),
-          resolution_notes: bodyValidation.data.resolution_notes,
-          previous_status: alert.status,
-          new_status: 'resolved'
-        },
-        message: 'Alerte résolue avec succès',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Échec résolution alerte'
-      });
+    if (!success) {
+      throw new DatabaseError('Échec résolution alerte');
     }
     
-  } catch (error) {
-    console.error('Erreur /api/alerts resolve:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur résolution alerte'
+    logger.info('[BusinessAlerts] Alerte résolue', { metadata: { alertId, userId, previousStatus: alert.status } });
+    
+    res.json({
+      success: true,
+      data: {
+        alert_id: alertId,
+        resolved_by: userId,
+        resolved_at: new Date().toISOString(),
+        resolution_notes: req.body.resolution_notes,
+        previous_status: alert.status,
+        new_status: 'resolved'
+      },
+      message: 'Alerte résolue avec succès',
+      timestamp: new Date().toISOString()
     });
-  }
-});
+  })
+);
 
 // 8. PATCH /api/alerts/:id/assign - Assignation Alerte
-app.patch('/api/alerts/:id/assign', isAuthenticated, async (req: any, res) => {
-  try {
-    // 1. RBAC - Assignation par admin/executive/manager
+app.patch('/api/alerts/:id/assign', 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  validateBody(z.object({
+    assigned_to: z.string().min(1)
+  })),
+  asyncHandler(async (req: any, res) => {
+    // RBAC - Assignation par admin/executive/manager
     if (!['admin', 'executive', 'manager'].includes(req.user?.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès refusé - Rôle manager minimum requis'
-      });
-    }
-    
-    // 2. VALIDATION BODY
-    const bodyValidation = z.object({
-      assigned_to: z.string().min(1)
-    }).safeParse(req.body);
-    
-    if (!bodyValidation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID assignation requis',
-        errors: bodyValidation.error.format()
-      });
+      throw new AuthorizationError('Accès refusé - Rôle manager minimum requis');
     }
     
     const alertId = req.params.id;
-    const assignedTo = bodyValidation.data.assigned_to;
+    const assignedTo = req.body.assigned_to;
     const assignedBy = req.user.id;
     
-    // 3. ASSIGNATION VIA STORAGE
+    // ASSIGNATION VIA STORAGE
     // @ts-ignore - Phase 6+ feature not yet implemented
     const success = await storage.updateBusinessAlertStatus(
       alertId,
@@ -6206,33 +6143,25 @@ app.patch('/api/alerts/:id/assign', isAuthenticated, async (req: any, res) => {
       assignedBy
     );
     
-    if (success) {
-      res.json({
-        success: true,
-        data: {
-          alert_id: alertId,
-          assigned_to: assignedTo,
-          assigned_by: assignedBy,
-          assigned_at: new Date().toISOString()
-        },
-        message: 'Alerte assignée avec succès',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(404).json({
-        success: false,
-        message: 'Alerte non trouvée'
-      });
+    if (!success) {
+      throw new NotFoundError('Alerte non trouvée');
     }
     
-  } catch (error) {
-    console.error('Erreur /api/alerts assign:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur assignation alerte'
+    logger.info('[BusinessAlerts] Alerte assignée', { metadata: { alertId, assignedTo, assignedBy } });
+    
+    res.json({
+      success: true,
+      data: {
+        alert_id: alertId,
+        assigned_to: assignedTo,
+        assigned_by: assignedBy,
+        assigned_at: new Date().toISOString()
+      },
+      message: 'Alerte assignée avec succès',
+      timestamp: new Date().toISOString()
     });
-  }
-});
+  })
+);
 
 // ========================================
 // C. ENDPOINTS DASHBOARD

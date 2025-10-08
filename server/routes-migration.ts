@@ -19,6 +19,8 @@ import { z } from 'zod';
 import { MondayMigrationService } from './services/MondayMigrationService';
 import { storage, type IStorage } from './storage-poc';
 import { validateBody } from './middleware/validation';
+import { asyncHandler } from './utils/error-handler';
+import { logger } from './utils/logger';
 
 // ========================================
 // INITIALISATION SERVICE MIGRATION
@@ -56,50 +58,45 @@ const validationRequestSchema = z.object({
  */
 migrationRoutes.post('/aos-planning',
   validateBody(migrationRequestSchema),
-  async (req, res) => {
-    try {
-      const { count, dryRun } = req.body;
+  asyncHandler(async (req, res) => {
+    const { count, dryRun } = req.body;
 
-      console.log(`[Migration API] Démarrage migration AO_Planning - ${count} enregistrements, dryRun: ${dryRun}`);
+    logger.info('Démarrage migration AO_Planning', {
+      metadata: { route: '/api/migration/aos-planning', count, dryRun }
+    });
 
-      if (dryRun) {
-        // Mode simulation - génère et valide sans insérer
-        const { generateRealisticJLMData } = await import('./utils/mondayDataGenerator');
-        const { validateAoBatch } = await import('./utils/mondayValidator');
-        
-        const sampleData = generateRealisticJLMData(Math.min(count, 10), 'aos');
-        const validation = validateAoBatch(sampleData);
-        
-        return res.json({
-          success: true,
-          dryRun: true,
-          simulation: {
-            generated: sampleData.length,
-            validation: validation.summary,
-            sampleData: validation.valid.slice(0, 3) // 3 premiers pour aperçu
-          }
-        });
-      }
-
-      // Migration réelle
-      const result = await mondayMigrationService.migrateAosFromAnalysis(count);
+    if (dryRun) {
+      // Mode simulation - génère et valide sans insérer
+      const { generateRealisticJLMData } = await import('./utils/mondayDataGenerator');
+      const { validateAoBatch } = await import('./utils/mondayValidator');
       
-      res.json({
+      const sampleData = generateRealisticJLMData(Math.min(count, 10), 'aos');
+      const validation = validateAoBatch(sampleData);
+      
+      return res.json({
         success: true,
-        migration: result,
-        message: `Migration AO_Planning terminée - ${result.migrated} migrés, ${result.errors} erreurs`
-      });
-
-    } catch (error) {
-      console.error('[Migration API] Erreur migration AO_Planning:', error);
-      
-      res.status(500).json({
-        success: false,
-        error: 'Erreur migration AO_Planning',
-        details: error instanceof Error ? error.message : String(error)
+        dryRun: true,
+        simulation: {
+          generated: sampleData.length,
+          validation: validation.summary,
+          sampleData: validation.valid.slice(0, 3) // 3 premiers pour aperçu
+        }
       });
     }
-  }
+
+    // Migration réelle
+    const result = await mondayMigrationService.migrateAosFromAnalysis(count);
+    
+    logger.info('Migration AO_Planning terminée', {
+      metadata: { route: '/api/migration/aos-planning', migrated: result.migrated, errors: result.errors }
+    });
+
+    res.json({
+      success: true,
+      migration: result,
+      message: `Migration AO_Planning terminée - ${result.migrated} migrés, ${result.errors} erreurs`
+    });
+  })
 );
 
 // ========================================
@@ -112,50 +109,45 @@ migrationRoutes.post('/aos-planning',
  */
 migrationRoutes.post('/chantiers',
   validateBody(migrationRequestSchema),
-  async (req, res) => {
-    try {
-      const { count, dryRun } = req.body;
+  asyncHandler(async (req, res) => {
+    const { count, dryRun } = req.body;
 
-      console.log(`[Migration API] Démarrage migration CHANTIERS - ${count} enregistrements, dryRun: ${dryRun}`);
+    logger.info('Démarrage migration CHANTIERS', {
+      metadata: { route: '/api/migration/chantiers', count, dryRun }
+    });
 
-      if (dryRun) {
-        // Mode simulation - génère et valide sans insérer
-        const { generateRealisticJLMData } = await import('./utils/mondayDataGenerator');
-        const { validateProjectBatch } = await import('./utils/mondayValidator');
-        
-        const sampleData = generateRealisticJLMData(Math.min(count, 10), 'projects');
-        const validation = validateProjectBatch(sampleData);
-        
-        return res.json({
-          success: true,
-          dryRun: true,
-          simulation: {
-            generated: sampleData.length,
-            validation: validation.summary,
-            sampleData: validation.valid.slice(0, 3) // 3 premiers pour aperçu
-          }
-        });
-      }
-
-      // Migration réelle
-      const result = await mondayMigrationService.migrateChantiersFromAnalysis(count);
+    if (dryRun) {
+      // Mode simulation - génère et valide sans insérer
+      const { generateRealisticJLMData } = await import('./utils/mondayDataGenerator');
+      const { validateProjectBatch } = await import('./utils/mondayValidator');
       
-      res.json({
+      const sampleData = generateRealisticJLMData(Math.min(count, 10), 'projects');
+      const validation = validateProjectBatch(sampleData);
+      
+      return res.json({
         success: true,
-        migration: result,
-        message: `Migration CHANTIERS terminée - ${result.migrated} migrés, ${result.errors} erreurs`
-      });
-
-    } catch (error) {
-      console.error('[Migration API] Erreur migration CHANTIERS:', error);
-      
-      res.status(500).json({
-        success: false,
-        error: 'Erreur migration CHANTIERS',
-        details: error instanceof Error ? error.message : String(error)
+        dryRun: true,
+        simulation: {
+          generated: sampleData.length,
+          validation: validation.summary,
+          sampleData: validation.valid.slice(0, 3) // 3 premiers pour aperçu
+        }
       });
     }
-  }
+
+    // Migration réelle
+    const result = await mondayMigrationService.migrateChantiersFromAnalysis(count);
+    
+    logger.info('Migration CHANTIERS terminée', {
+      metadata: { route: '/api/migration/chantiers', migrated: result.migrated, errors: result.errors }
+    });
+
+    res.json({
+      success: true,
+      migration: result,
+      message: `Migration CHANTIERS terminée - ${result.migrated} migrés, ${result.errors} erreurs`
+    });
+  })
 );
 
 // ========================================
@@ -353,82 +345,83 @@ migrationRoutes.post('/full',
     projectsCount: z.number().optional().default(1000),
     dryRun: z.boolean().optional().default(false)
   })),
-  async (req, res) => {
-    try {
-      const { aosCount, projectsCount, dryRun } = req.body;
+  asyncHandler(async (req, res) => {
+    const { aosCount, projectsCount, dryRun } = req.body;
 
-      console.log(`[Migration API] Démarrage migration complète - AO:${aosCount}, Projects:${projectsCount}, dryRun:${dryRun}`);
+    logger.info('Démarrage migration complète', {
+      metadata: { route: '/api/migration/full', aosCount, projectsCount, dryRun }
+    });
 
-      if (dryRun) {
-        return res.json({
-          success: true,
-          dryRun: true,
-          plan: {
-            aosToMigrate: aosCount,
-            projectsToMigrate: projectsCount,
-            totalRecords: aosCount + projectsCount,
-            estimatedDuration: '~5-10 minutes'
-          }
-        });
-      }
-
-      const results = [];
-      let totalMigrated = 0;
-      let totalErrors = 0;
-
-      // Migration séquentielle pour éviter surcharge
-      if (aosCount > 0) {
-        console.log('[Migration API] Phase 1/2 - Migration AO_Planning');
-        const aosResult = await mondayMigrationService.migrateAosFromAnalysis(aosCount);
-        results.push({ type: 'aos', result: aosResult });
-        totalMigrated += aosResult.migrated;
-        totalErrors += aosResult.errors;
-      }
-
-      if (projectsCount > 0) {
-        console.log('[Migration API] Phase 2/2 - Migration CHANTIERS');
-        const projectsResult = await mondayMigrationService.migrateChantiersFromAnalysis(projectsCount);
-        results.push({ type: 'projects', result: projectsResult });
-        totalMigrated += projectsResult.migrated;
-        totalErrors += projectsResult.errors;
-      }
-
-      // Validation finale
-      console.log('[Migration API] Validation finale migration complète');
-      const validation = await mondayMigrationService.validateMigration();
-
-      res.json({
+    if (dryRun) {
+      return res.json({
         success: true,
-        fullMigration: {
-          results,
-          summary: {
-            totalMigrated,
-            totalErrors,
-            validationPassed: validation.errors.length === 0
-          },
-          validation: {
-            aosCount: validation.aosCount,
-            projectsCount: validation.projectsCount,
-            integrityChecks: validation.integrityChecks,
-            issues: {
-              errors: validation.errors.length,
-              warnings: validation.warnings.length
-            }
-          }
-        },
-        message: `Migration complète terminée - ${totalMigrated} migrés, ${totalErrors} erreurs`
-      });
-
-    } catch (error) {
-      console.error('[Migration API] Erreur migration complète:', error);
-      
-      res.status(500).json({
-        success: false,
-        error: 'Erreur migration complète',
-        details: error instanceof Error ? error.message : String(error)
+        dryRun: true,
+        plan: {
+          aosToMigrate: aosCount,
+          projectsToMigrate: projectsCount,
+          totalRecords: aosCount + projectsCount,
+          estimatedDuration: '~5-10 minutes'
+        }
       });
     }
-  }
+
+    const results = [];
+    let totalMigrated = 0;
+    let totalErrors = 0;
+
+    // Migration séquentielle pour éviter surcharge
+    if (aosCount > 0) {
+      logger.info('Phase 1/2 - Migration AO_Planning', {
+        metadata: { route: '/api/migration/full', aosCount }
+      });
+      const aosResult = await mondayMigrationService.migrateAosFromAnalysis(aosCount);
+      results.push({ type: 'aos', result: aosResult });
+      totalMigrated += aosResult.migrated;
+      totalErrors += aosResult.errors;
+    }
+
+    if (projectsCount > 0) {
+      logger.info('Phase 2/2 - Migration CHANTIERS', {
+        metadata: { route: '/api/migration/full', projectsCount }
+      });
+      const projectsResult = await mondayMigrationService.migrateChantiersFromAnalysis(projectsCount);
+      results.push({ type: 'projects', result: projectsResult });
+      totalMigrated += projectsResult.migrated;
+      totalErrors += projectsResult.errors;
+    }
+
+    // Validation finale
+    logger.info('Validation finale migration complète', {
+      metadata: { route: '/api/migration/full', totalMigrated, totalErrors }
+    });
+    const validation = await mondayMigrationService.validateMigration();
+
+    logger.info('Migration complète terminée', {
+      metadata: { route: '/api/migration/full', totalMigrated, totalErrors, validationPassed: validation.errors.length === 0 }
+    });
+
+    res.json({
+      success: true,
+      fullMigration: {
+        results,
+        summary: {
+          totalMigrated,
+          totalErrors,
+          validationPassed: validation.errors.length === 0
+        },
+        validation: {
+          aosCount: validation.aosCount,
+          projectsCount: validation.projectsCount,
+          integrityChecks: validation.integrityChecks,
+          issues: {
+            errors: validation.errors.length,
+            warnings: validation.warnings.length
+          }
+        }
+      },
+      message: `Migration complète terminée - ${totalMigrated} migrés, ${totalErrors} erreurs`
+    });
+  })
 );
 
 // ========================================
@@ -501,4 +494,6 @@ migrationRoutes.delete('/reset', async (req, res) => {
   }
 });
 
-console.log('[Migration Routes] Routes migration Monday.com initialisées');
+logger.info('Routes migration Monday.com initialisées', {
+  service: 'MigrationRoutes'
+});

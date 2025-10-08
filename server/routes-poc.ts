@@ -142,26 +142,34 @@ const predictiveEngineService = new PredictiveEngineService(storage as IStorage,
 // 🔥 CORRECTION CRITIQUE : INTÉGRATION EVENTBUS → PREDICTIVEENGINESERVICE 🔥
 // ========================================
 
-console.log('===================================================');
-console.log('[CRITICAL FIX] EventBus → PredictiveEngineService Integration');
-console.log('[LOCATION] server/routes-poc.ts - REAL PredictiveEngine instance');
-console.log('===================================================');
+logger.info('EventBus PredictiveEngineService Integration', {
+  metadata: { location: 'server/routes-poc.ts', type: 'REAL_PredictiveEngine_instance' }
+});
 
 try {
   // INTÉGRATION CRITIQUE pour activation preloading background
   eventBus.integratePredictiveEngine(predictiveEngineService);
   
-  console.log('[SUCCESS] ✅ PredictiveEngine → EventBus integration COMPLETED');
-  console.log('[SUCCESS] ✅ Background preloading cycles ACTIVE');
-  console.log('[SUCCESS] ✅ Business hours/peak/weekend/nightly cycles RUNNING');
-  console.log('[SUCCESS] ✅ Cache hit-rate ≥70% + 35% latency reduction ENABLED');
-  console.log('[SUCCESS] ✅ Step 3 Performance - Objectif 25s→10s ATTEIGNABLE');
+  logger.info('PredictiveEngine EventBus integration completed', {
+    metadata: { 
+      status: 'success',
+      features: [
+        'background_preloading_cycles',
+        'business_hours_peak_weekend_nightly_cycles',
+        'cache_hit_rate_70_percent',
+        'latency_reduction_35_percent',
+        'performance_objective_25s_to_10s'
+      ]
+    }
+  });
 } catch (error) {
-  console.error('[ERROR] ❌ INTEGRATION FAILED:', error);
-  console.error('[ERROR] Objectif 25s→10s COMPROMIS sans preloading prédictif');
+  logger.error('EventBus PredictiveEngine integration failed', {
+    metadata: { 
+      error: error instanceof Error ? error.message : String(error),
+      impact: 'performance_objective_25s_to_10s_compromised'
+    }
+  });
 }
-
-console.log('===================================================');
 
 // ========================================
 // SERVICE IA MULTI-MODÈLES - CHATBOT TEXT-TO-SQL SAXIUM
@@ -379,9 +387,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
   
   // Initialiser les règles métier par défaut au démarrage
-  console.log('[App] Initialisation des règles métier menuiserie...');
+  logger.info('Initialisation des règles métier menuiserie', {
+    metadata: { context: 'app_startup' }
+  });
   await initializeDefaultRules();
-  console.log('[App] Règles métier initialisées avec succès');
+  logger.info('Règles métier initialisées avec succès', {
+    metadata: { context: 'app_startup' }
+  });
 
   // Basic Auth Login Route
   app.post('/api/login/basic', asyncHandler(async (req, res) => {
@@ -791,7 +803,9 @@ app.post("/api/ocr/process-pdf",
       throw createError.badRequest('Aucun fichier PDF fourni');
     }
 
-    console.log(`Processing PDF: ${req.file.originalname} (${req.file.size} bytes)`);
+    logger.info('Processing PDF', {
+      metadata: { filename: req.file.originalname, size: req.file.size }
+    });
     
     // Initialiser le service OCR
     await ocrService.initialize();
@@ -1479,10 +1493,14 @@ function convertDatesInObject(obj: any): any {
       try {
         if (typeof converted[field] === 'string') {
           converted[field] = new Date(converted[field]);
-          console.log(`Converted ${field} from string to Date:`, converted[field]);
+          logger.info('Converted field from string to Date', {
+            metadata: { field, value: converted[field] }
+          });
         }
       } catch (e) {
-        console.warn(`Failed to convert ${field}:`, converted[field]);
+        logger.warn('Failed to convert date field', {
+          metadata: { field, value: converted[field], error: e instanceof Error ? e.message : String(e) }
+        });
       }
     }
   }
@@ -1492,7 +1510,9 @@ function convertDatesInObject(obj: any): any {
   for (const field of decimalFields) {
     if (converted[field] && typeof converted[field] === 'number') {
       converted[field] = converted[field].toString();
-      console.log(`Converted ${field} from number to string:`, converted[field]);
+      logger.info('Converted decimal field from number to string', {
+        metadata: { field, value: converted[field] }
+      });
     }
   }
   
@@ -2784,9 +2804,13 @@ app.post("/api/offers/create-with-structure",
         offer.id, 
         offer.reference
       );
-      console.log(`Generated document structure for offer ${offer.reference}:`, documentStructure);
+      logger.info('Generated document structure for offer', {
+        metadata: { offerReference: offer.reference, documentStructure }
+      });
     } catch (docError: any) {
-      console.warn("Warning: Could not create document structure:", docError?.message);
+      logger.warn('Could not create document structure', {
+        metadata: { error: docError?.message }
+      });
     }
 
     // 2. CRÉATION AUTOMATIQUE DU JALON "RENDU AO" SI DATE LIMITE FOURNIE
@@ -2808,10 +2832,14 @@ app.post("/api/offers/create-with-structure",
         
         // Note: Pour le POC, nous créons le jalon comme une tâche générique
         // Dans une implémentation complète, cela pourrait être lié à un projet spécifique
-        console.log(`Created milestone for offer ${offer.reference} on ${processedData.deadline}`);
+        logger.info('Created milestone for offer', {
+          metadata: { offerReference: offer.reference, deadline: processedData.deadline }
+        });
         milestone = milestoneTaskData;
       } catch (milestoneError: any) {
-        console.warn("Warning: Could not create milestone:", milestoneError?.message);
+        logger.warn('Could not create milestone', {
+          metadata: { error: milestoneError?.message }
+        });
       }
     }
 
@@ -2825,9 +2853,13 @@ app.post("/api/offers/create-with-structure",
         };
         
         // Note: La méthode updateAo n'existe pas encore dans storage, on va la simuler pour le POC
-        console.log(`Would update AO ${offer.aoId} status to "En chiffrage" for offer ${offer.reference}`);
+        logger.info('Would update AO status to En chiffrage', {
+          metadata: { aoId: offer.aoId, offerReference: offer.reference }
+        });
       } catch (aoUpdateError: any) {
-        console.warn("Warning: Could not update AO status:", aoUpdateError?.message);
+        logger.warn('Could not update AO status', {
+          metadata: { error: aoUpdateError?.message }
+        });
       }
     }
 
@@ -2842,9 +2874,13 @@ app.post("/api/offers/create-with-structure",
           organizedPath: `${documentStructure?.basePath || 'temp'}/01-DCE-Cotes-Photos/${file.name}`
         }));
         
-        console.log(`Processed ${processedFiles.length} imported files for offer ${offer.reference}`);
+        logger.info('Processed imported files for offer', {
+          metadata: { count: processedFiles.length, offerReference: offer.reference }
+        });
       } catch (fileError: any) {
-        console.warn("Warning: Could not process uploaded files:", fileError?.message);
+        logger.warn('Could not process uploaded files', {
+          metadata: { error: fileError?.message }
+        });
       }
     }
 
@@ -3094,19 +3130,25 @@ app.get("/api/scoring-config",
   isAuthenticated,
   isAdminOrResponsible,
   asyncHandler(async (req, res) => {
-    console.log('[API] GET /api/scoring-config - Récupération configuration scoring');
+    logger.info('Récupération configuration scoring', {
+      metadata: { endpoint: 'GET /api/scoring-config' }
+    });
     
     try {
       const config = await storage.getScoringConfig();
       
-      console.log('[API] Configuration scoring récupérée:', JSON.stringify(config, null, 2));
+      logger.info('Configuration scoring récupérée', {
+        metadata: { config }
+      });
       
       res.json({
         success: true,
         data: config
       });
     } catch (error) {
-      console.error('[API] Erreur récupération configuration scoring:', error);
+      logger.error('Erreur récupération configuration scoring', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       throw createError.database( "Erreur lors de la récupération de la configuration");
     }
   })
@@ -3118,8 +3160,9 @@ app.patch("/api/scoring-config",
   isAdminOrResponsible,
   validateBody(technicalScoringConfigSchema),
   asyncHandler(async (req, res) => {
-    console.log('[API] PATCH /api/scoring-config - Mise à jour configuration scoring');
-    console.log('[API] Données reçues:', JSON.stringify(req.body, null, 2));
+    logger.info('Mise à jour configuration scoring', {
+      metadata: { endpoint: 'PATCH /api/scoring-config', data: req.body }
+    });
     
     try {
       const config: TechnicalScoringConfig = req.body;
@@ -3136,7 +3179,9 @@ app.patch("/api/scoring-config",
       // Sauvegarder la configuration
       await storage.updateScoringConfig(config);
       
-      console.log('[API] Configuration scoring mise à jour avec succès');
+      logger.info('Configuration scoring mise à jour avec succès', {
+        metadata: { config }
+      });
       
       res.json({
         success: true,
@@ -3144,7 +3189,9 @@ app.patch("/api/scoring-config",
         data: config
       });
     } catch (error) {
-      console.error('[API] Erreur mise à jour configuration scoring:', error);
+      logger.error('Erreur mise à jour configuration scoring', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       
       if (error instanceof Error && error.message.includes('doit être entre')) {
         return res.status(400).json({
@@ -3177,8 +3224,9 @@ app.post("/api/score-preview",
   isAdminOrResponsible,
   validateBody(scorePreviewSchema),
   asyncHandler(async (req, res) => {
-    console.log('[API] POST /api/score-preview - Calcul aperçu scoring');
-    console.log('[API] Critères reçus:', JSON.stringify(req.body, null, 2));
+    logger.info('Calcul aperçu scoring', {
+      metadata: { endpoint: 'POST /api/score-preview', criteria: req.body }
+    });
     
     try {
       const { specialCriteria, config } = req.body;
@@ -3189,7 +3237,9 @@ app.post("/api/score-preview",
       // Calculer le scoring
       const result = ScoringService.compute(specialCriteria, scoringConfig);
       
-      console.log('[API] Résultat aperçu scoring calculé:', JSON.stringify(result, null, 2));
+      logger.info('Résultat aperçu scoring calculé', {
+        metadata: { result }
+      });
       
       res.json({
         success: true,
@@ -3200,7 +3250,9 @@ app.post("/api/score-preview",
         }
       });
     } catch (error) {
-      console.error('[API] Erreur calcul aperçu scoring:', error);
+      logger.error('Erreur calcul aperçu scoring', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       throw createError.database( "Erreur lors du calcul de l'aperçu du scoring");
     }
   })
@@ -3231,11 +3283,15 @@ app.get('/api/settings/material-color-rules',
   isAuthenticated, 
   requireTechnicalValidationRole, // Réutiliser le middleware existant pour admin/responsable_be
   asyncHandler(async (req, res) => {
-    console.log('[API] GET /api/settings/material-color-rules - Récupération règles matériaux-couleurs');
+    logger.info('Récupération règles matériaux-couleurs', {
+      metadata: { endpoint: 'GET /api/settings/material-color-rules' }
+    });
     
     try {
       const rules = await storage.getMaterialColorRules();
-      console.log(`[API] ${rules.length} règles matériaux-couleurs récupérées`);
+      logger.info('Règles matériaux-couleurs récupérées', {
+        metadata: { count: rules.length }
+      });
       
       res.json({
         success: true,
@@ -3243,7 +3299,9 @@ app.get('/api/settings/material-color-rules',
         total: rules.length
       });
     } catch (error) {
-      console.error('[API] Erreur lors de la récupération des règles matériaux-couleurs:', error);
+      logger.error('Erreur récupération règles matériaux-couleurs', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       throw error; // Sera géré par asyncHandler
     }
   })
@@ -3255,8 +3313,9 @@ app.put('/api/settings/material-color-rules',
   requireTechnicalValidationRole, // Protection admin/responsable_be
   validateBody(z.array(materialColorAlertRuleSchema)),
   asyncHandler(async (req, res) => {
-    console.log('[API] PUT /api/settings/material-color-rules - Mise à jour règles matériaux-couleurs');
-    console.log('[API] Nouvelles règles reçues:', JSON.stringify(req.body, null, 2));
+    logger.info('Mise à jour règles matériaux-couleurs', {
+      metadata: { endpoint: 'PUT /api/settings/material-color-rules', newRules: req.body }
+    });
     
     try {
       const newRules: MaterialColorAlertRule[] = req.body;
@@ -3274,7 +3333,9 @@ app.put('/api/settings/material-color-rules',
       // Sauvegarder les nouvelles règles
       await storage.setMaterialColorRules(newRules);
       
-      console.log(`[API] ${newRules.length} règles matériaux-couleurs mises à jour avec succès`);
+      logger.info('Règles matériaux-couleurs mises à jour avec succès', {
+        metadata: { count: newRules.length }
+      });
       
       res.json({
         success: true,
@@ -3282,7 +3343,9 @@ app.put('/api/settings/material-color-rules',
         data: newRules
       });
     } catch (error) {
-      console.error('[API] Erreur lors de la mise à jour des règles matériaux-couleurs:', error);
+      logger.error('Erreur mise à jour règles matériaux-couleurs', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       throw error; // Sera géré par asyncHandler
     }
   })
@@ -3306,7 +3369,9 @@ app.get("/api/technical-alerts",
       
       sendSuccess(res, alerts);
     } catch (error) {
-      console.error('[API] Erreur récupération alertes techniques:', error);
+      logger.error('Erreur récupération alertes techniques', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       throw createError.database( "Erreur lors de la récupération des alertes techniques");
     }
   })
@@ -3328,7 +3393,9 @@ app.get("/api/technical-alerts/:id",
       
       sendSuccess(res, alert);
     } catch (error) {
-      console.error('[API] Erreur récupération alerte technique:', error);
+      logger.error('Erreur récupération alerte technique', {
+        metadata: { error: error instanceof Error ? error.message : String(error), alertId: req.params.id }
+      });
       throw error;
     }
   })
@@ -3362,7 +3429,9 @@ app.patch("/api/technical-alerts/:id/ack",
       
       sendSuccess(res, { alertId: id });
     } catch (error) {
-      console.error('[API] Erreur acknowledgment alerte technique:', error);
+      logger.error('Erreur acknowledgment alerte technique', {
+        metadata: { error: error instanceof Error ? error.message : String(error), alertId: id }
+      });
       throw error;
     }
   })
@@ -3396,7 +3465,9 @@ app.patch("/api/technical-alerts/:id/validate",
       
       sendSuccess(res, { alertId: id });
     } catch (error) {
-      console.error('[API] Erreur validation alerte technique:', error);
+      logger.error('Erreur validation alerte technique', {
+        metadata: { error: error instanceof Error ? error.message : String(error), alertId: id }
+      });
       throw error;
     }
   })
@@ -3433,7 +3504,9 @@ app.patch("/api/technical-alerts/:id/bypass",
       
       sendSuccess(res, { alertId: id, until, reason });
     } catch (error) {
-      console.error('[API] Erreur bypass alerte technique:', error);
+      logger.error('Erreur bypass alerte technique', {
+        metadata: { error: error instanceof Error ? error.message : String(error), alertId: id }
+      });
       throw error;
     }
   })
@@ -3451,7 +3524,9 @@ app.get("/api/technical-alerts/:id/history",
       
       sendSuccess(res, history);
     } catch (error) {
-      console.error('[API] Erreur récupération historique alerte technique:', error);
+      logger.error('Erreur récupération historique alerte technique', {
+        metadata: { error: error instanceof Error ? error.message : String(error), alertId: req.params.id }
+      });
       throw createError.database( "Erreur lors de la récupération de l'historique");
     }
   })
@@ -3491,11 +3566,15 @@ app.post("/api/technical-alerts/seed",
         }
       });
       
-      console.log('[SEED] Alerte technique persistée avec succès:', alert.id);
+      logger.info('Alerte technique persistée avec succès', {
+        metadata: { context: 'test_seed', alertId: alert.id }
+      });
       
       sendSuccess(res, alert);
     } catch (error) {
-      console.error('[SEED] Erreur création alerte test:', error);
+      logger.error('Erreur création alerte test', {
+        metadata: { context: 'test_seed', error: error instanceof Error ? error.message : String(error) }
+      });
       throw createError.badRequest('Erreur lors du seeding de l\'alerte technique');
     }
   })
@@ -3542,7 +3621,9 @@ app.post("/api/projects/:id/calculate-timeline",
       const { id: projectId } = req.params;
       const { constraints, context } = req.body;
       
-      console.log(`[DateIntelligence] Calcul timeline pour projet ${projectId}`);
+      logger.info('Calcul timeline pour projet', {
+        metadata: { projectId, constraintsCount: constraints?.length || 0 }
+      });
       
       // Générer la timeline intelligente
       const timeline = await dateIntelligenceService.generateProjectTimeline(
@@ -3567,7 +3648,13 @@ app.post("/api/projects/:id/calculate-timeline",
       
       sendSuccess(res, result);
     } catch (error: any) {
-      console.error('[DateIntelligence] Erreur calcul timeline:', error);
+      logger.error('Erreur calcul timeline', {
+        metadata: { 
+          projectId: req.params.id,
+          error: error instanceof Error ? error.message : String(error),
+          errorType: 'TIMELINE_CALCULATION_FAILED'
+        }
+      });
       throw createError.database( "Erreur lors du calcul de la timeline", {
         projectId: req.params.id,
         errorType: 'TIMELINE_CALCULATION_FAILED'
@@ -3590,7 +3677,9 @@ app.put("/api/projects/:id/recalculate-from/:phase",
       const { id: projectId, phase } = req.params;
       const { newDate, propagateChanges, context } = req.body;
       
-      console.log(`[DateIntelligence] Recalcul cascade projet ${projectId} depuis ${phase}`);
+      logger.info('Recalcul cascade projet', {
+        metadata: { projectId, phase, propagateChanges }
+      });
       
       // Effectuer le recalcul en cascade
       const cascadeResult = await dateIntelligenceService.recalculateFromPhase(
@@ -3630,7 +3719,9 @@ app.put("/api/projects/:id/recalculate-from/:phase",
       
       sendSuccess(res, result);
     } catch (error: any) {
-      console.error('[DateIntelligence] Erreur recalcul cascade:', error);
+      logger.error('Erreur recalcul cascade', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors du recalcul en cascade", {
         projectId: req.params.id,
         phase: req.params.phase,
@@ -3648,7 +3739,9 @@ app.get("/api/intelligence-rules",
     try {
       const { phase, projectType, isActive, priority } = req.query;
       
-      console.log('[DateIntelligence] Récupération règles avec filtres:', req.query);
+      logger.info('Récupération règles avec filtres', {
+        metadata: { filters: req.query }
+      });
       
       // Construire les filtres pour le storage
       const filters: any = {};
@@ -3680,7 +3773,9 @@ app.get("/api/intelligence-rules",
       
       sendSuccess(res, result);
     } catch (error: any) {
-      console.error('[DateIntelligence] Erreur récupération règles:', error);
+      logger.error('Erreur récupération règles', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors de la récupération des règles");
     }
   })
@@ -3693,7 +3788,9 @@ app.post("/api/intelligence-rules",
   validateBody(insertDateIntelligenceRuleSchema),
   asyncHandler(async (req, res) => {
     try {
-      console.log('[DateIntelligence] Création nouvelle règle:', req.body.name);
+      logger.info('Création nouvelle règle', {
+        metadata: { name: req.body.name }
+      });
       
       // Ajouter l'utilisateur créateur
       const ruleData = {
@@ -3704,11 +3801,15 @@ app.post("/api/intelligence-rules",
       // Créer la règle dans le storage
       const newRule = await storage.createRule(ruleData);
       
-      console.log(`[DateIntelligence] Règle créée avec succès: ${newRule.id}`);
+      logger.info('Règle créée avec succès', {
+        metadata: { ruleId: newRule.id }
+      });
       
       sendSuccess(res, newRule, 201);
     } catch (error: any) {
-      console.error('[DateIntelligence] Erreur création règle:', error);
+      logger.error('Erreur création règle', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       
       // Gestion d'erreurs spécialisées
       if (error.message?.includes('nom déjà utilisé')) {
@@ -3730,7 +3831,9 @@ app.get("/api/date-alerts",
     try {
       const { entityType, entityId, status, severity, limit, offset } = req.query;
       
-      console.log('[DateIntelligence] Récupération alertes avec filtres:', req.query);
+      logger.info('Récupération alertes avec filtres', {
+        metadata: { filters: req.query }
+      });
       
       // Construire les filtres pour le storage
       const filters: any = {};
@@ -3769,7 +3872,9 @@ app.get("/api/date-alerts",
       
       sendPaginatedSuccess(res, result.alerts, { page: Math.floor(numOffset / numLimit) + 1, limit: numLimit, total });
     } catch (error: any) {
-      console.error('[DateIntelligence] Erreur récupération alertes:', error);
+      logger.error('Erreur récupération alertes', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors de la récupération des alertes");
     }
   })
@@ -3787,7 +3892,9 @@ app.put("/api/date-alerts/:id/acknowledge",
       const { note } = req.body;
       const userId = (req as any).user?.id || 'unknown';
       
-      console.log(`[DateIntelligence] Acquittement alerte ${id} par ${userId}`);
+      logger.info('Acquittement alerte', {
+        metadata: { alertId: id, userId }
+      });
       
       // Vérifier que l'alerte existe
       const existingAlert = await storage.getDateAlert(id);
@@ -3813,11 +3920,15 @@ app.put("/api/date-alerts/:id/acknowledge",
         });
       }
       
-      console.log(`[DateIntelligence] Alerte ${id} acquittée avec succès`);
+      logger.info('Alerte acquittée avec succès', {
+        metadata: { alertId: id }
+      });
       
       sendSuccess(res, acknowledgedAlert);
     } catch (error: any) {
-      console.error('[DateIntelligence] Erreur acquittement alerte:', error);
+      logger.error('Erreur acquittement alerte', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       
       // Re-lancer les erreurs AppError
       if (error.statusCode) {
@@ -3847,7 +3958,9 @@ app.put("/api/date-alerts/:id/resolve",
       const { actionTaken, resolution } = req.body;
       const userId = (req as any).user?.id || 'unknown';
       
-      console.log(`[DateIntelligence] Résolution alerte ${id} par ${userId}`);
+      logger.info('Résolution alerte', {
+        metadata: { alertId: id, userId }
+      });
       
       // Vérifier que l'alerte existe
       const existingAlert = await storage.getDateAlert(id);
@@ -3858,11 +3971,15 @@ app.put("/api/date-alerts/:id/resolve",
       // Résoudre l'alerte
       const resolvedAlert = await storage.resolveAlert(id, userId, actionTaken);
       
-      console.log(`[DateIntelligence] Alerte ${id} résolue avec succès`);
+      logger.info('Alerte résolue avec succès', {
+        metadata: { alertId: id }
+      });
       
       sendSuccess(res, resolvedAlert);
     } catch (error: any) {
-      console.error('[DateIntelligence] Erreur résolution alerte:', error);
+      logger.error('Erreur résolution alerte', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       
       if (error.statusCode) {
         throw error;
@@ -3886,7 +4003,9 @@ app.get("/api/date-alerts/dashboard",
   asyncHandler(async (req, res) => {
     try {
       const userId = (req as any).user?.id;
-      console.log(`[AlertsDashboard] Récupération dashboard pour utilisateur ${userId}`);
+      logger.info('Récupération dashboard pour utilisateur', {
+        metadata: { userId }
+      });
       
       // Récupérer toutes les alertes actives
       const activeAlerts = await storage.getDateAlerts({ status: 'pending' });
@@ -3971,7 +4090,9 @@ app.get("/api/date-alerts/dashboard",
       sendSuccess(res, dashboard);
       
     } catch (error: any) {
-      console.error('[AlertsDashboard] Erreur:', error);
+      logger.error('Erreur récupération dashboard', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors de la récupération du dashboard", {
         errorType: 'DASHBOARD_FETCH_FAILED'
       });
@@ -3993,7 +4114,9 @@ app.post("/api/date-alerts/run-detection",
       const { detectionType, projectId, daysAhead } = req.body;
       const userId = (req as any).user?.id;
       
-      console.log(`[ManualDetection] Détection manuelle '${detectionType}' déclenchée par ${userId}`);
+      logger.info('Détection manuelle déclenchée', {
+        metadata: { detectionType, userId, projectId }
+      });
       
       let results: any = {};
       const startTime = Date.now();
@@ -4060,12 +4183,20 @@ app.post("/api/date-alerts/run-detection",
         success: true
       };
       
-      console.log(`[ManualDetection] Détection '${detectionType}' terminée: ${results.totalAlertsGenerated} alertes en ${executionTime}ms`);
+      logger.info('Détection terminée', {
+        metadata: { 
+          detectionType, 
+          totalAlerts: results.totalAlertsGenerated, 
+          executionTime 
+        }
+      });
       
       sendSuccess(res, response, 201);
       
     } catch (error: any) {
-      console.error('[ManualDetection] Erreur:', error);
+      logger.error('Erreur exécution détection', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors de l'exécution de la détection", {
         detectionType: req.body.detectionType,
         errorType: 'MANUAL_DETECTION_FAILED'
@@ -4090,7 +4221,9 @@ app.post("/api/date-alerts/:id/escalate",
       const { escalationLevel, reason, urgency } = req.body;
       const userId = (req as any).user?.id;
       
-      console.log(`[AlertEscalation] Escalade alerte ${id} niveau ${escalationLevel} par ${userId}`);
+      logger.info('Escalade alerte', {
+        metadata: { alertId: id, escalationLevel, userId }
+      });
       
       // Vérifier que l'alerte existe
       const existingAlert = await storage.getDateAlert(id);
@@ -4173,12 +4306,16 @@ app.post("/api/date-alerts/:id/escalate",
         }
       };
       
-      console.log(`[AlertEscalation] Alerte ${id} escaladée avec succès niveau ${escalationLevel}`);
+      logger.info('Alerte escaladée avec succès', {
+        metadata: { alertId: id, escalationLevel }
+      });
       
       sendSuccess(res, response, `Alerte escaladée au niveau ${escalationLevel}`, 201);
       
     } catch (error: any) {
-      console.error('[AlertEscalation] Erreur:', error);
+      logger.error('Erreur escalade alerte', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       
       if (error.statusCode) {
         throw error;
@@ -4204,7 +4341,9 @@ app.get("/api/date-alerts/summary",
     try {
       const { period, groupBy, includeResolved } = req.query;
       
-      console.log(`[AlertsSummary] Récupération résumé période ${period} groupé par ${groupBy}`);
+      logger.info('Récupération résumé alertes', {
+        metadata: { period, groupBy }
+      });
       
       // Calculer la période
       let startDate: Date;
@@ -4362,12 +4501,16 @@ app.get("/api/date-alerts/summary",
         summary.insights.push(`Entité la plus affectée: ${topEntities[0].entity} avec ${topEntities[0].count} alertes`);
       }
       
-      console.log(`[AlertsSummary] Résumé généré: ${totalAlerts} alertes, ${Object.keys(grouped).length} groupes`);
+      logger.info('Résumé généré', {
+        metadata: { totalAlerts, groupCount: Object.keys(grouped).length }
+      });
       
       sendSuccess(res, summary);
       
     } catch (error: any) {
-      console.error('[AlertsSummary] Erreur:', error);
+      logger.error('Erreur génération résumé', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors de la génération du résumé", {
         errorType: 'ALERTS_SUMMARY_FAILED'
       });
@@ -4384,13 +4527,15 @@ app.get("/api/admin/rules/statistics",
   isAuthenticated,
   asyncHandler(async (req, res) => {
     try {
-      console.log('[Admin] Récupération statistiques règles métier');
+      logger.info('Récupération statistiques règles métier');
       
       const stats = await DateIntelligenceRulesSeeder.getRulesStatistics();
       
       sendSuccess(res, stats);
     } catch (error: any) {
-      console.error('[Admin] Erreur statistiques règles:', error);
+      logger.error('Erreur statistiques règles', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors de la récupération des statistiques");
     }
   })
@@ -4402,7 +4547,7 @@ app.post("/api/admin/rules/seed",
   rateLimits.general,
   asyncHandler(async (req, res) => {
     try {
-      console.log('[Admin] Seeding forcé des règles par défaut');
+      logger.info('Seeding forcé des règles par défaut');
       
       await DateIntelligenceRulesSeeder.updateDefaultRules();
       
@@ -4414,7 +4559,9 @@ app.post("/api/admin/rules/seed",
       }, "Règles par défaut initialisées avec succès");
       
     } catch (error: any) {
-      console.error('[Admin] Erreur seeding règles:', error);
+      logger.error('Erreur seeding règles', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors du seeding des règles par défaut");
     }
   })
@@ -4432,13 +4579,17 @@ app.post("/api/admin/rules/reset",
   asyncHandler(async (req, res) => {
     try {
       const userId = (req as any).user?.id || 'unknown';
-      console.log(`[Admin] RESET COMPLET des règles initié par ${userId}`);
+      logger.info('RESET COMPLET des règles initié', {
+        metadata: { userId }
+      });
       
       await DateIntelligenceRulesSeeder.resetAllRules();
       
       const stats = await DateIntelligenceRulesSeeder.getRulesStatistics();
       
-      console.log(`[Admin] RESET COMPLET terminé par ${userId}`);
+      logger.info('RESET COMPLET terminé', {
+        metadata: { userId }
+      });
       
       sendSuccess(res, { 
         message: "Reset complet des règles effectué",
@@ -4448,7 +4599,9 @@ app.post("/api/admin/rules/reset",
       }, "Reset des règles effectué avec succès");
       
     } catch (error: any) {
-      console.error('[Admin] Erreur reset règles:', error);
+      logger.error('Erreur reset règles', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors du reset des règles");
     }
   })
@@ -4459,7 +4612,7 @@ app.get("/api/admin/rules/validate",
   isAuthenticated,
   asyncHandler(async (req, res) => {
     try {
-      console.log('[Admin] Validation cohérence règles métier');
+      logger.info('Validation cohérence règles métier');
       
       const validation = await DateIntelligenceRulesSeeder.validateRulesConsistency();
       
@@ -4482,7 +4635,9 @@ app.get("/api/admin/rules/validate",
       sendSuccess(res, response, "Validation de la cohérence terminée", statusCode);
       
     } catch (error: any) {
-      console.error('[Admin] Erreur validation règles:', error);
+      logger.error('Erreur validation règles', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors de la validation des règles");
     }
   })
@@ -4493,7 +4648,7 @@ app.get("/api/admin/intelligence/health",
   isAuthenticated,
   asyncHandler(async (req, res) => {
     try {
-      console.log('[Admin] Vérification santé système intelligence temporelle');
+      logger.info('Vérification santé système intelligence temporelle');
       
       // Récupérer les statistiques des différents composants
       const [rulesStats, rulesValidation] = await Promise.all([
@@ -4560,12 +4715,16 @@ app.get("/api/admin/intelligence/health",
         healthReport.recommendations.push("Nombreux avertissements - Optimisation des règles recommandée");
       }
       
-      console.log(`[Admin] Santé système: ${healthStatus} (${healthScore}/100)`);
+      logger.info('Santé système', {
+        metadata: { healthStatus, healthScore }
+      });
       
       sendSuccess(res, healthReport, "Rapport de santé du système d'intelligence temporelle");
       
     } catch (error: any) {
-      console.error('[Admin] Erreur vérification santé:', error);
+      logger.error('Erreur vérification santé', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors de la vérification de santé du système");
     }
   })
@@ -4580,7 +4739,7 @@ app.get("/api/admin/intelligence/test-integration",
   isAuthenticated,
   asyncHandler(async (req, res) => {
     try {
-      console.log('[Test] Démarrage test d\'intégration intelligence temporelle');
+      logger.info('Démarrage test intégration intelligence temporelle');
       
       // Import dynamique du test pour éviter les dépendances circulaires
       const { runIntegrationTest } = await import('./test/dateIntelligenceIntegration.test');
@@ -4605,7 +4764,9 @@ app.get("/api/admin/intelligence/test-integration",
       });
       
     } catch (error: any) {
-      console.error('[Test] Erreur test d\'intégration:', error);
+      logger.error('Erreur test intégration', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       throw createError.database( "Erreur lors du test d'intégration", {
         errorType: 'INTEGRATION_TEST_FAILED',
         details: error.message
@@ -4633,7 +4794,9 @@ app.get("/api/admin/intelligence/test-integration",
         const statuses = Array.isArray(query.statuses) ? query.statuses as string[] : query.statuses ? [query.statuses as string] : undefined;
         const projectId = query.projectId as string | undefined;
         
-        console.log('[ProjectTimelines] Récupération timelines avec filtres:', req.query);
+        logger.info('Récupération timelines avec filtres', {
+          metadata: { filters: req.query }
+        });
         
         // Récupérer toutes les timelines depuis le storage
         let timelines = await storage.getAllProjectTimelines();
@@ -4646,7 +4809,9 @@ app.get("/api/admin/intelligence/test-integration",
         if (statuses && statuses.length > 0) {
           // Note: ProjectTimeline ne contient pas de relation project directe
           // Les timelines seront filtrées côté client ou via une requête jointure
-          console.warn('[ProjectTimelines] Filtrage par statuts non implémenté - relation project manquante');
+          logger.warn('Filtrage par statuts non implémenté', {
+            metadata: { reason: 'relation project manquante' }
+          });
         }
         
         if (projectId) {
@@ -4668,7 +4833,9 @@ app.get("/api/admin/intelligence/test-integration",
         
         sendSuccess(res, result);
       } catch (error: any) {
-        console.error('[ProjectTimelines] Erreur récupération timelines:', error);
+        logger.error('Erreur récupération timelines', {
+          metadata: { error: error.message, stack: error.stack }
+        });
         throw createError.database( "Erreur lors de la récupération des timelines de projets");
       }
     })
@@ -4689,7 +4856,9 @@ app.get("/api/admin/intelligence/test-integration",
         const { id } = req.params;
         const updates = req.body;
         
-        console.log(`[ProjectTimelines] Mise à jour timeline ${id}:`, updates);
+        logger.info('Mise à jour timeline', {
+          metadata: { timelineId: id, updates }
+        });
         
         // Conversion des dates string en Date objects
         const timelineUpdates: any = {};
@@ -4709,11 +4878,15 @@ app.get("/api/admin/intelligence/test-integration",
           throw createError.notFound('Timeline', id);
         }
         
-        console.log(`[ProjectTimelines] Timeline ${id} mise à jour avec succès`);
+        logger.info('Timeline mise à jour avec succès', {
+          metadata: { timelineId: id }
+        });
         
         sendSuccess(res, updatedTimeline);
       } catch (error: any) {
-        console.error(`[ProjectTimelines] Erreur mise à jour timeline ${req.params.id}:`, error);
+        logger.error('Erreur mise à jour timeline', {
+          metadata: { timelineId: req.params.id, error: error.message, stack: error.stack }
+        });
         throw createError.database( "Erreur lors de la mise à jour de la timeline");
       }
     })
@@ -4739,7 +4912,9 @@ app.get("/api/admin/intelligence/test-integration",
       try {
         const { timeRange, phases, projectTypes, includeArchived } = req.query || {};
         
-        console.log('[PerformanceMetrics] Calcul métriques avec filtres:', req.query);
+        logger.info('Calcul métriques avec filtres', {
+          metadata: { filters: req.query }
+        });
         
         // Récupérer toutes les timelines et projets pour le calcul
         const timelines = await storage.getAllProjectTimelines();
@@ -4847,7 +5022,9 @@ app.get("/api/admin/intelligence/test-integration",
         
         sendSuccess(res, result);
       } catch (error: any) {
-        console.error('[PerformanceMetrics] Erreur calcul métriques:', error);
+        logger.error('Erreur calcul métriques', {
+          metadata: { error: error.message, stack: error.stack }
+        });
         throw createError.database( "Erreur lors du calcul des métriques de performance");
       }
     })
@@ -4877,7 +5054,9 @@ app.get("/api/admin/intelligence/test-integration",
         const userId = query.userId as string | undefined;
         const includeP95P99 = (typeof query.includeP95P99 === 'string' && query.includeP95P99 === 'true') || query.includeP95P99 === true;
         
-        console.log('[AI-Performance] Récupération métriques pipeline avec filtres:', req.query);
+        logger.info('Récupération métriques pipeline avec filtres', {
+          metadata: { filters: req.query }
+        });
         
         // Récupérer les métriques du service de performance
         const performanceService = getPerformanceMetricsService(storage as IStorage);
@@ -4897,7 +5076,9 @@ app.get("/api/admin/intelligence/test-integration",
         });
         
       } catch (error) {
-        console.error('[AI-Performance] Erreur pipeline metrics:', error);
+        logger.error('Erreur pipeline metrics', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des métriques pipeline');
       }
     })
@@ -4919,7 +5100,9 @@ app.get("/api/admin/intelligence/test-integration",
         const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
         const breakdown = (query.breakdown as 'complexity' | 'user' | 'time') || 'complexity';
         
-        console.log('[AI-Performance] Analytics cache avec breakdown:', breakdown);
+        logger.info('Analytics cache avec breakdown', {
+          metadata: { breakdown }
+        });
         
         const performanceService = getPerformanceMetricsService(storage as IStorage);
         const cacheAnalytics = await performanceService.getCacheAnalytics({
@@ -4936,7 +5119,9 @@ app.get("/api/admin/intelligence/test-integration",
         });
         
       } catch (error) {
-        console.error('[AI-Performance] Erreur cache analytics:', error);
+        logger.error('Erreur cache analytics', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de l\'analyse des métriques cache');
       }
     })
@@ -4957,7 +5142,7 @@ app.get("/api/admin/intelligence/test-integration",
       try {
         const { timeRange, includeTrends, includeAlerts } = req.query || {};
         
-        console.log('[AI-Performance] SLO compliance check');
+        logger.info('SLO compliance check');
         
         const performanceService = getPerformanceMetricsService(storage as IStorage);
         const sloMetrics = await performanceService.getSLOCompliance({
@@ -4976,7 +5161,9 @@ app.get("/api/admin/intelligence/test-integration",
         });
         
       } catch (error) {
-        console.error('[AI-Performance] Erreur SLO compliance:', error);
+        logger.error('Erreur SLO compliance', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.internal('Erreur lors de la vérification de conformité SLO');
       }
     })
@@ -4996,7 +5183,9 @@ app.get("/api/admin/intelligence/test-integration",
       try {
         const { timeRange, threshold } = req.query || {};
         
-        console.log('[AI-Performance] Analyse goulots avec seuil:', threshold);
+        logger.info('Analyse goulots avec seuil', {
+          metadata: { threshold }
+        });
         
         const performanceService = getPerformanceMetricsService(storage as IStorage);
         const bottlenecks = await performanceService.identifyBottlenecks({
@@ -5010,7 +5199,9 @@ app.get("/api/admin/intelligence/test-integration",
         });
         
       } catch (error) {
-        console.error('[AI-Performance] Erreur bottlenecks analysis:', error);
+        logger.error('Erreur bottlenecks analysis', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.internal('Erreur lors de l\'identification des goulots d\'étranglement');
       }
     })
@@ -5021,7 +5212,7 @@ app.get("/api/admin/intelligence/test-integration",
     isAuthenticated,
     asyncHandler(async (req, res) => {
       try {
-        console.log('[AI-Performance] Stats temps réel');
+        logger.info('Stats temps réel');
         
         const performanceService = getPerformanceMetricsService(storage as IStorage);
         const realtimeStats = await performanceService.getRealTimeStats();
@@ -5032,7 +5223,9 @@ app.get("/api/admin/intelligence/test-integration",
         });
         
       } catch (error) {
-        console.error('[AI-Performance] Erreur real-time stats:', error);
+        logger.error('Erreur real-time stats', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.internal('Erreur lors de la récupération des statistiques temps réel');
       }
     })
@@ -5252,7 +5445,9 @@ app.get('/api/analytics/alerts',
       try {
         technicalAlerts = await storage.listTechnicalAlerts();
       } catch (technicalError: any) {
-        console.warn('[Analytics/Alerts] Erreur récupération alertes techniques:', technicalError.message);
+        logger.warn('Erreur récupération alertes techniques', {
+          metadata: { error: technicalError.message }
+        });
         // Fallback: continuer avec alertes vides pour éviter crash complet
       }
       
@@ -5261,7 +5456,9 @@ app.get('/api/analytics/alerts',
       } catch (dateError: any) {
         // Gater log pollution in test environment
         if (process.env.NODE_ENV !== 'test') {
-          console.warn('[Analytics/Alerts] Erreur récupération alertes de date (deadline_history?):', dateError.message);
+          logger.warn('Erreur récupération alertes de date', {
+            metadata: { error: dateError.message }
+          });
         }
         // Fallback: continuer avec alertes vides pour éviter crash complet
       }
@@ -5296,7 +5493,9 @@ app.get('/api/analytics/alerts',
       sendSuccess(res, executiveAlerts);
       
     } catch (error: any) {
-      console.error('Erreur critique récupération alertes exécutives:', error);
+      logger.error('Erreur critique récupération alertes exécutives', {
+        metadata: { error: error.message, stack: error.stack }
+      });
       // Fallback gracieux avec données minimales
       sendSuccess(res, {
         total_alerts: 0,
@@ -6178,7 +6377,9 @@ app.post("/api/sql/query",
       timeoutMs
     };
 
-    console.log(`[SQL Engine] Requête NL reçue de ${sqlRequest.userRole}:`, naturalLanguageQuery);
+    logger.info('Requête NL reçue', {
+      metadata: { userRole: sqlRequest.userRole, query: naturalLanguageQuery }
+    });
 
     // Exécution via le moteur SQL sécurisé
     const result = await sqlEngineService.executeNaturalLanguageQuery(sqlRequest);
@@ -6226,7 +6427,9 @@ app.post("/api/sql/validate",
       userRole: req.session.user?.role || req.user?.role || 'user'
     };
 
-    console.log(`[SQL Engine] Validation SQL demandée par ${validationRequest.userRole}`);
+    logger.info('Validation SQL demandée', {
+      metadata: { userRole: validationRequest.userRole }
+    });
 
     // Validation via le moteur SQL
     const validationResult = await sqlEngineService.validateSQL(validationRequest);
@@ -6253,7 +6456,9 @@ app.get("/api/sql/context",
     const userId = req.session.user?.id || req.user?.id;
     const userRole = req.session.user?.role || req.user?.role || 'user';
 
-    console.log(`[SQL Engine] Contexte DB demandé par ${userRole}`);
+    logger.info('Contexte DB demandé', {
+      metadata: { userRole }
+    });
 
     // Récupération du contexte filtré par RBAC
     const contextResult = await sqlEngineService.buildDatabaseContext(userId, userRole);
@@ -6286,7 +6491,9 @@ app.post("/api/business-context/generate",
       sessionId: req.sessionID
     };
 
-    console.log(`[BusinessContext] Génération contexte pour ${contextRequest.userId} (${contextRequest.user_role})`);
+    logger.info('Génération contexte pour utilisateur', {
+      metadata: { userId: contextRequest.userId, userRole: contextRequest.user_role }
+    });
 
     // Génération du contexte via BusinessContextService
     const result = await businessContextService.generateBusinessContext(contextRequest);
@@ -6328,7 +6535,9 @@ app.post("/api/business-context/enrich",
       userId: req.session.user?.id || req.user?.id
     };
 
-    console.log(`[BusinessContext] Enrichissement contexte pour ${enrichmentRequest.userId}`);
+    logger.info('Enrichissement contexte pour utilisateur', {
+      metadata: { userId: enrichmentRequest.userId }
+    });
 
     // Enrichissement via BusinessContextService
     const result = await businessContextService.enrichContext(enrichmentRequest);
@@ -6368,7 +6577,9 @@ app.post("/api/business-context/learning/update",
       timestamp: new Date()
     };
 
-    console.log(`[BusinessContext] Mise à jour apprentissage pour ${learningUpdate.userId} (${learningUpdate.user_role})`);
+    logger.info('Mise à jour apprentissage pour utilisateur', {
+      metadata: { userId: learningUpdate.userId, userRole: learningUpdate.user_role }
+    });
 
     // Mise à jour via BusinessContextService
     const result = await businessContextService.updateAdaptiveLearning(learningUpdate);
@@ -6405,7 +6616,9 @@ app.get("/api/business-context/metrics",
       });
     }
 
-    console.log(`[BusinessContext] Récupération métriques demandée par ${userRole}`);
+    logger.info('Récupération métriques demandée', {
+      metadata: { userRole }
+    });
 
     try {
       // Récupération des métriques via BusinessContextService
@@ -6418,7 +6631,9 @@ app.get("/api/business-context/metrics",
       });
 
     } catch (error) {
-      console.error('[BusinessContext] Erreur récupération métriques:', error);
+      logger.error('Erreur récupération métriques', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       res.status(500).json({
         success: false,
         error: 'Erreur lors de la récupération des métriques'
@@ -6468,7 +6683,9 @@ app.get("/api/business-context/knowledge/materials",
       });
       
     } catch (error) {
-      console.error('[BusinessContext] Erreur recherche matériaux:', error);
+      logger.error('Erreur recherche matériaux', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       res.status(500).json({
         success: false,
         error: 'Erreur lors de la recherche de matériaux'
@@ -6492,7 +6709,9 @@ app.post("/api/chatbot/query",
     const userRole = req.session.user?.role || req.user?.role || 'user';
     const sessionId = req.session.id;
 
-    console.log(`[Chatbot] Requête principale reçue de ${userId} (${userRole}): "${requestBody.query}"`);
+    logger.info('Requête principale reçue', {
+      metadata: { userId, userRole, query: requestBody.query }
+    });
 
     // Construction de la requête chatbot complète
     const chatbotRequest: ChatbotQueryRequest = {
@@ -6504,7 +6723,9 @@ app.post("/api/chatbot/query",
 
     // Pipeline complet d'orchestration chatbot
     const result = await chatbotOrchestrationService.processChatbotQuery(chatbotRequest);
-    console.log(`[Chatbot] Pipeline terminé pour ${userId}, success: ${result.success}`);
+    logger.info('Pipeline terminé', {
+      metadata: { userId, success: result.success }
+    });
 
     // JSON replacer pour gérer BigInt serialization de manière globale
     const safeJsonReplacer = (_: string, value: any) => {
@@ -6519,10 +6740,14 @@ app.post("/api/chatbot/query",
 
     try {
       if (result.success) {
-        console.log(`[Chatbot] Préparation réponse success pour ${userId}`);
+        logger.info('Préparation réponse success', {
+          metadata: { userId }
+        });
         res.setHeader('Content-Type', 'application/json');
         const jsonResponse = JSON.stringify(result, safeJsonReplacer);
-        console.log(`[Chatbot] JSON stringifié (${jsonResponse.length} bytes) - Envoi 200`);
+        logger.info('JSON stringifié', {
+          metadata: { bytes: jsonResponse.length, statusCode: 200 }
+        });
         res.status(200).send(jsonResponse);
       } else {
         // Gestion d'erreur gracieuse selon le type
@@ -6530,16 +6755,25 @@ app.post("/api/chatbot/query",
                           result.error?.type === 'validation' ? 400 :
                           result.error?.type === 'timeout' ? 408 : 500;
         
-        console.log(`[Chatbot] Préparation réponse error pour ${userId}, statusCode: ${statusCode}, errorType: ${result.error?.type}`);
+        logger.info('Préparation réponse error', {
+          metadata: { userId, statusCode, errorType: result.error?.type }
+        });
         res.setHeader('Content-Type', 'application/json');
         const jsonResponse = JSON.stringify(result, safeJsonReplacer);
-        console.log(`[Chatbot] JSON stringifié (${jsonResponse.length} bytes) - Envoi ${statusCode}`);
+        logger.info('JSON stringifié', {
+          metadata: { bytes: jsonResponse.length, statusCode }
+        });
         res.status(statusCode).send(jsonResponse);
       }
     } catch (serializationError) {
-      console.error(`[Chatbot] ERREUR CRITIQUE sérialisation JSON pour ${userId}:`, serializationError);
-      console.error(`[Chatbot] Type result.success: ${typeof result.success}`);
-      console.error(`[Chatbot] Result keys: ${Object.keys(result).join(', ')}`);
+      logger.error('ERREUR CRITIQUE sérialisation JSON', {
+        metadata: { 
+          userId, 
+          error: serializationError instanceof Error ? serializationError.message : String(serializationError),
+          resultType: typeof result.success,
+          resultKeys: Object.keys(result).join(', ')
+        }
+      });
       res.status(500).json({
         success: false,
         error: {
@@ -6561,7 +6795,9 @@ app.get("/api/chatbot/suggestions",
     const userId = req.session.user?.id || req.user?.id;
     const userRole = req.session.user?.role || req.user?.role || 'user';
 
-    console.log(`[Chatbot] Suggestions demandées par ${userId} (${userRole})`);
+    logger.info('Suggestions demandées', {
+      metadata: { userId, userRole }
+    });
 
     // Construction de la requête suggestions
     const suggestionsRequest: ChatbotSuggestionsRequest = {
@@ -6602,7 +6838,9 @@ app.post("/api/chatbot/validate",
     const userId = req.session.user?.id || req.user?.id;
     const userRole = req.session.user?.role || req.user?.role || 'user';
 
-    console.log(`[Chatbot] Validation demandée par ${userId} (${userRole}): "${requestBody.query}"`);
+    logger.info('Validation demandée', {
+      metadata: { userId, userRole, query: requestBody.query }
+    });
 
     // Construction de la requête de validation
     const validateRequest: ChatbotValidateRequest = {
@@ -6631,7 +6869,9 @@ app.get("/api/chatbot/history",
     const queryParams = req.query;
     const userId = req.session.user?.id || req.user?.id;
 
-    console.log(`[Chatbot] Historique demandé par ${userId}`);
+    logger.info('Historique demandé', {
+      metadata: { userId }
+    });
 
     // Construction de la requête d'historique
     const historyRequest: ChatbotHistoryRequest = {
@@ -6672,7 +6912,9 @@ app.post("/api/chatbot/feedback",
     const requestBody = req.body;
     const userId = req.session.user?.id || req.user?.id;
 
-    console.log(`[Chatbot] Feedback reçu de ${userId} pour conversation ${requestBody.conversationId}`);
+    logger.info('Feedback reçu', {
+      metadata: { userId, conversationId: requestBody.conversationId }
+    });
 
     // Construction de la requête de feedback
     const feedbackRequest: ChatbotFeedbackRequest = {
@@ -6728,7 +6970,9 @@ app.get("/api/chatbot/stats",
       });
     }
 
-    console.log(`[Chatbot] Statistiques demandées par admin ${userRole}`);
+    logger.info('Statistiques demandées par admin', {
+      metadata: { userRole }
+    });
 
     // Construction de la requête de statistiques
     const statsRequest: ChatbotStatsRequest = queryParams;
@@ -6759,7 +7003,9 @@ app.get("/api/chatbot/health",
   asyncHandler(async (req: any, res) => {
     const userRole = req.session.user?.role || req.user?.role || 'user';
     
-    console.log(`[Chatbot] Health check demandé par ${userRole}`);
+    logger.info('Health check demandé', {
+      metadata: { userRole }
+    });
 
     try {
       // Vérification des services critiques
@@ -6795,7 +7041,9 @@ app.get("/api/chatbot/health",
       });
 
     } catch (error) {
-      console.error('[Chatbot] Erreur health check:', error);
+      logger.error('Erreur health check', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       res.status(503).json({
         success: false,
         chatbot_orchestration: "unhealthy",
@@ -6822,7 +7070,9 @@ app.post("/api/chatbot/propose-action",
     const userRole = req.session.user?.role || req.user?.role || 'user';
     const sessionId = req.session.id;
 
-    console.log(`[ChatbotAction] Proposition d'action ${requestBody.operation} sur ${requestBody.entity} pour ${userId} (${userRole})`);
+    logger.info('Proposition action', {
+      metadata: { operation: requestBody.operation, entity: requestBody.entity, userId, userRole }
+    });
 
     // Construction de la requête de proposition d'action complète
     const proposeRequest: ProposeActionRequest = {
@@ -6854,7 +7104,9 @@ app.post("/api/chatbot/execute-action",
     const userId = req.session.user?.id || req.user?.id;
     const userRole = req.session.user?.role || req.user?.role || 'user';
 
-    console.log(`[ChatbotAction] Exécution d'action ${requestBody.actionId} pour ${userId} (${userRole})`);
+    logger.info('Exécution action', {
+      metadata: { actionId: requestBody.actionId, userId, userRole }
+    });
 
     // Construction de la requête d'exécution d'action complète
     const executeRequest: ExecuteActionRequest = {
@@ -6886,7 +7138,9 @@ app.get("/api/chatbot/action-history",
     const userId = req.session.user?.id || req.user?.id;
     const userRole = req.session.user?.role || req.user?.role || 'user';
 
-    console.log(`[ChatbotAction] Historique des actions demandé par ${userId} (${userRole})`);
+    logger.info('Historique des actions demandé', {
+      metadata: { userId, userRole }
+    });
 
     // Construction de la requête d'historique d'actions
     const historyRequest: ActionHistoryRequest = {
@@ -6917,7 +7171,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
     const userId = req.session.user?.id || req.user?.id;
     const userRole = req.session.user?.role || req.user?.role || 'user';
 
-    console.log(`[ChatbotAction] Mise à jour confirmation ${confirmationId} par ${userId} (${userRole}): ${requestBody.status}`);
+    logger.info('Mise à jour confirmation', {
+      metadata: { confirmationId, userId, userRole, status: requestBody.status }
+    });
 
     // Construction de la requête de mise à jour de confirmation
     const updateRequest = {
@@ -7019,7 +7275,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const tempsData = await storage.getTempsPose(work_scope, component_type);
         sendSuccess(res, tempsData);
       } catch (error) {
-        console.error('[API] Erreur getTempsPose:', error);
+        logger.error('Erreur getTempsPose', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la récupération des temps de pose");
       }
     })
@@ -7036,7 +7294,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const newTemps = await storage.createTempsPose(tempsData);
         sendSuccess(res, newTemps, 201);
       } catch (error) {
-        console.error('[API] Erreur createTempsPose:', error);
+        logger.error('Erreur createTempsPose', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la création du temps de pose");
       }
     })
@@ -7055,7 +7315,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }
         sendSuccess(res, temps);
       } catch (error) {
-        console.error('[API] Erreur getTempsPoseById:', error);
+        logger.error('Erreur getTempsPoseById', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -7074,7 +7336,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const updatedTemps = await storage.updateTempsPose(id, updateData);
         sendSuccess(res, updatedTemps, "Temps de pose mis à jour avec succès");
       } catch (error) {
-        console.error('[API] Erreur updateTempsPose:', error);
+        logger.error('Erreur updateTempsPose', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la mise à jour du temps de pose");
       }
     })
@@ -7091,7 +7355,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteTempsPose(id);
         sendSuccess(res, null, "Temps de pose supprimé avec succès");
       } catch (error) {
-        console.error('[API] Erreur deleteTempsPose:', error);
+        logger.error('Erreur deleteTempsPose', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la suppression du temps de pose");
       }
     })
@@ -7111,7 +7377,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const metrics = await storage.getMetricsBusiness(entity_type, entity_id);
         sendSuccess(res, metrics);
       } catch (error) {
-        console.error('[API] Erreur getMetricsBusiness:', error);
+        logger.error('Erreur getMetricsBusiness', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la récupération des métriques business");
       }
     })
@@ -7128,7 +7396,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const newMetric = await storage.createMetricsBusiness(metricData);
         sendSuccess(res, newMetric, "Métrique business créée avec succès", 201);
       } catch (error) {
-        console.error('[API] Erreur createMetricsBusiness:', error);
+        logger.error('Erreur createMetricsBusiness', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la création de la métrique business");
       }
     })
@@ -7147,7 +7417,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }
         sendSuccess(res, metric);
       } catch (error) {
-        console.error('[API] Erreur getMetricsBusinessById:', error);
+        logger.error('Erreur getMetricsBusinessById', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -7166,7 +7438,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const updatedMetric = await storage.updateMetricsBusiness(id, updateData);
         sendSuccess(res, updatedMetric, "Métrique business mise à jour avec succès");
       } catch (error) {
-        console.error('[API] Erreur updateMetricsBusiness:', error);
+        logger.error('Erreur updateMetricsBusiness', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la mise à jour de la métrique business");
       }
     })
@@ -7183,7 +7457,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteMetricsBusiness(id);
         sendSuccess(res, null, "Métrique business supprimée avec succès");
       } catch (error) {
-        console.error('[API] Erreur deleteMetricsBusiness:', error);
+        logger.error('Erreur deleteMetricsBusiness', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la suppression de la métrique business");
       }
     })
@@ -7203,7 +7479,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const contacts = await storage.getAoContacts(aoId);
         sendSuccess(res, contacts);
       } catch (error) {
-        console.error('[API] Erreur getAoContacts:', error);
+        logger.error('Erreur getAoContacts', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la récupération des contacts AO");
       }
     })

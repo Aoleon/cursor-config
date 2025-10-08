@@ -216,23 +216,27 @@ Le workflow "Start application" lance `npm run dev` qui démarre:
 ### Octobre 2025
 - ✅ Migration de 28 routes (routes-teams, routes-batigest, routes/chiffrage)
 - ✅ Migration de 26 routes workflow avec validation Zod
-- ✅ Migration routes-poc.ts : 49/158 routes (31.0%)
+- ✅ Migration routes-poc.ts : 74/158 routes (46.8%)
   - Phase 1 (auth/users) : 5 routes + 1 middleware ✅ (validée architect)
   - Phase 2 (AO/Offers/Projects) : 18 routes ✅ (validée architect)
   - Phase 3 (Analytics/Predictive/Dashboard) : 15 routes + 1 helper + 2 middlewares ✅ (validée architect)
   - Phase 4 (Documents/Suppliers/Alerts critiques) : 10 routes ✅
-  - Restant : ~109 routes (Lots, Tasks, Maîtres d'ouvrage, Contacts, Alerts, etc.)
-- ✅ Progress global : 91.3% → 98.8% (+7.5%)
+  - **Phase 5 Batch 5A (Projects/Tasks)** : 7 routes ✅ - POST/PATCH projects, GET/POST/PATCH tasks, test-data/planning
+  - **Phase 5 Batch 5B (Lots AO)** : 4 routes ✅ - CRUD /api/aos/:aoId/lots avec fallback storage
+  - **Phase 5 Batch 5C (Maîtres ouvrage/œuvre/Contacts)** : 14 routes ✅ - 5 maîtres ouvrage, 5 maîtres œuvre, 4 contacts avec soft delete
+  - Restant : ~84 routes (Alerts Business, SQL/Business Context, Chatbot IA, utilitaires)
+- ✅ Progress routes-poc.ts : 31.0% → 46.8% (+15.8%, +25 routes cette session)
 - ✅ Ajout validation Zod + isAuthenticated sur routes POST critiques
 - ⚠️ Leçon apprise : Scripts automatiques inadaptés (orphaned catch blocks)
 - 📝 Anti-pattern nettoyé : try-catch inutiles dans routes avec asyncHandler (découvert Phase 3)
 - 🔒 Sécurité renforcée : Toutes routes POST nécessitent auth + validation
-- 🎯 **Stratégie cluster-based** : Migration par groupes de features (AO, Offers/Projects, Analytics, Documents)
+- 🎯 **Stratégie cluster-based** : Migration par groupes de features validée (Phases 1-5C réussies)
 - 🎉 **EventBus préservé** : Routes transform/validate conservent publishOfferStatusChanged + publishProjectCreated
-- 📊 **Résultat final** : 330/334 routes système (98.8%) utilisant unified error handling
+- 📊 **Résultat session** : +25 routes migrées (Projects/Tasks, Lots AO, Maîtres ouvrage/œuvre/Contacts)
+- 🏗️ **Patterns Phase 5** : NotFoundError systématique, soft delete préservé, validation params customs (maitreOeuvreId, contactId)
 
 ### Prochaines Étapes Suggérées
-1. Migrer clusters restants routes-poc.ts (~109 routes) : Lots, Tasks, Maîtres d'ouvrage, Contacts, Alerts
+1. Migrer clusters restants routes-poc.ts (~84 routes) : Alerts Business, SQL/Business Context, Chatbot IA
 2. Tester les validations Zod end-to-end (cas d'erreur, poids manquants, enums invalides)
 3. Ajouter retry logic pour opérations externes (AI, OCR)
 4. Implémenter circuit breakers pour services externes

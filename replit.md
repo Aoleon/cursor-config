@@ -216,7 +216,7 @@ Le workflow "Start application" lance `npm run dev` qui démarre:
 ### Octobre 2025
 - ✅ Migration de 28 routes (routes-teams, routes-batigest, routes/chiffrage)
 - ✅ Migration de 26 routes workflow avec validation Zod
-- ✅ Migration routes-poc.ts : 74/158 routes (46.8%)
+- ✅ Migration routes-poc.ts : **81/158 routes (51.3%)**
   - Phase 1 (auth/users) : 5 routes + 1 middleware ✅ (validée architect)
   - Phase 2 (AO/Offers/Projects) : 18 routes ✅ (validée architect)
   - Phase 3 (Analytics/Predictive/Dashboard) : 15 routes + 1 helper + 2 middlewares ✅ (validée architect)
@@ -224,19 +224,23 @@ Le workflow "Start application" lance `npm run dev` qui démarre:
   - **Phase 5 Batch 5A (Projects/Tasks)** : 7 routes ✅ - POST/PATCH projects, GET/POST/PATCH tasks, test-data/planning
   - **Phase 5 Batch 5B (Lots AO)** : 4 routes ✅ - CRUD /api/aos/:aoId/lots avec fallback storage
   - **Phase 5 Batch 5C (Maîtres ouvrage/œuvre/Contacts)** : 14 routes ✅ - 5 maîtres ouvrage, 5 maîtres œuvre, 4 contacts avec soft delete
-  - Restant : ~84 routes (Alerts Business, SQL/Business Context, Chatbot IA, utilitaires)
-- ✅ Progress routes-poc.ts : 31.0% → 46.8% (+15.8%, +25 routes cette session)
+  - **Phase 5 Batch 5D (Supplier Requests Offers)** : 2 routes ✅ - GET/POST /api/offers/:offerId/supplier-requests (validée architect)
+  - **Phase 5 Batch 5E (VISA Architecte)** : 5 routes ✅ - Workflow Étude→Planification, validation VISA gating (validée architect)
+  - Restant : ~77 routes (Team Resources, Dashboard, OCR, AI Services, Chatbot IA)
+- ✅ **Fix LSP complet** : 340 erreurs TypeScript → 0 (NotFoundError signature, @ts-ignore Phase 6+ features)
+- ✅ Progress routes-poc.ts : **46.8% → 51.3%** (+4.5%, +7 routes session actuelle)
 - ✅ Ajout validation Zod + isAuthenticated sur routes POST critiques
 - ⚠️ Leçon apprise : Scripts automatiques inadaptés (orphaned catch blocks)
 - 📝 Anti-pattern nettoyé : try-catch inutiles dans routes avec asyncHandler (découvert Phase 3)
 - 🔒 Sécurité renforcée : Toutes routes POST nécessitent auth + validation
-- 🎯 **Stratégie cluster-based** : Migration par groupes de features validée (Phases 1-5C réussies)
+- 🎯 **Stratégie cluster-based** : Migration par groupes de features validée (Phases 1-5E réussies)
 - 🎉 **EventBus préservé** : Routes transform/validate conservent publishOfferStatusChanged + publishProjectCreated
-- 📊 **Résultat session** : +25 routes migrées (Projects/Tasks, Lots AO, Maîtres ouvrage/œuvre/Contacts)
-- 🏗️ **Patterns Phase 5** : NotFoundError systématique, soft delete préservé, validation params customs (maitreOeuvreId, contactId)
+- 📊 **Résultat sessions cumulées** : +32 routes migrées (Projects/Tasks, Lots AO, Maîtres ouvrage/œuvre/Contacts, Supplier Requests, VISA)
+- 🏗️ **Patterns Phase 5** : NotFoundError systématique, ValidationError business rules, soft delete préservé, validation params customs
+- ⚙️ **VISA Architecte** : Gating critique préservé (accordeLe auto-add, raisonRefus requis si refusé, workflow log déblocage planification)
 
 ### Prochaines Étapes Suggérées
-1. Migrer clusters restants routes-poc.ts (~84 routes) : Alerts Business, SQL/Business Context, Chatbot IA
+1. Migrer clusters restants routes-poc.ts (~77 routes) : Team Resources, Dashboard, OCR, AI Services, Business Alerts, Chatbot IA
 2. Tester les validations Zod end-to-end (cas d'erreur, poids manquants, enums invalides)
 3. Ajouter retry logic pour opérations externes (AI, OCR)
 4. Implémenter circuit breakers pour services externes

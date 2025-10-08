@@ -8,6 +8,7 @@ import { storage, type IStorage } from "./storage-poc";
 // Import des nouveaux middlewares de robustesse
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { securityHeaders, sanitizeQuery, rateLimits } from "./middleware/security";
+import { logger } from './utils/logger';
 
 const app = express();
 
@@ -84,7 +85,13 @@ app.use((req, res, next) => {
   const { PredictiveEngineService } = await import('./services/PredictiveEngineService');
   
   // Créer les instances des services
-  console.log('[System] Initialisation du système de détection d\'alertes...');
+  logger.info('Initialisation système détection alertes', {
+    metadata: {
+      module: 'ExpressApp',
+      operation: 'initializeServices',
+      service: 'DateAlertDetectionService'
+    }
+  });
   
   // Cast storage to IStorage to resolve TypeScript interface compatibility issues
   const storageInterface = storage as IStorage;
@@ -93,12 +100,25 @@ app.use((req, res, next) => {
   // INITIALISATION SERVICE D'AUDIT SAXIUM - SINGLETON SÉCURISÉ
   // ========================================
   
-  console.log('[System] Initialisation du service d\'audit Saxium...');
+  logger.info('Initialisation service audit Saxium', {
+    metadata: {
+      module: 'ExpressApp',
+      operation: 'initializeServices',
+      service: 'AuditService'
+    }
+  });
   
   // CORRECTIF SÉCURITÉ : Vérifier qu'aucune instance n'existe déjà
   const existingAuditService = app.get('auditService');
   if (existingAuditService) {
-    console.error('[SECURITY ERROR] AuditService déjà initialisé - tentative de ré-initialisation bloquée');
+    logger.error('Tentative ré-initialisation AuditService bloquée', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'initializeServices',
+        service: 'AuditService',
+        error: 'SINGLETON VIOLATION: AuditService already initialized'
+      }
+    });
     throw new Error('SINGLETON VIOLATION: AuditService already initialized');
   }
   
@@ -119,9 +139,22 @@ app.use((req, res, next) => {
   
   // Rendre le service d'audit disponible pour les routes
   app.set('auditService', auditService);
-  console.log('[System] ✅ Service d\'audit Saxium opérationnel (SINGLETON SÉCURISÉ)');
+  logger.info('Service audit Saxium opérationnel', {
+    metadata: {
+      module: 'ExpressApp',
+      operation: 'initializeServices',
+      service: 'AuditService',
+      context: { singleton: true, frozen: true }
+    }
+  });
   
-  console.log('[CHECKPOINT 1] About to create DateIntelligenceService...');
+  logger.info('Création DateIntelligenceService', {
+    metadata: {
+      module: 'ExpressApp',
+      operation: 'initializeServices',
+      service: 'DateIntelligenceService'
+    }
+  });
   const dateIntelligenceService = new DateIntelligenceService(storageInterface);
   const menuiserieRules = new MenuiserieDetectionRules(storageInterface);
   const analyticsService = new AnalyticsService(storageInterface, eventBus);
@@ -132,24 +165,46 @@ app.use((req, res, next) => {
   // ========================================
   
   // Intégrer PredictiveEngine avec EventBus pour activation preloading background
-  console.log('===================================================');
-  console.log('[CRITICAL INTEGRATION] EventBus → PredictiveEngineService');
-  console.log('[DEBUG] PredictiveEngineService instance:', !!predictiveEngineService);
-  console.log('[DEBUG] EventBus instance:', !!eventBus);
-  console.log('[DEBUG] EventBus integratePredictiveEngine method:', typeof eventBus.integratePredictiveEngine);
-  console.log('===================================================');
+  logger.info('Intégration critique EventBus → PredictiveEngineService', {
+    metadata: {
+      module: 'ExpressApp',
+      operation: 'integratePredictiveEngine',
+      context: {
+        hasPredictiveEngine: !!predictiveEngineService,
+        hasEventBus: !!eventBus,
+        hasIntegrationMethod: typeof eventBus.integratePredictiveEngine === 'function'
+      }
+    }
+  });
   
   try {
-    console.log('[DEBUG] About to call eventBus.integratePredictiveEngine...');
+    logger.info('Appel eventBus.integratePredictiveEngine', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'integratePredictiveEngine'
+      }
+    });
     await eventBus.integratePredictiveEngine(predictiveEngineService);
-    console.log('[SUCCESS] ✅ PredictiveEngine integration COMPLETED');
-    console.log('[SUCCESS] ✅ Background preloading cycles ACTIVE');
-    console.log('[SUCCESS] ✅ Business hours/peak/weekend/nightly cycles RUNNING');
+    logger.info('Intégration PredictiveEngine terminée', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'integratePredictiveEngine',
+        context: {
+          preloadingActive: true,
+          backgroundCycles: ['business_hours', 'peak', 'weekend', 'nightly']
+        }
+      }
+    });
   } catch (error) {
-    console.error('[ERROR] ❌ Failed to integrate PredictiveEngine:', error);
-    console.error('[ERROR] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
-    // Ne pas throw pour éviter que l'application crash - continuer l'exécution
-    console.error('[ERROR] Continuing application startup without predictive integration');
+    logger.error('Échec intégration PredictiveEngine', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'integratePredictiveEngine',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        context: { continuingStartup: true }
+      }
+    });
   }
   
   const dateAlertDetectionService = new DateAlertDetectionService(
@@ -170,7 +225,13 @@ app.use((req, res, next) => {
   
   // Démarrer la surveillance périodique
   periodicDetectionScheduler.start();
-  console.log('[System] ✅ Système de détection d\'alertes opérationnel');
+  logger.info('Système détection alertes opérationnel', {
+    metadata: {
+      module: 'ExpressApp',
+      operation: 'initializeServices',
+      context: { periodicSchedulerActive: true }
+    }
+  });
   
   // Rendre les services disponibles pour les routes
   app.set('dateAlertDetectionService', dateAlertDetectionService);
@@ -247,7 +308,14 @@ app.use((req, res, next) => {
       
     } catch (error) {
       log(`[EventBus] Erreur traitement alerte technique: ${error}`);
-      console.error('[EventBus] Erreur traitement alerte technique:', error);
+      logger.error('Erreur traitement alerte technique EventBus', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'handleTechnicalAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }, {
     eventTypes: ['technical.alert' as any],
@@ -262,10 +330,13 @@ app.use((req, res, next) => {
   // 🔥 CORRECTION CRITIQUE FINALE : INTÉGRATION EVENTBUS → PREDICTIVEENGINESERVICE 🔥
   // ========================================
   
-  console.log('===================================================');
-  console.log('[CRITICAL FIX FINAL] POST-ROUTES EventBus → PredictiveEngineService');
-  console.log('[TIMING] AFTER registerRoutes - PredictiveEngine now available');
-  console.log('===================================================');
+  logger.info('Intégration finale post-routes PredictiveEngine', {
+    metadata: {
+      module: 'ExpressApp',
+      operation: 'integratePredictiveEngineFinal',
+      context: { timing: 'after_registerRoutes' }
+    }
+  });
   
   try {
     // À ce point, routes-poc.ts a été exécuté et PredictiveEngineService créé
@@ -273,22 +344,39 @@ app.use((req, res, next) => {
     const routesPoc = await import('./routes-poc');
     const predictiveEngineService = (routesPoc as any).predictiveEngineService;
     
-    console.log('[DEBUG] PredictiveEngine instance available:', !!predictiveEngineService);
+    logger.info('Instance PredictiveEngine récupérée', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'integratePredictiveEngineFinal',
+        context: { instanceAvailable: !!predictiveEngineService }
+      }
+    });
     
     // INTÉGRATION CRITIQUE pour activation preloading background
     eventBus.integratePredictiveEngine(predictiveEngineService);
     
-    console.log('[SUCCESS] ✅ FINAL PredictiveEngine integration COMPLETED');
-    console.log('[SUCCESS] ✅ Background preloading cycles ACTIVE');
-    console.log('[SUCCESS] ✅ Business hours/peak/weekend/nightly cycles RUNNING');
-    console.log('[SUCCESS] ✅ Cache hit-rate ≥70% + 35% latency reduction ENABLED');
-    console.log('[SUCCESS] ✅ Objectif 25s→10s maintenant ATTEIGNABLE');
+    logger.info('Intégration finale PredictiveEngine réussie', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'integratePredictiveEngineFinal',
+        context: {
+          backgroundCyclesActive: true,
+          cacheOptimizationEnabled: true,
+          targetLatencyReduction: '25s→10s'
+        }
+      }
+    });
   } catch (error) {
-    console.error('[ERROR] ❌ FINAL INTEGRATION FAILED:', error);
-    console.error('[ERROR] Objectif 25s→10s COMPROMIS - preloading prédictif inactif');
+    logger.error('Échec intégration finale PredictiveEngine', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'integratePredictiveEngineFinal',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        context: { performanceImpact: 'preloading_disabled' }
+      }
+    });
   }
-  
-  console.log('===================================================');
 
   // ========================================
   // GESTION CENTRALISÉE DES ERREURS
@@ -338,30 +426,82 @@ app.use((req, res, next) => {
   const { closePool } = await import("./db");
   
   async function gracefulShutdown(signal: string) {
-    console.log(`\n[Shutdown] Signal ${signal} reçu - Arrêt propre en cours...`);
+    logger.info('Signal arrêt reçu - graceful shutdown', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'gracefulShutdown',
+        signal
+      }
+    });
     
     try {
       // 1. Fermer les nouvelles connexions
-      console.log('[Shutdown] Fermeture du serveur HTTP...');
+      logger.info('Fermeture serveur HTTP', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'gracefulShutdown',
+          step: 'closeHttpServer'
+        }
+      });
       await new Promise<void>((resolve) => {
         server.close(() => {
-          console.log('[Shutdown] ✓ Serveur HTTP fermé');
+          logger.info('Serveur HTTP fermé', {
+            metadata: {
+              module: 'ExpressApp',
+              operation: 'gracefulShutdown',
+              step: 'httpServerClosed'
+            }
+          });
           resolve();
         });
       });
       
       // 2. Fermer le pool de connexions DB
-      console.log('[Shutdown] Fermeture du pool de connexions DB...');
+      logger.info('Fermeture pool connexions DB', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'gracefulShutdown',
+          step: 'closeDbPool'
+        }
+      });
       await closePool();
-      console.log('[Shutdown] ✓ Pool DB fermé');
+      logger.info('Pool DB fermé', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'gracefulShutdown',
+          step: 'dbPoolClosed'
+        }
+      });
       
       // 3. Fermer les WebSocket connections (géré automatiquement par la fermeture du serveur)
-      console.log('[Shutdown] ✓ WebSocket fermés');
+      logger.info('WebSocket fermés', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'gracefulShutdown',
+          step: 'websocketsClosed'
+        }
+      });
       
-      console.log('[Shutdown] ✅ Arrêt propre terminé avec succès');
+      logger.info('Arrêt propre terminé avec succès', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'gracefulShutdown',
+          signal,
+          exitCode: 0
+        }
+      });
       process.exit(0);
     } catch (error) {
-      console.error('[Shutdown] ❌ Erreur durant l\'arrêt:', error);
+      logger.error('Erreur durant arrêt graceful', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'gracefulShutdown',
+          signal,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          exitCode: 1
+        }
+      });
       process.exit(1);
     }
   }
@@ -372,12 +512,28 @@ app.use((req, res, next) => {
   
   // Gestion des erreurs non capturées
   process.on('uncaughtException', (error) => {
-    console.error('[FATAL] Exception non capturée:', error);
+    logger.error('Exception non capturée - FATAL', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'handleUncaughtException',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        fatal: true
+      }
+    });
     gracefulShutdown('UNCAUGHT_EXCEPTION');
   });
   
   process.on('unhandledRejection', (reason, promise) => {
-    console.error('[FATAL] Promesse rejetée non gérée:', reason);
+    logger.error('Promesse rejetée non gérée - FATAL', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'handleUnhandledRejection',
+        error: reason instanceof Error ? reason.message : String(reason),
+        stack: reason instanceof Error ? reason.stack : undefined,
+        fatal: true
+      }
+    });
     gracefulShutdown('UNHANDLED_REJECTION');
   });
 })();

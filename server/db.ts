@@ -2,6 +2,7 @@ import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
+import { logger } from './utils/logger';
 
 // ========================================
 // CONFIGURATION WEBSOCKET NEON
@@ -54,12 +55,23 @@ export const pool = new Pool({
  * Log et notifications pour monitoring
  */
 pool.on('error', (err, client) => {
-  console.error('[DB Pool] Erreur inattendue sur client inactif:', err);
-  console.error('[DB Pool] Stack trace:', err.stack);
+  logger.error('Erreur inattendue sur client pool inactif', {
+    metadata: {
+      module: 'DatabaseConfig',
+      operation: 'handlePoolError',
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined
+    }
+  });
 });
 
 pool.on('connect', (client) => {
-  console.log('[DB Pool] Nouvelle connexion établie');
+  logger.info('Nouvelle connexion pool établie', {
+    metadata: {
+      module: 'DatabaseConfig',
+      operation: 'handlePoolConnect'
+    }
+  });
 });
 
 pool.on('acquire', (client) => {
@@ -68,7 +80,12 @@ pool.on('acquire', (client) => {
 });
 
 pool.on('remove', (client) => {
-  console.log('[DB Pool] Connexion retirée du pool');
+  logger.info('Connexion retirée du pool', {
+    metadata: {
+      module: 'DatabaseConfig',
+      operation: 'handlePoolRemove'
+    }
+  });
 });
 
 // ========================================
@@ -104,7 +121,19 @@ export function getPoolStats() {
  * Fermeture propre du pool (à utiliser au shutdown)
  */
 export async function closePool() {
-  console.log('[DB Pool] Fermeture du pool de connexions...');
+  logger.info('Fermeture du pool de connexions', {
+    metadata: {
+      module: 'DatabaseConfig',
+      operation: 'closePool',
+      context: { action: 'shutdown' }
+    }
+  });
   await pool.end();
-  console.log('[DB Pool] Pool fermé proprement');
+  logger.info('Pool de connexions fermé proprement', {
+    metadata: {
+      module: 'DatabaseConfig',
+      operation: 'closePool',
+      context: { status: 'closed' }
+    }
+  });
 }

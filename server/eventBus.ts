@@ -10,6 +10,7 @@ import type {
 import { createRealtimeEvent, EventType as EventTypeEnum } from '../shared/events';
 import { log } from './vite';
 import type { ContextCacheService } from './services/ContextCacheService';
+import { logger } from './utils/logger';
 
 type EventHandler = (event: RealtimeEvent) => void;
 
@@ -1791,7 +1792,13 @@ export class EventBus extends EventEmitter {
   public integratePredictiveEngine(predictiveEngine: any): void {
     this.predictiveEngine = predictiveEngine;
     
-    console.log('[EventBus] Intégration PredictiveEngine activée pour déclencheurs automatiques');
+    logger.info('Intégration PredictiveEngine activée', {
+      metadata: {
+        module: 'EventBus',
+        operation: 'integratePredictiveEngine',
+        context: { triggersEnabled: true, automaticPreloading: true }
+      }
+    });
     
     // Démarrer cycles background preloading
     this.startBackgroundPreloadingCycles();
@@ -1807,7 +1814,12 @@ export class EventBus extends EventEmitter {
     if (this.backgroundTasksRunning) return;
     
     this.backgroundTasksRunning = true;
-    console.log('[EventBus] Démarrage cycles preloading background...');
+    logger.info('Démarrage cycles preloading background', {
+      metadata: {
+        module: 'EventBus',
+        operation: 'startBackgroundPreloadingCycles'
+      }
+    });
 
     // 1. CYCLE BUSINESS HOURS PRELOADING (toutes les 30 minutes pendant horaires business)
     const businessHoursInterval = setInterval(async () => {
@@ -1845,14 +1857,27 @@ export class EventBus extends EventEmitter {
     
     this.preloadingIntervals.set('nightly_maintenance', nightlyMaintenanceInterval);
 
-    console.log('[EventBus] Cycles preloading background configurés et démarrés');
+    logger.info('Cycles preloading background configurés et démarrés', {
+      metadata: {
+        module: 'EventBus',
+        operation: 'startBackgroundPreloadingCycles',
+        context: {
+          cycles: ['business_hours', 'weekend_warming', 'peak_hours', 'nightly_maintenance']
+        }
+      }
+    });
   }
 
   /**
    * Configure les déclencheurs prédictifs basés sur événements métier
    */
   private setupPredictiveEventTriggers(): void {
-    console.log('[EventBus] Configuration déclencheurs prédictifs événementiels...');
+    logger.info('Configuration déclencheurs prédictifs événementiels', {
+      metadata: {
+        module: 'EventBus',
+        operation: 'setupPredictiveEventTriggers'
+      }
+    });
 
     // Déclencheur AO : Prédict étude technique et fournisseurs
     this.subscribe(async (event) => {
@@ -1904,7 +1929,13 @@ export class EventBus extends EventEmitter {
       eventTypes: [EventTypeEnum.ANALYTICS_CALCULATED]
     });
 
-    console.log('[EventBus] Déclencheurs prédictifs événementiels configurés');
+    logger.info('Déclencheurs prédictifs événementiels configurés', {
+      metadata: {
+        module: 'EventBus',
+        operation: 'setupPredictiveEventTriggers',
+        context: { triggersCount: 5 }
+      }
+    });
   }
 
   /**
@@ -1915,7 +1946,12 @@ export class EventBus extends EventEmitter {
 
     try {
       const startTime = Date.now();
-      console.log('[EventBus] Exécution preloading business hours...');
+      logger.info('Exécution preloading business hours', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'executeBusinessHoursPreloading'
+        }
+      });
 
       // 1. GÉNÉRATION PRÉDICTIONS CONTEXT BUSINESS
       const predictions = await this.predictiveEngine.predictNextEntityAccess();
@@ -1940,7 +1976,15 @@ export class EventBus extends EventEmitter {
           
           return success;
         } catch (error) {
-          console.warn(`[EventBus] Erreur preloading business hours ${prediction.entityType}:${prediction.entityId}:`, error);
+          logger.warn('Erreur preloading business hours', {
+            metadata: {
+              module: 'EventBus',
+              operation: 'executeBusinessHoursPreloading',
+              entityType: prediction.entityType,
+              entityId: prediction.entityId,
+              error: error instanceof Error ? error.message : String(error)
+            }
+          });
           this.backgroundStats.failedBackgroundTasks++;
           return false;
         }
@@ -1957,10 +2001,25 @@ export class EventBus extends EventEmitter {
       this.backgroundStats.averagePreloadLatency = 
         (this.backgroundStats.averagePreloadLatency + duration) / 2;
 
-      console.log(`[EventBus] Business hours preloading terminé: ${successCount}/${businessPredictions.length} succès en ${duration}ms`);
+      logger.info('Business hours preloading terminé', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'businessHoursPreloading',
+          successCount,
+          totalPredictions: businessPredictions.length,
+          durationMs: duration
+        }
+      });
 
     } catch (error) {
-      console.error('[EventBus] Erreur business hours preloading:', error);
+      logger.error('Erreur business hours preloading', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'businessHoursPreloading',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -1973,7 +2032,12 @@ export class EventBus extends EventEmitter {
 
     try {
       const startTime = Date.now();
-      console.log('[EventBus] Exécution weekend warming...');
+      logger.info('Exécution weekend warming', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'weekendWarming'
+        }
+      });
 
       // 1. GÉNÉRATION HEAT-MAP PRÉPARATOIRE
       const heatMap = await this.predictiveEngine.generateEntityHeatMap();
@@ -1998,7 +2062,15 @@ export class EventBus extends EventEmitter {
           
           return success;
         } catch (error) {
-          console.warn(`[EventBus] Erreur weekend warming ${entity.entityType}:${entity.entityId}:`, error);
+          logger.warn('Erreur weekend warming entity', {
+            metadata: {
+              module: 'EventBus',
+              operation: 'weekendWarming',
+              entityType: entity.entityType,
+              entityId: entity.entityId,
+              error: error instanceof Error ? error.message : String(error)
+            }
+          });
           this.backgroundStats.failedBackgroundTasks++;
           return false;
         }
@@ -2014,10 +2086,25 @@ export class EventBus extends EventEmitter {
       this.backgroundStats.lastWeekendWarmingRun = new Date();
       const duration = Date.now() - startTime;
 
-      console.log(`[EventBus] Weekend warming terminé: ${successCount}/${mondayEntities.length} contextes préparés en ${duration}ms`);
+      logger.info('Weekend warming terminé', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'weekendWarming',
+          successCount,
+          totalEntities: mondayEntities.length,
+          durationMs: duration
+        }
+      });
 
     } catch (error) {
-      console.error('[EventBus] Erreur weekend warming:', error);
+      logger.error('Erreur weekend warming', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'weekendWarming',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2029,7 +2116,12 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
     try {
-      console.log('[EventBus] Optimisation peak hours...');
+      logger.info('Optimisation peak hours', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'peakHoursOptimization'
+        }
+      });
 
       // 1. PRÉDICTIONS HAUTE FRÉQUENCE
       const predictions = await this.predictiveEngine.predictNextEntityAccess();
@@ -2049,7 +2141,13 @@ export class EventBus extends EventEmitter {
           
           this.backgroundStats.totalTriggeredPreloads++;
         } catch (error) {
-          console.warn(`[EventBus] Erreur peak hours preloading:`, error);
+          logger.warn('Erreur peak hours preloading', {
+            metadata: {
+              module: 'EventBus',
+              operation: 'peakHoursOptimization',
+              error: error instanceof Error ? error.message : String(error)
+            }
+          });
           this.backgroundStats.failedBackgroundTasks++;
         }
       }
@@ -2058,7 +2156,14 @@ export class EventBus extends EventEmitter {
       await this.contextCacheService.optimizeLRUWithPredictiveScoring();
 
     } catch (error) {
-      console.error('[EventBus] Erreur peak hours optimization:', error);
+      logger.error('Erreur peak hours optimization', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'peakHoursOptimization',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2070,7 +2175,12 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
     try {
-      console.log('[EventBus] Maintenance nocturne...');
+      logger.info('Maintenance nocturne', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'nightlyMaintenance'
+        }
+      });
 
       // 1. NETTOYAGE CACHE EXPIRÉ
       await this.contextCacheService.cleanupExpiredEntries();
@@ -2092,14 +2202,32 @@ export class EventBus extends EventEmitter {
             'low' // Priorité basse maintenance nocturne
           );
         } catch (error) {
-          console.warn(`[EventBus] Erreur preload maintenance nocturne:`, error);
+          logger.warn('Erreur preload maintenance nocturne', {
+            metadata: {
+              module: 'EventBus',
+              operation: 'nightlyMaintenance',
+              error: error instanceof Error ? error.message : String(error)
+            }
+          });
         }
       }
 
-      console.log('[EventBus] Maintenance nocturne terminée');
+      logger.info('Maintenance nocturne terminée', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'nightlyMaintenance'
+        }
+      });
 
     } catch (error) {
-      console.error('[EventBus] Erreur maintenance nocturne:', error);
+      logger.error('Erreur maintenance nocturne', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'nightlyMaintenance',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2115,7 +2243,13 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
     try {
-      console.log(`[EventBus] Déclencheur AO workflow preloading: ${event.entityId}`);
+      logger.info('Déclencheur AO workflow preloading', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerAOWorkflowPreloading',
+          entityId: event.entityId
+        }
+      });
 
       // Prédict séquence AO → Étude technique → Chiffrage
       const workflowPredictions = [
@@ -2138,14 +2272,28 @@ export class EventBus extends EventEmitter {
             this.backgroundStats.eventTriggeredPreloads++;
             this.backgroundStats.totalTriggeredPreloads++;
           } catch (error) {
-            console.warn(`[EventBus] Erreur preload AO workflow ${prediction.type}:`, error);
+            logger.warn('Erreur preload AO workflow', {
+              metadata: {
+                module: 'EventBus',
+                operation: 'triggerAOWorkflowPreloading',
+                predictionType: prediction.type,
+                error: error instanceof Error ? error.message : String(error)
+              }
+            });
             this.backgroundStats.failedBackgroundTasks++;
           }
         }, prediction.delay * 60 * 1000);
       }
 
     } catch (error) {
-      console.error('[EventBus] Erreur déclencheur AO workflow:', error);
+      logger.error('Erreur déclencheur AO workflow', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerAOWorkflowPreloading',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2157,7 +2305,13 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
     try {
-      console.log(`[EventBus] Déclencheur Offre→Projet preloading: ${event.entityId}`);
+      logger.info('Déclencheur Offre→Projet preloading', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerOfferToProjectPreloading',
+          entityId: event.entityId
+        }
+      });
 
       // Prédict séquence Offre → Projet → Planning → Équipes
       const projectWorkflow = [
@@ -2180,14 +2334,28 @@ export class EventBus extends EventEmitter {
             this.backgroundStats.eventTriggeredPreloads++;
             this.backgroundStats.totalTriggeredPreloads++;
           } catch (error) {
-            console.warn(`[EventBus] Erreur preload offre→projet ${prediction.type}:`, error);
+            logger.warn('Erreur preload offre→projet', {
+              metadata: {
+                module: 'EventBus',
+                operation: 'triggerOfferToProjectPreloading',
+                predictionType: prediction.type,
+                error: error instanceof Error ? error.message : String(error)
+              }
+            });
             this.backgroundStats.failedBackgroundTasks++;
           }
         }, prediction.delay * 60 * 1000);
       }
 
     } catch (error) {
-      console.error('[EventBus] Erreur déclencheur offre→projet:', error);
+      logger.error('Erreur déclencheur offre→projet', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerOfferToProjectPreloading',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2199,7 +2367,13 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
     try {
-      console.log(`[EventBus] Déclencheur Projet workflow preloading: ${event.entityId}`);
+      logger.info('Déclencheur Projet workflow preloading', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerProjectWorkflowPreloading',
+          entityId: event.entityId
+        }
+      });
 
       const constructionWorkflow = [
         { type: 'chantier', delay: 180, priority: 'medium' },
@@ -2220,14 +2394,28 @@ export class EventBus extends EventEmitter {
             this.backgroundStats.eventTriggeredPreloads++;
             this.backgroundStats.totalTriggeredPreloads++;
           } catch (error) {
-            console.warn(`[EventBus] Erreur preload projet workflow ${prediction.type}:`, error);
+            logger.warn('Erreur preload projet workflow', {
+              metadata: {
+                module: 'EventBus',
+                operation: 'triggerProjectWorkflowPreloading',
+                predictionType: prediction.type,
+                error: error instanceof Error ? error.message : String(error)
+              }
+            });
             this.backgroundStats.failedBackgroundTasks++;
           }
         }, prediction.delay * 60 * 1000);
       }
 
     } catch (error) {
-      console.error('[EventBus] Erreur déclencheur projet workflow:', error);
+      logger.error('Erreur déclencheur projet workflow', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerProjectWorkflowPreloading',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2239,7 +2427,14 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService || !event.projectId) return;
 
     try {
-      console.log(`[EventBus] Déclencheur Tâche preloading: ${event.entityId} → ${event.projectId}`);
+      logger.info('Déclencheur Tâche preloading', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerTaskRelatedPreloading',
+          entityId: event.entityId,
+          projectId: event.projectId
+        }
+      });
 
       // Prédict contexte projet et équipe associée
       await this.contextCacheService.preloadContextByPrediction(
@@ -2265,7 +2460,14 @@ export class EventBus extends EventEmitter {
       this.backgroundStats.totalTriggeredPreloads += 2;
 
     } catch (error) {
-      console.error('[EventBus] Erreur déclencheur tâche:', error);
+      logger.error('Erreur déclencheur tâche', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerTaskRelatedPreloading',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2277,7 +2479,12 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
     try {
-      console.log(`[EventBus] Déclencheur Analytics dashboard preloading`);
+      logger.info('Déclencheur Analytics dashboard preloading', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerAnalyticsDashboardPreloading'
+        }
+      });
 
       // Prédict accès dashboard et KPIs
       const dashboardContexts = [
@@ -2299,14 +2506,28 @@ export class EventBus extends EventEmitter {
             this.backgroundStats.eventTriggeredPreloads++;
             this.backgroundStats.totalTriggeredPreloads++;
           } catch (error) {
-            console.warn(`[EventBus] Erreur preload analytics dashboard ${context.type}:`, error);
+            logger.warn('Erreur preload analytics dashboard', {
+              metadata: {
+                module: 'EventBus',
+                operation: 'triggerAnalyticsDashboardPreloading',
+                contextType: context.type,
+                error: error instanceof Error ? error.message : String(error)
+              }
+            });
             this.backgroundStats.failedBackgroundTasks++;
           }
         }, context.delay * 60 * 1000);
       }
 
     } catch (error) {
-      console.error('[EventBus] Erreur déclencheur analytics dashboard:', error);
+      logger.error('Erreur déclencheur analytics dashboard', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerAnalyticsDashboardPreloading',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2382,7 +2603,13 @@ export class EventBus extends EventEmitter {
    */
   public setPredictiveTriggersEnabled(enabled: boolean): void {
     this.predictiveTriggersEnabled = enabled;
-    console.log(`[EventBus] Déclencheurs prédictifs ${enabled ? 'ACTIVÉS' : 'DÉSACTIVÉS'}`);
+    logger.info(`Déclencheurs prédictifs ${enabled ? 'activés' : 'désactivés'}`, {
+      metadata: {
+        module: 'EventBus',
+        operation: 'setPredictiveTriggersEnabled',
+        enabled
+      }
+    });
   }
 
   /**
@@ -2390,7 +2617,13 @@ export class EventBus extends EventEmitter {
    */
   public setBusinessHoursPreloadingEnabled(enabled: boolean): void {
     this.businessHoursPreloadingEnabled = enabled;
-    console.log(`[EventBus] Preloading business hours ${enabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+    logger.info(`Preloading business hours ${enabled ? 'activé' : 'désactivé'}`, {
+      metadata: {
+        module: 'EventBus',
+        operation: 'setBusinessHoursPreloadingEnabled',
+        enabled
+      }
+    });
   }
 
   /**
@@ -2398,7 +2631,13 @@ export class EventBus extends EventEmitter {
    */
   public setWeekendWarmingEnabled(enabled: boolean): void {
     this.weekendWarmingEnabled = enabled;
-    console.log(`[EventBus] Weekend warming ${enabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+    logger.info(`Weekend warming ${enabled ? 'activé' : 'désactivé'}`, {
+      metadata: {
+        module: 'EventBus',
+        operation: 'setWeekendWarmingEnabled',
+        enabled
+      }
+    });
   }
 
   /**
@@ -2415,13 +2654,24 @@ export class EventBus extends EventEmitter {
     // Arrêter tous les intervals
     for (const [name, interval] of this.preloadingIntervals.entries()) {
       clearInterval(interval);
-      console.log(`[EventBus] Interval ${name} arrêté`);
+      logger.info('Interval arrêté', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'cleanupPredictiveIntegration',
+          intervalName: name
+        }
+      });
     }
     
     this.preloadingIntervals.clear();
     this.backgroundTasksRunning = false;
     
-    console.log('[EventBus] Intégration prédictive nettoyée');
+    logger.info('Intégration prédictive nettoyée', {
+      metadata: {
+        module: 'EventBus',
+        operation: 'cleanupPredictiveIntegration'
+      }
+    });
   }
 
 }

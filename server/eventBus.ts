@@ -71,7 +71,14 @@ export class EventBus extends EventEmitter {
       
       log(`EventBus: Published event ${validatedEvent.type} for ${validatedEvent.entity}:${validatedEvent.entityId}`);
     } catch (error) {
-      log(`EventBus: Error publishing event: ${error}`);
+      logger.error('Erreur publication événement', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'publish',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -96,7 +103,14 @@ export class EventBus extends EventEmitter {
         try {
           handler(event);
         } catch (error) {
-          log(`EventBus: Error in event handler: ${error}`);
+          logger.error('Erreur dans event handler', {
+            metadata: {
+              module: 'EventBus',
+              operation: 'subscribe.filteredHandler',
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            }
+          });
         }
       }
     };
@@ -243,7 +257,16 @@ export class EventBus extends EventEmitter {
         log(`[EventBus] Invalidation cache auto: ${invalidationMapping.entityType}:${invalidationMapping.entityId} en ${duration}ms`);
       }
     } catch (error) {
-      log(`[EventBus] Erreur invalidation cache automatique: ${error}`);
+      logger.error('Erreur invalidation cache automatique', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'processAutomaticCacheInvalidation',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          eventType: event?.type,
+          entityId: event?.entityId
+        }
+      });
     }
   }
 
@@ -1428,7 +1451,16 @@ export class EventBus extends EventEmitter {
       log(`EventBus: Événement business alert created publié - alert_id: ${payload.alert_id}, type: ${payload.alert_type}, severity: ${payload.severity}`);
       
     } catch (error) {
-      log(`EventBus: Erreur publishBusinessAlertCreated: ${error}`);
+      logger.error('Erreur publication alerte business created', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'publishBusinessAlertCreated',
+          alertId: payload?.alert_id,
+          alertType: payload?.alert_type,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1463,7 +1495,15 @@ export class EventBus extends EventEmitter {
       log(`EventBus: Alerte accusée réception - alert_id: ${payload.alert_id}, by: ${payload.acknowledged_by}`);
       
     } catch (error) {
-      log(`EventBus: Erreur publishBusinessAlertAcknowledged: ${error}`);
+      logger.error('Erreur publication alerte acknowledged', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'publishBusinessAlertAcknowledged',
+          alertId: payload?.alert_id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1500,7 +1540,15 @@ export class EventBus extends EventEmitter {
       log(`EventBus: Alerte résolue - alert_id: ${payload.alert_id}, by: ${payload.resolved_by}, duration: ${payload.resolution_duration_minutes || 'N/A'} min`);
       
     } catch (error) {
-      log(`EventBus: Erreur publishBusinessAlertResolved: ${error}`);
+      logger.error('Erreur publication alerte resolved', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'publishBusinessAlertResolved',
+          alertId: payload?.alert_id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1535,7 +1583,15 @@ export class EventBus extends EventEmitter {
       log(`EventBus: Alerte ignorée - alert_id: ${payload.alert_id}, by: ${payload.dismissed_by}`);
       
     } catch (error) {
-      log(`EventBus: Erreur publishBusinessAlertDismissed: ${error}`);
+      logger.error('Erreur publication alerte dismissed', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'publishBusinessAlertDismissed',
+          alertId: payload?.alert_id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1569,7 +1625,16 @@ export class EventBus extends EventEmitter {
       log(`EventBus: Alerte assignée - alert_id: ${payload.alert_id}, to: ${payload.assigned_to}, by: ${payload.assigned_by}`);
       
     } catch (error) {
-      log(`EventBus: Erreur publishBusinessAlertAssigned: ${error}`);
+      logger.error('Erreur publication alerte assigned', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'publishBusinessAlertAssigned',
+          alertId: payload?.alert_id,
+          assignedTo: payload?.assigned_to,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1609,7 +1674,16 @@ export class EventBus extends EventEmitter {
       log(`EventBus: Seuil alerte créé - threshold_id: ${payload.threshold_id}, key: ${payload.threshold_key}, by: ${payload.created_by}`);
       
     } catch (error) {
-      log(`EventBus: Erreur publishAlertThresholdCreated: ${error}`);
+      logger.error('Erreur publication threshold created', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'publishAlertThresholdCreated',
+          thresholdId: payload?.threshold_id,
+          thresholdKey: payload?.threshold_key,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1644,7 +1718,15 @@ export class EventBus extends EventEmitter {
       log(`EventBus: Seuil alerte mis à jour - threshold_id: ${payload.threshold_id}, by: ${payload.updated_by}, changes: ${Object.keys(payload.changes).join(', ')}`);
       
     } catch (error) {
-      log(`EventBus: Erreur publishAlertThresholdUpdated: ${error}`);
+      logger.error('Erreur publication threshold updated', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'publishAlertThresholdUpdated',
+          thresholdId: payload?.threshold_id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1676,7 +1758,15 @@ export class EventBus extends EventEmitter {
       log(`EventBus: Seuil alerte désactivé - threshold_id: ${payload.threshold_id}, by: ${payload.deactivated_by}`);
       
     } catch (error) {
-      log(`EventBus: Erreur publishAlertThresholdDeactivated: ${error}`);
+      logger.error('Erreur publication threshold deactivated', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'publishAlertThresholdDeactivated',
+          thresholdId: payload?.threshold_id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1712,7 +1802,16 @@ export class EventBus extends EventEmitter {
       }
       
     } catch (error) {
-      log(`EventBus: Erreur publishPredictiveSnapshotSaved: ${error}`);
+      logger.error('Erreur publication predictive snapshot', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'publishPredictiveSnapshotSaved',
+          snapshotId: payload?.snapshot_id,
+          calculationType: payload?.calculation_type,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }

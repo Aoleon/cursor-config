@@ -159,19 +159,33 @@ migrationRoutes.post('/chantiers',
  * ✅ SOLUTION FINALE - Migration données authentiques Monday.com
  * RÉSOUT problème architect: exports Excel réels au lieu de synthétiques
  */
-migrationRoutes.post('/production-final/full', async (req, res) => {
-  try {
-    console.log('[Production Final] 🎯 SOLUTION ARCHITECT: Migration données authentiques Monday.com');
-    console.log('[Production Final] Lecture exports Excel réels AO_Planning + CHANTIERS');
+migrationRoutes.post('/production-final/full', 
+  asyncHandler(async (req, res) => {
+    logger.info('Migration données authentiques Monday.com - démarrage', {
+      metadata: { route: '/api/migration/production-final/full', source: 'authentic_monday_exports' }
+    });
     
     // Migration finale avec données authentiques Monday.com
     const result = await mondayMigrationService.migrateFromRealMondayData();
+    
+    logger.info('Migration données authentiques Monday.com - terminée', {
+      metadata: {
+        route: '/api/migration/production-final/full',
+        source: result.source,
+        filesProcessed: result.filesProcessed,
+        totalLines: result.totalLines,
+        totalMigrated: result.totalMigrated,
+        aosMigrated: result.aos.migrated,
+        projectsMigrated: result.projects.migrated,
+        duration: result.duration
+      }
+    });
     
     res.json({
       success: result.success,
       message: `✅ RÉSOLU: Migration authentique Monday.com terminée: ${result.totalMigrated}/${result.totalLines} lignes`,
       details: {
-        source: result.source, // 'authentic_monday_exports'
+        source: result.source,
         filesProcessed: result.filesProcessed,
         totalLines: result.totalLines,
         totalMigrated: result.totalMigrated,
@@ -191,31 +205,36 @@ migrationRoutes.post('/production-final/full', async (req, res) => {
         architect_problem_resolved: true
       }
     });
-    
-  } catch (error) {
-    console.error('[Production Final] Erreur migration authentique Monday.com:', error);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Échec migration authentique Monday.com',
-      message: error instanceof Error ? error.message : String(error),
-      architect_problem_resolved: false
-    });
-  }
-});
+  })
+);
 
 /**
  * POST /api/migration/production-final/dry-run
  * 🔍 VALIDATION AUTHENTIQUE - Exports Excel Monday.com réels sans insertion BDD
  * Teste formats dates françaises et validation production
  */
-migrationRoutes.post('/production-final/dry-run', async (req, res) => {
-  try {
-    console.log('[Production Final] 🔍 VALIDATION AUTHENTIQUE - Exports Excel Monday.com réels');
-    console.log('[Production Final] Test intégrité données authentiques sans insertion BDD');
+migrationRoutes.post('/production-final/dry-run',
+  asyncHandler(async (req, res) => {
+    logger.info('Validation authentique Monday.com - démarrage', {
+      metadata: { route: '/api/migration/production-final/dry-run', source: 'authentic_monday_exports' }
+    });
     
     // Validation authentique Monday.com sans insertion
     const validationResult = await mondayMigrationService.validateAuthenticMondayDataIntegrity();
+    
+    logger.info('Validation authentique Monday.com - terminée', {
+      metadata: {
+        route: '/api/migration/production-final/dry-run',
+        totalFiles: validationResult.totalFiles,
+        filesProcessed: validationResult.filesProcessed,
+        totalLines: validationResult.totalLines,
+        validLines: validationResult.validLines,
+        errors: validationResult.errors,
+        warnings: validationResult.warnings,
+        validationRate: validationResult.validLines / validationResult.totalLines,
+        readyForProduction: validationResult.errors === 0
+      }
+    });
     
     res.json({
       success: validationResult.success,
@@ -233,17 +252,8 @@ migrationRoutes.post('/production-final/dry-run', async (req, res) => {
         architect_problem_resolved: true
       }
     });
-    
-  } catch (error) {
-    console.error('[Dry-Run] Erreur validation production:', error);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Erreur validation production',
-      message: error instanceof Error ? error.message : String(error)
-    });
-  }
-});
+  })
+);
 
 // ========================================
 // ROUTES STATUT MIGRATION
@@ -253,26 +263,24 @@ migrationRoutes.post('/production-final/dry-run', async (req, res) => {
  * GET /api/migration/status
  * Retourne le statut actuel des migrations
  */
-migrationRoutes.get('/status', async (req, res) => {
-  try {
+migrationRoutes.get('/status',
+  asyncHandler(async (req, res) => {
     const status = await mondayMigrationService.getMigrationStatus();
+    
+    logger.info('Récupération statut migration', {
+      metadata: {
+        route: '/api/migration/status',
+        isRunning: status.isRunning
+      }
+    });
     
     res.json({
       success: true,
       status,
       message: status.isRunning ? 'Migration en cours' : 'Aucune migration active'
     });
-
-  } catch (error) {
-    console.error('[Migration API] Erreur récupération statut:', error);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Erreur récupération statut migration',
-      details: error instanceof Error ? error.message : String(error)
-    });
-  }
-});
+  })
+);
 
 // ========================================
 // ROUTES VALIDATION POST-MIGRATION
@@ -284,51 +292,52 @@ migrationRoutes.get('/status', async (req, res) => {
  */
 migrationRoutes.post('/validate',
   validateBody(validationRequestSchema),
-  async (req, res) => {
-    try {
-      const { detailed } = req.body;
+  asyncHandler(async (req, res) => {
+    const { detailed } = req.body;
 
-      console.log('[Migration API] Démarrage validation post-migration');
+    logger.info('Validation post-migration - démarrage', {
+      metadata: { route: '/api/migration/validate', detailed }
+    });
 
-      const validation = await mondayMigrationService.validateMigration();
-      
-      const response: any = {
-        success: true,
-        validation: {
-          summary: {
-            aosCount: validation.aosCount,
-            projectsCount: validation.projectsCount,
-            totalMigrated: validation.aosCount + validation.projectsCount
-          },
-          integrityChecks: validation.integrityChecks,
-          issues: {
-            errorsCount: validation.errors.length,
-            warningsCount: validation.warnings.length
-          }
-        },
-        message: `Validation terminée - ${validation.errors.length} erreurs, ${validation.warnings.length} warnings`
-      };
-
-      // Détails complets si demandés
-      if (detailed) {
-        response.validation.details = {
-          errors: validation.errors,
-          warnings: validation.warnings
-        };
+    const validation = await mondayMigrationService.validateMigration();
+    
+    logger.info('Validation post-migration - terminée', {
+      metadata: {
+        route: '/api/migration/validate',
+        aosCount: validation.aosCount,
+        projectsCount: validation.projectsCount,
+        errorsCount: validation.errors.length,
+        warningsCount: validation.warnings.length
       }
+    });
+    
+    const response: any = {
+      success: true,
+      validation: {
+        summary: {
+          aosCount: validation.aosCount,
+          projectsCount: validation.projectsCount,
+          totalMigrated: validation.aosCount + validation.projectsCount
+        },
+        integrityChecks: validation.integrityChecks,
+        issues: {
+          errorsCount: validation.errors.length,
+          warningsCount: validation.warnings.length
+        }
+      },
+      message: `Validation terminée - ${validation.errors.length} erreurs, ${validation.warnings.length} warnings`
+    };
 
-      res.json(response);
-
-    } catch (error) {
-      console.error('[Migration API] Erreur validation:', error);
-      
-      res.status(500).json({
-        success: false,
-        error: 'Erreur validation migration',
-        details: error instanceof Error ? error.message : String(error)
-      });
+    // Détails complets si demandés
+    if (detailed) {
+      response.validation.details = {
+        errors: validation.errors,
+        warnings: validation.warnings
+      };
     }
-  }
+
+    res.json(response);
+  })
 );
 
 // ========================================
@@ -432,11 +441,19 @@ migrationRoutes.post('/full',
  * GET /api/migration/sample-data
  * Génère échantillon données Monday.com pour tests
  */
-migrationRoutes.get('/sample-data', async (req, res) => {
-  try {
+migrationRoutes.get('/sample-data',
+  asyncHandler(async (req, res) => {
     const { generateSampleDataForTesting, getGenerationStats } = await import('./utils/mondayDataGenerator');
     
     const sampleData = generateSampleDataForTesting();
+    
+    logger.info('Génération données échantillon Monday.com', {
+      metadata: {
+        route: '/api/migration/sample-data',
+        aosCount: sampleData.aos.length,
+        projectsCount: sampleData.projects.length
+      }
+    });
     
     res.json({
       success: true,
@@ -446,33 +463,30 @@ migrationRoutes.get('/sample-data', async (req, res) => {
         projects: getGenerationStats(sampleData.projects, 'projects')
       }
     });
-
-  } catch (error) {
-    console.error('[Migration API] Erreur génération échantillon:', error);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Erreur génération données échantillon',
-      details: error instanceof Error ? error.message : String(error)
-    });
-  }
-});
+  })
+);
 
 /**
  * DELETE /api/migration/reset
  * Reset migration (supprime données migrées) - ATTENTION DESTRUCTEUR
  */
-migrationRoutes.delete('/reset', async (req, res) => {
-  try {
+migrationRoutes.delete('/reset',
+  asyncHandler(async (req, res) => {
     // Protection - seulement en développement
     if (process.env.NODE_ENV === 'production') {
+      logger.warn('Tentative reset migration en production bloquée', {
+        metadata: { route: '/api/migration/reset', environment: 'production' }
+      });
+      
       return res.status(403).json({
         success: false,
         error: 'Reset interdit en production'
       });
     }
 
-    console.log('[Migration API] ATTENTION - Reset données migration demandé');
+    logger.warn('Reset données migration demandé', {
+      metadata: { route: '/api/migration/reset', environment: process.env.NODE_ENV }
+    });
 
     // TODO: Implémenter reset si nécessaire
     // Nécessiterait méthodes deleteAo, deleteProject dans storage
@@ -482,17 +496,8 @@ migrationRoutes.delete('/reset', async (req, res) => {
       message: 'Reset non implémenté - protection données',
       note: 'Pour reset complet, utiliser npm run db:reset'
     });
-
-  } catch (error) {
-    console.error('[Migration API] Erreur reset:', error);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Erreur reset migration',
-      details: error instanceof Error ? error.message : String(error)
-    });
-  }
-});
+  })
+);
 
 logger.info('Routes migration Monday.com initialisées', {
   service: 'MigrationRoutes'

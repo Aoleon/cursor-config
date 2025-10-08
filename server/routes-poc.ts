@@ -2458,82 +2458,81 @@ app.patch("/api/supplier-requests/:id",
 );
 
 // Récupérer les demandes fournisseurs pour une offre spécifique
-app.get("/api/offers/:offerId/supplier-requests", isAuthenticated, async (req, res) => {
-  try {
-    const { offerId } = req.params;
-    const requests = await storage.getSupplierRequests(offerId);
+app.get("/api/offers/:offerId/supplier-requests", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.offerId),
+  asyncHandler(async (req, res) => {
+    const requests = await storage.getSupplierRequests(req.params.offerId);
+    
+    logger.info('[SupplierRequests] Demandes offre récupérées', { metadata: { offerId: req.params.offerId, count: requests.length } });
+    
     res.json(requests);
-  } catch (error) {
-    console.error("Error fetching offer supplier requests:", error);
-    res.status(500).json({ message: "Failed to fetch supplier requests for offer" });
-  }
-});
+  })
+);
 
 // Créer une demande fournisseur pour une offre
-app.post("/api/offers/:offerId/supplier-requests", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/offers/:offerId/supplier-requests", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.offerId),
+  validateBody(insertSupplierRequestSchema.omit({ offerId: true })),
+  asyncHandler(async (req, res) => {
     const requestData = {
       ...req.body,
       offerId: req.params.offerId,
       requestedItems: JSON.stringify(req.body.requestedItems || []),
     };
     const request = await storage.createSupplierRequest(requestData);
+    
+    logger.info('[SupplierRequests] Demande offre créée', { metadata: { requestId: request.id, offerId: req.params.offerId } });
+    
     res.status(201).json(request);
-  } catch (error) {
-    console.error("Error creating offer supplier request:", error);
-    res.status(500).json({ message: "Failed to create supplier request for offer" });
-  }
-});
+  })
+);
 
 // ========================================
 // VISA ARCHITECTE ROUTES - Workflow entre Étude et Planification
 // ========================================
 
 // Récupérer tous les VISA d'un projet
-app.get("/api/projects/:projectId/visa-architecte", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/projects/:projectId/visa-architecte", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.projectId),
+  asyncHandler(async (req, res) => {
     const visas = await storage.getVisaArchitecte(req.params.projectId);
+    
+    logger.info('[VISA] Liste VISA récupérée', { metadata: { projectId: req.params.projectId, count: visas.length } });
+    
     res.json(visas);
-  } catch (error) {
-    console.error("Error fetching VISA Architecte:", error);
-    res.status(500).json({ message: "Failed to fetch VISA Architecte" });
-  }
-});
+  })
+);
 
 // Créer une nouvelle demande VISA Architecte
-app.post("/api/projects/:projectId/visa-architecte", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/projects/:projectId/visa-architecte", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.projectId),
+  validateBody(insertVisaArchitecteSchema.omit({ projectId: true })),
+  asyncHandler(async (req, res) => {
     const visaData = {
       ...req.body,
       projectId: req.params.projectId,
       demandePar: req.body.demandePar || 'test-user-1' // En mode développement
     };
 
-    // Validation des données
-    const validatedData = insertVisaArchitecteSchema.parse(visaData);
-    const visa = await storage.createVisaArchitecte(validatedData);
+    const visa = await storage.createVisaArchitecte(visaData);
     
-    console.log(`[VISA] Nouvelle demande VISA Architecte créée pour projet ${req.params.projectId}`);
+    logger.info('[VISA] Nouvelle demande VISA créée', { metadata: { visaId: visa.id, projectId: req.params.projectId } });
+    
     res.status(201).json(visa);
-  } catch (error: any) {
-    console.error("Error creating VISA Architecte:", error);
-    
-    // Gestion des erreurs de validation
-    if (error.name === 'ZodError') {
-      return res.status(400).json({
-        message: "Données de validation invalides",
-        errors: error.errors
-      });
-    }
-    
-    res.status(500).json({ message: "Failed to create VISA Architecte", error: error.message });
-  }
-});
+  })
+);
 
 // Mettre à jour un VISA Architecte (acceptation, refus, expiration)
-app.patch("/api/visa-architecte/:id", isAuthenticated, async (req, res) => {
-  try {
-    const updateData = req.body;
+app.patch("/api/visa-architecte/:id", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  validateBody(insertVisaArchitecteSchema.partial()),
+  asyncHandler(async (req, res) => {
+    const updateData = { ...req.body };
     
     // Si VISA accordé, ajouter la date d'accord
     if (updateData.status === 'valide' && !updateData.accordeLe) {
@@ -2543,55 +2542,45 @@ app.patch("/api/visa-architecte/:id", isAuthenticated, async (req, res) => {
     
     // Si VISA refusé, s'assurer qu'une raison est fournie
     if (updateData.status === 'refuse' && !updateData.raisonRefus) {
-      return res.status(400).json({ 
-        message: "Une raison de refus est requise pour refuser un VISA" 
-      });
+      throw new ValidationError('Une raison de refus est requise pour refuser un VISA');
     }
     
-    // Validation partielle des données
-    const validatedData = insertVisaArchitecteSchema.partial().parse(updateData);
-    const updatedVisa = await storage.updateVisaArchitecte(req.params.id, validatedData);
+    const updatedVisa = await storage.updateVisaArchitecte(req.params.id, updateData);
     
-    console.log(`[VISA] VISA Architecte ${req.params.id} mis à jour - Statut: ${updatedVisa.status}`);
+    logger.info('[VISA] VISA mis à jour', { metadata: { visaId: req.params.id, status: updatedVisa.status, projectId: updatedVisa.projectId } });
     
     // Log spécifique pour déblocage workflow
     if (updatedVisa.status === 'valide') {
-      console.log(`[WORKFLOW] ✅ VISA Architecte accordé - Projet ${updatedVisa.projectId} peut passer en planification`);
+      logger.info('[WORKFLOW] VISA Architecte accordé - Déblocage planification', { metadata: { projectId: updatedVisa.projectId, visaId: req.params.id } });
     }
     
     res.json(updatedVisa);
-  } catch (error: any) {
-    console.error("Error updating VISA Architecte:", error);
-    
-    if (error.name === 'ZodError') {
-      return res.status(400).json({
-        message: "Données de mise à jour invalides", 
-        errors: error.errors
-      });
-    }
-    
-    res.status(500).json({ message: "Failed to update VISA Architecte", error: error.message });
-  }
-});
+  })
+);
 
 // Supprimer un VISA Architecte
-app.delete("/api/visa-architecte/:id", isAuthenticated, async (req, res) => {
-  try {
+app.delete("/api/visa-architecte/:id", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  asyncHandler(async (req, res) => {
     await storage.deleteVisaArchitecte(req.params.id);
-    console.log(`[VISA] VISA Architecte ${req.params.id} supprimé`);
+    
+    logger.info('[VISA] VISA supprimé', { metadata: { visaId: req.params.id } });
+    
     res.status(204).send();
-  } catch (error) {
-    console.error("Error deleting VISA Architecte:", error);
-    res.status(500).json({ message: "Failed to delete VISA Architecte" });
-  }
-});
+  })
+);
 
 // Route utilitaire pour vérifier si un projet peut passer en planification
-app.get("/api/projects/:projectId/can-proceed-to-planning", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/projects/:projectId/can-proceed-to-planning", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.projectId),
+  asyncHandler(async (req, res) => {
     const visas = await storage.getVisaArchitecte(req.params.projectId);
     const hasValidVisa = visas.some(visa => visa.status === 'valide' && !visa.expireLe || 
       (visa.expireLe && new Date(visa.expireLe) > new Date()));
+    
+    logger.info('[VISA] Vérification déblocage planification', { metadata: { projectId: req.params.projectId, canProceed: hasValidVisa, visaCount: visas.length } });
     
     res.json({
       canProceed: hasValidVisa,
@@ -2601,11 +2590,8 @@ app.get("/api/projects/:projectId/can-proceed-to-planning", isAuthenticated, asy
         "VISA Architecte valide - Peut passer en planification" : 
         "VISA Architecte requis avant passage en planification"
     });
-  } catch (error) {
-    console.error("Error checking planning readiness:", error);
-    res.status(500).json({ message: "Failed to check planning readiness" });
-  }
-});
+  })
+);
 
 // ========================================
 // TEAM RESOURCE ROUTES - Gestion équipes simplifiée

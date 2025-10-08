@@ -1962,66 +1962,81 @@ app.post("/api/test-data/planning",
 // ========================================
 
 // GET /api/aos/:aoId/lots - Récupérer les lots d'un AO (avec données OCR)
-app.get("/api/aos/:aoId/lots", isAuthenticated, async (req, res) => {
-  try {
-    // Récupérer les lots directement de la base de données (table ao_lots)
-    const result = await db.execute(sql`
-      SELECT id, numero, designation, menuiserie_type as "menuiserieType", 
-             montant_estime as "montantEstime", is_selected as "isSelected", comment
-      FROM ao_lots 
-      WHERE ao_id = ${req.params.aoId}
-      ORDER BY numero
-    `);
-    
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Error fetching AO lots:", error);
-    // Fallback vers le storage si la table lots n'existe pas encore
+app.get("/api/aos/:aoId/lots", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.aoId),
+  asyncHandler(async (req, res) => {
     try {
+      // Récupérer les lots directement de la base de données (table ao_lots)
+      const result = await db.execute(sql`
+        SELECT id, numero, designation, menuiserie_type as "menuiserieType", 
+               montant_estime as "montantEstime", is_selected as "isSelected", comment
+        FROM ao_lots 
+        WHERE ao_id = ${req.params.aoId}
+        ORDER BY numero
+      `);
+      
+      logger.info('[AO Lots] Lots AO récupérés', { metadata: { aoId: req.params.aoId, count: result.rows.length } });
+      
+      res.json(result.rows);
+    } catch (error) {
+      // Fallback vers le storage si la table lots n'existe pas encore
       const lots = await storage.getAoLots(req.params.aoId);
+      
+      logger.info('[AO Lots] Lots AO récupérés (fallback storage)', { metadata: { aoId: req.params.aoId, count: lots.length } });
+      
       res.json(lots);
-    } catch (fallbackError) {
-      console.error("Fallback error:", fallbackError);
-      res.status(500).json({ message: "Failed to fetch AO lots" });
     }
-  }
-});
+  })
+);
 
 // POST /api/aos/:aoId/lots - Créer un lot pour un AO
-app.post("/api/aos/:aoId/lots", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/aos/:aoId/lots", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.aoId),
+  asyncHandler(async (req, res) => {
     const lot = await storage.createAoLot({
       ...req.body,
       aoId: req.params.aoId,
     });
+    
+    logger.info('[AO Lots] Lot AO créé', { metadata: { aoId: req.params.aoId, lotId: lot.id, numero: lot.numero } });
+    
     res.status(201).json(lot);
-  } catch (error) {
-    console.error("Error creating AO lot:", error);
-    res.status(500).json({ message: "Failed to create AO lot" });
-  }
-});
+  })
+);
 
 // PUT /api/aos/:aoId/lots/:lotId - Mettre à jour un lot
-app.put("/api/aos/:aoId/lots/:lotId", isAuthenticated, async (req, res) => {
-  try {
+app.put("/api/aos/:aoId/lots/:lotId", 
+  isAuthenticated, 
+  validateParams(z.object({
+    aoId: z.string().uuid(),
+    lotId: z.string().uuid()
+  })),
+  asyncHandler(async (req, res) => {
     const lot = await storage.updateAoLot(req.params.lotId, req.body);
+    
+    logger.info('[AO Lots] Lot AO mis à jour', { metadata: { lotId: req.params.lotId } });
+    
     res.json(lot);
-  } catch (error) {
-    console.error("Error updating AO lot:", error);
-    res.status(500).json({ message: "Failed to update AO lot" });
-  }
-});
+  })
+);
 
 // DELETE /api/aos/:aoId/lots/:lotId - Supprimer un lot
-app.delete("/api/aos/:aoId/lots/:lotId", isAuthenticated, async (req, res) => {
-  try {
+app.delete("/api/aos/:aoId/lots/:lotId", 
+  isAuthenticated, 
+  validateParams(z.object({
+    aoId: z.string().uuid(),
+    lotId: z.string().uuid()
+  })),
+  asyncHandler(async (req, res) => {
     await storage.deleteAoLot(req.params.lotId);
+    
+    logger.info('[AO Lots] Lot AO supprimé', { metadata: { lotId: req.params.lotId } });
+    
     res.status(204).send();
-  } catch (error) {
-    console.error("Error deleting AO lot:", error);
-    res.status(500).json({ message: "Failed to delete AO lot" });
-  }
-});
+  })
+);
 
 // ========================================
 // AO DOCUMENTS ROUTES - Gestion des documents d'AO

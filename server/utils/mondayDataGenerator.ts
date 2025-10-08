@@ -112,7 +112,11 @@ const MONDAY_LEGACY_DATE_FORMATS = [
 
 /**
  * Génère des données réalistes basées sur patterns métier JLM analysés
+ * Function overloads pour inférence de type correcte
  */
+export function generateRealisticJLMData(count: number, type: 'aos'): MondayAoData[];
+export function generateRealisticJLMData(count: number, type: 'projects'): MondayProjectData[];
+export function generateRealisticJLMData(count: number, type: 'aos' | 'projects'): (MondayAoData | MondayProjectData)[];
 export function generateRealisticJLMData(count: number, type: 'aos' | 'projects'): (MondayAoData | MondayProjectData)[] {
   if (type === 'aos') {
     return generateAoData(count);

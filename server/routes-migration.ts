@@ -17,15 +17,14 @@
 import express from 'express';
 import { z } from 'zod';
 import { MondayMigrationService } from './services/MondayMigrationService';
-import { DatabaseStorage } from './storage-poc';
+import { storage, type IStorage } from './storage-poc';
 import { validateBody } from './middleware/validation';
 
 // ========================================
 // INITIALISATION SERVICE MIGRATION
 // ========================================
 
-const storage = new DatabaseStorage();
-const mondayMigrationService = new MondayMigrationService(storage);
+const mondayMigrationService = new MondayMigrationService(storage as IStorage);
 
 export const migrationRoutes = express.Router();
 

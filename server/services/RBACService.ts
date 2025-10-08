@@ -16,6 +16,7 @@ import {
 import type { IStorage } from "../storage-poc";
 import { eq, and, or, desc, asc, gt, gte, lte, inArray, sql, isNull } from "drizzle-orm";
 import { db } from "../db";
+import { logger } from "../utils/logger";
 
 export class RBACService {
   constructor(private storage: IStorage) {}
@@ -100,7 +101,17 @@ export class RBACService {
       };
 
     } catch (error) {
-      console.error('[RBACService.getUserPermissions] Erreur:', error);
+      logger.error('Erreur récupération permissions utilisateur', {
+        metadata: {
+          service: 'RBACService',
+          operation: 'getUserPermissions',
+          userId,
+          role,
+          tableName,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Erreur lors de la récupération des permissions utilisateur');
     }
   }
@@ -188,7 +199,18 @@ export class RBACService {
       };
 
     } catch (error) {
-      console.error('[RBACService.validateTableAccess] Erreur:', error);
+      logger.error('Erreur validation accès table', {
+        metadata: {
+          service: 'RBACService',
+          operation: 'validateTableAccess',
+          userId: request.userId,
+          role: request.role,
+          tableName: request.tableName,
+          action: request.action,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         allowed: false,
         denialReason: "Erreur système lors de la validation"
@@ -225,7 +247,15 @@ export class RBACService {
 
       return newContext.id;
     } catch (error) {
-      console.error('[RBACService.createPermissionContext] Erreur:', error);
+      logger.error('Erreur création contexte permission', {
+        metadata: {
+          service: 'RBACService',
+          operation: 'createPermissionContext',
+          contextName,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Erreur lors de la création du contexte');
     }
   }
@@ -258,7 +288,17 @@ export class RBACService {
 
       return assignment.id;
     } catch (error) {
-      console.error('[RBACService.assignContextToUser] Erreur:', error);
+      logger.error('Erreur assignation contexte utilisateur', {
+        metadata: {
+          service: 'RBACService',
+          operation: 'assignContextToUser',
+          userId,
+          contextName,
+          grantedBy,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Erreur lors de l\'assignation du contexte');
     }
   }
@@ -305,7 +345,17 @@ export class RBACService {
         return await finalQuery;
       }
     } catch (error) {
-      console.error('[RBACService.getAuditHistory] Erreur:', error);
+      logger.error('Erreur récupération historique audit', {
+        metadata: {
+          service: 'RBACService',
+          operation: 'getAuditHistory',
+          userId: filters.userId,
+          tableName: filters.tableName,
+          action: filters.action,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Erreur lors de la récupération de l\'audit');
     }
   }
@@ -470,7 +520,18 @@ export class RBACService {
         timestamp: new Date()
       });
     } catch (error) {
-      console.error('[RBACService.logAccess] Erreur audit:', error);
+      logger.error('Erreur enregistrement audit', {
+        metadata: {
+          service: 'RBACService',
+          operation: 'logAccess',
+          userId,
+          role,
+          tableName,
+          action,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       // Ne pas faire échouer l'opération principale si l'audit échoue
     }
   }

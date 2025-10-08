@@ -1,6 +1,7 @@
 import { IStorage } from "../storage-poc";
 import crypto from "crypto";
 import memoize from "memoizee";
+import { logger } from "../utils/logger";
 import type { 
   AIContextualData, 
   ContextGenerationConfig,
@@ -108,7 +109,17 @@ export class ContextCacheService {
       return null;
 
     } catch (error) {
-      console.error(`[ContextCache] Erreur récupération cache ${cacheKey}:`, error);
+      logger.error('Erreur récupération cache', {
+        metadata: {
+          service: 'ContextCacheService',
+          operation: 'getContext',
+          cacheKey,
+          entityType,
+          entityId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       await this.recordCacheMiss(cacheKey, Date.now() - startTime);
       return null;
     }
@@ -147,14 +158,30 @@ export class ContextCacheService {
       
       // Stockage persistant (asynchrone)
       this.storeToPersistentCache(cacheKey, entry).catch(error => {
-        console.warn(`[ContextCache] Erreur stockage persistant ${cacheKey}:`, error);
+        logger.warn('Erreur stockage persistant', {
+          metadata: {
+            service: 'ContextCacheService',
+            operation: 'setContext',
+            cacheKey,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          }
+        });
       });
 
       // Nettoyage si nécessaire
       await this.enforeCacheLimits();
 
     } catch (error) {
-      console.error(`[ContextCache] Erreur stockage cache ${cacheKey}:`, error);
+      logger.error('Erreur stockage cache', {
+        metadata: {
+          service: 'ContextCacheService',
+          operation: 'setContext',
+          cacheKey,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -173,7 +200,15 @@ export class ContextCacheService {
   ): Promise<void> {
     const rules = this.invalidationRules.get(entityType) || [];
     
-    console.log(`[ContextCache] Invalidation déclenchée: ${entityType}:${entityId} (${changeType})`);
+    logger.info('Invalidation déclenchée', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'invalidateOnEntityChange',
+        entityType,
+        entityId,
+        changeType
+      }
+    });
     
     // Tags intelligents basés sur l'entité et le contexte
     const smartTags = this.generateSmartInvalidationTags(entityType, entityId, changeType, additionalContext);
@@ -201,7 +236,13 @@ export class ContextCacheService {
 
     // Métriques et logging
     this.stats.invalidationEvents++;
-    console.log(`[ContextCache] Invalidation terminée: ${smartTags.length} tags traités`);
+    logger.info('Invalidation terminée', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'invalidateOnEntityChange',
+        smartTagsCount: smartTags.length
+      }
+    });
   }
 
   /**
@@ -220,10 +261,25 @@ export class ContextCacheService {
 
     // Invalidation persistante (asynchrone)
     this.invalidateFromPersistentCache(pattern).catch(error => {
-      console.warn(`[ContextCache] Erreur invalidation persistante ${pattern}:`, error);
+      logger.warn('Erreur invalidation persistante', {
+        metadata: {
+          service: 'ContextCacheService',
+          operation: 'invalidateByPattern',
+          pattern,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     });
 
-    console.log(`[ContextCache] Invalidé ${invalidatedCount} entrées pour pattern: ${pattern}`);
+    logger.info('Invalidé entrées pour pattern', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'invalidateByPattern',
+        pattern,
+        invalidatedCount
+      }
+    });
     return invalidatedCount;
   }
 
@@ -247,18 +303,39 @@ export class ContextCacheService {
           this.memoryCache.delete(key);
           invalidatedCount++;
           
-          console.log(`[ContextCache] Entrée invalidée (score: ${matchScore.toFixed(2)}): ${key.substring(0, 50)}...`);
+          logger.info('Entrée invalidée', {
+            metadata: {
+              service: 'ContextCacheService',
+              operation: 'invalidateBySmartTags',
+              matchScore: matchScore.toFixed(2),
+              cacheKey: key.substring(0, 50)
+            }
+          });
         }
       }
     }
 
     // Invalidation persistante par tags
     this.invalidateFromPersistentCacheByTags(tags).catch(error => {
-      console.warn(`[ContextCache] Erreur invalidation persistante par tags:`, error);
+      logger.warn('Erreur invalidation persistante par tags', {
+        metadata: {
+          service: 'ContextCacheService',
+          operation: 'invalidateBySmartTags',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     });
 
     const duration = Date.now() - startTime;
-    console.log(`[ContextCache] Invalidation intelligente: ${invalidatedCount} entrées en ${duration}ms`);
+    logger.info('Invalidation intelligente', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'invalidateBySmartTags',
+        invalidatedCount,
+        durationMs: duration
+      }
+    });
     return invalidatedCount;
   }
 
@@ -339,7 +416,12 @@ export class ContextCacheService {
     this.memoryCache.clear();
     await this.clearPersistentCache();
     this.resetStats();
-    console.log(`[ContextCache] Cache entièrement vidé`);
+    logger.info('Cache entièrement vidé', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'invalidateAll'
+      }
+    });
   }
 
   // ========================================
@@ -367,7 +449,13 @@ export class ContextCacheService {
 
     this.stats.expiredEntries += cleanedCount;
     if (cleanedCount > 0) {
-      console.log(`[ContextCache] Nettoyé ${cleanedCount} entrées expirées`);
+      logger.info('Nettoyé entrées expirées', {
+        metadata: {
+          service: 'ContextCacheService',
+          operation: 'cleanupExpiredEntries',
+          cleanedCount
+        }
+      });
     }
 
     return cleanedCount;
@@ -378,7 +466,12 @@ export class ContextCacheService {
    */
   async preloadFrequentContexts(): Promise<void> {
     const startTime = Date.now();
-    console.log(`[ContextCache] Démarrage prewarming intelligent...`);
+    logger.info('Démarrage prewarming intelligent', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'preloadFrequentContexts'
+      }
+    });
     
     // Analyser les patterns d'usage fréquents
     const frequentPatterns = await this.analyzeUsagePatterns();
@@ -403,19 +496,39 @@ export class ContextCacheService {
       try {
         await this.preloadContextForPattern(pattern);
       } catch (error) {
-        console.warn(`[ContextCache] Erreur préchargement ${pattern}:`, error);
+        logger.warn('Erreur préchargement', {
+          metadata: {
+            service: 'ContextCacheService',
+            operation: 'preloadFrequentContexts',
+            pattern,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          }
+        });
       }
     }
     
     const duration = Date.now() - startTime;
-    console.log(`[ContextCache] Prewarming terminé en ${duration}ms - ${frequentPatterns.length} patterns traités`);
+    logger.info('Prewarming terminé', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'preloadFrequentContexts',
+        durationMs: duration,
+        patternsCount: frequentPatterns.length
+      }
+    });
   }
 
   /**
    * Préchargement intelligent pour les heures de pointe
    */
   private async prewarmPeakHourContexts(): Promise<void> {
-    console.log(`[ContextCache] Prewarming heures de pointe activé`);
+    logger.info('Prewarming heures de pointe activé', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'prewarmPeakHourContexts'
+      }
+    });
     
     // Précharger les contextes AO/Offres récents (dernières 48h)
     const recentThreshold = new Date(Date.now() - 48 * 60 * 60 * 1000);
@@ -441,7 +554,14 @@ export class ContextCacheService {
       });
       
     } catch (error) {
-      console.warn(`[ContextCache] Erreur prewarming heures de pointe:`, error);
+      logger.warn('Erreur prewarming heures de pointe', {
+        metadata: {
+          service: 'ContextCacheService',
+          operation: 'prewarmPeakHourContexts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -449,7 +569,12 @@ export class ContextCacheService {
    * Préchargement des contextes business standards
    */
   private async prewarmBusinessContexts(): Promise<void> {
-    console.log(`[ContextCache] Prewarming contextes business`);
+    logger.info('Prewarming contextes business', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'prewarmBusinessContexts'
+      }
+    });
     
     try {
       // Précharger les contextes fournisseurs actifs
@@ -465,7 +590,14 @@ export class ContextCacheService {
       });
       
     } catch (error) {
-      console.warn(`[ContextCache] Erreur prewarming contextes business:`, error);
+      logger.warn('Erreur prewarming contextes business', {
+        metadata: {
+          service: 'ContextCacheService',
+          operation: 'prewarmBusinessContexts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -772,7 +904,13 @@ export class ContextCacheService {
 
   private async invalidateFromPersistentCacheByTags(tags: string[]): Promise<void> {
     // Implémentation future avec Redis/DB pour invalidation par tags
-    console.log(`[ContextCache] Invalidation persistante par tags: ${tags.join(', ')}`);
+    logger.info('Invalidation persistante par tags', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'invalidateFromPersistentCacheByTags',
+        tags: tags.join(', ')
+      }
+    });
   }
 
   /**
@@ -820,7 +958,14 @@ export class ContextCacheService {
       limit?: number;
     }
   ): Promise<void> {
-    console.log(`[ContextCache] Prewarming ${entityType} avec filtres:`, filters);
+    logger.info('Prewarming avec filtres', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'prewarmEntityType',
+        entityType,
+        filters: JSON.stringify(filters)
+      }
+    });
     
     // Simulation du préchargement - dans un vrai système, on interrogerait la DB
     // et on génèrerait les contextes pour les entités correspondantes
@@ -872,7 +1017,14 @@ export class ContextCacheService {
       await new Promise(resolve => setTimeout(resolve, 10));
     }
     
-    console.log(`[ContextCache] Prewarming ${entityType} terminé: ${limit} contextes générés`);
+    logger.info('Prewarming terminé', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'prewarmEntityType',
+        entityType,
+        contextsGenerated: limit
+      }
+    });
   }
 
   private async analyzeUsagePatterns(): Promise<string[]> {
@@ -893,7 +1045,13 @@ export class ContextCacheService {
 
   private async preloadContextForPattern(pattern: string): Promise<void> {
     // Logique de préchargement future
-    console.log(`[ContextCache] Préchargement pattern: ${pattern}`);
+    logger.info('Préchargement pattern', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'preloadContextForPattern',
+        pattern
+      }
+    });
   }
 
   private async invalidateRelatedEntities(
@@ -909,7 +1067,14 @@ export class ContextCacheService {
     ];
     
     await this.invalidateBySmartTags(relatedTags);
-    console.log(`[ContextCache] Invalidation cascade pour ${entityType} liée à ${entityId}`);
+    logger.info('Invalidation cascade', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'invalidateRelatedEntities',
+        entityType,
+        relatedEntityId: entityId
+      }
+    });
   }
 
   // ========================================
@@ -931,7 +1096,12 @@ export class ContextCacheService {
    */
   public startIntelligentPrewarming(): void {
     if (this.backgroundTasksRunning) {
-      console.log('[ContextCache] Prewarming déjà en cours d\'exécution');
+      logger.info('Prewarming déjà en cours', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'startIntelligentPrewarming'
+      }
+    });
       return;
     }
 
@@ -946,7 +1116,12 @@ export class ContextCacheService {
     // Prewarming initial au démarrage
     this.executeInitialPrewarming();
     
-    console.log('[ContextCache] 🔥 Système de prewarming intelligent démarré avec succès');
+    logger.info('Système de prewarming intelligent démarré', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'startIntelligentPrewarming'
+      }
+    });
   }
 
   /**
@@ -959,7 +1134,12 @@ export class ContextCacheService {
     }
     
     this.backgroundTasksRunning = false;
-    console.log('[ContextCache] Système de prewarming arrêté');
+    logger.info('Système de prewarming arrêté', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'stopIntelligentPrewarming'
+      }
+    });
   }
 
   /**
@@ -984,11 +1164,22 @@ export class ContextCacheService {
       const isScheduledRun = this.shouldRunScheduledPrewarming();
       
       if (!isPeakHours && !isScheduledRun) {
-        console.log('[ContextCache] Prewarming reporté - hors période optimale');
+        logger.info('Prewarming reporté - hors période optimale', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'executeIntelligentPrewarming'
+      }
+    });
         return;
       }
 
-      console.log(`[ContextCache] 🚀 Début prewarming intelligent (période de pointe: ${isPeakHours})`);
+      logger.info('Début prewarming intelligent', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'executeIntelligentPrewarming',
+        isPeakHours
+      }
+    });
       
       // Analyser les patterns d'usage récents
       const popularContexts = await this.analyzePopularContexts();
@@ -1012,10 +1203,24 @@ export class ContextCacheService {
         });
       }
       
-      console.log(`[ContextCache] ✅ Prewarming terminé en ${Date.now() - startTime}ms - ${prewarmingResults.contextsPrewarmed} contextes`);
+      logger.info('Prewarming terminé', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'executeIntelligentPrewarming',
+        durationMs: Date.now() - startTime,
+        contextsPrewarmed: prewarmingResults.contextsPrewarmed
+      }
+    });
       
     } catch (error) {
-      console.error(`[ContextCache] ❌ Erreur prewarming intelligent:`, error);
+      logger.error('Erreur prewarming intelligent', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'executeIntelligentPrewarming',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
     }
   }
 
@@ -1164,7 +1369,15 @@ export class ContextCacheService {
         await new Promise(resolve => setTimeout(resolve, 100));
         
       } catch (error) {
-        console.error(`[ContextCache] Erreur prewarming ${entityType}:`, error);
+        logger.error('Erreur prewarming', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'executePrewarmingStrategy',
+        entityType,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       }
     }
 
@@ -1228,7 +1441,12 @@ export class ContextCacheService {
    * Exécute le prewarming initial au démarrage
    */
   private async executeInitialPrewarming(): Promise<void> {
-    console.log('[ContextCache] 🔄 Prewarming initial au démarrage...');
+    logger.info('Prewarming initial au démarrage', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'executeInitialPrewarming'
+      }
+    });
     
     // Précharger les contextes essentiels
     const essentialEntityTypes = ['ao', 'offer', 'project'];
@@ -1241,7 +1459,12 @@ export class ContextCacheService {
       });
     }
     
-    console.log('[ContextCache] ✅ Prewarming initial terminé');
+    logger.info('Prewarming initial terminé', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'executeInitialPrewarming'
+      }
+    });
   }
 
   /**
@@ -1260,11 +1483,23 @@ export class ContextCacheService {
     const prewarmingHitRate = this.calculatePrewarmingHitRate();
     const cacheUtilization = this.getCacheUtilizationRate();
     
-    console.log(`[ContextCache] 📊 Monitoring: Hit rate prewarming: ${(prewarmingHitRate * 100).toFixed(1)}%, Utilisation: ${(cacheUtilization * 100).toFixed(1)}%`);
+    logger.info('Monitoring prewarming', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'monitorPrewarmingEffectiveness',
+        prewarmingHitRate: (prewarmingHitRate * 100).toFixed(1) + '%',
+        cacheUtilization: (cacheUtilization * 100).toFixed(1) + '%'
+      }
+    });
     
     // Alerter si l'efficacité est faible
     if (prewarmingHitRate < 0.4) {
-      console.warn('[ContextCache] ⚠️ Efficacité prewarming faible - révision de stratégie recommandée');
+      logger.warn('Efficacité prewarming faible - révision recommandée', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'monitorPrewarmingEffectiveness'
+      }
+    });
     }
   }
 
@@ -1385,7 +1620,12 @@ export class ContextCacheService {
     this.predictiveEngine = predictiveEngine;
     this.predictiveStats.heatMapIntegrationActive = true;
     
-    console.log('[ContextCache] Intégration PredictiveEngine activée pour preloading intelligent');
+    logger.info('Intégration PredictiveEngine activée', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'integratePredictiveEngine'
+      }
+    });
     
     // Démarrer cycles prédictifs automatiques
     this.startPredictiveCycles();
@@ -1402,19 +1642,39 @@ export class ContextCacheService {
     priority: 'low' | 'medium' | 'high' | 'critical' = 'medium'
   ): Promise<boolean> {
     if (!this.predictivePreloadingEnabled) {
-      console.log('[ContextCache] Preloading prédictif désactivé');
+      logger.info('Preloading prédictif désactivé', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'preloadContextByPrediction'
+      }
+    });
       return false;
     }
 
     try {
       const startTime = Date.now();
       
-      console.log(`[ContextCache] Preloading prédictif: ${entityType}:${entityId} (priorité: ${priority})`);
+      logger.info('Preloading prédictif démarré', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'preloadContextByPrediction',
+        entityType,
+        entityId,
+        priority
+      }
+    });
       
       // 1. VÉRIFICATION CACHE EXISTANT
       const existingKey = this.generateCacheKey(entityType, entityId, contextConfig || this.getDefaultConfig());
       if (this.memoryCache.has(existingKey)) {
-        console.log(`[ContextCache] Contexte déjà en cache: ${entityType}:${entityId}`);
+        logger.info('Contexte déjà en cache', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'preloadContextByPrediction',
+        entityType,
+        entityId
+      }
+    });
         return true;
       }
 
@@ -1458,12 +1718,29 @@ export class ContextCacheService {
       this.predictiveStats.successfulPredictions++;
       
       const duration = Date.now() - startTime;
-      console.log(`[ContextCache] Preloading prédictif complété: ${entityType}:${entityId} en ${duration}ms`);
+      logger.info('Preloading prédictif complété', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'preloadContextByPrediction',
+        entityType,
+        entityId,
+        durationMs: duration
+      }
+    });
       
       return true;
 
     } catch (error) {
-      console.error(`[ContextCache] Erreur preloading prédictif ${entityType}:${entityId}:`, error);
+      logger.error('Erreur preloading prédictif', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'preloadContextByPrediction',
+        entityType,
+        entityId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       this.predictiveStats.failedPredictions++;
       return false;
     }
@@ -1474,12 +1751,22 @@ export class ContextCacheService {
    */
   async integrateHeatMapData(): Promise<void> {
     if (!this.predictiveEngine) {
-      console.log('[ContextCache] PredictiveEngine non intégré');
+      logger.info('PredictiveEngine non intégré', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'integrateHeatMapData'
+      }
+    });
       return;
     }
 
     try {
-      console.log('[ContextCache] Intégration heat-map pour optimisation cache...');
+      logger.info('Intégration heat-map pour optimisation cache', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'integrateHeatMapData'
+      }
+    });
       
       // 1. RÉCUPÉRATION HEAT-MAP ACTUELLE
       const heatMap = await this.predictiveEngine.generateEntityHeatMap();
@@ -1497,10 +1784,22 @@ export class ContextCacheService {
       await this.adjustForBusinessHours(heatMap.businessHoursMultiplier, heatMap.peakHours);
 
       this.predictiveStats.lastHeatMapUpdate = new Date();
-      console.log('[ContextCache] Intégration heat-map terminée');
+      logger.info('Intégration heat-map terminée', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'integrateHeatMapData'
+      }
+    });
 
     } catch (error) {
-      console.error('[ContextCache] Erreur intégration heat-map:', error);
+      logger.error('Erreur intégration heat-map', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'integrateHeatMapData',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
     }
   }
 
@@ -1516,7 +1815,12 @@ export class ContextCacheService {
         return; // Pas besoin d'optimisation
       }
 
-      console.log('[ContextCache] Optimisation LRU avec scoring prédictif...');
+      logger.info('Optimisation LRU avec scoring prédictif', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'optimizeLRUWithPredictiveScoring'
+      }
+    });
       
       // 1. CALCUL SCORES PRÉDICTIFS POUR CHAQUE ENTRÉE
       const entriesWithScores: Array<{
@@ -1552,15 +1856,35 @@ export class ContextCacheService {
           this.memoryCache.delete(item.key);
           evictedCount++;
           
-          console.log(`[ContextCache] Éviction prédictive: ${item.key.substring(0, 40)}... (score: ${item.predictiveScore})`);
+          logger.info('Éviction prédictive', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'optimizeLRUWithPredictiveScoring',
+        cacheKey: item.key.substring(0, 40) + '...',
+        predictiveScore: item.predictiveScore
+      }
+    });
         }
       }
 
       this.predictiveStats.lruOptimizationsApplied++;
-      console.log(`[ContextCache] Optimisation LRU terminée: ${evictedCount} entrées évincées`);
+      logger.info('Optimisation LRU terminée', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'optimizeLRUWithPredictiveScoring',
+        evictedCount
+      }
+    });
 
     } catch (error) {
-      console.error('[ContextCache] Erreur optimisation LRU prédictive:', error);
+      logger.error('Erreur optimisation LRU prédictive', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'optimizeLRUWithPredictiveScoring',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
     }
   }
 
@@ -1568,7 +1892,13 @@ export class ContextCacheService {
    * Preloading intelligent des entités chaudes selon heat-map
    */
   private async preloadHotEntities(hotEntities: any[]): Promise<void> {
-    console.log(`[ContextCache] Preloading ${hotEntities.length} entités chaudes...`);
+    logger.info('Preloading entités chaudes', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'preloadHotEntities',
+        hotEntitiesCount: hotEntities.length
+      }
+    });
     
     // Limite concurrent preloading pour éviter surcharge
     const MAX_CONCURRENT = 3;
@@ -1587,7 +1917,16 @@ export class ContextCacheService {
             priority
           );
         } catch (error) {
-          console.warn(`[ContextCache] Erreur preloading entité chaude ${entity.entityType}:${entity.entityId}:`, error);
+          logger.warn('Erreur preloading entité chaude', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'preloadHotEntities',
+        entityType: entity.entityType,
+        entityId: entity.entityId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
         }
       });
 
@@ -1608,13 +1947,25 @@ export class ContextCacheService {
           this.memoryCache.delete(cacheKey);
           evictedCount++;
           
-          console.log(`[ContextCache] Éviction entité froide: ${entityKey}`);
+          logger.info('Éviction entité froide', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'evictColdEntities',
+        entityKey
+      }
+    });
         }
       }
     }
     
     if (evictedCount > 0) {
-      console.log(`[ContextCache] ${evictedCount} entités froides évincées`);
+      logger.info('Entités froides évincées', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'evictColdEntities',
+        evictedCount
+      }
+    });
     }
   }
 
@@ -1650,15 +2001,30 @@ export class ContextCacheService {
     
     if (peakHours.includes(currentHour)) {
       // Mode agressif pendant heures de pointe
-      console.log('[ContextCache] Mode preloading agressif - heures de pointe');
+      logger.info('Mode preloading agressif - heures de pointe', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'calculatePreloadingBudget'
+      }
+    });
       await this.activateAggressivePreloading();
     } else if (businessMultiplier > 1.2) {
       // Mode modéré pendant horaires business
-      console.log('[ContextCache] Mode preloading modéré - horaires business');
+      logger.info('Mode preloading modéré - horaires business', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'calculatePreloadingBudget'
+      }
+    });
       await this.activateModeratePreloading();
     } else {
       // Mode conservateur hors horaires
-      console.log('[ContextCache] Mode preloading conservateur - hors horaires');
+      logger.info('Mode preloading conservateur - hors horaires', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'calculatePreloadingBudget'
+      }
+    });
       await this.activateConservativePreloading();
     }
   }
@@ -1721,7 +2087,14 @@ export class ContextCacheService {
       return 30; // Score bas si pas dans prédictions
 
     } catch (error) {
-      console.warn('[ContextCache] Erreur récupération score prédictif:', error);
+      logger.warn('Erreur récupération score prédictif', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'getPredictiveScore',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       return 50; // Score neutre en cas d'erreur
     }
   }
@@ -1808,7 +2181,15 @@ export class ContextCacheService {
     // Stockage avec priorité
     this.memoryCache.set(cacheKey, entry);
     
-    console.log(`[ContextCache] Contexte prédictif stocké: ${cacheKey} (TTL: ${ttlHours}h, priorité: ${priority})`);
+    logger.info('Contexte prédictif stocké', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'storePredictiveContext',
+        cacheKey,
+        ttlHours,
+        priority
+      }
+    });
   }
 
   /**
@@ -1836,7 +2217,12 @@ export class ContextCacheService {
       }
     }, 5 * 60 * 1000);
 
-    console.log('[ContextCache] Cycles prédictifs automatiques démarrés');
+    logger.info('Cycles prédictifs automatiques démarrés', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'startPredictiveCycles'
+      }
+    });
   }
 
   /**
@@ -1844,7 +2230,12 @@ export class ContextCacheService {
    */
   private async runPredictivePreloadingCycle(): Promise<void> {
     try {
-      console.log('[ContextCache] Cycle preloading prédictif...');
+      logger.info('Cycle preloading prédictif démarré', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'startPredictiveCycles'
+      }
+    });
       
       // 1. Obtenir prédictions depuis PredictiveEngine
       const predictions = await this.predictiveEngine.predictNextEntityAccess();
@@ -1867,10 +2258,23 @@ export class ContextCacheService {
         );
       }
       
-      console.log(`[ContextCache] Cycle prédictif terminé: ${viablePredictions.length} contextes preloadés`);
+      logger.info('Cycle prédictif terminé', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'startPredictiveCycles',
+        contextsPreloaded: viablePredictions.length
+      }
+    });
       
     } catch (error) {
-      console.error('[ContextCache] Erreur cycle preloading prédictif:', error);
+      logger.error('Erreur cycle preloading prédictif', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'startPredictiveCycles',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
     }
   }
 
@@ -2049,7 +2453,13 @@ export class ContextCacheService {
    */
   public setPredictivePreloadingEnabled(enabled: boolean): void {
     this.predictivePreloadingEnabled = enabled;
-    console.log(`[ContextCache] Preloading prédictif ${enabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+    logger.info('État preloading prédictif modifié', {
+      metadata: {
+        service: 'ContextCacheService',
+        operation: 'togglePredictivePreloading',
+        enabled
+      }
+    });
   }
 
   /**

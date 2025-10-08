@@ -7,6 +7,7 @@ import { db } from "../db";
 import { sql, eq, and, desc, gte, lte, asc, or } from "drizzle-orm";
 import crypto from "crypto";
 import { EventType } from "@shared/events";
+import { logger } from '../utils/logger';
 import type {
   ActionDefinition,
   ActionExecutionResult,
@@ -227,7 +228,14 @@ export class ActionExecutionService {
       };
 
     } catch (error) {
-      console.error('[ActionExecutionService.detectActionIntention] Erreur:', error);
+      logger.error('Erreur detectActionIntention', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'detectActionIntention',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return { hasActionIntention: false, confidence: 0 };
     }
   }
@@ -274,7 +282,13 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           const result = JSON.parse(aiResponse.data.query);
           return result?.type ? result : null;
         } catch (parseError) {
-          console.warn('[ActionExecutionService.analyzeActionWithAI] Erreur parsing JSON:', parseError);
+          logger.warn('Erreur parsing JSON AI response', {
+            metadata: {
+              service: 'ActionExecutionService',
+              operation: 'analyzeActionWithAI',
+              issue: parseError instanceof Error ? parseError.message : String(parseError)
+            }
+          });
           return null;
         }
       }
@@ -282,7 +296,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       return null;
 
     } catch (error) {
-      console.error('[ActionExecutionService.analyzeActionWithAI] Erreur:', error);
+      logger.error('Erreur analyzeActionWithAI', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'analyzeActionWithAI',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -299,7 +320,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
     const actionId = crypto.randomUUID();
 
     try {
-      console.log(`[ActionExecutionService.proposeAction] Proposition d'action ${actionId} pour ${request.userId}`);
+      logger.info('Proposition d\'action', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'proposeAction',
+          actionId,
+          userId: request.userId
+        }
+      });
 
       // 1. Validation RBAC préliminaire
       const rbacCheck = await this.rbacService.validateTableAccess({
@@ -456,7 +484,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       };
 
     } catch (error) {
-      console.error('[ActionExecutionService.proposeAction] Erreur:', error);
+      logger.error('Erreur proposeAction', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'proposeAction',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
 
       await this.auditService.logEvent({
         userId: request.userId,
@@ -495,7 +530,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
     let currentAction: Action | null = null;
 
     try {
-      console.log(`[ActionExecutionService.executeAction] Exécution d'action ${request.actionId} pour ${request.userId}`);
+      logger.info('Exécution d\'action', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'executeAction',
+          actionId: request.actionId,
+          userId: request.userId
+        }
+      });
 
       // 1. Récupérer l'action
       const actionResults = await db
@@ -679,7 +721,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       };
 
     } catch (error) {
-      console.error('[ActionExecutionService.executeAction] Erreur:', error);
+      logger.error('Erreur executeAction', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'executeAction',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
 
       // Marquer l'action comme échouée si possible
       if (currentAction) {
@@ -901,13 +950,27 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       await db.insert(actionHistory).values([historyData]);
 
     } catch (error) {
-      console.error('[ActionExecutionService.updateActionStatus] Erreur:', error);
+      logger.error('Erreur updateActionStatus', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'updateActionStatus',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
   private async performActionExecution(action: Action): Promise<ActionExecutionResult> {
     try {
-      console.log(`[ActionExecutionService.performActionExecution] Exécution ${action.operation} sur ${action.entity}`);
+      logger.info('Exécution opération', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'performActionExecution',
+          actionOperation: action.operation,
+          entity: action.entity
+        }
+      });
 
       switch (action.entity) {
         case 'offer':
@@ -932,7 +995,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           };
       }
     } catch (error) {
-      console.error('[ActionExecutionService.performActionExecution] Erreur:', error);
+      logger.error('Erreur performActionExecution', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'performActionExecution',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         success: false,
         error: {
@@ -1061,7 +1131,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         warnings: parameters.montantEstime ? [] : ['Montant estimé non spécifié']
       };
     } catch (error) {
-      console.error('[ActionExecutionService.createOffer] Erreur:', error);
+      logger.error('Erreur createOffer', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'createOffer',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         success: false,
         error: {
@@ -1085,7 +1162,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         affectedRows: 1
       };
     } catch (error) {
-      console.error('[ActionExecutionService.updateOfferStatus] Erreur:', error);
+      logger.error('Erreur updateOfferStatus', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'updateOfferStatus',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         success: false,
         error: {
@@ -1408,7 +1492,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       };
 
     } catch (error) {
-      console.error('[ActionExecutionService.getActionHistory] Erreur:', error);
+      logger.error('Erreur getActionHistory', {
+        metadata: {
+          service: 'ActionExecutionService',
+          operation: 'getActionHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         success: false,
         actions: [],

@@ -6,6 +6,7 @@ import type {
   PerformanceBenchmark, InsertPerformanceBenchmark,
   ProjectStatus
 } from "@shared/schema";
+import { logger } from '../utils/logger';
 
 // ========================================
 // TYPES ET INTERFACES ANALYTICS MÉTIER
@@ -221,7 +222,14 @@ class ConversionCalculator {
       };
 
     } catch (error) {
-      console.error('Erreur calcul conversion AO->Offre:', error);
+      logger.error('Erreur calcul conversion AO->Offre', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'calculateAOToQuoteConversion',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         rate: 0,
         totalInput: 0,
@@ -301,7 +309,14 @@ class ConversionCalculator {
       };
 
     } catch (error) {
-      console.error('Erreur calcul conversion Offre->Projet:', error);
+      logger.error('Erreur calcul conversion Offre->Projet', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'calculateQuoteToProjectConversion',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         rate: 0,
         totalInput: 0,
@@ -335,7 +350,14 @@ class ConversionCalculator {
       };
 
     } catch (error) {
-      console.error('Erreur calcul pipeline conversion:', error);
+      logger.error('Erreur calcul pipeline conversion', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'calculatePipelineConversion',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         aoToOffer: 0,
         offerToProject: 0,
@@ -442,7 +464,14 @@ class DelayCalculator {
       };
 
     } catch (error) {
-      console.error('Erreur calcul délais moyens:', error);
+      logger.error('Erreur calcul délais moyens', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'calculateAverageDelays',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         average: 0,
         median: 0,
@@ -504,7 +533,14 @@ class DelayCalculator {
       return delayedProjects.sort((a, b) => b.urgencyScore - a.urgencyScore);
 
     } catch (error) {
-      console.error('Erreur calcul projets en retard:', error);
+      logger.error('Erreur calcul projets en retard', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'calculateDelayedProjects',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -564,7 +600,14 @@ class DelayCalculator {
       return teamMetrics.sort((a, b) => b.performanceScore - a.performanceScore);
 
     } catch (error) {
-      console.error('Erreur calcul performance délais équipes:', error);
+      logger.error('Erreur calcul performance délais équipes', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'calculateTeamDelayPerformance',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -658,7 +701,14 @@ class RevenueCalculator {
       };
 
     } catch (error) {
-      console.error('Erreur calcul forecast revenus:', error);
+      logger.error('Erreur calcul forecast revenus', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'forecastRevenue',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         amount: 0,
         confidence: 0,
@@ -728,7 +778,14 @@ class RevenueCalculator {
       return result.sort((a, b) => b.revenue - a.revenue);
 
     } catch (error) {
-      console.error('Erreur calcul revenus par catégorie:', error);
+      logger.error('Erreur calcul revenus par catégorie', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'calculateRevenueByCategoryDetailed',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -821,7 +878,14 @@ class RevenueCalculator {
       };
 
     } catch (error) {
-      console.error('Erreur analyse marges:', error);
+      logger.error('Erreur analyse marges', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'analyzeMargins',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         average: 0,
         median: 0,
@@ -901,7 +965,14 @@ class TeamLoadCalculator {
       return teamMetrics.sort((a, b) => b.loadPercentage - a.loadPercentage);
 
     } catch (error) {
-      console.error('Erreur calcul charge équipes:', error);
+      logger.error('Erreur calcul charge équipes', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'calculateTeamWorkload',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -958,7 +1029,14 @@ class TeamLoadCalculator {
       return efficiencyMetrics.sort((a, b) => b.efficiency - a.efficiency);
 
     } catch (error) {
-      console.error('Erreur calcul efficacité équipes:', error);
+      logger.error('Erreur calcul efficacité équipes', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'calculateTeamEfficiency',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -1027,7 +1105,14 @@ class TeamLoadCalculator {
       });
 
     } catch (error) {
-      console.error('Erreur suggestions planning optimal:', error);
+      logger.error('Erreur suggestions planning optimal', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'suggestOptimalPlanning',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -1144,7 +1229,14 @@ export class AnalyticsService {
       return savedSnapshot;
 
     } catch (error) {
-      console.error('Erreur génération KPI snapshot:', error);
+      logger.error('Erreur génération KPI snapshot', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'generateKpiSnapshot',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Échec génération KPIs: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
   }
@@ -1199,7 +1291,14 @@ export class AnalyticsService {
       return kpis;
 
     } catch (error) {
-      console.error('Erreur calcul KPIs temps réel:', error);
+      logger.error('Erreur calcul KPIs temps réel', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'calculateRealTimeKPIs',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         conversionRate: 0,
         forecastRevenue: 0,
@@ -1294,7 +1393,14 @@ export class AnalyticsService {
       return await this.storage.createPerformanceBenchmark(benchmark);
 
     } catch (error) {
-      console.error('Erreur génération benchmarks:', error);
+      logger.error('Erreur génération benchmarks', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'generateBenchmarks',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Échec génération benchmarks: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
   }

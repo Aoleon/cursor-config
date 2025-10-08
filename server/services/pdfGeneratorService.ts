@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import * as Handlebars from "handlebars";
 import type { DpgfGroupedData } from "./dpgfComputeService";
+import { logger } from '../utils/logger';
 
 export interface PdfGenerationOptions {
   format?: "A4" | "A3" | "Letter";
@@ -53,7 +54,12 @@ export class PdfGeneratorService {
           ]
         });
 
-        console.log("✅ Puppeteer browser started successfully");
+        logger.info('Puppeteer browser started successfully', {
+          metadata: {
+            service: 'PDFGeneratorService',
+            operation: 'initialize'
+          }
+        });
       }
 
       // Compilation du template Handlebars
@@ -65,10 +71,22 @@ export class PdfGeneratorService {
         this.registerHandlebarsHelpers();
         
         this.template = Handlebars.compile(templateContent);
-        console.log("✅ DPGF template compiled successfully");
+        logger.info('DPGF template compiled successfully', {
+          metadata: {
+            service: 'PDFGeneratorService',
+            operation: 'initialize'
+          }
+        });
       }
     } catch (error) {
-      console.error("❌ Error initializing PDF generator service:", error);
+      logger.error('Error initializing PDF generator service', {
+        metadata: {
+          service: 'PDFGeneratorService',
+          operation: 'initialize',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Failed to initialize PDF generator: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -124,14 +142,27 @@ export class PdfGeneratorService {
       };
 
       // Génération du PDF
-      console.log("🔄 Generating DPGF PDF...");
+      logger.info('Generating DPGF PDF', {
+        metadata: {
+          service: 'PDFGeneratorService',
+          operation: 'generateDpgfPdf',
+          offerReference: data.metadata.offerReference
+        }
+      });
       const pdfBuffer = Buffer.from(await page.pdf(pdfOptions));
       
       // Generation du nom de fichier
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `DPGF-${data.metadata.offerReference || 'Document'}-${timestamp}.pdf`;
       
-      console.log(`✅ PDF generated successfully: ${filename} (${pdfBuffer.length} bytes)`);
+      logger.info('PDF generated successfully', {
+        metadata: {
+          service: 'PDFGeneratorService',
+          operation: 'generateDpgfPdf',
+          filename,
+          size: pdfBuffer.length
+        }
+      });
       
       return {
         buffer: pdfBuffer,
@@ -141,7 +172,14 @@ export class PdfGeneratorService {
       };
 
     } catch (error) {
-      console.error("❌ Error generating PDF:", error);
+      logger.error('Error generating PDF', {
+        metadata: {
+          service: 'PDFGeneratorService',
+          operation: 'generateDpgfPdf',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       // Nettoyage de la page
@@ -149,7 +187,13 @@ export class PdfGeneratorService {
         try {
           await page.close();
         } catch (error) {
-          console.warn("Warning: Failed to close page:", error);
+          logger.warn('Failed to close page', {
+            metadata: {
+              service: 'PDFGeneratorService',
+              operation: 'generateDpgfPdf',
+              issue: error instanceof Error ? error.message : String(error)
+            }
+          });
         }
       }
     }
@@ -167,10 +211,22 @@ export class PdfGeneratorService {
 
     try {
       const html = this.template(data);
-      console.log("✅ DPGF preview HTML generated successfully");
+      logger.info('DPGF preview HTML generated successfully', {
+        metadata: {
+          service: 'PDFGeneratorService',
+          operation: 'generateDpgfPreview'
+        }
+      });
       return html;
     } catch (error) {
-      console.error("❌ Error generating preview HTML:", error);
+      logger.error('Error generating preview HTML', {
+        metadata: {
+          service: 'PDFGeneratorService',
+          operation: 'generateDpgfPreview',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -183,9 +239,21 @@ export class PdfGeneratorService {
       try {
         await this.browser.close();
         this.browser = null;
-        console.log("✅ Puppeteer browser closed");
+        logger.info('Puppeteer browser closed', {
+          metadata: {
+            service: 'PDFGeneratorService',
+            operation: 'cleanup'
+          }
+        });
       } catch (error) {
-        console.error("❌ Error closing browser:", error);
+        logger.error('Error closing browser', {
+          metadata: {
+            service: 'PDFGeneratorService',
+            operation: 'cleanup',
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          }
+        });
       }
     }
   }
@@ -267,7 +335,12 @@ export class PdfGeneratorService {
       return str.substring(0, length) + "...";
     });
 
-    console.log("✅ Handlebars helpers registered");
+    logger.info('Handlebars helpers registered', {
+      metadata: {
+        service: 'PDFGeneratorService',
+        operation: 'registerHandlebarsHelpers'
+      }
+    });
   }
 
   /**
@@ -281,21 +354,41 @@ export class PdfGeneratorService {
    * Redémarre le service (utile en cas de problème)
    */
   static async restart(): Promise<void> {
-    console.log("🔄 Restarting PDF generator service...");
+    logger.info('Restarting PDF generator service', {
+      metadata: {
+        service: 'PDFGeneratorService',
+        operation: 'restart'
+      }
+    });
     await this.cleanup();
     this.template = null;
     await this.initialize();
-    console.log("✅ PDF generator service restarted");
+    logger.info('PDF generator service restarted', {
+      metadata: {
+        service: 'PDFGeneratorService',
+        operation: 'restart'
+      }
+    });
   }
 }
 
 // Gestion de l'arrêt propre du processus
 process.on("SIGTERM", async () => {
-  console.log("🔄 Received SIGTERM, cleaning up PDF generator...");
+  logger.info('Received SIGTERM, cleaning up PDF generator', {
+    metadata: {
+      service: 'PDFGeneratorService',
+      operation: 'SIGTERM handler'
+    }
+  });
   await PdfGeneratorService.cleanup();
 });
 
 process.on("SIGINT", async () => {
-  console.log("🔄 Received SIGINT, cleaning up PDF generator...");
+  logger.info('Received SIGINT, cleaning up PDF generator', {
+    metadata: {
+      service: 'PDFGeneratorService',
+      operation: 'SIGINT handler'
+    }
+  });
   await PdfGeneratorService.cleanup();
 });

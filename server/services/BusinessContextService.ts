@@ -5,6 +5,7 @@ import { db } from "../db";
 import { eq, and, desc, sql, gte, lte, isNull, or } from "drizzle-orm";
 import crypto from "crypto";
 import { z } from "zod";
+import { logger } from '../utils/logger';
 
 import type {
   BusinessContextRequest,
@@ -108,7 +109,15 @@ export class BusinessContextService {
     const contextId = crypto.randomUUID();
 
     try {
-      console.log(`[BusinessContext] Génération contexte ${contextId} pour ${request.userId} (${request.user_role})`);
+      logger.info('Génération contexte métier', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'generateBusinessContext',
+          contextId,
+          userId: request.userId,
+          userRole: request.user_role
+        }
+      });
 
       // 1. Validation de la requête
       const validationResult = businessContextRequestSchema.safeParse(request);
@@ -178,7 +187,15 @@ export class BusinessContextService {
       };
 
     } catch (error) {
-      console.error(`[BusinessContext] Erreur génération contexte ${contextId}:`, error);
+      logger.error('Erreur génération contexte', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'generateBusinessContext',
+          contextId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       await this.logMetrics(request, Date.now() - startTime, false, null, error);
       
@@ -261,7 +278,14 @@ export class BusinessContextService {
       };
 
     } catch (error) {
-      console.error(`[BusinessContext] Erreur enrichissement:`, error);
+      logger.error('Erreur enrichissement contexte', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'enrichContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       return {
         success: false,
@@ -382,7 +406,14 @@ export class BusinessContextService {
       };
 
     } catch (error) {
-      console.error(`[BusinessContext] Erreur apprentissage adaptatif:`, error);
+      logger.error('Erreur apprentissage adaptatif', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'updateAdaptiveLearning',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       return {
         success: false,
@@ -587,7 +618,13 @@ export class BusinessContextService {
       const memoryEntry = this.memoryCache.get(cacheKey);
       if (memoryEntry && memoryEntry.expiresAt > new Date()) {
         memoryEntry.hitCount++;
-        console.log(`[BusinessContext] Cache mémoire hit pour ${cacheKey}`);
+        logger.info('Cache mémoire hit', {
+          metadata: {
+            service: 'BusinessContextService',
+            operation: 'getCachedContext',
+            cacheKey
+          }
+        });
         return memoryEntry.data;
       }
 
@@ -621,13 +658,26 @@ export class BusinessContextService {
           hitCount: 1
         });
 
-        console.log(`[BusinessContext] Cache DB hit pour ${cacheKey}`);
+        logger.info('Cache DB hit', {
+          metadata: {
+            service: 'BusinessContextService',
+            operation: 'getCachedContext',
+            cacheKey
+          }
+        });
         return contextData;
       }
 
       return null;
     } catch (error) {
-      console.error(`[BusinessContext] Erreur récupération cache:`, error);
+      logger.error('Erreur récupération cache', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'getCachedContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -667,7 +717,14 @@ export class BusinessContextService {
       }
 
     } catch (error) {
-      console.error(`[BusinessContext] Erreur mise en cache:`, error);
+      logger.error('Erreur mise en cache', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'cacheContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       // Non bloquant - continue sans cache
     }
   }
@@ -687,14 +744,32 @@ export class BusinessContextService {
     }
 
     if (cleanedCount > 0) {
-      console.log(`[BusinessContext] Nettoyage cache: ${cleanedCount} entrées supprimées`);
+      logger.info('Nettoyage cache', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'cleanupExpiredCache',
+          cleanedCount
+        }
+      });
     }
 
     // Nettoyage DB en arrière-plan
     db.delete(businessContextCache)
       .where(lte(businessContextCache.expiresAt, now))
-      .then(() => console.log(`[BusinessContext] Cache DB nettoyé`))
-      .catch(err => console.error(`[BusinessContext] Erreur nettoyage DB:`, err));
+      .then(() => logger.info('Cache DB nettoyé', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'cleanupExpiredCache'
+        }
+      }))
+      .catch(err => logger.error('Erreur nettoyage DB', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'cleanupExpiredCache',
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined
+        }
+      }));
   }
 
   // ========================================
@@ -707,9 +782,21 @@ export class BusinessContextService {
   private async initializeDomainKnowledge(): Promise<void> {
     try {
       this.domainKnowledge = await this.loadMenuiserieDomainKnowledge();
-      console.log(`[BusinessContext] Base de connaissances menuiserie initialisée`);
+      logger.info('Base de connaissances menuiserie initialisée', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'initializeDomainKnowledge'
+        }
+      });
     } catch (error) {
-      console.error(`[BusinessContext] Erreur initialisation domaine:`, error);
+      logger.error('Erreur initialisation domaine', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'initializeDomainKnowledge',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       // Fallback vers une base minimale
       this.domainKnowledge = this.getMinimalDomainKnowledge();
     }
@@ -732,10 +819,25 @@ export class BusinessContextService {
     try {
       // Import dynamique de la base de connaissances
       const { MENUISERIE_KNOWLEDGE_BASE } = await import('./MenuiserieKnowledgeBase');
-      console.log(`[BusinessContext] Base de connaissances menuiserie chargée: ${MENUISERIE_KNOWLEDGE_BASE.materials.length} matériaux, ${MENUISERIE_KNOWLEDGE_BASE.processes.length} processus, ${MENUISERIE_KNOWLEDGE_BASE.norms.length} normes`);
+      logger.info('Base de connaissances menuiserie chargée', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'loadMenuiserieDomainKnowledge',
+          materialsCount: MENUISERIE_KNOWLEDGE_BASE.materials.length,
+          processesCount: MENUISERIE_KNOWLEDGE_BASE.processes.length,
+          normsCount: MENUISERIE_KNOWLEDGE_BASE.norms.length
+        }
+      });
       return MENUISERIE_KNOWLEDGE_BASE;
     } catch (error) {
-      console.error(`[BusinessContext] Erreur chargement base de connaissances:`, error);
+      logger.error('Erreur chargement base de connaissances', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'loadMenuiserieDomainKnowledge',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       // Fallback vers base minimale
       return this.getMinimalDomainKnowledge();
     }
@@ -1267,7 +1369,14 @@ export class BusinessContextService {
         typical_results: "Résultats basés sur l'historique d'utilisation"
       }));
     } catch (error) {
-      console.error(`[BusinessContext] Erreur récupération exemples adaptatifs:`, error);
+      logger.error('Erreur récupération exemples adaptatifs', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'getAdaptiveExamples',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -1296,7 +1405,14 @@ export class BusinessContextService {
         }
       };
     } catch (error) {
-      console.error(`[BusinessContext] Erreur construction RBAC:`, error);
+      logger.error('Erreur construction RBAC', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'buildRBACContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       // Fallback sécuritaire
       return {
         user_role: userRole,
@@ -1533,7 +1649,14 @@ export class BusinessContextService {
 
       await db.insert(businessContextMetricsLog).values(metrics);
     } catch (logError) {
-      console.error(`[BusinessContext] Erreur logging métriques:`, logError);
+      logger.error('Erreur logging métriques', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'logMetrics',
+          error: logError instanceof Error ? logError.message : String(logError),
+          stack: logError instanceof Error ? logError.stack : undefined
+        }
+      });
     }
   }
 
@@ -1571,7 +1694,14 @@ export class BusinessContextService {
       
       return "Contexte métier menuiserie: données de base disponibles";
     } catch (error) {
-      console.error(`[BusinessContext] Erreur contexte SQL:`, error);
+      logger.error('Erreur contexte SQL', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'buildIntelligentContextForSQL',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return "Contexte métier menuiserie: mode dégradé";
     }
   }
@@ -1656,7 +1786,14 @@ export class BusinessContextService {
         }
       };
     } catch (error) {
-      console.error(`[BusinessContext] Erreur récupération métriques:`, error);
+      logger.error('Erreur récupération métriques', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'getServiceMetrics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       // Métriques par défaut
       return {
         total_requests: 0,

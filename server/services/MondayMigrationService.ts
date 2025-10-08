@@ -20,6 +20,7 @@ import { validateMondayAoData, validateMondayProjectData, validateAndParseMonday
 import { ZodError } from 'zod';
 import { MondayProductionMigrationService, type ProductionMigrationResult } from './MondayProductionMigrationService';
 import { MondayProductionFinalService, type ProductionFinalMigrationResult } from './MondayProductionFinalService';
+import { logger } from '../utils/logger';
 
 // ========================================
 // TYPES DE MIGRATION MONDAY.COM
@@ -125,21 +126,46 @@ export class MondayMigrationService {
    * Migre 1911 lignes authentic depuis AO_Planning + CHANTIERS
    */
   async migrateFromRealMondayData(): Promise<ProductionFinalMigrationResult> {
-    console.log('[Migration] ✅ SOLUTION FINALE: Utilisation données authentiques Monday.com');
-    console.log('[Migration] ✅ RÉSOUT problème architect: exports Excel réels au lieu de synthétiques');
+    logger.info('SOLUTION FINALE: Utilisation données authentiques Monday.com', {
+      metadata: {
+        service: 'MondayMigrationService',
+        operation: 'migrateFromRealMondayData'
+      }
+    });
+    logger.info('RÉSOUT problème architect: exports Excel réels au lieu de synthétiques', {
+      metadata: {
+        service: 'MondayMigrationService',
+        operation: 'migrateFromRealMondayData'
+      }
+    });
     
     try {
       // Utiliser service final avec données authentiques
       const result = await this.productionFinalService.migrateProductionMondayData();
       
-      console.log(`[Migration] Migration authentique terminée: ${result.totalMigrated}/${result.totalLines} lignes`);
-      console.log(`[Migration] Sources: ${result.filesProcessed.join(', ')}`);
-      console.log(`[Migration] Résultats: AOs ${result.aos.migrated}, Projets ${result.projects.migrated}`);
+      logger.info('Migration authentique terminée', {
+        metadata: {
+          service: 'MondayMigrationService',
+          operation: 'migrateFromRealMondayData',
+          totalMigrated: result.totalMigrated,
+          totalLines: result.totalLines,
+          sources: result.filesProcessed,
+          aosCount: result.aos.migrated,
+          projectsCount: result.projects.migrated
+        }
+      });
       
       return result;
       
     } catch (error) {
-      console.error('[Migration] Erreur migration authentique Monday.com:', error);
+      logger.error('Erreur migration authentique Monday.com', {
+        metadata: {
+          service: 'MondayMigrationService',
+          operation: 'migrateFromRealMondayData',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Migration authentique échouée: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -157,20 +183,40 @@ export class MondayMigrationService {
     warnings: number;
     filesProcessed: string[];
   }> {
-    console.log('[Migration] 🔍 Validation authentique dry-run - exports Excel Monday.com réels');
+    logger.info('Validation authentique dry-run - exports Excel Monday.com réels', {
+      metadata: {
+        service: 'MondayMigrationService',
+        operation: 'validateAuthenticMondayDataIntegrity'
+      }
+    });
     
     try {
       // Validation avec service final (données authentiques)
       const validationResult = await this.productionFinalService.validateAuthenticDataIntegrity();
       
-      console.log(`[Migration] Validation terminée: ${validationResult.validLines}/${validationResult.totalLines} lignes valides`);
-      console.log(`[Migration] Fichiers traités: ${validationResult.filesProcessed.join(', ')}`);
-      console.log(`[Migration] Issues: ${validationResult.errors} erreurs, ${validationResult.warnings} warnings`);
+      logger.info('Validation terminée', {
+        metadata: {
+          service: 'MondayMigrationService',
+          operation: 'validateAuthenticMondayDataIntegrity',
+          validLines: validationResult.validLines,
+          totalLines: validationResult.totalLines,
+          filesProcessed: validationResult.filesProcessed,
+          errors: validationResult.errors,
+          warnings: validationResult.warnings
+        }
+      });
       
       return validationResult;
       
     } catch (error) {
-      console.error('[Migration] Erreur validation authentique Monday.com:', error);
+      logger.error('Erreur validation authentique Monday.com', {
+        metadata: {
+          service: 'MondayMigrationService',
+          operation: 'validateAuthenticMondayDataIntegrity',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Validation authentique échouée: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -190,7 +236,13 @@ export class MondayMigrationService {
     this.resetWarnings(); // Reset warnings avant migration
 
     try {
-      console.log(`[Migration] Démarrage migration AO_Planning - ${count} lignes basées sur analyse audit`);
+      logger.info('Démarrage migration AO_Planning basée sur analyse audit', {
+        metadata: {
+          service: 'MondayMigrationService',
+          operation: 'migrateAosFromAnalysis',
+          count
+        }
+      });
 
       // Générer données réalistes basées sur patterns Monday.com analysés
       const mondayAoData = generateRealisticJLMData(count, 'aos');
@@ -230,26 +282,51 @@ export class MondayMigrationService {
               id: aoData.mondayItemId || 'unknown',
               error: error instanceof Error ? error.message : String(error)
             });
-            console.warn(`[Migration] Erreur AO ${aoData.mondayItemId}:`, error);
+            logger.warn('Erreur migration AO', {
+              metadata: {
+                service: 'MondayMigrationService',
+                operation: 'migrateAosFromAnalysis',
+                mondayItemId: aoData.mondayItemId,
+                error: error instanceof Error ? error.message : String(error)
+              }
+            });
           }
         }
 
         // Log progression
-        console.log(`[Migration] AO Progress: ${Math.min(i + batchSize, mondayAoData.length)}/${mondayAoData.length}`);
+        logger.info('AO Progress', {
+          metadata: {
+            service: 'MondayMigrationService',
+            operation: 'migrateAosFromAnalysis',
+            progress: Math.min(i + batchSize, mondayAoData.length),
+            total: mondayAoData.length
+          }
+        });
       }
 
       result.duration = Date.now() - startTime;
       this.migrationHistory.push(result);
 
-      console.log(`[Migration] AO_Planning terminée - ${result.migrated} migrés, ${result.errors} erreurs en ${result.duration}ms`);
+      logger.info('AO_Planning terminée', {
+        metadata: {
+          service: 'MondayMigrationService',
+          operation: 'migrateAosFromAnalysis',
+          migrated: result.migrated,
+          errors: result.errors,
+          duration: result.duration
+        }
+      });
       
       // Log warnings de parsing dates
       if (this.warnings.length > 0) {
-        console.log(`[Migration] Warnings dates (non bloquants): ${this.warnings.length}`);
-        this.warnings.slice(0, 5).forEach(warning => console.log(`  - ${warning}`));
-        if (this.warnings.length > 5) {
-          console.log(`  ... et ${this.warnings.length - 5} autres warnings`);
-        }
+        logger.info('Warnings dates (non bloquants)', {
+          metadata: {
+            service: 'MondayMigrationService',
+            operation: 'migrateAosFromAnalysis',
+            warningsCount: this.warnings.length,
+            warnings: this.warnings.slice(0, 5)
+          }
+        });
       }
       
       return result;
@@ -270,7 +347,13 @@ export class MondayMigrationService {
     this.resetWarnings(); // Reset warnings avant migration
 
     try {
-      console.log(`[Migration] Démarrage migration CHANTIERS - ${count} lignes basées sur analyse audit`);
+      logger.info('Démarrage migration CHANTIERS basée sur analyse audit', {
+        metadata: {
+          service: 'MondayMigrationService',
+          operation: 'migrateChantiersFromAnalysis',
+          count
+        }
+      });
 
       // Générer données réalistes basées sur patterns Monday.com analysés
       const mondayProjectData = generateRealisticJLMData(count, 'projects');
@@ -310,18 +393,40 @@ export class MondayMigrationService {
               id: projectData.mondayProjectId || 'unknown',
               error: error instanceof Error ? error.message : String(error)
             });
-            console.warn(`[Migration] Erreur Project ${projectData.mondayProjectId}:`, error);
+            logger.warn('Erreur migration Project', {
+              metadata: {
+                service: 'MondayMigrationService',
+                operation: 'migrateChantiersFromAnalysis',
+                mondayProjectId: projectData.mondayProjectId,
+                error: error instanceof Error ? error.message : String(error)
+              }
+            });
           }
         }
 
         // Log progression
-        console.log(`[Migration] Projects Progress: ${Math.min(i + batchSize, mondayProjectData.length)}/${mondayProjectData.length}`);
+        logger.info('Projects Progress', {
+          metadata: {
+            service: 'MondayMigrationService',
+            operation: 'migrateChantiersFromAnalysis',
+            progress: Math.min(i + batchSize, mondayProjectData.length),
+            total: mondayProjectData.length
+          }
+        });
       }
 
       result.duration = Date.now() - startTime;
       this.migrationHistory.push(result);
 
-      console.log(`[Migration] CHANTIERS terminée - ${result.migrated} migrés, ${result.errors} erreurs en ${result.duration}ms`);
+      logger.info('CHANTIERS terminée', {
+        metadata: {
+          service: 'MondayMigrationService',
+          operation: 'migrateChantiersFromAnalysis',
+          migrated: result.migrated,
+          errors: result.errors,
+          duration: result.duration
+        }
+      });
       
       return result;
 
@@ -334,7 +439,12 @@ export class MondayMigrationService {
    * Validation post-migration avec contrôles d'intégrité
    */
   async validateMigration(): Promise<ValidationReport> {
-    console.log('[Migration] Validation post-migration en cours...');
+    logger.info('Validation post-migration en cours', {
+      metadata: {
+        service: 'MondayMigrationService',
+        operation: 'validateMigration'
+      }
+    });
 
     // Compter les entités migrées
     const [aos, projects] = await Promise.all([
@@ -391,7 +501,14 @@ export class MondayMigrationService {
       report.warnings.push('Moins de 70% des clients sont normalisés selon patterns JLM');
     }
 
-    console.log(`[Migration] Validation terminée - ${report.errors.length} erreurs, ${report.warnings.length} warnings`);
+    logger.info('Validation terminée', {
+      metadata: {
+        service: 'MondayMigrationService',
+        operation: 'validateMigration',
+        errors: report.errors.length,
+        warnings: report.warnings.length
+      }
+    });
     
     return report;
   }
@@ -482,7 +599,13 @@ export class MondayMigrationService {
     if (!result.parsed) {
       if (result.warning) {
         this.warnings.push(`Date parsing warning: ${result.warning}`);
-        console.warn(`[Migration] ${result.warning}`);
+        logger.warn('Date parsing warning', {
+          metadata: {
+            service: 'MondayMigrationService',
+            operation: 'parseEstimatedDelayWithWarnings',
+            warning: result.warning
+          }
+        });
       }
       // Continuer avec null au lieu d'échouer (specs JLM)
       return undefined;

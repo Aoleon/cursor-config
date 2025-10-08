@@ -24,6 +24,7 @@ import { type InsertAo, type InsertProject } from '@shared/schema';
 import { type MondayAoData, type MondayProjectData } from '../utils/mondayDataGenerator';
 import { validateMondayAoData, validateMondayProjectData, validateAndParseMondayDate } from '../utils/mondayValidator';
 import { ZodError } from 'zod';
+import { logger } from '../utils/logger';
 
 // ========================================
 // TYPES MIGRATION PRODUCTION FINALE
@@ -120,8 +121,20 @@ export class MondayProductionFinalService {
   async migrateProductionMondayData(): Promise<ProductionFinalMigrationResult> {
     const startTime = Date.now();
     
-    console.log('[Production Final] DÉBUT Migration données authentiques Monday.com');
-    console.log('[Production Final] RÉSOLUTION problème architect: données réelles au lieu de synthétiques');
+    logger.info('DÉBUT Migration données authentiques Monday.com', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'migrateProductionMondayData',
+        context: { source: 'authentic_monday_exports' }
+      }
+    });
+    logger.info('RÉSOLUTION problème architect: données réelles au lieu de synthétiques', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'migrateProductionMondayData',
+        context: { approach: 'real_data_instead_of_synthetic' }
+      }
+    });
     
     this.resetWarnings();
     
@@ -129,10 +142,18 @@ export class MondayProductionFinalService {
       // Chargement données authentiques depuis exports Excel
       const authenticData = await this.loadAuthenticMondayData();
       
-      console.log(`[Production Final] Données authentiques chargées:`);
-      console.log(`  - AOs: ${authenticData.aos.length} (source: ${authenticData.metadata.aoSourceFile})`);
-      console.log(`  - Projets: ${authenticData.projects.length} (source: ${authenticData.metadata.projectSourceFile})`);
-      console.log(`  - Total Excel: ${authenticData.metadata.totalExcelRows} lignes traitées`);
+      logger.info('Données authentiques chargées', {
+        metadata: {
+          service: 'MondayProductionFinalService',
+          operation: 'migrateProductionMondayData',
+          aosCount: authenticData.aos.length,
+          projectsCount: authenticData.projects.length,
+          aoSourceFile: authenticData.metadata.aoSourceFile,
+          projectSourceFile: authenticData.metadata.projectSourceFile,
+          totalExcelRows: authenticData.metadata.totalExcelRows,
+          context: { migrationStep: 'data_loaded' }
+        }
+      });
       
       // Migration avec données authentiques
       const aosResult = await this.migrateAuthenticAOs(authenticData.aos, authenticData.metadata.aoSourceFile);
@@ -154,19 +175,43 @@ export class MondayProductionFinalService {
         projects: projectsResult
       };
       
-      console.log(`[Production Final] TERMINÉE - ${totalMigrated}/${totalLines} lignes migrées`);
-      console.log(`[Production Final] Sources: ${result.filesProcessed.join(', ')}`);
-      console.log(`[Production Final] Durée: ${result.duration}ms, Erreurs: ${totalErrors}`);
+      logger.info('Migration TERMINÉE', {
+        metadata: {
+          service: 'MondayProductionFinalService',
+          operation: 'migrateProductionMondayData',
+          totalMigrated,
+          totalLines,
+          filesProcessed: result.filesProcessed,
+          duration: result.duration,
+          errors: totalErrors,
+          context: { migrationStep: 'completed' }
+        }
+      });
       
       if (this.warnings.length > 0) {
-        console.log(`[Production Final] Warnings non bloquants: ${this.warnings.length}`);
-        this.warnings.slice(0, 5).forEach(w => console.log(`  - ${w}`));
+        logger.warn('Warnings non bloquants détectés', {
+          metadata: {
+            service: 'MondayProductionFinalService',
+            operation: 'migrateProductionMondayData',
+            warningsCount: this.warnings.length,
+            topWarnings: this.warnings.slice(0, 5),
+            context: { migrationStep: 'warnings_detected' }
+          }
+        });
       }
       
       return result;
       
     } catch (error) {
-      console.error('[Production Final] Erreur critique:', error);
+      logger.error('Erreur critique migration', {
+        metadata: {
+          service: 'MondayProductionFinalService',
+          operation: 'migrateProductionMondayData',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          context: { migrationStep: 'error' }
+        }
+      });
       throw new Error(`Migration production finale échouée: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -176,7 +221,13 @@ export class MondayProductionFinalService {
    * Remplace generateRealisticJLMData par lecture fichiers réels
    */
   async loadAuthenticMondayData(): Promise<AuthenticMondayData> {
-    console.log('[Production Final] Chargement exports Excel authentiques Monday.com');
+    logger.info('Chargement exports Excel authentiques Monday.com', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'loadAuthenticMondayData',
+        context: { migrationStep: 'loading_excel_exports' }
+      }
+    });
     
     const aoFilePath = path.join(MONDAY_EXPORTS_BASE_PATH, AO_PLANNING_FILE);
     const chantiersFilePath = path.join(MONDAY_EXPORTS_BASE_PATH, CHANTIERS_FILE);
@@ -196,10 +247,16 @@ export class MondayProductionFinalService {
       
       const totalExcelRows = aoData.length + projectData.length;
       
-      console.log(`[Production Final] Lecture terminée:`);
-      console.log(`  - AO_Planning: ${aoData.length} entrées extraites`);
-      console.log(`  - CHANTIERS: ${projectData.length} entrées extraites`);
-      console.log(`  - Total: ${totalExcelRows} lignes Excel authentiques`);
+      logger.info('Lecture Excel terminée', {
+        metadata: {
+          service: 'MondayProductionFinalService',
+          operation: 'loadAuthenticMondayData',
+          aoEntriesCount: aoData.length,
+          chantiersEntriesCount: projectData.length,
+          totalExcelRows,
+          context: { migrationStep: 'excel_read_complete' }
+        }
+      });
       
       return {
         aos: aoData,
@@ -214,7 +271,15 @@ export class MondayProductionFinalService {
       };
       
     } catch (error) {
-      console.error('[Production Final] Erreur lecture exports Excel:', error);
+      logger.error('Erreur lecture exports Excel', {
+        metadata: {
+          service: 'MondayProductionFinalService',
+          operation: 'loadAuthenticMondayData',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          context: { migrationStep: 'excel_read_error' }
+        }
+      });
       throw new Error(`Impossible de lire exports authentiques: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -223,14 +288,29 @@ export class MondayProductionFinalService {
    * LECTURE FICHIER AO_PLANNING AUTHENTIQUE (911 lignes)
    */
   private async readAuthenticAOPlanningFile(filePath: string): Promise<MondayAoData[]> {
-    console.log(`[Production Final] Lecture ${AO_PLANNING_FILE}...`);
+    logger.info('Lecture fichier AO Planning', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'readAuthenticAOPlanningFile',
+        fileName: AO_PLANNING_FILE,
+        context: { fileType: 'ao_planning' }
+      }
+    });
     
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0]; // Première feuille
     const worksheet = workbook.Sheets[sheetName];
     const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
     
-    console.log(`[Production Final] Feuille: "${sheetName}", ${rawData.length} lignes brutes Excel`);
+    logger.info('Feuille Excel chargée', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'readAuthenticFile',
+        sheetName,
+        rawDataLines: rawData.length,
+        context: { loadStep: 'sheet_loaded' }
+      }
+    });
     
     const aos: MondayAoData[] = [];
     let processedCount = 0;
@@ -258,12 +338,28 @@ export class MondayProductionFinalService {
           skippedCount++;
         }
       } catch (error) {
-        console.warn(`[Production Final] Erreur ligne AO ${i}: ${error instanceof Error ? error.message : String(error)}`);
+        logger.warn('Erreur ligne AO', {
+          metadata: {
+            service: 'MondayProductionFinalService',
+            operation: 'readAuthenticAOPlanningFile',
+            lineIndex: i,
+            error: error instanceof Error ? error.message : String(error),
+            context: { fileType: 'ao_planning', step: 'row_processing_error' }
+          }
+        });
         skippedCount++;
       }
     }
     
-    console.log(`[Production Final] AO_Planning: ${processedCount} AOs extraits, ${skippedCount} lignes ignorées`);
+    logger.info('AO_Planning extraction terminée', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'readAuthenticAOPlanningFile',
+        processedCount,
+        skippedCount,
+        context: { fileType: 'ao_planning', step: 'extraction_complete' }
+      }
+    });
     return aos;
   }
 
@@ -271,14 +367,29 @@ export class MondayProductionFinalService {
    * LECTURE FICHIER CHANTIERS AUTHENTIQUE (1000 lignes)
    */
   private async readAuthenticChantiersFile(filePath: string): Promise<MondayProjectData[]> {
-    console.log(`[Production Final] Lecture ${CHANTIERS_FILE}...`);
+    logger.info('Lecture fichier CHANTIERS', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'readAuthenticChantiersFile',
+        fileName: CHANTIERS_FILE,
+        context: { fileType: 'chantiers' }
+      }
+    });
     
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0]; // Première feuille
     const worksheet = workbook.Sheets[sheetName];
     const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
     
-    console.log(`[Production Final] Feuille: "${sheetName}", ${rawData.length} lignes brutes Excel`);
+    logger.info('Feuille Excel chargée', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'readAuthenticFile',
+        sheetName,
+        rawDataLines: rawData.length,
+        context: { loadStep: 'sheet_loaded' }
+      }
+    });
     
     const projects: MondayProjectData[] = [];
     let processedCount = 0;
@@ -306,12 +417,28 @@ export class MondayProductionFinalService {
           skippedCount++;
         }
       } catch (error) {
-        console.warn(`[Production Final] Erreur ligne projet ${i}: ${error instanceof Error ? error.message : String(error)}`);
+        logger.warn('Erreur ligne projet', {
+          metadata: {
+            service: 'MondayProductionFinalService',
+            operation: 'readAuthenticChantiersFile',
+            lineIndex: i,
+            error: error instanceof Error ? error.message : String(error),
+            context: { fileType: 'chantiers', step: 'row_processing_error' }
+          }
+        });
         skippedCount++;
       }
     }
     
-    console.log(`[Production Final] CHANTIERS: ${processedCount} projets extraits, ${skippedCount} lignes ignorées`);
+    logger.info('CHANTIERS extraction terminée', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'readAuthenticChantiersFile',
+        processedCount,
+        skippedCount,
+        context: { fileType: 'chantiers', step: 'extraction_complete' }
+      }
+    });
     return projects;
   }
 
@@ -398,7 +525,15 @@ export class MondayProductionFinalService {
    * MIGRATION AO AUTHENTIQUES AVEC VALIDATION
    */
   private async migrateAuthenticAOs(aoData: MondayAoData[], sourceFile: string): Promise<MigrationBatchResult> {
-    console.log(`[Production Final] Migration ${aoData.length} AO authentiques (source: ${sourceFile})`);
+    logger.info('Démarrage migration AO authentiques', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'migrateAuthenticAOs',
+        aoCount: aoData.length,
+        sourceFile,
+        context: { migrationStep: 'aos_migration_start' }
+      }
+    });
     
     const results: BatchResult[] = [];
     
@@ -420,12 +555,31 @@ export class MondayProductionFinalService {
         
         // Log progression par batch de 100
         if ((index + 1) % 100 === 0) {
-          console.log(`[Migration AO Authentiques] Progress: ${index + 1}/${aoData.length} (${Math.round(((index + 1) / aoData.length) * 100)}%)`);
+          logger.info('Migration AO progression', {
+            metadata: {
+              service: 'MondayProductionFinalService',
+              operation: 'migrateAuthenticAOs',
+              progress: index + 1,
+              total: aoData.length,
+              percentage: Math.round(((index + 1) / aoData.length) * 100),
+              context: { migrationStep: 'aos_batch_progress' }
+            }
+          });
         }
         
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[Migration AO Authentiques] Erreur ligne ${index + 1} (${ao.mondayItemId}):`, errorMsg);
+        logger.error('Erreur migration AO', {
+          metadata: {
+            service: 'MondayProductionFinalService',
+            operation: 'migrateAuthenticAOs',
+            lineIndex: index + 1,
+            mondayItemId: ao.mondayItemId,
+            error: errorMsg,
+            stack: error instanceof Error ? error.stack : undefined,
+            context: { migrationStep: 'ao_migration_error' }
+          }
+        });
         
         results.push({
           index,
@@ -445,7 +599,15 @@ export class MondayProductionFinalService {
    * MIGRATION PROJETS AUTHENTIQUES AVEC VALIDATION
    */
   private async migrateAuthenticProjects(projectData: MondayProjectData[], sourceFile: string): Promise<MigrationBatchResult> {
-    console.log(`[Production Final] Migration ${projectData.length} projets authentiques (source: ${sourceFile})`);
+    logger.info('Démarrage migration projets authentiques', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'migrateAuthenticProjects',
+        projectCount: projectData.length,
+        sourceFile,
+        context: { migrationStep: 'projects_migration_start' }
+      }
+    });
     
     const results: BatchResult[] = [];
     
@@ -467,12 +629,31 @@ export class MondayProductionFinalService {
         
         // Log progression par batch de 100
         if ((index + 1) % 100 === 0) {
-          console.log(`[Migration Projects Authentiques] Progress: ${index + 1}/${projectData.length} (${Math.round(((index + 1) / projectData.length) * 100)}%)`);
+          logger.info('Migration projets progression', {
+            metadata: {
+              service: 'MondayProductionFinalService',
+              operation: 'migrateAuthenticProjects',
+              progress: index + 1,
+              total: projectData.length,
+              percentage: Math.round(((index + 1) / projectData.length) * 100),
+              context: { migrationStep: 'projects_batch_progress' }
+            }
+          });
         }
         
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[Migration Projects Authentiques] Erreur ligne ${index + 1} (${project.mondayProjectId}):`, errorMsg);
+        logger.error('Erreur migration projet', {
+          metadata: {
+            service: 'MondayProductionFinalService',
+            operation: 'migrateAuthenticProjects',
+            lineIndex: index + 1,
+            mondayProjectId: project.mondayProjectId,
+            error: errorMsg,
+            stack: error instanceof Error ? error.stack : undefined,
+            context: { migrationStep: 'project_migration_error' }
+          }
+        });
         
         results.push({
           index,
@@ -693,7 +874,14 @@ export class MondayProductionFinalService {
       return date;
     } catch (error) {
       // Fallback en cas d'erreur de date
-      console.warn('[Production Final] Erreur calcul date fin par défaut, utilisation fallback');
+      logger.warn('Erreur calcul date fin par défaut, utilisation fallback', {
+        metadata: {
+          service: 'MondayProductionFinalService',
+          operation: 'mapMondayWorkflowStage',
+          workflowStage,
+          context: { calculationStep: 'default_end_date_error' }
+        }
+      });
       const fallbackDate = new Date();
       fallbackDate.setFullYear(fallbackDate.getFullYear() + 1); // +1 an par défaut
       return fallbackDate;
@@ -756,15 +944,30 @@ export class MondayProductionFinalService {
       }
     };
     
-    console.log(`[Migration Authentique ${entityType}] Résultats: ${successful.length}/${totalLines} migrés (${Math.round(migrationResult.validationRate * 100)}%)`);
-    console.log(`[Migration Authentique ${entityType}] Source: ${sourceFile}`);
+    logger.info('Résultats migration authentique', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'analyzeBatchResults',
+        entityType,
+        successfulCount: successful.length,
+        totalLines,
+        validationRate: Math.round(migrationResult.validationRate * 100),
+        sourceFile,
+        context: { migrationStep: 'batch_results' }
+      }
+    });
     
     if (failed.length > 0) {
-      console.log(`[Migration Authentique ${entityType}] Erreurs: ${failed.length}`);
-      failed.slice(0, 3).forEach(f => console.log(`  - ${f.mondayId}: ${f.error}`));
-      if (failed.length > 3) {
-        console.log(`  ... et ${failed.length - 3} autres erreurs`);
-      }
+      logger.warn('Erreurs détectées migration authentique', {
+        metadata: {
+          service: 'MondayProductionFinalService',
+          operation: 'analyzeBatchResults',
+          entityType,
+          failedCount: failed.length,
+          topErrors: failed.slice(0, 3).map(f => ({ mondayId: f.mondayId, error: f.error })),
+          context: { migrationStep: 'batch_errors' }
+        }
+      });
     }
     
     return migrationResult;
@@ -786,7 +989,13 @@ export class MondayProductionFinalService {
     warnings: number;
     filesProcessed: string[];
   }> {
-    console.log('[Production Final] Validation authentique dry-run - sans insertion BDD');
+    logger.info('Validation authentique dry-run - sans insertion BDD', {
+      metadata: {
+        service: 'MondayProductionFinalService',
+        operation: 'validateAuthenticData',
+        context: { validationMode: 'dry_run' }
+      }
+    });
     
     try {
       // Charger données authentiques
@@ -818,8 +1027,17 @@ export class MondayProductionFinalService {
       
       const totalLines = authenticData.aos.length + authenticData.projects.length;
       
-      console.log(`[Production Final] Validation terminée: ${validLines}/${totalLines} lignes valides`);
-      console.log(`[Production Final] Erreurs: ${totalErrors}, Warnings: ${this.warnings.length}`);
+      logger.info('Validation terminée', {
+        metadata: {
+          service: 'MondayProductionFinalService',
+          operation: 'validateAuthenticData',
+          validLines,
+          totalLines,
+          totalErrors,
+          warningsCount: this.warnings.length,
+          context: { validationMode: 'dry_run', step: 'complete' }
+        }
+      });
       
       return {
         success: totalErrors === 0,
@@ -832,7 +1050,15 @@ export class MondayProductionFinalService {
       };
       
     } catch (error) {
-      console.error('[Production Final] Erreur validation authentique:', error);
+      logger.error('Erreur validation authentique', {
+        metadata: {
+          service: 'MondayProductionFinalService',
+          operation: 'validateAuthenticData',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          context: { validationMode: 'dry_run', step: 'error' }
+        }
+      });
       throw new Error(`Validation authentique échouée: ${error instanceof Error ? error.message : String(error)}`);
     }
   }

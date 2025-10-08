@@ -2,6 +2,7 @@ import { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { sql, eq, and, desc, gte, lte, asc } from "drizzle-orm";
 import crypto from "crypto";
+import { logger } from '../utils/logger';
 import type {
   PipelineMetrics,
   PipelineStep,
@@ -151,7 +152,15 @@ export class PerformanceMetricsService {
    */
   startPipelineTrace(traceId: string, userId: string, userRole: string, query: string, complexity: QueryComplexity): void {
     this.activeTraces.set(traceId, []);
-    console.log(`[PerformanceMetrics] Démarrage trace pipeline ${traceId} - complexité: ${complexity}`);
+    logger.info('Démarrage trace pipeline', {
+      metadata: {
+        service: 'PerformanceMetricsService',
+        operation: 'startPipelineTrace',
+        traceId,
+        complexity,
+        context: { pipelineStep: 'trace_start' }
+      }
+    });
   }
 
   /**
@@ -160,7 +169,15 @@ export class PerformanceMetricsService {
   startStep(traceId: string, stepName: PipelineStep, metadata?: Record<string, any>): void {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {
-      console.warn(`[PerformanceMetrics] Tentative start step ${stepName} sur trace inexistante ${traceId}`);
+      logger.warn('Tentative start step sur trace inexistante', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'startStep',
+          stepName,
+          traceId,
+          context: { issue: 'trace_not_found' }
+        }
+      });
       return;
     }
 
@@ -172,7 +189,15 @@ export class PerformanceMetricsService {
     };
 
     traces.push(stepMetrics);
-    console.log(`[PerformanceMetrics] Démarrage étape ${stepName} pour trace ${traceId}`);
+    logger.info('Démarrage étape pipeline', {
+      metadata: {
+        service: 'PerformanceMetricsService',
+        operation: 'startStep',
+        stepName,
+        traceId,
+        context: { pipelineStep: 'step_start' }
+      }
+    });
   }
 
   /**
@@ -181,7 +206,15 @@ export class PerformanceMetricsService {
   endStep(traceId: string, stepName: PipelineStep, success: boolean = true, metadata?: Record<string, any>): void {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {
-      console.warn(`[PerformanceMetrics] Tentative end step ${stepName} sur trace inexistante ${traceId}`);
+      logger.warn('Tentative end step sur trace inexistante', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'endStep',
+          stepName,
+          traceId,
+          context: { issue: 'trace_not_found' }
+        }
+      });
       return;
     }
 
@@ -190,7 +223,15 @@ export class PerformanceMetricsService {
     traces.reverse(); // Restaurer ordre original
 
     if (!step) {
-      console.warn(`[PerformanceMetrics] Étape ${stepName} non trouvée pour trace ${traceId}`);
+      logger.warn('Étape non trouvée pour trace', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'endStep',
+          stepName,
+          traceId,
+          context: { issue: 'step_not_found' }
+        }
+      });
       return;
     }
 
@@ -201,7 +242,16 @@ export class PerformanceMetricsService {
       step.metadata = { ...step.metadata, ...metadata };
     }
 
-    console.log(`[PerformanceMetrics] Fin étape ${stepName} (${step.duration}ms) pour trace ${traceId}`);
+    logger.info('Fin étape pipeline', {
+      metadata: {
+        service: 'PerformanceMetricsService',
+        operation: 'endStep',
+        stepName,
+        traceId,
+        duration: step.duration,
+        context: { pipelineStep: 'step_end' }
+      }
+    });
   }
 
   /**
@@ -219,7 +269,14 @@ export class PerformanceMetricsService {
   ): Promise<DetailedTimings> {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {
-      console.warn(`[PerformanceMetrics] Tentative end pipeline sur trace inexistante ${traceId}`);
+      logger.warn('Tentative end pipeline sur trace inexistante', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'endPipelineTrace',
+          traceId,
+          context: { issue: 'trace_not_found' }
+        }
+      });
       return this.createEmptyTimings();
     }
 
@@ -254,10 +311,27 @@ export class PerformanceMetricsService {
       // Cleanup trace active
       this.activeTraces.delete(traceId);
 
-      console.log(`[PerformanceMetrics] Pipeline trace ${traceId} terminé - ${timings.total}ms total`);
+      logger.info('Pipeline trace terminé', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'endPipelineTrace',
+          traceId,
+          totalDuration: timings.total,
+          context: { pipelineStep: 'trace_complete' }
+        }
+      });
 
     } catch (error) {
-      console.error(`[PerformanceMetrics] Erreur persistance trace ${traceId}:`, error);
+      logger.error('Erreur persistance trace', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'endPipelineTrace',
+          traceId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          context: { pipelineStep: 'trace_persistence_error' }
+        }
+      });
     }
 
     return timings;
@@ -308,7 +382,14 @@ export class PerformanceMetricsService {
     this.circuitBreakerLastFailureTime = new Date();
     this.parallelismStats.circuitBreakerTriggered++;
     
-    console.warn(`[PerformanceMetrics] Échec parallélisme enregistré: ${this.circuitBreakerFailureCount} échecs consécutifs`);
+    logger.warn('Échec parallélisme enregistré', {
+      metadata: {
+        service: 'PerformanceMetricsService',
+        operation: 'recordParallelismFailure',
+        consecutiveFailures: this.circuitBreakerFailureCount,
+        context: { circuitBreaker: 'failure_recorded' }
+      }
+    });
   }
 
   /**
@@ -504,7 +585,15 @@ export class PerformanceMetricsService {
       return stats;
 
     } catch (error) {
-      console.error(`[PerformanceMetrics] Erreur calcul percentiles pour ${stepName}:`, error);
+      logger.error('Erreur calcul percentiles', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'calculatePercentiles',
+          stepName,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return this.createEmptyPercentileStats();
     }
   }
@@ -579,7 +668,14 @@ export class PerformanceMetricsService {
       return analytics;
 
     } catch (error) {
-      console.error(`[PerformanceMetrics] Erreur analyse cache:`, error);
+      logger.error('Erreur analyse cache', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'analyzeCachePerformance',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return this.createEmptyCacheAnalytics();
     }
   }
@@ -626,7 +722,16 @@ export class PerformanceMetricsService {
         });
 
         this.lastAlertTime.set(alertKey, new Date());
-        console.warn(`[PerformanceMetrics] ALERTE SLO - ${complexity}: ${actualDuration}ms > ${threshold}ms`);
+        logger.warn('ALERTE SLO dépassé', {
+          metadata: {
+            service: 'PerformanceMetricsService',
+            operation: 'checkSLOCompliance',
+            complexity,
+            actualDuration,
+            threshold,
+            context: { alertType: 'slo_breach' }
+          }
+        });
       }
     }
   }
@@ -687,7 +792,14 @@ export class PerformanceMetricsService {
     }
 
     if (cleaned > 0) {
-      console.log(`[PerformanceMetrics] Nettoyé ${cleaned} traces expirées`);
+      logger.info('Nettoyage traces expirées', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'cleanupExpiredTraces',
+          cleanedCount: cleaned,
+          context: { maintenanceTask: 'trace_cleanup' }
+        }
+      });
     }
   }
 
@@ -704,7 +816,14 @@ export class PerformanceMetricsService {
         this.realtimeMetrics.set(step, stats);
       }
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur refresh métriques temps réel:', error);
+      logger.error('Erreur refresh métriques temps réel', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'refreshRealTimeMetrics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -716,7 +835,14 @@ export class PerformanceMetricsService {
     try {
       await db.insert(pipelineMetrics).values(metrics);
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur persistance métriques:', error);
+      logger.error('Erreur persistance métriques', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'persistMetrics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -725,7 +851,14 @@ export class PerformanceMetricsService {
     try {
       await db.insert(performanceAlerts).values(alert);
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur création alerte:', error);
+      logger.error('Erreur création alerte', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'createPerformanceAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -752,7 +885,14 @@ export class PerformanceMetricsService {
         .orderBy(desc(performanceAlerts.createdAt))
         .limit(limit);
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur récupération alertes:', error);
+      logger.error('Erreur récupération alertes', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'getPerformanceAlerts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -768,7 +908,14 @@ export class PerformanceMetricsService {
         .where(eq(performanceAlerts.id, alertId));
       return true;
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur acquittement alerte:', error);
+      logger.error('Erreur acquittement alerte', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'acknowledgeAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return false;
     }
   }
@@ -787,7 +934,13 @@ export class PerformanceMetricsService {
     includePercentiles?: boolean;
   }): Promise<any> {
     try {
-      console.log('[PerformanceMetrics] Récupération métriques pipeline avec filtres:', filters);
+      logger.info('Récupération métriques pipeline avec filtres', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'getPipelineMetrics',
+          filters
+        }
+      });
 
       // Récupérer les traces récentes
       let tracesQuery = db
@@ -864,7 +1017,14 @@ export class PerformanceMetricsService {
       };
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur getPipelineMetrics:', error);
+      logger.error('Erreur getPipelineMetrics', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'getPipelineMetrics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       // Retourner des données par défaut en cas d'erreur
       return {
         step_statistics: {
@@ -889,7 +1049,13 @@ export class PerformanceMetricsService {
     breakdown?: 'complexity' | 'user' | 'time';
   }): Promise<any> {
     try {
-      console.log('[PerformanceMetrics] Cache analytics breakdown:', filters.breakdown);
+      logger.info('Cache analytics breakdown', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'getCacheAnalytics',
+          breakdown: filters.breakdown
+        }
+      });
 
       // Récupérer les traces avec informations cache
       let tracesQuery = db
@@ -953,7 +1119,14 @@ export class PerformanceMetricsService {
       };
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur getCacheAnalytics:', error);
+      logger.error('Erreur getCacheAnalytics', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'getCacheAnalytics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         overall: { total_queries: 0, cache_hits: 0, cache_misses: 0, hit_rate: 0 },
         by_complexity: {
@@ -975,7 +1148,12 @@ export class PerformanceMetricsService {
     includeAlerts?: boolean;
   }): Promise<any> {
     try {
-      console.log('[PerformanceMetrics] SLO compliance check');
+      logger.info('SLO compliance check', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'getSLOCompliance'
+        }
+      });
 
       let tracesQuery = db
         .select()
@@ -1043,7 +1221,14 @@ export class PerformanceMetricsService {
       };
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur getSLOCompliance:', error);
+      logger.error('Erreur getSLOCompliance', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'getSLOCompliance',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         slo_targets: { simple: 5000, complex: 10000, expert: 15000 },
         compliance: {
@@ -1067,7 +1252,13 @@ export class PerformanceMetricsService {
     try {
       const threshold = (filters.thresholdSeconds || 2.0) * 1000; // Convert to ms
       
-      console.log('[PerformanceMetrics] Analyse goulots avec seuil:', threshold, 'ms');
+      logger.info('Analyse goulots avec seuil', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'identifyBottlenecks',
+          thresholdMs: threshold
+        }
+      });
 
       let metricsQuery = db
         .select()
@@ -1121,7 +1312,14 @@ export class PerformanceMetricsService {
       };
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur identifyBottlenecks:', error);
+      logger.error('Erreur identifyBottlenecks', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'identifyBottlenecks',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         bottlenecks: [],
         threshold_used: filters.thresholdSeconds || 2000,
@@ -1137,7 +1335,12 @@ export class PerformanceMetricsService {
    */
   async getRealTimeStats(): Promise<any> {
     try {
-      console.log('[PerformanceMetrics] Stats temps réel');
+      logger.info('Stats temps réel', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'getRealTimeStats'
+        }
+      });
 
       // Récupérer les métriques des dernières heures
       const now = new Date();
@@ -1180,7 +1383,14 @@ export class PerformanceMetricsService {
       };
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur getRealTimeStats:', error);
+      logger.error('Erreur getRealTimeStats', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'getRealTimeStats',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         current_hour: {
           total_queries: 0,
@@ -1388,11 +1598,26 @@ export class PerformanceMetricsService {
 
       // Log progression importante
       if (this.predictiveMetrics.cacheHitRate.upliftPercent >= 20) {
-        console.log(`[PerformanceMetrics] 🎯 OBJECTIF CACHE HIT-RATE ATTEINT: ${(this.predictiveMetrics.cacheHitRate.current * 100).toFixed(1)}% (+${this.predictiveMetrics.cacheHitRate.upliftPercent.toFixed(1)}%)`);
+        logger.info('🎯 OBJECTIF CACHE HIT-RATE ATTEINT', {
+          metadata: {
+            service: 'PerformanceMetricsService',
+            operation: 'trackCacheHitRateImprovement',
+            currentPercent: (this.predictiveMetrics.cacheHitRate.current * 100).toFixed(1),
+            upliftPercent: this.predictiveMetrics.cacheHitRate.upliftPercent.toFixed(1),
+            context: { milestone: 'cache_hit_rate_goal_achieved' }
+          }
+        });
       }
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur tracking cache hit-rate:', error);
+      logger.error('Erreur tracking cache hit-rate', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'trackCacheHitRateImprovement',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1443,11 +1668,27 @@ export class PerformanceMetricsService {
 
       // Log progression importante
       if (this.predictiveMetrics.latencyReduction.actualReductionPercent >= 35) {
-        console.log(`[PerformanceMetrics] 🚀 OBJECTIF LATENCY REDUCTION ATTEINT: ${this.predictiveMetrics.latencyReduction.actualReductionPercent.toFixed(1)}% (${actualLatencyMs}ms vs ${baseline}ms baseline)`);
+        logger.info('🚀 OBJECTIF LATENCY REDUCTION ATTEINT', {
+          metadata: {
+            service: 'PerformanceMetricsService',
+            operation: 'trackLatencyReduction',
+            actualReductionPercent: this.predictiveMetrics.latencyReduction.actualReductionPercent.toFixed(1),
+            actualLatencyMs,
+            baselineMs: baseline,
+            context: { milestone: 'latency_reduction_goal_achieved' }
+          }
+        });
       }
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur tracking latency reduction:', error);
+      logger.error('Erreur tracking latency reduction', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'trackLatencyReduction',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1512,11 +1753,25 @@ export class PerformanceMetricsService {
 
       // Log progression importante
       if (this.predictiveMetrics.predictionAccuracy.currentAccuracy >= 60) {
-        console.log(`[PerformanceMetrics] 🎯 OBJECTIF PREDICTION ACCURACY ATTEINT: ${this.predictiveMetrics.predictionAccuracy.currentAccuracy.toFixed(1)}%`);
+        logger.info('🎯 OBJECTIF PREDICTION ACCURACY ATTEINT', {
+          metadata: {
+            service: 'PerformanceMetricsService',
+            operation: 'trackPredictionAccuracy',
+            currentAccuracy: this.predictiveMetrics.predictionAccuracy.currentAccuracy.toFixed(1),
+            context: { milestone: 'prediction_accuracy_goal_achieved' }
+          }
+        });
       }
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur tracking prediction accuracy:', error);
+      logger.error('Erreur tracking prediction accuracy', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'trackPredictionAccuracy',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1570,7 +1825,14 @@ export class PerformanceMetricsService {
       stats.lastPreloadCycle = new Date();
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur tracking preloading operation:', error);
+      logger.error('Erreur tracking preloading operation', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'trackPreloadingOperation',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1625,11 +1887,26 @@ export class PerformanceMetricsService {
 
       // Log achievements majeurs
       if (targets.cacheHitRateAchieved && targets.latencyReductionAchieved && targets.predictionAccuracyAchieved) {
-        console.log(`[PerformanceMetrics] 🏆 TOUS LES OBJECTIFS ATTEINTS! Score: ${targets.performanceScore}/100, Progression: ${targets.overallGoalProgress.toFixed(1)}%`);
+        logger.info('🏆 TOUS LES OBJECTIFS ATTEINTS', {
+          metadata: {
+            service: 'PerformanceMetricsService',
+            operation: 'evaluateOverallProgress',
+            performanceScore: targets.performanceScore,
+            overallGoalProgress: targets.overallGoalProgress.toFixed(1),
+            context: { milestone: 'all_goals_achieved' }
+          }
+        });
       }
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur évaluation progression globale:', error);
+      logger.error('Erreur évaluation progression globale', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'evaluateOverallProgress',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1689,7 +1966,14 @@ export class PerformanceMetricsService {
       };
 
     } catch (error) {
-      console.error('[PerformanceMetrics] Erreur rapport métriques preloading:', error);
+      logger.error('Erreur rapport métriques preloading', {
+        metadata: {
+          service: 'PerformanceMetricsService',
+          operation: 'getPreloadingReport',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -1801,7 +2085,13 @@ export class PerformanceMetricsService {
     };
     
     this.metricsHistory = [];
-    console.log('[PerformanceMetrics] Métriques prédictives réinitialisées');
+    logger.info('Métriques prédictives réinitialisées', {
+      metadata: {
+        service: 'PerformanceMetricsService',
+        operation: 'resetPredictiveMetrics',
+        context: { action: 'metrics_reset' }
+      }
+    });
   }
 }
 

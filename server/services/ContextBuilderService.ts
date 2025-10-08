@@ -1,6 +1,7 @@
 import { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { eq, and, desc, sql, or, inArray, isNotNull, gte, lte } from "drizzle-orm";
+import { logger } from '../utils/logger';
 import type { 
   AIContextualData,
   TechnicalContext,
@@ -122,7 +123,14 @@ export class ContextBuilderService {
     this.contextTierService = new ContextTierService(storage);
     this.performanceMetricsService = performanceMetricsService;
 
-    console.log(`[ContextBuilder] Système tiéré ${this.TIERED_SYSTEM_ENABLED ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+    logger.info('Système tiéré initialisé', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'constructor',
+        tieredSystemEnabled: this.TIERED_SYSTEM_ENABLED,
+        context: { systemMode: this.TIERED_SYSTEM_ENABLED ? 'tiered' : 'classic' }
+      }
+    });
   }
 
   // ========================================
@@ -138,7 +146,14 @@ export class ContextBuilderService {
     this.queryMetrics = this.initializeMetrics();
 
     try {
-      console.log(`[ContextBuilder] Génération contexte pour ${config.entityType}:${config.entityId}`);
+      logger.info('Génération contexte enrichi', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'generateEnrichedContext',
+          entityType: config.entityType,
+          entityId: config.entityId
+        }
+      });
 
       // PHASE 3 : Routage vers système tiéré si activé et configuration étendue
       if (this.TIERED_SYSTEM_ENABLED && this.isTieredConfig(config)) {
@@ -150,7 +165,14 @@ export class ContextBuilderService {
       return await this.buildClassicContext(config);
 
     } catch (error) {
-      console.error(`[ContextBuilder] Erreur génération contexte:`, error);
+      logger.error('Erreur génération contexte', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'generateEnrichedContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return this.buildErrorResult('unknown', 'Erreur interne lors de la génération', error);
     }
   }
@@ -163,7 +185,15 @@ export class ContextBuilderService {
     let traceId: string | undefined;
 
     try {
-      console.log(`[ContextBuilder] Mode TIÉRÉ activé pour ${config.entityType}:${config.entityId}`);
+      logger.info('Mode TIÉRÉ activé', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'generateTieredContext',
+          entityType: config.entityType,
+          entityId: config.entityId,
+          context: { mode: 'tiered' }
+        }
+      });
 
       // 1. Initialisation trace performance si service disponible
       if (this.performanceMetricsService && config.enableTierMetrics) {
@@ -215,10 +245,25 @@ export class ContextBuilderService {
             });
           }
 
-          console.log(`[ContextBuilder] Tier détecté: ${tierDetectionResult.detectedTier} (conf: ${tierDetectionResult.confidence.toFixed(2)})`);
+          logger.info('Tier détecté', {
+            metadata: {
+              service: 'ContextBuilderService',
+              operation: 'generateTieredContext',
+              detectedTier: tierDetectionResult.detectedTier,
+              confidence: tierDetectionResult.confidence.toFixed(2),
+              context: { detectionStep: 'tier_detected' }
+            }
+          });
 
         } catch (error) {
-          console.warn(`[ContextBuilder] Échec détection tier, fallback COMPREHENSIVE:`, error);
+          logger.warn('Échec détection tier, fallback COMPREHENSIVE', {
+            metadata: {
+              service: 'ContextBuilderService',
+              operation: 'generateTieredContext',
+              error: error instanceof Error ? error.message : String(error),
+              context: { fallbackTier: 'COMPREHENSIVE' }
+            }
+          });
           
           if (traceId && this.performanceMetricsService) {
             this.performanceMetricsService.endStep(traceId, 'context_tier_detection', false, { error: error.message });
@@ -231,7 +276,14 @@ export class ContextBuilderService {
         // Tier forcé ou détection désactivée
         const forcedTier = config.tierConfig?.forceTier || 'comprehensive';
         selectedProfile = this.contextTierService.getContextProfile(forcedTier, config.entityType, 'system');
-        console.log(`[ContextBuilder] Tier forcé: ${forcedTier}`);
+        logger.info('Tier forcé', {
+          metadata: {
+            service: 'ContextBuilderService',
+            operation: 'generateTieredContext',
+            forcedTier,
+            context: { tierSelection: 'forced' }
+          }
+        });
       }
 
       // 4. CONSTRUCTION SÉLECTIVE selon profil tier
@@ -263,7 +315,14 @@ export class ContextBuilderService {
 
       // 7. Fallback si validation échoue
       if (!criticalDataPreserved && this.FALLBACK_TO_COMPREHENSIVE && selectedProfile.tier !== 'comprehensive') {
-        console.warn(`[ContextBuilder] Échec validation tier ${selectedProfile.tier}, fallback COMPREHENSIVE`);
+        logger.warn('Échec validation tier, fallback COMPREHENSIVE', {
+          metadata: {
+            service: 'ContextBuilderService',
+            operation: 'generateTieredContext',
+            attemptedTier: selectedProfile.tier,
+            context: { fallbackTier: 'COMPREHENSIVE' }
+          }
+        });
         const fallbackProfile = this.contextTierService.getContextProfile('comprehensive', config.entityType, 'system');
         const fallbackContext = await this.buildSelectiveContext(config, fallbackProfile);
         Object.assign(contextData, fallbackContext);
@@ -316,12 +375,28 @@ export class ContextBuilderService {
         }
       };
 
-      console.log(`[ContextBuilder] Contexte tiéré généré: ${selectedProfile.tier} (${executionTime}ms, ${contextData.tokenEstimate} tokens, ${tokenReductionPercentage.toFixed(1)}% réduction)`);
+      logger.info('Contexte tiéré généré', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'generateTieredContext',
+          tier: selectedProfile.tier,
+          executionTime,
+          tokenEstimate: contextData.tokenEstimate,
+          tokenReductionPercent: tokenReductionPercentage.toFixed(1)
+        }
+      });
 
       return result;
 
     } catch (error) {
-      console.error(`[ContextBuilder] Erreur contexte tiéré:`, error);
+      logger.error('Erreur contexte tiéré', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'generateTieredContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       if (traceId && this.performanceMetricsService) {
         this.performanceMetricsService.endStep(traceId, 'context_generation', false);
@@ -340,7 +415,15 @@ export class ContextBuilderService {
    * Construction contexte classique (système original)
    */
   async buildClassicContext(config: ContextGenerationConfig): Promise<ContextGenerationResult> {
-    console.log(`[ContextBuilder] Mode CLASSIQUE pour ${config.entityType}:${config.entityId}`);
+    logger.info('Mode CLASSIQUE', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'generateClassicContext',
+        entityType: config.entityType,
+        entityId: config.entityId,
+        context: { mode: 'classic' }
+      }
+    });
 
     // 1. Validation de la configuration
     const validationResult = this.validateConfig(config);
@@ -442,7 +525,13 @@ export class ContextBuilderService {
   private async buildAOContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
     try {
       const startTime = Date.now();
-      console.log(`[ContextBuilder] Construction contexte AO optimisée: ${config.entityId}`);
+      logger.info('Construction contexte AO optimisée', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'buildAoContext',
+          aoId: config.entityId
+        }
+      });
       
       // OPTIMISATION: Requête groupée avec index composite ao_entity_status_priority_idx
       const [aoResults, lotsResults, offersResults] = await Promise.all([
@@ -494,7 +583,13 @@ export class ContextBuilderService {
       this.addToMetrics('aos', 'aoLots', 'offers');
       
       const queryTime = Date.now() - startTime;
-      console.log(`[ContextBuilder] Requêtes AO optimisées en ${queryTime}ms`);
+      logger.info('Requêtes AO optimisées', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'buildAoContext',
+          queryTimeMs: queryTime
+        }
+      });
 
       // OPTIMISATION: Requêtes relationnelles parallèles
       const [maitreouvrage, maitreoeuvreData] = await Promise.all([
@@ -600,7 +695,14 @@ export class ContextBuilderService {
       };
 
     } catch (error) {
-      console.error(`[ContextBuilder] Erreur construction contexte AO:`, error);
+      logger.error('Erreur construction contexte AO', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'buildAoContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -611,7 +713,13 @@ export class ContextBuilderService {
   private async buildOfferContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
     try {
       const startTime = Date.now();
-      console.log(`[ContextBuilder] Construction contexte Offre optimisée: ${config.entityId}`);
+      logger.info('Construction contexte Offre optimisée', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'buildOfferContext',
+          offerId: config.entityId
+        }
+      });
       
       // OPTIMISATION: Requêtes groupées avec index composites offer_ao_status_idx et offer_status_created_idx
       const [offerResults, chiffrageResults, milestonesResults, beWorkloadResults] = await Promise.all([
@@ -673,7 +781,14 @@ export class ContextBuilderService {
       this.addToMetrics('offers', 'aos', 'chiffrageElements', 'validationMilestones', 'beWorkload');
       
       const queryTime = Date.now() - startTime;
-      console.log(`[ContextBuilder] Requêtes Offre optimisées en ${queryTime}ms - ${chiffrageItems.length} éléments chiffrage`);
+      logger.info('Requêtes Offre optimisées', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'buildOfferContext',
+          queryTimeMs: queryTime,
+          chiffrageItemsCount: chiffrageItems.length
+        }
+      });
 
       // Construction contexte métier enrichi avec données optimisées
       contextData.businessContext = {
@@ -736,7 +851,14 @@ export class ContextBuilderService {
       };
 
     } catch (error) {
-      console.error(`[ContextBuilder] Erreur construction contexte Offre:`, error);
+      logger.error('Erreur construction contexte Offre', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'buildOfferContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -874,7 +996,14 @@ export class ContextBuilderService {
       };
 
     } catch (error) {
-      console.error(`[ContextBuilder] Erreur construction contexte Projet:`, error);
+      logger.error('Erreur construction contexte Projet', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'buildProjectContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -983,7 +1112,14 @@ export class ContextBuilderService {
       };
 
     } catch (error) {
-      console.error(`[ContextBuilder] Erreur construction contexte Fournisseur:`, error);
+      logger.error('Erreur construction contexte Fournisseur', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'buildSupplierContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1078,7 +1214,14 @@ export class ContextBuilderService {
       };
 
     } catch (error) {
-      console.error(`[ContextBuilder] Erreur construction contexte Équipe:`, error);
+      logger.error('Erreur construction contexte Équipe', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'buildTeamContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1088,7 +1231,13 @@ export class ContextBuilderService {
    */
   private async buildClientContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
     // À implémenter selon le modèle client dans la base
-    console.log(`[ContextBuilder] Construction contexte Client en cours de développement`);
+    logger.info('Construction contexte Client en cours de développement', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'buildClientContext',
+        status: 'in_development'
+      }
+    });
   }
 
   // ========================================
@@ -1720,7 +1869,14 @@ export class ContextBuilderService {
     profile: ContextTierProfile
   ): Promise<AIContextualData> {
     
-    console.log(`[ContextBuilder] Construction sélective tier: ${profile.tier} (max ${profile.maxTokens} tokens)`);
+    logger.info('Construction sélective tier', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'buildSelectiveContext',
+        tier: profile.tier,
+        maxTokens: profile.maxTokens
+      }
+    });
     
     // 1. Initialisation contexte avec profil
     const contextData: AIContextualData = {
@@ -1776,7 +1932,13 @@ export class ContextBuilderService {
     // 6. Estimation tokens
     contextData.tokenEstimate = this.estimateTokens(contextData);
     
-    console.log(`[ContextBuilder] Contexte sélectif construit: ${contextData.tokenEstimate} tokens estimés`);
+    logger.info('Contexte sélectif construit', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'buildSelectiveContext',
+        tokenEstimate: contextData.tokenEstimate
+      }
+    });
     
     return contextData;
   }
@@ -1870,7 +2032,14 @@ export class ContextBuilderService {
 
       const aoData = aoResults[0];
       if (!aoData) {
-        console.warn(`[ContextBuilder] AO non trouvé: ${config.entityId}`);
+        logger.warn('AO non trouvé', {
+          metadata: {
+            service: 'ContextBuilderService',
+            operation: 'buildLimitedAoContext',
+            aoId: config.entityId,
+            context: { issue: 'ao_not_found' }
+          }
+        });
         return;
       }
 
@@ -1931,7 +2100,14 @@ export class ContextBuilderService {
       this.queryMetrics.executionTimeMs += Date.now() - startTime;
 
     } catch (error) {
-      console.error(`[ContextBuilder] Erreur construction AO limitée:`, error);
+      logger.error('Erreur construction AO limitée', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'buildLimitedAoContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1945,7 +2121,13 @@ export class ContextBuilderService {
   ): Promise<void> {
     // Implémentation similaire mais pour les offres
     // Version simplifiée basée sur le profil tier
-    console.log(`[ContextBuilder] Construction offre limitée tier: ${profile.tier}`);
+    logger.info('Construction offre limitée', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'buildLimitedOfferContext',
+        tier: profile.tier
+      }
+    });
     
     // TODO: Implémenter selon pattern buildAOContextLimited
   }
@@ -1959,7 +2141,13 @@ export class ContextBuilderService {
     profile: ContextTierProfile
   ): Promise<void> {
     // Implémentation similaire mais pour les projets
-    console.log(`[ContextBuilder] Construction projet limitée tier: ${profile.tier}`);
+    logger.info('Construction projet limitée', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'buildLimitedProjectContext',
+        tier: profile.tier
+      }
+    });
     
     // TODO: Implémenter selon pattern buildAOContextLimited
   }
@@ -1972,7 +2160,13 @@ export class ContextBuilderService {
     config: ContextGenerationConfig,
     profile: ContextTierProfile
   ): Promise<void> {
-    console.log(`[ContextBuilder] Construction fournisseur limitée tier: ${profile.tier}`);
+    logger.info('Construction fournisseur limitée', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'buildLimitedSupplierContext',
+        tier: profile.tier
+      }
+    });
     
     // TODO: Implémenter selon pattern buildAOContextLimited
   }
@@ -1985,7 +2179,13 @@ export class ContextBuilderService {
     config: ContextGenerationConfig,
     profile: ContextTierProfile
   ): Promise<void> {
-    console.log(`[ContextBuilder] Construction équipe limitée tier: ${profile.tier}`);
+    logger.info('Construction équipe limitée', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'buildLimitedTeamContext',
+        tier: profile.tier
+      }
+    });
     
     // TODO: Implémenter selon pattern buildAOContextLimited
   }
@@ -1998,7 +2198,13 @@ export class ContextBuilderService {
     config: ContextGenerationConfig,
     profile: ContextTierProfile
   ): Promise<void> {
-    console.log(`[ContextBuilder] Construction client limitée tier: ${profile.tier}`);
+    logger.info('Construction client limitée', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'buildLimitedClientContext',
+        tier: profile.tier
+      }
+    });
     
     // TODO: Implémenter selon pattern buildAOContextLimited
   }
@@ -2062,7 +2268,13 @@ export class ContextBuilderService {
     profile: ContextTierProfile
   ): Promise<void> {
     
-    console.log(`[ContextBuilder] Enrichissement sélectif types: ${profile.priorityContextTypes.join(', ')}`);
+    logger.info('Enrichissement sélectif types', {
+      metadata: {
+        service: 'ContextBuilderService',
+        operation: 'performSelectiveEnrichment',
+        priorityContextTypes: profile.priorityContextTypes.join(', ')
+      }
+    });
     
     // Enrichissement seulement pour types prioritaires
     for (const contextType of profile.priorityContextTypes) {
@@ -2413,7 +2625,13 @@ export function getContextBuilderService(
     
     // PHASE 3 : Initialisation monitoring système tiéré
     if (performanceMetricsService) {
-      console.log('[ContextBuilder] Service initialisé avec métriques de performance');
+      logger.info('Service initialisé avec métriques de performance', {
+        metadata: {
+          service: 'ContextBuilderService',
+          operation: 'initialize',
+          context: { performanceMetricsEnabled: true }
+        }
+      });
       
       // Enregistrement segments personnalisés pour système tiéré
       performanceMetricsService.registerCustomSegment('context_tier_detection', {
@@ -2446,7 +2664,13 @@ export function getContextBuilderService(
  */
 export function resetContextBuilderService(): void {
   globalContextBuilderService = null;
-  console.log('[ContextBuilder] Service réinitialisé - prêt pour nouvelle configuration');
+  logger.info('Service réinitialisé - prêt pour nouvelle configuration', {
+    metadata: {
+      service: 'ContextBuilderService',
+      operation: 'resetService',
+      context: { action: 'service_reset' }
+    }
+  });
 }
 
 export default ContextBuilderService;

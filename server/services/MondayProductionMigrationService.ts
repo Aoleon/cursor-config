@@ -22,6 +22,7 @@ import { type InsertAo, type InsertProject } from '@shared/schema';
 import { type MondayAoData, type MondayProjectData } from '../utils/mondayDataGenerator';
 import { validateMondayAoData, validateMondayProjectData, validateAndParseMondayDate } from '../utils/mondayValidator';
 import { ZodError } from 'zod';
+import { logger } from '../utils/logger';
 
 // ========================================
 // TYPES MIGRATION PRODUCTION
@@ -176,8 +177,18 @@ export class MondayProductionMigrationService {
   async migrateProductionData(): Promise<ProductionMigrationResult> {
     const startTime = Date.now();
     
-    console.log('[Production Migration] Début migration complète 1911 lignes JLM Menuiserie');
-    console.log('[Production Migration] Utilisation données analysées réelles (non synthétiques)');
+    logger.info('Début migration complète 1911 lignes JLM Menuiserie', {
+      metadata: {
+        service: 'MondayProductionMigrationService',
+        operation: 'migrateProductionData'
+      }
+    });
+    logger.info('Utilisation données analysées réelles (non synthétiques)', {
+      metadata: {
+        service: 'MondayProductionMigrationService',
+        operation: 'migrateProductionData'
+      }
+    });
     
     this.resetWarnings();
     
@@ -185,7 +196,14 @@ export class MondayProductionMigrationService {
       // Charger données basées analyses réelles JLM
       const jlmData = this.loadJLMAnalyzedData();
       
-      console.log(`[Production Migration] Chargement: ${jlmData.aos.length} AOs + ${jlmData.projects.length} projets`);
+      logger.info('Chargement données', {
+        metadata: {
+          service: 'MondayProductionMigrationService',
+          operation: 'migrateProductionData',
+          aosCount: jlmData.aos.length,
+          projectsCount: jlmData.projects.length
+        }
+      });
       
       // Migration par batch avec gestion erreurs
       const aosResult = await this.migrateAnalyzedAOs(jlmData.aos);
@@ -206,18 +224,39 @@ export class MondayProductionMigrationService {
         projects: projectsResult
       };
       
-      console.log(`[Production Migration] TERMINÉE - ${totalMigrated}/${totalLines} lignes migrées`);
-      console.log(`[Production Migration] Résultats: ${totalErrors} erreurs en ${result.duration}ms`);
+      logger.info('Migration TERMINÉE', {
+        metadata: {
+          service: 'MondayProductionMigrationService',
+          operation: 'migrateProductionData',
+          totalMigrated,
+          totalLines,
+          totalErrors,
+          duration: result.duration
+        }
+      });
       
       if (this.warnings.length > 0) {
-        console.log(`[Production Migration] Warnings non bloquants: ${this.warnings.length}`);
-        this.warnings.slice(0, 5).forEach(w => console.log(`  - ${w}`));
+        logger.info('Warnings non bloquants', {
+          metadata: {
+            service: 'MondayProductionMigrationService',
+            operation: 'migrateProductionData',
+            warningsCount: this.warnings.length,
+            warnings: this.warnings.slice(0, 5)
+          }
+        });
       }
       
       return result;
       
     } catch (error) {
-      console.error('[Production Migration] Erreur critique:', error);
+      logger.error('Erreur critique migration production', {
+        metadata: {
+          service: 'MondayProductionMigrationService',
+          operation: 'migrateProductionData',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Migration production échouée: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -227,7 +266,12 @@ export class MondayProductionMigrationService {
    * Remplace generateRealisticJLMData par données production
    */
   loadJLMAnalyzedData(): { aos: MondayAoData[], projects: MondayProjectData[] } {
-    console.log('[Production Migration] Génération données basées analyses JLM réelles');
+    logger.info('Génération données basées analyses JLM réelles', {
+      metadata: {
+        service: 'MondayProductionMigrationService',
+        operation: 'loadJLMAnalyzedData'
+      }
+    });
     
     return {
       aos: this.generateJLMRealisticAOs(911),      // Basé analyse AO_Planning  
@@ -264,7 +308,13 @@ export class MondayProductionMigrationService {
       aos.push(ao);
     }
     
-    console.log(`[Production Migration] Générés ${count} AO avec patterns JLM réels`);
+    logger.info('Générés AO avec patterns JLM réels', {
+      metadata: {
+        service: 'MondayProductionMigrationService',
+        operation: 'generateJLMRealisticAOs',
+        count
+      }
+    });
     return aos;
   }
 
@@ -296,7 +346,13 @@ export class MondayProductionMigrationService {
       projects.push(project);
     }
     
-    console.log(`[Production Migration] Générés ${count} projets avec patterns JLM réels`);
+    logger.info('Générés projets avec patterns JLM réels', {
+      metadata: {
+        service: 'MondayProductionMigrationService',
+        operation: 'generateJLMRealisticProjects',
+        count
+      }
+    });
     return projects;
   }
 
@@ -332,7 +388,13 @@ export class MondayProductionMigrationService {
    * MIGRATION AO AVEC VALIDATION PRODUCTION
    */
   private async migrateAnalyzedAOs(aoData: MondayAoData[]): Promise<MigrationBatchResult> {
-    console.log(`[Production Migration] Début migration ${aoData.length} AO avec validation production`);
+    logger.info('Début migration AO avec validation production', {
+      metadata: {
+        service: 'MondayProductionMigrationService',
+        operation: 'migrateAnalyzedAOs',
+        count: aoData.length
+      }
+    });
     
     const results: BatchResult[] = [];
     
@@ -353,12 +415,29 @@ export class MondayProductionMigrationService {
         
         // Log progression par batch de 100
         if ((index + 1) % 100 === 0) {
-          console.log(`[Migration AO] Progress: ${index + 1}/${aoData.length} (${Math.round(((index + 1) / aoData.length) * 100)}%)`);
+          logger.info('Migration AO Progress', {
+            metadata: {
+              service: 'MondayProductionMigrationService',
+              operation: 'migrateAnalyzedAOs',
+              progress: index + 1,
+              total: aoData.length,
+              percentage: Math.round(((index + 1) / aoData.length) * 100)
+            }
+          });
         }
         
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[Migration AO] Erreur ligne ${index + 1} (${ao.mondayItemId}):`, errorMsg);
+        logger.error('Erreur migration AO ligne', {
+          metadata: {
+            service: 'MondayProductionMigrationService',
+            operation: 'migrateAnalyzedAOs',
+            line: index + 1,
+            mondayItemId: ao.mondayItemId,
+            error: errorMsg,
+            stack: error instanceof Error ? error.stack : undefined
+          }
+        });
         
         results.push({
           index,
@@ -377,7 +456,13 @@ export class MondayProductionMigrationService {
    * MIGRATION PROJETS AVEC VALIDATION PRODUCTION
    */
   private async migrateAnalyzedProjects(projectData: MondayProjectData[]): Promise<MigrationBatchResult> {
-    console.log(`[Production Migration] Début migration ${projectData.length} projets avec validation production`);
+    logger.info('Début migration projets avec validation production', {
+      metadata: {
+        service: 'MondayProductionMigrationService',
+        operation: 'migrateAnalyzedProjects',
+        count: projectData.length
+      }
+    });
     
     const results: BatchResult[] = [];
     
@@ -398,12 +483,29 @@ export class MondayProductionMigrationService {
         
         // Log progression par batch de 100
         if ((index + 1) % 100 === 0) {
-          console.log(`[Migration Projects] Progress: ${index + 1}/${projectData.length} (${Math.round(((index + 1) / projectData.length) * 100)}%)`);
+          logger.info('Migration Projects Progress', {
+            metadata: {
+              service: 'MondayProductionMigrationService',
+              operation: 'migrateAnalyzedProjects',
+              progress: index + 1,
+              total: projectData.length,
+              percentage: Math.round(((index + 1) / projectData.length) * 100)
+            }
+          });
         }
         
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[Migration Projects] Erreur ligne ${index + 1} (${project.mondayProjectId}):`, errorMsg);
+        logger.error('Erreur migration projet ligne', {
+          metadata: {
+            service: 'MondayProductionMigrationService',
+            operation: 'migrateAnalyzedProjects',
+            line: index + 1,
+            mondayProjectId: project.mondayProjectId,
+            error: errorMsg,
+            stack: error instanceof Error ? error.stack : undefined
+          }
+        });
         
         results.push({
           index,
@@ -599,14 +701,27 @@ export class MondayProductionMigrationService {
       }
     };
     
-    console.log(`[Migration ${entityType}] Résultats: ${successful.length}/${totalLines} migrés (${Math.round(migrationResult.validationRate * 100)}%)`);
+    logger.info('Résultats migration batch', {
+      metadata: {
+        service: 'MondayProductionMigrationService',
+        operation: 'analyzeBatchResults',
+        entityType,
+        migrated: successful.length,
+        totalLines,
+        validationRate: Math.round(migrationResult.validationRate * 100)
+      }
+    });
     
     if (failed.length > 0) {
-      console.log(`[Migration ${entityType}] Erreurs: ${failed.length}`);
-      failed.slice(0, 3).forEach(f => console.log(`  - ${f.mondayId}: ${f.error}`));
-      if (failed.length > 3) {
-        console.log(`  ... et ${failed.length - 3} autres erreurs`);
-      }
+      logger.info('Erreurs migration batch', {
+        metadata: {
+          service: 'MondayProductionMigrationService',
+          operation: 'analyzeBatchResults',
+          entityType,
+          errorsCount: failed.length,
+          errors: failed.slice(0, 3).map(f => ({ mondayId: f.mondayId, error: f.error }))
+        }
+      });
     }
     
     return migrationResult;
@@ -616,7 +731,12 @@ export class MondayProductionMigrationService {
    * VALIDATION COMPLÈTE SANS INSERTION (DRY-RUN)
    */
   async validateProductionData(jlmData: { aos: MondayAoData[], projects: MondayProjectData[] }): Promise<ProductionValidationResult> {
-    console.log('[Production Validation] Début validation dry-run sans insertion BDD');
+    logger.info('Début validation dry-run sans insertion BDD', {
+      metadata: {
+        service: 'MondayProductionMigrationService',
+        operation: 'validateProductionData'
+      }
+    });
     
     let totalWarnings = 0;
     let totalErrors = 0;
@@ -652,8 +772,17 @@ export class MondayProductionMigrationService {
       }
     };
     
-    console.log(`[Production Validation] Terminée: ${result.validLines}/${result.totalLines} lignes valides`);
-    console.log(`[Production Validation] Issues: ${result.errors} erreurs, ${result.warnings} warnings, ${result.dateFormatIssues} dates problématiques`);
+    logger.info('Validation terminée', {
+      metadata: {
+        service: 'MondayProductionMigrationService',
+        operation: 'validateProductionData',
+        validLines: result.validLines,
+        totalLines: result.totalLines,
+        errors: result.errors,
+        warnings: result.warnings,
+        dateFormatIssues: result.dateFormatIssues
+      }
+    });
     
     return result;
   }

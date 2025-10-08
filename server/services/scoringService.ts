@@ -4,6 +4,7 @@ import type {
   TechnicalScoringResult
 } from "@shared/schema";
 import { defaultTechnicalScoringConfig as defaultConfig } from "@shared/schema";
+import { logger } from "../utils/logger";
 
 /**
  * Service de scoring technique pour le système d'alerte automatique JLM
@@ -55,12 +56,17 @@ export class ScoringService {
     // Déterminer si une alerte doit être déclenchée
     const shouldAlert = totalScore >= config.threshold;
 
-    console.log(`[ScoringService] Calcul scoring technique:
-      - Score total: ${totalScore}
-      - Seuil: ${config.threshold}
-      - Critères déclenchés: ${triggeredCriteria.join(', ') || 'aucun'}
-      - Alerte: ${shouldAlert ? 'OUI' : 'NON'}
-      - Détails: ${JSON.stringify(details)}`);
+    logger.info('Calcul scoring technique', {
+      metadata: {
+        service: 'ScoringService',
+        operation: 'compute',
+        totalScore,
+        threshold: config.threshold,
+        triggeredCriteria: triggeredCriteria.join(', ') || 'aucun',
+        shouldAlert,
+        details
+      }
+    });
 
     return {
       totalScore,
@@ -91,7 +97,14 @@ export class ScoringService {
       
       return validWeights && validThreshold;
     } catch (error) {
-      console.error('[ScoringService] Erreur validation config:', error);
+      logger.error('Erreur validation config scoring', {
+        metadata: {
+          service: 'ScoringService',
+          operation: 'validateConfig',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return false;
     }
   }

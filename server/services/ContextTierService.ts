@@ -1,4 +1,5 @@
 import { IStorage } from "../storage-poc";
+import { logger } from "../utils/logger";
 import type {
   ContextTierProfile,
   ContextTierDetectionResult,
@@ -86,7 +87,12 @@ export class ContextTierService implements ContextTierServiceInterface {
       fallbackCount: 0
     };
 
-    console.log('[ContextTierService] Service initialisé avec configuration BTP/Menuiserie');
+    logger.info('Service initialisé avec configuration BTP/Menuiserie', {
+      metadata: {
+        service: 'ContextTierService',
+        operation: 'constructor'
+      }
+    });
   }
 
   // ========================================
@@ -104,7 +110,14 @@ export class ContextTierService implements ContextTierServiceInterface {
     const startTime = Date.now();
     
     try {
-      console.log(`[ContextTierService] Détection tier pour requête: "${query.substring(0, 100)}..."`);
+      logger.info('Détection tier pour requête', {
+        metadata: {
+          service: 'ContextTierService',
+          operation: 'detectContextTier',
+          query: query.substring(0, 100),
+          entityType
+        }
+      });
 
       // 1. Analyse linguistique de la requête
       const queryAnalysis = this.analyzeQuery(query);
@@ -146,12 +159,29 @@ export class ContextTierService implements ContextTierServiceInterface {
       // Mise à jour métriques
       this.updateMetrics(tier, detectionTime);
       
-      console.log(`[ContextTierService] Tier détecté: ${tier} (confidence: ${confidence.toFixed(2)}) en ${detectionTime}ms`);
+      logger.info('Tier détecté', {
+        metadata: {
+          service: 'ContextTierService',
+          operation: 'detectContextTier',
+          tier,
+          confidence: confidence.toFixed(2),
+          detectionTimeMs: detectionTime,
+          entityType
+        }
+      });
       
       return result;
 
     } catch (error) {
-      console.error('[ContextTierService] Erreur détection tier:', error);
+      logger.error('Erreur détection tier', {
+        metadata: {
+          service: 'ContextTierService',
+          operation: 'detectContextTier',
+          entityType,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       // Fallback vers tier COMPREHENSIVE en cas d'erreur
       const fallbackProfile = this.getContextProfile('comprehensive', entityType, userContext.role || 'user');
@@ -707,7 +737,14 @@ export class ContextTierService implements ContextTierServiceInterface {
   ): Promise<AIContextualData> {
     
     const startTime = Date.now();
-    console.log(`[ContextTierService] Compression contexte selon profil ${profile.tier}`);
+    logger.info('Compression contexte selon profil', {
+      metadata: {
+        service: 'ContextTierService',
+        operation: 'compressContextByPriority',
+        tier: profile.tier,
+        entityType: fullContext.entityType
+      }
+    });
     
     const compressedContext = { ...fullContext };
     
@@ -731,7 +768,14 @@ export class ContextTierService implements ContextTierServiceInterface {
     await this.enforceTokenLimits(compressedContext, profile);
     
     const compressionTime = Date.now() - startTime;
-    console.log(`[ContextTierService] Compression terminée en ${compressionTime}ms`);
+    logger.info('Compression terminée', {
+      metadata: {
+        service: 'ContextTierService',
+        operation: 'compressContextByPriority',
+        tier: profile.tier,
+        compressionTimeMs: compressionTime
+      }
+    });
     
     // Mise à jour métriques compression
     compressedContext.generationMetrics.executionTimeMs += compressionTime;
@@ -972,7 +1016,14 @@ export class ContextTierService implements ContextTierServiceInterface {
     profile: ContextTierProfile
   ): boolean {
     
-    console.log('[ContextTierService] Validation sécurité contexte minimal');
+    logger.info('Validation sécurité contexte minimal', {
+      metadata: {
+        service: 'ContextTierService',
+        operation: 'validateMinimalContext',
+        tier: profile.tier,
+        entityType: context.entityType
+      }
+    });
     
     // Vérifications critiques
     const validations = [
@@ -992,7 +1043,14 @@ export class ContextTierService implements ContextTierServiceInterface {
     const isValid = validations.every(v => v);
     
     if (!isValid) {
-      console.warn('[ContextTierService] Échec validation contexte minimal');
+      logger.warn('Échec validation contexte minimal', {
+        metadata: {
+          service: 'ContextTierService',
+          operation: 'validateMinimalContext',
+          tier: profile.tier,
+          entityType: context.entityType
+        }
+      });
     }
     
     return isValid;

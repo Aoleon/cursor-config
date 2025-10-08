@@ -5,6 +5,7 @@ import type {
   Project, ProjectStatus, User, Offer
 } from "@shared/schema";
 import { addMonths, subMonths, format } from "date-fns";
+import { logger } from '../utils/logger';
 
 // ========================================
 // TYPES ET INTERFACES PRÉDICTIFS
@@ -326,7 +327,12 @@ export class PredictiveEngineService {
     setInterval(() => this.cleanupEntityAccess(), 30 * 60 * 1000); // Toutes les 30 minutes
     setInterval(() => this.updateBTPPatterns(), 2 * 60 * 60 * 1000); // Toutes les 2 heures
     
-    console.log('[PredictiveEngine] Service initialisé avec preloading prédictif activé');
+    logger.info('Service initialisé avec preloading prédictif', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'constructor'
+      }
+    });
   }
 
   // ========================================
@@ -341,12 +347,24 @@ export class PredictiveEngineService {
     const cached = this.getCachedEntry<PredictiveRevenueForecast[]>(cacheKey);
     
     if (cached) {
-      console.log('[PredictiveEngine] Cache hit pour forecast revenue');
+      logger.info('Cache hit', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'forecastRevenue',
+        cacheHit: true
+      }
+    });
       return cached;
     }
 
     try {
-      console.log('[PredictiveEngine] Calcul forecast revenue:', params);
+      logger.info('Calcul forecast revenue', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'forecastRevenue',
+        params
+      }
+    });
       
       // 1. RÉCUPÉRATION DONNÉES HISTORIQUES
       const historicalData = await this.getMonthlyRevenueHistory({
@@ -355,7 +373,12 @@ export class PredictiveEngineService {
       });
 
       if (historicalData.length === 0) {
-        console.log('[PredictiveEngine] Aucune donnée historique trouvée');
+        logger.info('Aucune donnée historique trouvée', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'forecastRevenue'
+      }
+    });
         return [];
       }
 
@@ -392,11 +415,24 @@ export class PredictiveEngineService {
       // 5. MISE EN CACHE
       this.setCacheEntry(cacheKey, results);
       
-      console.log('[PredictiveEngine] Forecast calculé:', results.length, 'prévisions');
+      logger.info('Forecast calculé', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'forecastRevenue',
+        forecastCount: results.length
+      }
+    });
       return results;
 
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur calcul forecast revenue:', error);
+      logger.error('Erreur calcul forecast revenue', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'forecastRevenue',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       return [];
     }
   }
@@ -409,12 +445,24 @@ export class PredictiveEngineService {
     const cached = this.getCachedEntry<ProjectRiskAssessment[]>(cacheKey);
     
     if (cached) {
-      console.log('[PredictiveEngine] Cache hit pour project risks');
+      logger.info('Cache hit', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'detectProjectRisks',
+        cacheHit: true
+      }
+    });
       return cached;
     }
 
     try {
-      console.log('[PredictiveEngine] Détection risques projets:', params);
+      logger.info('Détection risques projets', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'detectProjectRisks',
+        params
+      }
+    });
 
       // 1. DONNÉES HISTORIQUES DÉLAIS
       const delayHistory = await this.getProjectDelayHistory({
@@ -459,11 +507,24 @@ export class PredictiveEngineService {
       // 5. MISE EN CACHE
       this.setCacheEntry(cacheKey, results);
       
-      console.log('[PredictiveEngine] Risques détectés:', results.length, 'projets à risque');
+      logger.info('Risques détectés', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'detectProjectRisks',
+        risksCount: results.length
+      }
+    });
       return results;
 
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur détection risques:', error);
+      logger.error('Erreur détection risques', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'detectProjectRisks',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       return [];
     }
   }
@@ -476,12 +537,24 @@ export class PredictiveEngineService {
     const cached = this.getCachedEntry<BusinessRecommendation[]>(cacheKey);
     
     if (cached) {
-      console.log('[PredictiveEngine] Cache hit pour recommendations');
+      logger.info('Cache hit', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'generateBusinessRecommendations',
+        cacheHit: true
+      }
+    });
       return cached;
     }
 
     try {
-      console.log('[PredictiveEngine] Génération recommandations business:', context);
+      logger.info('Génération recommandations business', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'generateBusinessRecommendations',
+        context
+      }
+    });
 
       const recommendations: BusinessRecommendation[] = [];
 
@@ -526,11 +599,24 @@ export class PredictiveEngineService {
       // 5. MISE EN CACHE
       this.setCacheEntry(cacheKey, filteredRecs);
       
-      console.log('[PredictiveEngine] Recommandations générées:', filteredRecs.length, 'actions');
+      logger.info('Recommandations générées', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'generateBusinessRecommendations',
+        recommendationsCount: filteredRecs.length
+      }
+    });
       return filteredRecs;
 
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur génération recommandations:', error);
+      logger.error('Erreur génération recommandations', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'generateBusinessRecommendations',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       return [];
     }
   }
@@ -924,7 +1010,14 @@ export class PredictiveEngineService {
         team_efficiency: 75    // Fallback
       };
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur récupération KPIs:', error);
+      logger.error('Erreur récupération KPIs', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'getCurrentKPIs',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       // Fallback avec valeurs par défaut
       return {
         conversion_rate: 25,
@@ -942,7 +1035,14 @@ export class PredictiveEngineService {
     try {
       return await this.storage.getSectorBenchmarks();
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur récupération benchmarks:', error);
+      logger.error('Erreur récupération benchmarks', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'getIndustryBenchmarks',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       // Fallback avec benchmarks standards du secteur
       return {
         industry_avg_conversion: 35,
@@ -1056,7 +1156,14 @@ export class PredictiveEngineService {
         });
       }
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur recommandations planning:', error);
+      logger.error('Erreur recommandations planning', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'generatePlanningRecommendations',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
     }
 
     return recommendations;
@@ -1238,7 +1345,14 @@ export class PredictiveEngineService {
     }
     
     entry.hit_count++;
-    console.log(`[PredictiveEngine] Cache hit pour ${key} (${entry.hit_count} hits)`);
+    logger.info('Cache hit', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'getCachedEntry',
+        cacheKey: key,
+        hitCount: entry.hit_count
+      }
+    });
     return entry.data;
   }
 
@@ -1260,7 +1374,14 @@ export class PredictiveEngineService {
       hit_count: 0
     });
     
-    console.log(`[PredictiveEngine] Cache set pour ${key} (TTL: ${ttlMinutes}min)`);
+    logger.info('Cache set', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'setCacheEntry',
+        cacheKey: key,
+        ttlMinutes
+      }
+    });
   }
 
   /**
@@ -1291,7 +1412,13 @@ export class PredictiveEngineService {
     }
     
     if (deletedCount > 0) {
-      console.log(`[PredictiveEngine] Cache cleanup: ${deletedCount} entrées supprimées`);
+      logger.info('Cache cleanup', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'cleanupCache',
+        deletedCount
+      }
+    });
     }
   }
 
@@ -1328,7 +1455,14 @@ export class PredictiveEngineService {
     try {
       return await this.storage.getMonthlyRevenueHistory(params);
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur récupération historique revenues:', error);
+      logger.error('Erreur récupération historique revenues', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'getMonthlyRevenueHistory',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       return [];
     }
   }
@@ -1340,7 +1474,14 @@ export class PredictiveEngineService {
     try {
       return await this.storage.getProjectDelayHistory(params);
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur récupération historique délais:', error);
+      logger.error('Erreur récupération historique délais', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'getProjectDelayHistory',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       return [];
     }
   }
@@ -1354,7 +1495,12 @@ export class PredictiveEngineService {
    */
   public integrateWithContextCache(contextCacheService: any): void {
     this.contextCacheService = contextCacheService;
-    console.log('[PredictiveEngine] Intégration ContextCacheService activée pour preloading');
+    logger.info('Intégration ContextCacheService activée', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'integrateWithContextCache'
+      }
+    });
   }
 
   /**
@@ -1366,12 +1512,23 @@ export class PredictiveEngineService {
     const cached = this.getCachedEntry<EntityHeatMap>(cacheKey);
     
     if (cached) {
-      console.log('[PredictiveEngine] Cache hit pour entity heatmap');
+      logger.info('Cache hit pour entity heatmap', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'generateEntityHeatMap',
+        cacheHit: true
+      }
+    });
       return cached;
     }
 
     try {
-      console.log('[PredictiveEngine] Génération heat-map entités...');
+      logger.info('Génération heat-map entités', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'generateEntityHeatMap'
+      }
+    });
       
       // 1. ANALYSE ENTITÉS POPULAIRES RÉCENTES
       const now = Date.now();
@@ -1424,11 +1581,25 @@ export class PredictiveEngineService {
       // 5. MISE EN CACHE
       this.setCacheEntry(cacheKey, heatMap, 15); // Cache 15 minutes
 
-      console.log(`[PredictiveEngine] Heat-map générée: ${hotEntities.length} entités chaudes, ${coldEntities.length} froides`);
+      logger.info('Heat-map générée', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'generateEntityHeatMap',
+        hotEntitiesCount: hotEntities.length,
+        coldEntitiesCount: coldEntities.length
+      }
+    });
       return heatMap;
 
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur génération heat-map:', error);
+      logger.error('Erreur génération heat-map', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'generateEntityHeatMap',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       
       // Fallback heat-map vide
       return {
@@ -1451,7 +1622,13 @@ export class PredictiveEngineService {
     currentContext?: { entityType: string; entityId: string; workflow?: string }
   ): Promise<AccessPrediction[]> {
     try {
-      console.log('[PredictiveEngine] Prédiction accès entités pour utilisateur:', userId);
+      logger.info('Prédiction accès entités', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'predictNextEntityAccess',
+        userId
+      }
+    });
       
       const predictions: AccessPrediction[] = [];
       const now = Date.now();
@@ -1483,11 +1660,25 @@ export class PredictiveEngineService {
         .sort((a, b) => b.confidence - a.confidence)
         .slice(0, 20); // Top 20 prédictions
 
-      console.log(`[PredictiveEngine] ${filteredPredictions.length} prédictions générées (confiance ≥${this.PRELOADING_CONFIDENCE_THRESHOLD}%)`);
+      logger.info('Prédictions générées', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'predictNextEntityAccess',
+        predictionsCount: filteredPredictions.length,
+        confidenceThreshold: this.PRELOADING_CONFIDENCE_THRESHOLD
+      }
+    });
       return filteredPredictions;
 
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur prédiction accès:', error);
+      logger.error('Erreur prédiction accès', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'predictNextEntityAccess',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       return [];
     }
   }
@@ -1498,12 +1689,23 @@ export class PredictiveEngineService {
    */
   async schedulePreloadTasks(predictions: AccessPrediction[]): Promise<void> {
     if (!this.preloadingEnabled || !this.contextCacheService) {
-      console.log('[PredictiveEngine] Preloading désactivé ou ContextCache non disponible');
+      logger.info('Preloading désactivé ou ContextCache non disponible', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'schedulePreloadTasks'
+      }
+    });
       return;
     }
 
     try {
-      console.log('[PredictiveEngine] Programmation tâches preloading pour', predictions.length, 'prédictions');
+      logger.info('Programmation tâches preloading', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'schedulePreloadTasks',
+        predictionsCount: predictions.length
+      }
+    });
       
       const now = Date.now();
       const newTasks: PreloadingTask[] = [];
@@ -1555,10 +1757,23 @@ export class PredictiveEngineService {
       // 4. PROGRAMMATION TÂCHES DIFFÉRÉES
       this.scheduleDelayedTasks();
       
-      console.log(`[PredictiveEngine] ${newTasks.length} nouvelles tâches programmées`);
+      logger.info('Nouvelles tâches programmées', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'schedulePreloadTasks',
+        newTasksCount: newTasks.length
+      }
+    });
 
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur programmation tâches preloading:', error);
+      logger.error('Erreur programmation tâches preloading', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'schedulePreloadTasks',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
     }
   }
 
@@ -2431,7 +2646,14 @@ export class PredictiveEngineService {
         }
       }
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur prédiction heat-map:', error);
+      logger.error('Erreur prédiction heat-map', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'predictFromHeatMap',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
     }
     
     return predictions;
@@ -2499,7 +2721,15 @@ export class PredictiveEngineService {
     
     for (const task of highPriorityTasks) {
       this.executePreloadTask(task).catch(error => {
-        console.error(`[PredictiveEngine] Erreur tâche preloading ${task.id}:`, error);
+        logger.error('Erreur tâche preloading', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'executeHighPriorityTasks',
+        taskId: task.id,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       });
     }
   }
@@ -2520,7 +2750,14 @@ export class PredictiveEngineService {
       this.preloadingSchedule.scheduledTasks = this.preloadingSchedule.scheduledTasks
         .filter(t => t.id !== task.id);
       
-      console.log(`[PredictiveEngine] Exécution preloading ${task.entityType}:${task.entityId}`);
+      logger.info('Exécution preloading', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'executePreloadTask',
+        entityType: task.entityType,
+        entityId: task.entityId
+      }
+    });
       
       // Appel ContextCacheService pour preloading (si intégré)
       if (this.contextCacheService && this.contextCacheService.preloadContextByPrediction) {
@@ -2536,10 +2773,25 @@ export class PredictiveEngineService {
       this.preloadingSchedule.activeTasks = this.preloadingSchedule.activeTasks
         .filter(t => t.id !== task.id);
       
-      console.log(`[PredictiveEngine] Preloading complété: ${task.entityType}:${task.entityId}`);
+      logger.info('Preloading complété', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'executePreloadTask',
+        entityType: task.entityType,
+        entityId: task.entityId
+      }
+    });
       
     } catch (error) {
-      console.error(`[PredictiveEngine] Erreur preloading ${task.id}:`, error);
+      logger.error('Erreur preloading', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'executePreloadTask',
+        taskId: task.id,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       
       // Marquer comme échouée
       this.preloadingSchedule.failedTasks.push(task);
@@ -2563,7 +2815,15 @@ export class PredictiveEngineService {
       
       setTimeout(() => {
         this.executePreloadTask(task).catch(error => {
-          console.error(`[PredictiveEngine] Erreur tâche différée ${task.id}:`, error);
+          logger.error('Erreur tâche différée', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'scheduleDelayedTasks',
+        taskId: task.id,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
         });
       }, delay);
     }
@@ -2585,7 +2845,13 @@ export class PredictiveEngineService {
     }
     
     if (deletedCount > 0) {
-      console.log(`[PredictiveEngine] Cleanup accès entités: ${deletedCount} entrées supprimées`);
+      logger.info('Cleanup accès entités', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'cleanupStaleEntityAccess',
+        deletedCount
+      }
+    });
     }
   }
 
@@ -2601,16 +2867,33 @@ export class PredictiveEngineService {
     }
     
     try {
-      console.log('[PredictiveEngine] Mise à jour patterns BTP...');
+      logger.info('Mise à jour patterns BTP', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'updateBTPPatterns'
+      }
+    });
       
       // Analyser workflows récents pour mise à jour patterns
       // (Implémentation simplifiée pour POC)
       
       this.lastPatternUpdate = now;
-      console.log('[PredictiveEngine] Patterns BTP mis à jour');
+      logger.info('Patterns BTP mis à jour', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'updateBTPPatterns'
+      }
+    });
       
     } catch (error) {
-      console.error('[PredictiveEngine] Erreur mise à jour patterns BTP:', error);
+      logger.error('Erreur mise à jour patterns BTP', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'updateBTPPatterns',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
     }
   }
 
@@ -2619,7 +2902,13 @@ export class PredictiveEngineService {
    */
   public setPreloadingEnabled(enabled: boolean): void {
     this.preloadingEnabled = enabled;
-    console.log(`[PredictiveEngine] Preloading ${enabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+    logger.info('État preloading', {
+      metadata: {
+        service: 'PredictiveEngineService',
+        operation: 'togglePredictivePreloading',
+        enabled: enabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'
+      }
+    });
   }
 
   /**

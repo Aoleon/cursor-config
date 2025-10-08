@@ -1,5 +1,6 @@
 import { IStorage } from "../storage-poc";
 import { eventBus } from "../eventBus";
+import { logger } from "../utils/logger";
 import type { 
   ProjectTimeline, InsertProjectTimeline,
   DateIntelligenceRule, InsertDateIntelligenceRule,
@@ -225,7 +226,16 @@ class CalculationEngine {
       };
       
     } catch (error) {
-      console.error('Erreur dans le calcul de durée:', error);
+      logger.error('Erreur calcul durée', {
+        metadata: {
+          service: 'DateIntelligenceService',
+          operation: 'calculateDuration',
+          phase,
+          projectType: context.projectType,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       // Fallback sécurisé
       return this.getDefaultDuration(phase, context);
     }
@@ -487,7 +497,16 @@ export class DateIntelligenceService {
       return result;
       
     } catch (error) {
-      console.error('Erreur dans calculatePhaseDuration:', error);
+      logger.error('Erreur calcul durée phase', {
+        metadata: {
+          service: 'DateIntelligenceService',
+          operation: 'calculatePhaseDuration',
+          projectId,
+          phase,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Impossible de calculer la durée pour la phase ${phase}: ${error.message}`);
     }
   }
@@ -564,7 +583,16 @@ export class DateIntelligenceService {
       return timelines;
       
     } catch (error) {
-      console.error('Erreur dans generateProjectTimeline:', error);
+      logger.error('Erreur génération timeline projet', {
+        metadata: {
+          service: 'DateIntelligenceService',
+          operation: 'generateProjectTimeline',
+          projectId,
+          constraintsCount: constraints.length,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Impossible de générer la timeline du projet ${projectId}: ${error.message}`);
     }
   }
@@ -654,7 +682,17 @@ export class DateIntelligenceService {
       };
       
     } catch (error) {
-      console.error('Erreur dans recalculateFromPhase:', error);
+      logger.error('Erreur recalcul cascade depuis phase', {
+        metadata: {
+          service: 'DateIntelligenceService',
+          operation: 'recalculateFromPhase',
+          projectId,
+          fromPhase,
+          newDate: newDate.toISOString(),
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Impossible de recalculer depuis la phase ${fromPhase}: ${error.message}`);
     }
   }
@@ -705,7 +743,16 @@ export class DateIntelligenceService {
       return appliedRules.sort((a, b) => Math.abs(b.durationImpact) - Math.abs(a.durationImpact));
       
     } catch (error) {
-      console.error('Erreur dans applyIntelligenceRules:', error);
+      logger.error('Erreur application règles intelligence', {
+        metadata: {
+          service: 'DateIntelligenceService',
+          operation: 'applyIntelligenceRules',
+          projectId: context.projectId,
+          currentPhase: context.currentPhase,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Impossible d'appliquer les règles d'intelligence: ${error.message}`);
     }
   }
@@ -821,7 +868,15 @@ export class DateIntelligenceService {
       });
       
     } catch (error) {
-      console.error('Erreur dans detectPlanningIssues:', error);
+      logger.error('Erreur détection problèmes planification', {
+        metadata: {
+          service: 'DateIntelligenceService',
+          operation: 'detectPlanningIssues',
+          timelineLength: timeline.length,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Impossible de détecter les problèmes de planification: ${error.message}`);
     }
   }

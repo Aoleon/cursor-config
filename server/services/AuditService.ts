@@ -2,6 +2,7 @@ import { db } from "../db";
 import { eq, and, or, desc, asc, gte, lte, sql, count, avg, max, min, isNull, inArray } from "drizzle-orm";
 import type { EventBus } from "../eventBus";
 import type { IStorage } from "../storage-poc";
+import { logger } from '../utils/logger';
 import { 
   auditLogs, 
   securityAlerts, 
@@ -17,6 +18,7 @@ import {
   type SecurityAlertsQuery
 } from "@shared/schema";
 import crypto from "crypto";
+import { logger } from '../utils/logger';
 
 // ========================================
 // TYPES ET INTERFACES POUR LE SERVICE D'AUDIT
@@ -190,7 +192,14 @@ export class AuditService {
       return eventId;
 
     } catch (error) {
-      console.error('[AuditService.logEvent] Erreur lors du logging:', error);
+      logger.error('Erreur lors du logging', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'logEvent',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Échec du logging d\'audit');
     }
   }
@@ -207,7 +216,13 @@ export class AuditService {
       const cooldownKey = `${alertData.type}_${alertData.userId || 'system'}`;
       const lastAlert = this.alertCooldowns.get(cooldownKey);
       if (lastAlert && (Date.now() - lastAlert) < this.config.alertCooldownMs) {
-        console.log(`[AuditService] Alerte ${alertData.type} en cooldown, ignorée`);
+        logger.info('Alerte en cooldown, ignorée', {
+          metadata: {
+            service: 'AuditService',
+            operation: 'createSecurityAlert',
+            alertType: alertData.type
+          }
+        });
         return '';
       }
 
@@ -269,11 +284,25 @@ export class AuditService {
         }
       });
 
-      console.log(`[AuditService] Alerte sécurité créée: ${alertData.type} (${alertData.severity})`);
+      logger.info('Alerte sécurité créée', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'createSecurityAlert',
+          alertType: alertData.type,
+          severity: alertData.severity
+        }
+      });
       return alertId;
 
     } catch (error) {
-      console.error('[AuditService.createSecurityAlert] Erreur:', error);
+      logger.error('Erreur createSecurityAlert', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'createSecurityAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Échec de création d\'alerte de sécurité');
     }
   }
@@ -311,7 +340,14 @@ export class AuditService {
       }
 
     } catch (error) {
-      console.error('[AuditService.analyzeForSecurityAlerts] Erreur:', error);
+      logger.error('Erreur analyzeForSecurityAlerts', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'analyzeForSecurityAlerts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -555,7 +591,14 @@ export class AuditService {
       };
 
     } catch (error) {
-      console.error('[AuditService.getAuditLogs] Erreur:', error);
+      logger.error('Erreur getAuditLogs', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'getAuditLogs',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Échec de récupération des logs d\'audit');
     }
   }
@@ -631,7 +674,14 @@ export class AuditService {
       };
 
     } catch (error) {
-      console.error('[AuditService.getSecurityAlerts] Erreur:', error);
+      logger.error('Erreur getSecurityAlerts', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'getSecurityAlerts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Échec de récupération des alertes de sécurité');
     }
   }
@@ -697,7 +747,14 @@ export class AuditService {
       };
 
     } catch (error) {
-      console.error('[AuditService.getSecurityMetrics] Erreur:', error);
+      logger.error('Erreur getSecurityMetrics', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'getSecurityMetrics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Échec de calcul des métriques de sécurité');
     }
   }
@@ -784,7 +841,14 @@ export class AuditService {
       };
 
     } catch (error) {
-      console.error('[AuditService.getChatbotAnalytics] Erreur:', error);
+      logger.error('Erreur getChatbotAnalytics', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'getChatbotAnalytics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Échec de calcul des analytics chatbot');
     }
   }
@@ -852,7 +916,14 @@ export class AuditService {
       };
 
     } catch (error) {
-      console.error('[AuditService.getUserActivityReport] Erreur:', error);
+      logger.error('Erreur getUserActivityReport', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'getUserActivityReport',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Échec de génération du rapport d\'activité utilisateur');
     }
   }
@@ -908,7 +979,14 @@ export class AuditService {
       return true;
 
     } catch (error) {
-      console.error('[AuditService.resolveSecurityAlert] Erreur:', error);
+      logger.error('Erreur resolveSecurityAlert', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'resolveSecurityAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return false;
     }
   }
@@ -945,7 +1023,14 @@ export class AuditService {
           eq(auditLogs.isArchived, true)
         ));
 
-      console.log(`[AuditService] Archivage: ${archivedResult.rowCount || 0} logs archivés, ${deletedResult.rowCount || 0} logs supprimés`);
+      logger.info('Archivage logs', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'archiveOldLogs',
+          archived: archivedResult.rowCount || 0,
+          deleted: deletedResult.rowCount || 0
+        }
+      });
 
       return {
         archived: archivedResult.rowCount || 0,
@@ -953,7 +1038,14 @@ export class AuditService {
       };
 
     } catch (error) {
-      console.error('[AuditService.archiveOldLogs] Erreur:', error);
+      logger.error('Erreur archiveOldLogs', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'archiveOldLogs',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return { archived: 0, deleted: 0 };
     }
   }
@@ -1000,7 +1092,14 @@ export class AuditService {
       return csvContent;
 
     } catch (error) {
-      console.error('[AuditService.exportAuditLogsCSV] Erreur:', error);
+      logger.error('Erreur exportAuditLogsCSV', {
+        metadata: {
+          service: 'AuditService',
+          operation: 'exportAuditLogsCSV',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error('Échec d\'export CSV des logs d\'audit');
     }
   }
@@ -1092,7 +1191,14 @@ export class AuditService {
         try {
           await this.archiveOldLogs();
         } catch (error) {
-          console.error('[AuditService] Erreur lors de l\'archivage périodique:', error);
+          logger.error('Erreur archivage périodique', {
+            metadata: {
+              service: 'AuditService',
+              operation: 'periodicArchive',
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            }
+          });
         }
       }, 60 * 60 * 1000); // 1 heure
     }

@@ -1,4 +1,5 @@
 import { IStorage } from "../storage-poc";
+import { logger } from '../utils/logger';
 
 // ========================================
 // ÉTAPE 3 PHASE 3 PERFORMANCE : SAFETY GUARDS & RESOURCE MANAGEMENT
@@ -107,7 +108,12 @@ export class SafetyGuardsService {
     // Configuration circuit breakers
     this.initializeCircuitBreakers();
     
-    console.log('[SafetyGuards] Service démarré avec protection système BTP');
+    logger.info('Service démarré avec protection système BTP', {
+      metadata: {
+        service: 'SafetyGuardsService',
+        operation: 'constructor'
+      }
+    });
   }
 
   // ========================================
@@ -137,7 +143,13 @@ export class SafetyGuardsService {
       });
     });
 
-    console.log('[SafetyGuards] Circuit breakers initialisés:', breakers.join(', '));
+    logger.info('Circuit breakers initialisés', {
+      metadata: {
+        service: 'SafetyGuardsService',
+        operation: 'initializeCircuitBreakers',
+        breakers: breakers
+      }
+    });
   }
 
   /**
@@ -159,7 +171,13 @@ export class SafetyGuardsService {
         if (breaker.nextAttemptTime && now >= breaker.nextAttemptTime) {
           // Transition vers half-open
           breaker.state = 'half-open';
-          console.log(`[SafetyGuards] Circuit breaker ${componentName} → half-open`);
+          logger.info('Circuit breaker transition vers half-open', {
+            metadata: {
+              service: 'SafetyGuardsService',
+              operation: 'checkCircuitBreaker',
+              componentName
+            }
+          });
           return { allowed: true };
         }
         return { 
@@ -189,7 +207,13 @@ export class SafetyGuardsService {
         breaker.state = 'closed';
         breaker.lastFailureTime = null;
         breaker.nextAttemptTime = null;
-        console.log(`[SafetyGuards] Circuit breaker ${componentName} → fermé après succès`);
+        logger.info('Circuit breaker fermé après succès', {
+          metadata: {
+            service: 'SafetyGuardsService',
+            operation: 'recordOperationSuccess',
+            componentName
+          }
+        });
       }
     } else if (breaker.state === 'closed') {
       breaker.failureCount = Math.max(0, breaker.failureCount - 1);
@@ -211,7 +235,14 @@ export class SafetyGuardsService {
       breaker.nextAttemptTime = new Date(Date.now() + breaker.timeoutMinutes * 60 * 1000);
       this.safetyStats.circuitBreakerActivations++;
       
-      console.warn(`[SafetyGuards] ⚡ Circuit breaker ${componentName} OUVERT après ${breaker.failureCount} échecs`);
+      logger.warn('Circuit breaker OUVERT après échecs', {
+        metadata: {
+          service: 'SafetyGuardsService',
+          operation: 'recordOperationFailure',
+          componentName,
+          failureCount: breaker.failureCount
+        }
+      });
     }
   }
 
@@ -235,7 +266,12 @@ export class SafetyGuardsService {
       await this.comprehensiveSystemEvaluation();
     }, 60 * 1000);
 
-    console.log('[SafetyGuards] Monitoring système démarré (10s/60s intervals)');
+    logger.info('Monitoring système démarré (10s/60s intervals)', {
+      metadata: {
+        service: 'SafetyGuardsService',
+        operation: 'startSystemMonitoring'
+      }
+    });
   }
 
   /**
@@ -259,7 +295,14 @@ export class SafetyGuardsService {
       };
 
     } catch (error) {
-      console.error('[SafetyGuards] Erreur mise à jour métriques système:', error);
+      logger.error('Erreur mise à jour métriques système', {
+        metadata: {
+          service: 'SafetyGuardsService',
+          operation: 'updateSystemMetrics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -293,7 +336,14 @@ export class SafetyGuardsService {
       }
 
     } catch (error) {
-      console.error('[SafetyGuards] Erreur évaluation throttling:', error);
+      logger.error('Erreur évaluation throttling', {
+        metadata: {
+          service: 'SafetyGuardsService',
+          operation: 'evaluateThrottling',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -310,8 +360,14 @@ export class SafetyGuardsService {
     this.adaptiveConfig.backgroundTaskFrequency *= 1.5;  // +50% intervalle
     this.adaptiveConfig.predictionConfidenceThreshold += 10; // +10% seuil
 
-    console.warn(`[SafetyGuards] 🐌 THROTTLING ACTIVÉ: ${reason}`);
-    console.log(`[SafetyGuards] Agressivité réduite à ${this.adaptiveConfig.preloadingAggressiveness}%`);
+    logger.warn('THROTTLING ACTIVÉ', {
+      metadata: {
+        service: 'SafetyGuardsService',
+        operation: 'activateThrottling',
+        reason,
+        aggressiveness: this.adaptiveConfig.preloadingAggressiveness
+      }
+    });
   }
 
   /**
@@ -330,7 +386,14 @@ export class SafetyGuardsService {
     this.adaptiveConfig.backgroundTaskFrequency *= 0.9;
     this.adaptiveConfig.predictionConfidenceThreshold = Math.max(50, this.adaptiveConfig.predictionConfidenceThreshold - 5);
 
-    console.log(`[SafetyGuards] ✅ THROTTLING DÉSACTIVÉ: ${reason} (durée: ${Math.round(throttleDuration/1000)}s)`);
+    logger.info('THROTTLING DÉSACTIVÉ', {
+      metadata: {
+        service: 'SafetyGuardsService',
+        operation: 'deactivateThrottling',
+        reason,
+        duration: Math.round(throttleDuration/1000)
+      }
+    });
   }
 
   /**
@@ -340,7 +403,15 @@ export class SafetyGuardsService {
     this.safetyStats.systemOverloads++;
     this.safetyStats.lastOverloadTime = new Date();
 
-    console.error(`[SafetyGuards] 🚨 SURCHARGE CRITIQUE DÉTECTÉE - CPU: ${this.systemMetrics.cpuUsage}%, Mémoire: ${this.systemMetrics.memoryUsage}%`);
+    logger.error('SURCHARGE CRITIQUE DÉTECTÉE', {
+      metadata: {
+        service: 'SafetyGuardsService',
+        operation: 'handleCriticalOverload',
+        cpuUsage: this.systemMetrics.cpuUsage,
+        memoryUsage: this.systemMetrics.memoryUsage,
+        stack: new Error().stack
+      }
+    });
 
     // Actions d'urgence
     await this.emergencyResourceCleanup();
@@ -353,7 +424,13 @@ export class SafetyGuardsService {
       if (breaker.state === 'closed') {
         breaker.state = 'open';
         breaker.nextAttemptTime = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-        console.warn(`[SafetyGuards] Circuit breaker ${name} ouvert préventivemement`);
+        logger.warn('Circuit breaker ouvert préventivement', {
+          metadata: {
+            service: 'SafetyGuardsService',
+            operation: 'handleCriticalOverload',
+            circuitBreaker: name
+          }
+        });
       }
     });
   }
@@ -376,7 +453,14 @@ export class SafetyGuardsService {
       }
 
     } catch (error) {
-      console.error('[SafetyGuards] Erreur gestion adaptative:', error);
+      logger.error('Erreur gestion adaptative', {
+        metadata: {
+          service: 'SafetyGuardsService',
+          operation: 'adaptiveResourceManagement',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -415,8 +499,15 @@ export class SafetyGuardsService {
     const frequencyMultiplier = 1 + (adjustment * 2); // Max +100% intervalle
     this.adaptiveConfig.backgroundTaskFrequency *= frequencyMultiplier;
 
-    console.log(`[SafetyGuards] 🔧 ADAPTATION AUTOMATIQUE (score: ${(adaptationScore*100).toFixed(1)}%)`);
-    console.log(`[SafetyGuards] → Agressivité: ${newAggressiveness.toFixed(1)}%, Confiance: ${this.adaptiveConfig.predictionConfidenceThreshold.toFixed(1)}%`);
+    logger.info('ADAPTATION AUTOMATIQUE', {
+      metadata: {
+        service: 'SafetyGuardsService',
+        operation: 'performAdaptiveAdjustments',
+        adaptationScore: (adaptationScore*100).toFixed(1),
+        aggressiveness: newAggressiveness.toFixed(1),
+        confidenceThreshold: this.adaptiveConfig.predictionConfidenceThreshold.toFixed(1)
+      }
+    });
   }
 
   // ========================================
@@ -428,7 +519,12 @@ export class SafetyGuardsService {
    */
   private async emergencyResourceCleanup(): Promise<void> {
     try {
-      console.log('[SafetyGuards] 🧹 Nettoyage d\'urgence ressources...');
+      logger.info('Nettoyage d\'urgence ressources', {
+        metadata: {
+          service: 'SafetyGuardsService',
+          operation: 'emergencyResourceCleanup'
+        }
+      });
 
       // Arrêt background tasks non-critiques
       const tasksStopped = this.backgroundTasksRunning;
@@ -443,10 +539,23 @@ export class SafetyGuardsService {
         this.safetyStats.memoryOptimizations++;
       }
 
-      console.log(`[SafetyGuards] Nettoyage terminé: ${tasksStopped} background tasks arrêtées`);
+      logger.info('Nettoyage terminé', {
+        metadata: {
+          service: 'SafetyGuardsService',
+          operation: 'emergencyResourceCleanup',
+          tasksStopped
+        }
+      });
 
     } catch (error) {
-      console.error('[SafetyGuards] Erreur nettoyage d\'urgence:', error);
+      logger.error('Erreur nettoyage d\'urgence', {
+        metadata: {
+          service: 'SafetyGuardsService',
+          operation: 'emergencyResourceCleanup',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -464,12 +573,25 @@ export class SafetyGuardsService {
 
       // Log santé système si problème détecté
       if (report.systemHealth < 70) {
-        console.warn(`[SafetyGuards] ⚠️ Santé système dégradée: ${report.systemHealth}/100`);
-        console.log('[SafetyGuards] Recommandations:', report.recommendations.slice(0, 3));
+        logger.warn('Santé système dégradée', {
+          metadata: {
+            service: 'SafetyGuardsService',
+            operation: 'comprehensiveSystemEvaluation',
+            systemHealth: report.systemHealth,
+            recommendations: report.recommendations.slice(0, 3)
+          }
+        });
       }
 
     } catch (error) {
-      console.error('[SafetyGuards] Erreur évaluation système:', error);
+      logger.error('Erreur évaluation système', {
+        metadata: {
+          service: 'SafetyGuardsService',
+          operation: 'comprehensiveSystemEvaluation',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 

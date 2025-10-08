@@ -7,6 +7,7 @@ import crypto from "crypto";
 import { getContextBuilderService } from "./ContextBuilderService";
 import { getContextCacheService } from "./ContextCacheService";
 import { getPerformanceMetricsService } from "./PerformanceMetricsService";
+import { logger } from '../utils/logger';
 
 // Référence blueprints: javascript_anthropic et javascript_openai intégrés
 /*
@@ -471,7 +472,15 @@ export class AIService {
       };
 
     } catch (error) {
-      console.error(`[AIService] Erreur génération SQL (trace: ${traceId}):`, error);
+      logger.error('Erreur génération SQL', {
+        metadata: {
+          service: 'AIService',
+          operation: 'generateSQL',
+          traceId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       // Finaliser le tracing en erreur
       await this.performanceMetrics.endPipelineTrace(
@@ -713,7 +722,15 @@ export class AIService {
           return await this.executeGPT(request, requestId);
         }
       } catch (error) {
-        console.warn(`[AIService] Tentative ${attempt} échouée avec ${modelSelection.selectedModel}:`, error);
+        logger.warn('Tentative échouée avec modèle', {
+          metadata: {
+            service: 'AIService',
+            operation: 'executeModelQuery',
+            attempt,
+            model: modelSelection.selectedModel,
+            error: error instanceof Error ? error.message : String(error)
+          }
+        });
         lastError = error;
         
         if (attempt < MAX_RETRY_ATTEMPTS) {
@@ -726,7 +743,14 @@ export class AIService {
     if (modelSelection.fallbackAvailable && !fallbackAttempted) {
       const fallbackModel = modelSelection.selectedModel === "claude_sonnet_4" ? "gpt_5" : "claude_sonnet_4";
       
-      console.log(`[AIService] Tentative fallback vers ${fallbackModel}`);
+      logger.info('Tentative fallback vers modèle alternatif', {
+        metadata: {
+          service: 'AIService',
+          operation: 'executeModelQuery',
+          fallbackModel,
+          originalModel: modelSelection.selectedModel
+        }
+      });
       fallbackAttempted = true;
       
       try {
@@ -736,7 +760,15 @@ export class AIService {
           return await this.executeGPT(request, requestId);
         }
       } catch (error) {
-        console.error(`[AIService] Fallback ${fallbackModel} échoué:`, error);
+        logger.error('Fallback modèle échoué', {
+          metadata: {
+            service: 'AIService',
+            operation: 'executeModelQuery',
+            fallbackModel,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          }
+        });
       }
     }
 
@@ -860,7 +892,13 @@ export class AIService {
     // Fallback 1: Essayer le cache in-memory d'abord (plus rapide)
     const memoryEntry = this.memoryCache.get(queryHash);
     if (memoryEntry && memoryEntry.expiresAt > new Date()) {
-      console.log(`[AIService] Cache hit in-memory pour ${queryHash.substring(0, 8)}`);
+      logger.info('Cache hit in-memory', {
+        metadata: {
+          service: 'AIService',
+          operation: 'getCachedResponse',
+          queryHash: queryHash.substring(0, 8)
+        }
+      });
       return memoryEntry.data;
     }
     
@@ -894,17 +932,34 @@ export class AIService {
           tokensUsed: cached[0].tokensUsed || 0
         });
         
-        console.log(`[AIService] Cache hit DB pour ${queryHash.substring(0, 8)}`);
+        logger.info('Cache hit DB', {
+          metadata: {
+            service: 'AIService',
+            operation: 'getCachedResponse',
+            queryHash: queryHash.substring(0, 8)
+          }
+        });
         return data;
       }
 
       return null;
     } catch (error) {
-      console.warn(`[AIService] Erreur cache DB, fallback in-memory:`, error);
+      logger.warn('Erreur cache DB, fallback in-memory', {
+        metadata: {
+          service: 'AIService',
+          operation: 'getCachedResponse',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
       
       // Fallback 3: Si DB échoue, vérifier encore le cache in-memory même expiré comme derniere chance
       if (memoryEntry) {
-        console.log(`[AIService] Utilisation cache in-memory expiré comme fallback final`);
+        logger.info('Utilisation cache in-memory expiré comme fallback final', {
+          metadata: {
+            service: 'AIService',
+            operation: 'getCachedResponse'
+          }
+        });
         return memoryEntry.data;
       }
       
@@ -956,10 +1011,22 @@ export class AIService {
         }
       });
       
-      console.log(`[AIService] Cache sauvé DB+memory pour ${queryHash.substring(0, 8)}`);
+      logger.info('Cache sauvé DB+memory', {
+        metadata: {
+          service: 'AIService',
+          operation: 'cacheResponse',
+          queryHash: queryHash.substring(0, 8)
+        }
+      });
 
     } catch (error) {
-      console.warn(`[AIService] Erreur cache DB, utilisation memory uniquement:`, error);
+      logger.warn('Erreur cache DB, utilisation memory uniquement', {
+        metadata: {
+          service: 'AIService',
+          operation: 'cacheResponse',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
       // Le cache in-memory est déjà sauvé, donc pas d'impact sur l'utilisateur
     }
   }
@@ -978,7 +1045,13 @@ export class AIService {
       }
     }
     
-    console.log(`[AIService] Cache in-memory nettoyé: ${cleaned} entrées expirées supprimées`);
+    logger.info('Cache in-memory nettoyé', {
+      metadata: {
+        service: 'AIService',
+        operation: 'cleanMemoryCache',
+        entriesRemoved: cleaned
+      }
+    });
   }
 
   /**
@@ -1048,7 +1121,14 @@ export class AIService {
       await db.insert(aiQueryLogs).values(queryLog);
 
     } catch (error) {
-      console.error(`[AIService] Erreur logging métriques:`, error);
+      logger.error('Erreur logging métriques', {
+        metadata: {
+          service: 'AIService',
+          operation: 'logMetrics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1657,27 +1737,66 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       // Tentative de récupération depuis le cache
       const cachedContext = await this.contextCache.getContext(entityType, entityId, config);
       if (cachedContext) {
-        console.log(`[AIService] Contexte enrichi récupéré depuis le cache pour ${entityType}:${entityId}`);
+        logger.info('Contexte enrichi récupéré depuis le cache', {
+          metadata: {
+            service: 'AIService',
+            operation: 'buildEnrichedContext',
+            entityType,
+            entityId
+          }
+        });
         return cachedContext;
       }
 
       // Génération du contexte enrichi
-      console.log(`[AIService] Génération contexte enrichi pour ${entityType}:${entityId}`);
+      logger.info('Génération contexte enrichi', {
+        metadata: {
+          service: 'AIService',
+          operation: 'buildEnrichedContext',
+          entityType,
+          entityId
+        }
+      });
       const result = await this.contextBuilder.buildContextualData(config);
       
       if (result.success && result.data) {
         // Mise en cache pour utilisation future
         await this.contextCache.setContext(entityType, entityId, config, result.data);
         
-        console.log(`[AIService] Contexte enrichi généré avec succès: ${result.data.tokenEstimate} tokens estimés`);
+        logger.info('Contexte enrichi généré avec succès', {
+          metadata: {
+            service: 'AIService',
+            operation: 'buildEnrichedContext',
+            entityType,
+            entityId,
+            tokenEstimate: result.data.tokenEstimate
+          }
+        });
         return result.data;
       } else {
-        console.warn(`[AIService] Échec génération contexte: ${result.error?.message}`);
+        logger.warn('Échec génération contexte', {
+          metadata: {
+            service: 'AIService',
+            operation: 'buildEnrichedContext',
+            entityType,
+            entityId,
+            error: result.error?.message
+          }
+        });
         return null;
       }
 
     } catch (error) {
-      console.error(`[AIService] Erreur génération contexte enrichi:`, error);
+      logger.error('Erreur génération contexte enrichi', {
+        metadata: {
+          service: 'AIService',
+          operation: 'buildEnrichedContext',
+          entityType,
+          entityId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -1702,7 +1821,12 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     // Si la réponse commence par SELECT/INSERT/UPDATE/DELETE, c'est du SQL pur
     const sqlKeywords = /^\s*(SELECT|INSERT|UPDATE|DELETE|WITH)/i;
     if (sqlKeywords.test(cleanedResponse)) {
-      console.log('[AIService] Réponse SQL pure détectée (mode optimisé)');
+      logger.info('Réponse SQL pure détectée (mode optimisé)', {
+        metadata: {
+          service: 'AIService',
+          operation: 'parseAIResponse'
+        }
+      });
       
       // Extraire le SQL (avec ou sans point-virgule)
       const sqlMatch = cleanedResponse.match(/^(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*/i);
@@ -1735,7 +1859,13 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         warnings: Array.isArray(parsed.warnings) ? parsed.warnings : []
       };
     } catch (error) {
-      console.warn(`[AIService] Erreur parsing réponse IA - tentative fallback final:`, error);
+      logger.warn('Erreur parsing réponse IA - tentative fallback final', {
+        metadata: {
+          service: 'AIService',
+          operation: 'parseAIResponse',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
       
       // STRATÉGIE 3: Fallback - chercher du SQL n'importe où dans la réponse
       const sqlMatch = responseText.match(/SELECT[\s\S]*?(?:;|$)/i) ||
@@ -1874,7 +2004,14 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       };
 
     } catch (error) {
-      console.error(`[AIService] Erreur récupération stats:`, error);
+      logger.error('Erreur récupération stats', {
+        metadata: {
+          service: 'AIService',
+          operation: 'getUsageStats',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error("Impossible de récupérer les statistiques d'usage");
     }
   }
@@ -1888,10 +2025,23 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         .delete(aiQueryCache)
         .where(sql`expires_at < NOW()`);
       
-      console.log(`[AIService] Cache nettoyé: ${result.rowCount || 0} entrées supprimées`);
+      logger.info('Cache nettoyé', {
+        metadata: {
+          service: 'AIService',
+          operation: 'cleanExpiredCache',
+          entriesRemoved: result.rowCount || 0
+        }
+      });
       return result.rowCount || 0;
     } catch (error) {
-      console.error(`[AIService] Erreur nettoyage cache:`, error);
+      logger.error('Erreur nettoyage cache', {
+        metadata: {
+          service: 'AIService',
+          operation: 'cleanExpiredCache',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return 0;
     }
   }
@@ -1921,7 +2071,14 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       });
       health.claude = true;
     } catch (error) {
-      console.warn(`[AIService] Claude health check failed:`, error);
+      logger.warn('Claude health check failed', {
+        metadata: {
+          service: 'AIService',
+          operation: 'healthCheck',
+          check: 'claude',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
     }
 
     // Test GPT
@@ -1934,7 +2091,14 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         });
         health.gpt = true;
       } catch (error) {
-        console.warn(`[AIService] GPT health check failed:`, error);
+        logger.warn('GPT health check failed', {
+          metadata: {
+            service: 'AIService',
+            operation: 'healthCheck',
+            check: 'gpt',
+            error: error instanceof Error ? error.message : String(error)
+          }
+        });
       }
     }
 
@@ -1943,7 +2107,14 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       await db.select().from(sql`information_schema.tables`).limit(1);
       health.database = true;
     } catch (error) {
-      console.warn(`[AIService] Database health check failed:`, error);
+      logger.warn('Database health check failed', {
+        metadata: {
+          service: 'AIService',
+          operation: 'healthCheck',
+          check: 'database',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
     }
 
     // Test cache (utiliser une requête basique pour éviter les erreurs de schéma)
@@ -1951,7 +2122,14 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       await db.select().from(sql`information_schema.tables WHERE table_name LIKE 'ai_%'`).limit(1);
       health.cache = true;
     } catch (error) {
-      console.warn(`[AIService] Cache health check failed:`, error);
+      logger.warn('Cache health check failed', {
+        metadata: {
+          service: 'AIService',
+          operation: 'healthCheck',
+          check: 'cache',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
     }
 
     return health;

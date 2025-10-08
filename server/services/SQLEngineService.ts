@@ -19,6 +19,7 @@ import type {
   SQLValidationRequest,
   SQLValidationResult
 } from "@shared/schema";
+import { logger } from '../utils/logger';
 
 // ========================================
 // TYPES IMPORTÉS DEPUIS SHARED/SCHEMA.TS
@@ -97,7 +98,14 @@ export class SQLEngineService {
     const queryId = crypto.randomUUID();
 
     try {
-      console.log(`[SQLEngine] Démarrage requête ${queryId} pour utilisateur ${request.userId}`);
+      logger.info('Démarrage requête', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'executeNaturalLanguageQuery',
+        queryId,
+        userId: request.userId
+      }
+    });
 
       // 1. Validation et nettoyage de la requête d'entrée
       const validationResult = this.validateInputQuery(request);
@@ -143,11 +151,23 @@ export class SQLEngineService {
       }
 
       const generatedSQL = aiResponse.data.sqlGenerated;
-      
-      console.log(`[SQLEngine] ========================================`);
-      console.log(`[SQLEngine] SQL GÉNÉRÉ PAR L'IA (longueur: ${generatedSQL.length} chars):`);
-      console.log(`[SQLEngine] ${generatedSQL}`);
-      console.log(`[SQLEngine] ========================================`);
+
+      logger.info('SQL généré par l\'IA', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'executeNaturalLanguageQuery',
+        sqlLength: generatedSQL.length,
+        queryId
+      }
+    });
+      logger.info('SQL query', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'executeNaturalLanguageQuery',
+        sql: generatedSQL,
+        queryId
+      }
+    });
 
       // 4. Parsing et validation sécurité SQL
       const securityCheck = await this.validateSQLSecurity(generatedSQL, request.userId, request.userRole);
@@ -245,7 +265,15 @@ export class SQLEngineService {
       };
 
     } catch (error) {
-      console.error(`[SQLEngine] Erreur requête ${queryId}:`, error);
+      logger.error('Erreur requête', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'executeNaturalLanguageQuery',
+        queryId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       
       return {
         success: false,
@@ -313,7 +341,14 @@ export class SQLEngineService {
    */
   private async buildIntelligentContext(request: SQLQueryRequest): Promise<string> {
     try {
-      console.log(`[SQLEngine] Génération contexte intelligent pour ${request.userId} (${request.userRole})`);
+      logger.info('Génération contexte intelligent', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'generateIntelligentContext',
+        userId: request.userId,
+        userRole: request.userRole
+      }
+    });
       
       // Utilisation du BusinessContextService pour un contexte complet et adaptatif
       const enrichedContext = await this.businessContextService.buildIntelligentContextForSQL(
@@ -354,7 +389,14 @@ ${enrichedContext}
 ${sqlInstructions}`;
 
     } catch (error) {
-      console.error(`[SQLEngine] Erreur génération contexte intelligent:`, error);
+      logger.error('Erreur génération contexte intelligent', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'generateIntelligentContext',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
       
       // Fallback vers contexte basique en cas d'erreur
       return this.buildFallbackContext(request);
@@ -402,8 +444,21 @@ INSTRUCTIONS DE BASE:
     const allowedTables: string[] = [];
     const allowedColumns: string[] = [];
 
-    console.log(`[SQLSecurity] Validation SQL pour ${userId} (${userRole})`);
-    console.log(`[SQLSecurity] SQL à valider: ${sql.substring(0, 200)}${sql.length > 200 ? '...' : ''}`);
+    logger.info('Validation SQL', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        userId,
+        userRole
+      }
+    });
+    logger.info('SQL à valider', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        sqlPreview: sql.substring(0, 200) + (sql.length > 200 ? '...' : '')
+      }
+    });
 
     try {
       // 0. NETTOYAGE SQL COMPLET : Retirer TOUS les commentaires et normaliser
@@ -421,58 +476,142 @@ INSTRUCTIONS DE BASE:
           .replace(/\s+/g, ' ')
           .trim();
         
-        console.log(`[SQLSecurity] ✓ SQL nettoyé (${cleanedSQL.length} chars): ${cleanedSQL.substring(0, 150)}${cleanedSQL.length > 150 ? '...' : ''}`);
+        logger.info('SQL nettoyé', {
+          metadata: {
+            service: 'SQLEngineService',
+            operation: 'validateSQL',
+            cleanedSQLLength: cleanedSQL.length,
+            cleanedSQLPreview: cleanedSQL.substring(0, 150) + (cleanedSQL.length > 150 ? '...' : '')
+          }
+        });
       } catch (cleanError) {
-        console.warn(`[SQLSecurity] Erreur nettoyage SQL, utilisation SQL brut: ${cleanError}`);
+        logger.warn('Erreur nettoyage SQL, utilisation SQL brut', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        cleanError
+      }
+    });
         cleanedSQL = sql.trim();
       }
       
       // 1. ANALYSE AST COMPLÈTE avec node-sql-parser
-      console.log(`[SQLSecurity] Étape 1: Parsing AST avec node-sql-parser...`);
+      logger.info('Parsing AST', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        step: 1
+      }
+    });
       const ast = sqlParser.astify(cleanedSQL, { database: 'postgresql' });
-      console.log(`[SQLSecurity] ✓ Parsing AST réussi`);
+      logger.info('Parsing AST réussi', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL'
+      }
+    });
       
       // 2. ENFORCEMENT READ-ONLY STRICT
       const astArray = Array.isArray(ast) ? ast : [ast];
-      console.log(`[SQLSecurity] Étape 2: Vérification READ-ONLY (${astArray.length} statement(s))...`);
+      logger.info('Vérification READ-ONLY', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        step: 2,
+        statementsCount: astArray.length
+      }
+    });
       
       for (const statement of astArray) {
         // Vérifier que TOUTES les statements sont SELECT
         if (statement.type !== 'select') {
           const violation = `Opération dangereuse détectée: ${statement.type.toUpperCase()}. Seuls les SELECT sont autorisés.`;
-          console.log(`[SQLSecurity] ✗ ${violation}`);
+          logger.warn('Violation sécurité SQL', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        violation
+      }
+    });
           violations.push(violation);
           continue;
         }
-        console.log(`[SQLSecurity] ✓ Statement type: SELECT`);
+        logger.info('Statement type: SELECT', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL'
+      }
+    });
 
         // 3. EXTRACTION ET VALIDATION DES TABLES
-        console.log(`[SQLSecurity] Étape 3: Validation des tables...`);
+        logger.info('Validation des tables', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        step: 3
+      }
+    });
         const tablesInQuery = this.extractTablesFromAST(statement);
-        console.log(`[SQLSecurity] Tables extraites: [${tablesInQuery.join(', ')}]`);
+        logger.info('Tables extraites', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        tables: tablesInQuery.join(', ')
+      }
+    });
         
         for (const tableName of tablesInQuery) {
           if (ALLOWED_BUSINESS_TABLES.includes(tableName)) {
             allowedTables.push(tableName);
-            console.log(`[SQLSecurity] ✓ Table autorisée: ${tableName}`);
+            logger.info('Table autorisée', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        tableName
+      }
+    });
           } else {
             const violation = `Table non autorisée: ${tableName}`;
-            console.log(`[SQLSecurity] ✗ ${violation}`);
+            logger.warn('Violation sécurité SQL', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        violation
+      }
+    });
             violations.push(violation);
           }
         }
 
         // 4. COLUMN WHITELISTING ET VALIDATION
-        console.log(`[SQLSecurity] Étape 4: Validation des colonnes...`);
+        logger.info('Validation des colonnes', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        step: 4
+      }
+    });
         const columnsInQuery = this.extractColumnsFromAST(statement);
-        console.log(`[SQLSecurity] Colonnes extraites: ${columnsInQuery.length} colonne(s)`);
+        logger.info('Colonnes extraites', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        columnsCount: columnsInQuery.length
+      }
+    });
         
         for (const { table, column } of columnsInQuery) {
           // Vérifier colonnes sensibles
           if (table && SENSITIVE_COLUMNS[table]?.includes(column)) {
             if (userRole !== 'admin') {
               const violation = `Colonne sensible non autorisée pour rôle ${userRole}: ${table}.${column}`;
-              console.log(`[SQLSecurity] ✗ ${violation}`);
+              logger.warn('Violation sécurité SQL', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        violation
+      }
+    });
               violations.push(violation);
               continue;
             }
@@ -481,43 +620,112 @@ INSTRUCTIONS DE BASE:
         }
 
         // 5. DÉTECTION INJECTIONS AVANCÉES VIA AST
-        console.log(`[SQLSecurity] Étape 5: Détection patterns d'injection...`);
+        logger.info('Détection patterns d\'injection', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        step: 5
+      }
+    });
         const injectionViolationsBefore = violations.length;
         this.detectAdvancedInjectionPatterns(statement, violations);
         if (violations.length > injectionViolationsBefore) {
-          console.log(`[SQLSecurity] ✗ Patterns d'injection détectés: ${violations.slice(injectionViolationsBefore).join(', ')}`);
+          logger.warn('Patterns d\'injection détectés', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        patterns: violations.slice(injectionViolationsBefore).join(', ')
+      }
+    });
         } else {
-          console.log(`[SQLSecurity] ✓ Aucun pattern d'injection détecté`);
+          logger.info('Aucun pattern d\'injection détecté', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL'
+      }
+    });
         }
 
         // 6. VALIDATION CONTRAINTES MÉTIER
-        console.log(`[SQLSecurity] Étape 6: Validation contraintes métier...`);
+        logger.info('Validation contraintes métier', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        step: 6
+      }
+    });
         const businessViolationsBefore = violations.length;
         this.validateBusinessConstraints(statement, userRole, violations);
         if (violations.length > businessViolationsBefore) {
-          console.log(`[SQLSecurity] ✗ Contraintes métier violées: ${violations.slice(businessViolationsBefore).join(', ')}`);
+          logger.warn('Contraintes métier violées', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        violations: violations.slice(businessViolationsBefore).join(', ')
+      }
+    });
         } else {
-          console.log(`[SQLSecurity] ✓ Contraintes métier respectées`);
+          logger.info('Contraintes métier respectées', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL'
+      }
+    });
         }
       }
 
     } catch (parseError) {
       // Si parsing échoue, c'est potentiellement malicieux
       const violation = `SQL invalide ou malformé: ${parseError instanceof Error ? parseError.message : String(parseError)}`;
-      console.log(`[SQLSecurity] ✗ ERREUR PARSING: ${violation}`);
-      console.log(`[SQLSecurity] SQL problématique: ${sql}`);
+      logger.error('Erreur parsing SQL', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        violation
+      }
+    });
+      logger.error('SQL problématique', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        sql
+      }
+    });
       violations.push(violation);
     }
 
     const isSecure = violations.length === 0;
-    console.log(`[SQLSecurity] ═══════════════════════════════════════════`);
-    console.log(`[SQLSecurity] Résultat final: ${isSecure ? '✓ SÉCURISÉ' : '✗ REJETÉ'}`);
-    console.log(`[SQLSecurity] Violations: ${violations.length}`);
+    
+    logger.info('Résultat validation SQL', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        result: isSecure ? 'SÉCURISÉ' : 'REJETÉ'
+      }
+    });
+    logger.info('Violations count', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL',
+        violationsCount: violations.length
+      }
+    });
     if (violations.length > 0) {
-      console.log(`[SQLSecurity] Détail violations:`);
-      violations.forEach((v, i) => console.log(`[SQLSecurity]   ${i + 1}. ${v}`));
+      logger.info('Détail violations', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'validateSQL'
+      }
+    });
+      violations.forEach((v, i) => logger.info('Violation', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'validateSQL',
+          index: i + 1,
+          violation: v
+        }
+      }));
     }
-    console.log(`[SQLSecurity] ═══════════════════════════════════════════`);
 
     return {
       isSecure,
@@ -609,7 +817,12 @@ INSTRUCTIONS DE BASE:
       const hasUserFilter = this.hasUserIdFilter(ast);
       if (!hasUserFilter) {
         // Cette violation sera corrigée automatiquement par RBAC, mais on la note
-        console.log('[SQLEngine] Note: Filtre user_id manquant, sera ajouté par RBAC');
+        logger.info('Filtre user_id manquant, sera ajouté par RBAC', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'generateIntelligentContext'
+      }
+    });
       }
     }
   }
@@ -762,7 +975,13 @@ INSTRUCTIONS DE BASE:
         // Si la requête échoue après le timeout, on ignore l'erreur
         // car elle sera déjà gérée par le timeout
         if (isTimedOut) {
-          console.log('[SQLEngine] Query échouée après timeout (ignorée):', err.message);
+          logger.warn('Query échouée après timeout', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'executeNaturalLanguageQuery',
+        error: err.message
+      }
+    });
           return null;
         }
         throw err;
@@ -943,7 +1162,15 @@ INSTRUCTIONS DE BASE:
     startTime: number
   ): Promise<void> {
     try {
-      console.log(`[SQLEngine] Query ${queryId} executed in ${Date.now() - startTime}ms, ${resultCount} results`);
+      logger.info('Query executed', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'executeNaturalLanguageQuery',
+        queryId,
+        durationMs: Date.now() - startTime,
+        resultsCount: resultCount
+      }
+    });
       
       // TODO: Persister en base pour audit complet
       // await this.storage.createQueryLog({
@@ -957,7 +1184,14 @@ INSTRUCTIONS DE BASE:
       // });
       
     } catch (error) {
-      console.error('[SQLEngine] Erreur logging:', error);
+      logger.error('Erreur logging', {
+      metadata: {
+        service: 'SQLEngineService',
+        operation: 'logQueryToAudit',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
     }
   }
 

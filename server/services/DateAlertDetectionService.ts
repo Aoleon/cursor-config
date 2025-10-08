@@ -1,6 +1,7 @@
 import { IStorage } from "../storage-poc";
 import { EventBus } from "../eventBus";
 import { DateIntelligenceService } from "./DateIntelligenceService";
+import { logger } from '../utils/logger';
 import { AnalyticsService } from "./AnalyticsService";
 import { PredictiveEngineService } from "./PredictiveEngineService";
 import type { 
@@ -170,8 +171,6 @@ export interface PredictiveRiskViolation {
 // ========================================
 
 export class DateAlertDetectionService {
-  private logger: any;
-  
   constructor(
     private storage: IStorage,
     private eventBus: EventBus,
@@ -180,13 +179,6 @@ export class DateAlertDetectionService {
     private analyticsService: AnalyticsService,          // NOUVELLE DÉPENDANCE
     private predictiveEngineService: PredictiveEngineService // NOUVELLE DÉPENDANCE
   ) {
-    this.logger = { 
-      info: console.log, 
-      error: console.error, 
-      debug: console.debug, 
-      warn: console.warn,
-      child: () => this.logger 
-    };
   }
 
   // ========================================
@@ -236,11 +228,24 @@ export class DateAlertDetectionService {
         }
       }
       
-      console.log(`[DelayDetection] Détecté ${alerts.length} risques de retard`);
+      logger.info('Détection risques de retard', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'detectDelayRisks',
+          alertsCount: alerts.length
+        }
+      });
       return alerts;
       
     } catch (error) {
-      console.error('[DelayDetection] Erreur:', error);
+      logger.error('Erreur détection risques de retard', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'detectDelayRisks',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -281,11 +286,24 @@ export class DateAlertDetectionService {
         if (alert) alerts.push(alert);
       }
       
-      console.log(`[ConflictDetection] Détecté ${alerts.length} conflits de planning`);
+      logger.info('Détection conflits de planning', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'detectPlanningConflicts',
+          alertsCount: alerts.length
+        }
+      });
       return alerts;
       
     } catch (error) {
-      console.error('[ConflictDetection] Erreur:', error);
+      logger.error('Erreur détection conflits de planning', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'detectPlanningConflicts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -350,11 +368,24 @@ export class DateAlertDetectionService {
         if (alert) alerts.push(alert);
       }
       
-      console.log(`[DeadlineDetection] Détecté ${alerts.length} échéances critiques`);
+      logger.info('Détection échéances critiques', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'detectCriticalDeadlines',
+          alertsCount: alerts.length
+        }
+      });
       return alerts;
       
     } catch (error) {
-      console.error('[DeadlineDetection] Erreur:', error);
+      logger.error('Erreur détection échéances critiques', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'detectCriticalDeadlines',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -396,11 +427,24 @@ export class DateAlertDetectionService {
         }
       }
       
-      console.log(`[OptimizationDetection] Détecté ${alerts.length} opportunités d'optimisation`);
+      logger.info('Détection opportunités d\'optimisation', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'detectOptimizationOpportunities',
+          alertsCount: alerts.length
+        }
+      });
       return alerts;
       
     } catch (error) {
-      console.error('[OptimizationDetection] Erreur:', error);
+      logger.error('Erreur détection opportunités d\'optimisation', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'detectOptimizationOpportunities',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -423,7 +467,13 @@ export class DateAlertDetectionService {
     };
     
     try {
-      console.log('[PeriodicDetection] Démarrage détection globale...');
+      logger.info('Démarrage détection globale', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'runPeriodicDetection',
+          context: { detectionType: 'periodic' }
+        }
+      });
       
       // 1. Détection retards
       const delayAlerts = await this.detectDelayRisks();
@@ -473,12 +523,26 @@ export class DateAlertDetectionService {
       // Génération recommandations
       summary.recommendations = this.generateRecommendations(summary);
       
-      console.log(`[PeriodicDetection] Terminé: ${summary.totalAlertsGenerated} alertes générées en ${summary.detectionRunTime}ms`);
+      logger.info('Détection globale terminée', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'runPeriodicDetection',
+          totalAlertsGenerated: summary.totalAlertsGenerated,
+          detectionRunTimeMs: summary.detectionRunTime
+        }
+      });
       
       return summary;
       
     } catch (error) {
-      console.error('[PeriodicDetection] Erreur:', error);
+      logger.error('Erreur détection globale', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'runPeriodicDetection',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       summary.detectionRunTime = Date.now() - startTime;
       return summary;
     }
@@ -513,11 +577,26 @@ export class DateAlertDetectionService {
         }
       });
       
-      console.log(`[AlertWorkflow] Alerte ${alertId} accusée réception par ${userId}`);
+      logger.info('Alerte accusée réception', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'acknowledgeAlert',
+          alertId,
+          userId
+        }
+      });
       return updatedAlert;
       
     } catch (error) {
-      console.error(`[AlertWorkflow] Erreur accusé réception ${alertId}:`, error);
+      logger.error('Erreur accusé réception alerte', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'acknowledgeAlert',
+          alertId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -547,11 +626,26 @@ export class DateAlertDetectionService {
         }
       });
       
-      console.log(`[AlertWorkflow] Alerte ${alertId} résolue par ${userId}`);
+      logger.info('Alerte résolue', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'resolveAlert',
+          alertId,
+          userId
+        }
+      });
       return updatedAlert;
       
     } catch (error) {
-      console.error(`[AlertWorkflow] Erreur résolution ${alertId}:`, error);
+      logger.error('Erreur résolution alerte', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'resolveAlert',
+          alertId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -1085,7 +1179,15 @@ export class DateAlertDetectionService {
       }
       
     } catch (error) {
-      console.error(`[AlertNotification] Erreur notification alerte ${alert.id}:`, error);
+      logger.error('Erreur notification alerte', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'notifyAlertViaWebSocket',
+          alertId: alert.id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1111,7 +1213,14 @@ export class DateAlertDetectionService {
       return [...new Set(users)]; // Déduplication
       
     } catch (error) {
-      console.error('[getAffectedUsers] Erreur:', error);
+      logger.error('Erreur récupération utilisateurs affectés', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'getAffectedUsers',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -1145,7 +1254,14 @@ export class DateAlertDetectionService {
         status: 'pending'
       };
     } catch (error) {
-      console.error('[createDelayRiskAlert] Erreur:', error);
+      logger.error('Erreur création alerte risque retard', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'createDelayRiskAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -1171,7 +1287,14 @@ export class DateAlertDetectionService {
         status: 'pending'
       };
     } catch (error) {
-      console.error('[createWeatherDelayAlert] Erreur:', error);
+      logger.error('Erreur création alerte retard météo', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'createWeatherDelayAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -1195,7 +1318,14 @@ export class DateAlertDetectionService {
         status: 'pending'
       };
     } catch (error) {
-      console.error('[createResourceConflictAlert] Erreur:', error);
+      logger.error('Erreur création alerte conflit ressource', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'createResourceConflictAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -1222,7 +1352,14 @@ export class DateAlertDetectionService {
         status: 'pending'
       };
     } catch (error) {
-      console.error('[createDependencyViolationAlert] Erreur:', error);
+      logger.error('Erreur création alerte violation dépendance', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'createDependencyViolationAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -1249,7 +1386,14 @@ export class DateAlertDetectionService {
         status: 'pending'
       };
     } catch (error) {
-      console.error('[createScheduleOverlapAlert] Erreur:', error);
+      logger.error('Erreur création alerte chevauchement planning', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'createScheduleOverlapAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -1281,7 +1425,14 @@ export class DateAlertDetectionService {
         status: 'pending'
       };
     } catch (error) {
-      console.error('[createCriticalDeadlineAlert] Erreur:', error);
+      logger.error('Erreur création alerte échéance critique', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'createCriticalDeadlineAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -1310,7 +1461,14 @@ export class DateAlertDetectionService {
         status: 'pending'
       };
     } catch (error) {
-      console.error('[createRegulatoryDeadlineAlert] Erreur:', error);
+      logger.error('Erreur création alerte échéance réglementaire', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'createRegulatoryDeadlineAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -1333,7 +1491,14 @@ export class DateAlertDetectionService {
         status: 'pending'
       };
     } catch (error) {
-      console.error('[createOptimizationAlert] Erreur:', error);
+      logger.error('Erreur création alerte optimisation', {
+        metadata: {
+          service: 'DateAlertDetectionService',
+          operation: 'createOptimizationAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }

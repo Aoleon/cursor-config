@@ -2,6 +2,7 @@ import { IStorage } from "../storage-poc";
 import { EventBus } from "../eventBus";
 import { DateAlertDetectionService, MenuiserieDetectionRules } from "./DateAlertDetectionService";
 import { DateIntelligenceService } from "./DateIntelligenceService";
+import { logger } from "../utils/logger";
 import type { 
   Project, ProjectStatus, DateAlert,
   User, Offer
@@ -75,16 +76,35 @@ export class PeriodicDetectionScheduler {
     if (process.env.NODE_ENV === 'test' || 
         process.env.DISABLE_SCHEDULER === '1' ||
         process.env.CI === 'true') {
-      console.log('[PeriodicScheduler] Désactivé en mode test/CI');
+      logger.info('Désactivé en mode test/CI', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'start',
+          mode: process.env.NODE_ENV,
+          disableScheduler: process.env.DISABLE_SCHEDULER,
+          ci: process.env.CI
+        }
+      });
       return;
     }
 
     if (this.isRunning) {
-      console.log('[PeriodicScheduler] Système déjà démarré');
+      logger.info('Système déjà démarré', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'start',
+          status: 'already_running'
+        }
+      });
       return;
     }
 
-    console.log('[PeriodicScheduler] Démarrage système de surveillance...');
+    logger.info('Démarrage système de surveillance', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'start'
+      }
+    });
     
     // Surveillance horaire projets actifs
     this.scheduleHourlyDetection();
@@ -105,18 +125,36 @@ export class PeriodicDetectionScheduler {
     await this.runImmediateDetection('startup');
     
     this.isRunning = true;
-    console.log('[PeriodicScheduler] Système de surveillance démarré avec succès');
+    logger.info('Système de surveillance démarré avec succès', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'start',
+        status: 'started'
+      }
+    });
   }
 
   stop(): void {
-    console.log('[PeriodicScheduler] Arrêt système de surveillance...');
+    logger.info('Arrêt système de surveillance', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'stop',
+        activeIntervals: this.activeIntervals.length
+      }
+    });
     
     // Arrêter tous les intervalles
     this.activeIntervals.forEach(interval => clearInterval(interval));
     this.activeIntervals = [];
     
     this.isRunning = false;
-    console.log('[PeriodicScheduler] Système de surveillance arrêté');
+    logger.info('Système de surveillance arrêté', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'stop',
+        status: 'stopped'
+      }
+    });
   }
 
   // ========================================
@@ -124,13 +162,26 @@ export class PeriodicDetectionScheduler {
   // ========================================
   
   private scheduleHourlyDetection(): void {
-    console.log('[PeriodicScheduler] Programmation surveillance horaire');
+    logger.info('Programmation surveillance horaire', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'scheduleHourlyDetection',
+        intervalMs: 60 * 60 * 1000
+      }
+    });
     
     const interval = setInterval(async () => {
       try {
         await this.runHourlyProjectRiskDetection();
       } catch (error) {
-        console.error('[PeriodicScheduler] Erreur surveillance horaire:', error);
+        logger.error('Erreur surveillance horaire', {
+          metadata: {
+            service: 'PeriodicDetectionScheduler',
+            operation: 'scheduleHourlyDetection',
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          }
+        });
       }
     }, 60 * 60 * 1000); // 1 heure
     
@@ -155,7 +206,13 @@ export class PeriodicDetectionScheduler {
     };
 
     try {
-      console.log(`[PeriodicScheduler] Démarrage détection horaire ${runId}`);
+      logger.info('Démarrage détection horaire', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runHourlyProjectRiskDetection',
+          runId
+        }
+      });
       
       // Récupérer projets actifs (pas en SAV ou archivés)
       const activeProjects = await this.getActiveProjects();
@@ -177,7 +234,15 @@ export class PeriodicDetectionScheduler {
           }
           
         } catch (projectError) {
-          console.error(`[PeriodicScheduler] Erreur projet ${project.id}:`, projectError);
+          logger.error('Erreur projet', {
+            metadata: {
+              service: 'PeriodicDetectionScheduler',
+              operation: 'runHourlyProjectRiskDetection',
+              projectId: project.id,
+              error: projectError instanceof Error ? projectError.message : String(projectError),
+              stack: projectError instanceof Error ? projectError.stack : undefined
+            }
+          });
           summary.errors.push(`Projet ${project.id}: ${projectError}`);
         }
       }
@@ -194,7 +259,15 @@ export class PeriodicDetectionScheduler {
       // Génération recommandations
       summary.recommendations = this.generateHourlyRecommendations(summary, activeProjects.length);
       
-      console.log(`[PeriodicScheduler] Détection horaire terminée: ${summary.totalAlertsGenerated} alertes en ${summary.executionTimeMs}ms`);
+      logger.info('Détection horaire terminée', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runHourlyProjectRiskDetection',
+          runId,
+          totalAlertsGenerated: summary.totalAlertsGenerated,
+          executionTimeMs: summary.executionTimeMs
+        }
+      });
       
       // Notification si alertes critiques détectées
       if (summary.criticalAlertsCount > 0) {
@@ -206,7 +279,15 @@ export class PeriodicDetectionScheduler {
       summary.completedAt = new Date();
       summary.executionTimeMs = summary.completedAt.getTime() - startTime.getTime();
       
-      console.error('[PeriodicScheduler] Erreur détection horaire:', error);
+      logger.error('Erreur détection horaire', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runHourlyProjectRiskDetection',
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
     
     this.runHistory.push(summary);
@@ -220,7 +301,12 @@ export class PeriodicDetectionScheduler {
   // ========================================
   
   private scheduleDailyDeadlineCheck(): void {
-    console.log('[PeriodicScheduler] Programmation vérification quotidienne échéances');
+    logger.info('Programmation vérification quotidienne échéances', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'scheduleDailyDeadlineCheck'
+      }
+    });
     
     // Programmation à 8h00 chaque jour
     const scheduleDaily = () => {
@@ -264,7 +350,13 @@ export class PeriodicDetectionScheduler {
     };
 
     try {
-      console.log(`[PeriodicScheduler] Démarrage vérification quotidienne échéances ${runId}`);
+      logger.info('Démarrage vérification quotidienne échéances', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runDailyDeadlineCheck',
+          runId
+        }
+      });
       
       // Vérification échéances critiques (7 jours)
       const deadlineAlerts = await this.dateAlertDetectionService.checkCriticalDeadlines(7);
@@ -292,14 +384,30 @@ export class PeriodicDetectionScheduler {
       
       summary.recommendations = this.generateDailyRecommendations(summary);
       
-      console.log(`[PeriodicScheduler] Vérification quotidienne terminée: ${summary.totalAlertsGenerated} alertes en ${summary.executionTimeMs}ms`);
+      logger.info('Vérification quotidienne terminée', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runDailyDeadlineCheck',
+          runId,
+          totalAlertsGenerated: summary.totalAlertsGenerated,
+          executionTimeMs: summary.executionTimeMs
+        }
+      });
       
     } catch (error) {
       summary.errors.push(`Erreur vérification quotidienne: ${error}`);
       summary.completedAt = new Date();
       summary.executionTimeMs = summary.completedAt.getTime() - startTime.getTime();
       
-      console.error('[PeriodicScheduler] Erreur vérification quotidienne:', error);
+      logger.error('Erreur vérification quotidienne', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runDailyDeadlineCheck',
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
     
     this.runHistory.push(summary);
@@ -311,7 +419,12 @@ export class PeriodicDetectionScheduler {
   // ========================================
   
   private scheduleTwiceDailyOptimizationCheck(): void {
-    console.log('[PeriodicScheduler] Programmation vérification bi-quotidienne optimisations');
+    logger.info('Programmation vérification bi-quotidienne optimisations', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'scheduleTwiceDailyOptimizationCheck'
+      }
+    });
     
     // 9h00 et 17h00 chaque jour
     const scheduleOptimizations = () => {
@@ -342,11 +455,22 @@ export class PeriodicDetectionScheduler {
 
   private async runOptimizationCheck(): Promise<void> {
     try {
-      console.log('[PeriodicScheduler] Démarrage vérification optimisations');
+      logger.info('Démarrage vérification optimisations', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runOptimizationCheck'
+        }
+      });
       
       const optimizationAlerts = await this.dateAlertDetectionService.detectOptimizationOpportunities();
       
-      console.log(`[PeriodicScheduler] ${optimizationAlerts.length} opportunités d'optimisation détectées`);
+      logger.info('Opportunités d\'optimisation détectées', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runOptimizationCheck',
+          opportunitiesCount: optimizationAlerts.length
+        }
+      });
       
       // Notification des meilleures opportunités (gain > 3 jours)
       const highValueOpportunities = optimizationAlerts.filter(alert => {
@@ -361,7 +485,14 @@ export class PeriodicDetectionScheduler {
       }
       
     } catch (error) {
-      console.error('[PeriodicScheduler] Erreur vérification optimisations:', error);
+      logger.error('Erreur vérification optimisations', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runOptimizationCheck',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -370,7 +501,12 @@ export class PeriodicDetectionScheduler {
   // ========================================
 
   private initializeEventListeners(): void {
-    console.log('[PeriodicScheduler] Initialisation écoute événements temps réel');
+    logger.info('Initialisation écoute événements temps réel', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'initializeEventListeners'
+      }
+    });
     
     // Écoute modifications projets
     this.eventBus.subscribe((event) => {
@@ -406,14 +542,32 @@ export class PeriodicDetectionScheduler {
   // ========================================
 
   private setupBusinessThresholdTriggers(): void {
-    console.log('[PeriodicScheduler] Configuration triggers évaluation seuils business');
+    logger.info('Configuration triggers évaluation seuils business', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'setupBusinessThresholdTriggers'
+      }
+    });
     
     // Trigger évaluation sur calculs analytics
     this.eventBus.subscribe((event) => {
       if (event.type.includes('analytics.calculated') && event.metadata?.triggers_evaluation) {
-        console.log('[PeriodicScheduler] Déclenchement évaluation seuils suite calcul analytics');
+        logger.info('Déclenchement évaluation seuils suite calcul analytics', {
+          metadata: {
+            service: 'PeriodicDetectionScheduler',
+            operation: 'setupBusinessThresholdTriggers',
+            eventType: event.type
+          }
+        });
         this.dateAlertDetectionService.evaluateBusinessThresholds().catch(error => {
-          console.error('[PeriodicScheduler] Erreur évaluation seuils (analytics trigger):', error);
+          logger.error('Erreur évaluation seuils (analytics trigger)', {
+            metadata: {
+              service: 'PeriodicDetectionScheduler',
+              operation: 'setupBusinessThresholdTriggers',
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            }
+          });
         });
       }
     });
@@ -422,24 +576,56 @@ export class PeriodicDetectionScheduler {
     this.eventBus.subscribe((event) => {
       if ((event.entity === 'offer' || event.entity === 'project') && 
           event.type.includes('status_changed')) {
-        console.log('[PeriodicScheduler] Déclenchement évaluation seuils suite changement statut');
+        logger.info('Déclenchement évaluation seuils suite changement statut', {
+          metadata: {
+            service: 'PeriodicDetectionScheduler',
+            operation: 'setupBusinessThresholdTriggers',
+            entity: event.entity,
+            eventType: event.type
+          }
+        });
         this.dateAlertDetectionService.evaluateBusinessThresholds().catch(error => {
-          console.error('[PeriodicScheduler] Erreur évaluation seuils (statut trigger):', error);
+          logger.error('Erreur évaluation seuils (statut trigger)', {
+            metadata: {
+              service: 'PeriodicDetectionScheduler',
+              operation: 'setupBusinessThresholdTriggers',
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            }
+          });
         });
       }
     });
   }
 
   private scheduleBusinessThresholdEvaluation(): void {
-    console.log('[PeriodicScheduler] Programmation évaluation seuils business (30min)');
+    logger.info('Programmation évaluation seuils business (30min)', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'scheduleBusinessThresholdEvaluation',
+        intervalMs: 30 * 60 * 1000
+      }
+    });
     
     // Trigger évaluation périodique (toutes les 30 minutes)
     const interval = setInterval(async () => {
       try {
-        console.log('[PeriodicScheduler] Évaluation périodique seuils business (30min)');
+        logger.info('Évaluation périodique seuils business (30min)', {
+          metadata: {
+            service: 'PeriodicDetectionScheduler',
+            operation: 'scheduleBusinessThresholdEvaluation'
+          }
+        });
         await this.dateAlertDetectionService.evaluateBusinessThresholds();
       } catch (error) {
-        console.error('[PeriodicScheduler] Erreur évaluation périodique seuils:', error);
+        logger.error('Erreur évaluation périodique seuils', {
+          metadata: {
+            service: 'PeriodicDetectionScheduler',
+            operation: 'scheduleBusinessThresholdEvaluation',
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          }
+        });
       }
     }, 30 * 60 * 1000); // 30 minutes
     
@@ -448,45 +634,101 @@ export class PeriodicDetectionScheduler {
 
   // NOUVELLE MÉTHODE - Détection périodique complète avec évaluation business
   async runPeriodicDetection(): Promise<void> {
-    console.log('[PeriodicScheduler] Démarrage détection périodique complète');
+    logger.info('Démarrage détection périodique complète', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'runPeriodicDetection'
+      }
+    });
     const startTime = Date.now();
     
     try {
       // 1. Détections existantes (dates, conflits, échéances, optimisations)
-      console.log('[PeriodicDetection] Étape 1: Détection risques projets');
+      logger.info('Étape 1: Détection risques projets', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runPeriodicDetection',
+          step: 1
+        }
+      });
       const delayAlerts = await this.dateAlertDetectionService.detectDelayRisks();
       
-      console.log('[PeriodicDetection] Étape 2: Détection conflits planning');
+      logger.info('Étape 2: Détection conflits planning', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runPeriodicDetection',
+          step: 2
+        }
+      });
       const conflictAlerts = await this.dateAlertDetectionService.detectPlanningConflicts({
         startDate: new Date(),
         endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // +60 jours
       });
       
-      console.log('[PeriodicDetection] Étape 3: Vérification échéances critiques');
+      logger.info('Étape 3: Vérification échéances critiques', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runPeriodicDetection',
+          step: 3
+        }
+      });
       const deadlineAlerts = await this.dateAlertDetectionService.checkCriticalDeadlines(7);
       
-      console.log('[PeriodicDetection] Étape 4: Détection optimisations');
+      logger.info('Étape 4: Détection optimisations', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runPeriodicDetection',
+          step: 4
+        }
+      });
       const optimizationAlerts = await this.dateAlertDetectionService.detectOptimizationOpportunities();
       
       // 2. NOUVELLE ÉTAPE - Évaluation business seuils (PHASE 3.1.7.4)
-      console.log('[PeriodicDetection] Étape 5: Évaluation seuils business');
+      logger.info('Étape 5: Évaluation seuils business', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runPeriodicDetection',
+          step: 5
+        }
+      });
       await this.dateAlertDetectionService.evaluateBusinessThresholds();
       
       // 3. Rapport final
       const duration = Date.now() - startTime;
       const totalAlerts = delayAlerts.length + conflictAlerts.length + deadlineAlerts.length + optimizationAlerts.length;
       
-      console.log(`[PeriodicDetection] Terminé: ${totalAlerts} alertes générées en ${duration}ms`);
+      logger.info('Détection périodique terminée', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runPeriodicDetection',
+          totalAlerts,
+          durationMs: duration
+        }
+      });
       
     } catch (error) {
-      console.error('[PeriodicDetection] Erreur détection périodique complète:', error);
+      logger.error('Erreur détection périodique complète', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runPeriodicDetection',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
 
   private async handleProjectStatusChanged(projectId: string, metadata: any): Promise<void> {
     try {
-      console.log(`[EventHandler] Changement statut projet ${projectId}: ${metadata?.newStatus}`);
+      logger.info('Changement statut projet', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'handleProjectStatusChanged',
+          projectId,
+          newStatus: metadata?.newStatus
+        }
+      });
       
       // Détection immédiate après changement de statut
       const project = await this.storage.getProject(projectId);
@@ -494,7 +736,14 @@ export class PeriodicDetectionScheduler {
         const alerts = await this.detectAndNotifyProjectRisks(project);
         
         if (alerts.length > 0) {
-          console.log(`[EventHandler] ${alerts.length} nouvelles alertes générées pour projet ${projectId}`);
+          logger.info('Nouvelles alertes générées pour projet', {
+            metadata: {
+              service: 'PeriodicDetectionScheduler',
+              operation: 'handleProjectStatusChanged',
+              projectId,
+              alertsCount: alerts.length
+            }
+          });
         }
         
         // Mise à jour profil de risque
@@ -502,13 +751,27 @@ export class PeriodicDetectionScheduler {
       }
       
     } catch (error) {
-      console.error(`[EventHandler] Erreur traitement changement statut ${projectId}:`, error);
+      logger.error('Erreur traitement changement statut', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'handleProjectStatusChanged',
+          projectId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
   private async handleTimelineRecalculated(entityId: string, metadata: any): Promise<void> {
     try {
-      console.log(`[EventHandler] Timeline recalculée pour ${entityId}`);
+      logger.info('Timeline recalculée', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'handleTimelineRecalculated',
+          entityId
+        }
+      });
       
       // Vérification impacts cascade
       if (metadata?.affectedProjects && Array.isArray(metadata.affectedProjects)) {
@@ -516,13 +779,27 @@ export class PeriodicDetectionScheduler {
       }
       
     } catch (error) {
-      console.error(`[EventHandler] Erreur traitement recalcul timeline ${entityId}:`, error);
+      logger.error('Erreur traitement recalcul timeline', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'handleTimelineRecalculated',
+          entityId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
   private async handleOfferSigned(offerId: string, metadata: any): Promise<void> {
     try {
-      console.log(`[EventHandler] Offre signée ${offerId}, préparation surveillance projet`);
+      logger.info('Offre signée, préparation surveillance projet', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'handleOfferSigned',
+          offerId
+        }
+      });
       
       // Lorsqu'une offre est signée, on s'attend à ce qu'elle devienne projet
       // Programmer une vérification dans 1 heure pour détecter le nouveau projet
@@ -532,7 +809,14 @@ export class PeriodicDetectionScheduler {
           const newProject = projects.find(p => p.offerId === offerId);
           
           if (newProject) {
-            console.log(`[EventHandler] Nouveau projet ${newProject.id} détecté depuis offre ${offerId}`);
+            logger.info('Nouveau projet détecté depuis offre', {
+              metadata: {
+                service: 'PeriodicDetectionScheduler',
+                operation: 'handleOfferSigned',
+                projectId: newProject.id,
+                offerId
+              }
+            });
             
             // Détection initiale risques nouveau projet
             const alerts = await this.detectAndNotifyProjectRisks(newProject);
@@ -542,18 +826,40 @@ export class PeriodicDetectionScheduler {
           }
           
         } catch (error) {
-          console.error(`[EventHandler] Erreur suivi nouveau projet depuis offre ${offerId}:`, error);
+          logger.error('Erreur suivi nouveau projet depuis offre', {
+            metadata: {
+              service: 'PeriodicDetectionScheduler',
+              operation: 'handleOfferSigned',
+              offerId,
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            }
+          });
         }
       }, 60 * 60 * 1000); // 1 heure
       
     } catch (error) {
-      console.error(`[EventHandler] Erreur traitement offre signée ${offerId}:`, error);
+      logger.error('Erreur traitement offre signée', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'handleOfferSigned',
+          offerId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
   private async handleTechnicalAlertImpact(alertId: string, metadata: any): Promise<void> {
     try {
-      console.log(`[EventHandler] Alerte technique critique ${alertId}, analyse impact planning`);
+      logger.info('Alerte technique critique, analyse impact planning', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'handleTechnicalAlertImpact',
+          alertId
+        }
+      });
       
       // Si alerte technique liée à un projet, vérifier impact planning
       if (metadata?.projectId) {
@@ -574,7 +880,15 @@ export class PeriodicDetectionScheduler {
       }
       
     } catch (error) {
-      console.error(`[EventHandler] Erreur traitement impact alerte technique ${alertId}:`, error);
+      logger.error('Erreur traitement impact alerte technique', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'handleTechnicalAlertImpact',
+          alertId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -583,7 +897,12 @@ export class PeriodicDetectionScheduler {
   // ========================================
   
   private scheduleWeeklyCleanup(): void {
-    console.log('[PeriodicScheduler] Programmation nettoyage hebdomadaire');
+    logger.info('Programmation nettoyage hebdomadaire', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'scheduleWeeklyCleanup'
+      }
+    });
     
     // Dimanche à 2h00
     const scheduleWeekly = () => {
@@ -615,7 +934,12 @@ export class PeriodicDetectionScheduler {
 
   private async runWeeklyCleanup(): Promise<void> {
     try {
-      console.log('[PeriodicScheduler] Démarrage nettoyage hebdomadaire');
+      logger.info('Démarrage nettoyage hebdomadaire', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runWeeklyCleanup'
+        }
+      });
       
       const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       
@@ -629,17 +953,35 @@ export class PeriodicDetectionScheduler {
       for (const [projectId, profile] of this.projectRiskProfiles.entries()) {
         if (!activeProjectIds.includes(projectId) && profile.lastDetectionRun < oneWeekAgo) {
           this.projectRiskProfiles.delete(projectId);
-          console.log(`[WeeklyCleanup] Suppression profil de risque projet inactif ${projectId}`);
+          logger.info('Suppression profil de risque projet inactif', {
+            metadata: {
+              service: 'PeriodicDetectionScheduler',
+              operation: 'runWeeklyCleanup',
+              projectId
+            }
+          });
         }
       }
       
       // Nettoyage alertes expirées en base
       await this.cleanupExpiredAlerts();
       
-      console.log('[PeriodicScheduler] Nettoyage hebdomadaire terminé');
+      logger.info('Nettoyage hebdomadaire terminé', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runWeeklyCleanup'
+        }
+      });
       
     } catch (error) {
-      console.error('[PeriodicScheduler] Erreur nettoyage hebdomadaire:', error);
+      logger.error('Erreur nettoyage hebdomadaire', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'runWeeklyCleanup',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -697,7 +1039,15 @@ export class PeriodicDetectionScheduler {
       return allAlerts;
       
     } catch (error) {
-      console.error(`[DetectProjectRisks] Erreur projet ${project.id}:`, error);
+      logger.error('Erreur projet', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'detectAndNotifyProjectRisks',
+          projectId: project.id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -723,14 +1073,27 @@ export class PeriodicDetectionScheduler {
       return interProjectConflicts;
       
     } catch (error) {
-      console.error('[DetectInterProjectConflicts] Erreur:', error);
+      logger.error('Erreur', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'detectInterProjectConflicts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
 
   private async detectCascadeImpacts(affectedProjectIds: string[]): Promise<void> {
     try {
-      console.log(`[CascadeDetection] Analyse impacts cascade pour ${affectedProjectIds.length} projets`);
+      logger.info('Analyse impacts cascade', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'detectCascadeImpacts',
+          affectedProjectsCount: affectedProjectIds.length
+        }
+      });
       
       for (const projectId of affectedProjectIds) {
         const project = await this.storage.getProject(projectId);
@@ -738,13 +1101,27 @@ export class PeriodicDetectionScheduler {
           const alerts = await this.detectAndNotifyProjectRisks(project);
           
           if (alerts.length > 0) {
-            console.log(`[CascadeDetection] ${alerts.length} alertes cascade pour projet ${projectId}`);
+            logger.info('Alertes cascade pour projet', {
+              metadata: {
+                service: 'PeriodicDetectionScheduler',
+                operation: 'detectCascadeImpacts',
+                projectId,
+                alertsCount: alerts.length
+              }
+            });
           }
         }
       }
       
     } catch (error) {
-      console.error('[CascadeDetection] Erreur:', error);
+      logger.error('Erreur', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'detectCascadeImpacts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -782,13 +1159,26 @@ export class PeriodicDetectionScheduler {
       }
       
     } catch (error) {
-      console.error(`[UpdateRiskProfile] Erreur projet ${projectId}:`, error);
+      logger.error('Erreur projet', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'updateProjectRiskProfile',
+          projectId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
   private async generateDailyPlanningReport(): Promise<void> {
     try {
-      console.log('[DailyReport] Génération rapport planning quotidien');
+      logger.info('Génération rapport planning quotidien', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'generateDailyPlanningReport'
+        }
+      });
       
       const activeProjects = await this.getActiveProjects();
       const totalActiveProjects = activeProjects.length;
@@ -836,10 +1226,22 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
         }
       });
       
-      console.log('[DailyReport] Rapport planning quotidien généré et notifié');
+      logger.info('Rapport planning quotidien généré et notifié', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'generateDailyPlanningReport'
+        }
+      });
       
     } catch (error) {
-      console.error('[DailyReport] Erreur génération rapport:', error);
+      logger.error('Erreur génération rapport', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'generateDailyPlanningReport',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -847,7 +1249,14 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
     const runId = `immediate-${trigger}-${Date.now()}`;
     const startTime = new Date();
     
-    console.log(`[ImmediateDetection] Démarrage détection immédiate (${trigger})`);
+    logger.info('Démarrage détection immédiate', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'runImmediateDetection',
+        trigger,
+        runId
+      }
+    });
     
     const detectionSummary = await this.dateAlertDetectionService.runPeriodicDetection();
     
@@ -867,7 +1276,14 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
     this.runHistory.push(summary);
     this.lastFullDetection = new Date();
     
-    console.log(`[ImmediateDetection] Détection immédiate terminée: ${summary.totalAlertsGenerated} alertes`);
+    logger.info('Détection immédiate terminée', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'runImmediateDetection',
+        runId,
+        totalAlertsGenerated: summary.totalAlertsGenerated
+      }
+    });
     
     return summary;
   }
@@ -898,7 +1314,14 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
         }
       });
     } catch (error) {
-      console.error('[NotifyCriticalAlerts] Erreur:', error);
+      logger.error('Erreur', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'notifyCriticalAlertsDetected',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -928,7 +1351,14 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
         }
       });
     } catch (error) {
-      console.error('[NotifyOptimizations] Erreur:', error);
+      logger.error('Erreur', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'notifyHighValueOptimizations',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -954,7 +1384,14 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
         }
       });
     } catch (error) {
-      console.error('[NotifyRiskDeterioration] Erreur:', error);
+      logger.error('Erreur', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'notifyRiskProfileDeteriorating',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1019,10 +1456,22 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
         }
       }
       
-      console.log('[CleanupExpiredAlerts] Nettoyage alertes expirées terminé');
+      logger.info('Nettoyage alertes expirées terminé', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'cleanupExpiredAlerts'
+        }
+      });
       
     } catch (error) {
-      console.error('[CleanupExpiredAlerts] Erreur:', error);
+      logger.error('Erreur', {
+        metadata: {
+          service: 'PeriodicDetectionScheduler',
+          operation: 'cleanupExpiredAlerts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1031,7 +1480,12 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
   // ========================================
 
   async triggerManualDetection(): Promise<DetectionRunSummary> {
-    console.log('[PeriodicScheduler] Détection manuelle déclenchée');
+    logger.info('Détection manuelle déclenchée', {
+      metadata: {
+        service: 'PeriodicDetectionScheduler',
+        operation: 'triggerManualDetection'
+      }
+    });
     return await this.runImmediateDetection('manual');
   }
 

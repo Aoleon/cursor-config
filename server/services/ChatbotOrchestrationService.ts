@@ -1,6 +1,7 @@
 import { AIService } from "./AIService";
 import { RBACService } from "./RBACService";
 import { SQLEngineService } from "./SQLEngineService";
+import { logger } from '../utils/logger';
 import { BusinessContextService } from "./BusinessContextService";
 import { ActionExecutionService } from "./ActionExecutionService";
 import { EventBus } from "../eventBus";
@@ -160,7 +161,16 @@ export class ChatbotOrchestrationService {
     );
 
     try {
-      console.log(`[ChatbotOrchestration] PARALLEL Démarrage requête ${conversationId} (trace: ${traceId}) pour ${request.userId} (${request.userRole})`);
+      logger.info('PARALLEL Démarrage requête', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'handleParallelQuery',
+          conversationId,
+          traceId,
+          userId: request.userId,
+          userRole: request.userRole
+        }
+      });
 
       // ========================================
       // 1. VÉRIFICATION CIRCUIT BREAKER
@@ -172,7 +182,14 @@ export class ChatbotOrchestrationService {
       const circuitBreakerTime = Date.now() - circuitBreakerStartTime;
       
       if (!circuitBreakerCheck.allowed) {
-        console.warn(`[ChatbotOrchestration] Circuit breaker ouvert, fallback séquentiel: ${circuitBreakerCheck.reason}`);
+        logger.warn('Circuit breaker ouvert, fallback séquentiel', {
+          metadata: {
+            service: 'ChatbotOrchestrationService',
+            operation: 'handleParallelQuery',
+            reason: circuitBreakerCheck.reason,
+            context: { fallback: 'sequential' }
+          }
+        });
         
         this.performanceMetrics.endStep(traceId, 'circuit_breaker_check', false, { 
           circuitBreakerTime,
@@ -199,7 +216,15 @@ export class ChatbotOrchestrationService {
       const actionDetectionTime = Date.now() - actionDetectionStartTime;
       
       if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
-        console.log(`[ChatbotOrchestration] Action détectée: ${actionIntention.actionType} sur ${actionIntention.entity}`);
+        logger.info('Action détectée', {
+          metadata: {
+            service: 'ChatbotOrchestrationService',
+            operation: 'handleQuery',
+            actionType: actionIntention.actionType,
+            entity: actionIntention.entity,
+            context: { detectionStep: 'action_intention' }
+          }
+        });
         
         this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
           step: 'action_detected',
@@ -311,7 +336,13 @@ export class ChatbotOrchestrationService {
       
       const parallelStartTime = Date.now();
       
-      console.log(`[ChatbotOrchestration] Démarrage dispatch parallèle contexte + modèle`);
+      logger.info('Démarrage dispatch parallèle contexte + modèle', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'handleParallelQuery',
+          context: { parallelExecution: 'context_model_dispatch' }
+        }
+      });
 
       // Préparation des promesses parallèles
       const businessContextRequest = {
@@ -360,11 +391,27 @@ export class ChatbotOrchestrationService {
       const modelTime = modelSuccess ? 
         (modelResult.value.selectionTime || parallelTime) : parallelTime;
 
-      console.log(`[ChatbotOrchestration] Résultats parallèles - Context: ${contextSuccess ? 'OK' : 'FAIL'} (${contextTime}ms), Model: ${modelSuccess ? 'OK' : 'FAIL'} (${modelTime}ms), Total: ${parallelTime}ms`);
+      logger.info('Résultats parallèles', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'handleParallelQuery',
+          contextSuccess,
+          contextTimeMs: contextTime,
+          modelSuccess,
+          modelTimeMs: modelTime,
+          totalTimeMs: parallelTime
+        }
+      });
 
       // Validation de réussite minimum
       if (!contextSuccess && !modelSuccess) {
-        console.warn(`[ChatbotOrchestration] Échec total parallélisme, fallback séquentiel`);
+        logger.warn('Échec total parallélisme, fallback séquentiel', {
+          metadata: {
+            service: 'ChatbotOrchestrationService',
+            operation: 'handleParallelQuery',
+            context: { fallback: 'sequential_mode' }
+          }
+        });
         
         this.performanceMetrics.endParallelTrace(traceId, 'context_and_model_parallel', false, {
           contextSuccess,
@@ -402,12 +449,24 @@ export class ChatbotOrchestrationService {
 
       // Fallback partiel si nécessaire
       if (!contextSuccess) {
-        console.warn(`[ChatbotOrchestration] Contexte échoué, contexte minimal`);
+        logger.warn('Contexte échoué, contexte minimal', {
+          metadata: {
+            service: 'ChatbotOrchestrationService',
+            operation: 'handleParallelQuery',
+            context: { fallback: 'minimal_context' }
+          }
+        });
         // Continuer avec contexte minimal mais modèle OK
       }
       
       if (!modelSuccess) {
-        console.warn(`[ChatbotOrchestration] Sélection modèle échouée, modèle par défaut`);
+        logger.warn('Sélection modèle échouée, modèle par défaut', {
+          metadata: {
+            service: 'ChatbotOrchestrationService',
+            operation: 'handleParallelQuery',
+            context: { fallback: 'default_model' }
+          }
+        });
         // Continuer avec modèle par défaut mais contexte OK
       }
 
@@ -576,7 +635,14 @@ export class ChatbotOrchestrationService {
         createdAt: new Date()
       });
 
-      console.log(`[ChatbotOrchestration] PARALLEL Pipeline terminé en ${totalExecutionTime}ms (économie: ${debugInfo.parallel_execution?.timeSaving || 0}ms)`);
+      logger.info('PARALLEL Pipeline terminé', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'handleParallelQuery',
+          totalExecutionTimeMs: totalExecutionTime,
+          timeSavingMs: debugInfo.parallel_execution?.timeSaving || 0
+        }
+      });
 
       // Construire réponse finale selon interface ChatbotQueryResponse
       return {
@@ -606,7 +672,14 @@ export class ChatbotOrchestrationService {
       };
 
     } catch (error) {
-      console.error(`[ChatbotOrchestration] Erreur pipeline parallèle:`, error);
+      logger.error('Erreur pipeline parallèle', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'handleParallelQuery',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       // Enregistrer échec parallélisme
       this.performanceMetrics.recordParallelismFailure();
@@ -622,7 +695,13 @@ export class ChatbotOrchestrationService {
       );
       
       // Fallback vers méthode séquentielle en cas d'erreur critique
-      console.log(`[ChatbotOrchestration] Fallback séquentiel après erreur parallèle`);
+      logger.info('Fallback séquentiel après erreur parallèle', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'handleParallelQuery',
+          context: { fallback: 'sequential_after_error' }
+        }
+      });
       return await this.processChatbotQuerySequential(request, traceId, "parallel_exception");
     }
   }
@@ -698,7 +777,16 @@ export class ChatbotOrchestrationService {
     );
 
     try {
-      console.log(`[ChatbotOrchestration] Démarrage requête ${conversationId} (trace: ${finalTraceId}) pour ${request.userId} (${request.userRole})`);
+      logger.info('Démarrage requête', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'handleQuery',
+          conversationId,
+          traceId: finalTraceId,
+          userId: request.userId,
+          userRole: request.userRole
+        }
+      });
 
       // ========================================
       // 1. DÉTECTION D'INTENTIONS D'ACTIONS - NOUVEAU PIPELINE
@@ -710,7 +798,15 @@ export class ChatbotOrchestrationService {
       const actionDetectionTime = Date.now() - actionDetectionStartTime;
       
       if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
-        console.log(`[ChatbotOrchestration] Action détectée: ${actionIntention.actionType} sur ${actionIntention.entity}`);
+        logger.info('Action détectée', {
+          metadata: {
+            service: 'ChatbotOrchestrationService',
+            operation: 'handleQuery',
+            actionType: actionIntention.actionType,
+            entity: actionIntention.entity,
+            context: { detectionStep: 'action_intention' }
+          }
+        });
         
         this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
           step: 'action_detected',
@@ -840,7 +936,13 @@ export class ChatbotOrchestrationService {
       const contextTime = Date.now() - contextStartTime;
 
       if (!businessContextResponse.success || !businessContextResponse.context) {
-        console.warn("[ChatbotOrchestration] Échec génération contexte métier, continuation avec contexte minimal");
+        logger.warn('Échec génération contexte métier, continuation avec contexte minimal', {
+          metadata: {
+            service: 'ChatbotOrchestrationService',
+            operation: 'handleQuery',
+            context: { fallback: 'minimal_business_context' }
+          }
+        });
         
         this.performanceMetrics.endStep(traceId, 'context_generation', false, { 
           step: 'business_context_failed', 
@@ -1078,7 +1180,15 @@ export class ChatbotOrchestrationService {
       return response;
 
     } catch (error) {
-      console.error(`[ChatbotOrchestration] Erreur pipeline complet (trace: ${traceId}):`, error);
+      logger.error('Erreur pipeline complet', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'handleQuery',
+          traceId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       // === FINALISER LE TRACING EN ERREUR ===
       await this.performanceMetrics.endPipelineTrace(
@@ -1244,7 +1354,14 @@ export class ChatbotOrchestrationService {
       };
 
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur suggestions:", error);
+      logger.error('Erreur suggestions', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'getSuggestions',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       await this.logUsageMetrics(
         request.userId,
@@ -1328,7 +1445,14 @@ export class ChatbotOrchestrationService {
       };
 
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur validation:", error);
+      logger.error('Erreur validation', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'validateResponse',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       await this.logUsageMetrics(
         request.userId,
@@ -1463,7 +1587,14 @@ export class ChatbotOrchestrationService {
       };
 
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur historique:", error);
+      logger.error('Erreur historique', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'getHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       await this.logUsageMetrics(
         request.userId,
@@ -1552,7 +1683,14 @@ export class ChatbotOrchestrationService {
       };
 
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur feedback:", error);
+      logger.error('Erreur feedback', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'submitFeedback',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       return {
         success: false,
@@ -1620,7 +1758,14 @@ export class ChatbotOrchestrationService {
       };
 
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur statistiques:", error);
+      logger.error('Erreur statistiques', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'getStats',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       return {
         success: false,
@@ -1656,7 +1801,14 @@ export class ChatbotOrchestrationService {
     try {
       await db.insert(chatbotConversations).values(conversation);
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur logging conversation:", error);
+      logger.error('Erreur logging conversation', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'logConversation',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1684,7 +1836,14 @@ export class ChatbotOrchestrationService {
         estimatedCost: "0.0000" // TODO: calculer le coût réel - convertir en string
       });
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur logging métriques:", error);
+      logger.error('Erreur logging métriques', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'logMetrics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -1861,7 +2020,14 @@ export class ChatbotOrchestrationService {
 
       return patterns;
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur analyse patterns:", error);
+      logger.error('Erreur analyse patterns', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'analyzePatterns',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -1946,7 +2112,15 @@ export class ChatbotOrchestrationService {
    */
   async proposeAction(request: ProposeActionRequest): Promise<ProposeActionResponse> {
     try {
-      console.log(`[ChatbotOrchestration] Proposition d'action ${request.operation} sur ${request.entity} pour ${request.userId}`);
+      logger.info('Proposition d\'action', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'proposeAction',
+          actionOperation: request.operation,
+          entity: request.entity,
+          userId: request.userId
+        }
+      });
       
       const response = await this.actionExecutionService.proposeAction(request);
       
@@ -1962,7 +2136,14 @@ export class ChatbotOrchestrationService {
 
       return response;
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur proposition d'action:", error);
+      logger.error('Erreur proposition d\'action', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'proposeAction',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       await this.logUsageMetrics(
         request.userId,
@@ -1990,7 +2171,14 @@ export class ChatbotOrchestrationService {
    */
   async executeAction(request: ExecuteActionRequest): Promise<ExecuteActionResponse> {
     try {
-      console.log(`[ChatbotOrchestration] Exécution d'action ${request.actionId} pour ${request.userId}`);
+      logger.info('Exécution d\'action', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'executeAction',
+          actionId: request.actionId,
+          userId: request.userId
+        }
+      });
       
       const response = await this.actionExecutionService.executeAction(request);
       
@@ -2006,7 +2194,14 @@ export class ChatbotOrchestrationService {
 
       return response;
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur exécution d'action:", error);
+      logger.error('Erreur exécution d\'action', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'executeAction',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       await this.logUsageMetrics(
         request.userId,
@@ -2033,7 +2228,13 @@ export class ChatbotOrchestrationService {
    */
   async getActionHistory(request: ActionHistoryRequest): Promise<ActionHistoryResponse> {
     try {
-      console.log(`[ChatbotOrchestration] Récupération historique actions pour ${request.userId || 'all'}`);
+      logger.info('Récupération historique actions', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'getActionHistory',
+          userId: request.userId || 'all'
+        }
+      });
       
       const response = await this.actionExecutionService.getActionHistory(request);
       
@@ -2049,7 +2250,14 @@ export class ChatbotOrchestrationService {
 
       return response;
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur historique actions:", error);
+      logger.error('Erreur historique actions', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'getActionHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       return {
         success: false,
@@ -2069,7 +2277,14 @@ export class ChatbotOrchestrationService {
    */
   async updateActionConfirmation(request: UpdateConfirmationRequest & { userId: string; userRole: string }): Promise<{ success: boolean; error?: any }> {
     try {
-      console.log(`[ChatbotOrchestration] Mise à jour confirmation ${request.confirmationId} pour ${request.userId}`);
+      logger.info('Mise à jour confirmation', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'updateConfirmation',
+          confirmationId: request.confirmationId,
+          userId: request.userId
+        }
+      });
       
       // TODO: Implémenter la méthode dans ActionExecutionService
       // const response = await this.actionExecutionService.updateConfirmation(request);
@@ -2086,7 +2301,14 @@ export class ChatbotOrchestrationService {
 
       return { success: true };
     } catch (error) {
-      console.error("[ChatbotOrchestration] Erreur mise à jour confirmation:", error);
+      logger.error('Erreur mise à jour confirmation', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'updateConfirmation',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       await this.logUsageMetrics(
         request.userId,

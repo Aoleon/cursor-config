@@ -30,7 +30,9 @@ export default function Chantier() {
     queryKey: ["/api/projects/chantier"],
     queryFn: async () => {
       const response = await fetch("/api/projects?status=chantier");
-      return response.json();
+      const result = await response.json();
+      // L'API peut retourner soit un tableau, soit { success: true, data: [] }
+      return Array.isArray(result) ? result : (result?.data || []);
     }
   });
 

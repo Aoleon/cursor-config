@@ -32,7 +32,9 @@ export default function EnvoiDevis() {
     queryKey: ["/api/aos/devis-ready"],
     queryFn: async () => {
       const response = await fetch("/api/aos?status=devis_pret");
-      return response.json();
+      const result = await response.json();
+      // L'API peut retourner soit un tableau, soit { success: true, data: [] }
+      return Array.isArray(result) ? result : (result?.data || []);
     }
   });
 

@@ -28,7 +28,9 @@ export default function Planification() {
     queryKey: ["/api/projects/planification"],
     queryFn: async () => {
       const response = await fetch("/api/projects?status=planification");
-      return response.json();
+      const result = await response.json();
+      // L'API peut retourner soit un tableau, soit { success: true, data: [] }
+      return Array.isArray(result) ? result : (result?.data || []);
     }
   });
 

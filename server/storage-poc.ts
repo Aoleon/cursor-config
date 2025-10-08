@@ -383,8 +383,6 @@ export interface IStorage {
   createDateAlert(data: InsertDateAlert): Promise<DateAlert>;
   updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert>;
   deleteDateAlert(id: string): Promise<void>;
-  acknowledgeAlert(id: string, userId: string): Promise<boolean>;
-  resolveAlert(id: string, userId: string, actionTaken?: string): Promise<boolean>;
 
   // ========================================
   // ANALYTICS SERVICE OPERATIONS - PHASE 3.1.3
@@ -532,11 +530,11 @@ export interface IStorage {
     user_id: string
   ): Promise<boolean>;
 
-  // Marquer comme accusé réception
+  // Marquer comme accusé réception (supporte DateAlerts ET BusinessAlerts)
   acknowledgeAlert(id: string, user_id: string, notes?: string): Promise<boolean>;
 
-  // Résoudre alerte
-  resolveAlert(id: string, user_id: string, resolution_notes: string): Promise<boolean>;
+  // Résoudre alerte (supporte DateAlerts ET BusinessAlerts)
+  resolveAlert(id: string, user_id: string, resolution_notes?: string): Promise<boolean>;
 
   // Rechercher alertes similaires (déduplication)
   findSimilarAlerts(params: {
@@ -3968,7 +3966,82 @@ export class MemStorage implements IStorage {
     throw new Error("MemStorage: deleteDateAlert not implemented for POC");
   }
 
-  // acknowledgeAlert et resolveAlert sont implémentées dans la section business alerts
+  // ========================================
+  // BUSINESS ALERTS METHODS - STUBS MEMSTORAGE
+  // ========================================
+
+  async getBusinessAlertById(id: string): Promise<BusinessAlert | null> {
+    console.log(`[MemStorage] getBusinessAlertById stub called for: ${id}`);
+    return null;
+  }
+
+  async listBusinessAlerts(query: AlertsQuery): Promise<{
+    alerts: BusinessAlert[];
+    total: number;
+    summary: {
+      by_status: Record<AlertStatus, number>;
+      by_severity: Record<AlertSeverity, number>;
+      by_type: Record<AlertType, number>;
+    };
+  }> {
+    console.log(`[MemStorage] listBusinessAlerts stub called with:`, query);
+    return {
+      alerts: [],
+      total: 0,
+      summary: {
+        by_status: {} as Record<AlertStatus, number>,
+        by_severity: {} as Record<AlertSeverity, number>,
+        by_type: {} as Record<AlertType, number>
+      }
+    };
+  }
+
+  async updateBusinessAlertStatus(
+    id: string, 
+    update: UpdateBusinessAlert,
+    user_id: string
+  ): Promise<boolean> {
+    console.log(`[MemStorage] updateBusinessAlertStatus stub called for: ${id} by ${user_id}`);
+    return false;
+  }
+
+  async acknowledgeAlert(id: string, user_id: string, notes?: string): Promise<boolean> {
+    console.log(`[MemStorage] acknowledgeAlert stub called for: ${id} by ${user_id}`);
+    return false;
+  }
+
+  async resolveAlert(id: string, user_id: string, resolution_notes?: string): Promise<boolean> {
+    console.log(`[MemStorage] resolveAlert stub called for: ${id} by ${user_id}`);
+    return false;
+  }
+
+  async findSimilarAlerts(params: {
+    entity_type: string;
+    entity_id: string;
+    alert_type: AlertType;
+    hours_window?: number;
+  }): Promise<BusinessAlert[]> {
+    console.log(`[MemStorage] findSimilarAlerts stub called for: ${params.entity_type}:${params.entity_id}`);
+    return [];
+  }
+
+  async getOpenAlertsForEntity(
+    entity_type: string, 
+    entity_id: string
+  ): Promise<BusinessAlert[]> {
+    console.log(`[MemStorage] getOpenAlertsForEntity stub called for: ${entity_type}:${entity_id}`);
+    return [];
+  }
+
+  async createBusinessAlert(data: InsertBusinessAlert): Promise<string> {
+    const alertId = `mock-alert-${Date.now()}`;
+    console.log(`[MemStorage] createBusinessAlert stub called, generated ID: ${alertId}`);
+    return alertId;
+  }
+
+  // ========================================
+  // KPI AND ANALYTICS METHODS
+  // ========================================
 
   async createKPISnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot> {
     throw new Error("MemStorage: createKPISnapshot not implemented for POC");

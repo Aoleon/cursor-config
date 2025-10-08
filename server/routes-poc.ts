@@ -2678,7 +2678,7 @@ app.post("/api/objects/upload",
     
     logger.info('[ObjectStorage] URL upload générée', { metadata: { userId: req.user?.id } });
     
-    res.json({ uploadURL });
+    res.json({ success: true, data: { uploadURL } });
   })
 );
 
@@ -2898,7 +2898,7 @@ app.get("/api/dashboard/stats",
     
     logger.info('[Dashboard] Stats consultées', { metadata: { userId: req.user?.id } });
     
-    res.json(stats);
+    res.json({ success: true, data: stats });
   })
 );
 
@@ -2994,7 +2994,7 @@ app.get("/api/quotations/:offerId",
     
     logger.info('[Quotations] Quotations récupérées pour offre', { metadata: { offerId, count: quotations.length } });
     
-    res.json(quotations);
+    res.json({ success: true, data: quotations });
   })
 );
 
@@ -3005,7 +3005,7 @@ app.get("/api/quotations/",
     // Retourner une liste vide ou rediriger vers la nouvelle implémentation
     logger.info('[Quotations] Route legacy appelée', { metadata: { userId: req.user?.id } });
     
-    res.json([]);
+    res.json({ success: true, data: [] });
   })
 );
 
@@ -3060,7 +3060,7 @@ app.post("/api/quotations",
       metadata: { quotationId: quotation.id, offerId: quotation.offerId, supplier: quotation.supplierName } 
     });
     
-    res.status(201).json(quotation);
+    res.status(201).json({ success: true, data: quotation });
   })
 );
 
@@ -5871,7 +5871,6 @@ app.get('/api/alerts',
     }
     
     // RÉCUPÉRATION ALERTES  
-    // @ts-ignore - Phase 6+ feature - listBusinessAlerts will be implemented in AuditService
     const result = await storage.listBusinessAlerts(query);
     
     logger.info('[BusinessAlerts] Alertes récupérées', { metadata: { total: result.total, userRole: req.user?.role, limit: query.limit } });
@@ -5905,7 +5904,6 @@ app.post('/api/alerts/:id/acknowledge',
     const userId = req.user.id;
     
     // VÉRIFICATION ALERTE EXISTE
-    // @ts-ignore - Phase 6+ feature - getBusinessAlertById will be implemented in AuditService
     const alert = await storage.getBusinessAlertById(alertId);
     if (!alert) {
       throw new NotFoundError('Alerte non trouvée');
@@ -5952,7 +5950,6 @@ app.post('/api/alerts/:id/resolve',
     const userId = req.user.id;
     
     // VÉRIFICATION ALERTE
-    // @ts-ignore - Phase 6+ feature - getBusinessAlertById will be implemented in AuditService
     const alert = await storage.getBusinessAlertById(alertId);
     if (!alert) {
       throw new NotFoundError('Alerte non trouvée');
@@ -6010,7 +6007,6 @@ app.patch('/api/alerts/:id/assign',
     const assignedBy = req.user.id;
     
     // ASSIGNATION VIA STORAGE
-    // @ts-ignore - Phase 6+ feature - updateBusinessAlertStatus will be implemented in AuditService
     const success = await storage.updateBusinessAlertStatus(
       alertId,
       { assignedTo },
@@ -6048,14 +6044,12 @@ app.get('/api/alerts/dashboard',
     const userId = req.user.id;
     
     // STATS GLOBALES ALERTES
-    // @ts-ignore - Phase 6+ feature - listBusinessAlerts will be implemented in AuditService
     const openAlerts = await storage.listBusinessAlerts({
       status: 'open',
       limit: 100,
       offset: 0
     });
     
-    // @ts-ignore - Phase 6+ feature - listBusinessAlerts will be implemented in AuditService
     const criticalAlerts = await storage.listBusinessAlerts({
       severity: 'critical',
       status: 'open',
@@ -6063,7 +6057,6 @@ app.get('/api/alerts/dashboard',
       offset: 0
     });
     
-    // @ts-ignore - Phase 6+ feature - listBusinessAlerts will be implemented in AuditService
     const myAlerts = await storage.listBusinessAlerts({
       assignedTo: userId,
       status: 'open',
@@ -6073,7 +6066,6 @@ app.get('/api/alerts/dashboard',
     
     // MÉTRIQUES RÉSOLUTION (7 derniers jours)
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    // @ts-ignore - Phase 6+ feature - listBusinessAlerts will be implemented in AuditService
     const resolvedThisWeek = await storage.listBusinessAlerts({
       status: 'resolved',
       limit: 100,
@@ -6127,7 +6119,6 @@ app.get('/api/alerts/stats',
     const userRole = req.user.role;
     
     // CALCULS STATISTIQUES
-    // @ts-ignore - Phase 6+ feature - listBusinessAlerts will be implemented in AuditService
     const allAlerts = await storage.listBusinessAlerts({
       limit: 1000,
       offset: 0

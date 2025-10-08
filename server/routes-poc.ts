@@ -165,7 +165,10 @@ try {
 } catch (error) {
   logger.error('EventBus PredictiveEngine integration failed', {
     metadata: { 
+      route: 'system/initialization',
+      method: 'STARTUP',
       error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
       impact: 'performance_objective_25s_to_10s_compromised'
     }
   });
@@ -404,7 +407,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { username, password } = req.body;
 
     logger.info('[Auth] Tentative connexion basic', { 
-      metadata: { username, hasSession: !!req.session }
+      metadata: { 
+        route: '/api/login/basic',
+        method: 'POST',
+        username,
+        hasSession: !!req.session
+      }
     });
 
     if (username === 'admin' && password === 'admin') {
@@ -419,7 +427,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       logger.info('[Auth] Création utilisateur admin dev', { 
-        metadata: { userId: adminUser.id }
+        metadata: { 
+          route: '/api/login/basic',
+          method: 'POST',
+          userId: adminUser.id
+        }
       });
       
       req.session.user = adminUser;
@@ -428,11 +440,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.save((err: any) => {
           if (err) {
             logger.error('[Auth] Erreur sauvegarde session', { 
-              metadata: { error: err }
+              metadata: { 
+                route: '/api/login/basic',
+                method: 'POST',
+                error: err instanceof Error ? err.message : String(err),
+                stack: err instanceof Error ? err.stack : undefined,
+                username
+              }
             });
             reject(err);
           } else {
-            logger.info('[Auth] Session sauvegardée');
+            logger.info('[Auth] Session sauvegardée', {
+              metadata: {
+                route: '/api/login/basic',
+                method: 'POST',
+                userId: adminUser.id
+              }
+            });
             resolve();
           }
         });
@@ -445,7 +469,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } else {
       logger.warn('[Auth] Identifiants invalides', { 
-        metadata: { username }
+        metadata: { 
+          route: '/api/login/basic',
+          method: 'POST',
+          username
+        }
       });
       throw new AuthenticationError('Identifiants incorrects');
     }
@@ -504,7 +532,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     
     logger.info('[Auth] Health check effectué', { 
-      metadata: { healthy: sessionExists }
+      metadata: { 
+        route: '/api/auth/health',
+        method: 'GET',
+        healthy: sessionExists,
+        userId: req.user?.id
+      }
     });
     
     res.json({
@@ -522,22 +555,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     logger.info('[Auth] Récupération utilisateur', { 
       metadata: { 
+        route: '/api/auth/user',
+        method: 'GET',
         hasUser: !!user,
         hasSessionUser: !!sessionUser,
-        userType: (sessionUser?.isBasicAuth || user?.isBasicAuth) ? 'basic' : 'oidc'
+        userType: (sessionUser?.isBasicAuth || user?.isBasicAuth) ? 'basic' : 'oidc',
+        userId: user?.id || sessionUser?.id
       }
     });
     
     // CORRECTION BLOCKER 3: Vérifier d'abord si c'est un utilisateur basic auth
     if (user?.isBasicAuth || sessionUser?.isBasicAuth) {
-      logger.info('[Auth] Retour utilisateur basic auth');
+      logger.info('[Auth] Retour utilisateur basic auth', {
+        metadata: {
+          route: '/api/auth/user',
+          method: 'GET',
+          userId: user?.id || sessionUser?.id
+        }
+      });
       const basicAuthUser = user?.isBasicAuth ? user : sessionUser;
       return res.json(basicAuthUser);
     }
     
     // Pour les utilisateurs OIDC uniquement - vérifier claims
     if (!user || !user.claims) {
-      logger.warn('[Auth] Aucune session OIDC trouvée');
+      logger.warn('[Auth] Aucune session OIDC trouvée', {
+        metadata: {
+          route: '/api/auth/user',
+          method: 'GET'
+        }
+      });
       throw new AuthenticationError('No user session found');
     }
 
@@ -552,7 +599,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
 
     logger.info('[Auth] Retour profil OIDC', { 
-      metadata: { userId: userProfile.id }
+      metadata: { 
+        route: '/api/auth/user',
+        method: 'GET',
+        userId: userProfile.id
+      }
     });
     res.json(userProfile);
   }));
@@ -595,8 +646,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     logger.info('[Auth] Debug auth state inspection', { 
       metadata: { 
+        route: '/api/debug-auth-state',
+        method: 'GET',
         hasUser: debugInfo.request.hasUser,
-        hasSession: debugInfo.request.hasSession
+        hasSession: debugInfo.request.hasSession,
+        userId: req.user?.id || req.session?.user?.id
       }
     });
     
@@ -625,7 +679,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 app.get("/api/users", isAuthenticated, asyncHandler(async (req, res) => {
   const users = await storage.getUsers();
   logger.info('[Users] Liste utilisateurs récupérée', { 
-    metadata: { count: users.length }
+    metadata: { 
+      route: '/api/users',
+      method: 'GET',
+      count: users.length,
+      userId: req.user?.id
+    }
   });
   res.json(users);
 }));
@@ -679,7 +738,12 @@ app.get("/api/aos/etude", isAuthenticated, asyncHandler(async (req, res) => {
   }));
   
   logger.info('[AO] AOs en étude récupérés', { 
-    metadata: { count: enrichedAos.length }
+    metadata: { 
+      route: '/api/aos/etude',
+      method: 'GET',
+      count: enrichedAos.length,
+      userId: req.user?.id
+    }
   });
   
   res.json(enrichedAos);
@@ -719,9 +783,12 @@ app.post("/api/aos",
         
         logger.info('[AO] Dates calculées automatiquement', {
           metadata: {
+            route: '/api/aos',
+            method: 'POST',
             dateSortie: aoData.dateSortieAO,
             dateLimiteRemise: dateLimiteCalculee.toISOString(),
-            dateRenduAO: dateRenduCalculee ? dateRenduCalculee.toISOString() : 'N/A'
+            dateRenduAO: dateRenduCalculee ? dateRenduCalculee.toISOString() : 'N/A',
+            userId: req.user?.id
           }
         });
       }
@@ -730,7 +797,15 @@ app.post("/api/aos",
     // Gestion spécifique des erreurs de contrainte d'unicité personnalisées
     try {
       const ao = await storage.createAo(aoData);
-      logger.info('[AO] AO créé', { metadata: { aoId: ao.id, reference: ao.reference } });
+      logger.info('[AO] AO créé', { 
+        metadata: { 
+          route: '/api/aos',
+          method: 'POST',
+          aoId: ao.id,
+          reference: ao.reference,
+          userId: req.user?.id
+        }
+      });
       sendSuccess(res, ao, 201);
     } catch (error: any) {
       if (error.code === 'DUPLICATE_REFERENCE') {
@@ -973,7 +1048,12 @@ app.get("/api/offers/suppliers-pending", isAuthenticated, asyncHandler(async (re
   }));
   
   logger.info('[Offers] Offres en attente fournisseurs récupérées', { 
-    metadata: { count: enrichedOffers.length }
+    metadata: { 
+      route: '/api/offers/suppliers-pending',
+      method: 'GET',
+      count: enrichedOffers.length,
+      userId: req.user?.id
+    }
   });
   
   res.json(enrichedOffers);
@@ -998,7 +1078,12 @@ app.post("/api/offers/:id/start-chiffrage", isAuthenticated, asyncHandler(async 
   });
   
   logger.info('[Offers] Chiffrage démarré', { 
-    metadata: { offerId: req.params.id }
+    metadata: { 
+      route: '/api/offers/:id/start-chiffrage',
+      method: 'POST',
+      offerId: req.params.id,
+      userId: req.user?.id
+    }
   });
   
   res.json({
@@ -1056,7 +1141,12 @@ app.post("/api/offers/:id/validate-studies", isAuthenticated, asyncHandler(async
   });
   
   logger.info('[Offers] Études techniques validées', { 
-    metadata: { offerId: req.params.id }
+    metadata: { 
+      route: '/api/offers/:id/validate-studies',
+      method: 'POST',
+      offerId: req.params.id,
+      userId: req.user?.id
+    }
   });
   
   res.json({
@@ -1081,7 +1171,12 @@ app.get("/api/offers/:id", isAuthenticated, asyncHandler(async (req, res) => {
   }
   
   logger.info('[Offers] Offre récupérée', { 
-    metadata: { offerId: req.params.id }
+    metadata: { 
+      route: '/api/offers/:id',
+      method: 'GET',
+      offerId: req.params.id,
+      userId: req.user?.id
+    }
   });
   
   res.json(offer);
@@ -1652,7 +1747,15 @@ app.post("/api/projects",
     const validatedData = insertProjectSchema.parse(projectData);
     const project = await storage.createProject(validatedData);
     
-    logger.info('[Projects] Projet créé', { metadata: { projectId: project.id, name: project.name } });
+    logger.info('[Projects] Projet créé', { 
+      metadata: { 
+        route: '/api/projects',
+        method: 'POST',
+        projectId: project.id,
+        name: project.name,
+        userId: req.user?.id
+      }
+    });
     
     res.status(201).json(project);
   })
@@ -1685,9 +1788,12 @@ app.patch("/api/projects/:id",
         if (!validVisa) {
           logger.warn('[VISA_GATING] Passage planification bloqué - Aucun VISA valide', { 
             metadata: { 
+              route: '/api/projects/:id',
+              method: 'PATCH',
               projectId: req.params.id,
               visaCount: visaList.length,
-              validVisaCount: visaList.filter(v => v.status === 'valide').length
+              validVisaCount: visaList.filter(v => v.status === 'valide').length,
+              userId: req.user?.id
             } 
           });
           
@@ -1704,7 +1810,13 @@ app.patch("/api/projects/:id",
         // Vérifier que le VISA n'est pas expiré
         if (validVisa.expireLe && new Date(validVisa.expireLe) < new Date()) {
           logger.warn('[VISA_GATING] Passage planification bloqué - VISA expiré', { 
-            metadata: { projectId: req.params.id, expiredAt: validVisa.expireLe } 
+            metadata: { 
+              route: '/api/projects/:id',
+              method: 'PATCH',
+              projectId: req.params.id,
+              expiredAt: validVisa.expireLe,
+              userId: req.user?.id
+            } 
           });
           
           return res.status(403).json({
@@ -7397,7 +7509,13 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, newMetric, "Métrique business créée avec succès", 201);
       } catch (error) {
         logger.error('Erreur createMetricsBusiness', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/metrics-business',
+            method: 'POST',
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la création de la métrique business");
       }
@@ -7418,7 +7536,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, metric);
       } catch (error) {
         logger.error('Erreur getMetricsBusinessById', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/metrics-business/:id',
+            method: 'GET',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw error;
       }
@@ -7439,7 +7564,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, updatedMetric, "Métrique business mise à jour avec succès");
       } catch (error) {
         logger.error('Erreur updateMetricsBusiness', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/metrics-business/:id',
+            method: 'PUT',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la mise à jour de la métrique business");
       }
@@ -7458,7 +7590,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, null, "Métrique business supprimée avec succès");
       } catch (error) {
         logger.error('Erreur deleteMetricsBusiness', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/metrics-business/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la suppression de la métrique business");
       }
@@ -7480,7 +7619,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, contacts);
       } catch (error) {
         logger.error('Erreur getAoContacts', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/ao-contacts/:aoId',
+            method: 'GET',
+            aoId: req.params.aoId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la récupération des contacts AO");
       }
@@ -7499,7 +7645,15 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, newContact, "Liaison AO-Contact créée avec succès", 201);
       } catch (error) {
         logger.error('Erreur createAoContact', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/ao-contacts',
+            method: 'POST',
+            aoId: req.body.aoId,
+            contactId: req.body.contactId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la création de la liaison AO-Contact");
       }
@@ -7518,7 +7672,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, null, "Liaison AO-Contact supprimée avec succès");
       } catch (error) {
         logger.error('Erreur deleteAoContact', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/ao-contacts/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la suppression de la liaison AO-Contact");
       }
@@ -7540,7 +7701,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, contacts);
       } catch (error) {
         logger.error('Erreur getProjectContacts', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/project-contacts/:projectId',
+            method: 'GET',
+            projectId: req.params.projectId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la récupération des contacts projet");
       }
@@ -7559,7 +7727,15 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, newContact, "Liaison Project-Contact créée avec succès", 201);
       } catch (error) {
         logger.error('Erreur createProjectContact', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/project-contacts',
+            method: 'POST',
+            projectId: req.body.projectId,
+            contactId: req.body.contactId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la création de la liaison Project-Contact");
       }
@@ -7578,7 +7754,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, null, "Liaison Project-Contact supprimée avec succès");
       } catch (error) {
         logger.error('Erreur deleteProjectContact', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/project-contacts/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la suppression de la liaison Project-Contact");
       }
@@ -7600,7 +7783,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, specializations);
       } catch (error) {
         logger.error('Erreur getSupplierSpecializations', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/supplier-specializations',
+            method: 'GET',
+            supplier_id: req.query.supplier_id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la récupération des spécialisations fournisseur");
       }
@@ -7619,7 +7809,15 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, newSpec, "Spécialisation fournisseur créée avec succès", 201);
       } catch (error) {
         logger.error('Erreur createSupplierSpecialization', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/supplier-specializations',
+            method: 'POST',
+            supplierId: req.body.supplierId,
+            specializationType: req.body.specializationType,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la création de la spécialisation fournisseur");
       }
@@ -7640,7 +7838,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, updatedSpec, "Spécialisation fournisseur mise à jour avec succès");
       } catch (error) {
         logger.error('Erreur updateSupplierSpecialization', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/supplier-specializations/:id',
+            method: 'PUT',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la mise à jour de la spécialisation fournisseur");
       }
@@ -7659,7 +7864,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, null, "Spécialisation fournisseur supprimée avec succès");
       } catch (error) {
         logger.error('Erreur deleteSupplierSpecialization', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/supplier-specializations/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database("Erreur lors de la suppression de la spécialisation fournisseur");
       }
@@ -7750,7 +7962,13 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, migrationStats);
       } catch (error) {
         logger.error('Monday Dashboard - Erreur récupération stats', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/monday/migration-stats',
+            method: 'GET',
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la récupération des statistiques de migration');
       }
@@ -7908,7 +8126,16 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, mondayData);
       } catch (error) {
         logger.error('Monday Dashboard - Erreur récupération données', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/monday/all-data',
+            method: 'GET',
+            type: req.query.type,
+            limit: req.query.limit,
+            offset: req.query.offset,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la récupération des données Monday.com');
       }
@@ -9657,7 +9884,16 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
       } catch (error) {
         logger.error('Comparison API - Erreur sélection fournisseur', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/ao-lots/:id/select-supplier',
+            method: 'POST',
+            aoLotId: req.params.id,
+            supplierId: req.body.supplierId,
+            analysisId: req.body.analysisId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw error;
       }
@@ -9831,7 +10067,16 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
       } catch (error) {
         logger.error('Comparison API - Erreur récupération données session', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/supplier-quote-sessions/:id/comparison-data',
+            method: 'GET',
+            sessionId: req.params.id,
+            includeRawData: req.query.includeRawData,
+            format: req.query.format,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw error;
       }
@@ -9887,7 +10132,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
       } catch (error) {
         logger.error('Comparison API - Erreur mise à jour notes', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/supplier-quote-analysis/:id/notes',
+            method: 'PUT',
+            analysisId: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw error;
       }
@@ -9916,12 +10168,26 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
   const eventBus = app.get('eventBus');
   
   if (!auditService) {
-    logger.error('CRITICAL - AuditService non trouvé dans app.get');
+    logger.error('CRITICAL - AuditService non trouvé dans app.get', {
+      metadata: { 
+        route: 'system/admin-routes',
+        method: 'MOUNT',
+        issue: 'AuditService_missing',
+        impact: 'admin_routes_unavailable'
+      }
+    });
     throw new Error('AuditService manquant - impossible de monter routes admin');
   }
   
   if (!eventBus) {
-    logger.error('CRITICAL - EventBus non trouvé dans app.get');
+    logger.error('CRITICAL - EventBus non trouvé dans app.get', {
+      metadata: { 
+        route: 'system/admin-routes',
+        method: 'MOUNT',
+        issue: 'EventBus_missing',
+        impact: 'admin_routes_unavailable'
+      }
+    });
     throw new Error('EventBus manquant - impossible de monter routes admin');
   }
   
@@ -9953,7 +10219,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, batteries);
       } catch (error) {
         logger.error('Equipment Batteries - Erreur récupération', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/equipment-batteries',
+            method: 'GET',
+            projectId: req.query.projectId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la récupération des batteries');
       }
@@ -9974,7 +10247,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, battery);
       } catch (error) {
         logger.error('Equipment Batteries - Erreur récupération batterie', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/equipment-batteries/:id',
+            method: 'GET',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw error;
       }
@@ -10002,7 +10282,15 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, battery, 'Batterie créée avec succès');
       } catch (error) {
         logger.error('Equipment Batteries - Erreur création', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/equipment-batteries',
+            method: 'POST',
+            projectId: req.body.projectId,
+            name: req.body.name,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la création de la batterie');
       }
@@ -10031,7 +10319,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, battery, 'Batterie mise à jour avec succès');
       } catch (error) {
         logger.error('Equipment Batteries - Erreur mise à jour', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/equipment-batteries/:id',
+            method: 'PUT',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la mise à jour de la batterie');
       }
@@ -10049,7 +10344,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, null, 'Batterie supprimée avec succès');
       } catch (error) {
         logger.error('Equipment Batteries - Erreur suppression', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/equipment-batteries/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la suppression de la batterie');
       }
@@ -10074,7 +10376,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, targets);
       } catch (error) {
         logger.error('Margin Targets - Erreur récupération', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/margin-targets',
+            method: 'GET',
+            projectId: req.query.projectId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la récupération des objectifs de marge');
       }
@@ -10095,7 +10404,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, target);
       } catch (error) {
         logger.error('Margin Targets - Erreur récupération objectif', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/margin-targets/:id',
+            method: 'GET',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw error;
       }
@@ -10127,7 +10443,15 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, target, 'Objectif de marge créé avec succès');
       } catch (error) {
         logger.error('Margin Targets - Erreur création', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/margin-targets',
+            method: 'POST',
+            projectId: req.body.projectId,
+            name: req.body.name,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la création de l\'objectif de marge');
       }
@@ -10158,7 +10482,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, target, 'Objectif de marge mis à jour avec succès');
       } catch (error) {
         logger.error('Margin Targets - Erreur mise à jour', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/margin-targets/:id',
+            method: 'PUT',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la mise à jour de l\'objectif de marge');
       }
@@ -10176,7 +10507,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, null, 'Objectif de marge supprimé avec succès');
       } catch (error) {
         logger.error('Margin Targets - Erreur suppression', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/margin-targets/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la suppression de l\'objectif de marge');
       }
@@ -10210,7 +10548,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, studyDuration);
       } catch (error) {
         logger.error('Study Duration - Erreur récupération', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/projects/:id/study-duration',
+            method: 'GET',
+            projectId: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw error;
       }
@@ -10252,7 +10597,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, studyDuration, 'Durée d\'étude mise à jour avec succès');
       } catch (error) {
         logger.error('Study Duration - Erreur mise à jour', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/projects/:id/study-duration',
+            method: 'PATCH',
+            projectId: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la mise à jour de la durée d\'étude');
       }
@@ -10275,7 +10627,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, tags);
       } catch (error) {
         logger.error('Classification Tags - Erreur récupération', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/tags/classification',
+            method: 'GET',
+            category: req.query.category,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la récupération des tags de classification');
       }
@@ -10296,7 +10655,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, tag);
       } catch (error) {
         logger.error('Classification Tags - Erreur récupération tag', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/tags/classification/:id',
+            method: 'GET',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw error;
       }
@@ -10319,7 +10685,15 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, tag, 'Tag de classification créé avec succès');
       } catch (error) {
         logger.error('Classification Tags - Erreur création', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/tags/classification',
+            method: 'POST',
+            category: req.body.category,
+            name: req.body.name,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la création du tag de classification');
       }
@@ -10344,7 +10718,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, tag, 'Tag de classification mis à jour avec succès');
       } catch (error) {
         logger.error('Classification Tags - Erreur mise à jour', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/tags/classification/:id',
+            method: 'PUT',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la mise à jour du tag de classification');
       }
@@ -10362,7 +10743,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, null, 'Tag de classification supprimé avec succès');
       } catch (error) {
         logger.error('Classification Tags - Erreur suppression', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/tags/classification/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la suppression du tag de classification');
       }
@@ -10386,7 +10774,15 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, entityTags);
       } catch (error) {
         logger.error('Entity Tags - Erreur récupération', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/tags/entity',
+            method: 'GET',
+            entityType: req.query.entityType,
+            entityId: req.query.entityId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la récupération des liaisons de tags');
       }
@@ -10408,7 +10804,16 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, entityTag, 'Liaison de tag créée avec succès');
       } catch (error) {
         logger.error('Entity Tags - Erreur création', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/tags/entity',
+            method: 'POST',
+            entityType: req.body.entityType,
+            entityId: req.body.entityId,
+            tagId: req.body.tagId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la création de la liaison de tag');
       }
@@ -10426,7 +10831,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, null, 'Liaison de tag supprimée avec succès');
       } catch (error) {
         logger.error('Entity Tags - Erreur suppression', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/tags/entity/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la suppression de la liaison de tag');
       }
@@ -10445,7 +10857,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, labelAssignments);
       } catch (error) {
         logger.error('Employee Labels - Erreur récupération', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/employees/:id/labels',
+            method: 'GET',
+            employeeId: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la récupération des labels employé');
       }
@@ -10474,7 +10893,15 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, assignment, 'Label employé assigné avec succès');
       } catch (error) {
         logger.error('Employee Labels - Erreur assignation', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/employees/:id/labels',
+            method: 'POST',
+            employeeId: req.params.id,
+            labelId: req.body.labelId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de l\'assignation du label employé');
       }
@@ -10495,7 +10922,15 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, null, 'Label employé supprimé avec succès');
       } catch (error) {
         logger.error('Employee Labels - Erreur suppression', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/employees/:userId/labels/:labelId',
+            method: 'DELETE',
+            userId: req.params.userId,
+            labelId: req.params.labelId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la suppression du label employé');
       }
@@ -10514,7 +10949,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, subElements);
       } catch (error) {
         logger.error('Project Sub Elements - Erreur récupération', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/projects/:id/sub-elements',
+            method: 'GET',
+            projectId: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la récupération des sous-éléments du projet');
       }
@@ -10535,7 +10977,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, subElement);
       } catch (error) {
         logger.error('Project Sub Elements - Erreur récupération sous-élément', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/project-sub-elements/:id',
+            method: 'GET',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw error;
       }
@@ -10566,7 +11015,16 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, subElement, 'Sous-élément de projet créé avec succès');
       } catch (error) {
         logger.error('Project Sub Elements - Erreur création', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/projects/:id/sub-elements',
+            method: 'POST',
+            projectId: req.params.id,
+            name: req.body.name,
+            category: req.body.category,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la création du sous-élément de projet');
       }
@@ -10594,7 +11052,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, subElement, 'Sous-élément de projet mis à jour avec succès');
       } catch (error) {
         logger.error('Project Sub Elements - Erreur mise à jour', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/project-sub-elements/:id',
+            method: 'PUT',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la mise à jour du sous-élément de projet');
       }
@@ -10612,7 +11077,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, null, 'Sous-élément de projet supprimé avec succès');
       } catch (error) {
         logger.error('Project Sub Elements - Erreur suppression', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/project-sub-elements/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la suppression du sous-élément de projet');
       }
@@ -10677,7 +11149,12 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
       };
     } catch (error) {
       logger.error('Bug Report - Erreur collecte informations serveur', {
-        metadata: { error: error instanceof Error ? error.message : String(error) }
+        metadata: { 
+          context: 'bug_report_system',
+          function: 'collectServerInfo',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
       });
       return {
         serverLogs: 'Erreur lors de la collecte',
@@ -10771,7 +11248,14 @@ ${serverInfo.serverLogs}
       if (!response.ok) {
         const errorText = await response.text();
         logger.error('Bug Report - Erreur GitHub API', {
-          metadata: { status: response.status, errorText }
+          metadata: { 
+            context: 'bug_report_system',
+            function: 'createGitHubIssue',
+            status: response.status,
+            errorText,
+            repo: `${repoOwner}/${repoName}`,
+            issueTitle: bugReport.title
+          }
         });
         return null;
       }
@@ -10784,7 +11268,14 @@ ${serverInfo.serverLogs}
 
     } catch (error) {
       logger.error('Bug Report - Erreur création issue GitHub', {
-        metadata: { error: error instanceof Error ? error.message : String(error) }
+        metadata: { 
+          context: 'bug_report_system',
+          function: 'createGitHubIssue',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          bugReportTitle: bugReport.title,
+          bugReportType: bugReport.type
+        }
       });
       return null;
     }
@@ -10848,7 +11339,14 @@ ${serverInfo.serverLogs}
           githubIssueUrl = await createGitHubIssue(bugReportData, serverInfo);
         } catch (githubError) {
           logger.error('Bug Report - Erreur GitHub non bloquante', {
-            metadata: { error: githubError instanceof Error ? githubError.message : String(githubError) }
+            metadata: { 
+              route: '/api/bug-reports',
+              method: 'POST',
+              error: githubError instanceof Error ? githubError.message : String(githubError),
+              stack: githubError instanceof Error ? githubError.stack : undefined,
+              bugReportId: savedBugReport.id,
+              userId: req.user?.id
+            }
           });
           // On continue même si GitHub échoue
         }
@@ -10878,7 +11376,15 @@ ${serverInfo.serverLogs}
 
       } catch (error) {
         logger.error('Bug Report - Erreur création rapport', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+          metadata: { 
+            route: '/api/bug-reports',
+            method: 'POST',
+            bugReportType: req.body.type,
+            bugReportPriority: req.body.priority,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
         });
         throw createError.database('Erreur lors de la création du rapport de bug');
       }

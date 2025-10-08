@@ -18,6 +18,8 @@ import {
   AO_PATTERNS, 
   LINE_ITEM_PATTERNS 
 } from './services/MenuiserieKnowledgeBase';
+// Import du logger structuré
+import { logger } from './utils/logger';
 // Imports des types pour le contexte OCR
 import type { 
   AOFieldsExtracted, 
@@ -49,7 +51,12 @@ const initializeModules = async (): Promise<void> => {
   
   try {
     isInitializingPdfParse = true;
-    console.log('[OCR] Initializing pdf-parse module...');
+    logger.info('Initialisation module pdf-parse', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'initializeModules'
+      }
+    });
     
     // Import spécial pour éviter les problèmes de fichiers de test
     const pdfParseImport = await import('pdf-parse');
@@ -60,21 +67,55 @@ const initializeModules = async (): Promise<void> => {
       throw new Error('pdf-parse module not properly imported');
     }
     
-    console.log('[OCR] pdf-parse module initialized successfully');
+    logger.info('Module pdf-parse initialisé avec succès', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'initializeModules'
+      }
+    });
   } catch (error) {
-    console.error('[OCR] Failed to initialize pdf-parse:', error);
-    console.log('[OCR] Attempting fallback initialization...');
+    logger.error('Échec initialisation pdf-parse', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'initializeModules',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
+    logger.info('Tentative initialisation fallback pdf-parse', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'initializeModules'
+      }
+    });
     
     try {
       // Fallback: essayer d'importer différemment
       const { default: pdfParse } = await import('pdf-parse');
       pdfParseModule = pdfParse;
-      console.log('[OCR] pdf-parse fallback initialization successful');
+      logger.info('Initialisation fallback pdf-parse réussie', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'initializeModules'
+        }
+      });
     } catch (fallbackError) {
-      console.error('[OCR] Fallback initialization also failed:', fallbackError);
+      logger.error('Échec initialisation fallback pdf-parse', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'initializeModules',
+          error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          stack: fallbackError instanceof Error ? fallbackError.stack : undefined
+        }
+      });
       // Ne pas lever d'erreur ici, continuer avec OCR uniquement
       pdfParseModule = null;
-      console.log('[OCR] Will continue with OCR-only processing');
+      logger.info('Continuation avec traitement OCR uniquement', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'initializeModules'
+        }
+      });
     }
   } finally {
     isInitializingPdfParse = false;
@@ -411,16 +452,33 @@ export class OCRService {
     
     try {
       this.isInitializingTesseract = true;
-      console.log('[OCR] Initializing Tesseract worker...');
+      logger.info('Initialisation Tesseract worker', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'initialize'
+        }
+      });
       
       this.tesseractWorker = await createWorker(['fra', 'eng']);
       await this.tesseractWorker.setParameters({
         tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ.,!?;:()[]{}/@#€$%&*+-=_" ',
       });
       
-      console.log('[OCR] Tesseract worker initialized successfully');
+      logger.info('Tesseract worker initialisé avec succès', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'initialize'
+        }
+      });
     } catch (error) {
-      console.error('[OCR] Failed to initialize Tesseract worker:', error);
+      logger.error('Échec initialisation Tesseract worker', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'initialize',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       this.tesseractWorker = null;
       throw new Error(`Failed to initialize Tesseract: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
@@ -444,7 +502,13 @@ export class OCRService {
    */
   async generateAdaptivePatterns(documentType: 'ao' | 'supplier_quote'): Promise<Record<string, RegExp[]>> {
     try {
-      console.log(`[OCR] Génération de patterns adaptatifs pour ${documentType}...`);
+      logger.info('Génération patterns adaptatifs', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'generateAdaptivePatterns',
+          documentType: documentType
+        }
+      });
       
       // Utiliser le moteur contextuel pour générer des patterns adaptatifs
       const adaptivePatterns = contextualOCREngine.generateAdaptivePatterns(documentType);
@@ -452,11 +516,25 @@ export class OCRService {
       // Combiner avec les patterns de base existants
       const combinedPatterns = { ...AO_PATTERNS, ...adaptivePatterns };
       
-      console.log(`[OCR] ${Object.keys(adaptivePatterns).length} patterns adaptatifs générés`);
+      logger.info('Patterns adaptatifs générés', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'generateAdaptivePatterns',
+          documentType: documentType,
+          patternsCount: Object.keys(adaptivePatterns).length
+        }
+      });
       return combinedPatterns;
       
     } catch (error) {
-      console.warn('[OCR] Échec génération patterns adaptatifs:', error);
+      logger.warn('Échec génération patterns adaptatifs', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'generateAdaptivePatterns',
+          documentType: documentType,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
       return AO_PATTERNS; // Fallback vers patterns de base
     }
   }
@@ -470,14 +548,28 @@ export class OCRService {
     validationScore: number;
   }> {
     try {
-      console.log(`[OCR] Validation et correction des champs ${documentType}...`);
+      logger.info('Validation et correction champs', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'validateAndCorrectFields',
+          documentType: documentType
+        }
+      });
       
       // Utiliser le moteur contextuel pour validation et correction
       const contextualResult = await contextualOCREngine.enhanceOCRFields(fields, documentType);
       
       const validationScore = this.calculateValidationScore(contextualResult.validationErrors);
       
-      console.log(`[OCR] Validation terminée - Score: ${validationScore}, Corrections: ${contextualResult.suggestedCorrections.length}`);
+      logger.info('Validation terminée', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'validateAndCorrectFields',
+          documentType: documentType,
+          validationScore: validationScore,
+          correctionsCount: contextualResult.suggestedCorrections.length
+        }
+      });
       
       return {
         correctedFields: contextualResult.extractedFields,
@@ -486,7 +578,15 @@ export class OCRService {
       };
       
     } catch (error) {
-      console.error('[OCR] Échec validation/correction:', error);
+      logger.error('Échec validation/correction', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'validateAndCorrectFields',
+          documentType: documentType,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         correctedFields: fields,
         corrections: [],
@@ -504,7 +604,12 @@ export class OCRService {
     completionScore: number;
   }> {
     try {
-      console.log('[OCR] Auto-complétion depuis données maître...');
+      logger.info('Auto-complétion depuis données maître', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'autoCompleteFromMasterData'
+        }
+      });
       
       const completedFields = { ...fields };
       const completedFieldNames: string[] = [];
@@ -546,7 +651,14 @@ export class OCRService {
       
       const completionScore = completedFieldNames.length / Object.keys(completedFields).length;
       
-      console.log(`[OCR] Auto-complétion terminée - ${completedFieldNames.length} champs complétés, score: ${completionScore.toFixed(2)}`);
+      logger.info('Auto-complétion terminée', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'autoCompleteFromMasterData',
+          completedFieldsCount: completedFieldNames.length,
+          completionScore: parseFloat(completionScore.toFixed(2))
+        }
+      });
       
       return {
         completedFields,
@@ -555,7 +667,14 @@ export class OCRService {
       };
       
     } catch (error) {
-      console.error('[OCR] Échec auto-complétion:', error);
+      logger.error('Échec auto-complétion', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'autoCompleteFromMasterData',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return {
         completedFields: fields,
         completedFieldNames: [],
@@ -613,7 +732,13 @@ export class OCRService {
       }
       
     } catch (error) {
-      console.warn('[OCR] Échec auto-complétion contacts maître:', error);
+      logger.warn('Échec auto-complétion contacts maître', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'autoCompleteMasterContacts',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
     }
   }
 
@@ -725,7 +850,15 @@ export class OCRService {
       recommendations.push('Score contextuel faible - Enrichir les données de référence pour améliorer la précision');
     }
     
-    console.log(`[OCR] Rapport d'amélioration généré - ${improvementPercentage.toFixed(1)}% d'amélioration, ${fieldsImproved.length} champs optimisés`);
+    logger.info('Rapport amélioration généré', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'generateImprovementReport',
+        documentType: documentType,
+        improvementPercentage: parseFloat(improvementPercentage.toFixed(1)),
+        fieldsImprovedCount: fieldsImproved.length
+      }
+    });
     
     return {
       improvementPercentage,
@@ -751,13 +884,27 @@ export class OCRService {
     aoLotId: string
   ): Promise<SupplierQuoteOCRResult> {
     try {
-      console.log(`[OCR] Début analyse devis fournisseur - Document: ${documentId}`);
+      logger.info('Début analyse devis fournisseur', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processSupplierQuote',
+          documentId: documentId,
+          sessionId: sessionId,
+          aoLotId: aoLotId
+        }
+      });
       
       // Initialiser les modules nécessaires
       await initializeModules();
       
       // Étape 1: Essayer d'extraire le texte natif du PDF
-      console.log('[OCR] Tentative extraction texte natif...');
+      logger.info('Tentative extraction texte natif', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processSupplierQuote',
+          documentId: documentId
+        }
+      });
       const nativeText = await this.extractNativeText(pdfBuffer);
       
       let extractedText: string;
@@ -766,13 +913,26 @@ export class OCRService {
       
       if (nativeText && nativeText.length > 100) {
         // PDF contient du texte natif
-        console.log('[OCR] PDF avec texte natif détecté');
+        logger.info('PDF avec texte natif détecté', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'processSupplierQuote',
+            documentId: documentId,
+            textLength: nativeText.length
+          }
+        });
         extractedText = nativeText;
         extractionMethod = 'native-text';
         confidence = 95;
       } else {
         // Fallback vers OCR pour PDFs scannés
-        console.log('[OCR] Fallback vers OCR pour PDF scanné');
+        logger.info('Fallback vers OCR pour PDF scanné', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'processSupplierQuote',
+            documentId: documentId
+          }
+        });
         const ocrResult = await this.processSupplierQuoteWithOCR(pdfBuffer);
         extractedText = ocrResult.extractedText;
         extractionMethod = 'ocr';
@@ -780,12 +940,25 @@ export class OCRService {
       }
       
       // Étape 2: Parser les champs spécifiques du devis
-      console.log('[OCR] Analyse des champs du devis...');
+      logger.info('Analyse champs du devis', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processSupplierQuote',
+          documentId: documentId,
+          extractionMethod: extractionMethod
+        }
+      });
       const processedFields = await this.parseSupplierQuoteFields(extractedText);
       processedFields.extractionMethod = extractionMethod;
       
       // Étape 3: AMÉLIORATION CONTEXTUELLE - Nouveau moteur intelligent
-      console.log('[OCR] Application du moteur contextuel...');
+      logger.info('Application moteur contextuel', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processSupplierQuote',
+          documentId: documentId
+        }
+      });
       let contextualResult: ContextualOCRResult | undefined;
       try {
         contextualResult = await contextualOCREngine.enhanceOCRFields(processedFields, 'supplier_quote');
@@ -803,7 +976,15 @@ export class OCRService {
           materialEnhancementApplied: contextualResult.mappingResults.some(m => m.fieldName.includes('material'))
         };
         
-        console.log(`[OCR] Amélioration contextuelle terminée - Score: ${contextualResult.contextualScore}, Champs améliorés: ${contextualResult.mappingResults.length}`);
+        logger.info('Amélioration contextuelle terminée', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'processSupplierQuote',
+            documentId: documentId,
+            contextualScore: contextualResult.contextualScore,
+            fieldsImprovedCount: contextualResult.mappingResults.length
+          }
+        });
         
         // Émettre des alertes pour erreurs critiques
         const criticalErrors = contextualResult.validationErrors.filter(e => e.severity === 'critical');
@@ -816,7 +997,14 @@ export class OCRService {
         }
         
       } catch (contextualError) {
-        console.warn('[OCR] Échec du moteur contextuel, poursuite en mode standard:', contextualError);
+        logger.warn('Échec moteur contextuel, poursuite mode standard', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'processSupplierQuote',
+            documentId: documentId,
+            error: contextualError instanceof Error ? contextualError.message : String(contextualError)
+          }
+        });
         // Continuer avec les champs de base si le moteur contextuel échoue
       }
       
@@ -841,9 +1029,18 @@ export class OCRService {
       });
       
       const statusMessage = contextualResult ? 
-        `[OCR] ✅ Analyse devis terminée (contextuel) - Qualité: ${qualityScore}%, Complétude: ${completenessScore}%, Score contextuel: ${contextualResult.contextualScore}` :
-        `[OCR] ✅ Analyse devis terminée (standard) - Qualité: ${qualityScore}%, Complétude: ${completenessScore}%`;
-      console.log(statusMessage);
+        `Analyse devis terminée (contextuel) - Qualité: ${qualityScore}%, Complétude: ${completenessScore}%, Score contextuel: ${contextualResult.contextualScore}` :
+        `Analyse devis terminée (standard) - Qualité: ${qualityScore}%, Complétude: ${completenessScore}%`;
+      logger.info(statusMessage, {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processSupplierQuote',
+          documentId: documentId,
+          qualityScore: qualityScore,
+          completenessScore: completenessScore,
+          contextualEnhanced: !!contextualResult
+        }
+      });
       
       return {
         extractedText,
@@ -862,7 +1059,15 @@ export class OCRService {
       };
       
     } catch (error) {
-      console.error(`[OCR] ❌ Erreur lors de l'analyse du devis ${documentId}:`, error);
+      logger.error('Erreur analyse devis fournisseur', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processSupplierQuote',
+          documentId: documentId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       // Sauvegarder l'erreur dans la base
       await this.saveSupplierQuoteAnalysisError(documentId, sessionId, aoLotId, error);
@@ -874,22 +1079,43 @@ export class OCRService {
   // Méthode principale pour traiter un PDF (AO - existante)
   async processPDF(pdfBuffer: Buffer): Promise<OCRResult> {
     try {
-      console.log('[OCR] Starting PDF processing...');
+      logger.info('Démarrage traitement PDF', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processPDF'
+        }
+      });
       
       // Initialiser les modules nécessaires en premier
       await initializeModules();
       
       // Étape 1: Essayer d'extraire le texte natif du PDF
-      console.log('[OCR] Attempting native text extraction...');
+      logger.info('Tentative extraction texte natif PDF', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processPDF'
+        }
+      });
       const nativeText = await this.extractNativeText(pdfBuffer);
       
       if (nativeText && nativeText.length > 100) {
         // PDF contient du texte natif
-        console.log('[OCR] PDF with native text detected, using pdf-parse');
+        logger.info('PDF avec texte natif détecté', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'processPDF',
+            textLength: nativeText.length
+          }
+        });
         let processedFields = await this.parseAOFields(nativeText);
         
         // AMÉLIORATION CONTEXTUELLE - Moteur intelligent pour AO
-        console.log('[OCR] Application du moteur contextuel pour AO...');
+        logger.info('Application moteur contextuel pour AO', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'processPDF'
+          }
+        });
         let contextualResult: ContextualOCRResult | undefined;
         let finalConfidence = 95;
         
@@ -912,10 +1138,23 @@ export class OCRService {
           // Bonus de confiance basé sur la cohérence contextuelle
           finalConfidence = Math.min(100, 95 + (contextualResult.contextualScore * 5));
           
-          console.log(`[OCR] Amélioration contextuelle AO terminée - Score: ${contextualResult.contextualScore}, Champs mappés: ${contextualResult.mappingResults.length}`);
+          logger.info('Amélioration contextuelle AO terminée', {
+            metadata: {
+              service: 'OCRService',
+              operation: 'processPDF',
+              contextualScore: contextualResult.contextualScore,
+              fieldsMappedCount: contextualResult.mappingResults.length
+            }
+          });
           
         } catch (contextualError) {
-          console.warn('[OCR] Échec du moteur contextuel AO, poursuite en mode standard:', contextualError);
+          logger.warn('Échec moteur contextuel AO, poursuite mode standard', {
+            metadata: {
+              service: 'OCRService',
+              operation: 'processPDF',
+              error: contextualError instanceof Error ? contextualError.message : String(contextualError)
+            }
+          });
         }
         
         // Calculer le scoring technique après détection des critères
@@ -935,11 +1174,23 @@ export class OCRService {
       }
       
       // Étape 2: Fallback vers OCR pour PDFs scannés
-      console.log('[OCR] Scanned PDF detected, using OCR fallback');
+      logger.info('PDF scanné détecté, fallback OCR', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processPDF'
+        }
+      });
       return await this.processWithOCR(pdfBuffer);
       
     } catch (error) {
-      console.error('[OCR] Error processing PDF:', error);
+      logger.error('Erreur traitement PDF', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processPDF',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
       // Gestion d'erreur spécifique selon le type d'erreur
       if (error instanceof Error) {
@@ -962,23 +1213,50 @@ export class OCRService {
   private async extractNativeText(pdfBuffer: Buffer): Promise<string> {
     try {
       if (!pdfParseModule) {
-        console.log('[OCR] pdf-parse not initialized, calling initializeModules...');
+        logger.info('pdf-parse non initialisé, appel initializeModules', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'extractNativeText'
+          }
+        });
         await initializeModules();
       }
       
       if (!pdfParseModule) {
-        console.log('[OCR] pdf-parse module not available, skipping native text extraction');
+        logger.info('Module pdf-parse indisponible, skip extraction texte natif', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'extractNativeText'
+          }
+        });
         return ''; // Retourner chaîne vide pour déclencher le fallback OCR
       }
       
-      console.log('[OCR] Extracting native text from PDF...');
+      logger.info('Extraction texte natif depuis PDF', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'extractNativeText'
+        }
+      });
       const data = await pdfParseModule(pdfBuffer);
       const extractedText = data.text || '';
       
-      console.log(`[OCR] Native text extraction completed: ${extractedText.length} characters extracted`);
+      logger.info('Extraction texte natif terminée', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'extractNativeText',
+          charactersExtracted: extractedText.length
+        }
+      });
       return extractedText;
     } catch (error) {
-      console.log('[OCR] Native text extraction failed, will use OCR fallback:', error instanceof Error ? error.message : 'Unknown error');
+      logger.info('Extraction texte natif échouée, fallback OCR', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'extractNativeText',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
       return '';
     }
   }
@@ -986,7 +1264,12 @@ export class OCRService {
   // OCR pour PDFs scannés - Version POC simplifiée
   private async processWithOCR(pdfBuffer: Buffer): Promise<OCRResult> {
     try {
-      console.log('[OCR] Initializing Tesseract for OCR processing...');
+      logger.info('Initialisation Tesseract pour traitement OCR', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processWithOCR'
+        }
+      });
       await this.initialize();
       
       if (!this.tesseractWorker) {
@@ -995,14 +1278,24 @@ export class OCRService {
       
       // Pour le POC, on simule l'extraction OCR avec des données de test
       // Dans un environnement de production, on utiliserait une vraie conversion PDF->Image->OCR
-      console.log('[OCR] POC Mode: Using simulated OCR data for scanned PDFs');
+      logger.info('Mode POC: données OCR simulées pour PDFs scannés', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processWithOCR'
+        }
+      });
       
       // Simuler les données extraites depuis le PDF scanné
       const fullText = this.getSimulatedOCRText();
       let processedFields = await this.parseAOFields(fullText);
       
       // AMÉLIORATION CONTEXTUELLE - Moteur intelligent pour OCR AO
-      console.log('[OCR] Application du moteur contextuel pour OCR AO...');
+      logger.info('Application moteur contextuel pour OCR AO', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processWithOCR'
+        }
+      });
       let contextualResult: ContextualOCRResult | undefined;
       let finalConfidence = 85;
       
@@ -1025,16 +1318,35 @@ export class OCRService {
         // Bonus de confiance contextuelle (plus important pour OCR car moins fiable de base)
         finalConfidence = Math.min(100, 85 + (contextualResult.contextualScore * 15));
         
-        console.log(`[OCR] Amélioration contextuelle OCR terminée - Score: ${contextualResult.contextualScore}, Confiance finale: ${finalConfidence}`);
+        logger.info('Amélioration contextuelle OCR terminée', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'processWithOCR',
+            contextualScore: contextualResult.contextualScore,
+            finalConfidence: finalConfidence
+          }
+        });
         
       } catch (contextualError) {
-        console.warn('[OCR] Échec du moteur contextuel OCR, poursuite en mode standard:', contextualError);
+        logger.warn('Échec moteur contextuel OCR, poursuite mode standard', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'processWithOCR',
+            error: contextualError instanceof Error ? contextualError.message : String(contextualError)
+          }
+        });
       }
       
       // Calculer le scoring technique après détection des critères
       const technicalScoring = await this.computeTechnicalScoring(processedFields.specialCriteria, processedFields.reference);
       
-      console.log(`[OCR] OCR processing completed: ${fullText.length} characters simulated`);
+      logger.info('Traitement OCR terminé', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processWithOCR',
+          charactersSimulated: fullText.length
+        }
+      });
       
       return {
         extractedText: fullText,
@@ -1046,7 +1358,14 @@ export class OCRService {
       };
       
     } catch (error) {
-      console.error('[OCR] OCR processing failed:', error);
+      logger.error('Échec traitement OCR', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processWithOCR',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       if (errorMessage.includes('Tesseract')) {
@@ -1190,7 +1509,13 @@ Réponses publiées au plus tard le 22/03/2025
         .png({ quality: 100 })          // Compression sans perte
         .toBuffer();
     } catch (error) {
-      console.warn('Image preprocessing failed, using original:', error);
+      logger.warn('Échec preprocessing image, utilisation originale', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'preprocessImage',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
       return imageBuffer;
     }
   }
@@ -1441,7 +1766,13 @@ Réponses publiées au plus tard le 22/03/2025
       }
     }
     
-    console.log(`[OCR] Critères spéciaux détectés: ${Object.entries(criteria).filter(([,v]) => v === true).map(([k]) => k).join(', ')}`);
+    logger.info('Critères spéciaux détectés', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'detectSpecialCriteria',
+        detectedCriteria: Object.entries(criteria).filter(([,v]) => v === true).map(([k]) => k)
+      }
+    });
     
     return {
       ...criteria,
@@ -1570,18 +1901,37 @@ Réponses publiées au plus tard le 22/03/2025
     fields.specialCriteria = this.detectSpecialCriteria(text);
     
     // NOUVEAUTÉ: Extraction matériaux et couleurs avec patterns avancés OCR
-    console.log('[OCR] Extraction matériaux et couleurs...');
+    logger.info('Extraction matériaux et couleurs', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'parseAOFields'
+      }
+    });
     const { materials, colors } = this.extractMaterialsAndColors(text);
     fields.materials = materials;
     fields.colors = colors;
     
-    console.log(`[OCR] Extraction terminée: ${materials.length} matériaux, ${colors.length} couleurs détectés`);
+    logger.info('Extraction matériaux/couleurs terminée', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'parseAOFields',
+        materialsCount: materials.length,
+        colorsCount: colors.length
+      }
+    });
     
     // Évaluation des règles matériaux-couleurs (après tous les champs extraits)
     try {
       await this.evaluateMaterialColorRules(fields, text);
     } catch (error) {
-      console.error('[OCR] Erreur lors de l\'évaluation des règles matériaux-couleurs:', error);
+      logger.error('Erreur évaluation règles matériaux-couleurs', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'parseAOFields',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
     
     // CORRECTION BLOCKER 2: Calculer et inclure technicalScoring
@@ -1615,12 +1965,32 @@ Réponses publiées au plus tard le 22/03/2025
           }
         };
         
-        console.log(`[OCR] Publication alerte technique pour ${alertData.aoReference}, score: ${alertData.score}`);
+        logger.info('Publication alerte technique', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'parseAOFields',
+            aoReference: alertData.aoReference,
+            score: alertData.score
+          }
+        });
         eventBus.publishTechnicalAlert(alertData);
         
-        console.log(`[OCR] ✅ Alerte technique publiée via EventBus depuis parseAOFields pour AO ${fields.reference}`);
+        logger.info('Alerte technique publiée via EventBus', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'parseAOFields',
+            aoReference: fields.reference
+          }
+        });
       } catch (error) {
-        console.error(`[OCR] ❌ Erreur lors de la publication de l'alerte technique depuis parseAOFields:`, error);
+        logger.error('Erreur publication alerte technique', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'parseAOFields',
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          }
+        });
       }
     }
     
@@ -1639,21 +2009,47 @@ Réponses publiées au plus tard le 22/03/2025
       const rules = await storage.getMaterialColorRules();
       const triggeredRules: string[] = [];
       
-      console.log(`[OCR] Évaluation de ${rules.length} règles d'alerte depuis storage`);
+      logger.info('Évaluation règles alerte depuis storage', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'getTriggeredAlertRules',
+          rulesCount: rules.length
+        }
+      });
       
       for (const rule of rules) {
         const isTriggered = await this.evaluateAlertRule(rule, materials, specialCriteria);
         if (isTriggered) {
           triggeredRules.push(rule.id);
-          console.log(`[OCR] ✅ Règle déclenchée: ${rule.id} (${rule.severity})`);
+          logger.info('Règle alerte déclenchée', {
+            metadata: {
+              service: 'OCRService',
+              operation: 'getTriggeredAlertRules',
+              ruleId: rule.id,
+              severity: rule.severity
+            }
+          });
         }
       }
       
-      console.log(`[OCR] Règles d'alerte déclenchées: ${triggeredRules.join(', ') || 'aucune'}`);
+      logger.info('Règles alerte évaluées', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'getTriggeredAlertRules',
+          triggeredRulesCount: triggeredRules.length,
+          triggeredRules: triggeredRules
+        }
+      });
       return triggeredRules;
       
     } catch (error) {
-      console.warn('[OCR] Error fetching material color rules:', error);
+      logger.warn('Erreur récupération règles matériaux-couleurs', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'getTriggeredAlertRules',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
       // Fallback vers règles par défaut
       return this.getDefaultTriggeredRules(materials, specialCriteria);
     }
@@ -1714,18 +2110,31 @@ Réponses publiées au plus tard le 22/03/2025
       }
       
       if (finalMatch) {
-        console.log(`[OCR] Règle ${rule.id} déclenchée:`, {
-          materialMatch,
-          specialCriteriaMatch,
-          condition: rule.condition,
-          severity: rule.severity
+        logger.info('Règle alerte déclenchée', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'evaluateAlertRule',
+            ruleId: rule.id,
+            materialMatch: materialMatch,
+            specialCriteriaMatch: specialCriteriaMatch,
+            condition: rule.condition,
+            severity: rule.severity
+          }
         });
       }
       
       return finalMatch;
       
     } catch (error) {
-      console.error(`[OCR] Erreur lors de l'évaluation de la règle ${rule.id}:`, error);
+      logger.error('Erreur évaluation règle alerte', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'evaluateAlertRule',
+          ruleId: rule.id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return false;
     }
   }
@@ -1738,7 +2147,12 @@ Réponses publiées au plus tard le 22/03/2025
     const triggeredRules: string[] = [];
     const materialNames = materials.map(m => m.material);
     
-    console.log('[OCR] Utilisation des règles par défaut (fallback)');
+    logger.info('Utilisation règles par défaut (fallback)', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'getDefaultTriggeredRules'
+      }
+    });
     
     // Règle PVC + coupe-feu = critical
     if (materialNames.includes('pvc') && specialCriteria.coupeFeu) {
@@ -1756,7 +2170,14 @@ Réponses publiées au plus tard le 22/03/2025
       triggeredRules.push('custom-composite-thermal');
     }
     
-    console.log(`[OCR] Règles par défaut déclenchées: ${triggeredRules.join(', ') || 'aucune'}`);
+    logger.info('Règles par défaut déclenchées', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'getDefaultTriggeredRules',
+        triggeredRulesCount: triggeredRules.length,
+        triggeredRules: triggeredRules
+      }
+    });
     return triggeredRules;
   }
 
@@ -1777,7 +2198,13 @@ Réponses publiées au plus tard le 22/03/2025
         return date.toISOString().split('T')[0]; // Format YYYY-MM-DD
       }
     } catch (error) {
-      console.warn('Date parsing failed:', dateStr);
+      logger.warn('Échec parsing date', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'parseDate',
+          dateStr: dateStr
+        }
+      });
     }
     
     return dateStr;
@@ -1810,7 +2237,12 @@ Réponses publiées au plus tard le 22/03/2025
   }, aoReference?: string): Promise<TechnicalScoringResult | undefined> {
     // Si aucun critère détecté, pas de scoring
     if (!specialCriteria) {
-      console.log('[OCR] Aucun critère spécial détecté - pas de scoring technique');
+      logger.info('Aucun critère spécial détecté, pas de scoring technique', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'computeTechnicalScoring'
+        }
+      });
       return undefined;
     }
 
@@ -1826,22 +2258,44 @@ Réponses publiées au plus tard le 22/03/2025
       };
 
       // CORRECTION CRITIQUE: Charger la configuration utilisateur depuis storage
-      console.log('[OCR] Chargement de la configuration scoring depuis storage...');
+      logger.info('Chargement configuration scoring depuis storage', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'computeTechnicalScoring'
+        }
+      });
       const config = await storage.getScoringConfig();
-      console.log('[OCR] Configuration scoring chargée:', config);
+      logger.info('Configuration scoring chargée', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'computeTechnicalScoring',
+          config: config
+        }
+      });
 
       // Calculer le scoring avec la configuration utilisateur (au lieu de la config par défaut)
       const result = ScoringService.compute(criteriaForScoring, config);
       
-      console.log(`[OCR] Scoring technique calculé:
-        - Score total: ${result.totalScore}
-        - Critères déclenchés: ${result.triggeredCriteria.join(', ') || 'aucun'}
-        - Alerte: ${result.shouldAlert ? 'OUI 🚨' : 'NON'}
-        - Détails: ${JSON.stringify(result.details)}`);
+      logger.info('Scoring technique calculé', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'computeTechnicalScoring',
+          totalScore: result.totalScore,
+          triggeredCriteria: result.triggeredCriteria,
+          shouldAlert: result.shouldAlert
+        }
+      });
 
       // Émettre une alerte technique si le seuil est dépassé
       if (result.shouldAlert && aoReference) {
-        console.log(`[OCR] 🚨 ALERTE TECHNIQUE déclenchée pour AO ${aoReference} - Score: ${result.totalScore}`);
+        logger.info('Alerte technique déclenchée', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'computeTechnicalScoring',
+            aoReference: aoReference,
+            score: result.totalScore
+          }
+        });
         
         try {
           eventBus.publishTechnicalAlert({
@@ -1857,15 +2311,36 @@ Réponses publiées au plus tard le 22/03/2025
             }
           });
           
-          console.log(`[OCR] ✅ Alerte technique publiée via EventBus pour AO ${aoReference}`);
+          logger.info('Alerte technique publiée via EventBus', {
+            metadata: {
+              service: 'OCRService',
+              operation: 'computeTechnicalScoring',
+              aoReference: aoReference
+            }
+          });
         } catch (error) {
-          console.error(`[OCR] ❌ Erreur lors de la publication de l'alerte technique:`, error);
+          logger.error('Erreur publication alerte technique', {
+            metadata: {
+              service: 'OCRService',
+              operation: 'computeTechnicalScoring',
+              aoReference: aoReference,
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            }
+          });
         }
       }
 
       return result;
     } catch (error) {
-      console.error('[OCR] Erreur lors du calcul du scoring technique:', error);
+      logger.error('Erreur calcul scoring technique', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'computeTechnicalScoring',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return undefined;
     }
   }
@@ -1878,7 +2353,12 @@ Réponses publiées au plus tard le 22/03/2025
    * Extrait les matériaux et couleurs avec liaison contextuelle sophistiquée - VERSION OPTIMISÉE MENUISERIE FRANÇAISE
    */
   private extractMaterialsAndColors(text: string): { materials: MaterialSpec[]; colors: ColorSpec[] } {
-    console.log('[OCR] Début extraction matériaux et couleurs optimisée pour menuiserie française...');
+    logger.info('Début extraction matériaux et couleurs optimisée', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'extractMaterialsAndColors'
+      }
+    });
     
     const materials: MaterialSpec[] = [];
     const colors: ColorSpec[] = [];
@@ -1930,7 +2410,15 @@ Réponses publiées au plus tard le 22/03/2025
             context: isMenuiserieContext ? 'menuiserie' : 'general'
           } as any);
           
-          console.log(`[OCR] Matériau détecté: ${materialKey}, contexte: ${isMenuiserieContext ? 'menuiserie' : 'general'}, confiance: ${confidence.toFixed(2)}`);
+          logger.info('Matériau détecté', {
+            metadata: {
+              service: 'OCRService',
+              operation: 'extractMaterialsAndColors',
+              material: materialKey,
+              context: isMenuiserieContext ? 'menuiserie' : 'general',
+              confidence: confidence
+            }
+          });
         }
       }
       
@@ -1948,7 +2436,14 @@ Réponses publiées au plus tard le 22/03/2025
           confidence: isMenuiserieContext ? 0.9 : 0.7
         } as any);
         
-        console.log(`[OCR] Couleur RAL détectée: ${ralCode} (${this.getRalColorName(ralCode)}), finitions: ${JSON.stringify(associatedFinish)}`);
+        logger.info('Couleur RAL détectée', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'extractMaterialsAndColors',
+            ralCode: ralCode,
+            colorName: this.getRalColorName(ralCode)
+          }
+        });
       }
       
       // Détecter couleurs par nom avec finitions spécialisées
@@ -1964,14 +2459,27 @@ Réponses publiées au plus tard le 22/03/2025
           confidence: isMenuiserieContext ? 0.8 : 0.6
         } as any);
         
-        console.log(`[OCR] Couleur nommée détectée: ${colorName}, finitions: ${JSON.stringify(associatedFinishes)}`);
+        logger.info('Couleur nommée détectée', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'extractMaterialsAndColors',
+            colorName: colorName
+          }
+        });
       }
     }
     
     const dedupedMaterials = this.deduplicateMaterials(materials);
     const dedupedColors = this.deduplicateColors(colors);
     
-    console.log(`[OCR] Extraction optimisée terminée: ${dedupedMaterials.length} matériaux, ${dedupedColors.length} couleurs`);
+    logger.info('Extraction optimisée terminée', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'extractMaterialsAndColors',
+        materialsCount: dedupedMaterials.length,
+        colorsCount: dedupedColors.length
+      }
+    });
     
     return { materials: dedupedMaterials, colors: dedupedColors };
   }
@@ -2144,19 +2652,34 @@ Réponses publiées au plus tard le 22/03/2025
     fullText: string
   ): Promise<void> {
     try {
-      console.log('[OCR] Évaluation des règles matériaux-couleurs...');
-      console.log('[OCR] DEBUG: storage object type:', typeof storage);
-      console.log('[OCR] DEBUG: storage.getMaterialColorRules function exists:', typeof storage.getMaterialColorRules === 'function');
+      logger.info('Évaluation règles matériaux-couleurs', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'evaluateMaterialColorRules'
+        }
+      });
       
       const rules = await storage.getMaterialColorRules();
-      console.log(`[OCR] DEBUG: Rules retrieved:`, rules);
-      console.log(`[OCR] ${rules?.length || 0} règles à évaluer`);
+      logger.info('Règles matériaux-couleurs récupérées', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'evaluateMaterialColorRules',
+          rulesCount: rules?.length || 0
+        }
+      });
       
       for (const rule of rules) {
         const triggered = this.evaluateRule(rule, processedFields, fullText);
         
         if (triggered) {
-          console.log(`[OCR] 🚨 RÈGLE DÉCLENCHÉE: ${rule.message}`);
+          logger.info('Règle matériau-couleur déclenchée', {
+            metadata: {
+              service: 'OCRService',
+              operation: 'evaluateMaterialColorRules',
+              ruleId: rule.id,
+              ruleMessage: rule.message
+            }
+          });
           
           // Publier alerte technique via EventBus
           try {
@@ -2175,14 +2698,35 @@ Réponses publiées au plus tard le 22/03/2025
               }
             });
             
-            console.log(`[OCR] ✅ Alerte matériau-couleur publiée: ${rule.id}`);
+            logger.info('Alerte matériau-couleur publiée', {
+              metadata: {
+                service: 'OCRService',
+                operation: 'evaluateMaterialColorRules',
+                ruleId: rule.id
+              }
+            });
           } catch (eventError) {
-            console.error(`[OCR] ❌ Erreur publication alerte matériau-couleur:`, eventError);
+            logger.error('Erreur publication alerte matériau-couleur', {
+              metadata: {
+                service: 'OCRService',
+                operation: 'evaluateMaterialColorRules',
+                ruleId: rule.id,
+                error: eventError instanceof Error ? eventError.message : String(eventError),
+                stack: eventError instanceof Error ? eventError.stack : undefined
+              }
+            });
           }
         }
       }
     } catch (error) {
-      console.error('[OCR] Erreur lors de l\'évaluation des règles matériaux-couleurs:', error);
+      logger.error('Erreur évaluation règles matériaux-couleurs', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'evaluateMaterialColorRules',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     }
   }
 
@@ -2194,7 +2738,13 @@ Réponses publiées au plus tard le 22/03/2025
     fields: AOFieldsExtracted,
     fullText: string
   ): boolean {
-    console.log(`[OCR] Évaluation règle complète: ${rule.id}`);
+    logger.info('Évaluation règle complète', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'evaluateRule',
+        ruleId: rule.id
+      }
+    });
     
     try {
       const materials = fields.materials || [];
@@ -2219,7 +2769,16 @@ Réponses publiées au plus tard le 22/03/2025
         } else { // anyOf
           materialMatch = rule.materials.some(material => materialNames.includes(material));
         }
-        console.log(`[OCR] Matériaux - requis: ${rule.materials}, détectés: ${materialNames}, match: ${materialMatch}`);
+        logger.info('Évaluation correspondance matériaux', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'evaluateRule',
+            ruleId: rule.id,
+            requiredMaterials: rule.materials,
+            detectedMaterials: materialNames,
+            match: materialMatch
+          }
+        });
       } else {
         materialMatch = true; // Pas de contrainte matériau
       }
@@ -2244,7 +2803,15 @@ Réponses publiées au plus tard le 22/03/2025
         } else { // anyOf
           specialCriteriaMatch = criteriaMatches.some(match => match);
         }
-        console.log(`[OCR] Critères spéciaux - requis: ${rule.specialCriteria}, matches: ${criteriaMatches}, result: ${specialCriteriaMatch}`);
+        logger.info('Évaluation correspondance critères spéciaux', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'evaluateRule',
+            ruleId: rule.id,
+            requiredCriteria: rule.specialCriteria,
+            match: specialCriteriaMatch
+          }
+        });
       } else {
         specialCriteriaMatch = true; // Pas de contrainte critères spéciaux
       }
@@ -2257,11 +2824,29 @@ Réponses publiées au plus tard le 22/03/2025
         finalMatch = materialMatch || specialCriteriaMatch;
       }
       
-      console.log(`[OCR] Règle ${rule.id}: matériaux=${materialMatch}, critères=${specialCriteriaMatch}, condition=${rule.condition}, résultat=${finalMatch}`);
+      logger.info('Résultat évaluation règle', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'evaluateRule',
+          ruleId: rule.id,
+          materialMatch: materialMatch,
+          specialCriteriaMatch: specialCriteriaMatch,
+          condition: rule.condition,
+          finalMatch: finalMatch
+        }
+      });
       return finalMatch;
       
     } catch (error) {
-      console.error(`[OCR] Erreur lors de l'évaluation de la règle ${rule.id}:`, error);
+      logger.error('Erreur évaluation règle', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'evaluateRule',
+          ruleId: rule.id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return false;
     }
   }
@@ -2302,7 +2887,12 @@ Réponses publiées au plus tard le 22/03/2025
    */
   private async processSupplierQuoteWithOCR(pdfBuffer: Buffer): Promise<{ extractedText: string; confidence: number }> {
     try {
-      console.log('[OCR] Initialisation Tesseract pour devis fournisseur...');
+      logger.info('Initialisation Tesseract pour devis fournisseur', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processSupplierQuoteWithOCR'
+        }
+      });
       await this.initialize();
       
       if (!this.tesseractWorker) {
@@ -2310,7 +2900,12 @@ Réponses publiées au plus tard le 22/03/2025
       }
       
       // Pour le POC, utiliser des données simulées de devis
-      console.log('[OCR] Mode POC: Simulation OCR pour devis fournisseur');
+      logger.info('Mode POC: simulation OCR pour devis fournisseur', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processSupplierQuoteWithOCR'
+        }
+      });
       const simulatedText = this.getSimulatedSupplierQuoteText();
       
       return {
@@ -2319,7 +2914,14 @@ Réponses publiées au plus tard le 22/03/2025
       };
       
     } catch (error) {
-      console.error('[OCR] Erreur traitement OCR devis:', error);
+      logger.error('Erreur traitement OCR devis', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'processSupplierQuoteWithOCR',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw new Error(`Échec OCR devis fournisseur: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -2403,7 +3005,12 @@ l.bernard@menuiseries-moderne.fr
    * Parse les champs spécifiques d'un devis fournisseur
    */
   private async parseSupplierQuoteFields(text: string): Promise<SupplierQuoteFields> {
-    console.log('[OCR] Parsing des champs du devis fournisseur...');
+    logger.info('Parsing champs devis fournisseur', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'parseSupplierQuoteFields'
+      }
+    });
     
     const fields: SupplierQuoteFields = {
       extractionMethod: 'native-text',
@@ -2490,10 +3097,23 @@ l.bernard@menuiseries-moderne.fr
       fields.materials = materials;
       fields.colors = colors;
 
-      console.log(`[OCR] Parsing terminé - ${Object.keys(fields).filter(k => fields[k as keyof SupplierQuoteFields] !== undefined).length} champs extraits`);
+      logger.info('Parsing devis terminé', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'parseSupplierQuoteFields',
+          fieldsExtractedCount: Object.keys(fields).filter(k => fields[k as keyof SupplierQuoteFields] !== undefined).length
+        }
+      });
       
     } catch (error) {
-      console.error('[OCR] Erreur lors du parsing:', error);
+      logger.error('Erreur parsing devis', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'parseSupplierQuoteFields',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       fields.processingErrors = fields.processingErrors || [];
       fields.processingErrors.push(`Parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -2600,7 +3220,13 @@ l.bernard@menuiseries-moderne.fr
       }
     }
     
-    console.log(`[OCR] ${lineItems.length} lignes de devis extraites`);
+    logger.info('Extraction lignes devis terminée', {
+      metadata: {
+        service: 'OCRService',
+        operation: 'extractLineItems',
+        lineItemsCount: lineItems.length
+      }
+    });
     return lineItems;
   }
 
@@ -2681,7 +3307,13 @@ l.bernard@menuiseries-moderne.fr
     extractionMethod: string;
   }): Promise<void> {
     try {
-      console.log(`[OCR] Sauvegarde analyse devis ${data.documentId}...`);
+      logger.info('Sauvegarde analyse devis', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'saveSupplierQuoteAnalysis',
+          documentId: data.documentId
+        }
+      });
       
       const analysisData = {
         documentId: data.documentId,
@@ -2737,10 +3369,24 @@ l.bernard@menuiseries-moderne.fr
         validatedAt: new Date()
       });
       
-      console.log(`[OCR] ✅ Analyse sauvegardée pour ${data.documentId}`);
+      logger.info('Analyse devis sauvegardée', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'saveSupplierQuoteAnalysis',
+          documentId: data.documentId
+        }
+      });
       
     } catch (error) {
-      console.error(`[OCR] ❌ Erreur sauvegarde analyse ${data.documentId}:`, error);
+      logger.error('Erreur sauvegarde analyse devis', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'saveSupplierQuoteAnalysis',
+          documentId: data.documentId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2777,10 +3423,24 @@ l.bernard@menuiseries-moderne.fr
         status: 'rejected'
       });
       
-      console.log(`[OCR] Erreur d'analyse sauvegardée pour ${documentId}`);
+      logger.info('Erreur analyse sauvegardée', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'saveSupplierQuoteAnalysisError',
+          documentId: documentId
+        }
+      });
       
     } catch (saveError) {
-      console.error(`[OCR] Erreur lors de la sauvegarde d'erreur pour ${documentId}:`, saveError);
+      logger.error('Erreur sauvegarde erreur analyse', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'saveSupplierQuoteAnalysisError',
+          documentId: documentId,
+          error: saveError instanceof Error ? saveError.message : String(saveError),
+          stack: saveError instanceof Error ? saveError.stack : undefined
+        }
+      });
     }
   }
 }

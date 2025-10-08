@@ -183,7 +183,8 @@ export async function setupAuth(app: Express) {
             module: 'ReplitAuth',
             operation: 'verifyOIDC',
             userId: claims.sub,
-            error: 'User not found in database after upsert'
+            error: 'User not found in database after upsert',
+            stack: undefined
           }
         });
         return verified(new Error('Failed to create user'), null);

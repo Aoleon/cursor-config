@@ -65,13 +65,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import type { EventBus } from "./eventBus";
-
-// Logger simple pour les opérations storage
-const logger = {
-  info: (message: string, metadata?: any) => console.log(`[Storage] ${message}`, metadata || ''),
-  error: (message: string, error?: any) => console.error(`[Storage] ${message}`, error || ''),
-  warn: (message: string, metadata?: any) => console.warn(`[Storage] ${message}`, metadata || '')
-};
+import { logger } from "./utils/logger";
 
 // ========================================
 // TYPES POUR KPIs CONSOLIDÉS ET ANALYTICS
@@ -818,7 +812,14 @@ export class DatabaseStorage implements IStorage {
     
     // AUTOMATISATION BATIGEST : Génération automatique du code chantier lors d'accord AO
     if (offer.status && (offer.status === 'valide' || offer.status === 'fin_etudes_validee')) {
-      console.log(`[WORKFLOW] 🤖 Accord AO détecté - Déclenchement génération automatique code Batigest pour offre ${id}`);
+      logger.info('Accord AO détecté - Déclenchement génération automatique code Batigest', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateOffer',
+          offerId: id,
+          status: offer.status
+        }
+      });
       
       // Génération asynchrone pour ne pas bloquer la réponse
       setImmediate(async () => {
@@ -831,7 +832,15 @@ export class DatabaseStorage implements IStorage {
           const relatedProject = projects.find(p => p.offerId === id);
           
           if (relatedProject) {
-            console.log(`[BATIGEST] 📋 Projet associé trouvé: ${relatedProject.name} (${relatedProject.id})`);
+            logger.info('Projet associé trouvé pour génération Batigest', {
+              metadata: {
+                service: 'StoragePOC',
+                operation: 'updateOffer',
+                offerId: id,
+                projectId: relatedProject.id,
+                projectName: relatedProject.name
+              }
+            });
             
             // Vérifier si un code Batigest n'existe pas déjà (idempotence)
             if (!updatedOffer.batigestRef) {
@@ -852,7 +861,14 @@ export class DatabaseStorage implements IStorage {
                   })
                   .where(eq(offers.id, id));
                 
-                console.log(`[BATIGEST] ✅ Code chantier automatiquement assigné à l'offre: ${result.batigestRef}`);
+                logger.info('Code chantier automatiquement assigné à offre', {
+                  metadata: {
+                    service: 'StoragePOC',
+                    operation: 'updateOffer',
+                    offerId: id,
+                    batigestRef: result.batigestRef
+                  }
+                });
                 
                 // Mettre à jour aussi le projet associé si nécessaire
                 await db
@@ -863,18 +879,53 @@ export class DatabaseStorage implements IStorage {
                   })
                   .where(eq(projects.id, relatedProject.id));
                   
-                console.log(`[BATIGEST] ✅ Code chantier automatiquement assigné au projet: ${result.batigestRef}`);
+                logger.info('Code chantier automatiquement assigné au projet', {
+                  metadata: {
+                    service: 'StoragePOC',
+                    operation: 'updateOffer',
+                    projectId: relatedProject.id,
+                    batigestRef: result.batigestRef
+                  }
+                });
               } else {
-                console.warn(`[BATIGEST] ⚠️ Échec génération automatique: ${result.message}`);
+                logger.warn('Échec génération automatique code Batigest', {
+                  metadata: {
+                    service: 'StoragePOC',
+                    operation: 'updateOffer',
+                    offerId: id,
+                    message: result.message
+                  }
+                });
               }
             } else {
-              console.log(`[BATIGEST] ℹ️ Code Batigest déjà existant pour cette offre: ${updatedOffer.batigestRef} (idempotence)`);
+              logger.info('Code Batigest déjà existant (idempotence)', {
+                metadata: {
+                  service: 'StoragePOC',
+                  operation: 'updateOffer',
+                  offerId: id,
+                  batigestRef: updatedOffer.batigestRef
+                }
+              });
             }
           } else {
-            console.warn(`[BATIGEST] ⚠️ Aucun projet associé trouvé pour l'offre ${id} - Génération de code chantier reportée`);
+            logger.warn('Aucun projet associé trouvé - Génération code chantier reportée', {
+              metadata: {
+                service: 'StoragePOC',
+                operation: 'updateOffer',
+                offerId: id
+              }
+            });
           }
         } catch (error) {
-          console.error('[BATIGEST] ❌ Erreur lors de la génération automatique du code chantier:', error);
+          logger.error('Erreur génération automatique code chantier', {
+            metadata: {
+              service: 'StoragePOC',
+              operation: 'updateOffer',
+              offerId: id,
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            }
+          });
           // Ne pas faire échouer la mise à jour de l'offre pour autant
         }
       });
@@ -1001,24 +1052,30 @@ export class DatabaseStorage implements IStorage {
         assignedUser = await this.getUser(task.assignedUserId);
       }
 
-      // 🔍 DEBUG - Vérifier les champs DB bruts avant mapping  
-      console.log('🔍 STORAGE getAllTasks - Raw DB task:', {
-        id: task.id,
-        name: task.name,
-        projectId: task.projectId,
-        parentTaskId: task.parentTaskId,
-        hasProjectId: !!task.projectId,
-        hasParentTaskId: !!task.parentTaskId,
-        allKeys: Object.keys(task)
+      logger.info('Raw DB task mapping', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getAllTasks',
+          taskId: task.id,
+          taskName: task.name,
+          projectId: task.projectId,
+          parentTaskId: task.parentTaskId,
+          hasProjectId: !!task.projectId,
+          hasParentTaskId: !!task.parentTaskId
+        }
       });
 
       result.push({ ...task, assignedUser });
     }
 
-    console.log('🔍 STORAGE getAllTasks - Final result summary:', {
-      totalTasks: result.length,
-      tasksWithParentId: result.filter(t => t.parentTaskId).length,
-      tasksWithProjectId: result.filter(t => t.projectId).length
+    logger.info('getAllTasks result summary', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getAllTasks',
+        totalTasks: result.length,
+        tasksWithParentId: result.filter(t => t.parentTaskId).length,
+        tasksWithProjectId: result.filter(t => t.projectId).length
+      }
     });
 
     return result;
@@ -1880,7 +1937,12 @@ export class DatabaseStorage implements IStorage {
   async getScoringConfig(): Promise<TechnicalScoringConfig> {
     // Si pas de configuration en mémoire, retourner la configuration par défaut
     if (!DatabaseStorage.scoringConfig) {
-      console.log('[Storage] Aucune configuration scoring trouvée, utilisation des valeurs par défaut');
+      logger.info('Aucune configuration scoring trouvée, utilisation valeurs par défaut', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getScoringConfig'
+        }
+      });
       DatabaseStorage.scoringConfig = {
         weights: {
           batimentPassif: 5,
@@ -1897,7 +1959,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateScoringConfig(config: TechnicalScoringConfig): Promise<void> {
-    console.log('[Storage] Mise à jour configuration scoring:', JSON.stringify(config, null, 2));
+    logger.info('Mise à jour configuration scoring', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'updateScoringConfig',
+        threshold: config.threshold,
+        weightsCount: Object.keys(config.weights).length
+      }
+    });
     
     // Validation des valeurs (sécurité)
     if (config.threshold < 0 || config.threshold > 50) {
@@ -1912,7 +1981,12 @@ export class DatabaseStorage implements IStorage {
     
     // Sauvegarder en mémoire
     DatabaseStorage.scoringConfig = { ...config };
-    console.log('[Storage] Configuration scoring mise à jour avec succès');
+    logger.info('Configuration scoring mise à jour avec succès', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'updateScoringConfig'
+      }
+    });
   }
 
   // ========================================
@@ -1949,7 +2023,15 @@ export class DatabaseStorage implements IStorage {
     // Ajouter entrée d'historique
     await this.addTechnicalAlertHistory(id, 'created', alert.assignedToUserId ?? null, 'Alerte technique créée');
     
-    console.log(`[Storage] Alerte technique créée: ${id} pour AO ${alert.aoReference}`);
+    logger.info('Alerte technique créée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'enqueueTechnicalAlert',
+        alertId: id,
+        aoReference: alert.aoReference,
+        score: alert.score
+      }
+    });
     return technicalAlert;
   }
 
@@ -1984,7 +2066,14 @@ export class DatabaseStorage implements IStorage {
     DatabaseStorage.technicalAlerts.set(id, alert);
     
     await this.addTechnicalAlertHistory(id, 'acknowledged', userId, 'Alerte acknowledged par l\'utilisateur');
-    console.log(`[Storage] Alerte ${id} acknowledged par ${userId}`);
+    logger.info('Alerte acknowledged', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'acknowledgeTechnicalAlert',
+        alertId: id,
+        userId: userId
+      }
+    });
   }
 
   async validateTechnicalAlert(id: string, userId: string): Promise<void> {
@@ -2001,7 +2090,14 @@ export class DatabaseStorage implements IStorage {
     DatabaseStorage.technicalAlerts.set(id, alert);
     
     await this.addTechnicalAlertHistory(id, 'validated', userId, 'Alerte validée par l\'utilisateur');
-    console.log(`[Storage] Alerte ${id} validée par ${userId}`);
+    logger.info('Alerte validée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'validateTechnicalAlert',
+        alertId: id,
+        userId: userId
+      }
+    });
   }
 
   async bypassTechnicalAlert(id: string, userId: string, until: Date, reason: string): Promise<void> {
@@ -2025,7 +2121,16 @@ export class DatabaseStorage implements IStorage {
       { bypassUntil: until.toISOString(), bypassReason: reason }
     );
     
-    console.log(`[Storage] Alerte ${id} bypassée par ${userId} jusqu'au ${until.toISOString()}`);
+    logger.info('Alerte bypassée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'bypassTechnicalAlert',
+        alertId: id,
+        userId: userId,
+        bypassUntil: until.toISOString(),
+        reason: reason
+      }
+    });
   }
 
   async getActiveBypassForAo(aoId: string): Promise<{ until: Date; reason: string } | null> {
@@ -2071,7 +2176,14 @@ export class DatabaseStorage implements IStorage {
     existing.push(historyEntry);
     DatabaseStorage.technicalAlertHistory.set(alertHistoryKey, existing);
     
-    console.log(`[Storage] Historique ajouté pour alerte ${alertId}: ${action}`);
+    logger.info('Historique alerte ajouté', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'addTechnicalAlertHistory',
+        alertId: alertId,
+        action: action
+      }
+    });
     return historyEntry;
   }
 
@@ -2104,13 +2216,25 @@ export class DatabaseStorage implements IStorage {
   // ========================================
 
   async getMaterialColorRules(): Promise<MaterialColorAlertRule[]> {
-    console.log(`[Storage] Récupération de ${DatabaseStorage.materialColorRules.length} règles matériaux-couleurs`);
+    logger.info('Récupération règles matériaux-couleurs', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getMaterialColorRules',
+        rulesCount: DatabaseStorage.materialColorRules.length
+      }
+    });
     // Retourner une copie pour éviter les modifications directes
     return [...DatabaseStorage.materialColorRules];
   }
 
   async setMaterialColorRules(rules: MaterialColorAlertRule[]): Promise<void> {
-    console.log(`[Storage] Mise à jour des règles matériaux-couleurs: ${rules.length} règles`);
+    logger.info('Mise à jour règles matériaux-couleurs', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'setMaterialColorRules',
+        rulesCount: rules.length
+      }
+    });
     
     // Validation basique des règles
     for (const rule of rules) {
@@ -2132,8 +2256,14 @@ export class DatabaseStorage implements IStorage {
     // Remplacer les règles existantes
     DatabaseStorage.materialColorRules = [...rules];
     
-    console.log(`[Storage] ${rules.length} règles matériaux-couleurs mises à jour avec succès`);
-    console.log(`[Storage] IDs des règles: ${rules.map(r => r.id).join(', ')}`);
+    logger.info('Règles matériaux-couleurs mises à jour avec succès', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'setMaterialColorRules',
+        rulesCount: rules.length,
+        ruleIds: rules.map(r => r.id)
+      }
+    });
   }
 
   // ========================================
@@ -2154,7 +2284,14 @@ export class DatabaseStorage implements IStorage {
       .filter(timeline => timeline.projectId === projectId)
       .sort((a, b) => (a.plannedStartDate?.getTime() || 0) - (b.plannedStartDate?.getTime() || 0));
     
-    console.log(`[Storage] Récupération de ${timelines.length} timelines pour projet ${projectId}`);
+    logger.info('Récupération timelines projet', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getProjectTimelines',
+        projectId: projectId,
+        timelinesCount: timelines.length
+      }
+    });
     return timelines;
   }
 
@@ -2162,7 +2299,13 @@ export class DatabaseStorage implements IStorage {
     const timelines = Array.from(DatabaseStorage.projectTimelines.values())
       .sort((a, b) => (a.plannedStartDate?.getTime() || 0) - (b.plannedStartDate?.getTime() || 0));
     
-    console.log(`[Storage] Récupération de ${timelines.length} timelines totales`);
+    logger.info('Récupération timelines totales', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getAllProjectTimelines',
+        timelinesCount: timelines.length
+      }
+    });
     return timelines;
   }
 
@@ -2179,7 +2322,15 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.projectTimelines.set(id, timeline);
-    console.log(`[Storage] Timeline créée: ${id} pour projet ${data.projectId}, phase ${data.phase}`);
+    logger.info('Timeline créée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'createProjectTimeline',
+        timelineId: id,
+        projectId: data.projectId,
+        phase: data.phase
+      }
+    });
     
     return timeline;
   }
@@ -2198,7 +2349,13 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.projectTimelines.set(id, updated);
-    console.log(`[Storage] Timeline mise à jour: ${id}`);
+    logger.info('Timeline mise à jour', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'updateProjectTimeline',
+        timelineId: id
+      }
+    });
     
     return updated;
   }
@@ -2210,7 +2367,13 @@ export class DatabaseStorage implements IStorage {
     }
 
     DatabaseStorage.projectTimelines.delete(id);
-    console.log(`[Storage] Timeline supprimée: ${id}`);
+    logger.info('Timeline supprimée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'deleteProjectTimeline',
+        timelineId: id
+      }
+    });
   }
 
   // ========================================
@@ -2244,7 +2407,14 @@ export class DatabaseStorage implements IStorage {
     // Trier par priorité (plus élevée en premier)
     rules.sort((a, b) => (b.priority || 0) - (a.priority || 0));
     
-    console.log(`[Storage] ${rules.length} règles actives trouvées avec filtres:`, filters);
+    logger.info('Règles actives trouvées', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getActiveRules',
+        rulesCount: rules.length,
+        filters: filters
+      }
+    });
     return rules;
   }
 
@@ -2252,13 +2422,26 @@ export class DatabaseStorage implements IStorage {
     const rules = Array.from(DatabaseStorage.dateIntelligenceRules.values())
       .sort((a, b) => (b.priority || 0) - (a.priority || 0));
     
-    console.log(`[Storage] ${rules.length} règles totales récupérées`);
+    logger.info('Règles totales récupérées', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getAllRules',
+        rulesCount: rules.length
+      }
+    });
     return rules;
   }
 
   async getRule(id: string): Promise<DateIntelligenceRule | undefined> {
     const rule = DatabaseStorage.dateIntelligenceRules.get(id);
-    console.log(`[Storage] Règle ${id} ${rule ? 'trouvée' : 'non trouvée'}`);
+    logger.info('Règle récupérée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getRule',
+        ruleId: id,
+        found: !!rule
+      }
+    });
     return rule;
   }
 
@@ -2276,7 +2459,14 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateIntelligenceRules.set(id, rule);
-    console.log(`[Storage] Règle créée: ${id} - ${rule.name}`);
+    logger.info('Règle créée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'createRule',
+        ruleId: id,
+        ruleName: rule.name
+      }
+    });
     
     return rule;
   }
@@ -2294,7 +2484,13 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateIntelligenceRules.set(id, updated);
-    console.log(`[Storage] Règle mise à jour: ${id}`);
+    logger.info('Règle mise à jour', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'updateRule',
+        ruleId: id
+      }
+    });
     
     return updated;
   }
@@ -2306,7 +2502,13 @@ export class DatabaseStorage implements IStorage {
     }
 
     DatabaseStorage.dateIntelligenceRules.delete(id);
-    console.log(`[Storage] Règle supprimée: ${id}`);
+    logger.info('Règle supprimée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'deleteRule',
+        ruleId: id
+      }
+    });
   }
 
   // ========================================
@@ -2332,13 +2534,27 @@ export class DatabaseStorage implements IStorage {
     // Trier par date de détection (plus récent en premier)
     alerts.sort((a, b) => b.detectedAt.getTime() - a.detectedAt.getTime());
     
-    console.log(`[Storage] ${alerts.length} alertes trouvées avec filtres:`, filters);
+    logger.info('Alertes date trouvées', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getDateAlerts',
+        alertsCount: alerts.length,
+        filters: filters
+      }
+    });
     return alerts;
   }
 
   async getDateAlert(id: string): Promise<DateAlert | undefined> {
     const alert = DatabaseStorage.dateAlerts.get(id);
-    console.log(`[Storage] Alerte ${id} ${alert ? 'trouvée' : 'non trouvée'}`);
+    logger.info('Alerte date récupérée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getDateAlert',
+        alertId: id,
+        found: !!alert
+      }
+    });
     return alert;
   }
 
@@ -2356,7 +2572,14 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateAlerts.set(id, alert);
-    console.log(`[Storage] Alerte créée: ${id} - ${alert.title}`);
+    logger.info('Alerte date créée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'createDateAlert',
+        alertId: id,
+        title: alert.title
+      }
+    });
     
     return alert;
   }
@@ -2374,7 +2597,13 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateAlerts.set(id, updated);
-    console.log(`[Storage] Alerte mise à jour: ${id}`);
+    logger.info('Alerte date mise à jour', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'updateDateAlert',
+        alertId: id
+      }
+    });
     
     return updated;
   }
@@ -2386,7 +2615,13 @@ export class DatabaseStorage implements IStorage {
     }
 
     DatabaseStorage.dateAlerts.delete(id);
-    console.log(`[Storage] Alerte supprimée: ${id}`);
+    logger.info('Alerte date supprimée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'deleteDateAlert',
+        alertId: id
+      }
+    });
   }
 
   async acknowledgeAlert(id: string, userId: string): Promise<boolean> {
@@ -2404,7 +2639,14 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateAlerts.set(id, updated);
-    console.log(`[Storage] Alerte acquittée: ${id} par ${userId}`);
+    logger.info('Alerte date acquittée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'acknowledgeAlert',
+        alertId: id,
+        userId: userId
+      }
+    });
     
     return true;
   }
@@ -2425,7 +2667,14 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateAlerts.set(id, updated);
-    console.log(`[Storage] Alerte résolue: ${id} par ${userId}`);
+    logger.info('Alerte date résolue', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'resolveAlert',
+        alertId: id,
+        userId: userId
+      }
+    });
     
     return true;
   }
@@ -2437,7 +2686,14 @@ export class DatabaseStorage implements IStorage {
   // KPI Snapshots operations
   async createKPISnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot> {
     const [snapshot] = await db.insert(kpiSnapshots).values(data).returning();
-    console.log(`[Storage] KPI Snapshot créé pour période ${data.periodFrom} → ${data.periodTo}`);
+    logger.info('KPI Snapshot créé', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'createKPISnapshot',
+        periodFrom: data.periodFrom,
+        periodTo: data.periodTo
+      }
+    });
     return snapshot;
   }
 
@@ -2457,7 +2713,15 @@ export class DatabaseStorage implements IStorage {
     }
 
     const snapshots = await query;
-    console.log(`[Storage] ${snapshots.length} KPI snapshots trouvés pour la période`);
+    logger.info('KPI snapshots trouvés', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getKPISnapshots',
+        snapshotsCount: snapshots.length,
+        periodFrom: period.from,
+        periodTo: period.to
+      }
+    });
     return snapshots;
   }
 
@@ -2467,14 +2731,28 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(kpiSnapshots.snapshotDate))
       .limit(1);
     
-    console.log(`[Storage] Dernier KPI snapshot: ${latest ? latest.id : 'aucun'}`);
+    logger.info('Dernier KPI snapshot récupéré', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getLatestKPISnapshot',
+        snapshotId: latest ? latest.id : null
+      }
+    });
     return latest || null;
   }
 
   // Business Metrics operations  
   async createBusinessMetric(data: InsertBusinessMetric): Promise<BusinessMetric> {
     const [metric] = await db.insert(businessMetrics).values(data).returning();
-    console.log(`[Storage] Métrique business créée: ${data.metricType} pour période ${data.periodStart} → ${data.periodEnd}`);
+    logger.info('Métrique business créée', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'createBusinessMetric',
+        metricType: data.metricType,
+        periodStart: data.periodStart,
+        periodEnd: data.periodEnd
+      }
+    });
     return metric;
   }
 
@@ -2512,7 +2790,14 @@ export class DatabaseStorage implements IStorage {
     }
 
     const metrics = await query.orderBy(desc(businessMetrics.calculatedAt));
-    console.log(`[Storage] ${metrics.length} métriques business trouvées avec filtres`);
+    logger.info('Métriques business trouvées', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getBusinessMetrics',
+        metricsCount: metrics.length,
+        filters: filters
+      }
+    });
     return metrics;
   }
 
@@ -2528,14 +2813,29 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(businessMetrics.periodStart);
 
-    console.log(`[Storage] ${metrics.length} métriques ${metricType} trouvées en série temporelle`);
+    logger.info('Métriques série temporelle trouvées', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getMetricTimeSeries',
+        metricType: metricType,
+        metricsCount: metrics.length
+      }
+    });
     return metrics;
   }
 
   // Performance Benchmarks operations
   async createPerformanceBenchmark(data: InsertPerformanceBenchmark): Promise<PerformanceBenchmark> {
     const [benchmark] = await db.insert(performanceBenchmarks).values(data).returning();
-    console.log(`[Storage] Benchmark performance créé: ${data.benchmarkType} pour ${data.entityType}:${data.entityId}`);
+    logger.info('Benchmark performance créé', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'createPerformanceBenchmark',
+        benchmarkType: data.benchmarkType,
+        entityType: data.entityType,
+        entityId: data.entityId
+      }
+    });
     return benchmark;
   }
 
@@ -2551,7 +2851,15 @@ export class DatabaseStorage implements IStorage {
       .where(and(...whereConditions))
       .orderBy(desc(performanceBenchmarks.createdAt));
       
-    console.log(`[Storage] ${benchmarks.length} benchmarks trouvés pour ${entityType}${entityId ? `:${entityId}` : ''}`);
+    logger.info('Benchmarks trouvés', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getBenchmarks',
+        benchmarksCount: benchmarks.length,
+        entityType: entityType,
+        entityId: entityId
+      }
+    });
     return benchmarks;
   }
 
@@ -2562,7 +2870,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(performanceBenchmarks.performanceScore))
       .limit(limit);
 
-    console.log(`[Storage] Top ${performers.length} performers trouvés`);
+    logger.info('Top performers trouvés', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getTopPerformers',
+        performersCount: performers.length,
+        limit: limit
+      }
+    });
     return performers;
   }
 
@@ -2591,7 +2906,14 @@ export class DatabaseStorage implements IStorage {
     avg_project_value: number;
   }>> {
     try {
-      console.log(`[Storage] Récupération historique revenus mensuel de ${range.start_date} à ${range.end_date}`);
+      logger.info('Récupération historique revenus mensuel', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getMonthlyRevenueHistory',
+          startDate: range.start_date,
+          endDate: range.end_date
+        }
+      });
       
       // Requête SQL pour agréger les projets par mois
       // Utilise les projets signés/terminés avec montant final
@@ -2622,10 +2944,23 @@ export class DatabaseStorage implements IStorage {
         avg_project_value: Number(row.avg_project_value)
       }));
 
-      console.log(`[Storage] ${formattedResults.length} mois d'historique revenus trouvés`);
+      logger.info('Historique revenus mensuel trouvé', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getMonthlyRevenueHistory',
+          monthsCount: formattedResults.length
+        }
+      });
       return formattedResults;
     } catch (error) {
-      console.error('[Storage] Erreur getMonthlyRevenueHistory:', error);
+      logger.error('Erreur getMonthlyRevenueHistory', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getMonthlyRevenueHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2642,7 +2977,14 @@ export class DatabaseStorage implements IStorage {
     complexity: string;
   }>> {
     try {
-      console.log(`[Storage] Récupération historique délais projets de ${range.start_date} à ${range.end_date}`);
+      logger.info('Récupération historique délais projets', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjectDelayHistory',
+          startDate: range.start_date,
+          endDate: range.end_date
+        }
+      });
       
       // Requête pour calculer les délais des projets terminés
       const results = await db
@@ -2683,10 +3025,23 @@ export class DatabaseStorage implements IStorage {
         complexity: row.complexity
       }));
 
-      console.log(`[Storage] ${formattedResults.length} projets avec historique délais trouvés`);
+      logger.info('Historique délais projets trouvé', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjectDelayHistory',
+          projectsCount: formattedResults.length
+        }
+      });
       return formattedResults;
     } catch (error) {
-      console.error('[Storage] Erreur getProjectDelayHistory:', error);
+      logger.error('Erreur getProjectDelayHistory', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjectDelayHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2702,7 +3057,14 @@ export class DatabaseStorage implements IStorage {
     avg_project_duration: number;
   }>> {
     try {
-      console.log(`[Storage] Récupération historique charge équipes de ${range.start_date} à ${range.end_date}`);
+      logger.info('Récupération historique charge équipes', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getTeamLoadHistory',
+          startDate: range.start_date,
+          endDate: range.end_date
+        }
+      });
       
       // Requête pour agréger la charge équipes par mois
       const results = await db
@@ -2761,10 +3123,23 @@ export class DatabaseStorage implements IStorage {
         };
       });
 
-      console.log(`[Storage] ${formattedResults.length} mois d'historique charge équipes trouvés`);
+      logger.info('Historique charge équipes trouvé', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getTeamLoadHistory',
+          monthsCount: formattedResults.length
+        }
+      });
       return formattedResults;
     } catch (error) {
-      console.error('[Storage] Erreur getTeamLoadHistory:', error);
+      logger.error('Erreur getTeamLoadHistory', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getTeamLoadHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2794,10 +3169,24 @@ export class DatabaseStorage implements IStorage {
 
       DatabaseStorage.forecastSnapshots.set(id, snapshot);
       
-      console.log(`[Storage] Snapshot forecast sauvegardé: ${id} (période: ${forecastPeriod})`);
+      logger.info('Snapshot forecast sauvegardé', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'saveForecastSnapshot',
+          snapshotId: id,
+          forecastPeriod: forecastPeriod
+        }
+      });
       return id;
     } catch (error) {
-      console.error('[Storage] Erreur saveForecastSnapshot:', error);
+      logger.error('Erreur saveForecastSnapshot', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'saveForecastSnapshot',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2821,10 +3210,24 @@ export class DatabaseStorage implements IStorage {
           method_used: snapshot.method_used
         }));
 
-      console.log(`[Storage] ${snapshots.length} snapshots forecast trouvés`);
+      logger.info('Snapshots forecast trouvés', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'listForecastSnapshots',
+          snapshotsCount: snapshots.length,
+          limit: limit
+        }
+      });
       return snapshots;
     } catch (error) {
-      console.error('[Storage] Erreur listForecastSnapshots:', error);
+      logger.error('Erreur listForecastSnapshots', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'listForecastSnapshots',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2848,7 +3251,14 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Récupération de ${sessions.length} sessions fournisseurs`);
       return sessions;
     } catch (error) {
-      logger.error('Erreur getSupplierQuoteSessions:', error);
+      logger.error('Erreur récupération sessions devis fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierQuoteSessions',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2858,7 +3268,15 @@ export class DatabaseStorage implements IStorage {
       const [session] = await db.select().from(supplierQuoteSessions).where(eq(supplierQuoteSessions.id, id));
       return session;
     } catch (error) {
-      logger.error('Erreur getSupplierQuoteSession:', error);
+      logger.error('Erreur récupération session devis fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierQuoteSession',
+          sessionId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2868,7 +3286,14 @@ export class DatabaseStorage implements IStorage {
       const [session] = await db.select().from(supplierQuoteSessions).where(eq(supplierQuoteSessions.accessToken, token));
       return session;
     } catch (error) {
-      logger.error('Erreur getSupplierQuoteSessionByToken:', error);
+      logger.error('Erreur récupération session par token', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierQuoteSessionByToken',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2879,7 +3304,14 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Session fournisseur créée: ${newSession.id}`);
       return newSession;
     } catch (error) {
-      logger.error('Erreur createSupplierQuoteSession:', error);
+      logger.error('Erreur création session devis fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createSupplierQuoteSession',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2893,7 +3325,15 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Session fournisseur mise à jour: ${id}`);
       return updatedSession;
     } catch (error) {
-      logger.error('Erreur updateSupplierQuoteSession:', error);
+      logger.error('Erreur mise à jour session devis fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateSupplierQuoteSession',
+          sessionId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2903,7 +3343,15 @@ export class DatabaseStorage implements IStorage {
       await db.delete(supplierQuoteSessions).where(eq(supplierQuoteSessions.id, id));
       logger.info(`Session fournisseur supprimée: ${id}`);
     } catch (error) {
-      logger.error('Erreur deleteSupplierQuoteSession:', error);
+      logger.error('Erreur suppression session devis fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteSupplierQuoteSession',
+          sessionId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2928,7 +3376,15 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Récupération de ${lotSuppliers.length} fournisseurs pour le lot ${aoLotId}`);
       return lotSuppliers;
     } catch (error) {
-      logger.error('Erreur getAoLotSuppliers:', error);
+      logger.error('Erreur récupération fournisseurs lot', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getAoLotSuppliers',
+          aoLotId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2938,7 +3394,15 @@ export class DatabaseStorage implements IStorage {
       const [lotSupplier] = await db.select().from(aoLotSuppliers).where(eq(aoLotSuppliers.id, id));
       return lotSupplier;
     } catch (error) {
-      logger.error('Erreur getAoLotSupplier:', error);
+      logger.error('Erreur récupération fournisseur lot', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getAoLotSupplier',
+          lotSupplierId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2949,7 +3413,14 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Association lot-fournisseur créée: ${newLotSupplier.id}`);
       return newLotSupplier;
     } catch (error) {
-      logger.error('Erreur createAoLotSupplier:', error);
+      logger.error('Erreur création association lot-fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createAoLotSupplier',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2963,7 +3434,15 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Association lot-fournisseur mise à jour: ${id}`);
       return updatedLotSupplier;
     } catch (error) {
-      logger.error('Erreur updateAoLotSupplier:', error);
+      logger.error('Erreur mise à jour association lot-fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateAoLotSupplier',
+          lotSupplierId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2973,7 +3452,15 @@ export class DatabaseStorage implements IStorage {
       await db.delete(aoLotSuppliers).where(eq(aoLotSuppliers.id, id));
       logger.info(`Association lot-fournisseur supprimée: ${id}`);
     } catch (error) {
-      logger.error('Erreur deleteAoLotSupplier:', error);
+      logger.error('Erreur suppression association lot-fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteAoLotSupplier',
+          lotSupplierId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -2985,7 +3472,15 @@ export class DatabaseStorage implements IStorage {
       const associations = await this.getAoLotSuppliers(aoLotId);
       return associations;
     } catch (error) {
-      logger.error('Erreur getSuppliersByLot:', error);
+      logger.error('Erreur récupération fournisseurs par lot', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSuppliersByLot',
+          aoLotId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3009,7 +3504,14 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Récupération de ${documents.length} documents fournisseurs`);
       return documents;
     } catch (error) {
-      logger.error('Erreur getSupplierDocuments:', error);
+      logger.error('Erreur récupération documents fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierDocuments',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3019,7 +3521,15 @@ export class DatabaseStorage implements IStorage {
       const [document] = await db.select().from(supplierDocuments).where(eq(supplierDocuments.id, id));
       return document;
     } catch (error) {
-      logger.error('Erreur getSupplierDocument:', error);
+      logger.error('Erreur récupération document fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierDocument',
+          documentId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3030,7 +3540,14 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Document fournisseur créé: ${newDocument.id}`);
       return newDocument;
     } catch (error) {
-      logger.error('Erreur createSupplierDocument:', error);
+      logger.error('Erreur création document fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createSupplierDocument',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3044,7 +3561,15 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Document fournisseur mis à jour: ${id}`);
       return updatedDocument;
     } catch (error) {
-      logger.error('Erreur updateSupplierDocument:', error);
+      logger.error('Erreur mise à jour document fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateSupplierDocument',
+          documentId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3054,7 +3579,15 @@ export class DatabaseStorage implements IStorage {
       await db.delete(supplierDocuments).where(eq(supplierDocuments.id, id));
       logger.info(`Document fournisseur supprimé: ${id}`);
     } catch (error) {
-      logger.error('Erreur deleteSupplierDocument:', error);
+      logger.error('Erreur suppression document fournisseur', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteSupplierDocument',
+          documentId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3065,7 +3598,15 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Récupération de ${documents.length} documents pour la session ${sessionId}`);
       return documents;
     } catch (error) {
-      logger.error('Erreur getDocumentsBySession:', error);
+      logger.error('Erreur récupération documents par session', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getDocumentsBySession',
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3089,7 +3630,14 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Récupération de ${analyses.length} analyses OCR`);
       return analyses;
     } catch (error) {
-      logger.error('Erreur getSupplierQuoteAnalyses:', error);
+      logger.error('Erreur récupération analyses devis', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierQuoteAnalyses',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3099,7 +3647,15 @@ export class DatabaseStorage implements IStorage {
       const [analysis] = await db.select().from(supplierQuoteAnalysis).where(eq(supplierQuoteAnalysis.id, id));
       return analysis;
     } catch (error) {
-      logger.error('Erreur getSupplierQuoteAnalysis:', error);
+      logger.error('Erreur récupération analyse devis', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierQuoteAnalysis',
+          analysisId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3110,7 +3666,14 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Analyse OCR créée: ${newAnalysis.id}`);
       return newAnalysis;
     } catch (error) {
-      logger.error('Erreur createSupplierQuoteAnalysis:', error);
+      logger.error('Erreur création analyse devis', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createSupplierQuoteAnalysis',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3124,7 +3687,15 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Analyse OCR mise à jour: ${id}`);
       return updatedAnalysis;
     } catch (error) {
-      logger.error('Erreur updateSupplierQuoteAnalysis:', error);
+      logger.error('Erreur mise à jour analyse devis', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateSupplierQuoteAnalysis',
+          analysisId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3134,7 +3705,15 @@ export class DatabaseStorage implements IStorage {
       await db.delete(supplierQuoteAnalysis).where(eq(supplierQuoteAnalysis.id, id));
       logger.info(`Analyse OCR supprimée: ${id}`);
     } catch (error) {
-      logger.error('Erreur deleteSupplierQuoteAnalysis:', error);
+      logger.error('Erreur suppression analyse devis', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteSupplierQuoteAnalysis',
+          analysisId: id,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3144,7 +3723,15 @@ export class DatabaseStorage implements IStorage {
       const [analysis] = await db.select().from(supplierQuoteAnalysis).where(eq(supplierQuoteAnalysis.documentId, documentId));
       return analysis;
     } catch (error) {
-      logger.error('Erreur getAnalysisByDocument:', error);
+      logger.error('Erreur récupération analyse par document', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getAnalysisByDocument',
+          documentId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3208,7 +3795,14 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Statut workflow AO ${aoId}:`, status);
       return status;
     } catch (error) {
-      logger.error('Erreur getSupplierWorkflowStatus:', error);
+      logger.error('Erreur getSupplierWorkflowStatus', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierWorkflowStatus',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3257,7 +3851,14 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Résumé documents session ${sessionId}:`, summary);
       return summary;
     } catch (error) {
-      logger.error('Erreur getSessionDocumentsSummary:', error);
+      logger.error('Erreur getSessionDocumentsSummary', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSessionDocumentsSummary',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -3312,7 +3913,14 @@ export class MemStorage implements IStorage {
     project_type: string;
     complexity: string;
   }>> {
-    console.log(`[MemStorage] Mock - Historique délais projets de ${range.start_date} à ${range.end_date}`);
+    logger.info('Mock historique délais projets', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'getProjectDelayHistory',
+        startDate: range.start_date,
+        endDate: range.end_date
+      }
+    });
     
     // Données réalistes basées sur business menuiserie JLM
     return [
@@ -3377,7 +3985,14 @@ export class MemStorage implements IStorage {
     utilization_rate: number;
     avg_project_duration: number;
   }>> {
-    console.log(`[MemStorage] Mock - Historique charge équipes de ${range.start_date} à ${range.end_date}`);
+    logger.info('Mock historique charge équipes', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'getTeamLoadHistory',
+        startDate: range.start_date,
+        endDate: range.end_date
+      }
+    });
     
     // Pattern charge équipe JLM avec variations saisonnières
     return [
@@ -3464,7 +4079,13 @@ export class MemStorage implements IStorage {
 
     MemStorage.mockForecastSnapshots.unshift(newSnapshot);
     
-    console.log(`[MemStorage] Mock - Snapshot forecast sauvegardé: ${id}`);
+    logger.info('Mock snapshot forecast sauvegardé', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'saveForecastSnapshot',
+        snapshotId: id
+      }
+    });
     return id;
   }
 
@@ -3476,7 +4097,14 @@ export class MemStorage implements IStorage {
     method_used: string;
   }>> {
     const snapshots = MemStorage.mockForecastSnapshots.slice(0, limit);
-    console.log(`[MemStorage] Mock - ${snapshots.length} snapshots forecast retournés`);
+    logger.info('Mock snapshots forecast retournés', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'listForecastSnapshots',
+        snapshotsCount: snapshots.length,
+        limit: limit
+      }
+    });
     return snapshots;
   }
 
@@ -3971,7 +4599,13 @@ export class MemStorage implements IStorage {
   // ========================================
 
   async getBusinessAlertById(id: string): Promise<BusinessAlert | null> {
-    console.log(`[MemStorage] getBusinessAlertById stub called for: ${id}`);
+    logger.info('Stub getBusinessAlertById', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'getBusinessAlertById',
+        alertId: id
+      }
+    });
     return null;
   }
 
@@ -3984,7 +4618,13 @@ export class MemStorage implements IStorage {
       by_type: Record<AlertType, number>;
     };
   }> {
-    console.log(`[MemStorage] listBusinessAlerts stub called with:`, query);
+    logger.info('Stub listBusinessAlerts', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'listBusinessAlerts',
+        query: query
+      }
+    });
     return {
       alerts: [],
       total: 0,
@@ -4001,17 +4641,38 @@ export class MemStorage implements IStorage {
     update: UpdateBusinessAlert,
     user_id: string
   ): Promise<boolean> {
-    console.log(`[MemStorage] updateBusinessAlertStatus stub called for: ${id} by ${user_id}`);
+    logger.info('Stub updateBusinessAlertStatus', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'updateBusinessAlertStatus',
+        alertId: id,
+        userId: user_id
+      }
+    });
     return false;
   }
 
   async acknowledgeAlert(id: string, user_id: string, notes?: string): Promise<boolean> {
-    console.log(`[MemStorage] acknowledgeAlert stub called for: ${id} by ${user_id}`);
+    logger.info('Stub acknowledgeAlert', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'acknowledgeAlert',
+        alertId: id,
+        userId: user_id
+      }
+    });
     return false;
   }
 
   async resolveAlert(id: string, user_id: string, resolution_notes?: string): Promise<boolean> {
-    console.log(`[MemStorage] resolveAlert stub called for: ${id} by ${user_id}`);
+    logger.info('Stub resolveAlert', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'resolveAlert',
+        alertId: id,
+        userId: user_id
+      }
+    });
     return false;
   }
 
@@ -4021,7 +4682,14 @@ export class MemStorage implements IStorage {
     alert_type: AlertType;
     hours_window?: number;
   }): Promise<BusinessAlert[]> {
-    console.log(`[MemStorage] findSimilarAlerts stub called for: ${params.entity_type}:${params.entity_id}`);
+    logger.info('Stub findSimilarAlerts', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'findSimilarAlerts',
+        entityType: params.entity_type,
+        entityId: params.entity_id
+      }
+    });
     return [];
   }
 
@@ -4029,13 +4697,26 @@ export class MemStorage implements IStorage {
     entity_type: string, 
     entity_id: string
   ): Promise<BusinessAlert[]> {
-    console.log(`[MemStorage] getOpenAlertsForEntity stub called for: ${entity_type}:${entity_id}`);
+    logger.info('Stub getOpenAlertsForEntity', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'getOpenAlertsForEntity',
+        entityType: entity_type,
+        entityId: entity_id
+      }
+    });
     return [];
   }
 
   async createBusinessAlert(data: InsertBusinessAlert): Promise<string> {
     const alertId = `mock-alert-${Date.now()}`;
-    console.log(`[MemStorage] createBusinessAlert stub called, generated ID: ${alertId}`);
+    logger.info('Stub createBusinessAlert', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'createBusinessAlert',
+        alertId: alertId
+      }
+    });
     return alertId;
   }
 
@@ -4125,7 +4806,14 @@ export class MemStorage implements IStorage {
 
       return monthlyData;
     } catch (error) {
-      console.error('[DatabaseStorage] Erreur getMonthlyRevenueHistory:', error);
+      logger.error('Erreur getMonthlyRevenueHistory DatabaseStorage', {
+        metadata: {
+          service: 'DatabaseStorage',
+          operation: 'getMonthlyRevenueHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -4181,7 +4869,14 @@ export class MemStorage implements IStorage {
       return results;
       
     } catch (error) {
-      logger.error('Erreur getActiveThresholds:', error);
+      logger.error('Erreur getActiveThresholds', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getActiveThresholds',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4196,7 +4891,14 @@ export class MemStorage implements IStorage {
       return result || null;
       
     } catch (error) {
-      logger.error('Erreur getThresholdById:', error);
+      logger.error('Erreur getThresholdById', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getThresholdById',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4236,7 +4938,14 @@ export class MemStorage implements IStorage {
       return thresholdId;
       
     } catch (error) {
-      logger.error('Erreur createThreshold:', error);
+      logger.error('Erreur createThreshold', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createThreshold',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4280,7 +4989,14 @@ export class MemStorage implements IStorage {
       return !!result;
       
     } catch (error) {
-      logger.error('Erreur updateThreshold:', error);
+      logger.error('Erreur updateThreshold', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateThreshold',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4311,7 +5027,14 @@ export class MemStorage implements IStorage {
       return !!result;
       
     } catch (error) {
-      logger.error('Erreur deactivateThreshold:', error);
+      logger.error('Erreur deactivateThreshold', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deactivateThreshold',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4354,7 +5077,14 @@ export class MemStorage implements IStorage {
       return { thresholds, total: count };
       
     } catch (error) {
-      logger.error('Erreur listThresholds:', error);
+      logger.error('Erreur listThresholds', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'listThresholds',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4407,7 +5137,14 @@ export class MemStorage implements IStorage {
       return alertId;
       
     } catch (error) {
-      logger.error('Erreur createBusinessAlert:', error);
+      logger.error('Erreur createBusinessAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createBusinessAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4422,7 +5159,14 @@ export class MemStorage implements IStorage {
       return result || null;
       
     } catch (error) {
-      logger.error('Erreur getBusinessAlertById:', error);
+      logger.error('Erreur getBusinessAlertById', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getBusinessAlertById',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4498,7 +5242,14 @@ export class MemStorage implements IStorage {
       return { alerts, total: count, summary };
       
     } catch (error) {
-      logger.error('Erreur listBusinessAlerts:', error);
+      logger.error('Erreur listBusinessAlerts', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'listBusinessAlerts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4603,7 +5354,14 @@ export class MemStorage implements IStorage {
       return !!result;
       
     } catch (error) {
-      logger.error('Erreur updateBusinessAlertStatus:', error);
+      logger.error('Erreur updateBusinessAlertStatus', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateBusinessAlertStatus',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4626,7 +5384,14 @@ export class MemStorage implements IStorage {
       return !!result;
       
     } catch (error) {
-      logger.error('Erreur acknowledgeAlert:', error);
+      logger.error('Erreur acknowledgeAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'acknowledgeAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4649,7 +5414,14 @@ export class MemStorage implements IStorage {
       return !!result;
       
     } catch (error) {
-      logger.error('Erreur resolveAlert:', error);
+      logger.error('Erreur resolveAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'resolveAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4681,7 +5453,14 @@ export class MemStorage implements IStorage {
       return results;
       
     } catch (error) {
-      logger.error('Erreur findSimilarAlerts:', error);
+      logger.error('Erreur findSimilarAlerts', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'findSimilarAlerts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4707,7 +5486,14 @@ export class MemStorage implements IStorage {
       return results;
       
     } catch (error) {
-      logger.error('Erreur getOpenAlertsForEntity:', error);
+      logger.error('Erreur getOpenAlertsForEntity', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getOpenAlertsForEntity',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4729,7 +5515,14 @@ export class MemStorage implements IStorage {
       return results;
       
     } catch (error) {
-      logger.error('Erreur getProjectReserves:', error);
+      logger.error('Erreur getProjectReserves', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjectReserves',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4744,7 +5537,14 @@ export class MemStorage implements IStorage {
       return result;
       
     } catch (error) {
-      logger.error('Erreur getProjectReserve:', error);
+      logger.error('Erreur getProjectReserve', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjectReserve',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4764,7 +5564,14 @@ export class MemStorage implements IStorage {
       return result;
       
     } catch (error) {
-      logger.error('Erreur createProjectReserve:', error);
+      logger.error('Erreur createProjectReserve', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createProjectReserve',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4784,7 +5591,14 @@ export class MemStorage implements IStorage {
       return result;
       
     } catch (error) {
-      logger.error('Erreur updateProjectReserve:', error);
+      logger.error('Erreur updateProjectReserve', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateProjectReserve',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4798,7 +5612,14 @@ export class MemStorage implements IStorage {
       logger.info(`Réserve ${id} supprimée`);
       
     } catch (error) {
-      logger.error('Erreur deleteProjectReserve:', error);
+      logger.error('Erreur deleteProjectReserve', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteProjectReserve',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4816,7 +5637,14 @@ export class MemStorage implements IStorage {
       return results;
       
     } catch (error) {
-      logger.error('Erreur getSavInterventions:', error);
+      logger.error('Erreur getSavInterventions', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSavInterventions',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4831,7 +5659,14 @@ export class MemStorage implements IStorage {
       return result;
       
     } catch (error) {
-      logger.error('Erreur getSavIntervention:', error);
+      logger.error('Erreur getSavIntervention', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSavIntervention',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4851,7 +5686,14 @@ export class MemStorage implements IStorage {
       return result;
       
     } catch (error) {
-      logger.error('Erreur createSavIntervention:', error);
+      logger.error('Erreur createSavIntervention', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createSavIntervention',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4871,7 +5713,14 @@ export class MemStorage implements IStorage {
       return result;
       
     } catch (error) {
-      logger.error('Erreur updateSavIntervention:', error);
+      logger.error('Erreur updateSavIntervention', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateSavIntervention',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4885,7 +5734,14 @@ export class MemStorage implements IStorage {
       logger.info(`Intervention SAV ${id} supprimée`);
       
     } catch (error) {
-      logger.error('Erreur deleteSavIntervention:', error);
+      logger.error('Erreur deleteSavIntervention', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteSavIntervention',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4903,7 +5759,14 @@ export class MemStorage implements IStorage {
       return results;
       
     } catch (error) {
-      logger.error('Erreur getSavWarrantyClaims:', error);
+      logger.error('Erreur getSavWarrantyClaims', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSavWarrantyClaims',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4918,7 +5781,14 @@ export class MemStorage implements IStorage {
       return result;
       
     } catch (error) {
-      logger.error('Erreur getSavWarrantyClaim:', error);
+      logger.error('Erreur getSavWarrantyClaim', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSavWarrantyClaim',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4938,7 +5808,14 @@ export class MemStorage implements IStorage {
       return result;
       
     } catch (error) {
-      logger.error('Erreur createSavWarrantyClaim:', error);
+      logger.error('Erreur createSavWarrantyClaim', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createSavWarrantyClaim',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4958,7 +5835,14 @@ export class MemStorage implements IStorage {
       return result;
       
     } catch (error) {
-      logger.error('Erreur updateSavWarrantyClaim:', error);
+      logger.error('Erreur updateSavWarrantyClaim', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateSavWarrantyClaim',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4972,7 +5856,14 @@ export class MemStorage implements IStorage {
       logger.info(`Réclamation garantie ${id} supprimée`);
       
     } catch (error) {
-      logger.error('Erreur deleteSavWarrantyClaim:', error);
+      logger.error('Erreur deleteSavWarrantyClaim', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteSavWarrantyClaim',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -4997,7 +5888,14 @@ export class MemStorage implements IStorage {
       logger.info(`Récupération de ${results.length} métriques business`);
       return results;
     } catch (error) {
-      logger.error('Erreur getMetricsBusiness:', error);
+      logger.error('Erreur getMetricsBusiness', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getMetricsBusiness',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5011,7 +5909,14 @@ export class MemStorage implements IStorage {
       
       return result;
     } catch (error) {
-      logger.error('Erreur getMetricsBusinessById:', error);
+      logger.error('Erreur getMetricsBusinessById', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getMetricsBusinessById',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5030,7 +5935,14 @@ export class MemStorage implements IStorage {
       logger.info(`Métrique business créée avec ID: ${result.id}`);
       return result;
     } catch (error) {
-      logger.error('Erreur createMetricsBusiness:', error);
+      logger.error('Erreur createMetricsBusiness', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createMetricsBusiness',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5049,7 +5961,14 @@ export class MemStorage implements IStorage {
       logger.info(`Métrique business ${id} mise à jour`);
       return result;
     } catch (error) {
-      logger.error('Erreur updateMetricsBusiness:', error);
+      logger.error('Erreur updateMetricsBusiness', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateMetricsBusiness',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5059,7 +5978,14 @@ export class MemStorage implements IStorage {
       await this.db.delete(metricsBusiness).where(eq(metricsBusiness.id, id));
       logger.info(`Métrique business ${id} supprimée`);
     } catch (error) {
-      logger.error('Erreur deleteMetricsBusiness:', error);
+      logger.error('Erreur deleteMetricsBusiness', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteMetricsBusiness',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5080,7 +6006,14 @@ export class MemStorage implements IStorage {
       logger.info(`Récupération de ${results.length} temps de pose`);
       return results;
     } catch (error) {
-      logger.error('Erreur getTempsPose:', error);
+      logger.error('Erreur getTempsPose', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getTempsPose',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5094,7 +6027,14 @@ export class MemStorage implements IStorage {
       
       return result;
     } catch (error) {
-      logger.error('Erreur getTempsPoseById:', error);
+      logger.error('Erreur getTempsPoseById', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getTempsPoseById',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5113,7 +6053,14 @@ export class MemStorage implements IStorage {
       logger.info(`Temps de pose créé avec ID: ${result.id}`);
       return result;
     } catch (error) {
-      logger.error('Erreur createTempsPose:', error);
+      logger.error('Erreur createTempsPose', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createTempsPose',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5132,7 +6079,14 @@ export class MemStorage implements IStorage {
       logger.info(`Temps de pose ${id} mis à jour`);
       return result;
     } catch (error) {
-      logger.error('Erreur updateTempsPose:', error);
+      logger.error('Erreur updateTempsPose', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateTempsPose',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5142,7 +6096,14 @@ export class MemStorage implements IStorage {
       await this.db.delete(tempsPose).where(eq(tempsPose.id, id));
       logger.info(`Temps de pose ${id} supprimé`);
     } catch (error) {
-      logger.error('Erreur deleteTempsPose:', error);
+      logger.error('Erreur deleteTempsPose', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteTempsPose',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5158,7 +6119,14 @@ export class MemStorage implements IStorage {
       logger.info(`Récupération de ${results.length} contacts pour AO ${aoId}`);
       return results;
     } catch (error) {
-      logger.error('Erreur getAoContacts:', error);
+      logger.error('Erreur getAoContacts', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getAoContacts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5176,7 +6144,14 @@ export class MemStorage implements IStorage {
       logger.info(`Contact AO créé avec ID: ${result.id}`);
       return result;
     } catch (error) {
-      logger.error('Erreur createAoContact:', error);
+      logger.error('Erreur createAoContact', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createAoContact',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5186,7 +6161,14 @@ export class MemStorage implements IStorage {
       await this.db.delete(aoContacts).where(eq(aoContacts.id, id));
       logger.info(`Contact AO ${id} supprimé`);
     } catch (error) {
-      logger.error('Erreur deleteAoContact:', error);
+      logger.error('Erreur deleteAoContact', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteAoContact',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5202,7 +6184,14 @@ export class MemStorage implements IStorage {
       logger.info(`Récupération de ${results.length} contacts pour projet ${projectId}`);
       return results;
     } catch (error) {
-      logger.error('Erreur getProjectContacts:', error);
+      logger.error('Erreur getProjectContacts', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjectContacts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5220,7 +6209,14 @@ export class MemStorage implements IStorage {
       logger.info(`Contact projet créé avec ID: ${result.id}`);
       return result;
     } catch (error) {
-      logger.error('Erreur createProjectContact:', error);
+      logger.error('Erreur createProjectContact', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createProjectContact',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5230,7 +6226,14 @@ export class MemStorage implements IStorage {
       await this.db.delete(projectContacts).where(eq(projectContacts.id, id));
       logger.info(`Contact projet ${id} supprimé`);
     } catch (error) {
-      logger.error('Erreur deleteProjectContact:', error);
+      logger.error('Erreur deleteProjectContact', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteProjectContact',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5248,7 +6251,14 @@ export class MemStorage implements IStorage {
       logger.info(`Récupération de ${results.length} spécialisations fournisseurs`);
       return results;
     } catch (error) {
-      logger.error('Erreur getSupplierSpecializations:', error);
+      logger.error('Erreur getSupplierSpecializations', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierSpecializations',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5267,7 +6277,14 @@ export class MemStorage implements IStorage {
       logger.info(`Spécialisation fournisseur créée avec ID: ${result.id}`);
       return result;
     } catch (error) {
-      logger.error('Erreur createSupplierSpecialization:', error);
+      logger.error('Erreur createSupplierSpecialization', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createSupplierSpecialization',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5286,7 +6303,14 @@ export class MemStorage implements IStorage {
       logger.info(`Spécialisation fournisseur ${id} mise à jour`);
       return result;
     } catch (error) {
-      logger.error('Erreur updateSupplierSpecialization:', error);
+      logger.error('Erreur updateSupplierSpecialization', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateSupplierSpecialization',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5296,7 +6320,14 @@ export class MemStorage implements IStorage {
       await db.delete(supplierSpecializations).where(eq(supplierSpecializations.id, id));
       logger.info(`Spécialisation fournisseur ${id} supprimée`);
     } catch (error) {
-      logger.error('Erreur deleteSupplierSpecialization:', error);
+      logger.error('Erreur deleteSupplierSpecialization', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteSupplierSpecialization',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5323,7 +6354,14 @@ export class MemStorage implements IStorage {
       logger.info(`Alerte technique créée avec ID: ${newAlert.id}`);
       return newAlert;
     } catch (error) {
-      logger.error('Erreur enqueueTechnicalAlert:', error);
+      logger.error('Erreur enqueueTechnicalAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'enqueueTechnicalAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5345,7 +6383,14 @@ export class MemStorage implements IStorage {
       const alerts = await query.orderBy(desc(technicalAlerts.createdAt));
       return alerts;
     } catch (error) {
-      logger.error('Erreur listTechnicalAlerts:', error);
+      logger.error('Erreur listTechnicalAlerts', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'listTechnicalAlerts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5355,7 +6400,14 @@ export class MemStorage implements IStorage {
       const [alert] = await db.select().from(technicalAlerts).where(eq(technicalAlerts.id, id));
       return alert || null;
     } catch (error) {
-      logger.error('Erreur getTechnicalAlert:', error);
+      logger.error('Erreur getTechnicalAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getTechnicalAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5367,7 +6419,14 @@ export class MemStorage implements IStorage {
         .where(eq(technicalAlerts.id, id));
       logger.info(`Alerte technique ${id} acquittée par ${userId}`);
     } catch (error) {
-      logger.error('Erreur acknowledgeTechnicalAlert:', error);
+      logger.error('Erreur acknowledgeTechnicalAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'acknowledgeTechnicalAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5379,7 +6438,14 @@ export class MemStorage implements IStorage {
         .where(eq(technicalAlerts.id, id));
       logger.info(`Alerte technique ${id} validée par ${userId}`);
     } catch (error) {
-      logger.error('Erreur validateTechnicalAlert:', error);
+      logger.error('Erreur validateTechnicalAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'validateTechnicalAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5394,7 +6460,14 @@ export class MemStorage implements IStorage {
       await this.addTechnicalAlertHistory(id, 'bypassed', userId, reason, { until: until.toISOString() });
       logger.info(`Alerte technique ${id} bypassée par ${userId} jusqu'à ${until}`);
     } catch (error) {
-      logger.error('Erreur bypassTechnicalAlert:', error);
+      logger.error('Erreur bypassTechnicalAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'bypassTechnicalAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5416,7 +6489,14 @@ export class MemStorage implements IStorage {
         reason: lastBypass.note || 'Aucune raison spécifiée'
       };
     } catch (error) {
-      logger.error('Erreur getActiveBypassForAo:', error);
+      logger.error('Erreur getActiveBypassForAo', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getActiveBypassForAo',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -5429,7 +6509,14 @@ export class MemStorage implements IStorage {
         .orderBy(desc(technicalAlertHistory.createdAt));
       return history;
     } catch (error) {
-      logger.error('Erreur listTechnicalAlertHistory:', error);
+      logger.error('Erreur listTechnicalAlertHistory', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'listTechnicalAlertHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5445,7 +6532,14 @@ export class MemStorage implements IStorage {
       }).returning();
       return entry;
     } catch (error) {
-      logger.error('Erreur addTechnicalAlertHistory:', error);
+      logger.error('Erreur addTechnicalAlertHistory', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'addTechnicalAlertHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5461,7 +6555,14 @@ export class MemStorage implements IStorage {
         .orderBy(desc(technicalAlertHistory.createdAt));
       return history;
     } catch (error) {
-      logger.error('Erreur listAoSuppressionHistory:', error);
+      logger.error('Erreur listAoSuppressionHistory', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'listAoSuppressionHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5491,7 +6592,14 @@ export class MemStorage implements IStorage {
         .orderBy(projectTimelines.plannedStartDate);
       return timelines;
     } catch (error) {
-      logger.error('Erreur getProjectTimelines:', error);
+      logger.error('Erreur getProjectTimelines', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjectTimelines',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5503,7 +6611,14 @@ export class MemStorage implements IStorage {
         .orderBy(desc(projectTimelines.createdAt));
       return timelines;
     } catch (error) {
-      logger.error('Erreur getAllProjectTimelines:', error);
+      logger.error('Erreur getAllProjectTimelines', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getAllProjectTimelines',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5514,7 +6629,14 @@ export class MemStorage implements IStorage {
       logger.info(`Timeline projet créée avec ID: ${timeline.id}`);
       return timeline;
     } catch (error) {
-      logger.error('Erreur createProjectTimeline:', error);
+      logger.error('Erreur createProjectTimeline', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createProjectTimeline',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5528,7 +6650,14 @@ export class MemStorage implements IStorage {
       logger.info(`Timeline projet ${id} mise à jour`);
       return timeline;
     } catch (error) {
-      logger.error('Erreur updateProjectTimeline:', error);
+      logger.error('Erreur updateProjectTimeline', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateProjectTimeline',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5538,7 +6667,14 @@ export class MemStorage implements IStorage {
       await db.delete(projectTimelines).where(eq(projectTimelines.id, id));
       logger.info(`Timeline projet ${id} supprimée`);
     } catch (error) {
-      logger.error('Erreur deleteProjectTimeline:', error);
+      logger.error('Erreur deleteProjectTimeline', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteProjectTimeline',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5561,7 +6697,14 @@ export class MemStorage implements IStorage {
       const rules = await query.orderBy(desc(dateIntelligenceRules.priority));
       return rules;
     } catch (error) {
-      logger.error('Erreur getActiveRules:', error);
+      logger.error('Erreur getActiveRules', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getActiveRules',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5573,7 +6716,14 @@ export class MemStorage implements IStorage {
         .orderBy(desc(dateIntelligenceRules.createdAt));
       return rules;
     } catch (error) {
-      logger.error('Erreur getAllRules:', error);
+      logger.error('Erreur getAllRules', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getAllRules',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5583,7 +6733,14 @@ export class MemStorage implements IStorage {
       const [rule] = await db.select().from(dateIntelligenceRules).where(eq(dateIntelligenceRules.id, id));
       return rule;
     } catch (error) {
-      logger.error('Erreur getRule:', error);
+      logger.error('Erreur getRule', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getRule',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5594,7 +6751,14 @@ export class MemStorage implements IStorage {
       logger.info(`Règle d'intelligence temporelle créée avec ID: ${rule.id}`);
       return rule;
     } catch (error) {
-      logger.error('Erreur createRule:', error);
+      logger.error('Erreur createRule', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createRule',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5608,7 +6772,14 @@ export class MemStorage implements IStorage {
       logger.info(`Règle d'intelligence temporelle ${id} mise à jour`);
       return rule;
     } catch (error) {
-      logger.error('Erreur updateRule:', error);
+      logger.error('Erreur updateRule', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateRule',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5618,7 +6789,14 @@ export class MemStorage implements IStorage {
       await db.delete(dateIntelligenceRules).where(eq(dateIntelligenceRules.id, id));
       logger.info(`Règle d'intelligence temporelle ${id} supprimée`);
     } catch (error) {
-      logger.error('Erreur deleteRule:', error);
+      logger.error('Erreur deleteRule', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteRule',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5644,7 +6822,14 @@ export class MemStorage implements IStorage {
       const alerts = await query.orderBy(desc(dateAlerts.createdAt));
       return alerts;
     } catch (error) {
-      logger.error('Erreur getDateAlerts:', error);
+      logger.error('Erreur getDateAlerts', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getDateAlerts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5654,7 +6839,14 @@ export class MemStorage implements IStorage {
       const [alert] = await db.select().from(dateAlerts).where(eq(dateAlerts.id, id));
       return alert;
     } catch (error) {
-      logger.error('Erreur getDateAlert:', error);
+      logger.error('Erreur getDateAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getDateAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5665,7 +6857,14 @@ export class MemStorage implements IStorage {
       logger.info(`Alerte de date créée avec ID: ${alert.id}`);
       return alert;
     } catch (error) {
-      logger.error('Erreur createDateAlert:', error);
+      logger.error('Erreur createDateAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createDateAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5679,7 +6878,14 @@ export class MemStorage implements IStorage {
       logger.info(`Alerte de date ${id} mise à jour`);
       return alert;
     } catch (error) {
-      logger.error('Erreur updateDateAlert:', error);
+      logger.error('Erreur updateDateAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateDateAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5689,7 +6895,14 @@ export class MemStorage implements IStorage {
       await db.delete(dateAlerts).where(eq(dateAlerts.id, id));
       logger.info(`Alerte de date ${id} supprimée`);
     } catch (error) {
-      logger.error('Erreur deleteDateAlert:', error);
+      logger.error('Erreur deleteDateAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteDateAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5704,7 +6917,14 @@ export class MemStorage implements IStorage {
       logger.info(`Snapshot KPI créé avec ID: ${snapshot.id}`);
       return snapshot;
     } catch (error) {
-      logger.error('Erreur createKPISnapshot:', error);
+      logger.error('Erreur createKPISnapshot', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createKPISnapshot',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5726,7 +6946,14 @@ export class MemStorage implements IStorage {
       const snapshots = await query;
       return snapshots;
     } catch (error) {
-      logger.error('Erreur getKPISnapshots:', error);
+      logger.error('Erreur getKPISnapshots', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getKPISnapshots',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5739,7 +6966,14 @@ export class MemStorage implements IStorage {
         .limit(1);
       return snapshot || null;
     } catch (error) {
-      logger.error('Erreur getLatestKPISnapshot:', error);
+      logger.error('Erreur getLatestKPISnapshot', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getLatestKPISnapshot',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5750,7 +6984,14 @@ export class MemStorage implements IStorage {
       logger.info(`Métrique business créée avec ID: ${metric.id}`);
       return metric;
     } catch (error) {
-      logger.error('Erreur createBusinessMetric:', error);
+      logger.error('Erreur createBusinessMetric', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createBusinessMetric',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5775,7 +7016,14 @@ export class MemStorage implements IStorage {
       const metrics = await query.orderBy(desc(businessMetrics.createdAt));
       return metrics;
     } catch (error) {
-      logger.error('Erreur getBusinessMetrics:', error);
+      logger.error('Erreur getBusinessMetrics', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getBusinessMetrics',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5792,7 +7040,14 @@ export class MemStorage implements IStorage {
         .orderBy(businessMetrics.periodStart);
       return metrics;
     } catch (error) {
-      logger.error('Erreur getMetricTimeSeries:', error);
+      logger.error('Erreur getMetricTimeSeries', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getMetricTimeSeries',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5803,7 +7058,14 @@ export class MemStorage implements IStorage {
       logger.info(`Benchmark performance créé avec ID: ${benchmark.id}`);
       return benchmark;
     } catch (error) {
-      logger.error('Erreur createPerformanceBenchmark:', error);
+      logger.error('Erreur createPerformanceBenchmark', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createPerformanceBenchmark',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5819,7 +7081,14 @@ export class MemStorage implements IStorage {
       const benchmarks = await query.orderBy(desc(performanceBenchmarks.createdAt));
       return benchmarks;
     } catch (error) {
-      logger.error('Erreur getBenchmarks:', error);
+      logger.error('Erreur getBenchmarks', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getBenchmarks',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5838,7 +7107,14 @@ export class MemStorage implements IStorage {
       const topPerformers = await query;
       return topPerformers;
     } catch (error) {
-      logger.error('Erreur getTopPerformers:', error);
+      logger.error('Erreur getTopPerformers', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getTopPerformers',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5870,7 +7146,14 @@ export class MemStorage implements IStorage {
       
       return months;
     } catch (error) {
-      logger.error('Erreur getMonthlyRevenueHistory:', error);
+      logger.error('Erreur getMonthlyRevenueHistory', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getMonthlyRevenueHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5902,7 +7185,14 @@ export class MemStorage implements IStorage {
       
       return projectDelays;
     } catch (error) {
-      logger.error('Erreur getProjectDelayHistory:', error);
+      logger.error('Erreur getProjectDelayHistory', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjectDelayHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5932,7 +7222,14 @@ export class MemStorage implements IStorage {
       
       return months;
     } catch (error) {
-      logger.error('Erreur getTeamLoadHistory:', error);
+      logger.error('Erreur getTeamLoadHistory', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getTeamLoadHistory',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5944,7 +7241,14 @@ export class MemStorage implements IStorage {
       logger.info(`Snapshot forecast sauvegardé avec ID: ${snapshotId}`);
       return snapshotId;
     } catch (error) {
-      logger.error('Erreur saveForecastSnapshot:', error);
+      logger.error('Erreur saveForecastSnapshot', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'saveForecastSnapshot',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5973,7 +7277,14 @@ export class MemStorage implements IStorage {
       
       return snapshots;
     } catch (error) {
-      logger.error('Erreur listForecastSnapshots:', error);
+      logger.error('Erreur listForecastSnapshots', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'listForecastSnapshots',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -5995,7 +7306,14 @@ export class MemStorage implements IStorage {
         efficiency_benchmark: 0.82 // 82% efficacité moyenne
       };
     } catch (error) {
-      logger.error('Erreur getSectorBenchmarks:', error);
+      logger.error('Erreur getSectorBenchmarks', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSectorBenchmarks',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6012,7 +7330,14 @@ export class MemStorage implements IStorage {
       }
       return await db.select().from(equipmentBatteries);
     } catch (error) {
-      logger.error('Erreur getEquipmentBatteries:', error);
+      logger.error('Erreur getEquipmentBatteries', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getEquipmentBatteries',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -6022,7 +7347,14 @@ export class MemStorage implements IStorage {
       const [battery] = await db.select().from(equipmentBatteries).where(eq(equipmentBatteries.id, id));
       return battery;
     } catch (error) {
-      logger.error('Erreur getEquipmentBattery:', error);
+      logger.error('Erreur getEquipmentBattery', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getEquipmentBattery',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return undefined;
     }
   }
@@ -6033,7 +7365,14 @@ export class MemStorage implements IStorage {
       logger.info('Equipment Battery créée:', newBattery.id);
       return newBattery;
     } catch (error) {
-      logger.error('Erreur createEquipmentBattery:', error);
+      logger.error('Erreur createEquipmentBattery', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createEquipmentBattery',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6044,7 +7383,14 @@ export class MemStorage implements IStorage {
       logger.info('Equipment Battery mise à jour:', id);
       return updated;
     } catch (error) {
-      logger.error('Erreur updateEquipmentBattery:', error);
+      logger.error('Erreur updateEquipmentBattery', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateEquipmentBattery',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6054,7 +7400,14 @@ export class MemStorage implements IStorage {
       await db.delete(equipmentBatteries).where(eq(equipmentBatteries.id, id));
       logger.info('Equipment Battery supprimée:', id);
     } catch (error) {
-      logger.error('Erreur deleteEquipmentBattery:', error);
+      logger.error('Erreur deleteEquipmentBattery', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteEquipmentBattery',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6067,7 +7420,14 @@ export class MemStorage implements IStorage {
       }
       return await db.select().from(marginTargets);
     } catch (error) {
-      logger.error('Erreur getMarginTargets:', error);
+      logger.error('Erreur getMarginTargets', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getMarginTargets',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -6077,7 +7437,14 @@ export class MemStorage implements IStorage {
       const [target] = await db.select().from(marginTargets).where(eq(marginTargets.id, id));
       return target;
     } catch (error) {
-      logger.error('Erreur getMarginTarget:', error);
+      logger.error('Erreur getMarginTarget', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getMarginTarget',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return undefined;
     }
   }
@@ -6088,7 +7455,14 @@ export class MemStorage implements IStorage {
       logger.info('Margin Target créé:', newTarget.id);
       return newTarget;
     } catch (error) {
-      logger.error('Erreur createMarginTarget:', error);
+      logger.error('Erreur createMarginTarget', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createMarginTarget',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6099,7 +7473,14 @@ export class MemStorage implements IStorage {
       logger.info('Margin Target mis à jour:', id);
       return updated;
     } catch (error) {
-      logger.error('Erreur updateMarginTarget:', error);
+      logger.error('Erreur updateMarginTarget', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateMarginTarget',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6109,7 +7490,14 @@ export class MemStorage implements IStorage {
       await db.delete(marginTargets).where(eq(marginTargets.id, id));
       logger.info('Margin Target supprimé:', id);
     } catch (error) {
-      logger.error('Erreur deleteMarginTarget:', error);
+      logger.error('Erreur deleteMarginTarget', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteMarginTarget',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6122,7 +7510,14 @@ export class MemStorage implements IStorage {
       }
       return await db.select().from(projectSubElements);
     } catch (error) {
-      logger.error('Erreur getProjectSubElements:', error);
+      logger.error('Erreur getProjectSubElements', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjectSubElements',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -6132,7 +7527,14 @@ export class MemStorage implements IStorage {
       const [element] = await db.select().from(projectSubElements).where(eq(projectSubElements.id, id));
       return element;
     } catch (error) {
-      logger.error('Erreur getProjectSubElement:', error);
+      logger.error('Erreur getProjectSubElement', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjectSubElement',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return undefined;
     }
   }
@@ -6143,7 +7545,14 @@ export class MemStorage implements IStorage {
       logger.info('Project Sub Element créé:', newElement.id);
       return newElement;
     } catch (error) {
-      logger.error('Erreur createProjectSubElement:', error);
+      logger.error('Erreur createProjectSubElement', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createProjectSubElement',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6154,7 +7563,14 @@ export class MemStorage implements IStorage {
       logger.info('Project Sub Element mis à jour:', id);
       return updated;
     } catch (error) {
-      logger.error('Erreur updateProjectSubElement:', error);
+      logger.error('Erreur updateProjectSubElement', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateProjectSubElement',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6164,7 +7580,14 @@ export class MemStorage implements IStorage {
       await db.delete(projectSubElements).where(eq(projectSubElements.id, id));
       logger.info('Project Sub Element supprimé:', id);
     } catch (error) {
-      logger.error('Erreur deleteProjectSubElement:', error);
+      logger.error('Erreur deleteProjectSubElement', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteProjectSubElement',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6177,7 +7600,14 @@ export class MemStorage implements IStorage {
       }
       return await db.select().from(classificationTags);
     } catch (error) {
-      logger.error('Erreur getClassificationTags:', error);
+      logger.error('Erreur getClassificationTags', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getClassificationTags',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -6187,7 +7617,14 @@ export class MemStorage implements IStorage {
       const [tag] = await db.select().from(classificationTags).where(eq(classificationTags.id, id));
       return tag;
     } catch (error) {
-      logger.error('Erreur getClassificationTag:', error);
+      logger.error('Erreur getClassificationTag', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getClassificationTag',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return undefined;
     }
   }
@@ -6198,7 +7635,14 @@ export class MemStorage implements IStorage {
       logger.info('Classification Tag créé:', newTag.id);
       return newTag;
     } catch (error) {
-      logger.error('Erreur createClassificationTag:', error);
+      logger.error('Erreur createClassificationTag', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createClassificationTag',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6209,7 +7653,14 @@ export class MemStorage implements IStorage {
       logger.info('Classification Tag mis à jour:', id);
       return updated;
     } catch (error) {
-      logger.error('Erreur updateClassificationTag:', error);
+      logger.error('Erreur updateClassificationTag', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateClassificationTag',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6219,7 +7670,14 @@ export class MemStorage implements IStorage {
       await db.delete(classificationTags).where(eq(classificationTags.id, id));
       logger.info('Classification Tag supprimé:', id);
     } catch (error) {
-      logger.error('Erreur deleteClassificationTag:', error);
+      logger.error('Erreur deleteClassificationTag', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteClassificationTag',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6235,7 +7693,14 @@ export class MemStorage implements IStorage {
       }
       return await query;
     } catch (error) {
-      logger.error('Erreur getEntityTags:', error);
+      logger.error('Erreur getEntityTags', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getEntityTags',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -6246,7 +7711,14 @@ export class MemStorage implements IStorage {
       logger.info('Entity Tag créé:', newEntityTag.id);
       return newEntityTag;
     } catch (error) {
-      logger.error('Erreur createEntityTag:', error);
+      logger.error('Erreur createEntityTag', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createEntityTag',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6256,7 +7728,14 @@ export class MemStorage implements IStorage {
       await db.delete(entityTags).where(eq(entityTags.id, id));
       logger.info('Entity Tag supprimé:', id);
     } catch (error) {
-      logger.error('Erreur deleteEntityTag:', error);
+      logger.error('Erreur deleteEntityTag', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteEntityTag',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6269,7 +7748,14 @@ export class MemStorage implements IStorage {
       }
       return await db.select().from(employeeLabels);
     } catch (error) {
-      logger.error('Erreur getEmployeeLabels:', error);
+      logger.error('Erreur getEmployeeLabels', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getEmployeeLabels',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -6279,7 +7765,14 @@ export class MemStorage implements IStorage {
       const [label] = await db.select().from(employeeLabels).where(eq(employeeLabels.id, id));
       return label;
     } catch (error) {
-      logger.error('Erreur getEmployeeLabel:', error);
+      logger.error('Erreur getEmployeeLabel', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getEmployeeLabel',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return undefined;
     }
   }
@@ -6290,7 +7783,14 @@ export class MemStorage implements IStorage {
       logger.info('Employee Label créé:', newLabel.id);
       return newLabel;
     } catch (error) {
-      logger.error('Erreur createEmployeeLabel:', error);
+      logger.error('Erreur createEmployeeLabel', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createEmployeeLabel',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6301,7 +7801,14 @@ export class MemStorage implements IStorage {
       logger.info('Employee Label mis à jour:', id);
       return updated;
     } catch (error) {
-      logger.error('Erreur updateEmployeeLabel:', error);
+      logger.error('Erreur updateEmployeeLabel', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateEmployeeLabel',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6311,7 +7818,14 @@ export class MemStorage implements IStorage {
       await db.delete(employeeLabels).where(eq(employeeLabels.id, id));
       logger.info('Employee Label supprimé:', id);
     } catch (error) {
-      logger.error('Erreur deleteEmployeeLabel:', error);
+      logger.error('Erreur deleteEmployeeLabel', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteEmployeeLabel',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6324,7 +7838,14 @@ export class MemStorage implements IStorage {
       }
       return await db.select().from(employeeLabelAssignments);
     } catch (error) {
-      logger.error('Erreur getEmployeeLabelAssignments:', error);
+      logger.error('Erreur getEmployeeLabelAssignments', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getEmployeeLabelAssignments',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -6335,7 +7856,14 @@ export class MemStorage implements IStorage {
       logger.info('Employee Label Assignment créé:', newAssignment.id);
       return newAssignment;
     } catch (error) {
-      logger.error('Erreur createEmployeeLabelAssignment:', error);
+      logger.error('Erreur createEmployeeLabelAssignment', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createEmployeeLabelAssignment',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6345,7 +7873,14 @@ export class MemStorage implements IStorage {
       await db.delete(employeeLabelAssignments).where(eq(employeeLabelAssignments.id, id));
       logger.info('Employee Label Assignment supprimé:', id);
     } catch (error) {
-      logger.error('Erreur deleteEmployeeLabelAssignment:', error);
+      logger.error('Erreur deleteEmployeeLabelAssignment', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteEmployeeLabelAssignment',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6381,7 +7916,14 @@ export class MemStorage implements IStorage {
         }
       ];
     } catch (error) {
-      logger.error('Erreur getActiveBusinessThresholds:', error);
+      logger.error('Erreur getActiveBusinessThresholds', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getActiveBusinessThresholds',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -6397,7 +7939,14 @@ export class MemStorage implements IStorage {
       logger.debug(`[DatabaseStorage] findSimilarAlerts: Recherche pour ${params.entity_type}:${params.entity_id}`);
       return [];
     } catch (error) {
-      logger.error('Erreur findSimilarAlerts:', error);
+      logger.error('Erreur findSimilarAlerts', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'findSimilarAlerts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return [];
     }
   }
@@ -6408,7 +7957,14 @@ export class MemStorage implements IStorage {
       logger.debug(`[DatabaseStorage] getBusinessAlert: Recherche alerte ${id}`);
       return null;
     } catch (error) {
-      logger.error('Erreur getBusinessAlert:', error);
+      logger.error('Erreur getBusinessAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getBusinessAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       return null;
     }
   }
@@ -6421,7 +7977,14 @@ export class MemStorage implements IStorage {
       // Stub temporaire - simule la création d'une alerte
       return alertId;
     } catch (error) {
-      logger.error('Erreur createBusinessAlert:', error);
+      logger.error('Erreur createBusinessAlert', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createBusinessAlert',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6433,7 +7996,14 @@ export class MemStorage implements IStorage {
       logger.info(`Rapport de bug créé avec ID: ${result.id}`);
       return result;
     } catch (error) {
-      logger.error('Erreur createBugReport:', error);
+      logger.error('Erreur createBugReport', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createBugReport',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   }
@@ -6445,16 +8015,35 @@ export const storage = new DatabaseStorage();
 
 // FORCE: Assurer que createBugReport est disponible sur l'instance exportée
 if (!storage.createBugReport) {
-  console.error('[CRITICAL FIX] createBugReport manque sur l\'instance - ajout forcé');
+  logger.error('CRITICAL FIX: createBugReport manque sur instance', {
+    metadata: {
+      service: 'StoragePOC',
+      operation: 'criticalFix',
+      error: 'Method createBugReport missing on instance',
+      stack: undefined
+    }
+  });
   storage.createBugReport = async function(bugReport: InsertBugReport): Promise<BugReport> {
     try {
       const [result] = await db.insert(bugReports).values(bugReport).returning();
       logger.info(`Rapport de bug créé avec ID: ${result.id}`);
       return result;
     } catch (error) {
-      logger.error('Erreur createBugReport:', error);
+      logger.error('Erreur createBugReport', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createBugReport',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       throw error;
     }
   };
-  console.log('[CRITICAL FIX] createBugReport ajouté avec succès à l\'instance storage');
+  logger.info('CRITICAL FIX: createBugReport ajouté avec succès', {
+    metadata: {
+      service: 'StoragePOC',
+      operation: 'criticalFix'
+    }
+  });
 }

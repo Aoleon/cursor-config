@@ -116,7 +116,8 @@ app.use((req, res, next) => {
         module: 'ExpressApp',
         operation: 'initializeServices',
         service: 'AuditService',
-        error: 'SINGLETON VIOLATION: AuditService already initialized'
+        error: 'SINGLETON VIOLATION: AuditService already initialized',
+        stack: undefined
       }
     });
     throw new Error('SINGLETON VIOLATION: AuditService already initialized');

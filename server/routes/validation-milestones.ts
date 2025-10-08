@@ -33,7 +33,7 @@ router.post('/init', async (req, res) => {
     }
 
     // Créer les jalons par défaut pour le nouveau "Bouclage" (anciennement Validation BE)
-    const milestoneTypes = ['conformite_dtu', 'conformite_technique_marche', 'coherence_chiffrages']
+    const milestoneTypes = ['conformite_dtu', 'conformite_technique_marche', 'coherence_chiffrages'] as const
     const createdMilestones = []
 
     for (const milestoneType of milestoneTypes) {
@@ -76,7 +76,7 @@ router.patch('/:milestoneId', async (req, res) => {
     // CORRECTION WORKFLOW BOUCLAGE : Si un milestone bouclage est complété,
     // vérifier si tous les milestones bouclage sont terminés pour déclencher la progression
     if (validatedData.isCompleted && updatedMilestone.offerId) {
-      const requiredBouclageTypes = ['conformite_dtu', 'conformite_technique_marche', 'coherence_chiffrages']
+      const requiredBouclageTypes = ['conformite_dtu', 'conformite_technique_marche', 'coherence_chiffrages'] as const
       
       // Vérifier si c'est un milestone de bouclage
       if (requiredBouclageTypes.includes(updatedMilestone.milestoneType)) {

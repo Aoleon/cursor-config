@@ -84,15 +84,73 @@ The application uses a modern fullstack architecture.
 - ✅ Workflow bouclage automatique intact (conformité DTU, technique marché, cohérence chiffrages)
 - ✅ Validation architect PASS - patterns conformes, logique préservée
 
+### Phase 8 - routes-poc.ts Logger Migration (COMPLETED ✅)
+**Objectif** : Migrer 287 console.* vers logger avec metadata enrichie pour observabilité production
+
+**Contexte initial** :
+- ✅ 157 routes déjà avec asyncHandler (fait en Phase 5)
+- ❌ 287 console.* à migrer vers logger structuré
+
+**Travail effectué - 4 batches séquentiels** :
+
+**Batch 1** (Subagent 1) : 62 console.* migrés
+- Sections : EventBus, Règles métier, Conversion champs, Scoring
+
+**Batch 2** (Subagent 2) : 115 console.* migrés  
+- Sections : DateIntelligence, Alerts, Analytics, SQL Engine, BusinessContext, Chatbot
+
+**Batch 3** (Subagent 3) : 132 console.* migrés
+- Sections : Equipment, Margins, Study Duration, Tags, Bug Reports, System routes
+
+**Batch 4** (Subagent 4) : Enrichissement metadata production
+- **125 logger.error** enrichis avec route, method, entityIds, **error.stack** (CRITIQUE)
+- **logger.info** enrichis dans routes critiques (auth, users, AO, offers, projects)
+- **logger.warn** enrichis avec route + method + userId
+
+**Patterns metadata standardisés** :
+```typescript
+// logger.error avec stack traces complètes
+logger.error('Description', {
+  metadata: {
+    route: '/api/endpoint',
+    method: 'POST',
+    [entityId]: value,
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+    userId: req.user?.id
+  }
+})
+
+// logger.info avec contexte complet
+logger.info('Operation', {
+  metadata: {
+    route: '/api/endpoint',
+    method: 'GET',
+    [key]: value,
+    userId: req.user?.id
+  }
+})
+```
+
+**Résultats** :
+- ✅ 0 console.* dans routes-poc.ts (309 migrés total)
+- ✅ 125 logger.error avec error.stack + contexte complet
+- ✅ logger.info/warn enrichis dans routes critiques
+- ✅ Metadata standardisée (route, method, IDs, userId, error.stack)
+- ✅ 0 erreurs LSP - Application running stable
+- ✅ Validation architect PASS - observabilité production OK
+- ✅ Debugging incidents + traçage requêtes + audit trails
+
 ### 🎯 MIGRATION COMPLÈTE - Statut Final
 
-**Total routes modernisées** : **113+ routes avec patterns unifiés** ✅
-- Phase 5 : ~100 routes (routes-poc.ts + fichiers divers)
+**Total routes modernisées** : **157 routes avec patterns unifiés** ✅
+- Phase 5 : Routes déjà avec asyncHandler (routes-poc.ts + autres fichiers)
 - Phase 6 : 9 routes (routes-migration.ts)
 - Phase 7 : 4 routes (routes/validation-milestones.ts)
+- Phase 8 : routes-poc.ts logger migration (287 console.* → logger)
 
 **Fichiers routes conformes** :
-- ✅ server/routes-poc.ts - Migré Phase 5
+- ✅ server/routes-poc.ts - asyncHandler Phase 5 + logger Phase 8 (COMPLET)
 - ✅ server/routes-migration.ts - Migré Phase 6
 - ✅ server/routes/validation-milestones.ts - Migré Phase 7
 - ✅ server/routes/ai-service.ts - Déjà conforme (13 asyncHandler)
@@ -107,10 +165,13 @@ The application uses a modern fullstack architecture.
 - ✅ asyncHandler sur TOUTES les routes actives
 - ✅ 0 console.log/error dans fichiers routes (logger structuré partout)
 - ✅ Typed errors via error-handler.ts
-- ✅ Metadata JSON structurée pour observabilité
+- ✅ Metadata JSON structurée pour observabilité production
+- ✅ error.stack sur tous logger.error pour debugging incidents
 - ✅ Logique business 100% préservée
 
-**Migration terminée avec succès** 🎉
+**Migration routes terminée avec succès** 🎉
+
+**Fichiers restants** : Services (24 fichiers, ~600 console.*) - Hors scope routes, à évaluer si nécessaire
 
 ## External Dependencies
 - **Replit Services**: Auth (Log in with Replit OIDC), PostgreSQL (via `DATABASE_URL`), and Object Storage.

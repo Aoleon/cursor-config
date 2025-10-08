@@ -2670,36 +2670,33 @@ app.post("/api/be-workload",
 // ========================================
 
 // Route pour obtenir une URL d'upload pour les fichiers
-app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/objects/upload", 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
     const objectStorageService = new ObjectStorageService();
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+    
+    logger.info('[ObjectStorage] URL upload générée', { metadata: { userId: req.user?.id } });
+    
     res.json({ uploadURL });
-  } catch (error: any) {
-    console.error("Error getting upload URL:", error);
-    res.status(500).json({ 
-      message: "Failed to get upload URL", 
-      error: error?.message 
-    });
-  }
-});
+  })
+);
 
 // Route pour analyser un fichier uploadé et extraire les données AO
-app.post("/api/documents/analyze", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/documents/analyze", 
+  isAuthenticated,
+  validateBody(z.object({
+    fileUrl: z.string().url(),
+    filename: z.string().min(1)
+  })),
+  asyncHandler(async (req, res) => {
     const { fileUrl, filename } = req.body;
-    
-    if (!fileUrl || !filename) {
-      return res.status(400).json({ 
-        message: "fileUrl and filename are required" 
-      });
-    }
 
-    console.log(`[DocumentAnalysis] Starting analysis of ${filename}`);
+    logger.info('[DocumentAnalysis] Démarrage analyse', { metadata: { userId: req.user?.id, filename } });
     
     // 1. Extraire le contenu textuel du fichier
     const textContent = await documentProcessor.extractTextFromFile(fileUrl, filename);
-    console.log(`[DocumentAnalysis] Extracted ${textContent.length} characters from ${filename}`);
+    logger.info('[DocumentAnalysis] Extraction texte', { metadata: { filename, textLength: textContent.length } });
     
     // 2. Analyser le contenu avec l'IA pour extraire les données structurées
     const extractedData = await documentProcessor.extractAOInformation(textContent, filename);
@@ -2714,15 +2711,13 @@ app.post("/api/documents/analyze", isAuthenticated, async (req, res) => {
       extractedData.deliveryDate
     );
     
-    console.log(`[DocumentAnalysis] Analysis completed for ${filename}:`, enrichedData);
-    console.log(`[DocumentAnalysis] Dates importantes calculées:`, datesImportantes);
+    logger.info('[DocumentAnalysis] Analyse complétée', { metadata: { filename, hasContacts: !!enrichedData.linkedContacts } });
 
     res.json({
       success: true,
       filename,
       extractedData: {
         ...enrichedData,
-        // Ajouter les dates calculées dans la réponse
         datesImportantes
       },
       contactLinking: {
@@ -2746,24 +2741,17 @@ app.post("/api/documents/analyze", isAuthenticated, async (req, res) => {
       textLength: textContent.length,
       message: "Document analysé avec succès"
     });
-
-  } catch (error: any) {
-    console.error("Error analyzing document:", error);
-    res.status(500).json({ 
-      message: "Failed to analyze document",
-      error: error?.message,
-      stack: error?.stack
-    });
-  }
-});
+  })
+);
 
 // ========================================
 // ENHANCED OFFER ROUTES - Création avec arborescence
 // ========================================
 
 // Créer une offre avec génération automatique d'arborescence documentaire
-app.post("/api/offers/create-with-structure", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/offers/create-with-structure", 
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
     const { creationMethod, uploadedFiles, ...offerData } = req.body;
     
     // Convertir les dates string en objets Date si elles sont présentes
@@ -2860,6 +2848,10 @@ app.post("/api/offers/create-with-structure", isAuthenticated, async (req, res) 
       }
     }
 
+    logger.info('[Offers] Offre créée avec structure', { 
+      metadata: { offerId: offer.id, reference: offer.reference, creationMethod } 
+    });
+    
     // Réponse complète avec toutes les informations
     const response = {
       ...offer,
@@ -2872,58 +2864,43 @@ app.post("/api/offers/create-with-structure", isAuthenticated, async (req, res) 
     };
 
     res.status(201).json(response);
-  } catch (error: any) {
-    console.error("Error creating offer with structure:", error);
-    if (error.name === 'ZodError') {
-      res.status(400).json({ 
-        message: "Validation error", 
-        errors: error.errors 
-      });
-    } else {
-      res.status(500).json({ 
-        message: "Failed to create offer with structure",
-        error: error?.message 
-      });
-    }
-  }
-});
+  })
+);
 
 // Route pour servir les objets/fichiers depuis l'object storage
-app.get("/api/objects/:objectPath(*)", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/objects/:objectPath(*)", 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
     const objectStorageService = new ObjectStorageService();
     const objectPath = `/${req.params.objectPath}`;
     
     // Vérifier si l'objet existe
     const exists = await objectStorageService.objectExists(objectPath);
     if (!exists) {
-      return res.status(404).json({ error: "File not found" });
+      throw new NotFoundError("File not found");
     }
+    
+    logger.info('[ObjectStorage] Objet servi', { metadata: { objectPath, userId: req.user?.id } });
     
     // Télécharger et servir l'objet
     await objectStorageService.downloadObject(objectPath, res);
-  } catch (error: any) {
-    console.error("Error serving object:", error);
-    res.status(500).json({ 
-      message: "Failed to serve object",
-      error: error?.message 
-    });
-  }
-});
+  })
+);
 
 // ========================================
 // DASHBOARD ROUTES - Statistiques POC
 // ========================================
 
-app.get("/api/dashboard/stats", async (req, res) => {
-  try {
+app.get("/api/dashboard/stats", 
+  isAuthenticated,
+  asyncHandler(async (req, res) => {
     const stats = await storage.getDashboardStats();
+    
+    logger.info('[Dashboard] Stats consultées', { metadata: { userId: req.user?.id } });
+    
     res.json(stats);
-  } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
-    res.status(500).json({ message: "Failed to fetch dashboard stats" });
-  }
-});
+  })
+);
 
 // KPI consolidés avec métriques de performance temps réel
 const kpiParamsSchema = z.object({
@@ -2990,8 +2967,10 @@ app.get("/api/dashboard/kpis", asyncHandler(async (req, res) => {
 // ========================================
 
 // Route pour récupérer les quotations d'une offre (mapping vers chiffrage-elements)
-app.get("/api/quotations/:offerId", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/quotations/:offerId", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.offerId),
+  asyncHandler(async (req, res) => {
     const { offerId } = req.params;
     
     // Récupérer les éléments de chiffrage et les transformer en format quotations
@@ -3013,34 +2992,43 @@ app.get("/api/quotations/:offerId", isAuthenticated, async (req, res) => {
       notes: element.notes || "",
     }));
     
+    logger.info('[Quotations] Quotations récupérées pour offre', { metadata: { offerId, count: quotations.length } });
+    
     res.json(quotations);
-  } catch (error) {
-    console.error("Error fetching quotations:", error);
-    res.status(500).json({ message: "Failed to fetch quotations" });
-  }
-});
+  })
+);
 
 // Route legacy pour compatibilité avec le format ancien
-app.get("/api/quotations/", isAuthenticated, async (req, res) => {
-  try {
+app.get("/api/quotations/", 
+  isAuthenticated, 
+  asyncHandler(async (req, res) => {
     // Retourner une liste vide ou rediriger vers la nouvelle implémentation
+    logger.info('[Quotations] Route legacy appelée', { metadata: { userId: req.user?.id } });
+    
     res.json([]);
-  } catch (error) {
-    console.error("Error fetching quotations:", error);
-    res.status(500).json({ message: "Failed to fetch quotations" });
-  }
-});
+  })
+);
 
 // Route pour créer une quotation (mapping vers chiffrage-element)
-app.post("/api/quotations", isAuthenticated, async (req, res) => {
-  try {
+app.post("/api/quotations", 
+  isAuthenticated,
+  validateBody(z.object({
+    offerId: z.string().min(1),
+    productCategory: z.string().optional(),
+    supplierName: z.string().min(1),
+    quantity: z.number().positive(),
+    unitPrice: z.number().positive(),
+    totalPrice: z.number().positive(),
+    notes: z.string().optional()
+  })),
+  asyncHandler(async (req, res) => {
     const quotationData = req.body;
     
     // Transformer les données quotation vers chiffrage-element
     const elementData = {
       offerId: quotationData.offerId,
       category: quotationData.productCategory || "fournitures",
-      designation: `${quotationData.productCategory} - ${quotationData.supplierName}`,
+      designation: `${quotationData.productCategory || "fournitures"} - ${quotationData.supplierName}`,
       unit: "u",
       quantity: quotationData.quantity.toString(),
       unitPrice: quotationData.unitPrice.toString(),
@@ -3068,132 +3056,18 @@ app.post("/api/quotations", isAuthenticated, async (req, res) => {
       notes: element.notes,
     };
     
-    res.status(201).json(quotation);
-  } catch (error) {
-    console.error("Error creating quotation:", error);
-    res.status(500).json({ message: "Failed to create quotation" });
-  }
-});
-
-// ========================================
-// OCR ROUTES - Traitement intelligent des PDF d'appels d'offres
-// ========================================
-
-// Route pour créer un AO à partir d'un PDF avec extraction OCR des lots
-app.post("/api/ocr/create-ao-from-pdf", uploadMiddleware.single("pdf"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "Aucun fichier PDF fourni" });
-    }
-
-    console.log(`[OCR] Processing PDF: ${req.file.originalname}`);
-    
-    // Initialiser le service OCR
-    await ocrService.initialize();
-    
-    try {
-      // Traiter le PDF avec OCR
-      const ocrResult = await ocrService.processPDF(req.file.buffer);
-      
-      console.log(`[OCR] Extracted fields:`, ocrResult.processedFields);
-      console.log(`[OCR] Found ${ocrResult.processedFields.lots?.length || 0} lots`);
-      
-      // Préparer les données pour l'AO
-      const aoData = {
-        reference: ocrResult.processedFields.reference || `AO-${Date.now()}`,
-        intituleOperation: ocrResult.processedFields.intituleOperation || req.file.originalname,
-        client: ocrResult.processedFields.maitreOuvrageNom || ocrResult.processedFields.client || "Client non spécifié",
-        location: ocrResult.processedFields.location || "À définir",
-        deadline: ocrResult.processedFields.dateLimiteRemise || ocrResult.processedFields.deadline,
-        typeMarche: (ocrResult.processedFields.typeMarche || "prive") as "public" | "prive" | "ao_restreint" | "ao_ouvert" | "marche_negocie" | "procedure_adaptee",
-        menuiserieType: (ocrResult.processedFields.menuiserieType || "fenetre") as any,
-        source: "other" as const,
-        departement: (ocrResult.processedFields.departement || "62") as any,
-        cctpDisponible: ocrResult.processedFields.cctpDisponible || false,
-        plansDisponibles: ocrResult.processedFields.plansDisponibles || false,
-        dpgfClientDisponible: ocrResult.processedFields.dpgfClientDisponible || false,
-        dceDisponible: ocrResult.processedFields.dceDisponible || false,
-        maitreOeuvre: ocrResult.processedFields.maitreOeuvreNom || ocrResult.processedFields.bureauEtudes,
-        montantEstime: ocrResult.processedFields.montantEstime,
-        delaiExecution: ocrResult.processedFields.delaiContractuel,
-status: "brouillon" as const,
-        isSelected: false,
-        plateformeSource: "import_ocr",
-        priority: "normale" as const,
-      };
-      
-      // Créer l'AO dans la base de données
-      const ao = await storage.createAo(aoData);
-      
-      // Créer les lots détectés
-      let lotsCreated = [];
-      if (ocrResult.processedFields.lots && ocrResult.processedFields.lots.length > 0) {
-        for (const lot of ocrResult.processedFields.lots) {
-          try {
-            const lotData = {
-              aoId: ao.id,
-              numero: lot.numero,
-              designation: lot.designation,
-      status: "brouillon" as const,
-              isJlmEligible: lot.type?.includes('menuiserie') || false,
-              montantEstime: lot.montantEstime || "0",
-              notes: lot.type ? `Type détecté: ${lot.type}` : "",
-            };
-            
-            const createdLot = await storage.createAoLot(lotData);
-            lotsCreated.push(createdLot);
-          } catch (lotError) {
-            console.error(`[OCR] Error creating lot ${lot.numero}:`, lotError);
-          }
-        }
-      } else {
-        // Si aucun lot n'est trouvé, créer un lot générique pour menuiserie
-        if (ocrResult.processedFields.menuiserieType || 
-            ocrResult.processedFields.lotConcerne?.toLowerCase().includes('menuiserie')) {
-          const defaultLot = {
-            aoId: ao.id,
-            numero: "AUTO-1",
-            designation: "Menuiseries (lot détecté automatiquement)",
-    status: "brouillon" as const,
-            isJlmEligible: true,
-            montantEstime: ocrResult.processedFields.montantEstime || "0",
-            notes: "Lot créé automatiquement suite à la détection de termes menuiserie",
-          };
-          const createdLot = await storage.createAoLot(defaultLot);
-          lotsCreated.push(createdLot);
-        }
-      }
-      
-      console.log(`[OCR] Created AO ${ao.reference} with ${lotsCreated.length} lots`);
-      
-      // Retourner l'AO créé avec les lots
-      res.json({
-        success: true,
-        ao: {
-          ...ao,
-          lots: lotsCreated,
-        },
-        extractedData: ocrResult.processedFields,
-        confidence: ocrResult.confidence,
-        message: `AO créé avec succès. ${lotsCreated.length} lots détectés et créés.`,
-      });
-      
-    } finally {
-      await ocrService.cleanup();
-    }
-    
-  } catch (error) {
-    console.error("[OCR] Error creating AO from PDF:", error);
-    res.status(500).json({ 
-      error: "Erreur lors du traitement OCR du PDF",
-      details: error instanceof Error ? error.message : "Erreur inconnue",
+    logger.info('[Quotations] Quotation créée', { 
+      metadata: { quotationId: quotation.id, offerId: quotation.offerId, supplier: quotation.supplierName } 
     });
-  }
-});
+    
+    res.status(201).json(quotation);
+  })
+);
 
 // ========================================
 // TECHNICAL SCORING ROUTES - Configuration du système de scoring technique
 // ========================================
+// Note: Routes OCR déjà migrées aux lignes 785-925 (process-pdf, create-ao-from-pdf, add-pattern)
 
 // Middleware de validation pour les rôles admin/responsable
 const isAdminOrResponsible = (req: any, res: any, next: any) => {
@@ -6168,9 +6042,12 @@ app.patch('/api/alerts/:id/assign',
 // ========================================
 
 // 9. GET /api/alerts/dashboard - Résumé Dashboard
-app.get('/api/alerts/dashboard', isAuthenticated, async (req: any, res) => {
-  try {
-    // 1. STATS GLOBALES ALERTES
+app.get('/api/alerts/dashboard', 
+  isAuthenticated, 
+  asyncHandler(async (req: any, res) => {
+    const userId = req.user.id;
+    
+    // STATS GLOBALES ALERTES
     // @ts-ignore - Phase 6+ feature not yet implemented
     const openAlerts = await storage.listBusinessAlerts({
       status: 'open',
@@ -6188,13 +6065,13 @@ app.get('/api/alerts/dashboard', isAuthenticated, async (req: any, res) => {
     
     // @ts-ignore - Phase 6+ feature not yet implemented
     const myAlerts = await storage.listBusinessAlerts({
-      assignedTo: req.user.id,
+      assignedTo: userId,
       status: 'open',
       limit: 20,
       offset: 0
     });
     
-    // 2. MÉTRIQUES RÉSOLUTION (7 derniers jours)
+    // MÉTRIQUES RÉSOLUTION (7 derniers jours)
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     // @ts-ignore - Phase 6+ feature not yet implemented
     const resolvedThisWeek = await storage.listBusinessAlerts({
@@ -6203,7 +6080,10 @@ app.get('/api/alerts/dashboard', isAuthenticated, async (req: any, res) => {
       offset: 0
     });
     
-    // 3. RESPONSE DASHBOARD
+    logger.info('[BusinessAlerts] Dashboard consulté', { 
+      metadata: { userId, openCount: openAlerts.total, criticalCount: criticalAlerts.total } 
+    });
+    
     res.json({
       success: true,
       data: {
@@ -6231,35 +6111,29 @@ app.get('/api/alerts/dashboard', isAuthenticated, async (req: any, res) => {
       },
       timestamp: new Date().toISOString()
     });
-    
-  } catch (error) {
-    console.error('Erreur /api/alerts/dashboard:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur résumé dashboard alertes'
-    });
-  }
-});
+  })
+);
 
 // 10. GET /api/alerts/stats - Statistiques Alertes
-app.get('/api/alerts/stats', isAuthenticated, async (req: any, res) => {
-  try {
-    // 1. RBAC - Stats détaillées pour admin/executive
+app.get('/api/alerts/stats', 
+  isAuthenticated, 
+  asyncHandler(async (req: any, res) => {
+    // RBAC - Stats détaillées pour admin/executive
     if (!['admin', 'executive'].includes(req.user?.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès refusé - Statistiques admin/executive uniquement'
-      });
+      throw new AuthorizationError('Accès refusé - Statistiques admin/executive uniquement');
     }
     
-    // 2. CALCULS STATISTIQUES
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    // CALCULS STATISTIQUES
     // @ts-ignore - Phase 6+ feature not yet implemented
     const allAlerts = await storage.listBusinessAlerts({
       limit: 1000,
       offset: 0
     });
     
-    // 3. MÉTRIQUES AVANCÉES
+    // MÉTRIQUES AVANCÉES
     const stats = {
       total_alerts: allAlerts.total,
       distribution: allAlerts.summary,
@@ -6277,22 +6151,18 @@ app.get('/api/alerts/stats', isAuthenticated, async (req: any, res) => {
       trends: calculateAlertsTrends(allAlerts.alerts)
     };
     
-    // 4. RESPONSE STATS
+    logger.info('[BusinessAlerts] Stats consultées', { 
+      metadata: { userId, userRole, totalAlerts: allAlerts.total } 
+    });
+    
     res.json({
       success: true,
       data: stats,
       generated_at: new Date().toISOString(),
       timestamp: new Date().toISOString()
     });
-    
-  } catch (error) {
-    console.error('Erreur /api/alerts/stats:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur statistiques alertes'
-    });
-  }
-});
+  })
+);
 
 // ========================================
 // ROUTES MOTEUR SQL SÉCURISÉ - CHATBOT SAXIUM

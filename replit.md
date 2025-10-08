@@ -216,7 +216,7 @@ Le workflow "Start application" lance `npm run dev` qui démarre:
 ### Octobre 2025
 - ✅ Migration de 28 routes (routes-teams, routes-batigest, routes/chiffrage)
 - ✅ Migration de 26 routes workflow avec validation Zod
-- ✅ Migration routes-poc.ts : **90/158 routes (57.0%)**
+- ✅ Migration routes-poc.ts : **100/158 routes (63.3%)** - 🎉 **0 routes non-migrées** avec pattern legacy
   - Phase 1 (auth/users) : 5 routes + 1 middleware ✅ (validée architect)
   - Phase 2 (AO/Offers/Projects) : 18 routes ✅ (validée architect)
   - Phase 3 (Analytics/Predictive/Dashboard) : 15 routes + 1 helper + 2 middlewares ✅ (validée architect)
@@ -226,28 +226,33 @@ Le workflow "Start application" lance `npm run dev` qui démarre:
   - **Phase 5 Batch 5C (Maîtres ouvrage/œuvre/Contacts)** : 14 routes ✅ - 5 maîtres ouvrage, 5 maîtres œuvre, 4 contacts avec soft delete
   - **Phase 5 Batch 5D (Supplier Requests Offers)** : 2 routes ✅ - GET/POST /api/offers/:offerId/supplier-requests (validée architect)
   - **Phase 5 Batch 5E (VISA Architecte)** : 5 routes ✅ - Workflow Étude→Planification, validation VISA gating (validée architect)
-  - **Phase 5 Batch 5F (Team Resources & BE Workload)** : 5 routes ✅ - GET/POST/PATCH team-resources, GET/POST be-workload
-  - **Phase 5 Batch 5J (Business Alerts partiel)** : 4 routes ✅ - GET alerts avec RBAC, POST acknowledge/resolve, PATCH assign
-  - Restant : ~68 routes (Dashboard, OCR, AI Services, Business Alerts restantes, Chatbot IA)
+  - **Phase 5 Batch 5F (Team Resources & BE Workload)** : 5 routes ✅ - GET/POST/PATCH team-resources, GET/POST be-workload (validée architect)
+  - **Phase 5 Batch 5J (Business Alerts complet)** : 6 routes ✅ - GET alerts avec RBAC, POST ack/resolve, PATCH assign, GET dashboard/stats (validée architect)
+  - **Phase 5 Batch 5G (Dashboard & Quotations)** : 4 routes ✅ - GET dashboard/stats, GET/GET/POST quotations (validée architect)
+  - **Phase 5 Batch 5H (Object Storage & Documents)** : 4 routes ✅ + suppression route OCR dupliquée - POST objects/upload, POST documents/analyze, POST offers/create-with-structure, GET objects/:objectPath (validée architect)
+  - Restant : ~58 routes (36.7%) autres fichiers - DateIntelligence, Chatbot, extensions diverses
 - ✅ **Fix LSP complet** : 340 erreurs TypeScript → 0 (NotFoundError signature, @ts-ignore Phase 6+ features)
-- ✅ Progress routes-poc.ts : **51.3% → 57.0%** (+5.7%, +16 routes session actuelle)
+- ✅ Progress routes-poc.ts : **57.0% → 63.3%** (+6.3%, +10 routes session actuelle)
 - ✅ Ajout validation Zod + isAuthenticated sur routes POST critiques
 - ⚠️ Leçon apprise : Scripts automatiques inadaptés (orphaned catch blocks)
 - 📝 Anti-pattern nettoyé : try-catch inutiles dans routes avec asyncHandler (découvert Phase 3)
 - 🔒 Sécurité renforcée : Toutes routes POST nécessitent auth + validation
 - 🎯 **Stratégie cluster-based** : Migration par groupes de features validée (Phases 1-5E réussies)
 - 🎉 **EventBus préservé** : Routes transform/validate conservent publishOfferStatusChanged + publishProjectCreated
-- 📊 **Résultat sessions cumulées** : +48 routes migrées Phase 5 (Projects/Tasks, Lots AO, Maîtres ouvrage/œuvre/Contacts, Supplier Requests, VISA, Team Resources, Business Alerts)
+- 📊 **Résultat sessions cumulées** : +58 routes migrées Phase 5 (Projects/Tasks, Lots AO, Maîtres ouvrage/œuvre/Contacts, Supplier Requests, VISA, Team Resources, Business Alerts, Dashboard, Quotations, Object Storage, Documents)
 - 🏗️ **Patterns Phase 5** : NotFoundError systématique, ValidationError business rules, RBAC enforcement, soft delete préservé, validation params customs
 - ⚙️ **VISA Architecte** : Gating critique préservé (accordeLe auto-add, raisonRefus requis si refusé, workflow log déblocage planification)
-- 🔐 **Business Alerts RBAC** : Filtrage par rôle (users → assigned only), AuthorizationError manager+, status validation lifecycle
+- 🔐 **Business Alerts RBAC** : Filtrage par rôle (users → assigned only), AuthorizationError manager+, status validation lifecycle, stats admin/executive only
+- 🗄️ **Object Storage & Documents** : Validation fileUrl/filename, AI document analysis, structured logging, NotFoundError pour fichiers inexistants
+- 🧹 **Cleanup** : Suppression route OCR dupliquée (ligne 3096), consolidation patterns, 0 try-catch orphelins restants
 
 ### Prochaines Étapes Suggérées
-1. Migrer clusters restants routes-poc.ts (~68 routes) : Dashboard, OCR, AI Services, Business Alerts restantes, Chatbot IA
-2. Tester les validations Zod end-to-end (cas d'erreur, poids manquants, enums invalides)
-3. Ajouter retry logic pour opérations externes (AI, OCR)
-4. Implémenter circuit breakers pour services externes
-5. Tests end-to-end sur workflows critiques (AO → Offer → Project → Planning)
+1. **Tests E2E prioritaires** : Analytics, document analysis, large object downloads (recommandation architect)
+2. **Validation renforcée** : Tighten body validation for structured-offer creation payload
+3. Migrer routes restantes (~58 routes) autres fichiers : DateIntelligence, Chatbot, extensions
+4. Ajouter retry logic pour opérations externes (AI, OCR)
+5. Implémenter circuit breakers pour services externes
+6. Tests E2E workflows critiques : AO → Offer → Project → Planning, VISA Architecte, Business Alerts lifecycle
 
 ## Notes pour Replit Agent
 

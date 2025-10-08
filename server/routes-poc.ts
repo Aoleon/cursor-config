@@ -7498,7 +7498,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const newContact = await storage.createAoContact(contactData);
         sendSuccess(res, newContact, "Liaison AO-Contact créée avec succès", 201);
       } catch (error) {
-        console.error('[API] Erreur createAoContact:', error);
+        logger.error('Erreur createAoContact', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la création de la liaison AO-Contact");
       }
     })
@@ -7515,7 +7517,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteAoContact(id);
         sendSuccess(res, null, "Liaison AO-Contact supprimée avec succès");
       } catch (error) {
-        console.error('[API] Erreur deleteAoContact:', error);
+        logger.error('Erreur deleteAoContact', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la suppression de la liaison AO-Contact");
       }
     })
@@ -7535,7 +7539,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const contacts = await storage.getProjectContacts(projectId);
         sendSuccess(res, contacts);
       } catch (error) {
-        console.error('[API] Erreur getProjectContacts:', error);
+        logger.error('Erreur getProjectContacts', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la récupération des contacts projet");
       }
     })
@@ -7552,7 +7558,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const newContact = await storage.createProjectContact(contactData);
         sendSuccess(res, newContact, "Liaison Project-Contact créée avec succès", 201);
       } catch (error) {
-        console.error('[API] Erreur createProjectContact:', error);
+        logger.error('Erreur createProjectContact', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la création de la liaison Project-Contact");
       }
     })
@@ -7569,7 +7577,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteProjectContact(id);
         sendSuccess(res, null, "Liaison Project-Contact supprimée avec succès");
       } catch (error) {
-        console.error('[API] Erreur deleteProjectContact:', error);
+        logger.error('Erreur deleteProjectContact', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la suppression de la liaison Project-Contact");
       }
     })
@@ -7589,7 +7599,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const specializations = await storage.getSupplierSpecializations(supplier_id);
         sendSuccess(res, specializations);
       } catch (error) {
-        console.error('[API] Erreur getSupplierSpecializations:', error);
+        logger.error('Erreur getSupplierSpecializations', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la récupération des spécialisations fournisseur");
       }
     })
@@ -7606,7 +7618,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const newSpec = await storage.createSupplierSpecialization(specData);
         sendSuccess(res, newSpec, "Spécialisation fournisseur créée avec succès", 201);
       } catch (error) {
-        console.error('[API] Erreur createSupplierSpecialization:', error);
+        logger.error('Erreur createSupplierSpecialization', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la création de la spécialisation fournisseur");
       }
     })
@@ -7625,7 +7639,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const updatedSpec = await storage.updateSupplierSpecialization(id, updateData);
         sendSuccess(res, updatedSpec, "Spécialisation fournisseur mise à jour avec succès");
       } catch (error) {
-        console.error('[API] Erreur updateSupplierSpecialization:', error);
+        logger.error('Erreur updateSupplierSpecialization', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la mise à jour de la spécialisation fournisseur");
       }
     })
@@ -7642,7 +7658,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteSupplierSpecialization(id);
         sendSuccess(res, null, "Spécialisation fournisseur supprimée avec succès");
       } catch (error) {
-        console.error('[API] Erreur deleteSupplierSpecialization:', error);
+        logger.error('Erreur deleteSupplierSpecialization', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database("Erreur lors de la suppression de la spécialisation fournisseur");
       }
     })
@@ -7731,7 +7749,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
 
         sendSuccess(res, migrationStats);
       } catch (error) {
-        console.error('[Monday Dashboard] Erreur récupération stats:', error);
+        logger.error('Monday Dashboard - Erreur récupération stats', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des statistiques de migration');
       }
     })
@@ -7887,7 +7907,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, mondayData);
       } catch (error) {
-        console.error('[Monday Dashboard] Erreur récupération données:', error);
+        logger.error('Monday Dashboard - Erreur récupération données', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des données Monday.com');
       }
     })
@@ -7988,7 +8010,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, validationReport, 'Rapport de validation généré avec succès');
       } catch (error) {
-        console.error('[Monday Dashboard] Erreur génération validation:', error);
+        logger.error('Monday Dashboard - Erreur génération validation', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la génération du rapport de validation');
       }
     })
@@ -8127,7 +8151,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, logsResponse);
       } catch (error) {
-        console.error('[Monday Dashboard] Erreur récupération logs:', error);
+        logger.error('Monday Dashboard - Erreur récupération logs', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des logs de migration');
       }
     })
@@ -8160,7 +8186,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, workflowStatus);
       } catch (error) {
-        console.error('[Supplier Workflow] Erreur récupération statut:', error);
+        logger.error('Supplier Workflow - Erreur récupération statut', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération du statut du workflow');
       }
     })
@@ -8203,7 +8231,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, createdAssociations, 'Fournisseurs sélectionnés avec succès');
       } catch (error) {
-        console.error('[Supplier Workflow] Erreur sélection fournisseurs:', error);
+        logger.error('Supplier Workflow - Erreur sélection fournisseurs', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la sélection des fournisseurs');
       }
     })
@@ -8226,7 +8256,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, lotSuppliers);
       } catch (error) {
-        console.error('[Supplier Workflow] Erreur récupération fournisseurs lot:', error);
+        logger.error('Supplier Workflow - Erreur récupération fournisseurs lot', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des fournisseurs du lot');
       }
     })
@@ -8272,7 +8304,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, session, 'Session de devis créée avec succès');
       } catch (error) {
-        console.error('[Supplier Workflow] Erreur création session:', error);
+        logger.error('Supplier Workflow - Erreur création session', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la création de la session');
       }
     })
@@ -8295,7 +8329,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, summary);
       } catch (error) {
-        console.error('[Supplier Workflow] Erreur récupération résumé session:', error);
+        logger.error('Supplier Workflow - Erreur récupération résumé session', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération du résumé de session');
       }
     })
@@ -8346,7 +8382,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
           });
           
           // CORRECTIF ANALYTICS: Log pour tracking workflow
-          console.log(`[Supplier Workflow] Premier accès détecté - Session: ${session.id}, Supplier: ${session.supplierId}, AO: ${session.aoId}`);
+          logger.info('Supplier Workflow - Premier accès détecté', {
+            metadata: { sessionId: session.id, supplierId: session.supplierId, aoId: session.aoId }
+          });
           
           // Émettre événement pour analytics si eventBus disponible
           if (eventBus) {
@@ -8439,7 +8477,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, publicSession);
       } catch (error) {
-        console.error('[Supplier Workflow] Erreur accès session publique:', error);
+        logger.error('Supplier Workflow - Erreur accès session publique', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         
         // CORRECTIF SÉCURITÉ: Gestion d'erreur appropriée selon le type
         if (error.name === 'NotFoundError') {
@@ -8511,7 +8551,7 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }
         
         // CRITICAL: Persister le fichier dans Object Storage AVANT tout traitement
-        console.log(`[Supplier Workflow] Stockage du fichier dans Object Storage...`);
+        logger.info('Supplier Workflow - Stockage du fichier dans Object Storage');
         const objectStorageService = new ObjectStorageService();
         
         const { filePath, objectUrl } = await objectStorageService.uploadSupplierDocument(
@@ -8528,7 +8568,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
           }
         );
         
-        console.log(`[Supplier Workflow] ✅ Fichier stocké avec succès: ${filePath}`);
+        logger.info('Supplier Workflow - Fichier stocké avec succès', {
+          metadata: { filePath }
+        });
         
         // Créer l'enregistrement du document avec le chemin Object Storage
         const document = await storage.createSupplierDocument({
@@ -8547,7 +8589,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         // NOUVEAU: Déclencher automatiquement l'analyse OCR si c'est un devis (PDF)
         if (documentType === 'quote' && file.mimetype === 'application/pdf') {
-          console.log(`[OCR Auto-Trigger] Démarrage analyse OCR automatique pour document ${document.id}`);
+          logger.info('OCR Auto-Trigger - Démarrage analyse OCR automatique', {
+            metadata: { documentId: document.id }
+          });
           
           // Lancer l'analyse OCR en arrière-plan avec gestion complète des erreurs
           setImmediate(() => {
@@ -8594,7 +8638,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
                   status: 'analyzed'
                 });
                 
-                console.log(`[OCR Auto-Trigger] ✅ Analyse OCR terminée avec succès pour document ${document.id}`);
+                logger.info('OCR Auto-Trigger - Analyse OCR terminée avec succès', {
+                  metadata: { documentId: document.id }
+                });
                 
                 // Émettre un événement pour notifier le système
                 eventBus.emit({
@@ -8611,7 +8657,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
                 });
                 
               } catch (ocrError) {
-                console.error(`[OCR Auto-Trigger] ❌ Erreur analyse OCR pour document ${document.id}:`, ocrError);
+                logger.error('OCR Auto-Trigger - Erreur analyse OCR', {
+                  metadata: { documentId: document.id, error: ocrError instanceof Error ? ocrError.message : String(ocrError) }
+                });
                 
                 // Mettre à jour l'analyse en statut 'failed' avec gestion d'erreur
                 try {
@@ -8627,19 +8675,25 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
                     status: 'error'
                   });
                 } catch (updateError) {
-                  console.error(`[OCR Auto-Trigger] ❌ Impossible de mettre à jour le statut:`, updateError);
+                  logger.error('OCR Auto-Trigger - Impossible de mettre à jour le statut', {
+                    metadata: { error: updateError instanceof Error ? updateError.message : String(updateError) }
+                  });
                 }
               }
             })().catch((err) => {
               // Capture finale des erreurs non gérées de l'IIFE async
-              console.error(`[OCR Auto-Trigger] ❌ Erreur non capturée dans le processus OCR:`, err);
+              logger.error('OCR Auto-Trigger - Erreur non capturée dans le processus OCR', {
+                metadata: { error: err instanceof Error ? err.message : String(err) }
+              });
             });
           });
         }
         
         sendSuccess(res, document, 'Document uploadé avec succès. Analyse OCR en cours...');
       } catch (error) {
-        console.error('[Supplier Workflow] Erreur upload document:', error);
+        logger.error('Supplier Workflow - Erreur upload document', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de l\'upload du document');
       }
     })
@@ -8687,7 +8741,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }
         
         // Envoyer l'invitation via le service email générique
-        console.log(`[Supplier Workflow] Envoi invitation à ${supplier.email} pour session ${sessionId}`);
+        logger.info('Supplier Workflow - Envoi invitation', {
+          metadata: { email: supplier.email, sessionId }
+        });
         
         const invitationResult = await inviteSupplierForQuote(
           session,
@@ -8721,7 +8777,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         // Programmer des rappels automatiques si demandé
         if (sendReminders) {
           // TODO: Implémenter le scheduling réel des rappels
-          console.log(`[Supplier Workflow] Rappels programmés pour session ${sessionId}`);
+          logger.info('Supplier Workflow - Rappels programmés', {
+            metadata: { sessionId }
+          });
         }
         
         const result = {
@@ -8746,7 +8804,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, result, 'Invitation envoyée avec succès');
       } catch (error) {
-        console.error('[Supplier Workflow] Erreur envoi invitation:', error);
+        logger.error('Supplier Workflow - Erreur envoi invitation', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de l\'envoi de l\'invitation');
       }
     })
@@ -8814,7 +8874,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         });
         
         // Envoyer l'invitation immédiatement
-        console.log(`[Supplier Workflow] Envoi invitation pour nouvelle session ${session.id}`);
+        logger.info('Supplier Workflow - Envoi invitation pour nouvelle session', {
+          metadata: { sessionId: session.id }
+        });
         
         const invitationResult = await inviteSupplierForQuote(
           session,
@@ -8826,7 +8888,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         if (!invitationResult.success) {
           // Si l'envoi échoue, on garde la session mais on marque l'erreur
-          console.warn(`[Supplier Workflow] Échec envoi invitation pour session ${session.id}: ${invitationResult.error}`);
+          logger.warn('Supplier Workflow - Échec envoi invitation', {
+            metadata: { sessionId: session.id, error: invitationResult.error }
+          });
           
           await storage.updateSupplierQuoteSession(session.id, {
             status: 'invitation_failed',
@@ -8857,7 +8921,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         // Programmer des rappels automatiques si demandé
         if (sendReminders) {
           // TODO: Implémenter le scheduling réel des rappels
-          console.log(`[Supplier Workflow] Rappels programmés pour session ${session.id}`);
+          logger.info('Supplier Workflow - Rappels programmés', {
+            metadata: { sessionId: session.id }
+          });
         }
         
         const result = {
@@ -8885,7 +8951,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, result, 'Session créée et invitation envoyée avec succès');
       } catch (error) {
-        console.error('[Supplier Workflow] Erreur création session + invitation:', error);
+        logger.error('Supplier Workflow - Erreur création session + invitation', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la création de session et envoi d\'invitation');
       }
     })
@@ -8895,7 +8963,7 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
   // ROUTES ANALYSE OCR DEVIS FOURNISSEURS - NOUVEAU SYSTÈME
   // ========================================
   
-  console.log('[System] Configuration des routes analyse OCR devis fournisseurs...');
+  logger.info('System - Configuration des routes analyse OCR devis fournisseurs');
   
   // POST /api/supplier-documents/:id/analyze - Déclencher analyse OCR d'un document
   app.post('/api/supplier-documents/:id/analyze',
@@ -8910,7 +8978,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
           throw createError.unauthorized('Session utilisateur requise');
         }
         
-        console.log(`[OCR API] Démarrage analyse OCR document ${documentId} par utilisateur ${userId}`);
+        logger.info('OCR API - Démarrage analyse OCR document', {
+          metadata: { documentId, userId }
+        });
         
         // Récupérer le document
         const document = await storage.getSupplierDocument(documentId);
@@ -8949,7 +9019,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         // Lancer l'analyse OCR en arrière-plan (asynchrone)
         setImmediate(async () => {
           try {
-            console.log(`[OCR API] Démarrage traitement asynchrone document ${documentId}`);
+            logger.info('OCR API - Démarrage traitement asynchrone document', {
+              metadata: { documentId }
+            });
             
             // TODO: Récupérer le fichier depuis l'object storage
             // Pour le POC, simuler un buffer PDF
@@ -8962,10 +9034,14 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
               document.aoLotId
             );
             
-            console.log(`[OCR API] ✅ Analyse terminée pour ${documentId} - Score qualité: ${result.qualityScore}%`);
+            logger.info('OCR API - Analyse terminée', {
+              metadata: { documentId, qualityScore: result.qualityScore }
+            });
             
           } catch (error) {
-            console.error(`[OCR API] ❌ Erreur analyse asynchrone ${documentId}:`, error);
+            logger.error('OCR API - Erreur analyse asynchrone', {
+              metadata: { documentId, error: error instanceof Error ? error.message : String(error) }
+            });
             
             // Mettre à jour avec l'erreur
             await storage.updateSupplierQuoteAnalysis(analysisRecord.id, {
@@ -8991,7 +9067,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }, 'Analyse OCR initiée avec succès');
         
       } catch (error) {
-        console.error('[OCR API] Erreur déclenchement analyse:', error);
+        logger.error('OCR API - Erreur déclenchement analyse', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -9005,7 +9083,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
       try {
         const { id: documentId } = req.params;
         
-        console.log(`[OCR API] Récupération analyse pour document ${documentId}`);
+        logger.info('OCR API - Récupération analyse pour document', {
+          metadata: { documentId }
+        });
         
         // Récupérer l'analyse
         const analysis = await storage.getSupplierQuoteAnalysisByDocument(documentId);
@@ -9067,7 +9147,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, result);
         
       } catch (error) {
-        console.error('[OCR API] Erreur récupération analyse:', error);
+        logger.error('OCR API - Erreur récupération analyse', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -9088,7 +9170,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const { id: sessionId } = req.params;
         const { status, includeRawText, orderBy, order } = req.query;
         
-        console.log(`[OCR API] Récupération analyses pour session ${sessionId}`);
+        logger.info('OCR API - Récupération analyses pour session', {
+          metadata: { sessionId }
+        });
         
         // Vérifier que la session existe
         const session = await storage.getSupplierQuoteSession(sessionId);
@@ -9166,7 +9250,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, result);
         
       } catch (error) {
-        console.error('[OCR API] Erreur récupération analyses session:', error);
+        logger.error('OCR API - Erreur récupération analyses session', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -9186,7 +9272,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const { notes, corrections } = req.body;
         const userId = req.session.user?.id;
         
-        console.log(`[OCR API] Approbation analyse ${analysisId} par utilisateur ${userId}`);
+        logger.info('OCR API - Approbation analyse', {
+          metadata: { analysisId, userId }
+        });
         
         // Récupérer l'analyse
         const analysis = await storage.getSupplierQuoteAnalysis(analysisId);
@@ -9225,24 +9313,30 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }, 'Analyse approuvée avec succès');
         
       } catch (error) {
-        console.error('[OCR API] Erreur approbation analyse:', error);
+        logger.error('OCR API - Erreur approbation analyse', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
   );
   
-  console.log('[System] ✅ Routes analyse OCR devis fournisseurs configurées');
-  console.log('[System] Endpoints disponibles:');
-  console.log('  - POST /api/supplier-documents/:id/analyze');
-  console.log('  - GET /api/supplier-documents/:id/analysis');
-  console.log('  - GET /api/supplier-quote-sessions/:id/analysis');
-  console.log('  - POST /api/supplier-quote-analysis/:id/approve');
+  logger.info('System - Routes analyse OCR devis fournisseurs configurées', {
+    metadata: {
+      endpoints: [
+        'POST /api/supplier-documents/:id/analyze',
+        'GET /api/supplier-documents/:id/analysis',
+        'GET /api/supplier-quote-sessions/:id/analysis',
+        'POST /api/supplier-quote-analysis/:id/approve'
+      ]
+    }
+  });
 
   // ========================================
   // ROUTES COMPARAISON DEVIS FOURNISSEURS - INTERFACE COMPARAISON OCR
   // ========================================
   
-  console.log('[System] Configuration des routes de comparaison des devis fournisseurs...');
+  logger.info('System - Configuration des routes de comparaison des devis fournisseurs');
   
   // Schéma pour la sélection de fournisseur
   const selectSupplierSchema = z.object({
@@ -9273,7 +9367,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const { id: aoLotId } = req.params;
         const { includeRawOcr, sortBy, sortOrder, status } = req.query;
         
-        console.log(`[Comparison API] Récupération données comparaison lot ${aoLotId}`);
+        logger.info('Comparison API - Récupération données comparaison lot', {
+          metadata: { aoLotId }
+        });
         
         // Vérifier que le lot existe
         const lot = await storage.getAoLot(aoLotId);
@@ -9394,7 +9490,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
             suppliersData.push(supplierComparison);
             
           } catch (sessionError) {
-            console.error(`[Comparison API] Erreur traitement session ${session.id}:`, sessionError);
+            logger.error('Comparison API - Erreur traitement session', {
+              metadata: { sessionId: session.id, error: sessionError instanceof Error ? sessionError.message : String(sessionError) }
+            });
             // Continuer avec les autres sessions même en cas d'erreur
           }
         }
@@ -9468,7 +9566,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         sendSuccess(res, result);
         
       } catch (error) {
-        console.error('[Comparison API] Erreur récupération comparaison:', error);
+        logger.error('Comparison API - Erreur récupération comparaison', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -9485,7 +9585,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const { supplierId, analysisId, selectionReason, notes } = req.body;
         const userId = req.session.user?.id;
         
-        console.log(`[Comparison API] Sélection fournisseur ${supplierId} pour lot ${aoLotId} par utilisateur ${userId}`);
+        logger.info('Comparison API - Sélection fournisseur', {
+          metadata: { supplierId, aoLotId, userId }
+        });
         
         // Vérifier que le lot existe
         const lot = await storage.getAoLot(aoLotId);
@@ -9554,7 +9656,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }, 'Fournisseur sélectionné avec succès');
         
       } catch (error) {
-        console.error('[Comparison API] Erreur sélection fournisseur:', error);
+        logger.error('Comparison API - Erreur sélection fournisseur', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -9573,7 +9677,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const { id: sessionId } = req.params;
         const { includeRawData, format } = req.query;
         
-        console.log(`[Comparison API] Récupération données comparaison session ${sessionId}`);
+        logger.info('Comparison API - Récupération données comparaison session', {
+          metadata: { sessionId }
+        });
         
         // Récupérer la session
         const session = await storage.getSupplierQuoteSession(sessionId);
@@ -9724,7 +9830,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }
         
       } catch (error) {
-        console.error('[Comparison API] Erreur récupération données session:', error);
+        logger.error('Comparison API - Erreur récupération données session', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -9741,7 +9849,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const { notes, isInternal } = req.body;
         const userId = req.session.user?.id;
         
-        console.log(`[Comparison API] Mise à jour notes analyse ${analysisId} par utilisateur ${userId}`);
+        logger.info('Comparison API - Mise à jour notes analyse', {
+          metadata: { analysisId, userId }
+        });
         
         // Récupérer l'analyse
         const analysis = await storage.getSupplierQuoteAnalysis(analysisId);
@@ -9776,36 +9886,42 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }, 'Notes mises à jour avec succès');
         
       } catch (error) {
-        console.error('[Comparison API] Erreur mise à jour notes:', error);
+        logger.error('Comparison API - Erreur mise à jour notes', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
   );
   
-  console.log('[System] ✅ Routes comparaison devis fournisseurs configurées');
-  console.log('[System] Nouvelles APIs disponibles:');
-  console.log('  - GET /api/ao-lots/:id/comparison');
-  console.log('  - POST /api/ao-lots/:id/select-supplier');
-  console.log('  - GET /api/supplier-quote-sessions/:id/comparison-data');
-  console.log('  - PUT /api/supplier-quote-analysis/:id/notes');
+  logger.info('System - Routes comparaison devis fournisseurs configurées', {
+    metadata: {
+      apis: [
+        'GET /api/ao-lots/:id/comparison',
+        'POST /api/ao-lots/:id/select-supplier',
+        'GET /api/supplier-quote-sessions/:id/comparison-data',
+        'PUT /api/supplier-quote-analysis/:id/notes'
+      ]
+    }
+  });
 
   // ========================================
   // CORRECTIF CRITIQUE URGENT - ROUTES ADMIN
   // ========================================
   
-  console.log('[System] Montage des routes administrateur...');
+  logger.info('System - Montage des routes administrateur');
   
   // Récupérer les services depuis l'app
   const auditService = app.get('auditService');
   const eventBus = app.get('eventBus');
   
   if (!auditService) {
-    console.error('[CRITICAL] AuditService non trouvé dans app.get!');
+    logger.error('CRITICAL - AuditService non trouvé dans app.get');
     throw new Error('AuditService manquant - impossible de monter routes admin');
   }
   
   if (!eventBus) {
-    console.error('[CRITICAL] EventBus non trouvé dans app.get!');
+    logger.error('CRITICAL - EventBus non trouvé dans app.get');
     throw new Error('EventBus manquant - impossible de monter routes admin');
   }
   
@@ -9813,8 +9929,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
   const adminRouter = createAdminRoutes(storage, auditService, eventBus);
   app.use('/api/admin', adminRouter);
   
-  console.log('[System] ✅ Routes administrateur montées sur /api/admin');
-  console.log('[System] Services disponibles : AuditService ✅, EventBus ✅, Storage ✅');
+  logger.info('System - Routes administrateur montées', {
+    metadata: { path: '/api/admin', services: ['AuditService', 'EventBus', 'Storage'] }
+  });
 
   // ========================================
   // NOUVELLES ROUTES API MONDAY.COM - PHASE 2
@@ -9835,7 +9952,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const batteries = await storage.getEquipmentBatteries(projectId);
         sendSuccess(res, batteries);
       } catch (error) {
-        console.error('[Equipment Batteries] Erreur récupération:', error);
+        logger.error('Equipment Batteries - Erreur récupération', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des batteries');
       }
     })
@@ -9854,7 +9973,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }
         sendSuccess(res, battery);
       } catch (error) {
-        console.error('[Equipment Batteries] Erreur récupération batterie:', error);
+        logger.error('Equipment Batteries - Erreur récupération batterie', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -9880,7 +10001,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const battery = await storage.createEquipmentBattery(req.body);
         sendSuccess(res, battery, 'Batterie créée avec succès');
       } catch (error) {
-        console.error('[Equipment Batteries] Erreur création:', error);
+        logger.error('Equipment Batteries - Erreur création', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la création de la batterie');
       }
     })
@@ -9907,7 +10030,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const battery = await storage.updateEquipmentBattery(id, req.body);
         sendSuccess(res, battery, 'Batterie mise à jour avec succès');
       } catch (error) {
-        console.error('[Equipment Batteries] Erreur mise à jour:', error);
+        logger.error('Equipment Batteries - Erreur mise à jour', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la mise à jour de la batterie');
       }
     })
@@ -9923,7 +10048,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteEquipmentBattery(id);
         sendSuccess(res, null, 'Batterie supprimée avec succès');
       } catch (error) {
-        console.error('[Equipment Batteries] Erreur suppression:', error);
+        logger.error('Equipment Batteries - Erreur suppression', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la suppression de la batterie');
       }
     })
@@ -9946,7 +10073,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const targets = await storage.getMarginTargets(projectId);
         sendSuccess(res, targets);
       } catch (error) {
-        console.error('[Margin Targets] Erreur récupération:', error);
+        logger.error('Margin Targets - Erreur récupération', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des objectifs de marge');
       }
     })
@@ -9965,7 +10094,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }
         sendSuccess(res, target);
       } catch (error) {
-        console.error('[Margin Targets] Erreur récupération objectif:', error);
+        logger.error('Margin Targets - Erreur récupération objectif', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -9995,7 +10126,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         });
         sendSuccess(res, target, 'Objectif de marge créé avec succès');
       } catch (error) {
-        console.error('[Margin Targets] Erreur création:', error);
+        logger.error('Margin Targets - Erreur création', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la création de l\'objectif de marge');
       }
     })
@@ -10024,7 +10157,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const target = await storage.updateMarginTarget(id, updateData);
         sendSuccess(res, target, 'Objectif de marge mis à jour avec succès');
       } catch (error) {
-        console.error('[Margin Targets] Erreur mise à jour:', error);
+        logger.error('Margin Targets - Erreur mise à jour', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la mise à jour de l\'objectif de marge');
       }
     })
@@ -10040,7 +10175,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteMarginTarget(id);
         sendSuccess(res, null, 'Objectif de marge supprimé avec succès');
       } catch (error) {
-        console.error('[Margin Targets] Erreur suppression:', error);
+        logger.error('Margin Targets - Erreur suppression', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la suppression de l\'objectif de marge');
       }
     })
@@ -10072,7 +10209,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, studyDuration);
       } catch (error) {
-        console.error('[Study Duration] Erreur récupération:', error);
+        logger.error('Study Duration - Erreur récupération', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -10112,7 +10251,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, studyDuration, 'Durée d\'étude mise à jour avec succès');
       } catch (error) {
-        console.error('[Study Duration] Erreur mise à jour:', error);
+        logger.error('Study Duration - Erreur mise à jour', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la mise à jour de la durée d\'étude');
       }
     })
@@ -10133,7 +10274,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const tags = await storage.getClassificationTags(category);
         sendSuccess(res, tags);
       } catch (error) {
-        console.error('[Classification Tags] Erreur récupération:', error);
+        logger.error('Classification Tags - Erreur récupération', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des tags de classification');
       }
     })
@@ -10152,7 +10295,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }
         sendSuccess(res, tag);
       } catch (error) {
-        console.error('[Classification Tags] Erreur récupération tag:', error);
+        logger.error('Classification Tags - Erreur récupération tag', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -10173,7 +10318,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const tag = await storage.createClassificationTag(req.body);
         sendSuccess(res, tag, 'Tag de classification créé avec succès');
       } catch (error) {
-        console.error('[Classification Tags] Erreur création:', error);
+        logger.error('Classification Tags - Erreur création', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la création du tag de classification');
       }
     })
@@ -10196,7 +10343,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const tag = await storage.updateClassificationTag(id, req.body);
         sendSuccess(res, tag, 'Tag de classification mis à jour avec succès');
       } catch (error) {
-        console.error('[Classification Tags] Erreur mise à jour:', error);
+        logger.error('Classification Tags - Erreur mise à jour', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la mise à jour du tag de classification');
       }
     })
@@ -10212,7 +10361,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteClassificationTag(id);
         sendSuccess(res, null, 'Tag de classification supprimé avec succès');
       } catch (error) {
-        console.error('[Classification Tags] Erreur suppression:', error);
+        logger.error('Classification Tags - Erreur suppression', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la suppression du tag de classification');
       }
     })
@@ -10234,7 +10385,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const entityTags = await storage.getEntityTags(entityType, entityId);
         sendSuccess(res, entityTags);
       } catch (error) {
-        console.error('[Entity Tags] Erreur récupération:', error);
+        logger.error('Entity Tags - Erreur récupération', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des liaisons de tags');
       }
     })
@@ -10254,7 +10407,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const entityTag = await storage.createEntityTag(req.body);
         sendSuccess(res, entityTag, 'Liaison de tag créée avec succès');
       } catch (error) {
-        console.error('[Entity Tags] Erreur création:', error);
+        logger.error('Entity Tags - Erreur création', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la création de la liaison de tag');
       }
     })
@@ -10270,7 +10425,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteEntityTag(id);
         sendSuccess(res, null, 'Liaison de tag supprimée avec succès');
       } catch (error) {
-        console.error('[Entity Tags] Erreur suppression:', error);
+        logger.error('Entity Tags - Erreur suppression', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la suppression de la liaison de tag');
       }
     })
@@ -10287,7 +10444,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const labelAssignments = await storage.getEmployeeLabelAssignments(userId);
         sendSuccess(res, labelAssignments);
       } catch (error) {
-        console.error('[Employee Labels] Erreur récupération:', error);
+        logger.error('Employee Labels - Erreur récupération', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des labels employé');
       }
     })
@@ -10314,7 +10473,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         
         sendSuccess(res, assignment, 'Label employé assigné avec succès');
       } catch (error) {
-        console.error('[Employee Labels] Erreur assignation:', error);
+        logger.error('Employee Labels - Erreur assignation', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de l\'assignation du label employé');
       }
     })
@@ -10333,7 +10494,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteEmployeeLabelAssignment(labelId);
         sendSuccess(res, null, 'Label employé supprimé avec succès');
       } catch (error) {
-        console.error('[Employee Labels] Erreur suppression:', error);
+        logger.error('Employee Labels - Erreur suppression', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la suppression du label employé');
       }
     })
@@ -10350,7 +10513,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const subElements = await storage.getProjectSubElements(projectId);
         sendSuccess(res, subElements);
       } catch (error) {
-        console.error('[Project Sub Elements] Erreur récupération:', error);
+        logger.error('Project Sub Elements - Erreur récupération', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la récupération des sous-éléments du projet');
       }
     })
@@ -10369,7 +10534,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         }
         sendSuccess(res, subElement);
       } catch (error) {
-        console.error('[Project Sub Elements] Erreur récupération sous-élément:', error);
+        logger.error('Project Sub Elements - Erreur récupération sous-élément', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw error;
       }
     })
@@ -10398,7 +10565,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         });
         sendSuccess(res, subElement, 'Sous-élément de projet créé avec succès');
       } catch (error) {
-        console.error('[Project Sub Elements] Erreur création:', error);
+        logger.error('Project Sub Elements - Erreur création', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la création du sous-élément de projet');
       }
     })
@@ -10424,7 +10593,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         const subElement = await storage.updateProjectSubElement(id, req.body);
         sendSuccess(res, subElement, 'Sous-élément de projet mis à jour avec succès');
       } catch (error) {
-        console.error('[Project Sub Elements] Erreur mise à jour:', error);
+        logger.error('Project Sub Elements - Erreur mise à jour', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la mise à jour du sous-élément de projet');
       }
     })
@@ -10440,7 +10611,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         await storage.deleteProjectSubElement(id);
         sendSuccess(res, null, 'Sous-élément de projet supprimé avec succès');
       } catch (error) {
-        console.error('[Project Sub Elements] Erreur suppression:', error);
+        logger.error('Project Sub Elements - Erreur suppression', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la suppression du sous-élément de projet');
       }
     })
@@ -10503,7 +10676,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      console.error('[Bug Report] Erreur collecte informations serveur:', error);
+      logger.error('Bug Report - Erreur collecte informations serveur', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       return {
         serverLogs: 'Erreur lors de la collecte',
         version: process.version,
@@ -10524,7 +10699,7 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
       const repoName = process.env.GITHUB_REPO_NAME || 'saxium';
 
       if (!githubToken) {
-        console.warn('[Bug Report] GITHUB_TOKEN manquant - issue non créée');
+        logger.warn('Bug Report - GITHUB_TOKEN manquant - issue non créée');
         return null;
       }
 
@@ -10595,16 +10770,22 @@ ${serverInfo.serverLogs}
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[Bug Report] Erreur GitHub API:', response.status, errorText);
+        logger.error('Bug Report - Erreur GitHub API', {
+          metadata: { status: response.status, errorText }
+        });
         return null;
       }
 
       const issueData = await response.json();
-      console.log(`[Bug Report] Issue GitHub créée: ${issueData.html_url}`);
+      logger.info('Bug Report - Issue GitHub créée', {
+        metadata: { issueUrl: issueData.html_url }
+      });
       return issueData.html_url;
 
     } catch (error) {
-      console.error('[Bug Report] Erreur création issue GitHub:', error);
+      logger.error('Bug Report - Erreur création issue GitHub', {
+        metadata: { error: error instanceof Error ? error.message : String(error) }
+      });
       return null;
     }
   }
@@ -10618,7 +10799,7 @@ ${serverInfo.serverLogs}
     validateBody(insertBugReportSchema),
     asyncHandler(async (req, res) => {
       try {
-        console.log('[Bug Report] Création d\'un nouveau rapport de bug');
+        logger.info('Bug Report - Création nouveau rapport de bug');
         
         // Collecte automatique d'informations serveur
         const serverInfo = await collectServerInfo();
@@ -10636,46 +10817,52 @@ ${serverInfo.serverLogs}
         };
 
         // Sauvegarde en base de données (priorité absolue)
-        console.log('[DEBUG] Instance storage type:', typeof storage);
-        console.log('[DEBUG] Storage constructor name:', storage.constructor.name);
-        console.log('[DEBUG] Storage methods:', Object.getOwnPropertyNames(storage));
+        logger.debug('Storage debug info', {
+          metadata: {
+            storageType: typeof storage,
+            constructor: storage.constructor.name,
+            methods: Object.getOwnPropertyNames(storage)
+          }
+        });
         
-        // Afficher TOUTES les méthodes du prototype
         const allMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(storage));
-        console.log('[DEBUG] Total prototype methods count:', allMethods.length);
-        console.log('[DEBUG] All prototype methods:', allMethods.sort());
+        logger.debug('Storage prototype methods', {
+          metadata: {
+            count: allMethods.length,
+            methods: allMethods.sort(),
+            hasCreateBugReport: 'createBugReport' in storage,
+            inPrototype: allMethods.includes('createBugReport')
+          }
+        });
         
-        // Vérifier spécifiquement createBugReport (sans déclencher l'erreur)
-        console.log('[DEBUG] Has createBugReport method:', 'createBugReport' in storage);
-        console.log('[DEBUG] createBugReport in prototype:', allMethods.includes('createBugReport'));
-        
-        // Debug de l'instance exacte
-        console.log('[DEBUG] Storage instance ID:', storage.toString());
-        console.log('[DEBUG] storage === imported storage?', storage === storage);
-        
-        // SOLUTION ULTIME: bypasser complètement storage.createBugReport défaillant
-        console.log('[SOLUTION ULTIME] Bypass de storage.createBugReport - insertion directe en base');
+        logger.info('Bug Report - Bypass storage pour insertion directe');
         
         const [savedBugReport] = await db.insert(bugReports).values(bugReportData).returning();
-        console.log(`[Bug Report] BYPASS RÉUSSI - Rapport sauvegardé avec ID: ${savedBugReport.id}`);
-        console.log(`[Bug Report] Rapport sauvegardé en base avec ID: ${savedBugReport.id}`);
+        logger.info('Bug Report - Rapport sauvegardé en base', {
+          metadata: { bugReportId: savedBugReport.id }
+        });
 
         // Tentative de création d'issue GitHub (non bloquante)
         let githubIssueUrl: string | null = null;
         try {
           githubIssueUrl = await createGitHubIssue(bugReportData, serverInfo);
         } catch (githubError) {
-          console.error('[Bug Report] Erreur GitHub (non bloquante):', githubError);
+          logger.error('Bug Report - Erreur GitHub non bloquante', {
+            metadata: { error: githubError instanceof Error ? githubError.message : String(githubError) }
+          });
           // On continue même si GitHub échoue
         }
 
         // Logs détaillés pour debug
-        console.log(`[Bug Report] Rapport ${savedBugReport.id} créé:`, {
-          type: savedBugReport.type,
-          priority: savedBugReport.priority,
-          userId: savedBugReport.userId,
-          githubCreated: !!githubIssueUrl,
-          serverInfoCollected: !!serverInfo.timestamp
+        logger.info('Bug Report - Rapport créé', {
+          metadata: {
+            bugReportId: savedBugReport.id,
+            type: savedBugReport.type,
+            priority: savedBugReport.priority,
+            userId: savedBugReport.userId,
+            githubCreated: !!githubIssueUrl,
+            serverInfoCollected: !!serverInfo.timestamp
+          }
         });
 
         // Réponse finale au format demandé
@@ -10690,21 +10877,28 @@ ${serverInfo.serverLogs}
         }, responseMessage);
 
       } catch (error) {
-        console.error('[Bug Report] Erreur création rapport:', error);
+        logger.error('Bug Report - Erreur création rapport', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
         throw createError.database('Erreur lors de la création du rapport de bug');
       }
     })
   );
 
-  console.log('[System] ✅ Routes API ajoutées:');
-  console.log('  - /api/bug-reports (POST) - Système de rapport de bugs avec GitHub Issues');
-  console.log('  - /api/equipment-batteries (CRUD)');
-  console.log('  - /api/margin-targets (CRUD)');
-  console.log('  - /api/projects/:id/study-duration (GET/PATCH)');
-  console.log('  - /api/tags/classification (CRUD)');
-  console.log('  - /api/tags/entity (CRUD)');
-  console.log('  - /api/employees/:id/labels (CRUD)');
-  console.log('  - /api/projects/:id/sub-elements (CRUD)');
+  logger.info('System - Routes API ajoutées', {
+    metadata: {
+      routes: [
+        '/api/bug-reports (POST) - Système de rapport de bugs avec GitHub Issues',
+        '/api/equipment-batteries (CRUD)',
+        '/api/margin-targets (CRUD)',
+        '/api/projects/:id/study-duration (GET/PATCH)',
+        '/api/tags/classification (CRUD)',
+        '/api/tags/entity (CRUD)',
+        '/api/employees/:id/labels (CRUD)',
+        '/api/projects/:id/sub-elements (CRUD)'
+      ]
+    }
+  });
   
   const httpServer = createServer(app);
   return httpServer;

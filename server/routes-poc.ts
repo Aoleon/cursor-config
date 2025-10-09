@@ -82,6 +82,33 @@ declare module 'express-session' {
   }
 }
 
+// Extension du type Express Request pour inclure la propriété user
+// Support pour BOTH basic auth ET OIDC authentication
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: {
+      // Basic auth fields (optional car OIDC les extrait de claims)
+      id?: string;
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      profileImageUrl?: string | null;
+      role?: string;
+      isBasicAuth?: boolean;
+      // OIDC-specific fields
+      claims?: {
+        sub?: string;
+        email?: string;
+        first_name?: string;
+        last_name?: string;
+        profile_image_url?: string | null;
+        [key: string]: any;
+      };
+      isOIDC?: boolean;
+    };
+  }
+}
+
 // Configuration de multer pour l'upload de fichiers
 const uploadMiddleware = multer({ 
   storage: multer.memoryStorage(),
@@ -2499,7 +2526,7 @@ app.get("/api/suppliers/",
   isAuthenticated, 
   validateQuery(suppliersQuerySchema),
   asyncHandler(async (req, res) => {
-    const { search, status, page, limit } = req.query;
+    const { search, status, page = 1, limit = 20 } = req.query;
     
     const suppliers = await storage.getSuppliers(
       search as string, 
@@ -2507,14 +2534,16 @@ app.get("/api/suppliers/",
     );
     
     // Application de la pagination côté serveur
-    const offset = (Number(page) - 1) * Number(limit);
-    const paginatedSuppliers = suppliers.slice(offset, offset + limit);
+    const pageNum = typeof page === 'string' ? parseInt(page, 10) : Number(page);
+    const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : Number(limit);
+    const offset = (pageNum - 1) * limitNum;
+    const paginatedSuppliers = suppliers.slice(offset, offset + limitNum);
     const total = suppliers.length;
-    const totalPages = Math.ceil(total / Number(limit));
+    const totalPages = Math.ceil(total / limitNum);
     
     sendPaginatedSuccess(res, paginatedSuppliers, {
-      page: Number(page),
-      limit: Number(limit),
+      page: pageNum,
+      limit: limitNum,
       total
     });
   })
@@ -3519,8 +3548,8 @@ app.patch("/api/technical-alerts/:id/ack",
   requireTechnicalValidationRole,
   validateParams(commonParamSchemas.id),
   asyncHandler(async (req, res) => {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const userId = req.session?.user?.id;
       
       if (!userId) {
@@ -3555,8 +3584,8 @@ app.patch("/api/technical-alerts/:id/validate",
   requireTechnicalValidationRole,
   validateParams(commonParamSchemas.id),
   asyncHandler(async (req, res) => {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const userId = req.session?.user?.id;
       
       if (!userId) {
@@ -3592,8 +3621,8 @@ app.patch("/api/technical-alerts/:id/bypass",
   validateParams(commonParamSchemas.id),
   validateBody(bypassTechnicalAlertSchema),
   asyncHandler(async (req, res) => {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const { until, reason } = req.body;
       const userId = req.session?.user?.id;
       
@@ -4458,7 +4487,7 @@ app.get("/api/date-alerts/summary",
       });
       
       // Calculer la période
-      let startDate: Date;
+      let startDate: Date = new Date();
       switch (period) {
         case 'today':
           startDate = new Date();
@@ -4472,11 +4501,16 @@ app.get("/api/date-alerts/summary",
           startDate = new Date();
           startDate.setDate(startDate.getDate() - 30);
           break;
+        default:
+          startDate = new Date();
+          startDate.setDate(startDate.getDate() - 30);
+          break;
       }
       
       // Récupérer les alertes dans la période
       const allAlerts = await storage.getDateAlerts({});
       const periodAlerts = allAlerts.filter(alert => {
+        if (!alert.createdAt) return false;
         const alertDate = new Date(alert.createdAt);
         const isInPeriod = alertDate >= startDate;
         const includeAlert = includeResolved || alert.status !== 'resolved';
@@ -5156,7 +5190,7 @@ app.get("/api/admin/intelligence/test-integration",
       }).optional(),
       complexity: z.enum(['simple', 'complex', 'expert']).optional(),
       userId: z.string().optional(),
-      includeP95P99: z.boolean().default(true)
+      includeP95P99: z.string().transform(val => val === 'true' || val === '1').default('true')
     }).optional()),
     asyncHandler(async (req, res) => {
       try {
@@ -5164,7 +5198,7 @@ app.get("/api/admin/intelligence/test-integration",
         const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
         const complexity = query.complexity as 'simple' | 'complex' | 'expert' | undefined;
         const userId = query.userId as string | undefined;
-        const includeP95P99 = (typeof query.includeP95P99 === 'string' && query.includeP95P99 === 'true') || query.includeP95P99 === true;
+        const includeP95P99 = query.includeP95P99 === 'true' || query.includeP95P99 === true;
         
         logger.info('Récupération métriques pipeline avec filtres', {
           metadata: { filters: req.query }
@@ -5247,12 +5281,15 @@ app.get("/api/admin/intelligence/test-integration",
         startDate: z.string().datetime(),
         endDate: z.string().datetime()
       }).optional(),
-      includeTrends: z.boolean().default(true),
-      includeAlerts: z.boolean().default(true)
+      includeTrends: z.string().transform(val => val === 'true' || val === '1').default('true'),
+      includeAlerts: z.string().transform(val => val === 'true' || val === '1').default('true')
     }).optional()),
     asyncHandler(async (req, res) => {
       try {
-        const { timeRange, includeTrends, includeAlerts } = req.query || {};
+        const query = req.query || {};
+        const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
+        const includeTrends = query.includeTrends === 'true' || query.includeTrends === true;
+        const includeAlerts = query.includeAlerts === 'true' || query.includeAlerts === true;
         
         logger.info('SLO compliance check');
         
@@ -5263,7 +5300,8 @@ app.get("/api/admin/intelligence/test-integration",
           includeAlerts
         });
         
-        sendSuccess(res, sloMetrics, {
+        sendSuccess(res, {
+          ...sloMetrics,
           sloTargets: {
             simple: '5s',
             complex: '10s',
@@ -5276,7 +5314,7 @@ app.get("/api/admin/intelligence/test-integration",
         logger.error('Erreur SLO compliance', {
           metadata: { error: error instanceof Error ? error.message : String(error) }
         });
-        throw createError.internal('Erreur lors de la vérification de conformité SLO');
+        throw createError.database('Erreur lors de la vérification de conformité SLO');
       }
     })
   );
@@ -5289,11 +5327,13 @@ app.get("/api/admin/intelligence/test-integration",
         startDate: z.string().datetime(),
         endDate: z.string().datetime()
       }).optional(),
-      threshold: z.number().min(0.1).max(10).default(2.0) // En secondes
+      threshold: z.coerce.number().min(0.1).max(10).default(2.0) // En secondes
     }).optional()),
     asyncHandler(async (req, res) => {
       try {
-        const { timeRange, threshold } = req.query || {};
+        const query = req.query || {};
+        const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
+        const threshold = typeof query.threshold === 'string' ? parseFloat(query.threshold) : (query.threshold as number) || 2.0;
         
         logger.info('Analyse goulots avec seuil', {
           metadata: { threshold }
@@ -5944,8 +5984,9 @@ const calculateAvgResolutionTime = (alerts: BusinessAlert[]) => {
   if (resolvedAlerts.length === 0) return {};
   
   const severityGroups = resolvedAlerts.reduce((acc, alert) => {
+    if (!alert.resolvedAt || !alert.triggeredAt) return acc;
     if (!acc[alert.severity]) acc[alert.severity] = [];
-    const resolutionTime = (new Date(alert.resolvedAt!).getTime() - new Date(alert.triggeredAt).getTime()) / (1000 * 60); // en minutes
+    const resolutionTime = (new Date(alert.resolvedAt).getTime() - new Date(alert.triggeredAt).getTime()) / (1000 * 60); // en minutes
     acc[alert.severity].push(resolutionTime);
     return acc;
   }, {} as Record<string, number[]>);

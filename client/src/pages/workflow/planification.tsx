@@ -89,6 +89,7 @@ export default function Planification() {
     actions.push(
       <Button 
         key="edit-planning"
+        data-testid={`button-edit-planning-${project.id}`}
         variant="outline" 
         size="sm"
         onClick={() => handleEditPlanning(project.id)}
@@ -102,6 +103,7 @@ export default function Planification() {
     actions.push(
       <Button 
         key="teams"
+        data-testid={`button-manage-teams-${project.id}`}
         variant="outline" 
         size="sm"
         onClick={() => handleManageTeams(project.id)}
@@ -121,6 +123,7 @@ export default function Planification() {
       actions.push(
         <Button 
           key="approve"
+          data-testid={`button-validate-planning-${project.id}`}
           variant="outline"
           size="sm"
           onClick={() => validatePlanningMutation.mutate(project.id)}
@@ -134,6 +137,7 @@ export default function Planification() {
       actions.push(
         <Button 
           key="start"
+          data-testid={`button-start-chantier-${project.id}`}
           size="sm"
           className="bg-success hover:bg-success/90"
           onClick={() => startChantierMutation.mutate(project.id)}
@@ -146,6 +150,7 @@ export default function Planification() {
       actions.push(
         <Button 
           key="incomplete"
+          data-testid={`button-incomplete-${project.id}`}
           variant="secondary" 
           size="sm"
           disabled
@@ -189,7 +194,7 @@ export default function Planification() {
         <div className="px-6 py-6">
           {/* Statistiques */}
           <div className="grid grid-cols-4 gap-4 mb-6">
-            <Card>
+            <Card data-testid="stat-en-planification">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">En planification</CardTitle>
               </CardHeader>
@@ -199,7 +204,7 @@ export default function Planification() {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card data-testid="stat-equipes-affecter">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Équipes à affecter</CardTitle>
               </CardHeader>
@@ -211,7 +216,7 @@ export default function Planification() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="stat-prets-demarrer">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Prêts à démarrer</CardTitle>
               </CardHeader>
@@ -223,7 +228,7 @@ export default function Planification() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="stat-charge-equipes">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Charge équipes</CardTitle>
               </CardHeader>
@@ -244,9 +249,9 @@ export default function Planification() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8">Chargement...</div>
+                <div data-testid="loading-state" className="text-center py-8">Chargement...</div>
               ) : projects?.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div data-testid="empty-state" className="text-center py-8 text-gray-500">
                   Aucun projet en planification actuellement
                 </div>
               ) : (
@@ -254,20 +259,21 @@ export default function Planification() {
                   {projects?.map((project: any) => (
                     <div 
                       key={project.id} 
+                      data-testid={`card-project-${project.id}`}
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h3 className="font-semibold text-lg">{project.reference}</h3>
+                          <h3 data-testid={`project-reference-${project.id}`} className="font-semibold text-lg">{project.reference}</h3>
                           <p className="text-sm text-gray-600">{project.client}</p>
                           <p className="text-sm text-gray-500">{project.location}</p>
                         </div>
                         <div className="text-right">
-                          <Badge className={getPriorityColor(project.priority)}>
+                          <Badge data-testid={`priority-badge-${project.id}`} className={getPriorityColor(project.priority)}>
                             {project.priority === 'urgent' ? 'Urgent' : 
                              project.priority === 'high' ? 'Prioritaire' : 'Normal'}
                           </Badge>
-                          <p className="text-sm font-semibold mt-1">
+                          <p data-testid={`project-montant-${project.id}`} className="text-sm font-semibold mt-1">
                             {project.montantTotal?.toLocaleString('fr-FR')} € HT
                           </p>
                         </div>
@@ -277,7 +283,7 @@ export default function Planification() {
                       <div className="grid grid-cols-4 gap-4 mb-3 bg-gray-50 p-3 rounded">
                         <div>
                           <p className="text-xs text-gray-500">Date début prévue</p>
-                          <p className="font-semibold">
+                          <p data-testid={`project-date-debut-${project.id}`} className="font-semibold">
                             {project.dateDebutPrevue ? 
                               new Date(project.dateDebutPrevue).toLocaleDateString('fr-FR') : 
                               'À définir'}
@@ -285,7 +291,7 @@ export default function Planification() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Date fin prévue</p>
-                          <p className="font-semibold">
+                          <p data-testid={`project-date-fin-${project.id}`} className="font-semibold">
                             {project.dateFinPrevue ? 
                               new Date(project.dateFinPrevue).toLocaleDateString('fr-FR') : 
                               'À définir'}
@@ -293,13 +299,13 @@ export default function Planification() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Durée</p>
-                          <p className="font-semibold">
+                          <p data-testid={`project-duree-${project.id}`} className="font-semibold">
                             {project.dureeJours || '-'} jours
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Équipes</p>
-                          <p className="font-semibold">
+                          <p data-testid={`project-equipes-${project.id}`} className="font-semibold">
                             {project.teamCount || 0}/{project.teamRequired || 0}
                           </p>
                         </div>
@@ -307,19 +313,19 @@ export default function Planification() {
 
                       {/* Indicateurs */}
                       <div className="flex items-center gap-4 mb-3">
-                        <div className="flex items-center">
+                        <div data-testid={`indicator-tasks-${project.id}`} className="flex items-center">
                           <Target className={`h-4 w-4 mr-1 ${project.tasksCreated ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Tâches créées</span>
                         </div>
-                        <div className="flex items-center">
+                        <div data-testid={`indicator-teams-${project.id}`} className="flex items-center">
                           <Users className={`h-4 w-4 mr-1 ${project.teamsAssigned ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Équipes affectées</span>
                         </div>
-                        <div className="flex items-center">
+                        <div data-testid={`indicator-dates-${project.id}`} className="flex items-center">
                           <Calendar className={`h-4 w-4 mr-1 ${project.datesValidated ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Dates validées</span>
                         </div>
-                        <div className="flex items-center">
+                        <div data-testid={`indicator-supplies-${project.id}`} className="flex items-center">
                           <Truck className={`h-4 w-4 mr-1 ${project.suppliesOrdered ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Approvisionnement</span>
                         </div>
@@ -327,7 +333,7 @@ export default function Planification() {
 
                       {/* Jalons principaux */}
                       {project.milestones && project.milestones.length > 0 && (
-                        <div className="mb-3 p-2 bg-blue-50 rounded">
+                        <div data-testid={`milestones-${project.id}`} className="mb-3 p-2 bg-blue-50 rounded">
                           <p className="text-sm font-medium mb-1">Jalons principaux:</p>
                           <div className="flex gap-4 text-xs">
                             {project.milestones.map((milestone: any, idx: number) => (

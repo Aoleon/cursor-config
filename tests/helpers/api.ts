@@ -228,3 +228,35 @@ export async function waitForApiReady(page: Page, timeout = 30000): Promise<void
   
   throw new Error('API not ready within timeout');
 }
+
+/**
+ * Normalise la réponse API (gère data wrapper ou réponse directe)
+ */
+function normalizeApiResponse(result: any): any[] {
+  if (Array.isArray(result)) {
+    return result;
+  }
+  if (result.data && Array.isArray(result.data)) {
+    return result.data;
+  }
+  if (result.data) {
+    return [result.data];
+  }
+  return [];
+}
+
+/**
+ * Nettoie TOUS les projets en planification
+ * Utile pour garantir un état vide avant les tests
+ */
+export async function cleanupAllPlanificationProjects(page: Page): Promise<void> {
+  const response = await page.request.get('/api/projects?status=planification');
+  if (!response.ok()) return;
+  
+  const result = await response.json();
+  const projects = normalizeApiResponse(result);
+  
+  for (const project of projects) {
+    await deleteResource(page, '/api/projects', project.id);
+  }
+}

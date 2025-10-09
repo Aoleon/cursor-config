@@ -30,12 +30,27 @@ export interface TestAO {
 }
 
 export interface TestProject {
+  id?: string;
   reference: string;
-  nom: string;
+  nom?: string;
   client: string;
+  location?: string;
   status: string;
-  montant: number;
-  dateDebut: string;
+  montant?: number;
+  montantTotal?: number;
+  dateDebut?: string;
+  priority?: 'urgent' | 'high' | 'normal';
+  dateDebutPrevue?: Date | string;
+  dateFinPrevue?: Date | string;
+  dureeJours?: number;
+  teamCount?: number;
+  teamRequired?: number;
+  tasksCreated?: boolean;
+  teamsAssigned?: boolean;
+  datesValidated?: boolean;
+  suppliesOrdered?: boolean;
+  readyToStart?: boolean;
+  milestones?: Array<{name: string, date: Date | string}>;
 }
 
 export interface TestOffer {
@@ -90,14 +105,29 @@ export function generateTestAO(overrides: Partial<TestAO> = {}): TestAO {
 export function generateTestProject(overrides: Partial<TestProject> = {}): TestProject {
   const id = nanoid(8);
   const today = new Date();
+  const futureStart = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 jours
+  const futureEnd = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000); // +120 jours
 
   return {
     reference: `PROJ-TEST-${id}`,
     nom: `Projet Test ${id}`,
     client: `Client Test ${id}`,
+    location: 'Paris, France',
     status: 'planification',
     montant: 200000,
+    montantTotal: 250000,
     dateDebut: today.toISOString().split('T')[0],
+    priority: 'normal',
+    dateDebutPrevue: futureStart.toISOString().split('T')[0],
+    dateFinPrevue: futureEnd.toISOString().split('T')[0],
+    dureeJours: 90,
+    teamCount: 0,
+    teamRequired: 2,
+    tasksCreated: false,
+    teamsAssigned: false,
+    datesValidated: false,
+    suppliesOrdered: false,
+    readyToStart: false,
     ...overrides,
   };
 }

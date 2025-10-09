@@ -230,3 +230,60 @@ export async function assertNoLoadingState(page: Page): Promise<void> {
   const loaders = page.locator('[data-testid*="loading"], [data-testid*="skeleton"], [aria-busy="true"]');
   await expect(loaders).toHaveCount(0);
 }
+
+/**
+ * Vérifie que le badge de statut affiche le bon statut
+ * @param page - Page Playwright
+ * @param expectedStatus - Statut attendu (ex: 'en_cours_chiffrage', 'planification')
+ */
+export async function assertStatus(page: Page, expectedStatus: string): Promise<void> {
+  const badge = page.getByTestId(`badge-status-${expectedStatus}`);
+  await expect(badge).toBeVisible();
+}
+
+/**
+ * Vérifie qu'une transition d'état a réussi
+ * Attend que l'ancien statut disparaisse et le nouveau apparaisse
+ * @param page - Page Playwright
+ * @param fromStatus - Statut de départ
+ * @param toStatus - Statut d'arrivée
+ */
+export async function assertTransition(page: Page, fromStatus: string, toStatus: string): Promise<void> {
+  // Attendre que le nouveau statut apparaisse
+  const newBadge = page.getByTestId(`badge-status-${toStatus}`);
+  await expect(newBadge).toBeVisible({ timeout: 10000 });
+  
+  // Vérifier que l'ancien statut a disparu (s'il est différent)
+  if (fromStatus !== toStatus) {
+    const oldBadge = page.getByTestId(`badge-status-${fromStatus}`);
+    await expect(oldBadge).not.toBeVisible();
+  }
+}
+
+/**
+ * Vérifie qu'une redirection a eu lieu vers le chemin attendu
+ * @param page - Page Playwright
+ * @param expectedPath - Chemin attendu (ex: '/projects/123')
+ */
+export async function assertRedirection(page: Page, expectedPath: string): Promise<void> {
+  // Attendre que l'URL change
+  await page.waitForURL(expectedPath, { timeout: 10000 });
+  
+  // Vérifier que l'URL correspond
+  const currentUrl = new URL(page.url());
+  expect(currentUrl.pathname).toBe(expectedPath);
+}
+
+/**
+ * Vérifie qu'une redirection partielle a eu lieu (pattern matching)
+ * Utile pour les URLs avec IDs dynamiques
+ * @param page - Page Playwright
+ * @param expectedPattern - Pattern attendu (ex: '/projects/**')
+ */
+export async function assertRedirectionPattern(page: Page, expectedPattern: string): Promise<void> {
+  // Attendre que l'URL change
+  await page.waitForURL(expectedPattern, { timeout: 10000 });
+  
+  // Vérifier que l'URL correspond au pattern
+  await expect(page).toHaveURL(new RegExp(expectedPattern.replace('**', '.*')));
+}

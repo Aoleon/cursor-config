@@ -217,7 +217,7 @@ export default function ValidationList() {
               const isLate = offer.deadlineDate && new Date(offer.deadlineDate) < new Date();
               
               return (
-                <Card key={offer.id} className={`hover:shadow-md transition-shadow ${isLate ? 'border-l-4 border-red-500' : ''}`}>
+                <Card key={offer.id} className={`hover:shadow-md transition-shadow ${isLate ? 'border-l-4 border-red-500' : ''}`} data-testid={`card-offer-${offer.id}`}>
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <div>

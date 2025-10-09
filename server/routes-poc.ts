@@ -40,7 +40,8 @@ import {
   insertSupplierDocumentSchema, insertSupplierQuoteAnalysisSchema,
   insertBugReportSchema, type BugReport, type InsertBugReport,
   type ProjectReserve, type SavIntervention, type SavWarrantyClaim,
-  type SupplierQuoteSession, type AoLotSupplier, type SupplierDocument, type SupplierQuoteAnalysis
+  type SupplierQuoteSession, type AoLotSupplier, type SupplierDocument, type SupplierQuoteAnalysis,
+  aos, offers, projects
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
@@ -53,7 +54,7 @@ import { registerTeamsRoutes } from "./routes-teams";
 import { createAdminRoutes } from "./routes-admin";
 import { migrationRoutes } from "./routes-migration";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto, parsePeriod, getDefaultPeriod, getLastMonths, type DateRange } from "./dateUtils";
 import type { EventBus } from "./eventBus";
 import { ScoringService } from "./services/scoringService";
@@ -1947,6 +1948,200 @@ app.get("/api/tasks/all",
     res.json(allTasks);
   })
 );
+
+// ========================================
+// ROUTES DE TEST E2E (acceptent IDs déterministes)
+// ========================================
+
+/**
+ * POST /api/test/seed/ao
+ * Crée un AO avec ID déterministe pour tests E2E
+ * Accepte uniquement IDs avec pattern e2e-*
+ */
+app.post('/api/test/seed/ao', asyncHandler(async (req, res) => {
+  const { id, ...data } = req.body;
+  
+  // Valider que l'ID est au format e2e-*
+  if (!id || !id.startsWith('e2e-')) {
+    throw new ValidationError('ID must start with "e2e-" for test seeds');
+  }
+
+  // ✅ Utiliser insert schema pour validation et defaults
+  const validatedData = insertAoSchema.parse({
+    ...data,
+    // Defaults pour champs requis si absents
+    menuiserieType: data.menuiserieType || 'fenetre',
+    source: data.source || 'other',
+    departement: data.departement || '75',
+    // Convertir decimal fields (number → string)
+    montantEstime: data.montantEstime ? String(data.montantEstime) : undefined,
+    prorataEventuel: data.prorataEventuel ? String(data.prorataEventuel) : undefined,
+    amountEstimate: data.amountEstimate ? String(data.amountEstimate) : undefined,
+  });
+
+  // ✅ Insert avec données validées
+  const ao = await db.insert(aos).values({
+    id,
+    ...validatedData,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }).returning();
+
+  logger.info('[E2E Seeds] AO de test créé', { 
+    metadata: { aoId: id, route: '/api/test/seed/ao' } 
+  });
+
+  res.json({ success: true, data: ao[0] });
+}));
+
+/**
+ * POST /api/test/seed/offer
+ * Crée une Offer avec ID déterministe pour tests E2E
+ * Accepte uniquement IDs avec pattern e2e-*
+ */
+app.post('/api/test/seed/offer', asyncHandler(async (req, res) => {
+  const { id, ...data } = req.body;
+  
+  // Valider que l'ID est au format e2e-*
+  if (!id || !id.startsWith('e2e-')) {
+    throw new ValidationError('ID must start with "e2e-" for test seeds');
+  }
+
+  // ✅ Utiliser insert schema pour validation et defaults
+  const validatedData = insertOfferSchema.parse({
+    ...data,
+    // Defaults pour champs requis si absents
+    menuiserieType: data.menuiserieType || 'fenetre',
+    client: data.client || 'Client Test E2E',
+    location: data.location || 'Paris, France',
+    // Convertir decimal fields (number → string)
+    montantEstime: data.montantEstime ? String(data.montantEstime) : undefined,
+    montantFinal: data.montantFinal ? String(data.montantFinal) : undefined,
+  });
+
+  // ✅ Insert avec données validées
+  const offer = await db.insert(offers).values({
+    id,
+    ...validatedData,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }).returning();
+
+  logger.info('[E2E Seeds] Offer de test créée', { 
+    metadata: { offerId: id, route: '/api/test/seed/offer' } 
+  });
+
+  res.json({ success: true, data: offer[0] });
+}));
+
+/**
+ * POST /api/test/seed/project
+ * Crée un Project avec ID déterministe pour tests E2E
+ * Accepte uniquement IDs avec pattern e2e-*
+ */
+app.post('/api/test/seed/project', asyncHandler(async (req, res) => {
+  const { id, ...data } = req.body;
+  
+  // Valider que l'ID est au format e2e-*
+  if (!id || !id.startsWith('e2e-')) {
+    throw new ValidationError('ID must start with "e2e-" for test seeds');
+  }
+
+  // ✅ Utiliser insert schema pour validation et defaults
+  const validatedData = insertProjectSchema.parse({
+    ...data,
+    // Defaults pour champs requis si absents
+    name: data.name || data.nom || 'Project Test E2E',
+    client: data.client || 'Client Test E2E',
+    location: data.location || 'Paris, France',
+    // Convertir decimal fields (number → string)
+    budget: data.budget || data.montant ? String(data.budget || data.montant) : undefined,
+    montantEstime: data.montantEstime ? String(data.montantEstime) : undefined,
+    montantFinal: data.montantFinal ? String(data.montantFinal) : undefined,
+    prorataEventuel: data.prorataEventuel ? String(data.prorataEventuel) : undefined,
+    contractAmount: data.contractAmount ? String(data.contractAmount) : undefined,
+  });
+
+  // ✅ Insert avec données validées
+  const project = await db.insert(projects).values({
+    id,
+    ...validatedData,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }).returning();
+
+  logger.info('[E2E Seeds] Project de test créé', { 
+    metadata: { projectId: id, route: '/api/test/seed/project' } 
+  });
+
+  res.json({ success: true, data: project[0] });
+}));
+
+/**
+ * DELETE /api/test/seed/ao/:id
+ * Supprime un AO de test
+ * Accepte uniquement IDs avec pattern e2e-*
+ */
+app.delete('/api/test/seed/ao/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  // Valider que l'ID est au format e2e-*
+  if (!id || !id.startsWith('e2e-')) {
+    throw new ValidationError('ID must start with "e2e-" for test seeds');
+  }
+
+  await db.delete(aos).where(eq(aos.id, id));
+  
+  logger.info('[E2E Seeds] AO de test supprimé', { 
+    metadata: { aoId: id, route: '/api/test/seed/ao/:id' } 
+  });
+
+  res.json({ success: true });
+}));
+
+/**
+ * DELETE /api/test/seed/offer/:id
+ * Supprime une Offer de test
+ * Accepte uniquement IDs avec pattern e2e-*
+ */
+app.delete('/api/test/seed/offer/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  // Valider que l'ID est au format e2e-*
+  if (!id || !id.startsWith('e2e-')) {
+    throw new ValidationError('ID must start with "e2e-" for test seeds');
+  }
+
+  await db.delete(offers).where(eq(offers.id, id));
+  
+  logger.info('[E2E Seeds] Offer de test supprimée', { 
+    metadata: { offerId: id, route: '/api/test/seed/offer/:id' } 
+  });
+
+  res.json({ success: true });
+}));
+
+/**
+ * DELETE /api/test/seed/project/:id
+ * Supprime un Project de test
+ * Accepte uniquement IDs avec pattern e2e-*
+ */
+app.delete('/api/test/seed/project/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  // Valider que l'ID est au format e2e-*
+  if (!id || !id.startsWith('e2e-')) {
+    throw new ValidationError('ID must start with "e2e-" for test seeds');
+  }
+
+  await db.delete(projects).where(eq(projects.id, id));
+  
+  logger.info('[E2E Seeds] Project de test supprimé', { 
+    metadata: { projectId: id, route: '/api/test/seed/project/:id' } 
+  });
+
+  res.json({ success: true });
+}));
 
 // Route pour créer des données de test complètes pour le planning Gantt
 app.post("/api/test-data/planning", 

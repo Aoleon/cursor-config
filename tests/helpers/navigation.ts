@@ -196,3 +196,49 @@ export async function closeModal(page: Page): Promise<void> {
   // Attendre que le modal disparaisse
   await page.waitForSelector('[role="dialog"]', { state: 'hidden' });
 }
+
+/**
+ * Navigue vers un onglet spécifique d'un projet (study, supply, worksite, support)
+ * @param page - Page Playwright
+ * @param projectId - ID du projet
+ * @param tab - Nom de l'onglet ('study' | 'supply' | 'worksite' | 'support')
+ */
+export async function goToProjectTab(
+  page: Page, 
+  projectId: string, 
+  tab: 'study' | 'supply' | 'worksite' | 'support'
+): Promise<void> {
+  // D'abord aller sur la page du projet
+  await goToProjectDetail(page, projectId);
+  
+  // Cliquer sur l'onglet demandé
+  const tabButton = page.getByTestId(`tab-${tab}`);
+  await tabButton.click();
+  
+  // Attendre le chargement de l'onglet
+  await waitForPageLoad(page);
+}
+
+/**
+ * Navigue vers la liste de chiffrage des offres
+ */
+export async function goToChiffrageList(page: Page): Promise<void> {
+  await page.goto('/offers/chiffrage-list');
+  await waitForPageLoad(page);
+}
+
+/**
+ * Navigue vers la liste de validation des offres
+ */
+export async function goToValidationList(page: Page): Promise<void> {
+  await page.goto('/offers/validation-list');
+  await waitForPageLoad(page);
+}
+
+/**
+ * Navigue vers la liste de transformation des offres
+ */
+export async function goToTransformList(page: Page): Promise<void> {
+  await page.goto('/offers/transform-list');
+  await waitForPageLoad(page);
+}

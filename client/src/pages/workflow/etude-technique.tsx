@@ -246,6 +246,7 @@ export default function EtudeTechnique() {
                     <div 
                       key={offer.id} 
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      data-testid={`card-offer-${offer.id}`}
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>

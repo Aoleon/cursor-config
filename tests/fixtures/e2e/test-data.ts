@@ -18,6 +18,9 @@ export interface TestAO {
   montantEstime: number;
   typeMarche: string;
   status?: string;
+  // ✅ Champs requis pour insert schema
+  menuiserieType?: string;
+  source?: string;
   devisSent?: boolean;
   sentAt?: Date | string;
   clientResponse?: boolean;
@@ -67,10 +70,15 @@ export interface TestProject {
 }
 
 export interface TestOffer {
+  id?: string;
   reference: string;
-  titre: string;
+  titre?: string;
   montantEstime: number;
   status: string;
+  // ✅ Champs requis pour insert schema
+  menuiserieType?: string;
+  client?: string;
+  location?: string;
 }
 
 export interface TestContact {
@@ -100,6 +108,9 @@ export function generateTestAO(overrides: Partial<TestAO> = {}): TestAO {
     montantEstime: 150000,
     typeMarche: 'public',
     status: 'reception',
+    // ✅ Champs requis ajoutés pour validation insert schema
+    menuiserieType: 'fenetre',
+    source: 'other',
     devisSent: false,
     clientResponse: false,
     clientAccepted: false,
@@ -168,6 +179,10 @@ export function generateTestOffer(overrides: Partial<TestOffer> = {}): TestOffer
     titre: `Offre Test ${id}`,
     montantEstime: 100000,
     status: 'en_cours_chiffrage',
+    // ✅ Champs requis ajoutés pour validation insert schema
+    menuiserieType: 'fenetre',
+    client: `Client Test ${id}`,
+    location: 'Paris, France',
     ...overrides,
   };
 }
@@ -291,3 +306,115 @@ export async function cleanupTestData(page: Page, ids: {
 
   await Promise.allSettled(cleanupPromises);
 }
+
+// ========================================
+// SEEDS POUR PARCOURS E2E COMPLETS
+// ========================================
+
+/**
+ * Interface étendue pour les projets avec phases de workflow
+ */
+export interface TestProjectExtended extends TestProject {
+  aoId?: string;
+  offerId?: string;
+  phases?: {
+    study?: { status: 'pending' | 'in_progress' | 'completed', assignedTo?: string };
+    supply?: { status: 'pending' | 'in_progress' | 'completed', items?: any[] };
+    worksite?: { status: 'pending' | 'in_progress' | 'completed', teams?: any[] };
+    support?: { status: 'pending' | 'in_progress' | 'completed', tickets?: any[] };
+  };
+}
+
+/**
+ * Seeds E2E pour Journey 1: AO → Offer → Projet → Chantier
+ */
+export const testAOComplete = generateTestAO({
+  id: 'e2e-ao-complete-001',
+  reference: 'AO-E2E-COMPLETE-001',
+  client: 'Client E2E Test AO',
+  intituleOperation: 'Parcours E2E Complet AO-Projet',
+  status: 'etude' as const,
+  montantEstime: 50000,
+});
+
+export const testOfferFromAO = generateTestOffer({
+  id: 'e2e-offer-from-ao-001',
+  reference: 'OFF-E2E-FROM-AO-001',
+  titre: 'Offre E2E depuis AO',
+  montantEstime: 48000,
+  status: 'en_attente_fournisseurs' as const,
+});
+
+export const testProjectFromAO: TestProjectExtended = {
+  ...generateTestProject({
+    id: 'e2e-project-from-ao-001',
+    reference: 'PROJ-E2E-FROM-AO-001',
+    nom: 'Projet E2E depuis AO',
+    status: 'planification',
+    montant: 48000,
+  }),
+  aoId: 'e2e-ao-complete-001',
+  offerId: 'e2e-offer-from-ao-001',
+  phases: {
+    study: { status: 'pending' as const },
+    supply: { status: 'pending' as const },
+    worksite: { status: 'pending' as const },
+    support: { status: 'pending' as const },
+  },
+};
+
+/**
+ * Seeds E2E pour Journey 2: Offer maturation → Projet
+ */
+export const testOfferStandalone = generateTestOffer({
+  id: 'e2e-offer-standalone-001',
+  reference: 'OFF-E2E-STANDALONE-001',
+  titre: 'Offre E2E Standalone',
+  montantEstime: 35000,
+  status: 'en_cours_chiffrage' as const,
+});
+
+export const testProjectFromOffer: TestProjectExtended = {
+  ...generateTestProject({
+    id: 'e2e-project-from-offer-001',
+    reference: 'PROJ-E2E-FROM-OFFER-001',
+    nom: 'Projet E2E depuis Offer',
+    status: 'planification',
+    montant: 35000,
+  }),
+  offerId: 'e2e-offer-standalone-001',
+  phases: {
+    study: { status: 'pending' as const },
+    supply: { status: 'pending' as const },
+    worksite: { status: 'pending' as const },
+    support: { status: 'pending' as const },
+  },
+};
+
+/**
+ * Seeds E2E pour Journey 3: Project lifecycle (study → supply → worksite → support)
+ */
+export const testProjectLifecycle: TestProjectExtended = {
+  ...generateTestProject({
+    id: 'e2e-project-lifecycle-001',
+    reference: 'PROJ-E2E-LIFECYCLE-001',
+    nom: 'Projet E2E Lifecycle',
+    status: 'etude',
+    montant: 75000,
+  }),
+  phases: {
+    study: { status: 'in_progress' as const, assignedTo: 'tech-team-e2e' },
+    supply: { status: 'pending' as const },
+    worksite: { status: 'pending' as const },
+    support: { status: 'pending' as const },
+  },
+};
+
+/**
+ * Regroupement de tous les seeds E2E pour faciliter reset/seed
+ */
+export const e2eSeeds = {
+  aos: [testAOComplete],
+  offers: [testOfferFromAO, testOfferStandalone],
+  projects: [testProjectFromAO, testProjectFromOffer, testProjectLifecycle],
+};

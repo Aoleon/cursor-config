@@ -238,7 +238,7 @@ export default function ChiffrageList() {
         ) : (
           <div className="grid gap-4">
             {offers.map((offer: any) => (
-              <Card key={offer.id} className="hover:shadow-md transition-shadow">
+              <Card key={offer.id} className="hover:shadow-md transition-shadow" data-testid={`card-offer-${offer.id}`}>
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <div>

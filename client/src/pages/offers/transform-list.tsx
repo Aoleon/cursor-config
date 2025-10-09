@@ -253,7 +253,7 @@ export default function TransformList() {
               const transformed = isTransformed(offer.id);
               
               return (
-                <Card key={offer.id} className={`hover:shadow-md transition-shadow ${transformed ? 'bg-green-50 border-green-200' : ''}`}>
+                <Card key={offer.id} className={`hover:shadow-md transition-shadow ${transformed ? 'bg-green-50 border-green-200' : ''}`} data-testid={`card-offer-${offer.id}`}>
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <div>

@@ -1,5 +1,6 @@
 import type { Page, APIResponse } from '@playwright/test';
 import { expect } from '@playwright/test';
+import { e2eSeeds } from '../fixtures/e2e/test-data';
 
 /**
  * Helpers pour les appels API directs dans les tests
@@ -274,5 +275,118 @@ export async function cleanupAllChantierProjects(page: Page): Promise<void> {
   
   for (const project of projects) {
     await deleteResource(page, '/api/projects', project.id);
+  }
+}
+
+/**
+ * Reset complet de l'état E2E
+ * Supprime tous les AOs, Offers et Projects de test via routes de test
+ * @param page - Page Playwright
+ * @param seedIds - IDs des seeds à supprimer (optionnel, sinon utilise les IDs des seeds par défaut)
+ */
+export async function resetE2EState(page: Page, seedIds?: {
+  aos?: string[];
+  offers?: string[];
+  projects?: string[];
+}): Promise<void> {
+  const idsToDelete = seedIds || {
+    aos: e2eSeeds.aos.map(ao => ao.id!),
+    offers: e2eSeeds.offers.map(offer => offer.id!),
+    projects: e2eSeeds.projects.map(project => project.id!)
+  };
+
+  // Supprimer AOs via route de test
+  if (idsToDelete.aos) {
+    await Promise.allSettled(
+      idsToDelete.aos.map(id =>
+        page.request.delete(`/api/test/seed/ao/${id}`)
+      )
+    );
+  }
+
+  // Supprimer Offers via route de test
+  if (idsToDelete.offers) {
+    await Promise.allSettled(
+      idsToDelete.offers.map(id =>
+        page.request.delete(`/api/test/seed/offer/${id}`)
+      )
+    );
+  }
+
+  // Supprimer Projects via route de test
+  if (idsToDelete.projects) {
+    await Promise.allSettled(
+      idsToDelete.projects.map(id =>
+        page.request.delete(`/api/test/seed/project/${id}`)
+      )
+    );
+  }
+}
+
+/**
+ * Créer les seeds E2E dans la DB via routes de test
+ * Utilise /api/test/seed/* qui acceptent les IDs déterministes
+ * @param page - Page Playwright
+ * @param seeds - Données des seeds à créer (optionnel, utilise e2eSeeds par défaut)
+ */
+export async function seedE2EData(page: Page, seeds?: {
+  aos?: any[];
+  offers?: any[];
+  projects?: any[];
+}): Promise<void> {
+  const seedsToUse = seeds || e2eSeeds;
+
+  // Créer AOs via route de test
+  if (seedsToUse.aos) {
+    const aoResults = await Promise.allSettled(
+      seedsToUse.aos.map(ao =>
+        page.request.post('/api/test/seed/ao', { data: ao })
+      )
+    );
+    
+    // Vérifier succès
+    aoResults.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value.ok()) {
+        console.log(`✅ AO seed created: ${seedsToUse.aos![index].id}`);
+      } else {
+        console.error(`❌ Failed to seed AO: ${seedsToUse.aos![index].id}`, result);
+      }
+    });
+  }
+
+  // Créer Offers via route de test
+  if (seedsToUse.offers) {
+    const offerResults = await Promise.allSettled(
+      seedsToUse.offers.map(offer =>
+        page.request.post('/api/test/seed/offer', { data: offer })
+      )
+    );
+    
+    // Vérifier succès
+    offerResults.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value.ok()) {
+        console.log(`✅ Offer seed created: ${seedsToUse.offers![index].id}`);
+      } else {
+        console.error(`❌ Failed to seed Offer: ${seedsToUse.offers![index].id}`, result);
+      }
+    });
+  }
+
+  // Créer Projects via route de test
+  if (seedsToUse.projects) {
+    const projectResults = await Promise.allSettled(
+      seedsToUse.projects.map(project =>
+        page.request.post('/api/test/seed/project', { data: project })
+      )
+    );
+    
+    // Vérifier succès
+    projectResults.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value.ok()) {
+        console.log(`✅ Project seed created: ${seedsToUse.projects![index].id}`);
+      } else {
+        console.error(`❌ Failed to seed Project: ${seedsToUse.projects![index].id}`, result);
+      }
+    });
   }
 }

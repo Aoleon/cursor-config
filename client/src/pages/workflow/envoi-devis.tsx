@@ -93,6 +93,7 @@ export default function EnvoiDevis() {
     actions.push(
       <Button 
         key="view"
+        data-testid={`button-view-devis-${ao.id}`}
         variant="outline" 
         size="sm"
         onClick={() => handleViewDevis(ao.id)}
@@ -106,6 +107,7 @@ export default function EnvoiDevis() {
     actions.push(
       <Button 
         key="download"
+        data-testid={`button-download-devis-${ao.id}`}
         variant="outline" 
         size="sm"
         onClick={() => handleDownloadDevis(ao.id)}
@@ -120,6 +122,7 @@ export default function EnvoiDevis() {
       actions.push(
         <Button 
           key="send"
+          data-testid={`button-send-devis-${ao.id}`}
           size="sm"
           onClick={() => handleSendDevis(ao)}
         >
@@ -137,6 +140,7 @@ export default function EnvoiDevis() {
         actions.push(
           <Button 
             key="relance"
+            data-testid={`button-relancer-${ao.id}`}
             variant="outline"
             size="sm"
             onClick={() => relancerClientMutation.mutate(ao.id)}
@@ -152,6 +156,7 @@ export default function EnvoiDevis() {
         actions.push(
           <Button 
             key="convert"
+            data-testid={`button-convert-${ao.id}`}
             size="sm"
             className="bg-success hover:bg-success/90"
             onClick={() => handleConvertToProject(ao.id)}
@@ -209,7 +214,7 @@ export default function EnvoiDevis() {
         <div className="px-6 py-6">
           {/* Statistiques */}
           <div className="grid grid-cols-4 gap-4 mb-6">
-            <Card>
+            <Card data-testid="stat-a-envoyer">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">À envoyer</CardTitle>
               </CardHeader>
@@ -221,7 +226,7 @@ export default function EnvoiDevis() {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card data-testid="stat-en-attente">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">En attente</CardTitle>
               </CardHeader>
@@ -233,7 +238,7 @@ export default function EnvoiDevis() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="stat-acceptes">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Acceptés</CardTitle>
               </CardHeader>
@@ -245,7 +250,7 @@ export default function EnvoiDevis() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="stat-taux-conversion">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Taux conversion</CardTitle>
               </CardHeader>
@@ -266,27 +271,30 @@ export default function EnvoiDevis() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8">Chargement...</div>
+                <div data-testid="loading-state" className="text-center py-8">Chargement...</div>
               ) : aos?.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div data-testid="empty-state" className="text-center py-8 text-gray-500">
                   Aucun devis prêt à envoyer
                 </div>
               ) : (
                 <div className="space-y-4">
                   {aos?.map((ao: any) => (
                     <div 
-                      key={ao.id} 
+                      key={ao.id}
+                      data-testid={`card-ao-${ao.id}`}
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h3 className="font-semibold text-lg">{ao.reference}</h3>
+                          <h3 data-testid={`ao-reference-${ao.id}`} className="font-semibold text-lg">{ao.reference}</h3>
                           <p className="text-sm text-gray-600">{ao.client}</p>
                           <p className="text-sm text-gray-500">{ao.intituleOperation}</p>
                         </div>
                         <div className="text-right">
-                          {getStatusBadge(ao)}
-                          <p className="text-sm font-semibold mt-1">
+                          <div data-testid={`ao-status-badge-${ao.id}`}>
+                            {getStatusBadge(ao)}
+                          </div>
+                          <p data-testid={`ao-montant-${ao.id}`} className="text-sm font-semibold mt-1">
                             {ao.montantTotal?.toLocaleString('fr-FR')} € HT
                           </p>
                         </div>
@@ -345,13 +353,14 @@ export default function EnvoiDevis() {
         {/* Modal d'envoi */}
         {showSendModal && selectedAO && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96">
+            <div data-testid="modal-send-devis" className="bg-white rounded-lg p-6 w-96" role="dialog">
               <h3 className="text-lg font-semibold mb-4">Envoyer le devis</h3>
               <div className="space-y-4">
                 <div>
                   <Label>Méthode d'envoi</Label>
                   <div className="space-y-2 mt-2">
                     <Button
+                      data-testid="button-send-email"
                       className="w-full justify-start"
                       variant="outline"
                       onClick={() => {
@@ -365,6 +374,7 @@ export default function EnvoiDevis() {
                       Par email
                     </Button>
                     <Button
+                      data-testid="button-send-platform"
                       className="w-full justify-start"
                       variant="outline"
                       onClick={() => {
@@ -378,6 +388,7 @@ export default function EnvoiDevis() {
                       Via plateforme
                     </Button>
                     <Button
+                      data-testid="button-send-manual"
                       className="w-full justify-start"
                       variant="outline"
                       onClick={() => {
@@ -395,6 +406,7 @@ export default function EnvoiDevis() {
               </div>
               <div className="flex justify-end gap-2 mt-6">
                 <Button 
+                  data-testid="button-cancel-send"
                   variant="outline" 
                   onClick={() => setShowSendModal(false)}
                 >

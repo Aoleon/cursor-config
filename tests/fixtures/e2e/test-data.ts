@@ -7,6 +7,7 @@ import type { Page } from '@playwright/test';
  */
 
 export interface TestAO {
+  id?: string;
   reference: string;
   client: string;
   maitreOuvrage: string;
@@ -16,6 +17,16 @@ export interface TestAO {
   dateLimiteRemise: string;
   montantEstime: number;
   typeMarche: string;
+  status?: string;
+  devisSent?: boolean;
+  sentAt?: Date | string;
+  clientResponse?: boolean;
+  clientAccepted?: boolean;
+  clientRefused?: boolean;
+  montantTotal?: number;
+  relanceCount?: number;
+  contactEmail?: string;
+  contactPhone?: string;
 }
 
 export interface TestProject {
@@ -60,6 +71,15 @@ export function generateTestAO(overrides: Partial<TestAO> = {}): TestAO {
     dateLimiteRemise: futureDate.toISOString().split('T')[0],
     montantEstime: 150000,
     typeMarche: 'public',
+    status: 'reception',
+    devisSent: false,
+    clientResponse: false,
+    clientAccepted: false,
+    clientRefused: false,
+    montantTotal: 150000,
+    relanceCount: 0,
+    contactEmail: `client.${id}@test.local`,
+    contactPhone: `06${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
     ...overrides,
   };
 }

@@ -654,7 +654,7 @@ export default function ChatbotPage() {
   const { data: conversationHistory } = useChatbotHistory(50, 0);
   const executeActionMutation = useExecuteAction();
 
-  const isHealthy = healthData?.success && healthData?.chatbot_orchestration?.status === 'healthy';
+  const isHealthy = healthData?.isHealthy ?? false;
   const isLoading = queryMutation.isPending;
   const isExecutingAction = executeActionMutation.isPending;
 
@@ -827,7 +827,7 @@ export default function ChatbotPage() {
   };
 
   const renderEmptyState = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center" data-testid="chatbot-empty-state">
       <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
         <Wrench className="w-10 h-10 text-primary" />
       </div>
@@ -866,7 +866,7 @@ export default function ChatbotPage() {
     }
 
     return (
-      <div className="space-y-3" data-testid="chatbot-suggestions">
+      <div className="space-y-3" data-testid="chatbot-suggestions-area">
         <div className="flex items-center gap-3 mb-4">
           <Lightbulb className="w-6 h-6 text-primary" />
           <span className="text-lg font-medium text-foreground">
@@ -903,19 +903,19 @@ export default function ChatbotPage() {
           <div className="px-6 py-3 border-b bg-muted/30">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
+                <Badge variant={isHealthy ? "default" : "destructive"} data-testid="chatbot-health-status">
                   {isHealthy ? (
                     <>
-                      <CheckCircle className="w-5 h-5 text-green-600" data-testid="chatbot-status-healthy" />
-                      <span className="text-sm font-medium">Service opérationnel</span>
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      En ligne
                     </>
                   ) : (
                     <>
-                      <AlertCircle className="w-5 h-5 text-orange-600" data-testid="chatbot-status-warning" />
-                      <span className="text-sm font-medium text-orange-600">Service dégradé</span>
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      Service dégradé
                     </>
                   )}
-                </div>
+                </Badge>
                 {messages.length > 0 && (
                   <Badge variant="secondary" className="ml-2">
                     {messages.length} messages
@@ -925,14 +925,14 @@ export default function ChatbotPage() {
               
               <div className="flex items-center gap-2">
                 {conversationHistory && conversationHistory.length > 0 && (
-                  <Sheet open={showHistorySheet} onOpenChange={setShowHistorySheet}>
+                  <Sheet open={showHistorySheet} onOpenChange={setShowHistorySheet} data-testid="chatbot-history-sheet">
                     <SheetTrigger asChild>
-                      <Button variant="outline" size="sm" data-testid="button-show-history">
+                      <Button variant="outline" size="sm" data-testid="button-open-history">
                         <History className="w-4 h-4 mr-2" />
                         Historique ({conversationHistory.length})
                       </Button>
                     </SheetTrigger>
-                    <SheetContent className="w-96">
+                    <SheetContent className="w-96" data-testid="chatbot-history-content">
                       <SheetHeader>
                         <SheetTitle>Historique des conversations</SheetTitle>
                       </SheetHeader>

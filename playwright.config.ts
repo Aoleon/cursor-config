@@ -30,6 +30,7 @@ export default defineConfig({
     ['json', { outputFile: 'test-results/results.json' }],
     ['junit', { outputFile: 'test-results/junit.xml' }],
     ['list'],
+    ['./tests/reporters/metrics-reporter.ts'],
   ],
   outputDir: 'test-results/artifacts',
   

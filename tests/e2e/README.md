@@ -1132,6 +1132,94 @@ Après avoir établi les baselines (Tâche 8.1), les étapes suivantes incluent 
 - **Tâche 8.4** : Réduction des timeouts inutiles
 - **Tâche 8.5** : Monitoring continu des performances
 
+## 📊 Quality Metrics & Reporting
+
+### Custom Metrics Reporter
+
+**Fichier** : `tests/reporters/metrics-reporter.ts`
+
+Le custom metrics reporter collecte automatiquement des métriques de qualité pendant l'exécution des tests Playwright et les persiste pour analyse et visualisation.
+
+**Métriques collectées** :
+- **Par suite** : pass rate, avg duration, p50/p95/p99, flake rate
+- **Global** : total tests, total duration, overall pass rate, flaky tests
+- **Historique** : 100 dernières exécutions
+
+**Utilisation** :
+Le reporter est automatiquement exécuté avec tous les tests. Il est configuré dans `playwright.config.ts` et ne nécessite aucune configuration supplémentaire.
+
+### Fichiers Générés
+
+**Métriques actuelles** :
+- `test-results/metrics-latest.json` - Dernière exécution
+- `test-results/metrics-history.json` - Historique (100 runs)
+
+**Format metrics-latest.json** :
+```json
+{
+  "timestamp": "2025-01-10T12:00:00Z",
+  "environment": "ci",
+  "totalTests": 645,
+  "totalDuration": 31000,
+  "overallPassRate": 98.5,
+  "suites": [
+    {
+      "name": "chiffrage",
+      "testCount": 27,
+      "passRate": 100,
+      "avgDuration": 555,
+      "p50": 500,
+      "p95": 1200,
+      "p99": 1500,
+      "flakeRate": 0
+    }
+  ],
+  "flakyTests": ["suite::test-title"]
+}
+```
+
+### Flaky Tests Detection
+
+**Définition** :
+Un test est flaky s'il passe après 1+ retries (échec initial puis succès).
+
+**Detection** :
+Le reporter identifie automatiquement tests flaky et les liste dans `flakyTests`.
+
+**Action recommandée** :
+- Investiguer race conditions
+- Augmenter timeouts si nécessaire
+- Stabiliser tests avant merge
+
+### Visualiser les Métriques
+
+```bash
+# Voir les métriques de la dernière exécution
+cat test-results/metrics-latest.json | jq
+
+# Voir l'historique complet
+cat test-results/metrics-history.json | jq
+
+# Extraire les tests flaky
+cat test-results/metrics-latest.json | jq '.flakyTests'
+
+# Voir les métriques par suite
+cat test-results/metrics-latest.json | jq '.suites[]'
+```
+
+### Dashboard Requirements
+
+Voir `tests/e2e/DASHBOARD-REQUIREMENTS.md` pour spécifications complètes dashboard (Tâche 8.4).
+
+**Métriques dashboard** :
+- Overview KPIs (pass rate, duration, flaky tests)
+- Suite performance (comparison vs baseline)
+- Trends historiques (pass rate, duration, flakiness)
+- Alertes (threshold violations)
+
+**Prochaine étape** :
+La Tâche 8.4 implémentera un dashboard HTML statique pour visualiser ces métriques avec des graphiques interactifs et des alertes automatiques.
+
 ## 🎯 Résumé des Corrections Apportées
 
 ### ✅ Problème 1: Configuration testDir

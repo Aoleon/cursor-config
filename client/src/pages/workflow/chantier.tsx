@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { normalizeApiResponse } from "@/lib/api-helpers";
 import Header from "@/components/layout/header";
 import { 
   HardHat,
@@ -31,8 +32,7 @@ export default function Chantier() {
     queryFn: async () => {
       const response = await fetch("/api/projects?status=chantier");
       const result = await response.json();
-      // L'API peut retourner soit un tableau, soit { success: true, data: [] }
-      return Array.isArray(result) ? result : (result?.data || []);
+      return normalizeApiResponse(result);
     }
   });
 

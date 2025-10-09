@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { normalizeApiResponse } from "@/lib/api-helpers";
 import Header from "@/components/layout/header";
 import { 
   Send,
@@ -33,8 +34,7 @@ export default function EnvoiDevis() {
     queryFn: async () => {
       const response = await fetch("/api/aos?status=devis_pret");
       const result = await response.json();
-      // L'API peut retourner soit un tableau, soit { success: true, data: [] }
-      return Array.isArray(result) ? result : (result?.data || []);
+      return normalizeApiResponse(result);
     }
   });
 

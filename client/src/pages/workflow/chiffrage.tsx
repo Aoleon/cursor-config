@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { normalizeApiResponse } from "@/lib/api-helpers";
 import Header from "@/components/layout/header";
 import { 
   Calculator, 
@@ -38,8 +39,7 @@ export default function Chiffrage() {
         }
         
         const result = await response.json();
-        // L'API retourne { success: true, data: [...] }
-        const data = Array.isArray(result) ? result : (result?.data || []);
+        const data = normalizeApiResponse(result);
         console.log("✅ Données reçues:", data?.length, "offres");
         return data;
       } catch (err) {

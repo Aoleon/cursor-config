@@ -197,8 +197,26 @@ La configuration Playwright se trouve dans `playwright.config.ts` :
 {
   testDir: './tests/e2e',          // ✅ CORRIGÉ - Tous les tests inclus
   baseURL: 'http://localhost:5000',
-  timeout: 30000,                   // 30s timeout global
-  actionTimeout: 10000,             // 10s timeout actions
+  fullyParallel: true,             // ✅ Parallélisation activée
+  
+  // ✅ Parallelization environment-controlled
+  workers: process.env.CI 
+    ? parseInt(process.env.CI_WORKERS || '4')  // CI: 4 workers par défaut
+    : parseInt(process.env.WORKERS || '1'),    // Local: 1 worker (debugging)
+  
+  // ✅ Sharding support pour CI multi-machine
+  shard: process.env.SHARD_INDEX && process.env.SHARD_TOTAL 
+    ? { current: parseInt(process.env.SHARD_INDEX), total: parseInt(process.env.SHARD_TOTAL) }
+    : undefined,
+  
+  // ✅ Retries optimisés : CI robuste (2), local fail-fast (0)
+  retries: process.env.CI ? 2 : 0,
+  
+  // ✅ Timeouts basés sur baselines (Tâche 8.1)
+  timeout: 30 * 1000,               // 30s timeout global (Core: 25s + 20% buffer)
+  expect: { timeout: 5 * 1000 },   // 5s pour assertions
+  actionTimeout: 10 * 1000,         // 10s timeout actions
+  
   outputDir: 'test-results/artifacts',  // ✅ CI/CD - Artifacts centralisés
   
   // ✅ CI/CD - Multiple reporters
@@ -225,7 +243,11 @@ La configuration Playwright se trouve dans `playwright.config.ts` :
     { 
       name: 'journeys',  // ✅ CI/CD - Tagged suite pour journeys
       testMatch: /.*journeys.*\.spec\.ts$/,
-      use: { ...devices['Desktop Chrome'] }
+      use: { 
+        ...devices['Desktop Chrome'],
+        actionTimeout: 15 * 1000  // 15s pour actions E2E complexes
+      },
+      timeout: 90 * 1000  // 90s total (Journeys: 60s + 50% buffer)
     },
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
@@ -234,16 +256,286 @@ La configuration Playwright se trouve dans `playwright.config.ts` :
     { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } }
   ],
   
-  // Gestion des échecs
-  retries: process.env.CI ? 2 : 1,
-  workers: process.env.CI ? 1 : undefined,
-  
   // ✅ CI/CD - Captures on failure
   screenshot: 'only-on-failure',
   video: 'retain-on-failure',    // ✅ Conservé on failure
   trace: 'retain-on-failure'     // ✅ Conservé on failure
 }
 ```
+
+## ⚡ Parallelization & Performance
+
+### Configuration Workers
+
+La configuration Playwright utilise des workers environment-controlled pour optimiser l'exécution selon le contexte :
+
+**Local (debugging)** :
+```bash
+# 1 worker par défaut (séquentiel, plus facile à debug)
+npm run test:e2e
+
+# Custom workers (parallélisation locale)
+WORKERS=2 npm run test:e2e
+WORKERS=4 npm run test:e2e
+```
+
+**CI/CD (parallélisation)** :
+```bash
+# 4 workers par défaut en CI
+CI=true npm run test:ci
+
+# Custom workers CI (8 workers pour machines puissantes)
+CI=true CI_WORKERS=8 npm run test:ci
+
+# 1 worker pour debugging en CI
+CI=true CI_WORKERS=1 npm run test:ci
+```
+
+### Configuration Sharding
+
+Le sharding permet de distribuer les tests sur plusieurs machines en parallèle pour accélérer l'exécution en CI.
+
+**Utilisation manuelle** :
+```bash
+# Machine 1 - Shard 1 of 4
+SHARD_INDEX=1 SHARD_TOTAL=4 npx playwright test
+
+# Machine 2 - Shard 2 of 4
+SHARD_INDEX=2 SHARD_TOTAL=4 npx playwright test
+
+# Machine 3 - Shard 3 of 4
+SHARD_INDEX=3 SHARD_TOTAL=4 npx playwright test
+
+# Machine 4 - Shard 4 of 4
+SHARD_INDEX=4 SHARD_TOTAL=4 npx playwright test
+```
+
+**CI/CD Matrix (GitHub Actions)** :
+```yaml
+# .github/workflows/e2e-sharded.yml
+name: E2E Tests (Sharded)
+
+on: [push, pull_request]
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+      
+      - name: Run E2E Tests (Shard ${{ matrix.shard }}/4)
+        run: npx playwright test --project=journeys
+        env:
+          SHARD_INDEX: ${{ matrix.shard }}
+          SHARD_TOTAL: 4
+          CI: true
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report-shard-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 30
+```
+
+**Sharding en parallèle local (bash)** :
+```bash
+# Lancer 4 shards en parallèle sur la même machine
+for i in 1 2 3 4; do
+  SHARD_INDEX=$i SHARD_TOTAL=4 npx playwright test --project=journeys &
+done
+wait
+
+# Afficher le rapport combiné
+npx playwright show-report
+```
+
+### Timeouts Configurés
+
+Les timeouts sont optimisés en fonction des baselines de performance collectées (Tâche 8.1) :
+
+| Type | Timeout | Justification |
+|------|---------|---------------|
+| **Test global** | 30s | Basé threshold Core workflows (25s + buffer 20%) |
+| **Journey E2E** | 90s | Basé threshold Journeys (60s + buffer 50%) |
+| **Action (Core)** | 10s | Actions UI rapides (formulaires, clics) |
+| **Action (Journeys)** | 15s | Actions E2E plus complexes (workflows complets) |
+| **Expect** | 5s | Assertions doivent être rapides |
+
+**Exemple de configuration par projet** :
+```typescript
+// playwright.config.ts
+projects: [
+  {
+    name: 'chromium',
+    timeout: 30 * 1000,        // 30s pour tests core
+    use: {
+      actionTimeout: 10 * 1000  // 10s pour actions rapides
+    }
+  },
+  {
+    name: 'journeys',
+    timeout: 90 * 1000,         // 90s pour journeys E2E
+    use: {
+      actionTimeout: 15 * 1000  // 15s pour actions complexes
+    }
+  }
+]
+```
+
+### Variables Environnement
+
+| Variable | Valeur par défaut | Description |
+|----------|-------------------|-------------|
+| **WORKERS** | `1` (local) | Nombre de workers en local (debugging séquentiel) |
+| **CI_WORKERS** | `4` (CI) | Nombre de workers en CI (parallélisation) |
+| **SHARD_INDEX** | - | Index du shard actuel (1 à SHARD_TOTAL) |
+| **SHARD_TOTAL** | - | Nombre total de shards pour distribution |
+| **CI** | `false` | Détecte automatiquement l'environnement CI |
+
+**Exemples d'utilisation** :
+```bash
+# Local avec 2 workers
+WORKERS=2 npm run test:e2e
+
+# CI avec 8 workers
+CI=true CI_WORKERS=8 npm run test:ci
+
+# Sharding : exécuter shard 2 sur 4
+SHARD_INDEX=2 SHARD_TOTAL=4 npx playwright test
+```
+
+### Retries Policy
+
+La politique de retry est différenciée selon l'environnement :
+
+- **Local** : `0 retries` (fail-fast pour debugging rapide)
+- **CI** : `2 retries` (robustesse contre les flaky tests)
+
+**Justification** :
+- En local, on veut identifier rapidement les problèmes sans retry
+- En CI, on veut compenser la variabilité de l'environnement (réseau, ressources)
+
+**Configuration** :
+```typescript
+// playwright.config.ts
+retries: process.env.CI ? 2 : 0
+```
+
+### Optimisation Basée Baselines
+
+Les timeouts et workers sont configurés en utilisant les **baselines de performance** collectées via le script `collect-runtime.ts` (Tâche 8.1) :
+
+**Baselines mesurées** :
+- **Core workflows** : ~15-22s → timeout 30s (buffer 20%)
+- **Journeys E2E** : ~12-18s par journey → timeout 90s (buffer 50%)
+- **Actions UI** : ~100-500ms → timeout 10s (marge confortable)
+
+**Pourquoi ces buffers ?** :
+- **20% buffer (Core)** : Workflows stables, peu de variabilité
+- **50% buffer (Journeys)** : Parcours complets, plus de variabilité réseau/DB
+- **10-15s (Actions)** : Marge large pour compenser latence CI
+
+**Monitoring** :
+```bash
+# Collecter les baselines après modifications
+npx playwright test && npx tsx tests/tools/collect-runtime.ts
+
+# Comparer avec baselines précédentes
+diff test-results/baselines.json baselines-previous.json
+```
+
+### Scripts Optimisés
+
+**Development (Local)** :
+```bash
+# Séquentiel (1 worker, debugging)
+npm run test:e2e
+
+# Parallèle local (2 workers)
+WORKERS=2 npm run test:e2e
+
+# Parallèle local (4 workers, machine puissante)
+WORKERS=4 npm run test:e2e
+
+# Journeys uniquement (séquentiel)
+npm run test:journeys
+
+# Journeys parallèle
+WORKERS=2 npm run test:journeys
+```
+
+**CI/CD (Parallélisation)** :
+```bash
+# Parallèle CI avec 4 workers (défaut)
+npm run test:ci
+
+# Parallèle CI avec 8 workers (machine puissante)
+CI_WORKERS=8 npm run test:ci
+
+# Séquentiel en CI (debugging)
+CI_WORKERS=1 npm run test:ci
+```
+
+**Sharding (Multi-machines)** :
+```bash
+# Sharding manuel (4 machines)
+# Machine 1:
+SHARD_INDEX=1 SHARD_TOTAL=4 npx playwright test
+
+# Machine 2:
+SHARD_INDEX=2 SHARD_TOTAL=4 npx playwright test
+
+# Machine 3:
+SHARD_INDEX=3 SHARD_TOTAL=4 npx playwright test
+
+# Machine 4:
+SHARD_INDEX=4 SHARD_TOTAL=4 npx playwright test
+
+# Sharding local parallèle (bash)
+for i in 1 2 3 4; do
+  SHARD_INDEX=$i SHARD_TOTAL=4 npx playwright test &
+done
+wait
+```
+
+### Recommandations Performance
+
+1. **Local Development** :
+   - Utilisez `WORKERS=1` (défaut) pour debugging facile
+   - Utilisez `WORKERS=2-4` pour exécution rapide sans debug
+   - Utilisez `--headed` uniquement pour un test spécifique
+
+2. **CI/CD** :
+   - Utilisez `CI_WORKERS=4` (défaut) pour CI standard
+   - Utilisez `CI_WORKERS=8` pour machines puissantes (16+ CPU)
+   - Utilisez sharding pour tests très longs (>10 minutes)
+
+3. **Sharding** :
+   - Sharding recommandé si durée totale > 10 minutes
+   - Nombre de shards = nombre de machines disponibles
+   - 4 shards optimal pour 645 tests (~2-3 min par shard)
+
+4. **Monitoring** :
+   - Collectez baselines après chaque changement majeur
+   - Surveillez les p95/p99 pour identifier les tests lents
+   - Augmentez timeout si p99 proche du seuil actuel
 
 ## 🛠️ Helpers Disponibles
 

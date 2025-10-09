@@ -8,8 +8,23 @@ export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 1,
-  workers: process.env.CI ? 1 : undefined,
+  
+  // ✅ Retries optimisés : CI robuste (2 retries), local fail-fast (0 retries)
+  retries: process.env.CI ? 2 : 0,
+  
+  // ✅ Workers environment-controlled : CI parallèle (4), local séquentiel (1)
+  workers: process.env.CI 
+    ? parseInt(process.env.CI_WORKERS || '4')  // CI: 4 workers par défaut
+    : parseInt(process.env.WORKERS || '1'),    // Local: 1 worker (debugging)
+  
+  // ✅ Sharding support : SHARD_INDEX et SHARD_TOTAL pour CI multi-machine
+  shard: process.env.SHARD_INDEX && process.env.SHARD_TOTAL 
+    ? { 
+        current: parseInt(process.env.SHARD_INDEX), 
+        total: parseInt(process.env.SHARD_TOTAL) 
+      }
+    : undefined,
+  
   reporter: [
     ['html', { outputFolder: 'test-results/html-report' }],
     ['json', { outputFile: 'test-results/results.json' }],
@@ -17,13 +32,23 @@ export default defineConfig({
     ['list'],
   ],
   outputDir: 'test-results/artifacts',
-  timeout: 30000,
+  
+  // ✅ Timeout global basé sur baselines (Core: 25s threshold + 20% buffer)
+  timeout: 30 * 1000,
+  
+  // ✅ Expect timeout pour assertions rapides
+  expect: {
+    timeout: 5 * 1000,
+  },
+  
   use: {
     baseURL: 'http://localhost:5000',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    actionTimeout: 10000,
+    
+    // ✅ Action timeout pour interactions UI rapides
+    actionTimeout: 10 * 1000,
   },
 
   projects: [
@@ -38,7 +63,11 @@ export default defineConfig({
       use: { 
         ...devices['Desktop Chrome'],
         storageState: 'e2e/.auth/user.json',
+        // ✅ Timeout journeys E2E : actions plus longues (parcours complets)
+        actionTimeout: 15 * 1000,  // 15s max par action (vs 10s pour core)
       },
+      // ✅ Timeout total journeys : 90s (threshold 60s + buffer 50%)
+      timeout: 90 * 1000,
       dependencies: ['setup'],
     },
     {

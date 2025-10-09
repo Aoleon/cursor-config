@@ -28,6 +28,10 @@ The application features a modern fullstack architecture.
     - **DateIntelligenceService**: Generates intelligent project planning, considering business rules, deadlines, seasonal factors, holidays, and material types.
     - **OCR & AI Analysis**: `OCRService` extracts text, and `AIService` performs structured analysis of quotes using Claude.
     - **EventBus**: A pub/sub system facilitating inter-service coordination.
+- **API Response Handling**: Centralized `normalizeApiResponse<T>()` helper in `client/src/lib/api-helpers.ts` ensures consistent handling of all API response formats (arrays, wrapped objects, scalars, null/undefined), always returning type-safe `T[]`.
+- **Testing Infrastructure**:
+    - **Unit Tests**: Vitest tests in `client/src/lib/__tests__/` with comprehensive coverage for critical utilities (30 tests for normalizeApiResponse with 100% coverage).
+    - **E2E Tests**: Playwright regression tests for all workflow pages ensuring refactoring doesn't break functionality.
 - **Technical Implementations**: Includes a robust error handling system, standardized API routes with `asyncHandler`, and Zod validation for POST routes. The development workflow involves `npm run dev`, `npm run db:push`, and `npm test`.
 
 ## External Dependencies

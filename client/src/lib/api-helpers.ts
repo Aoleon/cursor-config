@@ -277,3 +277,65 @@ export const selectBeWorkload = createListSelector<{
   assignedOffers: number;
   department: string;
 }>();
+
+// ========================================
+// NORMALIZATION HELPER FOR WORKFLOW PAGES
+// ========================================
+
+/**
+ * Normalizes API responses to ALWAYS return an array.
+ * 
+ * Handles these cases:
+ * - Direct array: [] → return as-is
+ * - Wrapped array: {data: []} → return data
+ * - Wrapped scalar: {data: {id: 1}} → wrap in array: [{id: 1}]
+ * - Null/undefined → return []
+ * - Single object: {id: 1} → wrap in array: [{id: 1}]
+ * 
+ * This helper prevents the bug where scalar values wrapped in `.data` property
+ * were returned unwrapped, violating the T[] return type promise.
+ * 
+ * @template T - The type of items in the array
+ * @param result - The API response that may be an array, wrapped object, or null/undefined
+ * @returns Normalized array of type T[] - ALWAYS returns an array
+ * 
+ * @example
+ * // Direct array response
+ * const result = [{id: 1}, {id: 2}];
+ * normalizeApiResponse(result); // [{id: 1}, {id: 2}]
+ * 
+ * @example
+ * // Wrapped array response
+ * const result = {success: true, data: [{id: 1}, {id: 2}]};
+ * normalizeApiResponse(result); // [{id: 1}, {id: 2}]
+ * 
+ * @example
+ * // Wrapped scalar response (BUG FIX - previously returned scalar, now wraps it)
+ * const result = {data: {id: 1}};
+ * normalizeApiResponse(result); // [{id: 1}]
+ * 
+ * @example
+ * // Null/undefined response
+ * normalizeApiResponse(null); // []
+ * normalizeApiResponse(undefined); // []
+ * 
+ * @example
+ * // Single object response (no wrapper)
+ * const result = {id: 1, name: 'test'};
+ * normalizeApiResponse(result); // [{id: 1, name: 'test'}]
+ */
+export function normalizeApiResponse<T>(result: any): T[] {
+  // Already an array
+  if (Array.isArray(result)) return result;
+  
+  // Has data property
+  if (result?.data !== undefined) {
+    return Array.isArray(result.data) ? result.data : [result.data];
+  }
+  
+  // Null/undefined
+  if (result == null) return [];
+  
+  // Single object - wrap it
+  return [result];
+}

@@ -105,6 +105,7 @@ export default function Chiffrage() {
         variant="outline" 
         size="sm"
         onClick={() => handleOpenCalculator(offer.id)}
+        data-testid={`button-module-chiffrage-${offer.id}`}
       >
         <Calculator className="h-4 w-4 mr-2" />
         Module chiffrage
@@ -118,6 +119,7 @@ export default function Chiffrage() {
           variant="outline" 
           size="sm"
           onClick={() => handleViewDPGF(offer.id)}
+          data-testid={`button-view-dpgf-${offer.id}`}
         >
           <Eye className="h-4 w-4 mr-2" />
           Voir DPGF
@@ -130,6 +132,7 @@ export default function Chiffrage() {
           variant="outline" 
           size="sm"
           onClick={() => handleDownloadDPGF(offer.id)}
+          data-testid={`button-download-dpgf-${offer.id}`}
         >
           <Download className="h-4 w-4 mr-2" />
           Télécharger
@@ -146,6 +149,7 @@ export default function Chiffrage() {
           key="send"
           size="sm"
           onClick={() => validateChiffrageMutation.mutate(offer.id)}
+          data-testid={`button-validate-chiffrage-${offer.id}`}
         >
           <Send className="h-4 w-4 mr-2" />
           Valider le chiffrage
@@ -158,6 +162,7 @@ export default function Chiffrage() {
           variant="secondary" 
           size="sm"
           disabled
+          data-testid={`button-chiffrage-incomplet-${offer.id}`}
         >
           <AlertTriangle className="h-4 w-4 mr-2" />
           Chiffrage incomplet
@@ -234,44 +239,44 @@ export default function Chiffrage() {
         <div className="px-4 sm:px-6 py-6">
           {/* Statistiques */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card>
+            <Card data-testid="stat-en-cours">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">En cours</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{offers?.length || 0}</div>
+                <div className="text-2xl font-bold" data-testid="stat-value-en-cours">{offers?.length || 0}</div>
                 <p className="text-xs text-muted-foreground">Chiffrages actifs</p>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card data-testid="stat-volume-total">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Volume total</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold" data-testid="stat-value-volume">
                   {offers?.reduce((sum: number, offer: any) => sum + (parseFloat(offer.montantEstime) || 0), 0).toLocaleString('fr-FR')} €
                 </div>
                 <p className="text-xs text-muted-foreground">Montant cumulé</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="stat-marge-moyenne">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Marge moyenne</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">15.2%</div>
+                <div className="text-2xl font-bold text-green-600" data-testid="stat-value-marge">15.2%</div>
                 <p className="text-xs text-muted-foreground">Sur les devis</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="stat-a-valider">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">À valider</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
+                <div className="text-2xl font-bold text-orange-600" data-testid="stat-value-a-valider">
                   {offers?.filter((offer: any) => offer.dpgfDocument && offer.montantEstime).length || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">Devis prêts</p>
@@ -289,28 +294,29 @@ export default function Chiffrage() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8">
+                <div className="text-center py-8" data-testid="loading-state">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
                   <p>Chargement des offres...</p>
                 </div>
               ) : error ? (
-                <div className="text-center py-8 text-red-500">
+                <div className="text-center py-8 text-red-500" data-testid="error-state">
                   <AlertTriangle className="h-12 w-12 mx-auto mb-2" />
                   <p className="font-semibold">Erreur lors du chargement</p>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 mt-1" data-testid="error-message">
                     {error instanceof Error ? error.message : "Erreur inconnue"}
                   </p>
                   <Button 
                     variant="outline" 
                     size="sm" 
                     className="mt-3"
+                    data-testid="button-retry"
                     onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/offers", "chiffrage"] })}
                   >
                     Réessayer
                   </Button>
                 </div>
               ) : offers?.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500" data-testid="empty-state">
                   <Calculator className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>Aucune offre en chiffrage actuellement</p>
                 </div>
@@ -320,71 +326,72 @@ export default function Chiffrage() {
                     <div 
                       key={offer.id} 
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      data-testid={`card-offer-${offer.id}`}
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h3 className="font-semibold text-lg">{offer.reference}</h3>
-                          <p className="text-sm text-gray-600">{offer.client}</p>
-                          <p className="text-sm text-gray-500">{offer.intituleOperation}</p>
+                          <h3 className="font-semibold text-lg" data-testid={`offer-reference-${offer.id}`}>{offer.reference}</h3>
+                          <p className="text-sm text-gray-600" data-testid={`offer-client-${offer.id}`}>{offer.client}</p>
+                          <p className="text-sm text-gray-500" data-testid={`offer-operation-${offer.id}`}>{offer.intituleOperation}</p>
                         </div>
                         <div className="text-right">
                           {offer.deadline && (
-                            <Badge variant="outline" className="mb-1">
+                            <Badge variant="outline" className="mb-1" data-testid={`offer-deadline-${offer.id}`}>
                               Échéance: {new Date(offer.deadline).toLocaleDateString('fr-FR')}
                             </Badge>
                           )}
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500" data-testid={`offer-status-${offer.id}`}>
                             Status: {offer.status}
                           </p>
                         </div>
                       </div>
 
                       {/* Informations financières */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-3 bg-gray-50 p-3 rounded">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-3 bg-gray-50 p-3 rounded" data-testid={`offer-financials-${offer.id}`}>
                         <div>
                           <p className="text-xs text-gray-500">Montant estimé</p>
-                          <p className="font-semibold">
+                          <p className="font-semibold" data-testid={`offer-montant-${offer.id}`}>
                             {offer.montantEstime ? parseFloat(offer.montantEstime).toLocaleString('fr-FR') : '-'} €
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Prorata éventuel</p>
-                          <p className="font-semibold">
+                          <p className="font-semibold" data-testid={`offer-prorata-${offer.id}`}>
                             {offer.prorataEventuel ? parseFloat(offer.prorataEventuel).toLocaleString('fr-FR') : '-'} €
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Heures BE</p>
-                          <p className="font-semibold">
+                          <p className="font-semibold" data-testid={`offer-be-hours-${offer.id}`}>
                             {offer.beHoursEstimated ? parseFloat(offer.beHoursEstimated) : '-'} h
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Statut</p>
-                          <p className="font-semibold text-blue-600">
+                          <p className="font-semibold text-blue-600" data-testid={`offer-workflow-status-${offer.id}`}>
                             {offer.status === 'en_cours_chiffrage' ? 'En cours' : offer.status}
                           </p>
                         </div>
                       </div>
 
                       {/* Indicateurs de progression */}
-                      <div className="flex flex-wrap items-center gap-4 mb-3">
-                        <div className="flex items-center">
+                      <div className="flex flex-wrap items-center gap-4 mb-3" data-testid={`offer-indicators-${offer.id}`}>
+                        <div className="flex items-center" data-testid={`indicator-montant-${offer.id}`}>
                           <Euro className={`h-4 w-4 mr-1 ${offer.montantEstime ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Montant estimé</span>
                         </div>
-                        <div className="flex items-center">
+                        <div className="flex items-center" data-testid={`indicator-dpgf-${offer.id}`}>
                           <FileText className={`h-4 w-4 mr-1 ${offer.dpgfDocument ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">DPGF généré</span>
                         </div>
-                        <div className="flex items-center">
+                        <div className="flex items-center" data-testid={`indicator-be-hours-${offer.id}`}>
                           <CheckCircle className={`h-4 w-4 mr-1 ${offer.beHoursEstimated ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Heures BE estimées</span>
                         </div>
                       </div>
 
                       {/* Actions contextuelles */}
-                      <div className="flex flex-wrap gap-2 justify-end">
+                      <div className="flex flex-wrap gap-2 justify-end" data-testid={`offer-actions-${offer.id}`}>
                         {getActionButtons(offer)}
                       </div>
                     </div>

@@ -84,21 +84,97 @@ Créer dashboard pour visualiser métriques qualité tests Playwright et détect
 
 ## Implementation Plan
 
-### Phase 1 : Metrics Collection (Tâche 8.3 - COMPLÉTÉ)
+### ✅ Phase 1 : Metrics Collection (Tâche 8.3 - COMPLÉTÉ)
 - ✅ Custom reporter Playwright
 - ✅ Persist metrics (latest + history JSON)
 - ✅ Compute flaky tests, pass rate, percentiles
 
-### Phase 2 : Dashboard Static HTML (Tâche 8.4)
-- Générer HTML dashboard depuis metrics JSON
-- Graphiques trends (Chart.js)
-- Alerts/warnings visuels
-- CI integration (artifact upload)
+### ✅ Phase 2 : Dashboard Static HTML (Tâche 8.4 - COMPLÉTÉ)
+- ✅ Script `tests/tools/generate-dashboard.ts` créé
+- ✅ HTML dashboard généré depuis metrics JSON (avec fallback baselines)
+- ✅ Graphiques trends Chart.js (pass rate, duration, flaky tests)
+- ✅ Alerts/warnings visuels (pass rate, duration, flaky tests)
+- ✅ CI integration documentation (GitHub Actions workflow example)
+- ✅ Documentation complète dans `tests/e2e/README.md`
 
-### Phase 3 : AnalyticsService Integration (Post-Tâche 8.4)
+### 🔜 Phase 3 : AnalyticsService Integration (Post-Tâche 8.4)
 - API routes pour fetch métriques
 - PostgreSQL persistence
 - React dashboard intégré
+
+## Implementation Status
+
+### Tâche 8.4 - Automated Dashboard & Trends : ✅ COMPLÉTÉE
+
+**Fichiers créés** :
+- ✅ `tests/tools/generate-dashboard.ts` - Script générateur dashboard HTML
+
+**Fichiers modifiés** :
+- ✅ `tests/e2e/README.md` - Section "📊 Dashboard Generation" ajoutée
+- ✅ `tests/e2e/DASHBOARD-REQUIREMENTS.md` - Implementation status mis à jour
+
+**Features implémentées** :
+
+1. **Dashboard HTML Statique** :
+   - ✅ Génération automatique depuis JSON artifacts
+   - ✅ Self-contained (Chart.js via CDN)
+   - ✅ Responsive design (CSS Grid)
+   - ✅ Gradients et badges colorés
+
+2. **Overview KPIs** :
+   - ✅ Pass Rate avec status coloré (success/danger)
+   - ✅ Total Tests count
+   - ✅ Total Duration (secondes)
+   - ✅ Flaky Tests count avec alerte
+
+3. **Suite Performance** :
+   - ✅ Per-suite pass rate avec badge coloré
+   - ✅ Avg duration display
+   - ✅ P95 duration avec comparaison baseline
+   - ✅ Flake rate (si > 0%)
+
+4. **Trends Visualisés** :
+   - ✅ Pass Rate Trend (Chart.js line chart)
+   - ✅ Duration Trend (Chart.js line chart)
+   - ✅ Flaky Tests Trend (Chart.js bar chart)
+   - ✅ Threshold line (95%) sur graphique pass rate
+
+5. **Flaky Tests Detection** :
+   - ✅ Liste complète des tests flaky
+   - ✅ Recommandations d'actions
+   - ✅ Message de succès si aucun flaky
+
+6. **Alertes Régressions** :
+   - ✅ Pass rate < 95% → alerte DANGER
+   - ✅ Suite duration > baseline + 50% → alerte WARNING
+   - ✅ Nouveaux flaky tests → alerte WARNING
+   - ✅ Message de succès si aucune alerte
+
+7. **CI/CD Integration** :
+   - ✅ Script exécutable : `npx tsx tests/tools/generate-dashboard.ts`
+   - ✅ GitHub Actions workflow example documenté
+   - ✅ Artifacts upload configuration
+   - ✅ Documentation complète pour CI/CD
+
+**Data Sources supportées** :
+- ✅ `test-results/baselines.json` (requis)
+- ✅ `test-results/metrics-latest.json` (optionnel, fallback sur baselines)
+- ✅ `test-results/metrics-history.json` (optionnel, pour trends)
+
+**Commande d'utilisation** :
+```bash
+# Génération rapide
+npx tsx tests/tools/generate-dashboard.ts
+
+# Workflow complet
+npx playwright test && npx tsx tests/tools/generate-dashboard.ts && open test-results/dashboard.html
+```
+
+**Acceptance Criteria - Tous Remplis ✅** :
+1. ✅ Dashboard fonctionnel (HTML statique généré automatiquement)
+2. ✅ Trends visualisés (pass rate, duration, flakiness via Chart.js)
+3. ✅ Alertes régressions/flaky tests (section Alerts + badges colorés)
+4. ✅ CI integration (documentation GitHub Actions + artifacts)
 
 ## Files Generated
 

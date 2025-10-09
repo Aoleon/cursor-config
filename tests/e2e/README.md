@@ -1132,6 +1132,206 @@ Après avoir établi les baselines (Tâche 8.1), les étapes suivantes incluent 
 - **Tâche 8.4** : Réduction des timeouts inutiles
 - **Tâche 8.5** : Monitoring continu des performances
 
+## 📊 Dashboard Generation
+
+### Generate Dashboard
+
+Le dashboard HTML statique est généré automatiquement depuis les métriques de tests collectées. Il offre une vue complète de la qualité des tests avec graphiques interactifs et alertes.
+
+**Génération rapide** :
+```bash
+# Générer dashboard depuis les métriques existantes
+npx tsx tests/tools/generate-dashboard.ts
+
+# Ou ajouter ce script à package.json:
+# "test:dashboard": "tsx tests/tools/generate-dashboard.ts"
+```
+
+**Workflow complet** :
+```bash
+# 1. Exécuter tests (génère metrics)
+npx playwright test
+
+# 2. Générer dashboard
+npx tsx tests/tools/generate-dashboard.ts
+
+# 3. Ouvrir dashboard
+open test-results/dashboard.html
+```
+
+### Dashboard Features
+
+Le dashboard affiche plusieurs sections interactives :
+
+#### 📈 Overview KPIs
+- **Pass Rate** : Taux de réussite global vs threshold (95%)
+- **Total Tests** : Nombre total de tests exécutés
+- **Total Duration** : Durée totale d'exécution
+- **Flaky Tests** : Nombre de tests instables détectés
+
+#### 🧪 Suite Performance
+Pour chaque suite de tests :
+- Pass rate avec badge coloré (vert ≥95%, rouge <95%)
+- Avg duration vs baseline
+- P95 duration avec comparaison baseline
+- Flake rate (si > 0%)
+
+#### 📊 Trends (Historical)
+Graphiques Chart.js interactifs montrant l'évolution dans le temps :
+- **Pass rate trend** : Évolution du taux de réussite
+- **Duration trend** : Évolution de la durée d'exécution
+- **Flaky tests trend** : Évolution du nombre de tests instables
+
+*Note: Les trends nécessitent `metrics-history.json` avec plusieurs exécutions*
+
+#### ⚡ Flaky Tests Detection
+- Liste complète des tests instables détectés
+- Recommandations d'actions (race conditions, timeouts, etc.)
+- Message de succès si aucun test flaky
+
+#### 🔔 Alerts
+Alertes visuelles automatiques si :
+- Pass rate < 95% (threshold) → alerte DANGER
+- Suite duration > baseline + 50% → alerte WARNING
+- Nouveaux flaky tests détectés → alerte WARNING
+- P95 duration > threshold → alerte WARNING
+
+### Data Sources
+
+Le dashboard utilise plusieurs sources de données JSON :
+
+| Fichier | Description | Requis |
+|---------|-------------|--------|
+| `test-results/baselines.json` | Baselines de performance (Tâche 8.1) | ✅ Oui |
+| `test-results/metrics-latest.json` | Dernière exécution (Tâche 8.3) | ⚠️ Optionnel* |
+| `test-results/metrics-history.json` | Historique 100 runs (Tâche 8.3) | ❌ Non (pour trends) |
+
+*Si `metrics-latest.json` n'existe pas, le dashboard utilise `baselines.json` comme fallback.
+
+### CI/CD Integration
+
+#### GitHub Actions Workflow
+
+```yaml
+# .github/workflows/e2e-dashboard.yml
+name: E2E Tests with Dashboard
+
+on: [push, pull_request]
+
+jobs:
+  e2e-with-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+      
+      - name: Run E2E Tests
+        run: npx playwright test
+      
+      - name: Generate Quality Dashboard
+        if: always()
+        run: npx tsx tests/tools/generate-dashboard.ts
+      
+      - name: Upload Dashboard Artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-quality-dashboard
+          path: test-results/dashboard.html
+          retention-days: 30
+      
+      - name: Upload Test Metrics
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-metrics
+          path: |
+            test-results/metrics-latest.json
+            test-results/metrics-history.json
+            test-results/baselines.json
+          retention-days: 30
+```
+
+#### Artifacts Générés
+
+Après exécution CI/CD, les artifacts suivants sont disponibles au téléchargement :
+
+- **test-quality-dashboard** : `dashboard.html` (visualisation complète)
+- **test-metrics** : JSON files (metrics-latest, metrics-history, baselines)
+
+### Local Development
+
+**Workflow de développement complet** :
+
+```bash
+# 1. Exécuter tests avec génération de dashboard
+npx playwright test && npx tsx tests/tools/generate-dashboard.ts
+
+# 2. Ouvrir automatiquement le dashboard
+open test-results/dashboard.html
+
+# 3. Ou utiliser un serveur HTTP local pour visualiser
+npx http-server test-results -o /dashboard.html
+```
+
+**Debugging** :
+```bash
+# Vérifier si les métriques existent
+ls -la test-results/*.json
+
+# Voir le contenu des métriques
+cat test-results/baselines.json | jq .
+
+# Générer dashboard en mode verbose
+DEBUG=* npx tsx tests/tools/generate-dashboard.ts
+```
+
+### Dashboard Design
+
+Le dashboard est conçu pour être :
+
+- **Self-contained** : HTML unique avec CSS et JS inline (Chart.js via CDN)
+- **Responsive** : CSS Grid pour adaptation mobile/desktop
+- **Accessible** : Aucun serveur requis, ouvrable directement dans un navigateur
+- **Visual** : Gradients, badges colorés, alertes visuelles
+- **Interactive** : Graphiques Chart.js zoomables et interactifs
+
+**Technologies** :
+- HTML5 + CSS3 (Grid, Flexbox, Gradients)
+- Chart.js 4.4.0 pour graphiques
+- Vanilla JavaScript (pas de framework)
+
+### Maintenance
+
+**Mettre à jour les thresholds** :
+
+Les thresholds sont définis dans `tests/tools/collect-runtime.ts` :
+
+```typescript
+thresholds: {
+  core_workflows_max_duration: 25000,  // 25s max par workflow
+  journeys_max_duration: 60000,         // 60s max par journey
+  min_pass_rate: 95                     // 95% minimum de réussite
+}
+```
+
+**Ajouter de nouvelles métriques** :
+
+1. Modifier `tests/tools/generate-dashboard.ts`
+2. Ajouter nouvelle section HTML dans `generateHTML()`
+3. Mettre à jour les interfaces TypeScript si nécessaire
+4. Tester avec : `npx tsx tests/tools/generate-dashboard.ts`
+
 ## 📊 Quality Metrics & Reporting
 
 ### Custom Metrics Reporter

@@ -79,13 +79,25 @@ npx playwright install
 
 ## 📋 Commandes d'Exécution
 
-### ⚠️ Note sur les Scripts NPM
-Les scripts NPM ne peuvent pas être ajoutés automatiquement au package.json.
-Utilisez directement les commandes `npx` ci-dessous :
+### ⚠️ Scripts NPM Recommandés
+Les scripts suivants peuvent être ajoutés à votre `package.json` pour faciliter l'exécution :
+
+```json
+{
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:journeys": "playwright test --project=journeys",
+    "test:journeys:headed": "playwright test --project=journeys --headed",
+    "test:ci": "playwright test --project=journeys",
+    "test:report": "playwright show-report test-results/html-report"
+  }
+}
+```
 
 ### Tous les tests (645 tests)
 ```bash
 npx playwright test
+# OU avec script: npm run test:e2e
 ```
 
 ### Mode interface utilisateur (recommandé pour le développement)
@@ -102,6 +114,35 @@ npx playwright test --headed
 ```bash
 npx playwright test --debug
 ```
+
+### 🎯 Journeys E2E (Tagged Suite)
+
+Les journeys sont des parcours utilisateurs complets qui testent l'application de bout en bout :
+
+```bash
+# Tous les journeys (tagged suite)
+npx playwright test --project=journeys
+# OU avec script: npm run test:journeys
+
+# Journeys en mode headed
+npx playwright test --project=journeys --headed
+# OU avec script: npm run test:journeys:headed
+```
+
+**Journeys disponibles :**
+
+1. **AO to Chantier** (`tests/e2e/journeys/ao-to-chantier.spec.ts`)
+   - Création AO → Transformation Offer → Workflow complet jusqu'au chantier
+   - Valide la transformation complète d'un appel d'offres
+
+2. **Offer Maturation** (`tests/e2e/journeys/offer-maturation.spec.ts`)
+   - Create → Chiffrage → Validation → Transform → Project
+   - Teste le cycle de vie complet d'une offre
+
+3. **Project Lifecycle** (`tests/e2e/journeys/project-lifecycle.spec.ts`)
+   - Projects → Study → Supply → Worksite → Support
+   - Workflows: etude-technique & suppliers-pending
+   - Valide le cycle de vie complet d'un projet
 
 ### Tests par catégorie
 
@@ -155,6 +196,15 @@ La configuration Playwright se trouve dans `playwright.config.ts` :
   baseURL: 'http://localhost:5000',
   timeout: 30000,                   // 30s timeout global
   actionTimeout: 10000,             // 10s timeout actions
+  outputDir: 'test-results/artifacts',  // ✅ CI/CD - Artifacts centralisés
+  
+  // ✅ CI/CD - Multiple reporters
+  reporter: [
+    ['html', { outputFolder: 'test-results/html-report' }],
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['junit', { outputFile: 'test-results/junit.xml' }],
+    ['list']  // Console output
+  ],
   
   // Mode test avec authentification automatique
   webServer: {
@@ -166,23 +216,29 @@ La configuration Playwright se trouve dans `playwright.config.ts` :
     }
   },
   
-  // Multi-navigateurs
+  // Multi-navigateurs + Tagged Projects
   projects: [
-    { name: 'chromium' },
-    { name: 'firefox' },
-    { name: 'webkit' },
-    { name: 'Mobile Chrome' },
-    { name: 'Mobile Safari' }
+    { name: 'setup', testMatch: /.*\.setup\.ts/ },
+    { 
+      name: 'journeys',  // ✅ CI/CD - Tagged suite pour journeys
+      testMatch: /.*journeys.*\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'] }
+    },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
+    { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } }
   ],
   
   // Gestion des échecs
   retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
   
-  // Captures
+  // ✅ CI/CD - Captures on failure
   screenshot: 'only-on-failure',
-  video: 'on-first-retry',
-  trace: 'on-first-retry'
+  video: 'retain-on-failure',    // ✅ Conservé on failure
+  trace: 'retain-on-failure'     // ✅ Conservé on failure
 }
 ```
 
@@ -361,19 +417,111 @@ npx playwright show-report
 - Tests lents : augmenter `timeout` dans `playwright.config.ts`
 - Actions spécifiques : `await element.click({ timeout: 15000 })`
 
+## 🚀 CI/CD - Exécution en Environnement d'Intégration Continue
+
+### Commande CI-Ready
+```bash
+# Exécution complète pour CI/CD
+npx playwright test --project=journeys
+# OU avec script: npm run test:ci
+```
+
+Cette commande :
+- ✅ Exécute uniquement les journeys E2E (tagged suite)
+- ✅ Génère des rapports multiples (HTML, JSON, JUnit)
+- ✅ Capture screenshots/videos on failure
+- ✅ Conserve traces pour debugging
+- ✅ Utilise la configuration CI (retries: 2, workers: 1)
+
+### Rapports Générés
+
+Après exécution, les rapports sont disponibles dans :
+
+```
+test-results/
+├── html-report/          # Rapport HTML interactif
+│   └── index.html        # Visualiser : npm run test:report
+├── results.json          # Rapport JSON (parsing CI)
+├── junit.xml            # Rapport JUnit (intégration CI)
+└── artifacts/           # Screenshots, vidéos, traces
+    ├── screenshots/
+    ├── videos/
+    └── traces/
+```
+
+**Visualiser le rapport HTML :**
+```bash
+npx playwright show-report test-results/html-report
+# OU avec script: npm run test:report
+```
+
+### Configuration CI/CD (GitHub Actions exemple)
+
+```yaml
+name: E2E Tests
+
+on: [push, pull_request]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+      
+      - name: Run E2E Journeys
+        run: npm run test:ci
+        env:
+          NODE_ENV: test
+          CI: true
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: test-results/
+          retention-days: 30
+```
+
+### Artifacts et Debugging
+
+En cas d'échec, les artifacts suivants sont disponibles :
+
+1. **Screenshots** : Captures automatiques des échecs
+2. **Vidéos** : Enregistrements des tests échoués
+3. **Traces** : Timeline complète pour debugging
+4. **Rapport HTML** : Vue d'ensemble interactive
+
+```bash
+# Voir les traces d'un test échoué
+npx playwright show-trace test-results/artifacts/trace.zip
+```
+
 ## 📈 Rapports et Métriques
 
 ### Rapport HTML
 Après exécution :
 ```bash
-npx playwright show-report
+npx playwright show-report test-results/html-report
+# OU avec script: npm run test:report
 ```
 
 Le rapport contient :
 - Résultats de tous les tests (645 tests)
-- Screenshots des échecs
-- Vidéos des retries
-- Traces complètes avec timeline
+- Screenshots des échecs (automatic on failure)
+- Vidéos des échecs (retain on failure)
+- Traces complètes avec timeline (retain on failure)
 
 ### Métriques Actuelles
 - **Total tests**: 645
@@ -381,31 +529,39 @@ Le rapport contient :
 - **Coverage**: 433 data-testid dans l'application
 - **Browsers**: 5 (Chrome, Firefox, Safari, Mobile Chrome, Mobile Safari)
 
-## ⚙️ CI/CD
+## ⚙️ Best Practices CI/CD
 
-En environnement CI (GitHub Actions, etc.) :
-```yaml
-- name: Install Playwright Browsers
-  run: npx playwright install --with-deps
+### ✅ Configuration Optimale pour CI
 
-- name: Run E2E tests
-  run: npx playwright test
-  env:
-    NODE_ENV: test
-    CI: true
+La configuration actuelle est optimisée pour CI/CD avec :
 
-- name: Upload test results
-  if: failure()
-  uses: actions/upload-artifact@v3
-  with:
-    name: playwright-report
-    path: playwright-report/
+1. **Tagged Projects** : 
+   - `--project=journeys` pour exécuter uniquement les parcours critiques
+   - Isolation des tests E2E complets
+
+2. **Multiple Reporters** :
+   - HTML pour visualisation interactive
+   - JSON pour parsing et analyse
+   - JUnit pour intégration CI/CD
+   - List pour console output
+
+3. **Artifacts on Failure** :
+   - Screenshots automatiques (`only-on-failure`)
+   - Videos conservés (`retain-on-failure`)
+   - Traces complètes (`retain-on-failure`)
+   - Output centralisé : `test-results/artifacts/`
+
+4. **Resilience** :
+   - 2 retries automatiques en CI
+   - 1 worker pour éviter conflits
+   - Timeouts configurables
+
+### Commande Recommandée pour CI
+
+```bash
+npm run test:ci
+# OU: npx playwright test --project=journeys
 ```
-
-Configuration en CI :
-- 2 retries automatiques
-- 1 worker pour éviter les conflits
-- Screenshots/vidéos conservés en cas d'échec
 
 ## 🎯 Résumé des Corrections Apportées
 
@@ -429,6 +585,19 @@ Configuration en CI :
 - Fixtures dans `tests/fixtures/e2e/`
 - Helpers dans `tests/helpers/`
 - Imports mis à jour
+
+### ✅ Amélioration 5: Configuration CI/CD (Tâche 7.5)
+- **Tagged Projects**: Projet `journeys` pour isolation des parcours E2E
+- **Multiple Reporters**: HTML, JSON, JUnit + console output
+- **Artifacts on Failure**: Screenshots, videos, traces conservés
+- **Output Directory**: `test-results/artifacts/` centralisé
+- **Scripts NPM**: Commands CI-ready (`test:journeys`, `test:ci`, `test:report`)
+- **Documentation**: Section CI/CD complète avec exemples GitHub Actions
+
+**Journeys Documentés** :
+1. AO to Chantier - Transformation complète AO → Chantier
+2. Offer Maturation - Cycle de vie complet offre
+3. Project Lifecycle - Parcours projet complet avec workflows
 
 ## 📚 Ressources
 

@@ -10,13 +10,19 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: [
+    ['html', { outputFolder: 'test-results/html-report' }],
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['junit', { outputFile: 'test-results/junit.xml' }],
+    ['list'],
+  ],
+  outputDir: 'test-results/artifacts',
   timeout: 30000,
   use: {
     baseURL: 'http://localhost:5000',
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'on-first-retry',
+    video: 'retain-on-failure',
     actionTimeout: 10000,
   },
 
@@ -25,6 +31,15 @@ export default defineConfig({
     {
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
+    },
+    {
+      name: 'journeys',
+      testMatch: /.*journeys.*\.spec\.ts$/,
+      use: { 
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
     },
     {
       name: 'chromium',

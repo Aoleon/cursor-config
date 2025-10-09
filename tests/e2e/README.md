@@ -56,11 +56,14 @@ tests/
 │       ├── auth.setup.ts              # Configuration authentification
 │       └── database.setup.ts          # Helpers base de données
 │
-└── helpers/                           # Helpers partagés
-    ├── navigation.ts                  # Helpers de navigation
-    ├── forms.ts                       # Helpers de formulaires
-    ├── assertions.ts                  # Assertions personnalisées
-    └── api.ts                         # Helpers d'appels API
+├── helpers/                           # Helpers partagés
+│   ├── navigation.ts                  # Helpers de navigation
+│   ├── forms.ts                       # Helpers de formulaires
+│   ├── assertions.ts                  # Assertions personnalisées
+│   └── api.ts                         # Helpers d'appels API
+│
+└── tools/                             # Outils de profiling et analyse
+    └── collect-runtime.ts             # Script de collecte de baselines
 ```
 
 ## 🚀 Installation et Configuration
@@ -563,6 +566,280 @@ npm run test:ci
 # OU: npx playwright test --project=journeys
 ```
 
+## 📊 Performance Baselines
+
+### Objectif
+
+Le profiling de performance permet de :
+- **Mesurer** les durées d'exécution des tests par suite
+- **Établir** des baselines de référence pour détecter les régressions
+- **Optimiser** les temps d'exécution avec des données objectives
+- **Surveiller** l'évolution des performances dans le temps
+
+### Métriques Collectées
+
+Pour chaque suite de tests, le script collecte :
+
+| Métrique | Description |
+|----------|-------------|
+| **Durée totale** | Temps total d'exécution de tous les tests de la suite |
+| **Nombre de tests** | Total de tests exécutés (passed + failed + skipped) |
+| **Taux de réussite** | Pourcentage de tests réussis vs total |
+| **Durée moyenne** | Temps moyen par test dans la suite |
+| **Min/Max** | Temps d'exécution minimum et maximum |
+| **Percentiles** | p50 (médiane), p95, p99 pour identifier les outliers |
+
+### Baselines de Référence
+
+Les baselines actuelles sont stockées dans `test-results/baselines.json` après chaque exécution du profiling.
+
+**Valeurs indicatives attendues** :
+
+#### Core Workflows (tests/e2e/workflows/)
+- **Chiffrage** : ~15-20s (≈27 tests)
+- **Envoi Devis** : ~10-15s (≈23 tests)
+- **Planification** : ~18-25s (≈32 tests)
+- **Chantier** : ~22-30s (≈41 tests)
+- **Chatbot** : ~8-12s (≈15 tests)
+
+#### Journeys E2E (tests/e2e/journeys/)
+- **AO to Chantier** : ~15-25s (parcours complet)
+- **Offer Maturation** : ~12-18s (cycle de vie offre)
+- **Project Lifecycle** : ~18-28s (workflows projets)
+
+#### Scénarios Métier
+- **Alertes** : ~10-15s
+- **Dashboard** : ~8-12s
+- **Menuiserie** : ~12-18s
+- **Offres** : ~10-15s
+
+### Thresholds Définis
+
+Les seuils suivants sont définis pour alerter en cas de dégradation :
+
+```typescript
+{
+  core_workflows_max_duration: 25000,  // 25s max par workflow
+  journeys_max_duration: 60000,         // 60s max par journey  
+  min_pass_rate: 95                     // 95% minimum de réussite
+}
+```
+
+**Interprétation** :
+- ⚠️ Si un workflow dépasse 25s : Potentielle régression de performance
+- ⚠️ Si un journey dépasse 60s : Investigation requise
+- ❌ Si le taux de réussite < 95% : Échec critique
+
+### Collecter les Baselines
+
+#### Script NPM Recommandé
+
+Ajouter à `package.json` (documentation uniquement, ne pas modifier) :
+
+```json
+{
+  "scripts": {
+    "test:profile": "playwright test && tsx tests/tools/collect-runtime.ts"
+  }
+}
+```
+
+#### Exécution Manuelle
+
+```bash
+# 1. Exécuter les tests Playwright (génère results.json)
+npx playwright test
+
+# 2. Collecter les métriques de performance
+npx tsx tests/tools/collect-runtime.ts
+
+# OU en une seule commande
+npx playwright test && npx tsx tests/tools/collect-runtime.ts
+```
+
+#### Exécution en CI/CD
+
+En environnement CI, le script détecte automatiquement l'environnement :
+
+```bash
+# En CI, la variable CI=true est automatiquement définie
+CI=true npx playwright test && npx tsx tests/tools/collect-runtime.ts
+```
+
+Le script génère alors des outputs GitHub Actions :
+```
+::set-output name=total_tests::645
+::set-output name=total_duration::125000
+::set-output name=pass_rate::98.5
+```
+
+### Fichiers Générés
+
+| Fichier | Description |
+|---------|-------------|
+| `test-results/results.json` | Résultats bruts Playwright (JSON reporter) |
+| `test-results/baselines.json` | Métriques agrégées et baselines |
+| Console output | Résumé formaté des performances |
+
+### Format du Fichier Baselines
+
+Exemple de structure `test-results/baselines.json` :
+
+```json
+{
+  "timestamp": "2025-10-09T16:00:00.000Z",
+  "environment": "local",
+  "totalTests": 645,
+  "totalDuration": 125000,
+  "overallPassRate": 98.5,
+  "suites": [
+    {
+      "name": "Workflow: chiffrage",
+      "totalDuration": 15234,
+      "testCount": 27,
+      "passedCount": 27,
+      "failedCount": 0,
+      "skippedCount": 0,
+      "passRate": 100,
+      "avgDuration": 564,
+      "minDuration": 120,
+      "maxDuration": 1850,
+      "p50": 500,
+      "p95": 1200,
+      "p99": 1700
+    },
+    {
+      "name": "Journey: ao-to-chantier",
+      "totalDuration": 18567,
+      "testCount": 8,
+      "passedCount": 8,
+      "failedCount": 0,
+      "skippedCount": 0,
+      "passRate": 100,
+      "avgDuration": 2321,
+      "minDuration": 1200,
+      "maxDuration": 4500,
+      "p50": 2100,
+      "p95": 4200,
+      "p99": 4500
+    }
+  ],
+  "thresholds": {
+    "core_workflows_max_duration": 25000,
+    "journeys_max_duration": 60000,
+    "min_pass_rate": 95
+  }
+}
+```
+
+### Output Console
+
+Après exécution, le script affiche un résumé formaté :
+
+```
+═══════════════════════════════════════════════════════════
+📊 BASELINE EXECUTION PROFILING - PLAYWRIGHT TESTS
+═══════════════════════════════════════════════════════════
+
+🌍 Environnement: local
+📅 Timestamp: 2025-10-09T16:00:00.000Z
+🧪 Total tests: 645
+⏱️  Durée totale: 125.00s
+✅ Taux de réussite global: 98.5%
+
+📈 MÉTRIQUES PAR SUITE:
+
+⚙️ Workflow: chiffrage
+   Tests: 27 (✅ 27 | ❌ 0 | ⏭️  0)
+   Pass Rate: 100.0%
+   Durée totale: 15.23s
+   Durée moyenne: 564ms
+   Min/Max: 120ms / 1850ms
+   Percentiles: p50=500ms | p95=1200ms | p99=1700ms
+
+🚀 Journey: ao-to-chantier
+   Tests: 8 (✅ 8 | ❌ 0 | ⏭️  0)
+   Pass Rate: 100.0%
+   Durée totale: 18.57s
+   Durée moyenne: 2321ms
+   Min/Max: 1200ms / 4500ms
+   Percentiles: p50=2100ms | p95=4200ms | p99=4500ms
+
+🎯 THRESHOLDS DÉFINIS:
+
+   Core Workflows max: 25s
+   Journeys max: 60s
+   Pass rate min: 95%
+
+💾 Baselines enregistrées: test-results/baselines.json
+
+═══════════════════════════════════════════════════════════
+```
+
+### Utilisation des Données
+
+#### 1. Détection de Régressions
+
+Comparez les baselines avant/après un changement :
+
+```bash
+# Collecter baseline avant changement
+npx playwright test && npx tsx tests/tools/collect-runtime.ts
+cp test-results/baselines.json baselines-before.json
+
+# Faire vos modifications...
+
+# Collecter baseline après changement
+npx playwright test && npx tsx tests/tools/collect-runtime.ts
+cp test-results/baselines.json baselines-after.json
+
+# Comparer (manuellement ou avec un script)
+diff baselines-before.json baselines-after.json
+```
+
+#### 2. Monitoring en CI/CD
+
+Intégrez dans votre pipeline CI pour suivre l'évolution :
+
+```yaml
+# .github/workflows/e2e-performance.yml
+- name: Run E2E Tests
+  run: npx playwright test
+
+- name: Collect Performance Baselines
+  run: npx tsx tests/tools/collect-runtime.ts
+
+- name: Upload Baselines
+  uses: actions/upload-artifact@v3
+  with:
+    name: performance-baselines
+    path: test-results/baselines.json
+```
+
+#### 3. Optimisation
+
+Utilisez les percentiles pour identifier les tests lents :
+- **p95 élevé** : Certains tests sont significativement plus lents
+- **p99 très différent de p95** : Présence d'outliers à investiguer
+- **avgDuration élevé** : La suite entière pourrait être optimisée
+
+### Bonnes Pratiques
+
+1. **Collecter régulièrement** : Exécutez le profiling après chaque changement majeur
+2. **Comparer les environnements** : Les baselines CI sont généralement plus lentes que local
+3. **Tracker l'historique** : Conservez les baselines dans Git (`.json`) pour suivre l'évolution
+4. **Analyser les outliers** : Utilisez p95/p99 pour identifier les tests problématiques
+5. **Optimiser progressivement** : Concentrez-vous sur les suites les plus lentes en premier
+
+### Prochaines Étapes
+
+Après avoir établi les baselines (Tâche 8.1), les étapes suivantes incluent :
+
+- **Tâche 8.2** : Optimisation de la concurrence des tests
+- **Tâche 8.3** : Parallélisation intelligente par suite
+- **Tâche 8.4** : Réduction des timeouts inutiles
+- **Tâche 8.5** : Monitoring continu des performances
+
 ## 🎯 Résumé des Corrections Apportées
 
 ### ✅ Problème 1: Configuration testDir
@@ -612,4 +889,5 @@ npm run test:ci
 
 **Statut**: ✅ Infrastructure corrigée et validée
 **Tests découverts**: 645 dans 16 fichiers
+**Performance Baselines**: ✅ Script de profiling implémenté (Tâche 8.1)
 **Dernière mise à jour**: 2025-10-09

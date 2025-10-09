@@ -260,3 +260,19 @@ export async function cleanupAllPlanificationProjects(page: Page): Promise<void>
     await deleteResource(page, '/api/projects', project.id);
   }
 }
+
+/**
+ * Nettoie TOUS les projets en chantier
+ * Utile pour garantir un état vide avant les tests
+ */
+export async function cleanupAllChantierProjects(page: Page): Promise<void> {
+  const response = await page.request.get('/api/projects?status=chantier');
+  if (!response.ok()) return;
+  
+  const result = await response.json();
+  const projects = normalizeApiResponse(result);
+  
+  for (const project of projects) {
+    await deleteResource(page, '/api/projects', project.id);
+  }
+}

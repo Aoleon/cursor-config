@@ -90,6 +90,7 @@ export default function Chantier() {
         variant="outline" 
         size="sm"
         onClick={() => handlePhotoReport(project.id)}
+        data-testid={`button-photos-${project.id}`}
       >
         <Camera className="h-4 w-4 mr-2" />
         Suivi photo
@@ -103,6 +104,7 @@ export default function Chantier() {
         variant="outline" 
         size="sm"
         onClick={() => handleProgressReport(project.id)}
+        data-testid={`button-progress-report-${project.id}`}
       >
         <FileText className="h-4 w-4 mr-2" />
         Rapport avancement
@@ -118,6 +120,7 @@ export default function Chantier() {
           size="sm"
           className="text-green-600"
           onClick={() => handleResumeProject(project.id)}
+          data-testid={`button-resume-${project.id}`}
         >
           <Play className="h-4 w-4 mr-2" />
           Reprendre
@@ -131,6 +134,7 @@ export default function Chantier() {
           size="sm"
           className="text-orange-600"
           onClick={() => handlePauseProject(project.id)}
+          data-testid={`button-pause-${project.id}`}
         >
           <Pause className="h-4 w-4 mr-2" />
           Suspendre
@@ -146,6 +150,7 @@ export default function Chantier() {
           variant="destructive"
           size="sm"
           onClick={() => handleViewIssues(project.id)}
+          data-testid={`button-view-issues-${project.id}`}
         >
           <AlertTriangle className="h-4 w-4 mr-2" />
           Voir problèmes ({project.issueCount})
@@ -160,6 +165,7 @@ export default function Chantier() {
           size="sm"
           className="bg-green-600 hover:bg-green-700"
           onClick={() => finishChantierMutation.mutate(project.id)}
+          data-testid={`button-finish-${project.id}`}
         >
           <CheckCircle className="h-4 w-4 mr-2" />
           Terminer chantier
@@ -228,46 +234,46 @@ export default function Chantier() {
         <div className="px-6 py-6">
           {/* Statistiques */}
           <div className="grid grid-cols-4 gap-4 mb-6">
-            <Card>
+            <Card data-testid="stat-chantiers-actifs">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Actifs</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{projects?.length || 0}</div>
+                <div className="text-2xl font-bold" data-testid="stat-actifs-value">{projects?.length || 0}</div>
                 <p className="text-xs text-muted-foreground">Chantiers en cours</p>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card data-testid="stat-chantiers-retard">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">En retard</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
+                <div className="text-2xl font-bold text-orange-600" data-testid="stat-retard-value">
                   {projects?.filter((p: any) => p.isDelayed).length || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">Délais dépassés</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="stat-problemes">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Problèmes</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-2xl font-bold text-red-600" data-testid="stat-problemes-value">
                   {projects?.reduce((sum: number, p: any) => sum + (p.issueCount || 0), 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">À résoudre</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="stat-avancement-moyen">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Avancement moyen</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold" data-testid="stat-avancement-value">
                   {projects?.length ? 
                     Math.round(projects.reduce((sum: number, p: any) => sum + (p.progress || 0), 0) / projects.length) : 0}%
                 </div>
@@ -286,9 +292,9 @@ export default function Chantier() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8">Chargement...</div>
+                <div className="text-center py-8" data-testid="loading-state">Chargement...</div>
               ) : projects?.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500" data-testid="empty-state">
                   Aucun chantier en cours actuellement
                 </div>
               ) : (
@@ -297,19 +303,20 @@ export default function Chantier() {
                     <div 
                       key={project.id} 
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      data-testid={`card-chantier-${project.id}`}
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h3 className="font-semibold text-lg flex items-center gap-2">
+                          <h3 className="font-semibold text-lg flex items-center gap-2" data-testid={`chantier-reference-${project.id}`}>
                             {project.reference}
                             <HardHat className="h-5 w-5 text-orange-600" />
                           </h3>
-                          <p className="text-sm text-gray-600">{project.client}</p>
-                          <p className="text-sm text-gray-500">{project.location}</p>
+                          <p className="text-sm text-gray-600" data-testid={`chantier-client-${project.id}`}>{project.client}</p>
+                          <p className="text-sm text-gray-500" data-testid={`chantier-location-${project.id}`}>{project.location}</p>
                         </div>
                         <div className="text-right">
-                          {getStatusBadge(project)}
-                          <p className="text-sm font-semibold mt-1">
+                          <div data-testid={`status-badge-${project.id}`}>{getStatusBadge(project)}</div>
+                          <p className="text-sm font-semibold mt-1" data-testid={`chantier-montant-${project.id}`}>
                             {project.montantTotal?.toLocaleString('fr-FR')} € HT
                           </p>
                         </div>
@@ -319,11 +326,12 @@ export default function Chantier() {
                       <div className="mb-4">
                         <div className="flex justify-between text-sm mb-1">
                           <span>Avancement global</span>
-                          <span className="font-semibold">{project.progress || 0}%</span>
+                          <span className="font-semibold" data-testid={`progress-percentage-${project.id}`}>{project.progress || 0}%</span>
                         </div>
                         <Progress 
                           value={project.progress || 0} 
                           className={`h-2 ${getProgressColor(project.progress || 0)}`}
+                          data-testid={`progress-bar-${project.id}`}
                         />
                       </div>
 
@@ -331,25 +339,25 @@ export default function Chantier() {
                       <div className="grid grid-cols-4 gap-4 mb-3 bg-gray-50 p-3 rounded">
                         <div>
                           <p className="text-xs text-gray-500">Date début</p>
-                          <p className="font-semibold">
+                          <p className="font-semibold" data-testid={`chantier-date-debut-${project.id}`}>
                             {new Date(project.dateDebut).toLocaleDateString('fr-FR')}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Date fin prévue</p>
-                          <p className={`font-semibold ${project.isDelayed ? 'text-red-600' : ''}`}>
+                          <p className={`font-semibold ${project.isDelayed ? 'text-red-600' : ''}`} data-testid={`chantier-date-fin-${project.id}`}>
                             {new Date(project.dateFinPrevue).toLocaleDateString('fr-FR')}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Jours restants</p>
-                          <p className="font-semibold">
+                          <p className="font-semibold" data-testid={`chantier-jours-restants-${project.id}`}>
                             {project.daysRemaining || 0}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Équipes sur site</p>
-                          <p className="font-semibold">
+                          <p className="font-semibold" data-testid={`chantier-equipes-site-${project.id}`}>
                             {project.teamsOnSite || 0} équipes
                           </p>
                         </div>
@@ -357,17 +365,17 @@ export default function Chantier() {
 
                       {/* Tâches du jour */}
                       {project.todayTasks && project.todayTasks.length > 0 && (
-                        <div className="mb-3 p-2 bg-blue-50 rounded">
+                        <div className="mb-3 p-2 bg-blue-50 rounded" data-testid={`today-tasks-${project.id}`}>
                           <p className="text-sm font-medium mb-1 flex items-center">
                             <Clock className="h-4 w-4 mr-1" />
                             Tâches du jour:
                           </p>
                           <ul className="text-sm space-y-1">
                             {project.todayTasks.map((task: any, idx: number) => (
-                              <li key={idx} className="flex items-center">
+                              <li key={idx} className="flex items-center" data-testid={`task-${idx}-${project.id}`}>
                                 {task.completed ? 
-                                  <CheckCircle className="h-3 w-3 mr-1 text-green-600" /> :
-                                  <Clock className="h-3 w-3 mr-1 text-orange-600" />
+                                  <CheckCircle className="h-3 w-3 mr-1 text-green-600" data-testid={`task-completed-icon-${idx}-${project.id}`} /> :
+                                  <Clock className="h-3 w-3 mr-1 text-orange-600" data-testid={`task-pending-icon-${idx}-${project.id}`} />
                                 }
                                 {task.name}
                               </li>
@@ -378,19 +386,19 @@ export default function Chantier() {
 
                       {/* Indicateurs de qualité */}
                       <div className="flex items-center gap-4 mb-3">
-                        <div className="flex items-center">
+                        <div className="flex items-center" data-testid={`indicator-teams-present-${project.id}`}>
                           <Users className={`h-4 w-4 mr-1 ${project.teamsPresent ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Équipes présentes</span>
                         </div>
-                        <div className="flex items-center">
+                        <div className="flex items-center" data-testid={`indicator-photos-${project.id}`}>
                           <Camera className={`h-4 w-4 mr-1 ${project.photosTaken ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Suivi photo</span>
                         </div>
-                        <div className="flex items-center">
+                        <div className="flex items-center" data-testid={`indicator-report-${project.id}`}>
                           <FileText className={`h-4 w-4 mr-1 ${project.reportUpdated ? 'text-green-600' : 'text-gray-400'}`} />
                           <span className="text-sm">Rapport à jour</span>
                         </div>
-                        <div className="flex items-center">
+                        <div className="flex items-center" data-testid={`indicator-delays-${project.id}`}>
                           <TrendingUp className={`h-4 w-4 mr-1 ${!project.isDelayed ? 'text-green-600' : 'text-red-600'}`} />
                           <span className="text-sm">Respect délais</span>
                         </div>

@@ -51,6 +51,19 @@ export interface TestProject {
   suppliesOrdered?: boolean;
   readyToStart?: boolean;
   milestones?: Array<{name: string, date: Date | string}>;
+  
+  // Champs pour workflow Chantier
+  isDelayed?: boolean;
+  hasIssues?: boolean;
+  hasBlockingIssues?: boolean;
+  issueCount?: number;
+  progress?: number; // 0-100
+  daysRemaining?: number;
+  teamsOnSite?: number;
+  todayTasks?: Array<{ name: string; completed: boolean }>;
+  teamsPresent?: boolean;
+  photosTaken?: boolean;
+  reportUpdated?: boolean;
 }
 
 export interface TestOffer {
@@ -128,6 +141,18 @@ export function generateTestProject(overrides: Partial<TestProject> = {}): TestP
     datesValidated: false,
     suppliesOrdered: false,
     readyToStart: false,
+    // Champs pour workflow Chantier
+    isDelayed: false,
+    hasIssues: false,
+    hasBlockingIssues: false,
+    issueCount: 0,
+    progress: 0,
+    daysRemaining: 30,
+    teamsOnSite: 0,
+    todayTasks: [],
+    teamsPresent: false,
+    photosTaken: false,
+    reportUpdated: false,
     ...overrides,
   };
 }

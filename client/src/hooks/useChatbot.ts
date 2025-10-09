@@ -397,15 +397,43 @@ export function useChatbotStats() {
 // HOOK SANTÉ SYSTÈME
 // ========================================
 
+export interface HealthCheckResponse {
+  isHealthy: boolean;
+  isAuthError: boolean;
+  data: any;
+}
+
 export function useChatbotHealth() {
-  return useQuery({
+  return useQuery<HealthCheckResponse>({
     queryKey: ['/api/chatbot/health'],
-    queryFn: async () => {
+    queryFn: async (): Promise<HealthCheckResponse> => {
       const response = await fetch('/api/chatbot/health', {
         credentials: 'include'
       });
       
-      return await response.json();
+      // Distinguish between auth errors and service health issues
+      if (response.status === 401 || response.status === 403) {
+        // Auth error: chatbot stays functional, just show warning
+        return { 
+          isHealthy: true, 
+          isAuthError: true, 
+          data: null 
+        };
+      }
+      
+      // Service unavailable or other errors
+      if (!response.ok || response.status === 503) {
+        throw new Error('Service unavailable');
+      }
+      
+      // Parse response and check overall_status
+      const data = await response.json();
+      
+      return { 
+        isHealthy: data.overall_status !== 'degraded' && data.success !== false, 
+        isAuthError: false, 
+        data 
+      };
     },
     refetchInterval: 30000, // Vérification toutes les 30s
     staleTime: 15000, // 15s

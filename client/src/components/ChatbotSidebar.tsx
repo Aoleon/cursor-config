@@ -51,6 +51,7 @@ import {
   type ExecuteActionRequest,
   ROLE_SUGGESTIONS
 } from "@/hooks/useChatbot";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -655,16 +656,18 @@ export default function ChatbotSidebar({ isOpen, onToggle }: ChatbotSidebarProps
   
   // Hooks personnalisés
   const { userRole, roleSuggestions, userName, userId } = useChatbotState();
+  const { toast } = useToast();
   const chatbotQuery = useChatbotQuery();
   const chatbotFeedback = useChatbotFeedback();
   const proposeAction = useProposeAction();
   const executeAction = useExecuteAction();
   const { data: suggestions, isLoading: suggestionsLoading } = useChatbotSuggestions(userRole);
   const { data: history, isLoading: historyLoading } = useChatbotHistory();
-  const { data: healthStatus } = useChatbotHealth();
+  const { data: healthData, error: healthError, isLoading: healthLoading } = useChatbotHealth();
   
-  // État local
-  const isHealthy = healthStatus?.success ?? true;
+  // État local - distinguish between auth issues and service degradation
+  const isHealthy = healthError ? false : (healthData?.isHealthy ?? true);
+  const showAuthWarning = !healthError && (healthData?.isAuthError ?? false);
   const isLoading = chatbotQuery.isPending;
   const isExecutingAction = executeAction.isPending;
 
@@ -724,6 +727,18 @@ export default function ChatbotSidebar({ isOpen, onToggle }: ChatbotSidebarProps
       setMessages(historyMessages);
     }
   }, [history, isOpen, messages.length]);
+
+  // Show toast warning for auth errors (chatbot stays functional)
+  useEffect(() => {
+    if (showAuthWarning && isOpen) {
+      toast({
+        title: "Avertissement d'authentification",
+        description: "Problème temporaire d'authentification détecté. L'assistant reste fonctionnel.",
+        variant: "default",
+        duration: 5000
+      });
+    }
+  }, [showAuthWarning, isOpen, toast]);
 
   // ========================================
   // HANDLERS D'ÉVÉNEMENTS
@@ -970,10 +985,13 @@ export default function ChatbotSidebar({ isOpen, onToggle }: ChatbotSidebarProps
         Posez-moi des questions sur vos projets, planning, équipes, ou toute autre donnée métier.
       </p>
       
-      {!isHealthy && (
-        <div className="flex items-center gap-2 text-orange-600 text-xs mb-4 p-2 bg-orange-50 rounded">
+      {!isHealthy && !showAuthWarning && (
+        <div className="flex items-center gap-2 text-red-600 text-xs mb-4 p-3 bg-red-50 border border-red-200 rounded" data-testid="service-degraded-banner">
           <AlertCircle className="w-4 h-4" />
-          Service partiellement indisponible
+          <div>
+            <div className="font-medium">Service dégradé</div>
+            <div className="text-xs text-red-600/80">L'assistant est temporairement désactivé</div>
+          </div>
         </div>
       )}
     </div>
@@ -1046,8 +1064,10 @@ export default function ChatbotSidebar({ isOpen, onToggle }: ChatbotSidebarProps
             <div className="flex items-center gap-1">
               {isHealthy ? (
                 <CheckCircle className="w-4 h-4 text-green-600" data-testid="chatbot-status-healthy" />
+              ) : showAuthWarning ? (
+                <AlertCircle className="w-4 h-4 text-yellow-600" data-testid="chatbot-status-auth-warning" />
               ) : (
-                <AlertCircle className="w-4 h-4 text-orange-600" data-testid="chatbot-status-warning" />
+                <AlertCircle className="w-4 h-4 text-red-600" data-testid="chatbot-status-degraded" />
               )}
               {messages.length > 0 && (
                 <Button
@@ -1168,7 +1188,7 @@ export default function ChatbotSidebar({ isOpen, onToggle }: ChatbotSidebarProps
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Posez votre question..."
-              disabled={isLoading || !isHealthy}
+              disabled={isLoading || (!isHealthy && !showAuthWarning)}
               className="flex-1"
               maxLength={500}
               data-testid="input-chatbot-query"
@@ -1177,7 +1197,7 @@ export default function ChatbotSidebar({ isOpen, onToggle }: ChatbotSidebarProps
             />
             <Button
               onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isLoading || !isHealthy}
+              disabled={!inputValue.trim() || isLoading || (!isHealthy && !showAuthWarning)}
               size="sm"
               className="px-3"
               data-testid="button-send-message"
@@ -1196,9 +1216,14 @@ export default function ChatbotSidebar({ isOpen, onToggle }: ChatbotSidebarProps
                   Traitement en cours...
                 </span>
               )}
-              {!isHealthy && (
-                <span className="text-orange-600" data-testid="chatbot-service-warning">
+              {!isHealthy && !showAuthWarning && (
+                <span className="text-red-600" data-testid="chatbot-service-degraded">
                   Service dégradé
+                </span>
+              )}
+              {showAuthWarning && (
+                <span className="text-yellow-600" data-testid="chatbot-auth-warning">
+                  Avertissement d'auth
                 </span>
               )}
             </div>

@@ -1,0 +1,168 @@
+{
+  "boardMappings": {
+    "ao planning  🖥️": {
+      "saxiumTable": "appels_offres",
+      "itemCount": 791,
+      "columns": [
+        "Name",
+        "Duree J Eq"
+      ]
+    },
+    "chantiers 🏗️": {
+      "saxiumTable": "projets (type=chantier)",
+      "itemCount": 350,
+      "columns": [
+        "Name",
+        "Passation"
+      ]
+    },
+    "capso": {
+      "saxiumTable": "demandes_projet",
+      "itemCount": 381,
+      "columns": [
+        "Nom",
+        "CHANTIERS - Etudes"
+      ]
+    },
+    "contacts": {
+      "saxiumTable": "contacts",
+      "itemCount": 4,
+      "columns": [
+        "Nom",
+        "Remarques"
+      ]
+    },
+    "direction": {
+      "saxiumTable": "taches_direction",
+      "itemCount": 91,
+      "columns": [
+        "Name",
+        "Pipette"
+      ]
+    },
+    "formation ouvriers": {
+      "saxiumTable": "formations (type=ouvrier)",
+      "itemCount": 34,
+      "columns": [
+        "Name",
+        "Extincteurs"
+      ]
+    },
+    "formation bureaux": {
+      "saxiumTable": "formations (type=bureau)",
+      "itemCount": 8,
+      "columns": [
+        "Name",
+        "Période - End"
+      ]
+    },
+    "sous-traitants": {
+      "saxiumTable": "fournisseurs",
+      "itemCount": 74,
+      "columns": [
+        "Name",
+        "RG"
+      ]
+    }
+  },
+  "columnMappings": {
+    "Name": {
+      "saxiumColumn": "nom",
+      "types": [
+        "text",
+        "city",
+        "client",
+        "person"
+      ],
+      "boardsUsing": [
+        "preures - rue noire",
+        "ao planning  🖥️",
+        "bethune budapest",
+        "boulogne 102 - gcc - ",
+        "chantiers 🏗️",
+        "chantiers administrat",
+        "copie de chantiers 🏗️",
+        "direction",
+        "ecques bureaux jlm",
+        "formation bureaux",
+        "formation ouvriers",
+        "outillage makita 🛠️",
+        "pièces personnel",
+        "👩‍💻 personnel bureau",
+        "👷‍♂️ personnel chanti",
+        "heures insertion",
+        "perenchies 10+14 - po",
+        "pérenchies - charpent",
+        "boulogne",
+        "fruges ts",
+        "planning symphonie",
+        "sous-traitants",
+        "temps de pose jlm",
+        "to do flavie",
+        "to do julien",
+        "🧭 tableau bord jlm"
+      ]
+    },
+    "Nom": {
+      "saxiumColumn": "nom",
+      "types": [
+        "text",
+        "city",
+        "person"
+      ],
+      "boardsUsing": [
+        "capso",
+        "contacts",
+        "jlm chantiers",
+        "campagne",
+        "fruges",
+        "planning bethune",
+        "planning etaples gran",
+        "planning longuenesse ",
+        "to do ludivine"
+      ]
+    },
+    "Duree J Eq": {
+      "saxiumColumn": "duree_jours",
+      "types": [
+        "unknown",
+        "number"
+      ],
+      "boardsUsing": [
+        "ao planning  🖥️"
+      ]
+    },
+    "Started By": {
+      "saxiumColumn": "cree_par",
+      "types": [
+        "person"
+      ],
+      "boardsUsing": [
+        "chronometre"
+      ]
+    },
+    "Duration": {
+      "saxiumColumn": "duree",
+      "types": [
+        "text"
+      ],
+      "boardsUsing": [
+        "chronometre"
+      ]
+    }
+  },
+  "statusMappings": {
+    "En cours": "en_cours",
+    "A Faire": "a_faire"
+  },
+  "recommendations": [
+    "39 boards Monday.com à migrer vers Saxium",
+    "4178 items au total à importer",
+    "4 statuts différents à mapper",
+    "796 villes identifiées pour la géolocalisation",
+    "16 clients à créer dans la table contacts",
+    "Créer une table subitems pour gérer les sous-tâches",
+    "Implémenter un système de groupes pour organiser les items",
+    "Ajouter des champs personnalisés pour les colonnes Monday spécifiques"
+  ]
+}

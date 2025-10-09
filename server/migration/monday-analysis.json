@@ -1,0 +1,2479 @@
+{
+  "metadata": {
+    "analyzedAt": "2025-10-09T10:49:41.348Z",
+    "totalBoards": 39,
+    "totalItems": 4178,
+    "totalStatuses": 4,
+    "totalCities": 796,
+    "totalClients": 16
+  },
+  "globalStatuses": [
+    "A Faire",
+    "A faire",
+    "CAPSO FACTURES rejetées 4870 + 4913",
+    "En cours"
+  ],
+  "globalColumns": {
+    "Name": {
+      "types": [
+        "text",
+        "city",
+        "client",
+        "person"
+      ],
+      "boardsUsing": 26
+    },
+    "Période - End": {
+      "types": [
+        "date",
+        "unknown"
+      ],
+      "boardsUsing": 4
+    },
+    "Duree J Eq": {
+      "types": [
+        "unknown",
+        "number"
+      ],
+      "boardsUsing": 1
+    },
+    "link to JLM CHANTIERS": {
+      "types": [
+        "text",
+        "city"
+      ],
+      "boardsUsing": 5
+    },
+    "Nom": {
+      "types": [
+        "text",
+        "city",
+        "person"
+      ],
+      "boardsUsing": 9
+    },
+    "CHANTIERS - Etudes": {
+      "types": [
+        "unknown"
+      ],
+      "boardsUsing": 1
+    },
+    "Started By": {
+      "types": [
+        "person"
+      ],
+      "boardsUsing": 1
+    },
+    "Duration": {
+      "types": [
+        "text"
+      ],
+      "boardsUsing": 1
+    },
+    "Passation": {
+      "types": [
+        "unknown",
+        "text",
+        "number"
+      ],
+      "boardsUsing": 1
+    },
+    "Commerce": {
+      "types": [
+        "text",
+        "status"
+      ],
+      "boardsUsing": 1
+    },
+    "Remarques": {
+      "types": [
+        "unknown"
+      ],
+      "boardsUsing": 1
+    },
+    "Durée etude": {
+      "types": [
+        "unknown",
+        "number"
+      ],
+      "boardsUsing": 1
+    },
+    "Pipette": {
+      "types": [
+        "unknown",
+        "text",
+        "date"
+      ],
+      "boardsUsing": 1
+    },
+    "Extincteurs": {
+      "types": [
+        "text"
+      ],
+      "boardsUsing": 1
+    },
+    "Scie Délignage": {
+      "types": [
+        "text"
+      ],
+      "boardsUsing": 1
+    },
+    "RI": {
+      "types": [
+        "text",
+        "status"
+      ],
+      "boardsUsing": 1
+    },
+    "Cout mutuelle salarié paie novembre": {
+      "types": [
+        "unknown",
+        "text"
+      ],
+      "boardsUsing": 2
+    },
+    "Organismes": {
+      "types": [
+        "text"
+      ],
+      "boardsUsing": 1
+    },
+    "Description du projet": {
+      "types": [
+        "text"
+      ],
+      "boardsUsing": 1
+    },
+    "Equipe": {
+      "types": [
+        "unknown"
+      ],
+      "boardsUsing": 1
+    },
+    "Statut d'achèvement": {
+      "types": [
+        "unknown"
+      ],
+      "boardsUsing": 5
+    },
+    "qt": {
+      "types": [
+        "unknown",
+        "number"
+      ],
+      "boardsUsing": 1
+    },
+    "Effort réalisé": {
+      "types": [
+        "unknown"
+      ],
+      "boardsUsing": 1
+    },
+    "RG": {
+      "types": [
+        "unknown",
+        "number"
+      ],
+      "boardsUsing": 1
+    },
+    "Qt / j/homme": {
+      "types": [
+        "number"
+      ],
+      "boardsUsing": 1
+    },
+    "RG a Cautionner": {
+      "types": [
+        "unknown",
+        "text",
+        "status"
+      ],
+      "boardsUsing": 1
+    },
+    "link to TO DO Julien": {
+      "types": [
+        "unknown",
+        "client"
+      ],
+      "boardsUsing": 1
+    }
+  },
+  "cities": [
+    "ACHICOURT",
+    "AD LA MADELEINE",
+    "AIRE",
+    "AIRE - AREA -",
+    "AIRE - AREA - P",
+    "AIRE - DUCROCQ - BAP",
+    "AIRE - EPHAD",
+    "AIRE - POLE TERRITORIAL - V",
+    "AIRE - S",
+    "AIRE ANNEXE VAUBAN - V",
+    "AIRE DUCROT - L",
+    "AIRE SALLE DUCROT ADAP",
+    "AIRE SUR  LA LYS - TAGV P",
+    "AIRE SUR LA LYS  -  L",
+    "AIRE SUR LA LYS - A",
+    "AIRE SUR LA LYS - AREA - ADAP M",
+    "AIRE SUR LA LYS - ASSOCIATION DIOCESAINE ARRAS -",
+    "AIRE SUR LA LYS - ASSOCIATION SAINT VINCENT AIRE SUR LA LYS",
+    "AIRE SUR LA LYS - F",
+    "AIRE SUR LA LYS - FOURNITURES DE CYLINDRES",
+    "AIRE SUR LA LYS - LYCEE",
+    "AIRE SUR LA LYS - LYCEE - DIVERS",
+    "AIRE SUR LA LYS - P",
+    "AIRE SUR LA LYS - REMPLACEMENT DE LA PORTE WC CARMEL",
+    "AIRE SUR LA LYS - S",
+    "AIRE SUR LA LYS - SALLE H",
+    "AIRE SUR LA LYS N",
+    "AIRE SUR LA LYS R",
+    "AIRE-SUR-LA-LYS - REMPLACEMENT DES MENUISERIES BOIS",
+    "ALQUINES",
+    "ALQUINES - PROJET DE RENOVATION ET D EXTENSION DE L ECOLE",
+    "ALUMINIUM DE FINITION",
+    "AMBLETEUSE",
+    "AMOPALE -",
+    "ANDRES - BLANPAIN",
+    "ANNAY",
+    "ANNOEULLIN",
+    "ANSART F",
+    "ANZIN ST AUBIN -L",
+    "AO PROJET MAIRIE",
+    "ARDRES",
+    "AREA - BANQUE D",
+    "ARGENTIN M",
+    "ARMENTIERES",
+    "ARMENTIERES - M",
+    "ARQUES  - H",
+    "ARQUES -",
+    "ARQUES - ALPHAGLASS MEN EXT",
+    "ARQUES - ALPHAGLASS MEN INT",
+    "ARQUES - BALAVOINE - P",
+    "ARQUES - BALAVOINE - PORTES E",
+    "ARQUES - CHATEAU PORION - T",
+    "ARQUES - H",
+    "ARQUES - SALLE BALAVOINE - R",
+    "ARQUES - SIAM - E",
+    "ARQUES - VR",
+    "ARQUES BLENDECQUES - TAGV GENS DU VOYAGE - H",
+    "ARQUES CAPO - C",
+    "ARQUES H",
+    "ARQUES M",
+    "ARQUES PEPSO - B",
+    "ARQUES SAV H",
+    "ARRAS",
+    "ARRAS - C",
+    "ARRAS BAUDIMONT",
+    "AUDEMBERT -  GITE - L",
+    "AUDEMBERT - GITE - L",
+    "AUDEMBERT - I",
+    "AUDEMBERT - I SZYMKOWIAK - TS C",
+    "AUDOBAT",
+    "AUDRICQ - E",
+    "AUDRUICQ",
+    "AUDRUICQ - O",
+    "AXENTIA - MARPA P",
+    "BAILLEUL - E",
+    "BAILLEUL - SIR BERTHOULT - N",
+    "BAILLEUL HARMONY - A",
+    "BAILLEUL HARMONY - CONSTRUCTION DE",
+    "BAILLEUL HARMONY - TMA M",
+    "BAILLEUL HARMONY - TRAVAUX SUP",
+    "BAUDART S",
+    "BAUVAIS J",
+    "BAUVIN",
+    "BAVINCOVE RENESCURE",
+    "BEAUGRAND A",
+    "BEAURAIN - APEI - M",
+    "BEAURAINVILLE B",
+    "BEAURIN- O",
+    "BERCK",
+    "BERCK - BELLE EUGENIE - HOCHART FERRONNERIE",
+    "BERCK - BELLE EUGENIE - R",
+    "BERCK - BELLE EUGENIE - SATT",
+    "BERCK - CAZIN PERROCHAUD - BUREAU MAS",
+    "BERCK - CAZIN PERROCHAUD - BUREAU MAS  - C",
+    "BERCK - E",
+    "BERCK - ECOUFLE",
+    "BERCK - ECOUFLE - M",
+    "BERCK - L",
+    "BERCK - LA BELLE EUGENIE - MENUISERIES EXTERIEURES",
+    "BERCK - OXYGENE - E"
+  ],
+  "clients": [
+    "COGEDIM",
+    "HABITAT",
+    "Habitat",
+    "KAUFMAN",
+    "MARIGNAN",
+    "NACARAT",
+    "NEXITY",
+    "NOVEBAT",
+    "Nexity",
+    "PIRON",
+    "Piron",
+    "RAMERY",
+    "Ramery",
+    "TISSERIN",
+    "VINCI",
+    "tisserin"
+  ],
+  "boards": {
+    "preures - rue noire": {
+      "fileName": "AMOPALE/PREURES_-_RUE_NOIRE_1758620731.xlsx",
+      "itemCount": 14,
+      "groups": [
+        "Planning travaux",
+        "Titre du groupe"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 14,
+          "sampleValues": [
+            "Terrassement - Assainissement",
+            "Gros oeuvre",
+            "Charpente - Couverture",
+            "Menuiseries extérieures",
+            "Enduit"
+          ]
+        },
+        "Période - End": {
+          "type": "date",
+          "uniqueValuesCount": 2,
+          "sampleValues": [
+            "2023-10-21T21:59:39.000Z",
+            "2023-10-19T21:59:39.000Z"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Période - End"
+      ],
+      "statusesFound": [],
+      "datesFound": [
+        "2023-10-21T21:59:39.000Z",
+        "2023-10-21T21:59:39.000Z",
+        "2023-10-19T21:59:39.000Z",
+        "2023-10-21T21:59:39.000Z",
+        "2023-10-21T21:59:39.000Z"
+      ],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "PREURES - RUE NOIRE": "Terrassement - Assainissement",
+          "undefined": "2023-10-21T21:59:39.000Z"
+        },
+        {
+          "PREURES - RUE NOIRE": "Gros oeuvre",
+          "undefined": "2023-10-21T21:59:39.000Z"
+        },
+        {
+          "PREURES - RUE NOIRE": "Charpente - Couverture",
+          "undefined": "2023-10-19T21:59:39.000Z"
+        }
+      ]
+    },
+    "ao planning  🖥️": {
+      "fileName": "AO_Planning_1758620539.xlsx",
+      "itemCount": 791,
+      "groups": [
+        "Commerce Devis",
+        "Emailed Éléments",
+        "A RELANCER",
+        "AO EN COURS",
+        "RENDUS - Attente réponse",
+        "Acceptés",
+        "Refusés",
+        "En STAND BY",
+        "Abandonnés",
+        "Variantes"
+      ],
+      "columns": {
+        "Name": {
+          "type": "city",
+          "uniqueValuesCount": 100,
+          "sampleValues": [
+            "GRANDE-SYNTHE 60 - Construction neuf - Quartier des Ilot des Peintres - PARTENORD HABITAT ->01/10/25",
+            "DUNKERQUE 85 NEXITY - MEXT",
+            "DUNKERQUE 85 NEUF  MEXT- NEXITY IR NORD LILLE : 10165 - DUNKERQUE B1",
+            "LE CROTOY 28 - COGEDIM - MEXT  -  LE CROTOY - TS Micro crèches en Logements",
+            "SAINS les MARQUIONS - NOVEBAT"
+          ]
+        },
+        "Duree J Eq": {
+          "type": "number",
+          "uniqueValuesCount": 13,
+          "sampleValues": [
+            "4",
+            "92",
+            "21",
+            "16",
+            "14"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Duree J Eq"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [
+        4,
+        92,
+        21,
+        16,
+        14,
+        14,
+        77,
+        79,
+        57,
+        62
+      ],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "AO Planning  🖥️": "GRANDE-SYNTHE 60 - Construction neuf - Quartier des Ilot des Peintres - PARTENORD HABITAT ->01/10/25",
+          "undefined": ""
+        },
+        {
+          "AO Planning  🖥️": "DUNKERQUE 85 NEXITY - MEXT",
+          "undefined": ""
+        },
+        {
+          "AO Planning  🖥️": "DUNKERQUE 85 NEUF  MEXT- NEXITY IR NORD LILLE : 10165 - DUNKERQUE B1",
+          "undefined": ""
+        }
+      ]
+    },
+    "bethune budapest": {
+      "fileName": "BETHUNE_BUDAPEST_1758620834.xlsx",
+      "itemCount": 3,
+      "groups": [
+        "Planning",
+        "Execution",
+        "Launch"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 3,
+          "sampleValues": [
+            "Task 1",
+            "Task 2",
+            "Task 3"
+          ]
+        },
+        "link to JLM CHANTIERS": {
+          "type": "text",
+          "uniqueValuesCount": 1,
+          "sampleValues": [
+            "BETHUNE BUDAPEST"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "link to JLM CHANTIERS"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "BETHUNE BUDAPEST": "Task 1",
+          "undefined": "BETHUNE BUDAPEST"
+        },
+        {
+          "BETHUNE BUDAPEST": "Task 2",
+          "undefined": "BETHUNE BUDAPEST"
+        },
+        {
+          "BETHUNE BUDAPEST": "Task 3",
+          "undefined": "BETHUNE BUDAPEST"
+        }
+      ]
+    },
+    "boulogne 102 - gcc - ": {
+      "fileName": "BOULOGNE_102_-_GCC_-_102_lgts_-_Serrurerie_1758620850.xlsx",
+      "itemCount": 3,
+      "groups": [
+        "Planning",
+        "Execution",
+        "Launch"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 3,
+          "sampleValues": [
+            "Task 1",
+            "Task 2",
+            "Task 3"
+          ]
+        },
+        "link to JLM CHANTIERS": {
+          "type": "city",
+          "uniqueValuesCount": 1,
+          "sampleValues": [
+            "BOULOGNE 102 - GCC - 102 lgts - Serrurerie"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "link to JLM CHANTIERS"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "BOULOGNE 102 - GCC - 102 lgts - Serrurerie": "Task 1",
+          "undefined": "BOULOGNE 102 - GCC - 102 lgts - Serrurerie"
+        },
+        {
+          "BOULOGNE 102 - GCC - 102 lgts - Serrurerie": "Task 2",
+          "undefined": "BOULOGNE 102 - GCC - 102 lgts - Serrurerie"
+        },
+        {
+          "BOULOGNE 102 - GCC - 102 lgts - Serrurerie": "Task 3",
+          "undefined": "BOULOGNE 102 - GCC - 102 lgts - Serrurerie"
+        }
+      ]
+    },
+    "capso": {
+      "fileName": "CAPSO_1758620571.xlsx",
+      "itemCount": 381,
+      "groups": [
+        "Utilisez ce tableau pour recevoir des demandes de projet via un formulaire et pour gérer le processus d'approbation de projet.\n\nComment cela fonctionne-t-il ? Une fois soumis, le formulaire peuplera le groupe « nouvelles demandes ». Après approbation, un nouvel élément sera créé dans le tableau « gestion de portefeuille » qui est lié à la demande de projet.",
+        "Emailed Éléments",
+        "Nouvelles demandes",
+        "Sous étude",
+        "Approuvée",
+        "Devis Envoyé",
+        "Rejetée",
+        "Terminé, à facturer",
+        "Facturé"
+      ],
+      "columns": {
+        "Nom": {
+          "type": "city",
+          "uniqueValuesCount": 23,
+          "sampleValues": [
+            "AIRE - Salle DUCROT - Demande Devis Dominique",
+            "ST OMER - QUARTIER FOCH - MISSION LOCALE - Réparation sol",
+            "FW: Salle Balavoine - Portes - Complément",
+            "AIRE ANNEXE VAUBAN - passage boite aux lettres dans une porte bois",
+            "SAINT OMER - Ecole d'art - Devis plancher"
+          ]
+        },
+        "CHANTIERS - Etudes": {
+          "type": "unknown",
+          "uniqueValuesCount": 0,
+          "sampleValues": []
+        }
+      },
+      "columnNames": [
+        "Nom",
+        "CHANTIERS - Etudes"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "CAPSO": "AIRE - Salle DUCROT - Demande Devis Dominique",
+          "undefined": ""
+        },
+        {
+          "CAPSO": "ST OMER - QUARTIER FOCH - MISSION LOCALE - Réparation sol",
+          "undefined": ""
+        },
+        {
+          "CAPSO": "FW: Salle Balavoine - Portes - Complément",
+          "undefined": ""
+        }
+      ]
+    },
+    "chronometre": {
+      "fileName": "CAPSO_1758620571.xlsx",
+      "itemCount": 151,
+      "groups": [
+        "ST OMER - CRD QUARTIER FOCH Cloison et portes",
+        "ST OMER - ECOLE de la Seconde Chance - ADAP",
+        "AREA - BANQUE D'ACCUEIL - Compléments",
+        "ST OMER - Bourse du travail - ADAP V5 Quartier Foch",
+        "ST OMER - MISSION LOCALE - Reprise plafond tombé",
+        "ST OMER - ECOLE SECONDE CHANCE - Local Archive CF1H",
+        "AIRE - PPE - Départ feu plaques - ATTENTE BC REGULE",
+        "ST OMER MHD porte et vitrage et TIsanerie",
+        "FAUQUEMBERGUES RPE (Petite Enfance) - Modif cloisons et plafond",
+        "ST OMER LE BROCKUS - S.P.A. - Vitrage",
+        "AIRE SUR  LA LYS - TAGV Devis porte",
+        "LONGUENESSE - HOTEL COM - Porte Ext Alu",
+        "EPERLECQUES - MDS maison de santé - Cloison facture en doublon",
+        "THEROUANNE SALLE DE SPORT  - Ajout Laine de verre dans plafond - LDV 120",
+        "ARQUES BLENDECQUES - TAGV Gens du Voyage : Remplacement de 2 portes extérieures du bloc 7 handicapé",
+        "LONGUENESSE - TAGV Gens du Voyage : Remplacement de 2 portes extérieures et 2 intérieures",
+        "AIRE SUR LA LYS - TAGV Gens du Voyage : Remplacement de 2 portes extérieures Hand",
+        "ST OMER - BASE KAYAK - ADAP",
+        "FAUQUEMBERGUES - SALLE DES SPORTS - ADAP V1",
+        "FAUQUEMBERGUE - Gendarmerie - ADAP",
+        "ARQUES BLENDECQUES - TAGV GENS DU VOYAGE - Habillage ébrasements",
+        "ARQUES - PISCINES vitrage",
+        "ST OMER - EPICERIE SOCIALE -  Remplacement de petit carreau en verre",
+        "ARQUES - Piscine Découpe 2h + Trappe plat 1,5*0,2",
+        "LONGUENESSE HOTEL COMMUNAUTAIRE DEPOSE PLAFOND PUIS REPOSE",
+        "FAUQUEMBERGUES - LA POSTE - Reprises suite Inondation",
+        "FAUQUEMBERGUES - MAM - Remplacements suite inondation",
+        "FAUQUEMBERGUES - HOTEL ENTREPRISE - Création Sanitaires",
+        "FAUQUEMBERGUES - ENERLYA - Reprises suite inondation",
+        "ARQUES - CHATEAU PORION - Transformation Ecole de Musique",
+        "THEROUANNE - SALLE DE SPORT - Reprises suite inondation",
+        "ST OMER - MAISON DU MARAIS - Reprises suite nondations",
+        "ST OMER - BIBLIOTHEQUE - Création Platelage comble VMC",
+        "THEROUANNE - SALLE DE SPORT - Remplacement portes vestiaires",
+        "EPERLECQUES - PPE VITRAGE",
+        "FAUQUEMBERGUES - Logement de fonction à la Poste - Reprises suite inondations",
+        "AIRE - AREA - Porte métal Arrière accès livraison",
+        "ARQUES - BALAVOINE - PORTES Ext ET TOLES",
+        "FAUQUEMBERGUES - GENDARMERIE - Caches tuyaux Pompes à chaleur",
+        "ST OMER - SPA LPA - ADAP - Miroir",
+        "ST OMER - VIE ACTIVE - ADAP - Miroir",
+        "ST OMER - Base Kayak polo - ADAP - Miroir",
+        "AIRE SUR LA LYS - Pole Communautaire - Révision menuiserie",
+        "LONGUENESSE - EILCO Cylindres",
+        "ARQUES - BALAVOINE - Portes Ext supplémentaires",
+        "FAUQUEMBERGUES - LA POSTE - Reprises suite Inondation 201719",
+        "ARQUES - Chateau PORION - Plinthes",
+        "THEROUANNE - Maison des Services - Dépose / Repose d'un placard",
+        "ST OMER - PPE - ADAP - Pose de 2 miroirs",
+        "THEROUANNE - Maison des Service - Réglage Fenêtre et Remplacement poignée",
+        "FAUQUEMBERGUES - LA POSTE - Reprises suite Inondation V2",
+        "FAUQUEMBERGUES HOTEL Entreprise Porte métal",
+        "St OMER QUARTIER FOCH 2 Barres AP",
+        "AIRE DUCROT - Lames Parquet - 10u",
+        "ST OMER PAVILLON Préfigurateur",
+        "ARQUES GARAGE OM Porte Karcher",
+        "THEROUANNE EPICERIE SOCIALE - Faux plafond",
+        "THEROUANNE MDS - Réglage Fenêtre Note 17 oct. 2024",
+        "AIRE VAUBAN 2025-02-05 à chiffrer annexe Vauban vitrage",
+        "MENTQUE NORTBECOURT MOULIN LEBRIEZ - Réparation Note 23 oct. 2024",
+        "FAUQUEMBERGUES MAM - Poignée coulissant - Attente BC pour régule",
+        "AIRE - AREA - 2 crémones à levier",
+        "AIRE - Salle DUCROT : Portes de sorties de secours",
+        "AIRE - Salle de sport Berton - 2 Butées + 2 barres",
+        "AIRE - POLE TERRITORIAL - Vitre Bureau Betty",
+        "AIRE - POLE TERRITORIAL -  ADAP -  Tapis de sol",
+        "ST MARTIN - CRD - 5 PORTES",
+        "FAUQUEMBERGUES - ENERLYA - Réglage porte"
+      ],
+      "columns": {
+        "Started By": {
+          "type": "person",
+          "uniqueValuesCount": 3,
+          "sampleValues": [
+            "Julien LAMBOROT",
+            "Total",
+            "Laurent WISSOCQ"
+          ]
+        },
+        "Duration": {
+          "type": "text",
+          "uniqueValuesCount": 87,
+          "sampleValues": [
+            "00:05:27",
+            "00:00:14",
+            "00:03:48",
+            "00:04:49",
+            "00:02:14"
+          ]
+        }
+      },
+      "columnNames": [
+        "Started By",
+        "Duration"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [
+        "Julien LAMBOROT",
+        "Laurent WISSOCQ"
+      ],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Time Tracking": "Julien LAMBOROT",
+          "undefined": "00:05:27"
+        },
+        {
+          "Time Tracking": "Total",
+          "undefined": "00:05:27"
+        },
+        {
+          "Time Tracking": "Julien LAMBOROT",
+          "undefined": "00:00:14"
+        }
+      ]
+    },
+    "chantiers 🏗️": {
+      "fileName": "CHANTIERS_1758620580.xlsx",
+      "itemCount": 350,
+      "groups": [
+        "Emailed Éléments",
+        "SAV",
+        "NOUVEAUX",
+        "CHANTIERS En cours",
+        "CAPSO",
+        "Nicolas",
+        "Anne-Sophie",
+        "Yannick",
+        "Julien D.",
+        "Julien V",
+        "France",
+        "Prêt - A PROGRAMMER",
+        "En réception",
+        "Réceptionné",
+        "Archives"
+      ],
+      "columns": {
+        "Name": {
+          "type": "city",
+          "uniqueValuesCount": 100,
+          "sampleValues": [
+            "BERCK Reflet d’Ecume Refab Dormants 2/2",
+            "BERCK Reflet d’Ecume - Recommande Dormants",
+            "Sav boulogne 102 boitiers serrures livraison S11",
+            "BERCK Reflet d'Ecume - Refab 3",
+            "BERCK ECUME recommande 4"
+          ]
+        },
+        "Passation": {
+          "type": "number",
+          "uniqueValuesCount": 100,
+          "sampleValues": [
+            "-13.3521126761",
+            "-27.3348519362",
+            "-13.4951393073",
+            "-11.3795031056",
+            "-10.898543106"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Passation"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [
+        66,
+        30
+      ],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "CHANTIERS 🏗️": "BERCK Reflet d’Ecume Refab Dormants 2/2",
+          "undefined": ""
+        },
+        {
+          "CHANTIERS 🏗️": "BERCK Reflet d’Ecume - Recommande Dormants",
+          "undefined": ""
+        },
+        {
+          "CHANTIERS 🏗️": "Sav boulogne 102 boitiers serrures livraison S11",
+          "undefined": ""
+        }
+      ]
+    },
+    "chantiers administrat": {
+      "fileName": "CHANTIERS_Administratif_1758620613.xlsx",
+      "itemCount": 269,
+      "groups": [
+        "Emailed Éléments",
+        "Nouveaux",
+        "Acceptés / En étude",
+        "En Travaux",
+        "Réceptionné",
+        "A l'Arrêt",
+        "Archivés"
+      ],
+      "columns": {
+        "Name": {
+          "type": "city",
+          "uniqueValuesCount": 100,
+          "sampleValues": [
+            "DESVRES - Septalia M&C - Mext",
+            "LONGUENESSE - Construction d'un plateau d'analyses - MEXT",
+            "MARCQ en BAROEUL - CER - B.SALIN",
+            "LONGUENESSE - RESIDENCE LES GENETS B9 - REMPLACEMENT BLOC PORTES",
+            "BERCK CAZIN MAS DUNE AU VENT - Remplacement 4 Portes"
+          ]
+        },
+        "Commerce": {
+          "type": "status",
+          "uniqueValuesCount": 6,
+          "sampleValues": [
+            "SB",
+            "FL",
+            "JL",
+            "JD",
+            "A Faire"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Commerce"
+      ],
+      "statusesFound": [
+        "A Faire"
+      ],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "CHANTIERS Administratif": "DESVRES - Septalia M&C - Mext",
+          "undefined": "SB"
+        },
+        {
+          "CHANTIERS Administratif": "LONGUENESSE - Construction d'un plateau d'analyses - MEXT",
+          "undefined": "FL"
+        },
+        {
+          "CHANTIERS Administratif": "MARCQ en BAROEUL - CER - B.SALIN",
+          "undefined": "FL"
+        }
+      ]
+    },
+    "contacts": {
+      "fileName": "Contacts_1758620760.xlsx",
+      "itemCount": 4,
+      "groups": [
+        "Bienvenue sur votre tableau des contacts ! Ici, vous pouvez enregistrer et gérer tous vos contacts",
+        "Contacts"
+      ],
+      "columns": {
+        "Nom": {
+          "type": "text",
+          "uniqueValuesCount": 4,
+          "sampleValues": [
+            "Laurent Fromentin",
+            "Emmanuel Branque",
+            "Aïcha Langot",
+            "Eric Rodin"
+          ]
+        },
+        "Remarques": {
+          "type": "unknown",
+          "uniqueValuesCount": 0,
+          "sampleValues": []
+        }
+      },
+      "columnNames": [
+        "Nom",
+        "Remarques"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Contacts": "Laurent Fromentin",
+          "undefined": ""
+        },
+        {
+          "Contacts": "Emmanuel Branque",
+          "undefined": ""
+        },
+        {
+          "Contacts": "Aïcha Langot",
+          "undefined": ""
+        }
+      ]
+    },
+    "copie de chantiers 🏗️": {
+      "fileName": "Copie_de_CHANTIERS_PROJET_1758620682.xlsx",
+      "itemCount": 316,
+      "groups": [
+        "Emailed Éléments",
+        "SAV",
+        "NOUVEAUX",
+        "CAPSO",
+        "Nicolas",
+        "Julien D.",
+        "Julien",
+        "Laurent",
+        "France",
+        "Prêt - A PROGRAMMER",
+        "CHANTIERS En cours",
+        "En réception",
+        "Réceptionné",
+        "Archives"
+      ],
+      "columns": {
+        "Name": {
+          "type": "client",
+          "uniqueValuesCount": 100,
+          "sampleValues": [
+            "CAMIER Casse verre  devis de LE KAP VERRE COTE D'OPALE",
+            "- HAZEBROUCK - TOLESPORTES ABIMEES- pour discution NOVEBAT",
+            "Sav boulogne 102 boitiers serrures livraison S11",
+            "Berck reflet d’Ecume - MEXT Recommmande Erreur JLM",
+            "FW: LE CROTOY - REUNION DU JEUDI 27/02"
+          ]
+        },
+        "Durée etude": {
+          "type": "number",
+          "uniqueValuesCount": 4,
+          "sampleValues": [
+            "10",
+            "25",
+            "0.5",
+            "1"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Durée etude"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [
+        10,
+        25,
+        1
+      ],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Copie de CHANTIERS 🏗️ PROJET": "CAMIER Casse verre  devis de LE KAP VERRE COTE D'OPALE",
+          "undefined": ""
+        },
+        {
+          "Copie de CHANTIERS 🏗️ PROJET": "- HAZEBROUCK - TOLESPORTES ABIMEES- pour discution NOVEBAT",
+          "undefined": ""
+        },
+        {
+          "Copie de CHANTIERS 🏗️ PROJET": "Sav boulogne 102 boitiers serrures livraison S11",
+          "undefined": ""
+        }
+      ]
+    },
+    "direction": {
+      "fileName": "DIRECTION_1758620650.xlsx",
+      "itemCount": 91,
+      "groups": [
+        "Flavie Julien",
+        "Emailed Éléments",
+        "A VALIDER",
+        "MENUISONS",
+        "TERRAIN - BUREAUX",
+        "RH",
+        "FORMATION",
+        "INNOVATION",
+        "Abandonné - Fait"
+      ],
+      "columns": {
+        "Name": {
+          "type": "client",
+          "uniqueValuesCount": 90,
+          "sampleValues": [
+            "FW: Devis - Projet JLM MENUISERIE SAS LONGUENESSE",
+            "FW: Ergonomie et Confort au Bureau pour 2025",
+            "MAIL SAV créé",
+            "FW: [UMB-FFB] Invitation CA 5 et 6 décembre 2024 à Paris",
+            "Fwd: offre de prix Raboteuse"
+          ]
+        },
+        "Pipette": {
+          "type": "date",
+          "uniqueValuesCount": 3,
+          "sampleValues": [
+            "#FDFB67",
+            "2023-05-26T21:59:39.000Z",
+            "2023-06-19T21:59:39.000Z"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Pipette"
+      ],
+      "statusesFound": [],
+      "datesFound": [
+        "2023-05-26T21:59:39.000Z",
+        "2023-06-19T21:59:39.000Z",
+        "2023-06-19T21:59:39.000Z"
+      ],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "DIRECTION": "FW: Devis - Projet JLM MENUISERIE SAS LONGUENESSE",
+          "undefined": ""
+        },
+        {
+          "DIRECTION": "FW: Ergonomie et Confort au Bureau pour 2025",
+          "undefined": ""
+        },
+        {
+          "DIRECTION": "MAIL SAV créé",
+          "undefined": ""
+        }
+      ]
+    },
+    "ecques bureaux jlm": {
+      "fileName": "ECQUES_BUREAUX_JLM_1758620829.xlsx",
+      "itemCount": 3,
+      "groups": [
+        "Planning",
+        "Execution",
+        "Launch"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 1,
+          "sampleValues": [
+            "MEXT ALU"
+          ]
+        },
+        "link to JLM CHANTIERS": {
+          "type": "text",
+          "uniqueValuesCount": 1,
+          "sampleValues": [
+            "ECQUES BUREAUX JLM"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "link to JLM CHANTIERS"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "ECQUES BUREAUX JLM": "MEXT ALU",
+          "undefined": "ECQUES BUREAUX JLM"
+        }
+      ]
+    },
+    "formation bureaux": {
+      "fileName": "Formation_Bureaux_1758620863.xlsx",
+      "itemCount": 8,
+      "groups": [
+        "BUREAU",
+        "SORTI"
+      ],
+      "columns": {
+        "Name": {
+          "type": "person",
+          "uniqueValuesCount": 8,
+          "sampleValues": [
+            "Sylvie BAUDART",
+            "Ludivine COMBAZ",
+            "Flavie",
+            "Julien",
+            "Nicolas LOVERGNE"
+          ]
+        },
+        "Période - End": {
+          "type": "date",
+          "uniqueValuesCount": 1,
+          "sampleValues": [
+            "2023-02-26T21:59:39.000Z"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Période - End"
+      ],
+      "statusesFound": [],
+      "datesFound": [
+        "2023-02-26T21:59:39.000Z",
+        "2023-02-26T21:59:39.000Z"
+      ],
+      "peopleFound": [
+        "Sylvie BAUDART",
+        "Ludivine COMBAZ",
+        "Nicolas LOVERGNE",
+        "Julien DUCROCQ",
+        "Laurent WISSOCQ"
+      ],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Formation Bureaux": "Sylvie BAUDART",
+          "undefined": "2023-02-26T21:59:39.000Z"
+        },
+        {
+          "Formation Bureaux": "Ludivine COMBAZ",
+          "undefined": "2023-02-26T21:59:39.000Z"
+        },
+        {
+          "Formation Bureaux": "Flavie",
+          "undefined": ""
+        }
+      ]
+    },
+    "formation ouvriers": {
+      "fileName": "Gestion salariés/Formation_Ouvriers_1758620716.xlsx",
+      "itemCount": 34,
+      "groups": [
+        "Plan de formation salarié",
+        "Sortis"
+      ],
+      "columns": {
+        "Name": {
+          "type": "person",
+          "uniqueValuesCount": 34,
+          "sampleValues": [
+            "TRISTRAM Arnaud",
+            "ROSE Bryan",
+            "POURCHEL Franck",
+            "WIDEHEM J-Charles",
+            "LEFEBVRE José"
+          ]
+        },
+        "Extincteurs": {
+          "type": "text",
+          "uniqueValuesCount": 1,
+          "sampleValues": [
+            "7 ou 14/04/2023"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Extincteurs"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [
+        "Killian CLABAULT",
+        "Rudy LEGAULT",
+        "Gordon DAUSSE",
+        "Matthieu FOURNIER",
+        "Laurent LESEIGNEUR",
+        "Antoine BEAUGRAND"
+      ],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Formation Ouvriers": "TRISTRAM Arnaud",
+          "undefined": "7 ou 14/04/2023"
+        },
+        {
+          "Formation Ouvriers": "ROSE Bryan",
+          "undefined": ""
+        },
+        {
+          "Formation Ouvriers": "POURCHEL Franck",
+          "undefined": "7 ou 14/04/2023"
+        }
+      ]
+    },
+    "outillage makita 🛠️": {
+      "fileName": "Gestion salariés/Outillage_MAKITA_1758620723.xlsx",
+      "itemCount": 27,
+      "groups": [
+        "Inventaire 04/07/23",
+        "Sortis",
+        "Titre du groupe"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 8,
+          "sampleValues": [
+            "COFFIN  Nicolas",
+            "DAUSSE Gordon",
+            "VANWALSCAPPEL Gilbert",
+            "DELISSEN Philippe",
+            "SAINT POL Bastien"
+          ]
+        },
+        "Scie Délignage": {
+          "type": "text",
+          "uniqueValuesCount": 1,
+          "sampleValues": [
+            "Camion"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Scie Délignage"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 1,
+      "subitemsDetails": [
+        {
+          "parentItem": "COFFIN  Nicolas",
+          "columns": [
+            "Date"
+          ],
+          "itemCount": 8,
+          "sampleItems": [
+            {
+              "Outillage MAKITA 🛠️": "VEXTARD Dimitri",
+              "undefined": "Camion"
+            },
+            {
+              "Outillage MAKITA 🛠️": "RODRIGUEZ Camion",
+              "undefined": "DEWALT D27111 D305"
+            }
+          ]
+        }
+      ],
+      "sampleItems": [
+        {
+          "Outillage MAKITA 🛠️": "COFFIN  Nicolas",
+          "undefined": "Camion"
+        },
+        {
+          "Outillage MAKITA 🛠️": "DAUSSE Gordon",
+          "undefined": ""
+        },
+        {
+          "Outillage MAKITA 🛠️": "VANWALSCAPPEL Gilbert",
+          "undefined": ""
+        }
+      ]
+    },
+    "pièces personnel": {
+      "fileName": "Gestion salariés/Pi_ces_personnel_1758620698.xlsx",
+      "itemCount": 38,
+      "groups": [
+        "SALARIES EN POSTE dossier administratif",
+        "ANCIENS SALARIES"
+      ],
+      "columns": {
+        "Name": {
+          "type": "person",
+          "uniqueValuesCount": 38,
+          "sampleValues": [
+            "José LEFEBVRE",
+            "Arnaud TRISTRAM",
+            "Maxence MEISSNER",
+            "Nicolas COFFIN",
+            "J-Charles WIDEHEM"
+          ]
+        },
+        "RI": {
+          "type": "status",
+          "uniqueValuesCount": 4,
+          "sampleValues": [
+            "Fait",
+            "A faire",
+            "x",
+            "X"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "RI"
+      ],
+      "statusesFound": [
+        "A faire"
+      ],
+      "datesFound": [],
+      "peopleFound": [
+        "Arnaud TRISTRAM",
+        "Maxence MEISSNER",
+        "Nicolas COFFIN",
+        "Franck POURCHEL",
+        "Bryan ROSE",
+        "Mathis DUMETZ",
+        "Dimitri VEXTARD",
+        "Maxime LEMAIRE",
+        "Antoine RODRIGUEZ",
+        "Julien BAUVAIS"
+      ],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Pièces personnel": "José LEFEBVRE",
+          "undefined": "Fait"
+        },
+        {
+          "Pièces personnel": "Arnaud TRISTRAM",
+          "undefined": "Fait"
+        },
+        {
+          "Pièces personnel": "Maxence MEISSNER",
+          "undefined": "Fait"
+        }
+      ]
+    },
+    "👩‍💻 personnel bureau": {
+      "fileName": "Gestion salariés/_Personnel_bureau_1758620710.xlsx",
+      "itemCount": 7,
+      "groups": [
+        "21-10-01 Liste du personnel et TH",
+        "Sortis",
+        "Titre du groupe"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 7,
+          "sampleValues": [
+            "BAUDART Sylvie",
+            "COMBAZ Ludivine",
+            "WISSOCQ Laurent",
+            "LOVERGNE Nicolas",
+            "DUCROCQ Julien"
+          ]
+        },
+        "Cout mutuelle salarié paie novembre": {
+          "type": "unknown",
+          "uniqueValuesCount": 0,
+          "sampleValues": []
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Cout mutuelle salarié paie novembre"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "👩‍💻 Personnel bureau": "BAUDART Sylvie",
+          "undefined": ""
+        },
+        {
+          "👩‍💻 Personnel bureau": "COMBAZ Ludivine",
+          "undefined": ""
+        },
+        {
+          "👩‍💻 Personnel bureau": "WISSOCQ Laurent",
+          "undefined": ""
+        }
+      ]
+    },
+    "👷‍♂️ personnel chanti": {
+      "fileName": "Gestion salariés/_Personnel_chantier_1758620704.xlsx",
+      "itemCount": 37,
+      "groups": [
+        "21-10-01 Liste du personnel et TH",
+        "Sortis",
+        "Titre du groupe"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 37,
+          "sampleValues": [
+            "COFFIN  Nicolas",
+            "DUMETZ Mathis",
+            "LEFEBVRE José",
+            "LEMAIRE Maxime",
+            "MEISSNER Maxence"
+          ]
+        },
+        "Cout mutuelle salarié paie novembre": {
+          "type": "text",
+          "uniqueValuesCount": 12,
+          "sampleValues": [
+            "37.56",
+            "39.21",
+            "32.19",
+            "68.7",
+            "75.38"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Cout mutuelle salarié paie novembre"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "👷‍♂️ Personnel chantier": "COFFIN  Nicolas",
+          "undefined": 37.56
+        },
+        {
+          "👷‍♂️ Personnel chantier": "DUMETZ Mathis",
+          "undefined": 0
+        },
+        {
+          "👷‍♂️ Personnel chantier": "LEFEBVRE José",
+          "undefined": 39.21
+        }
+      ]
+    },
+    "heures insertion": {
+      "fileName": "Heures_Insertion_1758620671.xlsx",
+      "itemCount": 15,
+      "groups": [
+        "Insertion en cours",
+        "Insertion terminée",
+        "Inclusion"
+      ],
+      "columns": {
+        "Name": {
+          "type": "city",
+          "uniqueValuesCount": 15,
+          "sampleValues": [
+            "ETAPLES GRAND LARGE",
+            "BETHUNE",
+            "DUNKERQUE BANC VERT",
+            "BAVINCOVE RENESCURE",
+            "HOULLE EPERLECQUES"
+          ]
+        },
+        "Organismes": {
+          "type": "text",
+          "uniqueValuesCount": 6,
+          "sampleValues": [
+            "ADEFI Laetitia PLASSCHAERT",
+            "MIPE LEROY Fabienne",
+            "EEDK Julia PROCKO",
+            "PLIE Frédéric VENDERBUR",
+            "AMIE BOULONNAIS Mme VOSPETTE"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Organismes"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Heures Insertion": "ETAPLES GRAND LARGE",
+          "undefined": "ADEFI Laetitia PLASSCHAERT"
+        },
+        {
+          "Heures Insertion": "BETHUNE",
+          "undefined": ""
+        },
+        {
+          "Heures Insertion": "DUNKERQUE BANC VERT",
+          "undefined": ""
+        }
+      ]
+    },
+    "jlm chantiers": {
+      "fileName": "JLM_CHANTIERS_1758620597.xlsx",
+      "itemCount": 7,
+      "groups": [
+        "Projets"
+      ],
+      "columns": {
+        "Nom": {
+          "type": "city",
+          "uniqueValuesCount": 7,
+          "sampleValues": [
+            "ECQUES BUREAUX JLM",
+            "BETHUNE BUDAPEST",
+            "PÉRENCHIES - Charpente Brisis",
+            "PERENCHIES 10+14 - Portes de Hall",
+            "BOULOGNE 102 - GCC - 102 lgts - Serrurerie"
+          ]
+        },
+        "Description du projet": {
+          "type": "text",
+          "uniqueValuesCount": 1,
+          "sampleValues": [
+            "Constrcution des bureau JLM"
+          ]
+        }
+      },
+      "columnNames": [
+        "Nom",
+        "Description du projet"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "JLM CHANTIERS": "ECQUES BUREAUX JLM",
+          "undefined": "Constrcution des bureau JLM"
+        },
+        {
+          "JLM CHANTIERS": "BETHUNE BUDAPEST",
+          "undefined": ""
+        },
+        {
+          "JLM CHANTIERS": "PÉRENCHIES - Charpente Brisis",
+          "undefined": ""
+        }
+      ]
+    },
+    "perenchies 10+14 - po": {
+      "fileName": "PERENCHIES_10_14_-_Portes_de_Hall_1758620845.xlsx",
+      "itemCount": 3,
+      "groups": [
+        "Planning",
+        "Execution",
+        "Launch"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 3,
+          "sampleValues": [
+            "Task 1",
+            "Task 2",
+            "Task 3"
+          ]
+        },
+        "link to JLM CHANTIERS": {
+          "type": "city",
+          "uniqueValuesCount": 1,
+          "sampleValues": [
+            "PERENCHIES 10+14 - Portes de Hall"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "link to JLM CHANTIERS"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "PERENCHIES 10+14 - Portes de Hall": "Task 1",
+          "undefined": "PERENCHIES 10+14 - Portes de Hall"
+        },
+        {
+          "PERENCHIES 10+14 - Portes de Hall": "Task 2",
+          "undefined": "PERENCHIES 10+14 - Portes de Hall"
+        },
+        {
+          "PERENCHIES 10+14 - Portes de Hall": "Task 3",
+          "undefined": "PERENCHIES 10+14 - Portes de Hall"
+        }
+      ]
+    },
+    "pérenchies - charpent": {
+      "fileName": "P_RENCHIES_-_Charpente_Brisis_1758620839.xlsx",
+      "itemCount": 3,
+      "groups": [
+        "Planning",
+        "Execution",
+        "Launch"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 3,
+          "sampleValues": [
+            "Task 1",
+            "Task 2",
+            "Task 3"
+          ]
+        },
+        "link to JLM CHANTIERS": {
+          "type": "text",
+          "uniqueValuesCount": 1,
+          "sampleValues": [
+            "PÉRENCHIES - Charpente Brisis"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "link to JLM CHANTIERS"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "PÉRENCHIES - Charpente Brisis": "Task 1",
+          "undefined": "PÉRENCHIES - Charpente Brisis"
+        },
+        {
+          "PÉRENCHIES - Charpente Brisis": "Task 2",
+          "undefined": "PÉRENCHIES - Charpente Brisis"
+        },
+        {
+          "PÉRENCHIES - Charpente Brisis": "Task 3",
+          "undefined": "PÉRENCHIES - Charpente Brisis"
+        }
+      ]
+    },
+    "boulogne": {
+      "fileName": "Planning chantier/Boulogne_1758620768.xlsx",
+      "itemCount": 204,
+      "groups": [
+        "Classeur1",
+        "Titre du groupe"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 100,
+          "sampleValues": [
+            "Appt 74",
+            "Appt 80",
+            "Appt 86",
+            "Appt 92",
+            "Appt 98"
+          ]
+        },
+        "Equipe": {
+          "type": "unknown",
+          "uniqueValuesCount": 0,
+          "sampleValues": []
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Equipe"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Boulogne": "Appt 74",
+          "undefined": ""
+        },
+        {
+          "Boulogne": "Appt 80",
+          "undefined": ""
+        },
+        {
+          "Boulogne": "Appt 86",
+          "undefined": ""
+        }
+      ]
+    },
+    "campagne": {
+      "fileName": "Planning chantier/CAMPAGNE_1758620806.xlsx",
+      "itemCount": 18,
+      "groups": [
+        "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+        "BARDAGE",
+        "MENUISERIE INTERIEURE",
+        "Lancement"
+      ],
+      "columns": {
+        "Nom": {
+          "type": "person",
+          "uniqueValuesCount": 18,
+          "sampleValues": [
+            "Bardage Zinc",
+            "Bardage Bois Ext",
+            "Bardage Int Lattes M1",
+            "Enduit Ext",
+            "Fin"
+          ]
+        },
+        "Statut d'achèvement": {
+          "type": "unknown",
+          "uniqueValuesCount": 0,
+          "sampleValues": []
+        }
+      },
+      "columnNames": [
+        "Nom",
+        "Statut d'achèvement"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [
+        "Placards SOGAL"
+      ],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "CAMPAGNE": "Bardage Zinc",
+          "undefined": ""
+        },
+        {
+          "CAMPAGNE": "Bardage Bois Ext",
+          "undefined": ""
+        },
+        {
+          "CAMPAGNE": "Bardage Int Lattes M1",
+          "undefined": ""
+        }
+      ]
+    },
+    "fruges": {
+      "fileName": "Planning chantier/FRUGES_1758620811.xlsx",
+      "itemCount": 13,
+      "groups": [
+        "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+        "carea",
+        "Cage escalier gauche",
+        "Cage escalier droit",
+        "Zone cour",
+        "FIN"
+      ],
+      "columns": {
+        "Nom": {
+          "type": "text",
+          "uniqueValuesCount": 8,
+          "sampleValues": [
+            "Ossature",
+            "Livraison",
+            "Pose",
+            "Echafaudage",
+            "pose panneaux"
+          ]
+        },
+        "Statut d'achèvement": {
+          "type": "unknown",
+          "uniqueValuesCount": 0,
+          "sampleValues": []
+        }
+      },
+      "columnNames": [
+        "Nom",
+        "Statut d'achèvement"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "FRUGES": "Ossature",
+          "undefined": ""
+        },
+        {
+          "FRUGES": "Livraison",
+          "undefined": ""
+        },
+        {
+          "FRUGES": "Pose",
+          "undefined": ""
+        }
+      ]
+    },
+    "fruges ts": {
+      "fileName": "Planning chantier/FRUGES_TS_1758620823.xlsx",
+      "itemCount": 8,
+      "groups": [
+        "SOUS FACE PREAU ALU",
+        "FAÇADE 9 FIN",
+        "FACADE PREAU"
+      ],
+      "columns": {
+        "Name": {
+          "type": "city",
+          "uniqueValuesCount": 8,
+          "sampleValues": [
+            "Ossature",
+            "Isolation",
+            "Pose",
+            "POSE DU BARDAGE FUNDERMAX",
+            "EBRASEMENTS ALU"
+          ]
+        },
+        "qt": {
+          "type": "number",
+          "uniqueValuesCount": 3,
+          "sampleValues": [
+            "40",
+            "23",
+            "50"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "qt"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [
+        40,
+        23,
+        50,
+        50,
+        23
+      ],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "FRUGES TS": "Ossature",
+          "undefined": ""
+        },
+        {
+          "FRUGES TS": "Isolation",
+          "undefined": ""
+        },
+        {
+          "FRUGES TS": "Pose",
+          "undefined": ""
+        }
+      ]
+    },
+    "planning symphonie": {
+      "fileName": "Planning chantier/PLANNING_SYMPHONIE_1758620816.xlsx",
+      "itemCount": 11,
+      "groups": [
+        "OSSATURE",
+        "BARDAGE",
+        "FINITIONS ALUMINIUM"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 11,
+          "sampleValues": [
+            "ossature Appliques",
+            "bardage appliques",
+            "bardage façade Nord",
+            "bardage facade Sud",
+            "badage pignon Est"
+          ]
+        },
+        "Effort réalisé": {
+          "type": "unknown",
+          "uniqueValuesCount": 0,
+          "sampleValues": []
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Effort réalisé"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "PLANNING SYMPHONIE": "ossature Appliques",
+          "undefined": ""
+        },
+        {
+          "PLANNING SYMPHONIE": "bardage appliques",
+          "undefined": 0
+        },
+        {
+          "PLANNING SYMPHONIE": "bardage façade Nord",
+          "undefined": ""
+        }
+      ]
+    },
+    "planning bethune": {
+      "fileName": "Planning chantier/Planning_BETHUNE_1758620799.xlsx",
+      "itemCount": 18,
+      "groups": [
+        "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+        "Préparation chantier",
+        "Exécution"
+      ],
+      "columns": {
+        "Nom": {
+          "type": "text",
+          "uniqueValuesCount": 18,
+          "sampleValues": [
+            "Dossier technique",
+            "Validation dossier technique",
+            "Commande et fabrication matériaux",
+            "Logement témoin",
+            "Validation du logement témoin"
+          ]
+        },
+        "Statut d'achèvement": {
+          "type": "unknown",
+          "uniqueValuesCount": 0,
+          "sampleValues": []
+        }
+      },
+      "columnNames": [
+        "Nom",
+        "Statut d'achèvement"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Planning BETHUNE": "Dossier technique",
+          "undefined": ""
+        },
+        {
+          "Planning BETHUNE": "Validation dossier technique",
+          "undefined": ""
+        },
+        {
+          "Planning BETHUNE": "Commande et fabrication matériaux",
+          "undefined": ""
+        }
+      ]
+    },
+    "planning etaples gran": {
+      "fileName": "Planning chantier/Planning_ETAPLES_GRAND_LARGE_men_int_1758620787.xlsx",
+      "itemCount": 9,
+      "groups": [
+        "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+        "Préparation chantier",
+        "Exécution"
+      ],
+      "columns": {
+        "Nom": {
+          "type": "text",
+          "uniqueValuesCount": 9,
+          "sampleValues": [
+            "Dossier technique",
+            "Validation dossier technique",
+            "Commande et fabrication matériaux",
+            "Logement témoin",
+            "Validation du logement témoin"
+          ]
+        },
+        "Statut d'achèvement": {
+          "type": "unknown",
+          "uniqueValuesCount": 0,
+          "sampleValues": []
+        }
+      },
+      "columnNames": [
+        "Nom",
+        "Statut d'achèvement"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Planning ETAPLES GRAND LARGE men int": "Dossier technique",
+          "undefined": ""
+        },
+        {
+          "Planning ETAPLES GRAND LARGE men int": "Validation dossier technique",
+          "undefined": ""
+        },
+        {
+          "Planning ETAPLES GRAND LARGE men int": "Commande et fabrication matériaux",
+          "undefined": ""
+        }
+      ]
+    },
+    "planning longuenesse ": {
+      "fileName": "Planning chantier/Planning_LONGUENESSE_85_1758620780.xlsx",
+      "itemCount": 11,
+      "groups": [
+        "Gérez votre projet depuis ce tableau. Définissez les tâches, les admins, les échéances et plus encore. Consultez les données agrégées de tous vos projets dans le tableau de bord du portefeuille.",
+        "Préparation chantier",
+        "Exécution"
+      ],
+      "columns": {
+        "Nom": {
+          "type": "text",
+          "uniqueValuesCount": 11,
+          "sampleValues": [
+            "Dossier technique",
+            "Validation dossier technique",
+            "Commande et fabrication matériaux",
+            "Logement témoin",
+            "Validation du logement témoin"
+          ]
+        },
+        "Statut d'achèvement": {
+          "type": "unknown",
+          "uniqueValuesCount": 0,
+          "sampleValues": []
+        }
+      },
+      "columnNames": [
+        "Nom",
+        "Statut d'achèvement"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "Planning LONGUENESSE 85": "Dossier technique",
+          "undefined": ""
+        },
+        {
+          "Planning LONGUENESSE 85": "Validation dossier technique",
+          "undefined": ""
+        },
+        {
+          "Planning LONGUENESSE 85": "Commande et fabrication matériaux",
+          "undefined": ""
+        }
+      ]
+    },
+    "sous-traitants": {
+      "fileName": "SOUS-TRAITANTS_1758620632.xlsx",
+      "itemCount": 74,
+      "groups": [
+        "En cours",
+        "Nouveau groupe",
+        "FIDAL",
+        "MARCHE ECQUES JLM"
+      ],
+      "columns": {
+        "Name": {
+          "type": "city",
+          "uniqueValuesCount": 74,
+          "sampleValues": [
+            "ECQUES - DELALLEAU - Escalier",
+            "LE PARCQ - MULTIWAL - Mur mobile",
+            "DUNKERQUE Angellier - Etude - 33Ther",
+            "ARQUES H2/H3 - SATT Concept Confort",
+            "Ajouter élément"
+          ]
+        },
+        "RG": {
+          "type": "number",
+          "uniqueValuesCount": 4,
+          "sampleValues": [
+            "1240",
+            "796",
+            "820",
+            "-1871"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "RG"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [
+        1240,
+        796,
+        820
+      ],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "SOUS-TRAITANTS": "ECQUES - DELALLEAU - Escalier",
+          "undefined": ""
+        },
+        {
+          "SOUS-TRAITANTS": "LE PARCQ - MULTIWAL - Mur mobile",
+          "undefined": ""
+        },
+        {
+          "SOUS-TRAITANTS": "DUNKERQUE Angellier - Etude - 33Ther",
+          "undefined": ""
+        }
+      ]
+    },
+    "temps de pose jlm": {
+      "fileName": "TEMPS_DE_POSE_JLM_1758620739.xlsx",
+      "itemCount": 29,
+      "groups": [
+        "MINT",
+        "BARDAGE",
+        "MEXT"
+      ],
+      "columns": {
+        "Name": {
+          "type": "city",
+          "uniqueValuesCount": 29,
+          "sampleValues": [
+            "POSE BLOC PORTE 1 Vantail",
+            "POSE BLOC PORTE 2 Vantaux",
+            "POSE DE FERME PORTE",
+            "POSE DE CREMONE POMPIER",
+            "POSE DE BEQUILLE"
+          ]
+        },
+        "Qt / j/homme": {
+          "type": "number",
+          "uniqueValuesCount": 18,
+          "sampleValues": [
+            "5",
+            "4.1666666667",
+            "10",
+            "12.5",
+            "50"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Qt / j/homme"
+      ],
+      "statusesFound": [],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [
+        5,
+        10,
+        50,
+        50,
+        5,
+        5,
+        5,
+        100,
+        100,
+        25
+      ],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "TEMPS DE POSE JLM": "POSE BLOC PORTE 1 Vantail",
+          "undefined": 5
+        },
+        {
+          "TEMPS DE POSE JLM": "POSE BLOC PORTE 2 Vantaux",
+          "undefined": 4.1666666667
+        },
+        {
+          "TEMPS DE POSE JLM": "POSE DE FERME PORTE",
+          "undefined": 10
+        }
+      ]
+    },
+    "to do flavie": {
+      "fileName": "TO_DO_FLAVIE_1758620656.xlsx",
+      "itemCount": 92,
+      "groups": [
+        "Titre du groupe"
+      ],
+      "columns": {
+        "Name": {
+          "type": "client",
+          "uniqueValuesCount": 82,
+          "sampleValues": [
+            "BERCK OXYGENE",
+            "WAILLY BEAUCAMP - STOVEN",
+            "BERCK OXYGENE - NEXITY - Construction logements Lot Mext PVC",
+            "BERCK OXYGENE - NEXITY - Construction logements Lot Mext Alu",
+            "RENTY - DEPREZ Devis Gouttière"
+          ]
+        },
+        "Période - End": {
+          "type": "date",
+          "uniqueValuesCount": 2,
+          "sampleValues": [
+            "2023-02-13T21:59:39.000Z",
+            "2023-02-10T21:59:39.000Z"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Période - End"
+      ],
+      "statusesFound": [],
+      "datesFound": [
+        "2023-02-13T21:59:39.000Z",
+        "2023-02-10T21:59:39.000Z"
+      ],
+      "peopleFound": [
+        "Programmation CAPSO"
+      ],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "TO DO FLAVIE": "BERCK OXYGENE",
+          "undefined": ""
+        },
+        {
+          "TO DO FLAVIE": "WAILLY BEAUCAMP - STOVEN",
+          "undefined": ""
+        },
+        {
+          "TO DO FLAVIE": "BERCK OXYGENE - NEXITY - Construction logements Lot Mext PVC",
+          "undefined": ""
+        }
+      ]
+    },
+    "to do julien": {
+      "fileName": "TO_DO_Julien_1758620664.xlsx",
+      "itemCount": 139,
+      "groups": [
+        "Emailed Éléments",
+        "RG",
+        "Pour Mémoire",
+        "ARCHIVES"
+      ],
+      "columns": {
+        "Name": {
+          "type": "city",
+          "uniqueValuesCount": 100,
+          "sampleValues": [
+            "DEYA facture Plinthes et BOULOGNE",
+            "TS SAMER",
+            "FW: SATT POSE MENUISERIES",
+            "Fw: ACTIFLIP",
+            "Fwd: Manutention professionnelle"
+          ]
+        },
+        "RG a Cautionner": {
+          "type": "status",
+          "uniqueValuesCount": 7,
+          "sampleValues": [
+            "Ne pas cautionner",
+            "A faire",
+            "Sans objet, Pas de RG",
+            "Fait",
+            "En cours"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "RG a Cautionner"
+      ],
+      "statusesFound": [
+        "A faire",
+        "En cours"
+      ],
+      "datesFound": [
+        "2023-03-06T21:59:39.000Z"
+      ],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "TO DO Julien": "DEYA facture Plinthes et BOULOGNE",
+          "undefined": ""
+        },
+        {
+          "TO DO Julien": "TS SAMER",
+          "undefined": ""
+        },
+        {
+          "TO DO Julien": "FW: SATT POSE MENUISERIES",
+          "undefined": ""
+        }
+      ]
+    },
+    "to do ludivine": {
+      "fileName": "TO_DO_LUDIVINE_1758621044.xlsx",
+      "itemCount": 942,
+      "groups": [
+        "A faire",
+        "Ludivine",
+        "Factures Fournisseurs",
+        "CONTENTIEUX",
+        "CAUTIONS",
+        "FACTURES EN ATTENTE DE VALIDATION",
+        "Tâches",
+        "PPSPS",
+        "Formations / Déchets",
+        "FINANCIER",
+        "SCI JF BAT",
+        "ARCHIVES"
+      ],
+      "columns": {
+        "Nom": {
+          "type": "city",
+          "uniqueValuesCount": 100,
+          "sampleValues": [
+            "CONTRAT JULIEN V",
+            "FACTURE CB CHATGPT 08/07/2025 256.03 E",
+            "FACTURE CJD 1630 E 12/08/2025",
+            "FMA contestation facture",
+            "Voir pour subvention Devis YOUCOM n° DV-01152"
+          ]
+        },
+        "link to TO DO Julien": {
+          "type": "client",
+          "uniqueValuesCount": 12,
+          "sampleValues": [
+            "LE CROTOY - COGEDIM - MEXT Suite Mise au point  - Caution RG ?",
+            "DUNKERQUE 38 - HABITAT du NORD - Mext (V3 pose tunnel)  - Caution RG ?",
+            "CALAIS - NOVEBAT - Euro tunnel Bardage  - Caution RG ?",
+            "STELLA 82 -  MARIGNAN LOT PVC (Variante Qté recallée)  - Caution RG ?",
+            "RENESCURE BAVINCHOVE 48 - FOH -> 29/01/25 (V2)  - Caution RG ?"
+          ]
+        }
+      },
+      "columnNames": [
+        "Nom",
+        "link to TO DO Julien"
+      ],
+      "statusesFound": [
+        "CAPSO FACTURES rejetées 4870 + 4913"
+      ],
+      "datesFound": [],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "TO DO LUDIVINE": "CONTRAT JULIEN V",
+          "undefined": ""
+        },
+        {
+          "TO DO LUDIVINE": "FACTURE CB CHATGPT 08/07/2025 256.03 E",
+          "undefined": ""
+        },
+        {
+          "TO DO LUDIVINE": "FACTURE CJD 1630 E 12/08/2025",
+          "undefined": ""
+        }
+      ]
+    },
+    "🧭 tableau bord jlm": {
+      "fileName": "_Tableau_bord_JLM_1758620606.xlsx",
+      "itemCount": 37,
+      "groups": [
+        "Exercice 2024-2025",
+        "Exercice 2023 - 2024",
+        "Exercice 2022 - 2023"
+      ],
+      "columns": {
+        "Name": {
+          "type": "text",
+          "uniqueValuesCount": 37,
+          "sampleValues": [
+            "2024 - 08 Aout",
+            "2024 - 09 Septembre",
+            "2024 - 10 Octobre",
+            "2024 - 11 Novembre",
+            "2024 - 12 Décembre"
+          ]
+        },
+        "Période - End": {
+          "type": "date",
+          "uniqueValuesCount": 3,
+          "sampleValues": [
+            "2023-11-15T21:59:39.000Z",
+            "2023-11-17T21:59:39.000Z",
+            "2023-11-12T21:59:39.000Z"
+          ]
+        }
+      },
+      "columnNames": [
+        "Name",
+        "Période - End"
+      ],
+      "statusesFound": [],
+      "datesFound": [
+        "2023-11-15T21:59:39.000Z",
+        "2023-11-15T21:59:39.000Z",
+        "2023-11-17T21:59:39.000Z",
+        "2023-11-17T21:59:39.000Z",
+        "2023-11-17T21:59:39.000Z",
+        "2023-11-12T21:59:39.000Z"
+      ],
+      "peopleFound": [],
+      "numbersFound": [],
+      "subitemsCount": 0,
+      "subitemsDetails": [],
+      "sampleItems": [
+        {
+          "🧭 Tableau bord JLM": "2024 - 08 Aout",
+          "undefined": ""
+        },
+        {
+          "🧭 Tableau bord JLM": "2024 - 09 Septembre",
+          "undefined": ""
+        },
+        {
+          "🧭 Tableau bord JLM": "2024 - 10 Octobre",
+          "undefined": ""
+        }
+      ]
+    }
+  }
+}

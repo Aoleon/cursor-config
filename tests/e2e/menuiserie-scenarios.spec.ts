@@ -50,7 +50,7 @@ test.beforeEach(async ({ page }) => {
   await waitForPageLoad(page, '[data-testid="dashboard-content"]');
 });
 
-describe('Scénarios Menuiserie Ground Truth', () => {
+test.describe('Scénarios Menuiserie Ground Truth', () => {
 
   // ========================================
   // SCÉNARIO COMPLET FENÊTRES PVC STANDARD

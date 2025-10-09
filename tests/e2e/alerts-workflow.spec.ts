@@ -190,7 +190,7 @@ test.describe('Workflow Alertes Métier - E2E Complet', () => {
     await predictiveAlert.click();
     await expect(page.getByTestId('alert-details-predictive')).toBeVisible();
     await expect(page.getByText(/risque projet élevé/i)).toBeVisible();
-    await expect(page.getByText(/score: 88/100/i)).toBeVisible();
+    await expect(page.getByText(/score: 88\/100/i)).toBeVisible();
     
     // Vérifier prédictions et facteurs risque
     await expect(page.getByTestId('risk-factors')).toBeVisible();

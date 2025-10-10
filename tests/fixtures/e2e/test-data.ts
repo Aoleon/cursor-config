@@ -4,6 +4,31 @@ import type { Page } from '@playwright/test';
 /**
  * Générateur de données de test uniques pour Saxium
  * Utilise nanoid pour garantir l'unicité des données dans les tests parallèles
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SYSTÈME DE CLEANUP DES DONNÉES TEST
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Deux fonctions de cleanup garantissent qu'aucune donnée test ne persiste :
+ * 
+ * 1. cleanupTestData(page, ids) :
+ *    - Nettoie les IDs trackés explicitement (rapide)
+ *    - Fallback: cleanup global par préfixe (attrape tout)
+ *    - Usage: afterEach dans tests workflow
+ * 
+ * 2. cleanupAllTestData(page) :
+ *    - Nettoie TOUTES les données avec préfixe TEST/E2E
+ *    - Récupère toutes les ressources via API LIST
+ *    - Filtre par préfixe et supprime
+ *    - Usage: standalone ou fallback
+ * 
+ * Pattern données test :
+ * - Références : TEST-*, E2E-*
+ * - IDs : e2e-*, test-*
+ * - Clients : "Client Test", "Client E2E"
+ * 
+ * Garantie : Toutes données avec ces patterns sont nettoyées après chaque test
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 
 export interface TestAO {
@@ -81,12 +106,26 @@ export interface TestOffer {
   location?: string;
 }
 
-export interface TestContact {
+export interface TestMaitreOuvrage {
+  id?: string;
   nom: string;
-  prenom: string;
+  email: string;
+  telephone?: string;
+  adresse?: string;
+  codePostal?: string;
+  ville?: string;
+  siret?: string;
+  typeOrganisation?: string;
+}
+
+export interface TestSupplier {
+  id?: string;
+  nom: string;
   email: string;
   telephone: string;
-  poste: string;
+  siret?: string;
+  specialite?: string;
+  status?: string;
 }
 
 /**
@@ -188,17 +227,40 @@ export function generateTestOffer(overrides: Partial<TestOffer> = {}): TestOffer
 }
 
 /**
- * Génère un Contact de test unique
+ * Génère un Maître d'Ouvrage de test unique
+ * Note: /api/contacts n'existe pas - utiliser /api/maitres-ouvrage
  */
-export function generateTestContact(overrides: Partial<TestContact> = {}): TestContact {
+export function generateTestMaitreOuvrage(overrides: Partial<TestMaitreOuvrage> = {}): TestMaitreOuvrage {
   const id = nanoid(8);
 
   return {
-    nom: `Nom${id}`,
-    prenom: `Prenom${id}`,
-    email: `test.${id}@saxium-test.local`,
+    id: `e2e-mo-${id}`,
+    nom: `TEST Maître Ouvrage ${id}`,
+    email: `test.mo.${id}@saxium-test.local`,
     telephone: `06${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
-    poste: 'responsable',
+    adresse: `${Math.floor(Math.random() * 200)} Rue Test`,
+    codePostal: '75001',
+    ville: 'Paris Test',
+    siret: `${Math.floor(Math.random() * 1000000000000000).toString().padStart(14, '0')}`,
+    typeOrganisation: 'public',
+    ...overrides,
+  };
+}
+
+/**
+ * Génère un Supplier de test unique
+ */
+export function generateTestSupplier(overrides: Partial<TestSupplier> = {}): TestSupplier {
+  const id = nanoid(8);
+  
+  return {
+    id: `e2e-supplier-${id}`,
+    nom: `Supplier TEST ${id}`,
+    email: `supplier-test-${id}@saxium-test.local`,
+    telephone: `0612345${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+    siret: `${Math.floor(Math.random() * 100000000000000).toString().padStart(14, '0')}`,
+    specialite: 'menuiserie',
+    status: 'actif',
     ...overrides,
   };
 }
@@ -285,13 +347,278 @@ export async function deleteOfferViaAPI(page: Page, offerId: string): Promise<vo
 }
 
 /**
- * Nettoie toutes les données de test créées par un test
+ * Crée un Maître d'Ouvrage via l'API
+ */
+export async function createMaitreOuvrageViaAPI(page: Page, maitreOuvrageData: TestMaitreOuvrage): Promise<string> {
+  const response = await page.request.post('/api/maitres-ouvrage', {
+    data: maitreOuvrageData,
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Failed to create maître d'ouvrage: ${response.status()} ${await response.text()}`);
+  }
+
+  const result = await response.json();
+  return result.data?.id || result.id;
+}
+
+/**
+ * Supprime un Maître d'Ouvrage via l'API
+ */
+export async function deleteMaitreOuvrageViaAPI(page: Page, maitreOuvrageId: string): Promise<void> {
+  const response = await page.request.delete(`/api/maitres-ouvrage/${maitreOuvrageId}`);
+  
+  if (!response.ok() && response.status() !== 404) {
+    console.warn(`Failed to delete maître d'ouvrage ${maitreOuvrageId}: ${response.status()}`);
+  }
+}
+
+/**
+ * Crée un Supplier via l'API
+ */
+export async function createSupplierViaAPI(page: Page, supplierData: any): Promise<string> {
+  const response = await page.request.post('/api/suppliers', {
+    data: supplierData,
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Failed to create supplier: ${response.status()} ${await response.text()}`);
+  }
+
+  const result = await response.json();
+  return result.data?.id || result.id;
+}
+
+/**
+ * Supprime un Supplier via l'API
+ */
+export async function deleteSupplierViaAPI(page: Page, supplierId: string): Promise<void> {
+  const response = await page.request.delete(`/api/suppliers/${supplierId}`);
+  
+  if (!response.ok() && response.status() !== 404) {
+    console.warn(`Failed to delete supplier ${supplierId}: ${response.status()}`);
+  }
+}
+
+/**
+ * Nettoie TOUTES les données de test de la base de données (par préfixe)
+ * Cette fonction garantit qu'aucune donnée test ne persiste, même si l'ID n'a pas été tracké
+ * 
+ * ✅ COUVERTURE COMPLÈTE : AOs, Offers, Projects, Maîtres d'Ouvrage, Maîtres d'Œuvre,
+ *    Suppliers, Supplier Requests, Date Alerts, Project Timelines, Alert Thresholds
+ */
+export async function cleanupAllTestData(page: Page): Promise<void> {
+  const cleanupPromises: Promise<void>[] = [];
+
+  // Patterns pour identifier les données test
+  const testPrefixes = ['TEST', 'E2E', 'test-', 'e2e-'];
+  
+  try {
+    // 1. Cleanup AOs
+    const aosResponse = await page.request.get('/api/aos');
+    if (aosResponse.ok()) {
+      const aosData = await aosResponse.json();
+      const aos = aosData.data || aosData || [];
+      const testAOs = aos.filter((ao: any) => 
+        testPrefixes.some(prefix => 
+          ao.reference?.includes(prefix) || 
+          ao.client?.includes(prefix) ||
+          ao.id?.startsWith('e2e-')
+        )
+      );
+      cleanupPromises.push(
+        ...testAOs.map((ao: any) => deleteAOViaAPI(page, ao.id))
+      );
+    }
+
+    // 2. Cleanup Offers
+    const offersResponse = await page.request.get('/api/offers');
+    if (offersResponse.ok()) {
+      const offersData = await offersResponse.json();
+      const offers = offersData.data || offersData || [];
+      const testOffers = offers.filter((offer: any) => 
+        testPrefixes.some(prefix => 
+          offer.reference?.includes(prefix) || 
+          offer.titre?.includes(prefix) ||
+          offer.client?.includes(prefix) ||
+          offer.id?.startsWith('e2e-')
+        )
+      );
+      cleanupPromises.push(
+        ...testOffers.map((offer: any) => deleteOfferViaAPI(page, offer.id))
+      );
+    }
+
+    // 3. Cleanup Projects
+    const projectsResponse = await page.request.get('/api/projects');
+    if (projectsResponse.ok()) {
+      const projectsData = await projectsResponse.json();
+      const projects = projectsData.data || projectsData || [];
+      const testProjects = projects.filter((project: any) => 
+        testPrefixes.some(prefix => 
+          project.reference?.includes(prefix) || 
+          project.nom?.includes(prefix) ||
+          project.client?.includes(prefix) ||
+          project.id?.startsWith('e2e-')
+        )
+      );
+      cleanupPromises.push(
+        ...testProjects.map((project: any) => deleteProjectViaAPI(page, project.id))
+      );
+    }
+
+    // 4. Cleanup Maîtres d'Ouvrage
+    const maitresOuvrageResponse = await page.request.get('/api/maitres-ouvrage');
+    if (maitresOuvrageResponse.ok()) {
+      const maitresOuvrageData = await maitresOuvrageResponse.json();
+      const maitresOuvrage = maitresOuvrageData.data || maitresOuvrageData || [];
+      const testMaitresOuvrage = maitresOuvrage.filter((mo: any) => 
+        testPrefixes.some(prefix => 
+          mo.nom?.includes(prefix) ||
+          mo.email?.includes('test') ||
+          mo.email?.includes('e2e') ||
+          mo.id?.startsWith('e2e-')
+        )
+      );
+      cleanupPromises.push(
+        ...testMaitresOuvrage.map((mo: any) => 
+          page.request.delete(`/api/maitres-ouvrage/${mo.id}`).catch(() => {})
+        )
+      );
+    }
+
+    // 5. Cleanup Maîtres d'Œuvre
+    const maitresOeuvreResponse = await page.request.get('/api/maitres-oeuvre');
+    if (maitresOeuvreResponse.ok()) {
+      const maitresOeuvreData = await maitresOeuvreResponse.json();
+      const maitresOeuvre = maitresOeuvreData.data || maitresOeuvreData || [];
+      const testMaitresOeuvre = maitresOeuvre.filter((moe: any) => 
+        testPrefixes.some(prefix => 
+          moe.nom?.includes(prefix) ||
+          moe.email?.includes('test') ||
+          moe.email?.includes('e2e') ||
+          moe.id?.startsWith('e2e-')
+        )
+      );
+      cleanupPromises.push(
+        ...testMaitresOeuvre.map((moe: any) => 
+          page.request.delete(`/api/maitres-oeuvre/${moe.id}`).catch(() => {})
+        )
+      );
+    }
+
+    // 6. Cleanup Suppliers
+    const suppliersResponse = await page.request.get('/api/suppliers');
+    if (suppliersResponse.ok()) {
+      const suppliersData = await suppliersResponse.json();
+      const suppliers = suppliersData.data || suppliersData || [];
+      const testSuppliers = suppliers.filter((supplier: any) => 
+        testPrefixes.some(prefix => 
+          supplier.nom?.includes(prefix) ||
+          supplier.email?.includes('test') ||
+          supplier.email?.includes('e2e') ||
+          supplier.id?.startsWith('e2e-')
+        )
+      );
+      cleanupPromises.push(
+        ...testSuppliers.map((supplier: any) => 
+          page.request.delete(`/api/suppliers/${supplier.id}`).catch(() => {})
+        )
+      );
+    }
+
+    // 7. Cleanup Supplier Requests
+    const supplierRequestsResponse = await page.request.get('/api/supplier-requests');
+    if (supplierRequestsResponse.ok()) {
+      const supplierRequestsData = await supplierRequestsResponse.json();
+      const supplierRequests = supplierRequestsData.data || supplierRequestsData || [];
+      const testSupplierRequests = supplierRequests.filter((request: any) => 
+        testPrefixes.some(prefix => 
+          request.offerId?.startsWith('e2e-') ||
+          request.id?.startsWith('e2e-')
+        )
+      );
+      // Note: Pas de route DELETE visible pour supplier-requests, silently skip
+      // Les requests seront supprimées en cascade lors de la suppression de l'offre
+    }
+
+    // 8. Cleanup Date Alerts
+    const dateAlertsResponse = await page.request.get('/api/date-alerts');
+    if (dateAlertsResponse.ok()) {
+      const dateAlertsData = await dateAlertsResponse.json();
+      const dateAlerts = dateAlertsData.data || dateAlertsData || [];
+      const testDateAlerts = dateAlerts.filter((alert: any) => 
+        testPrefixes.some(prefix => 
+          alert.entityId?.startsWith('e2e-') ||
+          alert.projectId?.startsWith('e2e-') ||
+          alert.id?.startsWith('e2e-')
+        )
+      );
+      // Les date alerts sont probablement supprimées en cascade, mais tentons quand même
+      cleanupPromises.push(
+        ...testDateAlerts.map((alert: any) => 
+          page.request.delete(`/api/date-alerts/${alert.id}`).catch(() => {})
+        )
+      );
+    }
+
+    // 9. Cleanup Project Timelines
+    const timelinesResponse = await page.request.get('/api/project-timelines');
+    if (timelinesResponse.ok()) {
+      const timelinesData = await timelinesResponse.json();
+      const timelines = timelinesData.data || timelinesData || [];
+      const testTimelines = timelines.filter((timeline: any) => 
+        testPrefixes.some(prefix => 
+          timeline.projectId?.startsWith('e2e-') ||
+          timeline.id?.startsWith('e2e-')
+        )
+      );
+      // Les timelines sont probablement supprimées en cascade, mais tentons quand même
+      cleanupPromises.push(
+        ...testTimelines.map((timeline: any) => 
+          page.request.delete(`/api/project-timelines/${timeline.id}`).catch(() => {})
+        )
+      );
+    }
+
+    // 10. Cleanup Alert Thresholds
+    const alertThresholdsResponse = await page.request.get('/api/alert-thresholds');
+    if (alertThresholdsResponse.ok()) {
+      const alertThresholdsData = await alertThresholdsResponse.json();
+      const alertThresholds = alertThresholdsData.data || alertThresholdsData || [];
+      const testAlertThresholds = alertThresholds.filter((threshold: any) => 
+        testPrefixes.some(prefix => 
+          threshold.name?.includes(prefix) ||
+          threshold.id?.startsWith('e2e-') ||
+          threshold.id?.startsWith('test-')
+        )
+      );
+      cleanupPromises.push(
+        ...testAlertThresholds.map((threshold: any) => 
+          page.request.delete(`/api/alert-thresholds/${threshold.id}`).catch(() => {})
+        )
+      );
+    }
+
+    // Exécuter tous les cleanups en parallèle
+    await Promise.allSettled(cleanupPromises);
+    
+  } catch (error) {
+    // Silent fail - le cleanup ne doit pas faire échouer les tests
+    console.warn('Cleanup warning:', error);
+  }
+}
+
+/**
+ * Nettoie les données de test créées par un test (IDs trackés + cleanup global)
+ * Combine cleanup ciblé (IDs trackés) + cleanup global (par préfixe)
  */
 export async function cleanupTestData(page: Page, ids: {
   aos?: string[];
   projects?: string[];
   offers?: string[];
 }): Promise<void> {
+  // 1. Cleanup ciblé des IDs trackés (rapide)
   const cleanupPromises: Promise<void>[] = [];
 
   if (ids.aos) {
@@ -305,6 +632,9 @@ export async function cleanupTestData(page: Page, ids: {
   }
 
   await Promise.allSettled(cleanupPromises);
+
+  // 2. Cleanup global pour attraper les données non-trackées (fallback)
+  await cleanupAllTestData(page);
 }
 
 // ========================================

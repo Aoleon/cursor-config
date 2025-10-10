@@ -281,6 +281,7 @@ export async function cleanupAllChantierProjects(page: Page): Promise<void> {
 /**
  * Reset complet de l'état E2E
  * Supprime tous les AOs, Offers et Projects de test via routes de test
+ * Puis effectue un cleanup global pour attraper les données non-trackées
  * @param page - Page Playwright
  * @param seedIds - IDs des seeds à supprimer (optionnel, sinon utilise les IDs des seeds par défaut)
  */
@@ -289,6 +290,7 @@ export async function resetE2EState(page: Page, seedIds?: {
   offers?: string[];
   projects?: string[];
 }): Promise<void> {
+  // 1. Cleanup seeds E2E prédéfinis
   const idsToDelete = seedIds || {
     aos: e2eSeeds.aos.map(ao => ao.id!),
     offers: e2eSeeds.offers.map(offer => offer.id!),
@@ -321,6 +323,10 @@ export async function resetE2EState(page: Page, seedIds?: {
       )
     );
   }
+
+  // 2. Cleanup global pour attraper les données non-trackées (fallback)
+  const { cleanupAllTestData } = await import('../fixtures/e2e/test-data');
+  await cleanupAllTestData(page);
 }
 
 /**

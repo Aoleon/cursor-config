@@ -15,10 +15,10 @@ export const STORAGE_STATE_PATH = 'e2e/.auth/user.json';
  */
 export async function isAuthenticated(page: Page): Promise<boolean> {
   try {
-    const response = await page.request.get('/api/test/auth-status');
+    const response = await page.request.get('/api/auth/user');
     if (response.ok()) {
       const data = await response.json();
-      return data.authenticated === true;
+      return data && (data.id || data.email);
     }
   } catch (error) {
     console.log('Error checking auth status:', error);
@@ -32,7 +32,7 @@ export async function isAuthenticated(page: Page): Promise<boolean> {
  */
 export async function authenticateTestUser(page: Page): Promise<void> {
   // En mode test, naviguer vers n'importe quelle page API crée automatiquement la session
-  await page.goto('/api/test/auth-status');
+  await page.goto('/api/auth/user');
   
   const authStatus = await isAuthenticated(page);
   if (!authStatus) {
@@ -66,9 +66,9 @@ setup('authenticate', async ({ page }) => {
  */
 export async function waitForAuth(page: Page, timeout = 5000): Promise<void> {
   await page.waitForFunction(() => {
-    return fetch('/api/test/auth-status')
+    return fetch('/api/auth/user')
       .then(r => r.json())
-      .then(data => data.authenticated === true)
+      .then(data => data && (data.id || data.email))
       .catch(() => false);
   }, { timeout });
 }
@@ -77,10 +77,10 @@ export async function waitForAuth(page: Page, timeout = 5000): Promise<void> {
  * Obtient les informations de l'utilisateur de test
  */
 export async function getTestUser(page: Page) {
-  const response = await page.request.get('/api/test/auth-status');
+  const response = await page.request.get('/api/auth/user');
   if (!response.ok()) {
     throw new Error('Failed to get test user info');
   }
   const data = await response.json();
-  return data.user;
+  return data;
 }

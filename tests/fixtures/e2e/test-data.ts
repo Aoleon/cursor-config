@@ -566,7 +566,8 @@ export async function cleanupAllTestData(page: Page): Promise<void> {
     const timelinesResponse = await page.request.get('/api/project-timelines');
     if (timelinesResponse.ok()) {
       const timelinesData = await timelinesResponse.json();
-      const timelines = timelinesData.data || timelinesData || [];
+      const timelines = Array.isArray(timelinesData.data) ? timelinesData.data : 
+                        Array.isArray(timelinesData) ? timelinesData : [];
       const testTimelines = timelines.filter((timeline: any) => 
         testPrefixes.some(prefix => 
           timeline.projectId?.startsWith('e2e-') ||

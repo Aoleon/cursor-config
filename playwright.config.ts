@@ -50,6 +50,11 @@ export default defineConfig({
     
     // ✅ Action timeout pour interactions UI rapides
     actionTimeout: 10 * 1000,
+    
+    // ✅ Use system Chromium in Replit (Nix package)
+    launchOptions: {
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium-browser',
+    },
   },
 
   projects: [

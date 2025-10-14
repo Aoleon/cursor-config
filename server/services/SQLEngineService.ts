@@ -563,7 +563,7 @@ SELECT
   p.id, p.name, p.status, p.date_created,
   u.name as responsable_name
 FROM projects p
-LEFT JOIN users u ON p.responsable_user_id = u.id
+LEFT JOIN users u ON p.responsible_user_id = u.id
 WHERE p.status = 'active'
 ORDER BY p.date_created DESC
 LIMIT 50 OFFSET 0;`
@@ -613,13 +613,13 @@ FROM current_period c, previous_period p;`
         `-- Top performers analysis
 WITH project_stats AS (
   SELECT 
-    responsable_user_id,
+    responsible_user_id,
     COUNT(*) as project_count,
     AVG(montant_total) as avg_revenue,
     RANK() OVER (ORDER BY COUNT(*) DESC) as rank_by_count
   FROM projects
   WHERE date_created >= NOW() - INTERVAL '6 months'
-  GROUP BY responsable_user_id
+  GROUP BY responsible_user_id
 )
 SELECT * FROM project_stats
 WHERE rank_by_count <= 10

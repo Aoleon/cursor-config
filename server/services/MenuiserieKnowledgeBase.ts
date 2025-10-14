@@ -680,7 +680,7 @@ const MENUISERIE_TERMINOLOGY = {
     // Colonnes courantes
     "project_status": "statut du projet",
     "date_echeance": "date d'échéance",
-    "responsable_user_id": "responsable projet",
+    "responsible_user_id": "responsable projet",
     "material_type": "type de matériau",
     "material_color": "couleur/finition",
     "coefficient_thermique": "performance thermique Uw",
@@ -708,7 +708,7 @@ const MENUISERIE_TERMINOLOGY = {
     
     "statut du projet": "project_status",
     "date d'échéance": "date_echeance", 
-    "responsable projet": "responsable_user_id",
+    "responsable projet": "responsible_user_id",
     "type de matériau": "material_type",
     "couleur/finition": "material_color",
     "performance thermique": "coefficient_thermique",
@@ -716,7 +716,7 @@ const MENUISERIE_TERMINOLOGY = {
     
     // Expressions métier courantes
     "projets en retard": "projects WHERE date_echeance < NOW() AND status != 'termine'",
-    "projets de l'équipe": "projects WHERE responsable_user_id IN (team_members)",
+    "projets de l'équipe": "projects WHERE responsible_user_id IN (team_members)",
     "offres en cours": "offers WHERE status IN ('etude_technique', 'en_cours_chiffrage')",
     "planning cette semaine": "project_timelines WHERE date_debut <= DATE_ADD(NOW(), INTERVAL 7 DAY)",
     "matériaux PVC": "materials WHERE material_type = 'PVC'",

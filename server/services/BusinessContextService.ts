@@ -908,7 +908,7 @@ export class BusinessContextService {
           nullable: true
         },
         {
-          name: 'responsable_user_id',
+          name: 'responsible_user_id',
           type: 'varchar',
           businessName: 'Commercial responsable',
           description: 'Commercial en charge de l\'offre',
@@ -946,7 +946,7 @@ export class BusinessContextService {
           description: 'Offres en cours de chiffrage avec montants',
           sql: `SELECT o.id, o.estimated_amount, u.name as commercial
                 FROM offers o 
-                LEFT JOIN users u ON o.responsable_user_id = u.id
+                LEFT JOIN users u ON o.responsible_user_id = u.id
                 WHERE o.status = 'en_cours_chiffrage'
                 ORDER BY o.created_at DESC`,
           explanation: 'Liste les offres actuellement en phase de chiffrage avec leurs montants et commerciaux'
@@ -1028,7 +1028,7 @@ export class BusinessContextService {
           nullable: true
         },
         {
-          name: 'responsable_user_id',
+          name: 'responsible_user_id',
           type: 'varchar',
           businessName: 'Chef de projet',
           description: 'Responsable principal du projet',
@@ -1081,7 +1081,7 @@ export class BusinessContextService {
           sql: `SELECT p.id, p.date_echeance, u.name as chef_projet, 
                   DATE_PART('day', p.date_echeance - NOW()) as jours_retard
                 FROM projects p
-                JOIN users u ON p.responsable_user_id = u.id
+                JOIN users u ON p.responsible_user_id = u.id
                 WHERE p.date_echeance < NOW() 
                   AND p.status NOT IN ('termine', 'sav')
                 ORDER BY jours_retard DESC`,
@@ -1408,7 +1408,7 @@ export class BusinessContextService {
       sqlExamples: [
         {
           description: 'Alertes critiques non traitées',
-          sql: `SELECT da.*, p.id as projet, p.responsable_user_id
+          sql: `SELECT da.*, p.id as projet, p.responsible_user_id
                 FROM date_alerts da
                 LEFT JOIN projects p ON da.entity_id = p.id AND da.entity_type = 'project'
                 WHERE da.severity IN ('high', 'critical')
@@ -1989,12 +1989,12 @@ export class BusinessContextService {
         sql_to_business: {
           "project_status": "statut du projet",
           "date_echeance": "date d'échéance",
-          "responsable_user_id": "responsable projet"
+          "responsible_user_id": "responsable projet"
         },
         business_to_sql: {
           "statut du projet": "project_status",
           "date d'échéance": "date_echeance",
-          "responsable projet": "responsable_user_id"
+          "responsable projet": "responsible_user_id"
         }
       }
     };
@@ -2041,7 +2041,7 @@ export class BusinessContextService {
           businessExamples: ["2025-03-15", "2025-06-30"]
         },
         {
-          name: "responsable_user_id",
+          name: "responsible_user_id",
           businessName: "Chef de projet",
           type: "varchar",
           description: "Responsable principal du projet",
@@ -2278,7 +2278,7 @@ export class BusinessContextService {
         id: "planning-retards-projets",
         category: "planning",
         user_query: "Quels sont mes projets en retard sur échéance de livraison ?",
-        sql_example: "SELECT p.id, p.nom, p.date_echeance, p.status, DATEDIFF(NOW(), p.date_echeance) as jours_retard FROM projects p WHERE p.responsable_user_id = :user_id AND p.date_echeance < NOW() AND p.status NOT IN ('termine', 'livre') ORDER BY jours_retard DESC",
+        sql_example: "SELECT p.id, p.nom, p.date_echeance, p.status, DATEDIFF(NOW(), p.date_echeance) as jours_retard FROM projects p WHERE p.responsible_user_id = :user_id AND p.date_echeance < NOW() AND p.status NOT IN ('termine', 'livre') ORDER BY jours_retard DESC",
         explanation: "Identifie les projets assignés en retard sur leur date d'échéance prévue, avec calcul du nombre de jours de retard",
         applicable_roles: ["chef_projet", "admin"],
         complexity: "simple",
@@ -2305,7 +2305,7 @@ export class BusinessContextService {
         id: "planning-charge-be",
         category: "planning",
         user_query: "Quelle est la charge de travail du BE cette semaine ?",
-        sql_example: "SELECT u.nom, COUNT(p.id) as nb_projets_etude, SUM(CASE WHEN p.date_echeance < DATE_ADD(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as urgent FROM users u JOIN projects p ON u.id = p.responsable_user_id WHERE u.role = 'technicien_be' AND p.status IN ('etude', 'visa_architecte') GROUP BY u.id, u.nom ORDER BY nb_projets_etude DESC",
+        sql_example: "SELECT u.nom, COUNT(p.id) as nb_projets_etude, SUM(CASE WHEN p.date_echeance < DATE_ADD(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as urgent FROM users u JOIN projects p ON u.id = p.responsible_user_id WHERE u.role = 'technicien_be' AND p.status IN ('etude', 'visa_architecte') GROUP BY u.id, u.nom ORDER BY nb_projets_etude DESC",
         explanation: "Analyse la répartition de la charge des techniciens BE avec focus sur les urgences de la semaine",
         applicable_roles: ["chef_projet", "admin", "technicien_be"],
         complexity: "complex",
@@ -2318,7 +2318,7 @@ export class BusinessContextService {
         id: "finances-marge-projets",
         category: "finances",
         user_query: "Quelle est la marge réalisée sur mes projets terminés ce trimestre ?",
-        sql_example: "SELECT p.id, p.nom, p.montant_final, SUM(m.price_per_unit * pm.quantity) as cout_materiaux, (p.montant_final - SUM(m.price_per_unit * pm.quantity)) as marge_brute, ROUND(((p.montant_final - SUM(m.price_per_unit * pm.quantity)) / p.montant_final) * 100, 2) as taux_marge FROM projects p JOIN project_materials pm ON p.id = pm.project_id JOIN materials m ON pm.material_id = m.id WHERE p.responsable_user_id = :user_id AND p.status = 'termine' AND p.date_fin >= DATE_SUB(NOW(), INTERVAL 3 MONTH) GROUP BY p.id ORDER BY taux_marge DESC",
+        sql_example: "SELECT p.id, p.nom, p.montant_final, SUM(m.price_per_unit * pm.quantity) as cout_materiaux, (p.montant_final - SUM(m.price_per_unit * pm.quantity)) as marge_brute, ROUND(((p.montant_final - SUM(m.price_per_unit * pm.quantity)) / p.montant_final) * 100, 2) as taux_marge FROM projects p JOIN project_materials pm ON p.id = pm.project_id JOIN materials m ON pm.material_id = m.id WHERE p.responsible_user_id = :user_id AND p.status = 'termine' AND p.date_fin >= DATE_SUB(NOW(), INTERVAL 3 MONTH) GROUP BY p.id ORDER BY taux_marge DESC",
         explanation: "Calcul de la marge brute par projet (prix vente - coût matériaux) avec taux de marge en pourcentage",
         applicable_roles: ["admin", "chef_projet"],
         complexity: "expert",
@@ -2379,7 +2379,7 @@ export class BusinessContextService {
         id: "performance-taux-transformation",
         category: "performance",
         user_query: "Quel est le taux de transformation offres/projets par commercial ?",
-        sql_example: "SELECT u.nom, COUNT(DISTINCT o.id) as nb_offres, COUNT(DISTINCT p.id) as nb_projets, ROUND((COUNT(DISTINCT p.id) / COUNT(DISTINCT o.id)) * 100, 2) as taux_transformation FROM users u JOIN offers o ON u.id = o.responsable_user_id LEFT JOIN projects p ON o.id = p.offer_id WHERE u.role = 'commercial' AND o.date_creation >= DATE_SUB(NOW(), INTERVAL 6 MONTH) GROUP BY u.id ORDER BY taux_transformation DESC",
+        sql_example: "SELECT u.nom, COUNT(DISTINCT o.id) as nb_offres, COUNT(DISTINCT p.id) as nb_projets, ROUND((COUNT(DISTINCT p.id) / COUNT(DISTINCT o.id)) * 100, 2) as taux_transformation FROM users u JOIN offers o ON u.id = o.responsible_user_id LEFT JOIN projects p ON o.id = p.offer_id WHERE u.role = 'commercial' AND o.date_creation >= DATE_SUB(NOW(), INTERVAL 6 MONTH) GROUP BY u.id ORDER BY taux_transformation DESC",
         explanation: "Analyse performance commerciale : ratio projets signés / offres émises par commercial",
         applicable_roles: ["admin", "commercial"],
         complexity: "expert",
@@ -3126,7 +3126,7 @@ export class BusinessContextService {
       joins.push('projects p JOIN project_timelines pt ON p.id = pt.project_id');
     }
     if (tables.includes('projects') && tables.includes('users')) {
-      joins.push('projects p JOIN users u ON p.responsable_user_id = u.id');
+      joins.push('projects p JOIN users u ON p.responsible_user_id = u.id');
     }
     
     return joins.slice(0, 3); // Max 3 jointures recommandées
@@ -3144,13 +3144,13 @@ export class BusinessContextService {
       
       if (tables.includes('projects')) {
         if (userRole === 'chef_projet') {
-          constraints.push('-- Filtrer projets: WHERE responsable_user_id = :userId OR team_id IN (SELECT team_id FROM user_teams WHERE user_id = :userId)');
+          constraints.push('-- Filtrer projets: WHERE responsible_user_id = :userId OR team_id IN (SELECT team_id FROM user_teams WHERE user_id = :userId)');
         }
       }
       
       if (tables.includes('offers')) {
         if (userRole === 'commercial') {
-          constraints.push('-- Filtrer offres: WHERE responsable_user_id = :userId');
+          constraints.push('-- Filtrer offres: WHERE responsible_user_id = :userId');
         }
       }
       

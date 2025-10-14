@@ -979,6 +979,14 @@ export class BusinessContextService {
           constraints: ['PRIMARY KEY']
         },
         {
+          name: 'name',
+          type: 'varchar',
+          businessName: 'Nom du projet',
+          description: 'Nom descriptif du projet',
+          examples: ['Rénovation Cuisine', 'Extension Villa', 'Menuiserie Appartement'],
+          nullable: false
+        },
+        {
           name: 'status',
           type: 'enum',
           businessName: 'Phase actuelle',
@@ -996,11 +1004,19 @@ export class BusinessContextService {
           nullable: true
         },
         {
-          name: 'price_total',
+          name: 'montant_final',
           type: 'decimal(12,2)',
           businessName: 'Montant total HT',
           description: 'Montant total du projet en euros HT',
           examples: ['45000.00', '125000.00', '380000.00'],
+          nullable: true
+        },
+        {
+          name: 'budget',
+          type: 'decimal(12,2)',
+          businessName: 'Budget projet',
+          description: 'Budget alloué pour le projet',
+          examples: ['50000.00', '100000.00', '250000.00'],
           nullable: true
         },
         {
@@ -1075,11 +1091,11 @@ export class BusinessContextService {
           description: 'Rentabilité moyenne par type de projet',
           sql: `SELECT 
                   p.project_type,
-                  AVG((p.actual_margin / p.price_total) * 100) as marge_moyenne_pct,
+                  AVG((p.actual_margin / p.montant_final) * 100) as marge_moyenne_pct,
                   COUNT(*) as nb_projets
                 FROM projects p
                 WHERE p.status = 'termine' 
-                  AND p.price_total > 0
+                  AND p.montant_final > 0
                 GROUP BY p.project_type
                 ORDER BY marge_moyenne_pct DESC`,
           explanation: 'Analyse la marge moyenne réalisée par type de projet terminé'
@@ -1681,7 +1697,7 @@ export class BusinessContextService {
       'urgent': 'WITH HIGH PRIORITY OR critical severity',
       
       // Indicateurs métier
-      'rentabilité': '(actual_margin / price_total * 100)',
+      'rentabilité': '(actual_margin / montant_final * 100)',
       'marge': 'margin_percentage OR actual_margin',
       'taux de transformation': 'COUNT(status=\'signe\') / COUNT(*)',
       'charge de travail': 'current_load',
@@ -1697,7 +1713,7 @@ export class BusinessContextService {
       financier: {
         description: 'Contexte pour analyses financières et chiffrage',
         tables: ['offers', 'projects', 'chiffrage_elements'],
-        key_columns: ['price_total', 'estimated_amount', 'actual_margin', 'margin_percentage', 'unit_price'],
+        key_columns: ['montant_final', 'budget', 'actual_margin', 'margin_percentage', 'unit_price'],
         aggregations: ['SUM', 'AVG', 'MIN', 'MAX'],
         business_rules: [
           'Marge minimale cible: 15%',
@@ -1868,7 +1884,7 @@ export class BusinessContextService {
       'signé': 'WHERE status = \'signe\'',
       
       // Métriques métier
-      'rentabilité': '(actual_margin / price_total * 100) as rentabilite_pct',
+      'rentabilité': '(actual_margin / montant_final * 100) as rentabilite_pct',
       'marge': 'margin_percentage',
       'charge': 'current_load',
       'disponibilité': 'availability_percentage',
@@ -2033,7 +2049,7 @@ export class BusinessContextService {
           businessExamples: ["user-123", "chef-projet-nord"]
         },
         {
-          name: "price_total",
+          name: "montant_final",
           businessName: "Montant total HT",
           type: "decimal",
           description: "Montant total du projet en euros HT",
@@ -2302,7 +2318,7 @@ export class BusinessContextService {
         id: "finances-marge-projets",
         category: "finances",
         user_query: "Quelle est la marge réalisée sur mes projets terminés ce trimestre ?",
-        sql_example: "SELECT p.id, p.nom, p.price_total, SUM(m.price_per_unit * pm.quantity) as cout_materiaux, (p.price_total - SUM(m.price_per_unit * pm.quantity)) as marge_brute, ROUND(((p.price_total - SUM(m.price_per_unit * pm.quantity)) / p.price_total) * 100, 2) as taux_marge FROM projects p JOIN project_materials pm ON p.id = pm.project_id JOIN materials m ON pm.material_id = m.id WHERE p.responsable_user_id = :user_id AND p.status = 'termine' AND p.date_fin >= DATE_SUB(NOW(), INTERVAL 3 MONTH) GROUP BY p.id ORDER BY taux_marge DESC",
+        sql_example: "SELECT p.id, p.nom, p.montant_final, SUM(m.price_per_unit * pm.quantity) as cout_materiaux, (p.montant_final - SUM(m.price_per_unit * pm.quantity)) as marge_brute, ROUND(((p.montant_final - SUM(m.price_per_unit * pm.quantity)) / p.montant_final) * 100, 2) as taux_marge FROM projects p JOIN project_materials pm ON p.id = pm.project_id JOIN materials m ON pm.material_id = m.id WHERE p.responsable_user_id = :user_id AND p.status = 'termine' AND p.date_fin >= DATE_SUB(NOW(), INTERVAL 3 MONTH) GROUP BY p.id ORDER BY taux_marge DESC",
         explanation: "Calcul de la marge brute par projet (prix vente - coût matériaux) avec taux de marge en pourcentage",
         applicable_roles: ["admin", "chef_projet"],
         complexity: "expert",
@@ -2885,7 +2901,7 @@ export class BusinessContextService {
       }
       if (queryAnalysis.primaryDomain === 'financier') {
         contextSections.push('- Arrondir les montants avec ROUND() pour lisibilité');
-        contextSections.push('- Vérifier price_total > 0 avant calcul de ratios');
+        contextSections.push('- Vérifier montant_final > 0 avant calcul de ratios');
       }
       
       const finalContext = contextSections.join('\n');

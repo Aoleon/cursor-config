@@ -260,6 +260,11 @@ export class SQLEngineService {
       // Appliquer les corrections de typos automatiquement
       let generatedSQL = aiResponse.data.sqlGenerated;
       generatedSQL = this.fixCommonSQLTypos(generatedSQL);
+      
+      // S'assurer que le SQL se termine par un point-virgule
+      if (!generatedSQL.trim().endsWith(';')) {
+        generatedSQL = generatedSQL.trim() + ';';
+      }
 
       logger.info('SQL généré par l\'IA', {
       metadata: {
@@ -1136,7 +1141,8 @@ INSTRUCTIONS DE BASE:
       // 0. NETTOYAGE SQL COMPLET : Retirer TOUS les commentaires et normaliser
       let cleanedSQL = sql;
       try {
-        cleanedSQL = sql
+        // Décoder les entités HTML d'abord
+        cleanedSQL = this.decodeHTMLEntities(sql)
           // Retirer commentaires multi-lignes /* */
           .replace(/\/\*[\s\S]*?\*\//g, ' ')
           // Retirer commentaires simples --
@@ -1786,6 +1792,21 @@ INSTRUCTIONS DE BASE:
   // ========================================
 
   /**
+   * Décode les entités HTML dans une chaîne SQL
+   */
+  private decodeHTMLEntities(text: string): string {
+    return text
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&#x2F;/g, '/')
+      .replace(/&nbsp;/g, ' ');
+  }
+
+  /**
    * Exécute le SQL avec timeout et limitation de résultats
    */
   private async executeSecureSQL(
@@ -1804,6 +1825,9 @@ INSTRUCTIONS DE BASE:
     try {
       // Limitation des résultats si pas déjà présente
       const limitedSQL = this.ensureLimitClause(sql, maxResults);
+      
+      // Décoder les entités HTML qui pourraient être présentes dans le SQL
+      const decodedSQL = this.decodeHTMLEntities(limitedSQL);
 
       // Exécution avec timeout robuste (évite unhandled rejection)
       let timeoutId: NodeJS.Timeout | null = null;
@@ -1816,28 +1840,26 @@ INSTRUCTIONS DE BASE:
         }, timeoutMs);
       });
 
-      // Créer la promesse de requête avec gestion d'erreur explicite
-      const queryPromise = db.execute(sql.raw(limitedSQL)).catch(err => {
-        // Si la requête échoue après le timeout, on ignore l'erreur
-        // car elle sera déjà gérée par le timeout
-        if (isTimedOut) {
-          logger.warn('Query échouée après timeout', {
-      metadata: {
-        service: 'SQLEngineService',
-        operation: 'executeNaturalLanguageQuery',
-        error: err.message
-      }
-    });
-          return null;
-        }
-        throw err;
-      });
+      // Créer la promesse de requête
+      const queryPromise = db.execute(sql`${decodedSQL}`);
       
       try {
-        const results = await Promise.race([queryPromise, timeoutPromise]) as any[];
+        // Race entre la requête et le timeout
+        const results = await Promise.race([
+          queryPromise,
+          timeoutPromise
+        ]) as any[];
         
         // Nettoyer le timeout si la requête réussit avant
         if (timeoutId) clearTimeout(timeoutId);
+        
+        // Marquer la requête comme terminée pour éviter les rejets non gérés
+        isTimedOut = true;
+        
+        // Si la requête est encore en cours, l'ignorer (elle finira en arrière-plan)
+        queryPromise.catch(() => {
+          // Ignorer les erreurs après le succès
+        });
         
         const executionTime = Date.now() - startTime;
 
@@ -1849,6 +1871,15 @@ INSTRUCTIONS DE BASE:
       } catch (raceError) {
         // Nettoyer le timeout même en cas d'erreur
         if (timeoutId) clearTimeout(timeoutId);
+        
+        // Marquer comme timeout et gérer la promesse de requête
+        isTimedOut = true;
+        
+        // Ignorer les erreurs de la requête après timeout
+        queryPromise.catch(() => {
+          // Ignorer les erreurs après timeout
+        });
+        
         throw raceError;
       }
 

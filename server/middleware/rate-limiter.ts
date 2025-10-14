@@ -34,9 +34,10 @@ interface AuthenticatedRequest extends Request {
 }
 
 /**
- * Key generator that combines IP and user ID for authenticated users
+ * Key generator that returns user ID for authenticated users
+ * Returns undefined for non-authenticated users to use default IP handling
  */
-const generateKey = (req: AuthenticatedRequest): string => {
+const generateKey = (req: AuthenticatedRequest): string | undefined => {
   const userId = req.user?.id || req.user?.claims?.sub || req.session?.user?.id;
   const userEmail = req.user?.email || req.user?.claims?.email || req.session?.user?.email;
   
@@ -52,13 +53,15 @@ const generateKey = (req: AuthenticatedRequest): string => {
     return `user:${userId}`;
   }
   
-  logger.debug('[RateLimiter] Key generated for IP', {
+  logger.debug('[RateLimiter] Using default IP-based rate limiting', {
     metadata: {
       ip: req.ip,
       path: req.originalUrl
     }
   });
-  return `ip:${req.ip}`;
+  // Return undefined to let express-rate-limit handle IP normalization for IPv4/IPv6 compatibility
+  // This avoids the ValidationError for custom keyGenerators with direct IP usage
+  return undefined;
 };
 
 /**
@@ -163,7 +166,7 @@ export const rateLimits = {
     message: 'Limite de requêtes atteinte pour le portail fournisseur.',
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req: Request) => `ip:${req.ip}`, // Only by IP for public portal
+    // No keyGenerator specified - express-rate-limit will handle IP normalization for IPv4/IPv6
     handler: rateLimitHandler
   } as Options),
 
@@ -273,11 +276,17 @@ export function createRateLimiter(options: {
   skipSuccessfulRequests?: boolean;
   keyGenerator?: 'ip' | 'user' | 'ip+user';
 }): any {
-  const keyGen = options.keyGenerator === 'ip' 
-    ? (req: Request) => `ip:${req.ip}`
-    : options.keyGenerator === 'ip+user'
-    ? generateKey
-    : generateKey;
+  // Configure key generator based on option
+  let keyGen: ((req: Request) => string | undefined) | undefined;
+  
+  if (options.keyGenerator === 'ip') {
+    // Don't specify keyGenerator - let express-rate-limit handle IP normalization
+    keyGen = undefined;
+  } else if (options.keyGenerator === 'user' || options.keyGenerator === 'ip+user') {
+    keyGen = generateKey as any; // Cast to any to handle the string | undefined return type
+  } else {
+    keyGen = generateKey as any;
+  }
 
   return rateLimit({
     windowMs: options.windowMs,
@@ -286,7 +295,7 @@ export function createRateLimiter(options: {
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: options.skipSuccessfulRequests,
-    keyGenerator: keyGen,
+    keyGenerator: keyGen as any,
     handler: rateLimitHandler
   } as Options);
 }

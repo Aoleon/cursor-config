@@ -1545,7 +1545,7 @@ export class AIService {
 
 🎯 RÈGLES TECHNIQUES SAXIUM:
 1. 📊 Génère UNIQUEMENT du SQL PostgreSQL valide et optimisé pour la base Saxium
-2. 🏷️ Utilise les noms exacts des tables/colonnes du schéma enrichi OCR+Monday.com
+2. 🏷️ IMPORTANT: Utilise UNIQUEMENT les noms techniques des colonnes (columnName) et NON les noms métier (businessName). Par exemple: utilise "name" et NON "Nom du projet", utilise "montant_final" et NON "Montant total HT"
 3. ⚡ Applique les bonnes pratiques: indexes géographiques, LIMIT intelligent, agrégations temporelles
 4. 🔒 Gère les NULL, enums français, et cas d'erreur métier systématiquement
 5. 🔗 Privilégie les JOINs optimisés aux sous-requêtes pour les relations AO→Projet→Fournisseur
@@ -1868,7 +1868,7 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
 📋 INSTRUCTIONS ULTRA-PRÉCISES SAXIUM:
 1. 🧠 Analyse la requête avec intelligence contextuelle métier BTP/menuiserie
 2. 🔍 Exploite TOUTES les données enrichies (OCR, Monday.com, prédictif, business)
-3. 🛠️ Génère du SQL PostgreSQL ultra-optimisé pour la base Saxium
+3. 🛠️ Génère du SQL PostgreSQL ultra-optimisé pour la base Saxium en utilisant UNIQUEMENT les noms techniques des colonnes (columnName) et NON les noms métier (businessName)
 4. 🇫🇷 Utilise exclusivement la terminologie française BTP dans les explications
 5. ⚡ Optimise performance: indexes géographiques, agrégations temporelles, JOINs intelligents
 6. 🔒 Respecte les permissions RBAC du rôle ${userRole} avec filtrage contextuel
@@ -2193,6 +2193,21 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
   /**
    * Parse et valide la réponse IA structurée
    */
+  /**
+   * Décode les entités HTML dans une chaîne
+   */
+  private decodeHTMLEntities(text: string): string {
+    return text
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&#x2F;/g, '/')
+      .replace(/&nbsp;/g, ' ');
+  }
+
   private parseAIResponse(responseText: string): {
     sql: string;
     explanation: string;
@@ -2219,7 +2234,10 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       
       // Extraire le SQL (avec ou sans point-virgule)
       const sqlMatch = cleanedResponse.match(/^(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*/i);
-      const sql = sqlMatch ? sqlMatch[0].trim() : cleanedResponse.trim();
+      let sql = sqlMatch ? sqlMatch[0].trim() : cleanedResponse.trim();
+      
+      // Décoder les entités HTML qui pourraient être présentes
+      sql = this.decodeHTMLEntities(sql);
       
       return {
         sql,
@@ -2240,9 +2258,12 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       }
       
       const parsed = JSON.parse(cleanedResponse);
+      
+      // Décoder les entités HTML dans le SQL
+      const decodedSql = this.decodeHTMLEntities(parsed.sql || "");
 
       return {
-        sql: parsed.sql || "",
+        sql: decodedSql,
         explanation: parsed.explanation || "Pas d'explication fournie",
         confidence: Math.max(0, Math.min(1, parsed.confidence || 0.5)),
         warnings: Array.isArray(parsed.warnings) ? parsed.warnings : []
@@ -2262,8 +2283,13 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
                       responseText.match(/UPDATE[\s\S]*?(?:;|$)/i) ||
                       responseText.match(/DELETE[\s\S]*?(?:;|$)/i);
       
+      // Décoder les entités HTML même dans le fallback
+      const fallbackSql = sqlMatch ? 
+        this.decodeHTMLEntities(sqlMatch[0].trim()) : 
+        "SELECT 1 as status;";
+      
       return {
-        sql: sqlMatch ? sqlMatch[0].trim() : "SELECT 1 as status;",
+        sql: fallbackSql,
         explanation: "Réponse IA mal formatée - utilisation du fallback SQL",
         confidence: 0.2,
         warnings: ["Réponse IA mal formatée, fallback utilisé"]

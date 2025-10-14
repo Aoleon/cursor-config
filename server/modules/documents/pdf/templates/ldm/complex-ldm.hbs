@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LDM Détaillée - [reference]</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 1.5cm 1cm 2cm 1cm;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 9pt;
+      line-height: 1.5;
+      color: #2c3e50;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Header Styles */
+    .header-container {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      margin: -20px -20px 30px -20px;
+      border-radius: 10px;
+    }
+    
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .company-info {
+      flex: 1;
+    }
+    
+    .document-title {
+      text-align: center;
+      flex: 2;
+    }
+    
+    .document-title h1 {
+      font-size: 28pt;
+      margin: 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .document-meta {
+      flex: 1;
+      text-align: right;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 5px 10px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 15px;
+      margin: 2px;
+    }
+    
+    /* Navigation Tabs */
+    .nav-tabs {
+      display: flex;
+      background: #f8f9fa;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .nav-tab {
+      flex: 1;
+      padding: 15px;
+      text-align: center;
+      background: white;
+      border-right: 1px solid #dee2e6;
+      cursor: pointer;
+    }
+    
+    .nav-tab:last-child {
+      border-right: none;
+    }
+    
+    .nav-tab.active {
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+    }
+    
+    /* Section Styles */
+    .section {
+      background: white;
+      padding: 25px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      page-break-inside: avoid;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #667eea;
+    }
+    
+    .section-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      margin-right: 15px;
+      font-size: 20px;
+    }
+    
+    .section-title {
+      font-size: 18pt;
+      color: #2c3e50;
+      margin: 0;
+    }
+    
+    /* Grid Layouts */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    
+    .info-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .info-card h3 {
+      color: #667eea;
+      margin: 0 0 10px 0;
+      font-size: 12pt;
+    }
+    
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px dotted #dee2e6;
+    }
+    
+    .info-item:last-child {
+      border-bottom: none;
+    }
+    
+    .info-label {
+      font-weight: 600;
+      color: #6c757d;
+    }
+    
+    .info-value {
+      color: #2c3e50;
+      text-align: right;
+    }
+    
+    /* Advanced Table Styles */
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .data-table thead {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .data-table th {
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 8pt;
+      letter-spacing: 0.5px;
+    }
+    
+    .data-table tbody tr {
+      border-bottom: 1px solid #dee2e6;
+      transition: background 0.3s;
+    }
+    
+    .data-table tbody tr:hover {
+      background: #f8f9fa;
+    }
+    
+    .data-table td {
+      padding: 10px 12px;
+      vertical-align: middle;
+    }
+    
+    .category-header {
+      background: #e9ecef;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 9pt;
+      color: #495057;
+    }
+    
+    .category-header td {
+      padding: 8px 12px;
+    }
+    
+    /* Status Badges */
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 8pt;
+      font-weight: 600;
+    }
+    
+    .status-new { background: #d1f2eb; color: #0f5132; }
+    .status-pending { background: #fff3cd; color: #664d03; }
+    .status-approved { background: #d1e7dd; color: #0f5132; }
+    .status-rejected { background: #f8d7da; color: #842029; }
+    
+    /* Progress Bars */
+    .progress-container {
+      background: #e9ecef;
+      border-radius: 10px;
+      height: 20px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    
+    .progress-bar {
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 8pt;
+      font-weight: bold;
+      transition: width 0.5s ease;
+    }
+    
+    /* Metrics Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+    
+    .metric-card {
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+    }
+    
+    .metric-value {
+      font-size: 24pt;
+      font-weight: bold;
+      color: #667eea;
+      margin: 5px 0;
+    }
+    
+    .metric-label {
+      color: #6c757d;
+      font-size: 8pt;
+      text-transform: uppercase;
+    }
+    
+    /* Charts Placeholder */
+    .chart-container {
+      background: #f8f9fa;
+      border: 2px dashed #dee2e6;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      color: #6c757d;
+      margin: 20px 0;
+    }
+    
+    /* Timeline */
+    .timeline {
+      position: relative;
+      padding: 20px 0;
+    }
+    
+    .timeline-item {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    
+    .timeline-marker {
+      width: 12px;
+      height: 12px;
+      background: #667eea;
+      border-radius: 50%;
+      margin-right: 20px;
+      margin-top: 5px;
+    }
+    
+    .timeline-content {
+      flex: 1;
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    
+    .timeline-date {
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+    
+    /* Footer */
+    .footer-section {
+      background: #2c3e50;
+      color: white;
+      padding: 30px;
+      margin: 30px -20px -20px -20px;
+      border-radius: 10px;
+    }
+    
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+    }
+    
+    .footer-column h4 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+    
+    .footer-column p {
+      margin: 5px 0;
+    }
+    
+    /* Print Optimizations */
+    @media print {
+      .nav-tabs { display: none; }
+      .section { box-shadow: none; border: 1px solid #dee2e6; }
+      .no-print { display: none; }
+      .page-break { page-break-after: always; }
+      .keep-together { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header Section -->
+  <div class="header-container keep-together">
+    <div class="header-top">
+      <div class="company-info">
+        [if:supplier.logo]
+          [image logo supplier]
+        [/if]
+        <h2>[supplier.name?Saxium]</h2>
+        <p>[supplier.address]</p>
+      </div>
+      <div class="document-title">
+        <h1>LIGNE DE MATÉRIEL</h1>
+        <p style="font-size: 14pt;">Détail Complet</p>
+      </div>
+      <div class="document-meta">
+        <div class="badge">Réf: [reference]</div>
+        <div class="badge">[date:date:dd/mm/yyyy]</div>
+        <div class="badge">[status?DRAFT]</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs (for screen only) -->
+  <div class="nav-tabs no-print">
+    <div class="nav-tab active">📋 Informations</div>
+    <div class="nav-tab">📦 Matériel</div>
+    <div class="nav-tab">📊 Analyse</div>
+    <div class="nav-tab">📈 Suivi</div>
+  </div>
+
+  <!-- Section 1: General Information -->
+  <div class="section keep-together">
+    <div class="section-header">
+      <div class="section-icon">📋</div>
+      <h2 class="section-title">Informations Générales</h2>
+    </div>
+    
+    <div class="info-grid">
+      <div class="info-card">
+        <h3>Client</h3>
+        <div class="info-item">
+          <span class="info-label">Entreprise:</span>
+          <span class="info-value">[client.name]</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Contact:</span>
+          <span class="info-value">[client.contact]</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Email:</span>
+          <span class="info-value">[client.email]</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Téléphone:</span>
+          <span class="info-value">[client.phone]</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">SIRET:</span>
+          <span class="info-value">[client.siret?-]</span>
+        </div>
+      </div>
+      
+      <div class="info-card">
+        <h3>Projet</h3>
+        <div class="info-item">
+          <span class="info-label">Nom:</span>
+          <span class="info-value">[project.name]</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Référence:</span>
+          <span class="info-value">[project.reference]</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Chantier:</span>
+          <span class="info-value">[project.location]</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Date début:</span>
+          <span class="info-value">[project.startDate:date:dd/mm/yyyy]</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Date fin:</span>
+          <span class="info-value">[project.endDate:date:dd/mm/yyyy]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Key Metrics -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">📊</div>
+      <h2 class="section-title">Métriques Clés</h2>
+    </div>
+    
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Articles</div>
+        <div class="metric-value">[metrics.totalItems?0]</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Quantité Totale</div>
+        <div class="metric-value">[metrics.totalQuantity?0]</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Montant HT</div>
+        <div class="metric-value">[totals.ht:currency]</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Montant TTC</div>
+        <div class="metric-value">[totals.ttc:currency]</div>
+      </div>
+    </div>
+    
+    [if:metrics.progressPercentage]
+    <div class="progress-container">
+      <div class="progress-bar" style="width: [metrics.progressPercentage]%;">
+        [metrics.progressPercentage]% Complété
+      </div>
+    </div>
+    [/if]
+  </div>
+
+  <!-- Section 3: Detailed Items by Category -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">📦</div>
+      <h2 class="section-title">Détail du Matériel par Catégorie</h2>
+    </div>
+    
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 8%;">Réf.</th>
+          <th style="width: 30%;">Désignation</th>
+          <th style="width: 10%;">Fournisseur</th>
+          <th style="width: 8%;">Quantité</th>
+          <th style="width: 8%;">Unité</th>
+          <th style="width: 10%;">P.U. HT</th>
+          <th style="width: 8%;">Remise</th>
+          <th style="width: 10%;">Total HT</th>
+          <th style="width: 8%;">Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        [foreach:categories]
+        <tr class="category-header">
+          <td colspan="9">📁 [category.name] ([category.items.length] articles)</td>
+        </tr>
+        [foreach:category.items]
+        <tr>
+          <td>[item.reference]</td>
+          <td>
+            <strong>[item.designation]</strong>
+            [if:item.description]
+              <br><small style="color: #6c757d;">[item.description]</small>
+            [/if]
+            [if:item.specifications]
+              <br><small style="color: #667eea;">Spéc: [item.specifications]</small>
+            [/if]
+          </td>
+          <td>[item.supplier?-]</td>
+          <td style="text-align: right;">[item.quantity:number:0]</td>
+          <td style="text-align: center;">[item.unit]</td>
+          <td style="text-align: right;">[item.unitPrice:currency]</td>
+          <td style="text-align: right;">
+            [if:item.discount]
+              [item.discount:currency]
+            [else]
+              -
+            [/if]
+          </td>
+          <td style="text-align: right; font-weight: bold;">[item.total:currency]</td>
+          <td style="text-align: center;">
+            <span class="status-badge status-[item.status?new]">[item.status?Nouveau]</span>
+          </td>
+        </tr>
+        [/foreach]
+        <tr style="background: #f8f9fa; font-weight: bold;">
+          <td colspan="7" style="text-align: right;">Sous-total [category.name]:</td>
+          <td colspan="2" style="text-align: right;">[category.total:currency]</td>
+        </tr>
+        [/foreach]
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Section 4: Financial Summary -->
+  <div class="section keep-together">
+    <div class="section-header">
+      <div class="section-icon">💰</div>
+      <h2 class="section-title">Synthèse Financière</h2>
+    </div>
+    
+    <div class="info-grid">
+      <div class="info-card">
+        <h3>Calcul du Prix</h3>
+        <div class="info-item">
+          <span class="info-label">Total HT:</span>
+          <span class="info-value">[totals.ht:currency]</span>
+        </div>
+        [if:totals.discount]
+        <div class="info-item">
+          <span class="info-label">Remise globale:</span>
+          <span class="info-value" style="color: #dc3545;">-[totals.discount:currency]</span>
+        </div>
+        [/if]
+        <div class="info-item">
+          <span class="info-label">TVA (20%):</span>
+          <span class="info-value">[totals.tva:currency]</span>
+        </div>
+        <div class="info-item" style="font-size: 12pt; font-weight: bold;">
+          <span class="info-label">Total TTC:</span>
+          <span class="info-value" style="color: #667eea;">[totals.ttc:currency]</span>
+        </div>
+      </div>
+      
+      <div class="info-card">
+        <h3>Conditions de Paiement</h3>
+        <div class="info-item">
+          <span class="info-label">Acompte:</span>
+          <span class="info-value">[payment.deposit?30]%</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Échéance:</span>
+          <span class="info-value">[payment.terms?30 jours]</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Mode:</span>
+          <span class="info-value">[payment.method?Virement]</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Validité:</span>
+          <span class="info-value">[validityDate:date:dd/mm/yyyy]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Timeline -->
+  [if:timeline]
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">📈</div>
+      <h2 class="section-title">Chronologie du Projet</h2>
+    </div>
+    
+    <div class="timeline">
+      [foreach:timeline]
+      <div class="timeline-item">
+        <div class="timeline-marker"></div>
+        <div class="timeline-content">
+          <div class="timeline-date">[event.date:date:dd/mm/yyyy]</div>
+          <div>[event.description]</div>
+        </div>
+      </div>
+      [/foreach]
+    </div>
+  </div>
+  [/if]
+
+  <!-- Section 6: Terms and Conditions -->
+  [if:conditions]
+  <div class="section keep-together">
+    <div class="section-header">
+      <div class="section-icon">📜</div>
+      <h2 class="section-title">Conditions Particulières</h2>
+    </div>
+    <p>[conditions]</p>
+  </div>
+  [/if]
+
+  <!-- Footer -->
+  <div class="footer-section keep-together">
+    <div class="footer-grid">
+      <div class="footer-column">
+        <h4>Fournisseur</h4>
+        <p>[supplier.name]</p>
+        <p>[supplier.address]</p>
+        <p>[supplier.phone]</p>
+        <p>[supplier.email]</p>
+      </div>
+      <div class="footer-column">
+        <h4>Signatures</h4>
+        <p>Client: ____________________</p>
+        <p>Date: ____________________</p>
+        <br>
+        <p>Fournisseur: ____________________</p>
+        <p>Date: ____________________</p>
+      </div>
+      <div class="footer-column">
+        <h4>Document</h4>
+        <p>Référence: [reference]</p>
+        <p>Généré le: [now:date:dd/mm/yyyy]</p>
+        <p>Page: <span class="pageNumber"></span></p>
+        <p>Version: [version?1.0]</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

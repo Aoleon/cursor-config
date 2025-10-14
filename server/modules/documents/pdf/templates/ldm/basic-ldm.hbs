@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LDM - [reference]</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.4;
+      color: #333;
+    }
+    
+    .header {
+      border-bottom: 3px solid #1e40af;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .logo-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    h1 {
+      color: #1e40af;
+      font-size: 24pt;
+      margin: 0;
+      text-align: center;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+    
+    .info-block {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    
+    .info-block h2 {
+      color: #1e40af;
+      font-size: 12pt;
+      margin-top: 0;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #dee2e6;
+      padding-bottom: 5px;
+    }
+    
+    .info-line {
+      margin: 5px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .label {
+      font-weight: bold;
+      color: #666;
+      min-width: 100px;
+    }
+    
+    .value {
+      flex: 1;
+      text-align: right;
+    }
+    
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .items-table th {
+      background: #1e40af;
+      color: white;
+      padding: 10px;
+      text-align: left;
+      font-weight: bold;
+    }
+    
+    .items-table td {
+      border: 1px solid #dee2e6;
+      padding: 8px;
+    }
+    
+    .items-table tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+    
+    .total-row {
+      background: #1e40af !important;
+      color: white;
+      font-weight: bold;
+    }
+    
+    .total-row td {
+      border-color: #1e40af;
+      padding: 12px;
+    }
+    
+    .footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 2px solid #dee2e6;
+    }
+    
+    .conditions {
+      background: #fff3cd;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    
+    .conditions h3 {
+      color: #856404;
+      margin-top: 0;
+    }
+    
+    .signature-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 50px;
+      margin-top: 50px;
+    }
+    
+    .signature-block {
+      text-align: center;
+      padding-top: 20px;
+    }
+    
+    .signature-line {
+      border-bottom: 2px solid #333;
+      margin-bottom: 10px;
+      min-height: 50px;
+    }
+    
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .font-bold { font-weight: bold; }
+    .keep-together { page-break-inside: avoid; }
+  </style>
+</head>
+<body>
+  <!-- Header with Logo -->
+  <div class="header">
+    <div class="logo-section">
+      [if:logo_url]
+        [image logo company]
+      [/if]
+      <h1>LIGNE DE MATÉRIEL (LDM)</h1>
+    </div>
+  </div>
+
+  <!-- Document Information -->
+  <div class="info-grid">
+    <!-- Client Information -->
+    <div class="info-block keep-together">
+      <h2>CLIENT</h2>
+      <div class="info-line">
+        <span class="label">Nom:</span>
+        <span class="value">[client.name]</span>
+      </div>
+      <div class="info-line">
+        <span class="label">Adresse:</span>
+        <span class="value">[client.address]</span>
+      </div>
+      <div class="info-line">
+        <span class="label">Contact:</span>
+        <span class="value">[client.contact]</span>
+      </div>
+      <div class="info-line">
+        <span class="label">Email:</span>
+        <span class="value">[client.email]</span>
+      </div>
+      <div class="info-line">
+        <span class="label">Téléphone:</span>
+        <span class="value">[client.phone]</span>
+      </div>
+    </div>
+
+    <!-- Project Information -->
+    <div class="info-block keep-together">
+      <h2>PROJET</h2>
+      <div class="info-line">
+        <span class="label">Référence:</span>
+        <span class="value font-bold">[reference]</span>
+      </div>
+      <div class="info-line">
+        <span class="label">Projet:</span>
+        <span class="value">[project.name]</span>
+      </div>
+      <div class="info-line">
+        <span class="label">Date:</span>
+        <span class="value">[date:date:dd/mm/yyyy]</span>
+      </div>
+      <div class="info-line">
+        <span class="label">Validité:</span>
+        <span class="value">[validityDate:date:dd/mm/yyyy]</span>
+      </div>
+      <div class="info-line">
+        <span class="label">Chantier:</span>
+        <span class="value">[project.location?Non défini]</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Items Table -->
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th style="width: 8%;">Réf.</th>
+        <th style="width: 35%;">Désignation</th>
+        <th style="width: 8%;">Qté</th>
+        <th style="width: 8%;">Unité</th>
+        <th style="width: 12%;">P.U. HT</th>
+        <th style="width: 12%;">Remise</th>
+        <th style="width: 17%;">Total HT</th>
+      </tr>
+    </thead>
+    <tbody>
+      [foreach:items]
+      <tr>
+        <td>[item.reference]</td>
+        <td>
+          <strong>[item.designation]</strong>
+          [if:item.description]
+            <br><small>[item.description]</small>
+          [/if]
+        </td>
+        <td class="text-right">[item.quantity:number:0]</td>
+        <td class="text-center">[item.unit]</td>
+        <td class="text-right">[item.unitPrice:currency]</td>
+        <td class="text-right">
+          [if:item.discount]
+            [item.discount:currency]
+          [else]
+            -
+          [/if]
+        </td>
+        <td class="text-right font-bold">[item.total:currency]</td>
+      </tr>
+      [/foreach]
+    </tbody>
+    <tfoot>
+      <!-- Subtotal -->
+      <tr>
+        <td colspan="6" class="text-right font-bold">Sous-total HT:</td>
+        <td class="text-right font-bold">[totals.ht:currency]</td>
+      </tr>
+      [if:totals.discount]
+      <tr>
+        <td colspan="6" class="text-right">Remise globale:</td>
+        <td class="text-right">-[totals.discount:currency]</td>
+      </tr>
+      [/if]
+      <!-- TVA -->
+      <tr>
+        <td colspan="6" class="text-right">TVA (20%):</td>
+        <td class="text-right">[totals.tva:currency]</td>
+      </tr>
+      <!-- Total -->
+      <tr class="total-row">
+        <td colspan="6" class="text-right">TOTAL TTC:</td>
+        <td class="text-right">[totals.ttc:currency]</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Conditions -->
+  [if:conditions]
+  <div class="conditions keep-together">
+    <h3>Conditions particulières</h3>
+    <p>[conditions]</p>
+  </div>
+  [/if]
+
+  <!-- Notes -->
+  [if:notes]
+  <div class="info-block keep-together">
+    <h3>Notes</h3>
+    <p>[notes]</p>
+  </div>
+  [/if]
+
+  <!-- Signatures -->
+  <div class="signature-section keep-together">
+    <div class="signature-block">
+      <h3>Le Client</h3>
+      <p>Date et signature:</p>
+      <div class="signature-line"></div>
+      <p>[client.name]</p>
+    </div>
+    <div class="signature-block">
+      <h3>Le Fournisseur</h3>
+      <p>Date et signature:</p>
+      <div class="signature-line"></div>
+      <p>[supplier.name?Saxium]</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer text-center">
+    <p><small>Document généré le [now:date:dd/mm/yyyy] - Référence: [reference]</small></p>
+  </div>
+</body>
+</html>

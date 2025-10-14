@@ -4,6 +4,16 @@ import { join } from "path";
 import * as Handlebars from "handlebars";
 import type { DpgfGroupedData } from "./dpgfComputeService";
 import { logger } from '../utils/logger';
+import { 
+  PDFTemplateEngine,
+  type PDFTemplate,
+  type RenderOptions,
+  type RenderResult,
+  type LDMTemplateData,
+  createLDMData,
+  loadTemplate,
+  TEMPLATES
+} from '../modules/documents/pdf';
 
 export interface PdfGenerationOptions {
   format?: "A4" | "A3" | "Letter";
@@ -369,6 +379,250 @@ export class PdfGeneratorService {
         operation: 'restart'
       }
     });
+  }
+
+  // ========================================
+  // INTEGRATION WITH NEW TEMPLATE ENGINE
+  // ========================================
+
+  private static templateEngine: PDFTemplateEngine | null = null;
+
+  /**
+   * Get or create template engine instance
+   */
+  private static getTemplateEngine(): PDFTemplateEngine {
+    if (!this.templateEngine) {
+      this.templateEngine = PDFTemplateEngine.getInstance({
+        cacheEnabled: true,
+        cacheTTL: 3600,
+        cacheMaxSize: 50,
+        validationStrict: true,
+        defaultLocale: 'fr-FR',
+        imageOptimization: true,
+        layoutOptimization: true,
+        errorRecovery: true
+      });
+    }
+    return this.templateEngine;
+  }
+
+  /**
+   * Generate PDF from template with advanced features
+   */
+  static async generateFromTemplate(
+    templateOrPath: PDFTemplate | string,
+    data: Record<string, any>,
+    options?: PdfGenerationOptions
+  ): Promise<PdfGenerationResult> {
+    await this.initialize();
+
+    try {
+      const engine = this.getTemplateEngine();
+
+      // Load template if path provided
+      let template: PDFTemplate;
+      if (typeof templateOrPath === 'string') {
+        const content = await loadTemplate(templateOrPath);
+        template = {
+          id: templateOrPath,
+          name: templateOrPath,
+          type: 'handlebars',
+          content
+        };
+      } else {
+        template = templateOrPath;
+      }
+
+      // Render template
+      const renderResult = await engine.render({
+        template,
+        context: {
+          data,
+          locale: 'fr-FR',
+          timezone: 'Europe/Paris'
+        },
+        layout: {
+          pageSize: options?.format || 'A4',
+          orientation: options?.orientation || 'portrait',
+          margins: options?.margins
+        }
+      });
+
+      if (!renderResult.success || !renderResult.html) {
+        throw new Error('Template rendering failed');
+      }
+
+      // Generate PDF from HTML
+      const pdfResult = await this.generatePdfFromHtml(
+        renderResult.html,
+        options
+      );
+
+      return pdfResult;
+    } catch (error) {
+      logger.error('Template PDF generation failed', error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate LDM PDF with template engine
+   */
+  static async generateLDMPdf(
+    data: Partial<LDMTemplateData>,
+    templateType: 'basic' | 'complex' | 'visual' = 'basic',
+    options?: PdfGenerationOptions
+  ): Promise<PdfGenerationResult> {
+    try {
+      // Select template path
+      const templatePath = 
+        templateType === 'basic' ? TEMPLATES.LDM.BASIC :
+        templateType === 'complex' ? TEMPLATES.LDM.COMPLEX :
+        TEMPLATES.LDM.VISUAL;
+
+      // Prepare LDM data
+      const ldmData = createLDMData(data);
+
+      // Generate PDF
+      return await this.generateFromTemplate(
+        templatePath,
+        ldmData,
+        options
+      );
+    } catch (error) {
+      logger.error('LDM PDF generation failed', error as Error, {
+        templateType,
+        dataKeys: Object.keys(data)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Validate template before use
+   */
+  static async validateTemplate(
+    templateOrPath: PDFTemplate | string
+  ): Promise<{ valid: boolean; errors?: any[]; warnings?: any[] }> {
+    try {
+      const engine = this.getTemplateEngine();
+
+      let template: PDFTemplate;
+      if (typeof templateOrPath === 'string') {
+        const content = await loadTemplate(templateOrPath);
+        template = {
+          id: templateOrPath,
+          name: templateOrPath,
+          type: 'handlebars',
+          content
+        };
+      } else {
+        template = templateOrPath;
+      }
+
+      const validation = await engine.validateTemplate(template);
+      
+      return {
+        valid: validation.isValid,
+        errors: validation.errors,
+        warnings: validation.warnings
+      };
+    } catch (error) {
+      logger.error('Template validation failed', error as Error);
+      return {
+        valid: false,
+        errors: [{ message: error instanceof Error ? error.message : 'Unknown error' }]
+      };
+    }
+  }
+
+  /**
+   * Clear template cache
+   */
+  static clearTemplateCache(templateId?: string): void {
+    const engine = this.getTemplateEngine();
+    engine.clearCache(templateId);
+    logger.info('Template cache cleared', { templateId });
+  }
+
+  /**
+   * Get template cache statistics
+   */
+  static getTemplateCacheStats(): any {
+    const engine = this.getTemplateEngine();
+    return engine.getCacheStats();
+  }
+
+  /**
+   * Generate PDF from HTML content (public method)
+   */
+  static async generatePdfFromHtml(
+    html: string,
+    options?: PdfGenerationOptions
+  ): Promise<PdfGenerationResult> {
+    await this.initialize();
+
+    if (!this.browser) {
+      throw new Error("PDF generator not initialized");
+    }
+
+    let page: Page | null = null;
+
+    try {
+      page = await this.browser.newPage();
+
+      await page.setViewport({
+        width: 1200,
+        height: 1600,
+        deviceScaleFactor: options?.scale || 1,
+      });
+
+      await page.setContent(html, {
+        waitUntil: 'networkidle0',
+        timeout: 30000
+      });
+
+      const pdfOptions: PDFOptions = {
+        format: options?.format || "A4",
+        printBackground: options?.includeBackground ?? true,
+        margin: {
+          top: options?.margins?.top || "2cm",
+          right: options?.margins?.right || "1.5cm",
+          bottom: options?.margins?.bottom || "2cm",
+          left: options?.margins?.left || "1.5cm",
+        },
+        displayHeaderFooter: options?.displayHeaderFooter ?? false,
+        scale: options?.scale || 0.8,
+        preferCSSPageSize: true,
+      };
+
+      const pdfBuffer = await page.pdf(pdfOptions);
+
+      const filename = `document_${Date.now()}.pdf`;
+
+      logger.info('PDF generated from HTML successfully', {
+        metadata: {
+          service: 'PDFGeneratorService',
+          operation: 'generatePdfFromHtml',
+          filename,
+          size: pdfBuffer.length
+        }
+      });
+
+      return {
+        buffer: pdfBuffer,
+        filename,
+        mimeType: 'application/pdf',
+        size: pdfBuffer.length
+      };
+    } catch (error) {
+      logger.error('PDF generation from HTML failed', error as Error);
+      throw error;
+    } finally {
+      if (page) {
+        await page.close();
+      }
+    }
   }
 }
 

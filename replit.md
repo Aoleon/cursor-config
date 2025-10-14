@@ -19,6 +19,19 @@ Saxium is a fullstack application designed for quoting and project management in
 The application features a modern fullstack architecture.
 - **Frontend**: Built with React, TypeScript, Vite, Wouter for routing, shadcn/ui, Tailwind CSS, and Radix UI. It leverages React Query for data fetching and `react-hook-form` with Zod for form management, incorporating `data-testid` for testing.
 - **Backend**: Implemented using Express, TypeScript, and Drizzle ORM.
+  - **Modular Routes**: Refactored from monolithic 11,647-line file into 6 clean modules:
+    - `server/modules/auth/` - Authentication, OIDC, sessions
+    - `server/modules/chiffrage/` - DPGF calculations, validations
+    - `server/modules/suppliers/` - Supplier quotes, OCR analysis
+    - `server/modules/projects/` - Project management, timelines
+    - `server/modules/analytics/` - KPIs, dashboards, reports
+    - `server/modules/documents/` - OCR, PDF generation, templates
+  - **PDF Template Engine**: New robust system for template-based PDF generation:
+    - `PDFTemplateEngine` - Main orchestrator with caching
+    - `PlaceholderResolver` - Handles [placeholders], nested paths, formatters
+    - `ImageIntegrator` - Manages [image pub x] references with Object Storage
+    - `LayoutOptimizer` - Prevents overlaps, optimizes margins
+    - `TemplateValidator` - Validates templates before use
 - **Database**: PostgreSQL, hosted on Neon.
 - **AI**: Integrates Anthropic Claude and OpenAI for advanced functionalities, complemented by Tesseract.js for OCR.
 - **Folder Structure**: Divided into `client/` for frontend, `server/` for backend, `shared/` for common code (e.g., Drizzle schema and Zod types), and `attached_assets/` for static assets.

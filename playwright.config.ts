@@ -34,8 +34,8 @@ export default defineConfig({
   ],
   outputDir: 'test-results/artifacts',
   
-  // ✅ Timeout global basé sur baselines (Core: 25s threshold + 20% buffer)
-  timeout: 30 * 1000,
+  // ✅ Timeout augmenté pour APIs IA (60s par test)
+  timeout: 60 * 1000,
   
   // ✅ Expect timeout pour assertions rapides
   expect: {
@@ -62,6 +62,36 @@ export default defineConfig({
     {
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
+    },
+    // Tests critiques du chatbot IA
+    {
+      name: 'chatbot',
+      testMatch: /chatbot\.spec\.ts/,
+      use: { 
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
+    // Tests du workflow de chiffrage
+    {
+      name: 'chiffrage',
+      testMatch: /chiffrage\.spec\.ts/,
+      use: { 
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
+    // Tests de résilience et robustesse
+    {
+      name: 'resilience',
+      testMatch: /resilience\.spec\.ts/,
+      use: { 
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
     },
     {
       name: 'journeys',

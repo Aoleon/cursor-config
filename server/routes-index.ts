@@ -29,6 +29,9 @@ import { createDocumentsRouter } from './modules/documents';
 // Service imports
 import { AuditService } from './services/AuditService';
 
+// Monitoring routes
+import monitoringRouter from './routes/monitoring';
+
 export async function registerModularRoutes(app: Express): Promise<void> {
   logger.info('Initialisation des routes modulaires', {
     metadata: {
@@ -126,6 +129,17 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       operation: 'mountRouter',
       moduleName: 'documents',
       routes: ['/api/ocr', '/api/pdf', '/api/documents', '/api/objects', '/api/templates']
+    }
+  });
+
+  // Monitoring Module
+  app.use('/api/monitoring', monitoringRouter);
+  logger.info('Module Monitoring monté avec succès', {
+    metadata: {
+      module: 'RoutesIndex',
+      operation: 'mountRouter',
+      moduleName: 'monitoring',
+      routes: ['/api/monitoring/health', '/api/monitoring/metrics', '/api/monitoring/errors', '/api/monitoring/alerts']
     }
   });
 

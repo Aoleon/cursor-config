@@ -67,6 +67,8 @@ import ChatbotDemo from "@/pages/ChatbotDemo";
 // Import de la page administration
 import Administration from "@/pages/administration";
 import BugReportButton from "@/components/BugReportButton";
+// Import du dashboard monitoring
+import MonitoringDashboard from "@/pages/monitoring";
 
 function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -123,6 +125,7 @@ function Router() {
       <Route path="/dashboard/be" component={() => <ProtectedRoute component={BEDashboard} />} />
       <Route path="/dashboard/admin-security" component={() => <ProtectedRoute component={AdminSecurityDashboard} />} />
       <Route path="/dashboard/monday-migration" component={() => <ProtectedRoute component={MondayMigrationDashboard} />} />
+      <Route path="/dashboard/monitoring" component={() => <ProtectedRoute component={MonitoringDashboard} />} />
       {/* REDIRECTION INTELLIGENTE: Page d'accueil avec détection de rôle */}
       <Route path="/">
         <SmartLanding />

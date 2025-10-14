@@ -221,6 +221,17 @@ export const rateLimits = {
     handler: rateLimitHandler
   } as Options),
 
+  // Processing endpoints: Similar to OCR for resource intensive operations
+  processing: rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 5,
+    message: 'Limite de traitement atteinte. Réessayez dans quelques minutes.',
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: generateKey,
+    handler: rateLimitHandler
+  } as Options),
+
   // Creation endpoints: 20 creations per minute
   creation: rateLimit({
     windowMs: 60 * 1000, // 1 minute

@@ -12,6 +12,8 @@
 
 import { logger } from './logger';
 import type { LogContext } from './logger';
+import { getErrorCollector } from '../monitoring/error-collector';
+import { getMetricsAggregator } from '../monitoring/metrics-aggregator';
 
 // ========================================
 // TYPES D'ERREURS MÉTIER
@@ -114,11 +116,18 @@ export async function withErrorHandling<T>(
     userId: context.userId,
     metadata: context.metadata
   };
+  
+  // Instances de monitoring
+  const errorCollector = getErrorCollector();
+  const metricsAggregator = getMetricsAggregator();
 
   try {
     logger.debug(`${context.operation} - démarrage`, logContext);
     const result = await operation();
     const duration = Date.now() - startTime;
+    
+    // Enregistrer la métrique de performance
+    metricsAggregator.recordResponseTime(duration);
     
     logger.info(`${context.operation} - succès (${duration}ms)`, {
       ...logContext,
@@ -129,6 +138,18 @@ export async function withErrorHandling<T>(
   } catch (error) {
     const duration = Date.now() - startTime;
     const normalizedError = normalizeError(error);
+    
+    // Capturer l'erreur dans le système de monitoring
+    errorCollector.capture(normalizedError, {
+      service: context.service,
+      operation: context.operation,
+      userId: context.userId,
+      duration,
+      ...context.metadata
+    });
+    
+    // Enregistrer la métrique de performance même en cas d'erreur
+    metricsAggregator.recordResponseTime(duration);
     
     logger.error(
       `${context.operation} - échec (${duration}ms)`,

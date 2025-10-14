@@ -63,9 +63,11 @@ import {
   type EmployeeLabelAssignment, type EmployeeLabelAssignmentInsert,
   type BugReport, type InsertBugReport
 } from "@shared/schema";
-import { db } from "./db";
+import { db } from "./db"; // Utilise la config existante avec pool optimisé
 import type { EventBus } from "./eventBus";
 import { logger } from "./utils/logger";
+import { withTransaction, withSavepoint } from "./utils/database-helpers";
+import { safeQuery, safeInsert, safeUpdate, safeDelete } from "./utils/safe-query";
 
 // ========================================
 // TYPES POUR KPIs CONSOLIDÉS ET ANALYTICS
@@ -676,27 +678,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    try {
-      const [user] = await db
-        .insert(users)
-        .values(userData)
-        .onConflictDoUpdate({
-          target: users.id, // Conflict sur l'ID
-          set: {
-            ...userData,
-            updatedAt: new Date(),
-          },
-        })
-        .returning();
-      return user;
-    } catch (error: any) {
-      // Si erreur de contrainte unique sur email, essayer de mettre à jour par email
-      if (error.code === '23505' && error.constraint?.includes('email')) {
+    return safeQuery(async () => {
+      try {
         const [user] = await db
           .insert(users)
           .values(userData)
           .onConflictDoUpdate({
-            target: users.email, // Conflict sur l'email
+            target: users.id, // Conflict sur l'ID
             set: {
               ...userData,
               updatedAt: new Date(),
@@ -704,9 +692,30 @@ export class DatabaseStorage implements IStorage {
           })
           .returning();
         return user;
+      } catch (error: any) {
+        // Si erreur de contrainte unique sur email, essayer de mettre à jour par email
+        if (error.code === '23505' && error.constraint?.includes('email')) {
+          const [user] = await db
+            .insert(users)
+            .values(userData)
+            .onConflictDoUpdate({
+              target: users.email, // Conflict sur l'email
+              set: {
+                ...userData,
+                updatedAt: new Date(),
+              },
+            })
+            .returning();
+          return user;
+        }
+        throw error;
       }
-      throw error;
-    }
+    }, {
+      retries: 2,
+      service: 'StoragePOC',
+      operation: 'upsertUser',
+      logQuery: true
+    });
   }
 
   // AO operations
@@ -720,28 +729,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAo(ao: InsertAo): Promise<Ao> {
-    try {
-      const [newAo] = await db.insert(aos).values(ao).returning();
-      return newAo;
-    } catch (error: any) {
-      // Gestion spécifique des erreurs de contrainte d'unicité PostgreSQL
-      if (error.code === '23505' && error.constraint) {
-        if (error.constraint.includes('reference')) {
-          const duplicateError = new Error(`La référence '${ao.reference}' existe déjà. Veuillez choisir une autre référence.`);
-          (duplicateError as any).code = 'DUPLICATE_REFERENCE';
-          (duplicateError as any).field = 'reference';
-          (duplicateError as any).value = ao.reference;
+    return safeInsert('aos', async () => {
+      try {
+        const [newAo] = await db.insert(aos).values(ao).returning();
+        return newAo;
+      } catch (error: any) {
+        // Gestion spécifique des erreurs de contrainte d'unicité PostgreSQL
+        if (error.code === '23505' && error.constraint) {
+          if (error.constraint.includes('reference')) {
+            const duplicateError = new Error(`La référence '${ao.reference}' existe déjà. Veuillez choisir une autre référence.`);
+            (duplicateError as any).code = 'DUPLICATE_REFERENCE';
+            (duplicateError as any).field = 'reference';
+            (duplicateError as any).value = ao.reference;
+            throw duplicateError;
+          }
+          // Autres contraintes d'unicité si nécessaire
+          const duplicateError = new Error(`Cette valeur existe déjà dans la base de données.`);
+          (duplicateError as any).code = 'DUPLICATE_VALUE';
           throw duplicateError;
         }
-        // Autres contraintes d'unicité si nécessaire
-        const duplicateError = new Error(`Cette valeur existe déjà dans la base de données.`);
-        (duplicateError as any).code = 'DUPLICATE_VALUE';
-        throw duplicateError;
+        
+        // Re-lancer l'erreur si ce n'est pas une contrainte d'unicité
+        throw error;
       }
-      
-      // Re-lancer l'erreur si ce n'est pas une contrainte d'unicité
-      throw error;
-    }
+    }, {
+      retries: 2,
+      service: 'StoragePOC',
+      operation: 'createAo'
+    });
   }
 
   async updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao> {
@@ -804,11 +819,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOffer(id: string, offer: Partial<InsertOffer>): Promise<Offer> {
-    const [updatedOffer] = await db
-      .update(offers)
-      .set({ ...offer, updatedAt: new Date() })
-      .where(eq(offers.id, id))
-      .returning();
+    // Utilise une transaction robuste pour cette opération critique
+    const updatedOffer = await withTransaction(async (tx) => {
+      const [result] = await tx
+        .update(offers)
+        .set({ ...offer, updatedAt: new Date() })
+        .where(eq(offers.id, id))
+        .returning();
+      return result;
+    }, {
+      retries: 3,
+      timeout: 15000, // 15 secondes pour les mises à jour complexes
+      isolationLevel: 'READ COMMITTED'
+    });
     
     // AUTOMATISATION BATIGEST : Génération automatique du code chantier lors d'accord AO
     if (offer.status && (offer.status === 'valide' || offer.status === 'fin_etudes_validee')) {
@@ -998,17 +1021,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProject(project: InsertProject): Promise<Project> {
-    const [newProject] = await db.insert(projects).values(project).returning();
-    return newProject;
+    return safeInsert('projects', async () => {
+      const [newProject] = await db.insert(projects).values(project).returning();
+      return newProject;
+    }, {
+      retries: 3,
+      service: 'StoragePOC',
+      operation: 'createProject'
+    });
   }
 
   async updateProject(id: string, project: Partial<InsertProject>): Promise<Project> {
-    const [updatedProject] = await db
-      .update(projects)
-      .set({ ...project, updatedAt: new Date() })
-      .where(eq(projects.id, id))
-      .returning();
-    return updatedProject;
+    return safeUpdate('projects', async () => {
+      const [updatedProject] = await db
+        .update(projects)
+        .set({ ...project, updatedAt: new Date() })
+        .where(eq(projects.id, id))
+        .returning();
+      return updatedProject;
+    }, 1, {
+      retries: 3,
+      service: 'StoragePOC',
+      operation: 'updateProject'
+    });
   }
 
   // Project task operations (planning partagé)

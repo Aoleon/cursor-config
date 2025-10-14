@@ -8,6 +8,7 @@ import { storage, type IStorage } from "./storage-poc";
 // Import des nouveaux middlewares de robustesse
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { securityHeaders, sanitizeQuery, rateLimits } from "./middleware/security";
+import { databaseErrorHandler, addRequestId } from "./middleware/db-error-handler";
 import { logger } from './utils/logger';
 
 const app = express();
@@ -17,6 +18,7 @@ const app = express();
 // ========================================
 app.use(securityHeaders());
 app.use(sanitizeQuery());
+app.use(addRequestId); // Ajoute un ID unique pour tracer les requêtes
 
 // ========================================
 // MIDDLEWARES DE PARSING (avec limites de sécurité)
@@ -386,7 +388,10 @@ app.use((req, res, next) => {
   // Handler pour les routes non trouvées (avant le catch-all de Vite)
   app.use('/api/*', notFoundHandler);
   
-  // Middleware global de gestion d'erreurs
+  // Middleware de gestion d'erreurs de base de données
+  app.use(databaseErrorHandler);
+  
+  // Middleware global de gestion d'erreurs (doit être le dernier)
   app.use(errorHandler);
 
   // importantly only setup vite in development and after

@@ -21,6 +21,14 @@ import { logger } from '../../utils/logger';
 import type { IStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
 import { z } from 'zod';
+import {
+  processPdfSchema,
+  analyzeDocumentSchema,
+  generateDpgfOptionsSchema,
+  uploadObjectSchema,
+  createTemplateSchema,
+  updateTemplateSchema
+} from '../../validation-schemas';
 import multer from 'multer';
 import { OCRService } from '../../ocrService';
 import { ObjectStorageService } from '../../objectStorage';
@@ -111,6 +119,7 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
     isAuthenticated,
     rateLimits.processing,
     uploadMiddleware.single('pdf'),
+    validateBody(processPdfSchema),
     asyncHandler(async (req: any, res: Response) => {
       if (!req.file) {
         throw createError.badRequest('Aucun fichier PDF fourni');
@@ -127,7 +136,7 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       // Parse options
-      const options: OCROptions = req.body.options ? JSON.parse(req.body.options) : {};
+      const options: OCROptions = req.body.options;
 
       // Initialize OCR service
       await ocrService.initialize();
@@ -258,6 +267,7 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
     isAuthenticated,
     rateLimits.processing,
     uploadMiddleware.single('document'),
+    validateBody(analyzeDocumentSchema),
     asyncHandler(async (req: any, res: Response) => {
       if (!req.file) {
         throw createError.badRequest('Aucun fichier fourni');
@@ -417,6 +427,7 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.post('/api/pdf/dpgf/:offerId',
     isAuthenticated,
     rateLimits.processing,
+    validateBody(generateDpgfOptionsSchema),
     asyncHandler(async (req: any, res: Response) => {
       const { offerId } = req.params;
       const options: PDFOptions = req.body;
@@ -457,6 +468,7 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
     isAuthenticated,
     rateLimits.fileUpload,
     uploadMiddleware.single('file'),
+    validateBody(uploadObjectSchema),
     asyncHandler(async (req: any, res: Response) => {
       if (!req.file) {
         throw createError.badRequest('Aucun fichier fourni');
@@ -609,6 +621,7 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.post('/api/templates',
     isAuthenticated,
     rateLimits.creation,
+    validateBody(createTemplateSchema),
     asyncHandler(async (req: any, res: Response) => {
       const templateData = req.body;
       
@@ -641,6 +654,7 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
   // Update template
   router.put('/api/templates/:id',
     isAuthenticated,
+    validateBody(updateTemplateSchema),
     asyncHandler(async (req: any, res: Response) => {
       const { id } = req.params;
       const templateData = req.body;

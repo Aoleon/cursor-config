@@ -45,6 +45,18 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService } from "./objectStorage";
+import { 
+  startChiffrageSchema,
+  requestSuppliersSchema,
+  validateStudiesSchema,
+  createOfferWithStructureSchema,
+  convertToProjectSchema,
+  patchValidateStudiesSchema,
+  transformToProjectSchema,
+  createProjectSchema,
+  updateProjectSchema,
+  createProjectTaskSchema
+} from "./validation-schemas";
 import { documentProcessor, type ExtractedAOData } from "./documentProcessor";
 import { registerChiffrageRoutes } from "./routes/chiffrage";
 import validationMilestonesRouter from "./routes/validation-milestones";
@@ -1088,7 +1100,11 @@ app.get("/api/offers/suppliers-pending", isAuthenticated, asyncHandler(async (re
 }));
 
 // Nouvelle route : Valider passage vers chiffrage
-app.post("/api/offers/:id/start-chiffrage", isAuthenticated, asyncHandler(async (req, res) => {
+app.post("/api/offers/:id/start-chiffrage", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  validateBody(startChiffrageSchema),
+  asyncHandler(async (req, res) => {
   const offer = await storage.getOffer(req.params.id);
   if (!offer) {
     throw new NotFoundError(`Offre ${req.params.id}`);
@@ -1122,7 +1138,11 @@ app.post("/api/offers/:id/start-chiffrage", isAuthenticated, asyncHandler(async 
 }));
 
 // Nouvelle route : Valider étude technique vers demandes fournisseurs
-app.post("/api/offers/:id/request-suppliers", isAuthenticated, asyncHandler(async (req, res) => {
+app.post("/api/offers/:id/request-suppliers", 
+  isAuthenticated, 
+  validateParams(commonParamSchemas.id),
+  validateBody(requestSuppliersSchema),
+  asyncHandler(async (req, res) => {
   const offer = await storage.getOffer(req.params.id);
   if (!offer) {
     throw new NotFoundError(`Offre ${req.params.id}`);
@@ -1151,7 +1171,11 @@ app.post("/api/offers/:id/request-suppliers", isAuthenticated, asyncHandler(asyn
 }));
 
 // Route pour valider la fin d'études d'une offre
-app.post("/api/offers/:id/validate-studies", isAuthenticated, asyncHandler(async (req, res) => {
+app.post("/api/offers/:id/validate-studies", 
+  isAuthenticated,
+  validateParams(commonParamSchemas.id),
+  validateBody(validateStudiesSchema),
+  asyncHandler(async (req, res) => {
   const offer = await storage.getOffer(req.params.id);
   if (!offer) {
     throw new NotFoundError(`Offre ${req.params.id}`);
@@ -1241,7 +1265,10 @@ app.post("/api/offers",
 );
 
 // Endpoint enrichi pour créer offre avec arborescence documentaire (audit JLM)
-app.post("/api/offers/create-with-structure", isAuthenticated, asyncHandler(async (req, res) => {
+app.post("/api/offers/create-with-structure", 
+  isAuthenticated, 
+  validateBody(createOfferWithStructureSchema),
+  asyncHandler(async (req, res) => {
   const { uploadedFiles, creationMethod, ...offerData } = req.body;
     
     // Convertir les dates et données comme l'endpoint existant
@@ -1321,7 +1348,11 @@ app.patch("/api/offers/:id",
 );
 
 // Transformer une offre signée en projet
-app.post("/api/offers/:id/convert-to-project", isAuthenticated, asyncHandler(async (req, res) => {
+app.post("/api/offers/:id/convert-to-project", 
+  isAuthenticated,
+  validateParams(commonParamSchemas.id),
+  validateBody(convertToProjectSchema),
+  asyncHandler(async (req, res) => {
   const offer = await storage.getOffer(req.params.id);
   if (!offer) {
     throw new NotFoundError(`Offre ${req.params.id}`);
@@ -1424,7 +1455,11 @@ app.delete("/api/offers/:id", isAuthenticated, asyncHandler(async (req, res) => 
 }));
 
 // Validation jalon Fin d'études (spécifique POC) - Version complète avec eventBus
-app.patch("/api/offers/:id/validate-studies", isAuthenticated, asyncHandler(async (req, res) => {
+app.patch("/api/offers/:id/validate-studies", 
+  isAuthenticated,
+  validateParams(commonParamSchemas.id),
+  validateBody(patchValidateStudiesSchema),
+  asyncHandler(async (req, res) => {
   const { finEtudesValidatedAt, status } = req.body;
   
   // Trouver l'offre par son ID ou par aoId (même logique que GET /api/offers/:id)
@@ -1464,7 +1499,11 @@ app.patch("/api/offers/:id/validate-studies", isAuthenticated, asyncHandler(asyn
 }));
 
 // Transformation AO → Projet (principe formulaire unique évolutif)
-app.post("/api/offers/:id/transform-to-project", isAuthenticated, asyncHandler(async (req, res) => {
+app.post("/api/offers/:id/transform-to-project", 
+  isAuthenticated,
+  validateParams(commonParamSchemas.id),
+  validateBody(transformToProjectSchema),
+  asyncHandler(async (req, res) => {
   const offerId = req.params.id;
   const offer = await storage.getOffer(offerId);
   
@@ -1711,6 +1750,7 @@ app.get("/api/projects/:id", isAuthenticated, asyncHandler(async (req, res) => {
 
 app.post("/api/projects", 
   isAuthenticated, 
+  validateBody(createProjectSchema),
   asyncHandler(async (req, res) => {
     // Convert string dates to Date objects before validation - WITH EXPLICIT HANDLING
     const projectData = { ...req.body };
@@ -1792,6 +1832,7 @@ app.post("/api/projects",
 app.patch("/api/projects/:id", 
   isAuthenticated, 
   validateParams(commonParamSchemas.id),
+  validateBody(updateProjectSchema),
   asyncHandler(async (req, res) => {
     // Convert string dates to Date objects before validation
     const convertedData = convertDatesInObject(req.body);
@@ -1896,6 +1937,7 @@ app.get("/api/projects/:projectId/tasks",
 app.post("/api/projects/:projectId/tasks", 
   isAuthenticated, 
   validateParams(commonParamSchemas.projectId),
+  validateBody(createProjectTaskSchema),
   asyncHandler(async (req, res) => {
     // Convert string dates to Date objects
     const taskData = {
@@ -3104,140 +3146,8 @@ app.post("/api/documents/analyze",
 // ENHANCED OFFER ROUTES - Création avec arborescence
 // ========================================
 
-// Créer une offre avec génération automatique d'arborescence documentaire
-app.post("/api/offers/create-with-structure", 
-  isAuthenticated,
-  asyncHandler(async (req, res) => {
-    const { creationMethod, uploadedFiles, ...offerData } = req.body;
-    
-    // Convertir les dates string en objets Date si elles sont présentes
-    const processedData = {
-      ...offerData,
-      dateRenduAO: offerData.dateRenduAO ? new Date(offerData.dateRenduAO) : 
-        // Calculer automatiquement J-15 si date limite fournie
-        (offerData.dateLimiteRemise ? calculerDateRemiseJ15(new Date(offerData.dateLimiteRemise)) : undefined),
-      dateAcceptationAO: offerData.dateAcceptationAO ? new Date(offerData.dateAcceptationAO) : undefined,
-      demarragePrevu: offerData.demarragePrevu ? new Date(offerData.demarragePrevu) : undefined,
-      dateLivraisonPrevue: offerData.dateLivraisonPrevue ? new Date(offerData.dateLivraisonPrevue) : undefined,
-      deadline: offerData.deadline ? new Date(offerData.deadline) : undefined,
-      montantEstime: offerData.montantEstime ? offerData.montantEstime.toString() : undefined,
-      prorataEventuel: offerData.prorataEventuel ? offerData.prorataEventuel.toString() : undefined,
-      beHoursEstimated: offerData.beHoursEstimated ? offerData.beHoursEstimated.toString() : undefined,
-    };
-
-    // Valider les données d'offre
-    const validatedData = insertOfferSchema.parse(processedData);
-    
-    // Créer l'offre
-    const offer = await storage.createOffer(validatedData);
-
-    // 1. GÉNÉRATION AUTOMATIQUE D'ARBORESCENCE DOCUMENTAIRE
-    const objectStorageService = new ObjectStorageService();
-    let documentStructure: { basePath: string; folders: string[] } | null = null;
-    
-    try {
-      documentStructure = await objectStorageService.createOfferDocumentStructure(
-        offer.id, 
-        offer.reference
-      );
-      logger.info('Generated document structure for offer', {
-        metadata: { offerReference: offer.reference, documentStructure }
-      });
-    } catch (docError: any) {
-      logger.warn('Could not create document structure', {
-        metadata: { error: docError?.message }
-      });
-    }
-
-    // 2. CRÉATION AUTOMATIQUE DU JALON "RENDU AO" SI DATE LIMITE FOURNIE
-    let milestone;
-    if (processedData.deadline) {
-      try {
-        // Créer une tâche jalon "Rendu AO" dans le système de planning
-        const milestoneTaskData = {
-          name: `Rendu AO - ${offer.reference}`,
-          description: `Jalon automatique : Date limite de remise pour ${offer.client}`,
-          status: "a_faire" as const,
-          priority: "haute" as const,
-          startDate: new Date(processedData.deadline),
-          endDate: new Date(processedData.deadline),
-          assignedUserId: offer.responsibleUserId,
-          offerId: offer.id,
-          isJalon: true,
-        };
-        
-        // Note: Pour le POC, nous créons le jalon comme une tâche générique
-        // Dans une implémentation complète, cela pourrait être lié à un projet spécifique
-        logger.info('Created milestone for offer', {
-          metadata: { offerReference: offer.reference, deadline: processedData.deadline }
-        });
-        milestone = milestoneTaskData;
-      } catch (milestoneError: any) {
-        logger.warn('Could not create milestone', {
-          metadata: { error: milestoneError?.message }
-        });
-      }
-    }
-
-    // 3. MISE À JOUR AUTOMATIQUE DU STATUT AO EN "EN CHIFFRAGE"
-    if (offer.aoId) {
-      try {
-        // Mettre à jour le statut de l'AO associé pour indiquer qu'il est en cours de chiffrage
-        const aoUpdate = {
-          isSelected: true,
-          selectionComment: `Dossier d'offre ${offer.reference} créé le ${new Date().toLocaleDateString('fr-FR')}`
-        };
-        
-        // Note: La méthode updateAo n'existe pas encore dans storage, on va la simuler pour le POC
-        logger.info('Would update AO status to En chiffrage', {
-          metadata: { aoId: offer.aoId, offerReference: offer.reference }
-        });
-      } catch (aoUpdateError: any) {
-        logger.warn('Could not update AO status', {
-          metadata: { error: aoUpdateError?.message }
-        });
-      }
-    }
-
-    // 4. TRAITEMENT DES FICHIERS IMPORTÉS (si méthode = import)
-    let processedFiles;
-    if (creationMethod === "import" && uploadedFiles && uploadedFiles.length > 0) {
-      try {
-        processedFiles = uploadedFiles.map((file: any) => ({
-          name: file.name,
-          size: file.size,
-          uploadURL: file.uploadURL,
-          organizedPath: `${documentStructure?.basePath || 'temp'}/01-DCE-Cotes-Photos/${file.name}`
-        }));
-        
-        logger.info('Processed imported files for offer', {
-          metadata: { count: processedFiles.length, offerReference: offer.reference }
-        });
-      } catch (fileError: any) {
-        logger.warn('Could not process uploaded files', {
-          metadata: { error: fileError?.message }
-        });
-      }
-    }
-
-    logger.info('[Offers] Offre créée avec structure', { 
-      metadata: { offerId: offer.id, reference: offer.reference, creationMethod } 
-    });
-    
-    // Réponse complète avec toutes les informations
-    const response = {
-      ...offer,
-      documentStructure: documentStructure || null,
-      milestone: milestone || null,
-      aoStatusUpdated: !!offer.aoId,
-      processedFiles: processedFiles || [],
-      creationMethod,
-      message: `Dossier d'offre ${offer.reference} créé avec succès. Arborescence documentaire générée automatiquement.`
-    };
-
-    res.status(201).json(response);
-  })
-);
+// Route dupliquée supprimée - déjà définie ligne 1271
+// Cette section est maintenant obsolète car la fonctionnalité est gérée par la route principale
 
 // Route pour servir les objets/fichiers depuis l'object storage
 app.get("/api/objects/:objectPath(*)", 

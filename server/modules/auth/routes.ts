@@ -12,11 +12,13 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler } from '../../middleware/errorHandler';
+import { validateBody } from '../../middleware/validation';
 import { AuthenticationError, AuthorizationError } from '../../utils/error-handler';
 import { logger } from '../../utils/logger';
 import type { IStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
 import type { AuthUser, BasicAuthRequest, AuthHealthStatus } from './types';
+import { basicLoginSchema } from '../../validation-schemas';
 
 export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router {
   const router = Router();
@@ -49,7 +51,9 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
   // ========================================
 
   // Basic Auth Login Route (Development Only)
-  router.post('/api/login/basic', asyncHandler(async (req: Request, res: Response) => {
+  router.post('/api/login/basic', 
+    validateBody(basicLoginSchema),
+    asyncHandler(async (req: Request, res: Response) => {
     if (process.env.NODE_ENV === 'production') {
       return res.status(404).json({ message: "Not found" });
     }

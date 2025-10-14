@@ -8,6 +8,14 @@ import { sendSuccess, asyncHandler } from "./middleware/errorHandler";
 import { z } from "zod";
 import { logger } from "./utils/logger";
 import { ValidationError, NotFoundError, DatabaseError } from "./utils/error-handler";
+import {
+  validateEtudeSchema,
+  validateChiffrageSchema,
+  relanceSchema,
+  validatePlanningSchema,
+  startChantierSchema,
+  finishProjectSchema
+} from "./validation-schemas";
 
 const projectStatusValues = [
   "passation", "etude", "visa_architecte", "planification", 
@@ -94,7 +102,10 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     res.json(enrichedAos);
   }));
 
-  app.post("/api/aos/:id/validate-etude", isAuthenticated, asyncHandler(async (req, res) => {
+  app.post("/api/aos/:id/validate-etude", 
+    isAuthenticated,
+    validateBody(validateEtudeSchema),
+    asyncHandler(async (req, res) => {
     const aoId = req.params.id;
     
     const existingAo = await storage.getAo(aoId);
@@ -147,7 +158,10 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     res.json(filtered);
   }));
 
-  app.post("/api/aos/:id/validate-chiffrage", isAuthenticated, asyncHandler(async (req, res) => {
+  app.post("/api/aos/:id/validate-chiffrage", 
+    isAuthenticated,
+    validateBody(validateChiffrageSchema),
+    asyncHandler(async (req, res) => {
     const aoId = req.params.id;
     
     logger.info('[Workflow] Chiffrage validé', { 
@@ -204,7 +218,10 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     });
   }));
 
-  app.post("/api/aos/:id/relance", isAuthenticated, asyncHandler(async (req, res) => {
+  app.post("/api/aos/:id/relance", 
+    isAuthenticated,
+    validateBody(relanceSchema),
+    asyncHandler(async (req, res) => {
     const aoId = req.params.id;
     
     logger.info('[Workflow] Relance client effectuée', { 
@@ -349,7 +366,10 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     res.json(planningData);
   }));
 
-  app.post("/api/projects/:id/validate-planning", isAuthenticated, asyncHandler(async (req, res) => {
+  app.post("/api/projects/:id/validate-planning", 
+    isAuthenticated,
+    validateBody(validatePlanningSchema),
+    asyncHandler(async (req, res) => {
     const projectId = req.params.id;
     
     logger.info('[Workflow] Planification validée', { 
@@ -364,7 +384,10 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     });
   }));
 
-  app.post("/api/projects/:id/start-chantier", isAuthenticated, asyncHandler(async (req, res) => {
+  app.post("/api/projects/:id/start-chantier", 
+    isAuthenticated,
+    validateBody(startChantierSchema),
+    asyncHandler(async (req, res) => {
     const projectId = req.params.id;
     
     logger.info('[Workflow] Chantier démarré', { 
@@ -380,7 +403,10 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     });
   }));
 
-  app.post("/api/projects/:id/finish", isAuthenticated, asyncHandler(async (req, res) => {
+  app.post("/api/projects/:id/finish", 
+    isAuthenticated,
+    validateBody(finishProjectSchema),
+    asyncHandler(async (req, res) => {
     const projectId = req.params.id;
     
     logger.info('[Workflow] Chantier terminé', { 

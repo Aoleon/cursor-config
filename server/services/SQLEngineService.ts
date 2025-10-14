@@ -3,7 +3,7 @@ import { RBACService } from "./RBACService";
 import { BusinessContextService } from "./BusinessContextService";
 import { EventBus } from "../eventBus";
 import { IStorage } from "../storage-poc";
-import { db } from "../db";
+import { db, pool } from "../db";
 import { sql } from "drizzle-orm";
 import crypto from "crypto";
 import { z } from "zod";
@@ -1821,13 +1821,14 @@ INSTRUCTIONS DE BASE:
     error?: any;
   }> {
     const startTime = Date.now();
+    
+    // Limitation des résultats si pas déjà présente
+    const limitedSQL = this.ensureLimitClause(sql, maxResults);
+    
+    // Décoder les entités HTML qui pourraient être présentes dans le SQL
+    const decodedSQL = this.decodeHTMLEntities(limitedSQL);
 
     try {
-      // Limitation des résultats si pas déjà présente
-      const limitedSQL = this.ensureLimitClause(sql, maxResults);
-      
-      // Décoder les entités HTML qui pourraient être présentes dans le SQL
-      const decodedSQL = this.decodeHTMLEntities(limitedSQL);
 
       // Exécution avec timeout robuste (évite unhandled rejection)
       let timeoutId: NodeJS.Timeout | null = null;
@@ -1841,10 +1842,9 @@ INSTRUCTIONS DE BASE:
       });
 
       // Créer la promesse de requête  
-      // Pour exécuter du SQL dynamique dans Drizzle, on doit utiliser le sql operator correctement
-      // On crée un objet SQL à partir de la chaîne avec sql.raw ou une méthode équivalente
-      const sqlQuery = sql.raw(decodedSQL);
-      const queryPromise = db.execute(sqlQuery);
+      // Pour exécuter du SQL dynamique dans Drizzle avec Neon
+      // On utilise directement le pool sous-jacent pour le SQL brut
+      const queryPromise = pool.query(decodedSQL);
       
       try {
         // Race entre la requête et le timeout

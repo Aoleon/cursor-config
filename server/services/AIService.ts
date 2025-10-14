@@ -8,6 +8,9 @@ import { getContextBuilderService } from "./ContextBuilderService";
 import { getContextCacheService } from "./ContextCacheService";
 import { getPerformanceMetricsService } from "./PerformanceMetricsService";
 import { logger } from '../utils/logger';
+import { withRetry, isRetryableError } from '../utils/retry-helper';
+import { CircuitBreaker, CircuitBreakerManager } from '../utils/circuit-breaker';
+import { API_LIMITS, getModelConfig } from '../config/api-limits';
 
 // Référence blueprints: javascript_anthropic et javascript_openai intégrés
 /*
@@ -73,6 +76,10 @@ export class AIService {
   private contextBuilder: any;
   private contextCache: any;
   private performanceMetrics: any;
+  // Circuit breakers pour chaque provider
+  private circuitBreakerManager: CircuitBreakerManager;
+  private claudeBreaker: CircuitBreaker;
+  private gptBreaker: CircuitBreaker;
   // Cache in-memory en fallback si DB échoue
   private memoryCache: Map<string, {
     data: any;
@@ -108,6 +115,59 @@ export class AIService {
     this.contextBuilder = getContextBuilderService(storage);
     this.contextCache = getContextCacheService(storage);
     this.performanceMetrics = getPerformanceMetricsService(storage);
+    
+    // Initialisation des circuit breakers
+    this.circuitBreakerManager = CircuitBreakerManager.getInstance();
+    
+    // Circuit breaker pour Claude
+    const claudeConfig = API_LIMITS.ai.claude;
+    this.claudeBreaker = this.circuitBreakerManager.getBreaker('claude', {
+      threshold: claudeConfig.circuitBreaker?.threshold || 5,
+      timeout: claudeConfig.circuitBreaker?.timeout || 60000,
+      onOpen: (name) => {
+        logger.warn('Circuit breaker ouvert pour Claude', {
+          metadata: {
+            service: 'AIService',
+            operation: 'circuit_breaker',
+            provider: name
+          }
+        });
+      },
+      onClose: (name) => {
+        logger.info('Circuit breaker fermé pour Claude', {
+          metadata: {
+            service: 'AIService',
+            operation: 'circuit_breaker',
+            provider: name
+          }
+        });
+      }
+    });
+    
+    // Circuit breaker pour GPT
+    const gptConfig = API_LIMITS.ai.openai;
+    this.gptBreaker = this.circuitBreakerManager.getBreaker('gpt', {
+      threshold: gptConfig.circuitBreaker?.threshold || 5,
+      timeout: gptConfig.circuitBreaker?.timeout || 60000,
+      onOpen: (name) => {
+        logger.warn('Circuit breaker ouvert pour GPT', {
+          metadata: {
+            service: 'AIService',
+            operation: 'circuit_breaker',
+            provider: name
+          }
+        });
+      },
+      onClose: (name) => {
+        logger.info('Circuit breaker fermé pour GPT', {
+          metadata: {
+            service: 'AIService',
+            operation: 'circuit_breaker',
+            provider: name
+          }
+        });
+      }
+    });
   }
 
   // ========================================
@@ -773,17 +833,18 @@ export class AIService {
   // ========================================
 
   /**
-   * Exécute la requête avec le modèle sélectionné + retry logic amélioré
-   * OPTIMISÉ : Timeouts progressifs et réponses dégradées
+   * Exécute la requête avec le modèle sélectionné + retry logic robuste
+   * NOUVEAU : Retry avec backoff exponentiel et circuit breaker
    */
   private async executeModelQuery(
     request: AiQueryRequest, 
     modelSelection: ModelSelectionResult,
     requestId: string
   ): Promise<AiQueryResponse> {
+    const startTime = Date.now();
     
     // Logs enrichis pour debugging
-    logger.info('Début requête IA', {
+    logger.info('Début requête IA avec retry robuste', {
       metadata: {
         service: 'AIService',
         operation: 'executeModelQuery',
@@ -792,8 +853,6 @@ export class AIService {
         complexity: request.complexity || 'simple',
         hasContext: !!request.context,
         contextLength: request.context?.length || 0,
-        timeout: REQUEST_TIMEOUT_MS,
-        timestamp: new Date().toISOString(),
         requestId,
         userRole: request.userRole
       }
@@ -810,7 +869,7 @@ export class AIService {
           explanation: "Réponse optimisée basée sur l'historique (cache dégradé)",
           modelUsed: "degraded_cache",
           tokensUsed: 0,
-          responseTimeMs: 0,
+          responseTimeMs: Date.now() - startTime,
           fromCache: true,
           confidence: 0.6,
           warnings: ["Réponse simplifiée pour performance optimale"]
@@ -820,103 +879,191 @@ export class AIService {
     
     let lastError: any = null;
     let fallbackAttempted = false;
+    let retryStats: any = null;
 
-    // Tentative avec le modèle principal et timeout normal
+    // Obtenir la configuration selon le modèle
+    const providerName = modelSelection.selectedModel === "claude_sonnet_4" ? 'claude' : 'openai';
+    const modelConfig = getModelConfig(providerName, 
+      modelSelection.selectedModel === "claude_sonnet_4" ? DEFAULT_CLAUDE_MODEL : DEFAULT_GPT_MODEL
+    );
+    
+    // Sélectionner le circuit breaker approprié
+    const circuitBreaker = modelSelection.selectedModel === "claude_sonnet_4" 
+      ? this.claudeBreaker 
+      : this.gptBreaker;
+
+    // Tentative avec le modèle principal avec retry et circuit breaker
     try {
-      logger.info('Tentative avec modèle principal', { 
+      logger.info('Tentative avec modèle principal et retry robuste', { 
         metadata: {
           service: 'AIService',
           operation: 'executeModelQuery',
           model: modelSelection.selectedModel,
-          timeout: REQUEST_TIMEOUT_MS
+          maxRetries: modelConfig.maxRetries,
+          timeout: modelConfig.timeout,
+          backoffMultiplier: modelConfig.backoffMultiplier
         }
       });
       
-      const result = await this.executeWithTimeout(
-        async () => {
-          if (modelSelection.selectedModel === "claude_sonnet_4") {
-            return await this.executeClaude(request, requestId);
-          } else if (modelSelection.selectedModel === "gpt_5") {
-            return await this.executeGPT(request, requestId);
+      // Exécuter avec circuit breaker et retry
+      const result = await circuitBreaker.execute(async () => {
+        return await withRetry(
+          async () => {
+            if (modelSelection.selectedModel === "claude_sonnet_4") {
+              return await this.executeClaude(request, requestId);
+            } else if (modelSelection.selectedModel === "gpt_5") {
+              return await this.executeGPT(request, requestId);
+            }
+            throw new Error(`Modèle non supporté: ${modelSelection.selectedModel}`);
+          },
+          {
+            maxRetries: modelConfig.maxRetries,
+            timeout: modelConfig.timeout,
+            initialDelay: modelConfig.initialDelay || 1000,
+            maxDelay: modelConfig.maxDelay || 10000,
+            backoffMultiplier: modelConfig.backoffMultiplier,
+            retryCondition: (error) => {
+              // Ne pas retry si circuit breaker ouvert
+              if ((error as any)?.circuitBreakerOpen) {
+                return false;
+              }
+              // Utiliser la fonction isRetryableError importée
+              return isRetryableError(error);
+            },
+            onRetry: (attempt, delay, error) => {
+              logger.warn('Retry IA en cours', {
+                metadata: {
+                  service: 'AIService',
+                  operation: 'executeModelQuery',
+                  model: modelSelection.selectedModel,
+                  attempt,
+                  delay,
+                  error: error instanceof Error ? error.message : String(error)
+                }
+              });
+            }
           }
-          throw new Error(`Modèle non supporté: ${modelSelection.selectedModel}`);
-        },
-        REQUEST_TIMEOUT_MS
-      );
+        );
+      });
       
-      logger.info('Modèle principal réussi', { 
+      logger.info('Modèle principal réussi avec retry', { 
         metadata: {
           service: 'AIService',
           operation: 'executeModelQuery',
           model: modelSelection.selectedModel,
-          responseTime: result.data?.responseTimeMs
+          responseTime: result.data?.responseTimeMs,
+          totalTime: Date.now() - startTime
         }
       });
       
       return result;
       
     } catch (error) {
-      logger.warn('Modèle principal échoué, tentative fallback', { 
+      // Extraire les stats de retry si disponibles
+      retryStats = (error as any)?.retryStats;
+      
+      logger.warn('Modèle principal échoué après retry, tentative fallback', { 
         metadata: {
           service: 'AIService',
           operation: 'executeModelQuery',
           model: modelSelection.selectedModel,
           error: error instanceof Error ? error.message : String(error),
-          timeout: error instanceof Error && error.message.includes('Timeout')
+          timeout: error instanceof Error && error.message.includes('Timeout'),
+          circuitBreakerOpen: (error as any)?.circuitBreakerOpen,
+          retryStats: retryStats
         }
       });
       lastError = error;
     }
 
-    // Tentative fallback avec timeout étendu (10s)
+    // Tentative fallback avec retry si disponible
     if (modelSelection.fallbackAvailable && !fallbackAttempted) {
       const fallbackModel = modelSelection.selectedModel === "claude_sonnet_4" ? "gpt_5" : "claude_sonnet_4";
-      const fallbackTimeout = 10000; // 10s pour le fallback
+      const fallbackProviderName = fallbackModel === "claude_sonnet_4" ? 'claude' : 'openai';
+      const fallbackConfig = getModelConfig(fallbackProviderName,
+        fallbackModel === "claude_sonnet_4" ? DEFAULT_CLAUDE_MODEL : DEFAULT_GPT_MODEL
+      );
+      const fallbackCircuitBreaker = fallbackModel === "claude_sonnet_4"
+        ? this.claudeBreaker
+        : this.gptBreaker;
       
-      logger.info('Tentative fallback avec timeout étendu', {
+      logger.info('Tentative fallback avec retry robuste', {
         metadata: {
           service: 'AIService',
           operation: 'executeModelQuery',
           fallbackModel,
           originalModel: modelSelection.selectedModel,
-          timeout: fallbackTimeout
+          maxRetries: fallbackConfig.maxRetries,
+          timeout: fallbackConfig.timeout
         }
       });
       
       fallbackAttempted = true;
       
       try {
-        const result = await this.executeWithTimeout(
-          async () => {
-            if (fallbackModel === "claude_sonnet_4") {
-              return await this.executeClaude(request, requestId);
-            } else if (fallbackModel === "gpt_5" && this.openai) {
-              return await this.executeGPT(request, requestId);
+        const result = await fallbackCircuitBreaker.execute(async () => {
+          return await withRetry(
+            async () => {
+              if (fallbackModel === "claude_sonnet_4") {
+                return await this.executeClaude(request, requestId);
+              } else if (fallbackModel === "gpt_5" && this.openai) {
+                return await this.executeGPT(request, requestId);
+              }
+              throw new Error(`Modèle fallback non disponible: ${fallbackModel}`);
+            },
+            {
+              maxRetries: fallbackConfig.maxRetries,
+              timeout: fallbackConfig.timeout,
+              initialDelay: fallbackConfig.initialDelay || 1000,
+              maxDelay: fallbackConfig.maxDelay || 10000,
+              backoffMultiplier: fallbackConfig.backoffMultiplier,
+              retryCondition: (error) => {
+                if ((error as any)?.circuitBreakerOpen) {
+                  return false;
+                }
+                return isRetryableError(error);
+              },
+              onRetry: (attempt, delay, error) => {
+                logger.warn('Retry fallback IA en cours', {
+                  metadata: {
+                    service: 'AIService',
+                    operation: 'executeModelQuery',
+                    model: fallbackModel,
+                    attempt,
+                    delay,
+                    error: error instanceof Error ? error.message : String(error)
+                  }
+                });
+              }
             }
-            throw new Error(`Modèle fallback non disponible: ${fallbackModel}`);
-          },
-          fallbackTimeout
-        );
+          );
+        });
         
-        logger.info('Fallback réussi', {
+        logger.info('Fallback réussi avec retry', {
           metadata: {
             service: 'AIService',
             operation: 'executeModelQuery',
             fallbackModel,
-            responseTime: result.data?.responseTimeMs
+            responseTime: result.data?.responseTimeMs,
+            totalTime: Date.now() - startTime
           }
         });
         
         return result;
         
       } catch (fallbackError) {
-        logger.error('Tous les modèles ont échoué', { 
+        const fallbackRetryStats = (fallbackError as any)?.retryStats;
+        
+        logger.error('Tous les modèles ont échoué après retry', { 
           metadata: {
             service: 'AIService',
             operation: 'executeModelQuery',
             fallbackModel,
             error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-            stack: fallbackError instanceof Error ? fallbackError.stack : undefined
+            stack: fallbackError instanceof Error ? fallbackError.stack : undefined,
+            circuitBreakerOpen: (fallbackError as any)?.circuitBreakerOpen,
+            retryStats: fallbackRetryStats,
+            totalTime: Date.now() - startTime
           }
         });
         lastError = fallbackError;
@@ -924,12 +1071,14 @@ export class AIService {
     }
 
     // Retourner une réponse dégradée mais utile
-    logger.info('Retour réponse dégradée suite aux timeouts', {
+    logger.info('Retour réponse dégradée après tous les retries', {
       metadata: {
         service: 'AIService',
         operation: 'executeModelQuery',
         fallbackAttempted,
-        complexity: request.complexity || 'high'
+        complexity: request.complexity || 'high',
+        totalTime: Date.now() - startTime,
+        retryStats: retryStats
       }
     });
     
@@ -948,23 +1097,24 @@ export class AIService {
       data: {
         query: request.query,
         sqlGenerated: simplifiedSQL,
-        explanation: "Je traite une requête complexe qui prend plus de temps que prévu. Voici une réponse simplifiée. Pour des résultats plus rapides, essayez une requête plus spécifique.",
+        explanation: "Les services IA sont temporairement surchargés. Voici une réponse simplifiée basée sur votre requête. Les capacités complètes reviendront bientôt.",
         modelUsed: "degraded",
         tokensUsed: 0,
-        responseTimeMs: Date.now() - Date.now(), // 0ms car réponse générée localement
+        responseTimeMs: Date.now() - startTime,
         fromCache: false,
         confidence: 0.5,
         warnings: [
-          "Réponse dégradée suite à timeout",
-          "Simplifiez votre requête pour des résultats plus précis",
-          "Essayez de diviser votre requête en plusieurs parties"
+          "Réponse dégradée après plusieurs tentatives",
+          "Les services IA se rétabliront automatiquement",
+          "Réessayez dans quelques instants pour une réponse complète"
         ],
         metadata: {
           complexity: 'high',
           timeout: true,
-          suggestion: 'Simplifiez votre requête pour des résultats plus rapides',
           fallbackAttempted,
-          lastError: lastError instanceof Error ? lastError.message : String(lastError)
+          retryStats: retryStats,
+          lastError: lastError instanceof Error ? lastError.message : String(lastError),
+          totalAttempts: retryStats?.attempts || 0
         }
       }
     };
@@ -995,6 +1145,7 @@ export class AIService {
 
   /**
    * Exécution avec Claude Sonnet 4
+   * SIMPLIFIÉ : Le timeout est maintenant géré par withRetry
    */
   private async executeClaude(request: AiQueryRequest, requestId: string): Promise<AiQueryResponse> {
     const startTime = Date.now();
@@ -1002,18 +1153,13 @@ export class AIService {
     const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql", undefined, request.complexity);
     const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole, undefined, request.complexity);
 
-    // Timeout explicite pour Anthropic Claude
-    const response = await Promise.race([
-      this.anthropic.messages.create({
-        model: DEFAULT_CLAUDE_MODEL,
-        max_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
-        messages: [{ role: 'user', content: userPrompt }],
-        system: systemPrompt,
-      }),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error(`Timeout Claude après ${REQUEST_TIMEOUT_MS}ms`)), REQUEST_TIMEOUT_MS)
-      )
-    ]) as any;
+    // Appel simple sans timeout (géré par withRetry)
+    const response = await this.anthropic.messages.create({
+      model: DEFAULT_CLAUDE_MODEL,
+      max_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
+      messages: [{ role: 'user', content: userPrompt }],
+      system: systemPrompt,
+    });
 
     const responseTime = Date.now() - startTime;
     const tokensUsed = this.estimateTokens(userPrompt + systemPrompt, response.content[0]?.text || "");
@@ -1039,6 +1185,7 @@ export class AIService {
 
   /**
    * Exécution avec GPT-5
+   * SIMPLIFIÉ : Le timeout est maintenant géré par withRetry
    */
   private async executeGPT(request: AiQueryRequest, requestId: string): Promise<AiQueryResponse> {
     if (!this.openai) {
@@ -1050,21 +1197,16 @@ export class AIService {
     const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql", undefined, request.complexity);
     const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole, undefined, request.complexity);
 
-    // Timeout explicite pour OpenAI GPT
-    const response = await Promise.race([
-      this.openai.chat.completions.create({
-        model: DEFAULT_GPT_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        response_format: { type: "json_object" },
-        max_completion_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
-      }),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error(`Timeout OpenAI après ${REQUEST_TIMEOUT_MS}ms`)), REQUEST_TIMEOUT_MS)
-      )
-    ]) as any;
+    // Appel simple sans timeout (géré par withRetry)
+    const response = await this.openai.chat.completions.create({
+      model: DEFAULT_GPT_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: { type: "json_object" },
+      max_completion_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
+    });
 
     const responseTime = Date.now() - startTime;
     const tokensUsed = response.usage?.total_tokens || this.estimateTokens(userPrompt, response.choices[0].message.content || "");

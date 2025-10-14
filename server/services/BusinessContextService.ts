@@ -990,8 +990,8 @@ export class BusinessContextService {
           name: 'status',
           type: 'enum',
           businessName: 'Phase actuelle',
-          description: 'Étape dans le workflow projet (passation→étude→visa→planification→approvisionnement→chantier→sav)',
-          examples: ['passation', 'etude', 'visa_architecte', 'chantier'],
+          description: 'Étape dans le workflow projet (étude→planification→approvisionnement→chantier→sav)',
+          examples: ['etude', 'planification', 'approvisionnement', 'chantier', 'sav'],
           nullable: false,
           constraints: ['NOT NULL']
         },

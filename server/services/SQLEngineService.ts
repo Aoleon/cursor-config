@@ -2002,7 +2002,15 @@ INSTRUCTIONS DE BASE:
     if (sql.toLowerCase().includes('limit')) {
       return sql; // Déjà une limite
     }
-    return sql + ` LIMIT ${maxResults}`;
+    
+    // Enlever le point-virgule à la fin s'il existe
+    let cleanedSQL = sql.trim();
+    if (cleanedSQL.endsWith(';')) {
+      cleanedSQL = cleanedSQL.slice(0, -1).trim();
+    }
+    
+    // Ajouter LIMIT et remettre le point-virgule
+    return cleanedSQL + ` LIMIT ${maxResults};`;
   }
 
   private isSensitiveQuery(sql: string, userRole: string): boolean {

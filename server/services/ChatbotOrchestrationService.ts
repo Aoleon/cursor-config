@@ -424,6 +424,7 @@ export class ChatbotOrchestrationService {
         include_temporal: true,
         cache_duration_minutes: 60,
         personalization_level: "advanced" as const,
+        generation_mode: "sql_minimal" as const,
         // Enrichissement avec les nouvelles données
         query_pattern: queryPattern,
         sql_template: sqlTemplate,
@@ -714,8 +715,8 @@ export class ChatbotOrchestrationService {
         sessionId,
         query: request.query,
         response: {
-          explanation,
-          suggestions,
+          explanation: enrichedExplanation,
+          suggestions: enhancedSuggestions,
           metadata: {
             parallelMode: true,
             modelSelection: modelSelection?.selectedModel,
@@ -750,8 +751,8 @@ export class ChatbotOrchestrationService {
         success: true,
         conversation_id: conversationId,
         query: request.query,
-        explanation,
-        suggestions,
+        explanation: enrichedExplanation,
+        suggestions: enhancedSuggestions,
         sql: this.shouldIncludeSQL(request.userRole) ? sqlResult.sql : undefined,
         results: sqlResult.results || [],
         confidence: sqlResult.confidence || 0,
@@ -1027,7 +1028,8 @@ export class ChatbotOrchestrationService {
         focus_areas: this.detectFocusAreas(request.query),
         include_temporal: true,
         cache_duration_minutes: 60,
-        personalization_level: "advanced" as const
+        personalization_level: "advanced" as const,
+        generation_mode: "sql_minimal" as const
       };
 
       const businessContextResponse = await this.businessContextService.generateBusinessContext(
@@ -1246,36 +1248,15 @@ export class ChatbotOrchestrationService {
         success: true,
         conversation_id: conversationId,
         query: request.query,
-        explanation: enrichedExplanation,
+        explanation: explanation,
         sql: this.shouldIncludeSQL(request.userRole) ? sqlResult.sql : undefined,
         results: sqlResult.results || [],
-        suggestions: enhancedSuggestions,
+        suggestions: suggestions,
         confidence: sqlResult.confidence || 0,
         execution_time_ms: totalExecutionTime,
-        model_used: sqlResult.metadata?.aiModelUsed || modelSelection?.selectedModel,
-        cache_hit: sqlResult.metadata?.cacheHit || false,
-        // Enrichissement avec métadonnées contextuelles
-        metadata: {
-          ...contextualMetadata,
-          queryAnalysis: {
-            type: queryPattern.queryType,
-            complexity: queryComplexity,
-            entities: queryPattern.entities,
-            temporalContext: queryPattern.temporalContext,
-            aggregations: queryPattern.aggregations
-          },
-          performanceOptimization: {
-            sqlHints: sqlTemplate.hints,
-            estimatedComplexity: sqlTemplate.estimatedComplexity,
-            cacheStrategy: this.calculateAdaptiveTTL(queryPattern)
-          }
-        }
+        model_used: sqlResult.metadata?.aiModelUsed || null,
+        cache_hit: sqlResult.metadata?.cacheHit || false
       };
-      
-      // === MISE EN CACHE LRU DU RÉSULTAT ===
-      if (sqlResult.success && !request.options?.dryRun) {
-        this.setCacheLRU(cacheKey, response, queryPattern);
-      }
 
       // Debug info si demandé - ENRICHI avec métriques détaillées
       if (request.options?.includeDebugInfo) {

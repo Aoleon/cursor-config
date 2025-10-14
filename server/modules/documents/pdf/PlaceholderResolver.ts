@@ -5,7 +5,7 @@
 
 import { Logger } from '../../../utils/logger';
 import { parseAmountSafely, formatMontantEuros, parseDateSafely, formatDateFR } from '../../../utils/shared-utils';
-import { get, set, has } from 'lodash';
+import _ from 'lodash';
 import type {
   Placeholder,
   PlaceholderFormatter,
@@ -131,7 +131,7 @@ export class PlaceholderResolver {
         
         if (value !== undefined) {
           resolved.push({ placeholder, value });
-          set(resolvedData, placeholder.path, value);
+          _.set(resolvedData, placeholder.path, value);
         } else if (placeholder.isRequired) {
           missing.push(placeholder);
           logger.warn('Required placeholder missing', { 
@@ -142,7 +142,7 @@ export class PlaceholderResolver {
           // Use default value if available
           const defaultValue = placeholder.defaultValue ?? '';
           resolved.push({ placeholder, value: defaultValue });
-          set(resolvedData, placeholder.path, defaultValue);
+          _.set(resolvedData, placeholder.path, defaultValue);
         }
       } catch (error) {
         logger.error('Error resolving placeholder', error as Error, {
@@ -263,7 +263,7 @@ export class PlaceholderResolver {
     customFormatters?: Record<string, PlaceholderFormatter>
   ): Promise<any> {
     // Get raw value from data
-    let value = get(data, placeholder.path);
+    let value = _.get(data, placeholder.path);
 
     // Apply formatter if present
     if (placeholder.formatter) {

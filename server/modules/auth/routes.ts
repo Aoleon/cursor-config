@@ -13,6 +13,7 @@ import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { validateBody } from '../../middleware/validation';
+import { rateLimits } from '../../middleware/rate-limiter';
 import { AuthenticationError, AuthorizationError } from '../../utils/error-handler';
 import { logger } from '../../utils/logger';
 import type { IStorage } from '../../storage-poc';
@@ -52,6 +53,7 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
 
   // Basic Auth Login Route (Development Only)
   router.post('/api/login/basic', 
+    rateLimits.auth, // Rate limiting: 5 attempts per 15 minutes
     validateBody(basicLoginSchema),
     asyncHandler(async (req: Request, res: Response) => {
     if (process.env.NODE_ENV === 'production') {

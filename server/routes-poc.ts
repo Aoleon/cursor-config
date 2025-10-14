@@ -6,7 +6,8 @@ import { OCRService } from "./ocrService";
 import multer from "multer";
 // Import des nouveaux middlewares de validation et sécurité
 import { validateBody, validateParams, validateQuery, commonParamSchemas, commonQuerySchemas, validateFileUpload } from "./middleware/validation";
-import { rateLimits, secureFileUpload } from "./middleware/security";
+import { secureFileUpload } from "./middleware/security";
+import { rateLimits } from "./middleware/rate-limiter";
 import { sendSuccess, sendPaginatedSuccess, createError, asyncHandler } from "./middleware/errorHandler";
 import { ValidationError, AuthenticationError, AuthorizationError, NotFoundError, DatabaseError } from "./utils/error-handler";
 import { logger } from "./utils/logger";
@@ -6959,7 +6960,7 @@ app.get("/api/business-context/knowledge/materials",
 // POST /api/chatbot/query - Endpoint principal du chatbot avec pipeline complet
 app.post("/api/chatbot/query",
   isAuthenticated,
-  rateLimits.processing, // Rate limiting strict pour le chatbot
+  rateLimits.chatbot, // Rate limiting strict pour le chatbot (10 req/min)
   validateBody(chatbotQueryRequestSchema),
   asyncHandler(async (req: any, res) => {
     const requestBody = req.body;

@@ -802,6 +802,1081 @@ export class BusinessContextService {
     }
   }
 
+  // ========================================
+  // MÉTADONNÉES ENRICHIES JLM - PHASE 3
+  // ========================================
+
+  /**
+   * Retourne des métadonnées enrichies complètes sur toutes les tables JLM
+   * @returns Métadonnées détaillées incluant descriptions métier, exemples, relations, index
+   */
+  async getEnrichedSchemaMetadata(): Promise<{
+    tables: Record<string, {
+      tableName: string;
+      businessName: string;
+      description: string;
+      domain: string[];
+      columns: Array<{
+        name: string;
+        type: string;
+        businessName: string;
+        description: string;
+        examples: string[];
+        nullable: boolean;
+        constraints?: string[];
+        relatedTo?: string;
+      }>;
+      relations: Array<{
+        targetTable: string;
+        type: 'one_to_one' | 'one_to_many' | 'many_to_one' | 'many_to_many';
+        via?: string;
+        description: string;
+      }>;
+      indexes: string[];
+      commonQueries: string[];
+      sqlExamples: Array<{
+        description: string;
+        sql: string;
+        explanation: string;
+      }>;
+    }>;
+    businessDictionary: Record<string, string>;
+    domainContexts: Record<string, any>;
+  }> {
+    const metadata = {
+      tables: {} as any,
+      businessDictionary: this.getJLMBusinessDictionary(),
+      domainContexts: this.getDomainSpecializedContexts()
+    };
+
+    // Table OFFERS - Offres commerciales
+    metadata.tables.offers = {
+      tableName: 'offers',
+      businessName: 'Offres commerciales',
+      description: 'Devis clients et propositions commerciales, de la création à la signature',
+      domain: ['commercial', 'financier'],
+      columns: [
+        {
+          name: 'id',
+          type: 'varchar',
+          businessName: 'Référence offre',
+          description: 'Identifiant unique de l\'offre',
+          examples: ['OFF-2025-001', 'OFF-2025-047', 'offre-lycee-bonaparte'],
+          nullable: false,
+          constraints: ['PRIMARY KEY', 'UNIQUE']
+        },
+        {
+          name: 'status',
+          type: 'enum',
+          businessName: 'Statut offre',
+          description: 'Étape actuelle dans le workflow offre',
+          examples: ['etude_technique', 'en_cours_chiffrage', 'valide', 'signe'],
+          nullable: false,
+          constraints: ['NOT NULL']
+        },
+        {
+          name: 'ao_id',
+          type: 'varchar',
+          businessName: 'Référence AO source',
+          description: 'Lien vers l\'appel d\'offres d\'origine',
+          examples: ['AO-2025-001', 'AO-2025-123'],
+          nullable: true,
+          relatedTo: 'aos.id'
+        },
+        {
+          name: 'estimated_amount',
+          type: 'decimal(10,2)',
+          businessName: 'Montant estimé HT',
+          description: 'Estimation financière de l\'offre en euros HT',
+          examples: ['25000.00', '150000.00', '450000.00'],
+          nullable: true
+        },
+        {
+          name: 'margin_percentage',
+          type: 'decimal(5,2)',
+          businessName: 'Marge prévisionnelle %',
+          description: 'Pourcentage de marge commerciale prévue',
+          examples: ['15.50', '22.00', '18.75'],
+          nullable: true
+        },
+        {
+          name: 'validation_date',
+          type: 'timestamp',
+          businessName: 'Date validation BE',
+          description: 'Date de validation technique par le BE',
+          examples: ['2025-03-15T14:30:00Z', '2025-04-01T09:00:00Z'],
+          nullable: true
+        },
+        {
+          name: 'responsable_user_id',
+          type: 'varchar',
+          businessName: 'Commercial responsable',
+          description: 'Commercial en charge de l\'offre',
+          examples: ['user-123', 'commercial-nord-01'],
+          nullable: false,
+          relatedTo: 'users.id'
+        }
+      ],
+      relations: [
+        {
+          targetTable: 'aos',
+          type: 'many_to_one',
+          description: 'Offre créée en réponse à un appel d\'offres'
+        },
+        {
+          targetTable: 'projects',
+          type: 'one_to_many',
+          description: 'Offre transformée en projet après signature'
+        },
+        {
+          targetTable: 'chiffrage_elements',
+          type: 'one_to_many',
+          description: 'Éléments de chiffrage détaillés de l\'offre'
+        }
+      ],
+      indexes: ['idx_offers_status', 'idx_offers_ao_id', 'idx_offers_responsable'],
+      commonQueries: [
+        'Offres en cours de chiffrage',
+        'Offres en attente validation BE',
+        'Taux transformation offres signées',
+        'Pipeline commercial par mois'
+      ],
+      sqlExamples: [
+        {
+          description: 'Offres en cours de chiffrage avec montants',
+          sql: `SELECT o.id, o.estimated_amount, u.name as commercial
+                FROM offers o 
+                LEFT JOIN users u ON o.responsable_user_id = u.id
+                WHERE o.status = 'en_cours_chiffrage'
+                ORDER BY o.created_at DESC`,
+          explanation: 'Liste les offres actuellement en phase de chiffrage avec leurs montants et commerciaux'
+        },
+        {
+          description: 'Taux de transformation offres → projets',
+          sql: `SELECT 
+                  COUNT(CASE WHEN status = 'signe' THEN 1 END)::float / COUNT(*) * 100 as taux_transformation
+                FROM offers 
+                WHERE created_at >= NOW() - INTERVAL '3 months'`,
+          explanation: 'Calcule le pourcentage d\'offres transformées en projets sur 3 mois'
+        }
+      ]
+    };
+
+    // Table PROJECTS - Projets de chantier
+    metadata.tables.projects = {
+      tableName: 'projects',
+      businessName: 'Projets de chantier',
+      description: 'Gestion complète des projets de menuiserie de la passation au SAV',
+      domain: ['operationnel', 'financier', 'planning'],
+      columns: [
+        {
+          name: 'id',
+          type: 'varchar',
+          businessName: 'Code projet',
+          description: 'Identifiant unique du projet',
+          examples: ['PRJ-2025-001', 'projet-villa-martin', 'PRJ-2025-089'],
+          nullable: false,
+          constraints: ['PRIMARY KEY']
+        },
+        {
+          name: 'status',
+          type: 'enum',
+          businessName: 'Phase actuelle',
+          description: 'Étape dans le workflow projet (passation→étude→visa→planification→approvisionnement→chantier→sav)',
+          examples: ['passation', 'etude', 'visa_architecte', 'chantier'],
+          nullable: false,
+          constraints: ['NOT NULL']
+        },
+        {
+          name: 'date_echeance',
+          type: 'timestamp',
+          businessName: 'Date livraison prévue',
+          description: 'Date de livraison contractuelle au client',
+          examples: ['2025-06-30', '2025-09-15', '2025-12-20'],
+          nullable: true
+        },
+        {
+          name: 'price_total',
+          type: 'decimal(12,2)',
+          businessName: 'Montant total HT',
+          description: 'Montant total du projet en euros HT',
+          examples: ['45000.00', '125000.00', '380000.00'],
+          nullable: true
+        },
+        {
+          name: 'actual_margin',
+          type: 'decimal(12,2)',
+          businessName: 'Marge réelle',
+          description: 'Marge réellement réalisée sur le projet',
+          examples: ['8500.00', '22000.00', '45000.00'],
+          nullable: true
+        },
+        {
+          name: 'responsable_user_id',
+          type: 'varchar',
+          businessName: 'Chef de projet',
+          description: 'Responsable principal du projet',
+          examples: ['user-456', 'chef-projet-01'],
+          nullable: false,
+          relatedTo: 'users.id'
+        },
+        {
+          name: 'offer_id',
+          type: 'varchar',
+          businessName: 'Offre source',
+          description: 'Offre commerciale ayant généré ce projet',
+          examples: ['OFF-2025-001', 'OFF-2025-047'],
+          nullable: true,
+          relatedTo: 'offers.id'
+        }
+      ],
+      relations: [
+        {
+          targetTable: 'offers',
+          type: 'many_to_one',
+          description: 'Projet créé depuis une offre signée'
+        },
+        {
+          targetTable: 'project_timelines',
+          type: 'one_to_many',
+          description: 'Planning détaillé et jalons du projet'
+        },
+        {
+          targetTable: 'project_tasks',
+          type: 'one_to_many',
+          description: 'Tâches et activités du projet'
+        },
+        {
+          targetTable: 'validation_milestones',
+          type: 'one_to_many',
+          description: 'Jalons de validation et contrôles qualité'
+        }
+      ],
+      indexes: ['idx_projects_status', 'idx_projects_responsable', 'idx_projects_echeance'],
+      commonQueries: [
+        'Projets en retard sur planning',
+        'Charge par chef de projet',
+        'Projets en phase chantier',
+        'Rentabilité par projet'
+      ],
+      sqlExamples: [
+        {
+          description: 'Projets en retard avec responsables',
+          sql: `SELECT p.id, p.date_echeance, u.name as chef_projet, 
+                  DATE_PART('day', p.date_echeance - NOW()) as jours_retard
+                FROM projects p
+                JOIN users u ON p.responsable_user_id = u.id
+                WHERE p.date_echeance < NOW() 
+                  AND p.status NOT IN ('termine', 'sav')
+                ORDER BY jours_retard DESC`,
+          explanation: 'Identifie tous les projets en retard avec nombre de jours et responsables'
+        },
+        {
+          description: 'Rentabilité moyenne par type de projet',
+          sql: `SELECT 
+                  p.project_type,
+                  AVG((p.actual_margin / p.price_total) * 100) as marge_moyenne_pct,
+                  COUNT(*) as nb_projets
+                FROM projects p
+                WHERE p.status = 'termine' 
+                  AND p.price_total > 0
+                GROUP BY p.project_type
+                ORDER BY marge_moyenne_pct DESC`,
+          explanation: 'Analyse la marge moyenne réalisée par type de projet terminé'
+        }
+      ]
+    };
+
+    // Table AOS - Appels d'offres
+    metadata.tables.aos = {
+      tableName: 'aos',
+      businessName: 'Appels d\'offres',
+      description: 'Opportunités commerciales reçues (marchés publics et privés)',
+      domain: ['commercial'],
+      columns: [
+        {
+          name: 'id',
+          type: 'varchar',
+          businessName: 'Référence AO',
+          description: 'Identifiant unique de l\'appel d\'offres',
+          examples: ['AO-2025-001', 'AO-2025-156', 'ao-mairie-paris'],
+          nullable: false,
+          constraints: ['PRIMARY KEY']
+        },
+        {
+          name: 'title',
+          type: 'text',
+          businessName: 'Titre AO',
+          description: 'Libellé complet de l\'appel d\'offres',
+          examples: ['Rénovation menuiseries lycée Bonaparte', 'Remplacement fenêtres mairie'],
+          nullable: false
+        },
+        {
+          name: 'deadline',
+          type: 'timestamp',
+          businessName: 'Date limite dépôt',
+          description: 'Date limite de remise des offres',
+          examples: ['2025-03-31T12:00:00Z', '2025-05-15T14:00:00Z'],
+          nullable: false
+        },
+        {
+          name: 'estimated_budget',
+          type: 'decimal(12,2)',
+          businessName: 'Budget estimé',
+          description: 'Enveloppe budgétaire estimée de l\'AO',
+          examples: ['250000.00', '500000.00', '1200000.00'],
+          nullable: true
+        },
+        {
+          name: 'market_type',
+          type: 'enum',
+          businessName: 'Type de marché',
+          description: 'Catégorie du marché (public, privé, restreint, etc.)',
+          examples: ['public', 'prive', 'ao_restreint'],
+          nullable: false
+        }
+      ],
+      relations: [
+        {
+          targetTable: 'offers',
+          type: 'one_to_many',
+          description: 'AO peut générer plusieurs variantes d\'offres'
+        },
+        {
+          targetTable: 'ao_documents',
+          type: 'one_to_many',
+          description: 'Documents associés (CCTP, plans, etc.)'
+        }
+      ],
+      indexes: ['idx_aos_deadline', 'idx_aos_market_type'],
+      commonQueries: [
+        'AO proches échéance',
+        'AO par type de marché',
+        'Taux de réponse aux AO'
+      ],
+      sqlExamples: [
+        {
+          description: 'AO urgents (échéance < 7 jours)',
+          sql: `SELECT id, title, deadline, 
+                  DATE_PART('day', deadline - NOW()) as jours_restants
+                FROM aos
+                WHERE deadline > NOW() 
+                  AND deadline <= NOW() + INTERVAL '7 days'
+                ORDER BY deadline ASC`,
+          explanation: 'Liste les appels d\'offres dont la date limite approche'
+        }
+      ]
+    };
+
+    // Plus de tables enrichies...
+    await this.enrichRemainingTables(metadata);
+    
+    return metadata;
+  }
+
+  /**
+   * Enrichit les tables restantes avec métadonnées
+   */
+  private async enrichRemainingTables(metadata: any): Promise<void> {
+    // Table SUPPLIERS - Fournisseurs
+    metadata.tables.suppliers = {
+      tableName: 'suppliers',
+      businessName: 'Fournisseurs',
+      description: 'Base fournisseurs pour matériaux et prestations menuiserie',
+      domain: ['achat', 'fournisseur'],
+      columns: [
+        {
+          name: 'id',
+          type: 'varchar',
+          businessName: 'Code fournisseur',
+          description: 'Identifiant unique du fournisseur',
+          examples: ['SUPP-001', 'REHAU-FR', 'TECHNAL-01'],
+          nullable: false,
+          constraints: ['PRIMARY KEY']
+        },
+        {
+          name: 'name',
+          type: 'varchar',
+          businessName: 'Raison sociale',
+          description: 'Nom commercial du fournisseur',
+          examples: ['REHAU SAS', 'TECHNAL', 'FERIMAT'],
+          nullable: false
+        },
+        {
+          name: 'specialty',
+          type: 'text',
+          businessName: 'Spécialité',
+          description: 'Domaine de spécialisation du fournisseur',
+          examples: ['Profilés PVC', 'Systèmes aluminium', 'Vitrages isolants'],
+          nullable: true
+        },
+        {
+          name: 'lead_time_days',
+          type: 'integer',
+          businessName: 'Délai livraison (jours)',
+          description: 'Délai de livraison moyen en jours',
+          examples: ['15', '21', '30'],
+          nullable: true
+        }
+      ],
+      relations: [
+        {
+          targetTable: 'supplier_quote_sessions',
+          type: 'one_to_many',
+          description: 'Sessions de consultation fournisseur'
+        }
+      ],
+      indexes: ['idx_suppliers_name'],
+      commonQueries: [
+        'Fournisseurs par délai de livraison',
+        'Performance fournisseurs'
+      ],
+      sqlExamples: [
+        {
+          description: 'Fournisseurs avec délais courts',
+          sql: `SELECT name, specialty, lead_time_days
+                FROM suppliers
+                WHERE lead_time_days <= 15
+                ORDER BY lead_time_days ASC`,
+          explanation: 'Liste les fournisseurs pouvant livrer rapidement (≤ 15 jours)'
+        }
+      ]
+    };
+
+    // Table PROJECT_TIMELINES - Plannings projets
+    metadata.tables.project_timelines = {
+      tableName: 'project_timelines',
+      businessName: 'Plannings projets',
+      description: 'Jalons et échéances détaillés des projets',
+      domain: ['planning', 'temporel'],
+      columns: [
+        {
+          name: 'id',
+          type: 'varchar',
+          businessName: 'ID timeline',
+          description: 'Identifiant unique du jalon',
+          examples: ['TL-001', 'timeline-prj-001-phase1'],
+          nullable: false
+        },
+        {
+          name: 'project_id',
+          type: 'varchar',
+          businessName: 'Projet associé',
+          description: 'Référence du projet parent',
+          examples: ['PRJ-2025-001'],
+          nullable: false,
+          relatedTo: 'projects.id'
+        },
+        {
+          name: 'phase_name',
+          type: 'varchar',
+          businessName: 'Nom de la phase',
+          description: 'Libellé de la phase projet',
+          examples: ['Étude technique', 'VISA Architecte', 'Livraison matériaux'],
+          nullable: false
+        },
+        {
+          name: 'start_date',
+          type: 'timestamp',
+          businessName: 'Date début',
+          description: 'Date de début prévue de la phase',
+          examples: ['2025-04-01', '2025-05-15'],
+          nullable: false
+        },
+        {
+          name: 'end_date',
+          type: 'timestamp',
+          businessName: 'Date fin',
+          description: 'Date de fin prévue de la phase',
+          examples: ['2025-04-15', '2025-06-01'],
+          nullable: false
+        },
+        {
+          name: 'actual_end_date',
+          type: 'timestamp',
+          businessName: 'Date fin réelle',
+          description: 'Date de fin effectivement réalisée',
+          examples: ['2025-04-18', '2025-06-05'],
+          nullable: true
+        }
+      ],
+      relations: [
+        {
+          targetTable: 'projects',
+          type: 'many_to_one',
+          description: 'Timeline appartient à un projet'
+        }
+      ],
+      indexes: ['idx_timelines_project', 'idx_timelines_dates'],
+      commonQueries: [
+        'Phases en retard',
+        'Planning hebdomadaire global'
+      ],
+      sqlExamples: [
+        {
+          description: 'Phases en cours cette semaine',
+          sql: `SELECT pt.phase_name, p.id as projet, pt.end_date
+                FROM project_timelines pt
+                JOIN projects p ON pt.project_id = p.id
+                WHERE pt.start_date <= NOW()
+                  AND pt.end_date >= NOW()
+                  AND pt.actual_end_date IS NULL
+                ORDER BY pt.end_date ASC`,
+          explanation: 'Montre toutes les phases actuellement actives'
+        }
+      ]
+    };
+
+    // Table DATE_ALERTS - Alertes temporelles
+    metadata.tables.date_alerts = {
+      tableName: 'date_alerts',
+      businessName: 'Alertes temporelles',
+      description: 'Système d\'alertes sur dates et échéances critiques',
+      domain: ['temporel', 'alertes'],
+      columns: [
+        {
+          name: 'id',
+          type: 'varchar',
+          businessName: 'ID alerte',
+          description: 'Identifiant unique de l\'alerte',
+          examples: ['ALERT-001', 'alert-retard-prj-001'],
+          nullable: false
+        },
+        {
+          name: 'entity_type',
+          type: 'varchar',
+          businessName: 'Type entité',
+          description: 'Type d\'objet concerné (project, offer, ao)',
+          examples: ['project', 'offer', 'ao'],
+          nullable: false
+        },
+        {
+          name: 'entity_id',
+          type: 'varchar',
+          businessName: 'Référence entité',
+          description: 'ID de l\'entité concernée',
+          examples: ['PRJ-2025-001', 'OFF-2025-047'],
+          nullable: false
+        },
+        {
+          name: 'alert_type',
+          type: 'varchar',
+          businessName: 'Type alerte',
+          description: 'Catégorie d\'alerte temporelle',
+          examples: ['retard_livraison', 'echeance_proche', 'jalon_depasse'],
+          nullable: false
+        },
+        {
+          name: 'severity',
+          type: 'varchar',
+          businessName: 'Sévérité',
+          description: 'Niveau de criticité (low, medium, high, critical)',
+          examples: ['high', 'critical', 'medium'],
+          nullable: false
+        },
+        {
+          name: 'days_offset',
+          type: 'integer',
+          businessName: 'Jours de décalage',
+          description: 'Nombre de jours de retard/avance',
+          examples: ['-5', '10', '3'],
+          nullable: true
+        }
+      ],
+      relations: [],
+      indexes: ['idx_alerts_entity', 'idx_alerts_severity'],
+      commonQueries: [
+        'Alertes critiques actives',
+        'Retards par projet'
+      ],
+      sqlExamples: [
+        {
+          description: 'Alertes critiques non traitées',
+          sql: `SELECT da.*, p.id as projet, p.responsable_user_id
+                FROM date_alerts da
+                LEFT JOIN projects p ON da.entity_id = p.id AND da.entity_type = 'project'
+                WHERE da.severity IN ('high', 'critical')
+                  AND da.resolved_at IS NULL
+                ORDER BY da.created_at DESC`,
+          explanation: 'Liste toutes les alertes critiques nécessitant une action'
+        }
+      ]
+    };
+
+    // Table BUSINESS_ALERTS - Alertes métier
+    metadata.tables.business_alerts = {
+      tableName: 'business_alerts',
+      businessName: 'Alertes métier',
+      description: 'Alertes sur indicateurs métier et seuils KPI',
+      domain: ['alertes', 'kpi'],
+      columns: [
+        {
+          name: 'id',
+          type: 'varchar',
+          businessName: 'ID alerte métier',
+          description: 'Identifiant unique de l\'alerte métier',
+          examples: ['BIZ-ALERT-001'],
+          nullable: false
+        },
+        {
+          name: 'metric_name',
+          type: 'varchar',
+          businessName: 'Indicateur',
+          description: 'Nom de l\'indicateur métier surveillé',
+          examples: ['taux_transformation', 'marge_moyenne', 'delai_moyen'],
+          nullable: false
+        },
+        {
+          name: 'threshold_value',
+          type: 'decimal',
+          businessName: 'Seuil déclenché',
+          description: 'Valeur seuil qui a déclenché l\'alerte',
+          examples: ['15.0', '30000', '0.75'],
+          nullable: false
+        },
+        {
+          name: 'actual_value',
+          type: 'decimal',
+          businessName: 'Valeur constatée',
+          description: 'Valeur réelle mesurée',
+          examples: ['12.5', '25000', '0.65'],
+          nullable: false
+        }
+      ],
+      relations: [],
+      indexes: ['idx_business_alerts_metric'],
+      commonQueries: [
+        'KPIs hors seuils',
+        'Tendances alertes métier'
+      ],
+      sqlExamples: [
+        {
+          description: 'Alertes KPI actives',
+          sql: `SELECT metric_name, threshold_value, actual_value,
+                  (actual_value - threshold_value) as ecart
+                FROM business_alerts
+                WHERE created_at >= NOW() - INTERVAL '7 days'
+                ORDER BY ABS(actual_value - threshold_value) DESC`,
+          explanation: 'Montre les écarts par rapport aux seuils définis'
+        }
+      ]
+    };
+
+    // Table CHIFFRAGE_ELEMENTS
+    metadata.tables.chiffrage_elements = {
+      tableName: 'chiffrage_elements',
+      businessName: 'Éléments de chiffrage',
+      description: 'Détail des éléments DPGF pour chiffrage précis',
+      domain: ['financier', 'chiffrage'],
+      columns: [
+        {
+          name: 'id',
+          type: 'varchar',
+          businessName: 'ID élément',
+          description: 'Identifiant unique de l\'élément de chiffrage',
+          examples: ['CHIFF-001', 'element-dpgf-001'],
+          nullable: false
+        },
+        {
+          name: 'offer_id',
+          type: 'varchar',
+          businessName: 'Offre associée',
+          description: 'Référence de l\'offre contenant cet élément',
+          examples: ['OFF-2025-001'],
+          nullable: false,
+          relatedTo: 'offers.id'
+        },
+        {
+          name: 'designation',
+          type: 'text',
+          businessName: 'Désignation',
+          description: 'Libellé détaillé de l\'élément',
+          examples: ['Fenêtre PVC 2 vantaux 120x140', 'Porte-fenêtre alu coulissante 240x215'],
+          nullable: false
+        },
+        {
+          name: 'quantity',
+          type: 'decimal',
+          businessName: 'Quantité',
+          description: 'Nombre d\'unités',
+          examples: ['12', '25', '8.5'],
+          nullable: false
+        },
+        {
+          name: 'unit_price',
+          type: 'decimal(10,2)',
+          businessName: 'Prix unitaire HT',
+          description: 'Prix à l\'unité hors taxes',
+          examples: ['450.00', '1250.00', '850.00'],
+          nullable: false
+        },
+        {
+          name: 'total_price',
+          type: 'decimal(12,2)',
+          businessName: 'Prix total HT',
+          description: 'Montant total ligne (quantité × prix unitaire)',
+          examples: ['5400.00', '31250.00', '7225.00'],
+          nullable: false
+        }
+      ],
+      relations: [
+        {
+          targetTable: 'offers',
+          type: 'many_to_one',
+          description: 'Élément appartient à une offre'
+        }
+      ],
+      indexes: ['idx_chiffrage_offer'],
+      commonQueries: [
+        'Détail chiffrage par offre',
+        'Top éléments par valeur'
+      ],
+      sqlExamples: [
+        {
+          description: 'Synthèse chiffrage par offre',
+          sql: `SELECT o.id as offre, 
+                  COUNT(ce.id) as nb_lignes,
+                  SUM(ce.total_price) as montant_total_ht
+                FROM offers o
+                LEFT JOIN chiffrage_elements ce ON ce.offer_id = o.id
+                WHERE o.status = 'en_cours_chiffrage'
+                GROUP BY o.id
+                ORDER BY montant_total_ht DESC`,
+          explanation: 'Récapitulatif des montants chiffrés par offre en cours'
+        }
+      ]
+    };
+
+    // Table TEAM_RESOURCES  
+    metadata.tables.team_resources = {
+      tableName: 'team_resources',
+      businessName: 'Ressources équipes',
+      description: 'Gestion des ressources humaines BE et chantier',
+      domain: ['ressources', 'planning'],
+      columns: [
+        {
+          name: 'id',
+          type: 'varchar',
+          businessName: 'ID ressource',
+          description: 'Identifiant unique de la ressource',
+          examples: ['RES-001', 'team-be-01'],
+          nullable: false
+        },
+        {
+          name: 'user_id',
+          type: 'varchar',
+          businessName: 'Collaborateur',
+          description: 'Référence du collaborateur',
+          examples: ['user-123', 'tech-be-01'],
+          nullable: false,
+          relatedTo: 'users.id'
+        },
+        {
+          name: 'team_type',
+          type: 'varchar',
+          businessName: 'Type équipe',
+          description: 'Catégorie d\'équipe (BE, chantier, commercial)',
+          examples: ['BE', 'chantier', 'commercial'],
+          nullable: false
+        },
+        {
+          name: 'availability_percentage',
+          type: 'integer',
+          businessName: 'Disponibilité %',
+          description: 'Pourcentage de disponibilité actuelle',
+          examples: ['100', '75', '50'],
+          nullable: false
+        },
+        {
+          name: 'current_load',
+          type: 'integer',
+          businessName: 'Charge actuelle %',
+          description: 'Taux de charge actuel en pourcentage',
+          examples: ['80', '120', '60'],
+          nullable: false
+        }
+      ],
+      relations: [
+        {
+          targetTable: 'users',
+          type: 'many_to_one',
+          description: 'Ressource liée à un utilisateur'
+        },
+        {
+          targetTable: 'project_tasks',
+          type: 'one_to_many',
+          description: 'Tâches assignées à la ressource'
+        }
+      ],
+      indexes: ['idx_resources_team', 'idx_resources_load'],
+      commonQueries: [
+        'Charge équipe BE',
+        'Disponibilités par équipe'
+      ],
+      sqlExamples: [
+        {
+          description: 'Charge de l\'équipe BE',
+          sql: `SELECT u.name, tr.current_load, tr.availability_percentage
+                FROM team_resources tr
+                JOIN users u ON tr.user_id = u.id
+                WHERE tr.team_type = 'BE'
+                  AND tr.current_load > 80
+                ORDER BY tr.current_load DESC`,
+          explanation: 'Identifie les membres du BE en surcharge (>80%)'
+        }
+      ]
+    };
+
+    logger.info('Métadonnées enrichies générées', {
+      metadata: {
+        service: 'BusinessContextService',
+        operation: 'getEnrichedSchemaMetadata',
+        tablesCount: Object.keys(metadata.tables).length
+      }
+    });
+  }
+
+  /**
+   * Dictionnaire métier JLM complet
+   */
+  private getJLMBusinessDictionary(): Record<string, string> {
+    return {
+      // Termes métier → Tables SQL
+      'devis': 'offers',
+      'offre': 'offers',
+      'proposition': 'offers',
+      'chantier': 'projects',
+      'projet': 'projects',
+      'réalisation': 'projects',
+      'AO': 'aos',
+      'appel d\'offres': 'aos',
+      'consultation': 'aos',
+      'marché': 'aos',
+      'planning': 'project_timelines',
+      'échéancier': 'project_timelines',
+      'jalons': 'project_timelines',
+      'calendrier': 'project_timelines',
+      'fournisseur': 'suppliers',
+      'sous-traitant': 'suppliers',
+      'prestataire': 'suppliers',
+      'équipe BE': 'team_resources WHERE team_type=\'BE\'',
+      'bureau d\'études': 'team_resources WHERE team_type=\'BE\'',
+      'équipe chantier': 'team_resources WHERE team_type=\'chantier\'',
+      'retard': 'date_alerts WHERE alert_type LIKE \'%retard%\'',
+      'alerte': 'date_alerts OR business_alerts',
+      'dépassement': 'date_alerts WHERE alert_type=\'depassement\'',
+      'chiffrage': 'chiffrage_elements',
+      'DPGF': 'chiffrage_elements',
+      'bordereau': 'chiffrage_elements',
+      'validation': 'validation_milestones',
+      'contrôle': 'validation_milestones',
+      'VISA': 'validation_milestones WHERE milestone_type=\'visa_architecte\'',
+      
+      // Statuts métier → Valeurs enum
+      'en cours': 'IN (\'en_cours\', \'etude\', \'chantier\')',
+      'terminé': '= \'termine\'',
+      'validé': '= \'valide\'',
+      'signé': '= \'signe\'',
+      'en attente': 'LIKE \'%attente%\'',
+      'urgent': 'WITH HIGH PRIORITY OR critical severity',
+      
+      // Indicateurs métier
+      'rentabilité': '(actual_margin / price_total * 100)',
+      'marge': 'margin_percentage OR actual_margin',
+      'taux de transformation': 'COUNT(status=\'signe\') / COUNT(*)',
+      'charge de travail': 'current_load',
+      'disponibilité': 'availability_percentage'
+    };
+  }
+
+  /**
+   * Contextes spécialisés par domaine métier
+   */
+  private getDomainSpecializedContexts(): Record<string, any> {
+    return {
+      financier: {
+        description: 'Contexte pour analyses financières et chiffrage',
+        tables: ['offers', 'projects', 'chiffrage_elements'],
+        key_columns: ['price_total', 'estimated_amount', 'actual_margin', 'margin_percentage', 'unit_price'],
+        aggregations: ['SUM', 'AVG', 'MIN', 'MAX'],
+        business_rules: [
+          'Marge minimale cible: 15%',
+          'Seuil rentabilité projet: margin > 0',
+          'Alerte si dépassement budget > 10%'
+        ],
+        sample_queries: [
+          'Rentabilité par type de projet',
+          'Évolution des marges mensuelles',
+          'Top 10 projets par valeur'
+        ]
+      },
+      
+      temporel: {
+        description: 'Contexte pour planning et gestion des délais',
+        tables: ['project_timelines', 'date_alerts', 'projects', 'aos'],
+        key_columns: ['start_date', 'end_date', 'actual_end_date', 'date_echeance', 'deadline'],
+        functions: ['DATE_PART', 'INTERVAL', 'NOW()', 'DATE_TRUNC'],
+        business_rules: [
+          'Alerte retard si actual_end_date > end_date',
+          'Notification J-7 avant échéance',
+          'Escalade si retard > 15 jours'
+        ],
+        sample_queries: [
+          'Projets en retard cette semaine',
+          'Planning charge sur 3 mois',
+          'Jalons critiques du mois'
+        ]
+      },
+      
+      ressources: {
+        description: 'Contexte pour gestion des équipes et charge',
+        tables: ['team_resources', 'users', 'project_tasks'],
+        key_columns: ['current_load', 'availability_percentage', 'team_type'],
+        business_rules: [
+          'Alerte surcharge si load > 100%',
+          'Équilibrage charge entre équipes',
+          'Priorisation par compétence'
+        ],
+        sample_queries: [
+          'Charge BE par personne',
+          'Disponibilités équipe chantier',
+          'Répartition tâches par équipe'
+        ]
+      },
+      
+      fournisseurs: {
+        description: 'Contexte pour achats et consultations fournisseurs',
+        tables: ['suppliers', 'supplier_quote_sessions', 'supplier_documents', 'supplier_quote_analysis'],
+        key_columns: ['lead_time_days', 'quote_amount', 'supplier_id'],
+        business_rules: [
+          'Consultation minimum 3 fournisseurs',
+          'Délai commande = lead_time + 5 jours sécurité',
+          'Scoring fournisseur sur prix/délai/qualité'
+        ],
+        sample_queries: [
+          'Comparatif devis fournisseurs',
+          'Performance délais par fournisseur',
+          'Historique prix matériaux'
+        ]
+      },
+      
+      qualite: {
+        description: 'Contexte pour validations et conformité',
+        tables: ['validation_milestones', 'business_alerts', 'date_alerts'],
+        key_columns: ['milestone_type', 'status', 'severity', 'validation_status'],
+        business_rules: [
+          'Validation BE obligatoire avant commande',
+          'VISA architecte requis avant chantier',
+          'Contrôle conformité DTU systematique'
+        ],
+        sample_queries: [
+          'Validations en attente',
+          'Taux de non-conformité',
+          'Délais moyens validation'
+        ]
+      }
+    };
+  }
+
+  /**
+   * Système de synonymes métier enrichi
+   */
+  private getEnrichedBusinessSynonyms(): Record<string, string> {
+    return {
+      // Synonymes français → SQL
+      'devis': 'offers',
+      'offre': 'offers',
+      'offres': 'offers',
+      'proposition': 'offers',
+      'propositions': 'offers',
+      
+      'chantier': 'projects',
+      'chantiers': 'projects',
+      'projet': 'projects',
+      'projets': 'projects',
+      'réalisation': 'projects',
+      'réalisations': 'projects',
+      'affaire': 'projects',
+      'affaires': 'projects',
+      
+      'appel d\'offres': 'aos',
+      'appels d\'offres': 'aos',
+      'AO': 'aos',
+      'consultation': 'aos',
+      'consultations': 'aos',
+      'marché': 'aos',
+      'marchés': 'aos',
+      'tender': 'aos',
+      
+      'planning': 'project_timelines',
+      'plannings': 'project_timelines',
+      'calendrier': 'project_timelines',
+      'échéancier': 'project_timelines',
+      'jalons': 'project_timelines',
+      'phases': 'project_timelines',
+      
+      'fournisseur': 'suppliers',
+      'fournisseurs': 'suppliers',
+      'sous-traitant': 'suppliers',
+      'sous-traitants': 'suppliers',
+      'prestataire': 'suppliers',
+      'prestataires': 'suppliers',
+      'partenaire': 'suppliers',
+      
+      'équipe BE': 'team_resources',
+      'bureau d\'études': 'team_resources',
+      'technicien': 'team_resources',
+      'techniciens': 'team_resources',
+      'équipe': 'team_resources',
+      'équipes': 'team_resources',
+      'ressource': 'team_resources',
+      'ressources': 'team_resources',
+      
+      'retard': 'date_alerts',
+      'retards': 'date_alerts',
+      'alerte': 'alerts',
+      'alertes': 'alerts',
+      'dépassement': 'date_alerts',
+      'dépassements': 'date_alerts',
+      'échéance': 'date_alerts',
+      'échéances': 'date_alerts',
+      
+      'chiffrage': 'chiffrage_elements',
+      'chiffrages': 'chiffrage_elements',
+      'DPGF': 'chiffrage_elements',
+      'bordereau': 'chiffrage_elements',
+      'devis détaillé': 'chiffrage_elements',
+      'lignes de chiffrage': 'chiffrage_elements',
+      
+      'validation': 'validation_milestones',
+      'validations': 'validation_milestones',
+      'contrôle': 'validation_milestones',
+      'contrôles': 'validation_milestones',
+      'VISA': 'validation_milestones',
+      'jalon': 'validation_milestones',
+      
+      // Termes d'action → Clauses SQL
+      'en retard': 'WHERE date_echeance < NOW()',
+      'urgent': 'WHERE severity = \'critical\' OR priority = \'high\'',
+      'cette semaine': 'WHERE date >= DATE_TRUNC(\'week\', NOW())',
+      'ce mois': 'WHERE date >= DATE_TRUNC(\'month\', NOW())',
+      'trimestre': 'WHERE date >= DATE_TRUNC(\'quarter\', NOW())',
+      'en cours': 'WHERE status NOT IN (\'termine\', \'archive\', \'annule\')',
+      'terminé': 'WHERE status = \'termine\'',
+      'validé': 'WHERE status = \'valide\' OR validation_status = \'approved\'',
+      'à valider': 'WHERE status = \'en_attente_validation\'',
+      'signé': 'WHERE status = \'signe\'',
+      
+      // Métriques métier
+      'rentabilité': '(actual_margin / price_total * 100) as rentabilite_pct',
+      'marge': 'margin_percentage',
+      'charge': 'current_load',
+      'disponibilité': 'availability_percentage',
+      'taux de transformation': '(COUNT(CASE WHEN status = \'signe\' THEN 1 END)::float / COUNT(*) * 100)',
+      'délai moyen': 'AVG(DATE_PART(\'day\', end_date - start_date))'
+    };
+  }
+
   /**
    * Récupère la base de connaissances (lazy-loading)
    */
@@ -1665,7 +2740,8 @@ export class BusinessContextService {
   // ========================================
 
   /**
-   * Méthode spéciale pour intégration avec SQLEngineService
+   * Méthode spéciale pour intégration avec SQLEngineService - VERSION ENRICHIE PHASE 3
+   * Analyse intelligente du domaine et génération de contexte optimisé
    */
   async buildIntelligentContextForSQL(
     userId: string,
@@ -1673,28 +2749,166 @@ export class BusinessContextService {
     naturalLanguageQuery: string
   ): Promise<string> {
     try {
-      const request: BusinessContextRequest = {
-        userId,
-        user_role: userRole,
-        query_hint: naturalLanguageQuery,
-        complexity_preference: "simple",
-        focus_areas: [],
-        include_temporal: false, // Pas de contexte temporel en mode SQL
-        cache_duration_minutes: 15, // Cache court 15min pour SQL
-        personalization_level: "basic",
-        generation_mode: "sql_minimal" // Mode ultra-light pour génération SQL rapide
-      };
-
-      const response = await this.generateBusinessContext(request);
+      const startTime = Date.now();
       
-      if (response.success && response.context) {
-        // Conversion du contexte métier en chaîne optimisée pour IA
-        return this.contextToAIString(response.context);
+      // 1. Détection intelligente du domaine et des entités
+      const queryAnalysis = this.analyzeQueryDomain(naturalLanguageQuery);
+      
+      // 2. Vérification cache avec clé enrichie
+      const cacheKey = `sql_context_${userRole}_${queryAnalysis.primaryDomain}_${crypto.createHash('md5').update(naturalLanguageQuery.toLowerCase()).digest('hex')}`;
+      const cachedContext = await this.getCachedSQLContext(cacheKey);
+      if (cachedContext) {
+        logger.info('Cache SQL hit', {
+          metadata: {
+            service: 'BusinessContextService',
+            operation: 'buildIntelligentContextForSQL',
+            domain: queryAnalysis.primaryDomain,
+            cacheKey
+          }
+        });
+        return cachedContext;
       }
       
-      return "Contexte métier menuiserie: données de base disponibles";
+      // 3. Récupération des métadonnées enrichies
+      const enrichedMetadata = await this.getEnrichedSchemaMetadata();
+      
+      // 4. Construction du contexte spécialisé par domaine
+      const contextSections: string[] = [];
+      
+      // Header avec version et domaine
+      contextSections.push('=== CONTEXTE SQL INTELLIGENT JLM V3 ===');
+      contextSections.push(`Domaine principal: ${queryAnalysis.primaryDomain}`);
+      contextSections.push(`Entités détectées: ${queryAnalysis.detectedEntities.join(', ')}`);
+      contextSections.push(`Rôle utilisateur: ${userRole}`);
+      contextSections.push('');
+      
+      // 5. Synonymes métier pertinents
+      contextSections.push('=== SYNONYMES MÉTIER ===');
+      const relevantSynonyms = this.getRelevantSynonyms(queryAnalysis.keywords);
+      relevantSynonyms.forEach(syn => {
+        contextSections.push(`"${syn.business}" → ${syn.sql}`);
+      });
+      contextSections.push('');
+      
+      // 6. Tables pertinentes avec métadonnées enrichies
+      contextSections.push('=== TABLES PERTINENTES ===');
+      const relevantTables = this.selectRelevantTables(queryAnalysis, enrichedMetadata.tables);
+      
+      for (const tableName of relevantTables) {
+        const table = enrichedMetadata.tables[tableName];
+        if (!table) continue;
+        
+        contextSections.push(`\nTABLE: ${table.businessName} (${table.tableName})`);
+        contextSections.push(`Description: ${table.description}`);
+        contextSections.push('Colonnes clés:');
+        
+        // Colonnes filtrées selon le domaine et le rôle
+        const relevantColumns = this.filterColumnsForRole(table.columns, userRole, queryAnalysis.primaryDomain);
+        relevantColumns.forEach(col => {
+          const examples = col.examples ? ` Ex: [${col.examples.slice(0, 2).join(', ')}]` : '';
+          contextSections.push(`  - ${col.businessName} (${col.name}): ${col.type}${examples}`);
+        });
+        
+        // Relations importantes
+        if (table.relations.length > 0) {
+          contextSections.push('Relations:');
+          table.relations.slice(0, 3).forEach(rel => {
+            contextSections.push(`  - ${rel.type} avec ${rel.targetTable}: ${rel.description}`);
+          });
+        }
+        
+        // Index pour optimisation
+        if (table.indexes && table.indexes.length > 0) {
+          contextSections.push(`Index disponibles: ${table.indexes.join(', ')}`);
+        }
+      }
+      contextSections.push('');
+      
+      // 7. Contexte spécialisé du domaine
+      const domainContext = enrichedMetadata.domainContexts[queryAnalysis.primaryDomain];
+      if (domainContext) {
+        contextSections.push(`=== CONTEXTE DOMAINE: ${queryAnalysis.primaryDomain.toUpperCase()} ===`);
+        contextSections.push(`Description: ${domainContext.description}`);
+        
+        if (domainContext.business_rules) {
+          contextSections.push('Règles métier:');
+          domainContext.business_rules.forEach((rule: string) => {
+            contextSections.push(`  - ${rule}`);
+          });
+        }
+        
+        if (domainContext.key_columns) {
+          contextSections.push(`Colonnes clés du domaine: ${domainContext.key_columns.join(', ')}`);
+        }
+        
+        if (domainContext.aggregations) {
+          contextSections.push(`Agrégations courantes: ${domainContext.aggregations.join(', ')}`);
+        }
+        contextSections.push('');
+      }
+      
+      // 8. Exemples SQL pertinents
+      contextSections.push('=== EXEMPLES SQL PERTINENTS ===');
+      const relevantExamples = await this.selectRelevantSQLExamples(queryAnalysis, enrichedMetadata.tables, relevantTables);
+      
+      relevantExamples.forEach(example => {
+        contextSections.push(`\n// ${example.description}`);
+        contextSections.push(example.sql);
+        contextSections.push(`// Explication: ${example.explanation}`);
+      });
+      contextSections.push('');
+      
+      // 9. Jointures recommandées
+      contextSections.push('=== JOINTURES RECOMMANDÉES ===');
+      const recommendedJoins = this.getRecommendedJoins(relevantTables, enrichedMetadata.tables);
+      recommendedJoins.forEach(join => {
+        contextSections.push(join);
+      });
+      contextSections.push('');
+      
+      // 10. Contraintes RBAC
+      contextSections.push('=== CONTRAINTES DE SÉCURITÉ ===');
+      const rbacConstraints = await this.getRBACConstraintsForSQL(userId, userRole, relevantTables);
+      rbacConstraints.forEach(constraint => {
+        contextSections.push(constraint);
+      });
+      contextSections.push('');
+      
+      // 11. Hints d'optimisation
+      contextSections.push('=== HINTS D\'OPTIMISATION ===');
+      contextSections.push('- Utiliser les index disponibles pour les jointures');
+      contextSections.push('- Limiter les résultats avec LIMIT pour les requêtes exploratoires');
+      contextSections.push('- Préférer les filtres sur colonnes indexées');
+      if (queryAnalysis.primaryDomain === 'temporel') {
+        contextSections.push('- Utiliser DATE_TRUNC pour grouper par période');
+        contextSections.push('- Indexer sur les colonnes de dates pour performance');
+      }
+      if (queryAnalysis.primaryDomain === 'financier') {
+        contextSections.push('- Arrondir les montants avec ROUND() pour lisibilité');
+        contextSections.push('- Vérifier price_total > 0 avant calcul de ratios');
+      }
+      
+      const finalContext = contextSections.join('\n');
+      
+      // 12. Mise en cache du contexte généré
+      await this.cacheSQLContext(cacheKey, finalContext, 30); // Cache 30 minutes
+      
+      logger.info('Contexte SQL enrichi généré', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'buildIntelligentContextForSQL',
+          domain: queryAnalysis.primaryDomain,
+          tablesIncluded: relevantTables.length,
+          examplesIncluded: relevantExamples.length,
+          generationTime: Date.now() - startTime,
+          contextSize: finalContext.length
+        }
+      });
+      
+      return finalContext;
+      
     } catch (error) {
-      logger.error('Erreur contexte SQL', {
+      logger.error('Erreur contexte SQL enrichi', {
         metadata: {
           service: 'BusinessContextService',
           operation: 'buildIntelligentContextForSQL',
@@ -1702,8 +2916,292 @@ export class BusinessContextService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      return "Contexte métier menuiserie: mode dégradé";
+      // Fallback vers méthode basique
+      return "Contexte métier JLM: tables offers, projects, aos, suppliers disponibles. Utilisez les jointures standards.";
     }
+  }
+
+  /**
+   * Analyse le domaine métier de la requête
+   */
+  private analyzeQueryDomain(query: string): {
+    primaryDomain: string;
+    secondaryDomains: string[];
+    detectedEntities: string[];
+    keywords: string[];
+    complexity: 'simple' | 'medium' | 'complex';
+  } {
+    const queryLower = query.toLowerCase();
+    const analysis = {
+      primaryDomain: 'general',
+      secondaryDomains: [] as string[],
+      detectedEntities: [] as string[],
+      keywords: [] as string[],
+      complexity: 'simple' as 'simple' | 'medium' | 'complex'
+    };
+    
+    // Détection des domaines
+    const domainPatterns = {
+      financier: /\b(montant|prix|coût|budget|marge|rentabilité|chiffr|devis|factur|total|somme|moyenne|€)\b/i,
+      temporel: /\b(date|délai|retard|planning|calendrier|semaine|mois|année|échéance|jalon|phase|période|aujourd|demain|hier)\b/i,
+      ressources: /\b(équipe|ressource|charge|disponibilité|capacité|be|bureau|technicien|employé|collaborateur)\b/i,
+      fournisseurs: /\b(fournisseur|devis|consultation|livraison|commande|achat|sous-traitant|prestataire)\b/i,
+      qualite: /\b(validation|contrôle|conformité|visa|qualité|alerte|critique|bloquant|erreur)\b/i,
+      commercial: /\b(offre|ao|appel|marché|client|prospect|transformation|pipeline|commercial)\b/i,
+      operationnel: /\b(projet|chantier|réalisation|avancement|statut|phase|étape|sav)\b/i
+    };
+    
+    let maxScore = 0;
+    for (const [domain, pattern] of Object.entries(domainPatterns)) {
+      const matches = queryLower.match(pattern);
+      if (matches) {
+        const score = matches.length;
+        if (score > maxScore) {
+          if (analysis.primaryDomain !== 'general') {
+            analysis.secondaryDomains.push(analysis.primaryDomain);
+          }
+          analysis.primaryDomain = domain;
+          maxScore = score;
+        } else if (score > 0) {
+          analysis.secondaryDomains.push(domain);
+        }
+      }
+    }
+    
+    // Détection des entités métier
+    const entityPatterns = {
+      offers: /\b(offre|devis|proposition|commercial)\b/i,
+      projects: /\b(projet|chantier|réalisation|affaire)\b/i,
+      aos: /\b(ao|appel|d'offre|consultation|marché)\b/i,
+      suppliers: /\b(fournisseur|sous-traitant|prestataire)\b/i,
+      timelines: /\b(planning|calendrier|échéancier|jalon)\b/i,
+      alerts: /\b(alerte|retard|dépassement|critique)\b/i,
+      resources: /\b(équipe|ressource|be|technicien)\b/i,
+      chiffrage: /\b(chiffrage|dpgf|bordereau|ligne)\b/i
+    };
+    
+    for (const [entity, pattern] of Object.entries(entityPatterns)) {
+      if (pattern.test(queryLower)) {
+        analysis.detectedEntities.push(entity);
+      }
+    }
+    
+    // Extraction des mots-clés significatifs
+    const words = queryLower.split(/\s+/);
+    const stopWords = ['le', 'la', 'les', 'de', 'du', 'des', 'un', 'une', 'et', 'ou', 'à', 'pour', 'dans', 'sur', 'avec', 'par'];
+    analysis.keywords = words.filter(word => word.length > 3 && !stopWords.includes(word));
+    
+    // Évaluation de la complexité
+    if (queryLower.includes('group by') || queryLower.includes('avg') || queryLower.includes('sum')) {
+      analysis.complexity = 'complex';
+    } else if (queryLower.includes('join') || analysis.detectedEntities.length > 2) {
+      analysis.complexity = 'medium';
+    }
+    
+    return analysis;
+  }
+
+  /**
+   * Sélectionne les tables pertinentes selon l'analyse
+   */
+  private selectRelevantTables(
+    queryAnalysis: any,
+    allTables: Record<string, any>
+  ): string[] {
+    const relevantTables = new Set<string>();
+    
+    // Ajouter les entités directement détectées
+    queryAnalysis.detectedEntities.forEach((entity: string) => {
+      if (allTables[entity]) {
+        relevantTables.add(entity);
+      }
+    });
+    
+    // Ajouter les tables du domaine principal
+    const domainTables: Record<string, string[]> = {
+      financier: ['offers', 'projects', 'chiffrage_elements'],
+      temporel: ['project_timelines', 'date_alerts', 'projects'],
+      ressources: ['team_resources', 'users', 'project_tasks'],
+      fournisseurs: ['suppliers', 'supplier_quote_sessions'],
+      qualite: ['validation_milestones', 'business_alerts'],
+      commercial: ['offers', 'aos', 'projects'],
+      operationnel: ['projects', 'project_tasks', 'project_timelines']
+    };
+    
+    const primaryDomainTables = domainTables[queryAnalysis.primaryDomain] || ['projects', 'offers'];
+    primaryDomainTables.forEach(table => relevantTables.add(table));
+    
+    // Limiter à 5 tables maximum pour ne pas surcharger le contexte
+    return Array.from(relevantTables).slice(0, 5);
+  }
+
+  /**
+   * Filtre les colonnes selon le rôle et le domaine
+   */
+  private filterColumnsForRole(columns: any[], userRole: string, domain: string): any[] {
+    return columns.filter(col => {
+      // Exclure les colonnes sensibles selon le rôle
+      if (col.name.includes('margin') && userRole !== 'admin' && userRole !== 'chef_projet') {
+        return false;
+      }
+      if (col.name.includes('cost') && userRole !== 'admin') {
+        return false;
+      }
+      
+      // Inclure les colonnes pertinentes pour le domaine
+      if (domain === 'financier' && (col.name.includes('price') || col.name.includes('amount') || col.name.includes('margin'))) {
+        return true;
+      }
+      if (domain === 'temporel' && (col.type.includes('timestamp') || col.name.includes('date'))) {
+        return true;
+      }
+      
+      // Colonnes de base toujours incluses
+      return ['id', 'status', 'name', 'title'].some(base => col.name.includes(base));
+    }).slice(0, 8); // Limiter à 8 colonnes max
+  }
+
+  /**
+   * Sélectionne les exemples SQL pertinents
+   */
+  private async selectRelevantSQLExamples(
+    queryAnalysis: any,
+    allTables: Record<string, any>,
+    relevantTables: string[]
+  ): Promise<Array<{description: string; sql: string; explanation: string}>> {
+    const examples: Array<{description: string; sql: string; explanation: string}> = [];
+    
+    // Collecter les exemples des tables pertinentes
+    for (const tableName of relevantTables) {
+      const table = allTables[tableName];
+      if (table?.sqlExamples) {
+        // Filtrer les exemples selon les mots-clés de la requête
+        const relevantExamples = table.sqlExamples.filter((ex: any) => {
+          const exampleText = `${ex.description} ${ex.sql}`.toLowerCase();
+          return queryAnalysis.keywords.some((keyword: string) => exampleText.includes(keyword));
+        });
+        
+        if (relevantExamples.length > 0) {
+          examples.push(...relevantExamples.slice(0, 2)); // Max 2 exemples par table
+        } else if (table.sqlExamples.length > 0) {
+          examples.push(table.sqlExamples[0]); // Au moins 1 exemple par table
+        }
+      }
+    }
+    
+    // Limiter à 5 exemples total
+    return examples.slice(0, 5);
+  }
+
+  /**
+   * Génère les jointures recommandées
+   */
+  private getRecommendedJoins(tables: string[], allTables: Record<string, any>): string[] {
+    const joins: string[] = [];
+    
+    // Jointures standards
+    if (tables.includes('projects') && tables.includes('offers')) {
+      joins.push('projects p JOIN offers o ON p.offer_id = o.id');
+    }
+    if (tables.includes('offers') && tables.includes('aos')) {
+      joins.push('offers o JOIN aos a ON o.ao_id = a.id');
+    }
+    if (tables.includes('projects') && tables.includes('project_timelines')) {
+      joins.push('projects p JOIN project_timelines pt ON p.id = pt.project_id');
+    }
+    if (tables.includes('projects') && tables.includes('users')) {
+      joins.push('projects p JOIN users u ON p.responsable_user_id = u.id');
+    }
+    
+    return joins.slice(0, 3); // Max 3 jointures recommandées
+  }
+
+  /**
+   * Récupère les contraintes RBAC pour le SQL
+   */
+  private async getRBACConstraintsForSQL(userId: string, userRole: string, tables: string[]): Promise<string[]> {
+    const constraints: string[] = [];
+    
+    // Contraintes de base selon le rôle
+    if (userRole !== 'admin') {
+      constraints.push(`-- Accès limité selon le rôle: ${userRole}`);
+      
+      if (tables.includes('projects')) {
+        if (userRole === 'chef_projet') {
+          constraints.push('-- Filtrer projets: WHERE responsable_user_id = :userId OR team_id IN (SELECT team_id FROM user_teams WHERE user_id = :userId)');
+        }
+      }
+      
+      if (tables.includes('offers')) {
+        if (userRole === 'commercial') {
+          constraints.push('-- Filtrer offres: WHERE responsable_user_id = :userId');
+        }
+      }
+      
+      constraints.push('-- Colonnes sensibles masquées: actual_cost, internal_margin');
+    } else {
+      constraints.push('-- Accès complet administrateur');
+    }
+    
+    return constraints;
+  }
+
+  /**
+   * Récupère les synonymes pertinents
+   */
+  private getRelevantSynonyms(keywords: string[]): Array<{business: string; sql: string}> {
+    const allSynonyms = this.getEnrichedBusinessSynonyms();
+    const relevant: Array<{business: string; sql: string}> = [];
+    
+    for (const keyword of keywords) {
+      for (const [business, sql] of Object.entries(allSynonyms)) {
+        if (business.includes(keyword) || keyword.includes(business)) {
+          relevant.push({ business, sql });
+          if (relevant.length >= 10) break; // Max 10 synonymes
+        }
+      }
+    }
+    
+    return relevant;
+  }
+
+  /**
+   * Cache pour contextes SQL
+   */
+  private async cacheSQLContext(key: string, context: string, ttlMinutes: number): Promise<void> {
+    try {
+      // Cache en mémoire simplifié pour SQL
+      this.memoryCache.set(key, {
+        data: { contextData: context } as any,
+        expiresAt: new Date(Date.now() + ttlMinutes * 60 * 1000),
+        hitCount: 0
+      });
+    } catch (error) {
+      // Non-bloquant
+      logger.error('Erreur cache SQL', {
+        metadata: {
+          service: 'BusinessContextService',
+          operation: 'cacheSQLContext',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+    }
+  }
+
+  /**
+   * Récupère un contexte SQL du cache
+   */
+  private async getCachedSQLContext(key: string): Promise<string | null> {
+    try {
+      const cached = this.memoryCache.get(key);
+      if (cached && cached.expiresAt > new Date()) {
+        cached.hitCount++;
+        return (cached.data as any).contextData || null;
+      }
+    } catch (error) {
+      // Non-bloquant
+    }
+    return null;
   }
 
   /**

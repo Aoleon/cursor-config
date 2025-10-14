@@ -442,9 +442,9 @@ export class ChatbotOrchestrationService {
         )
       ];
 
-      // Timeout de protection 5s max
+      // Timeout de protection 10s max (augmenté pour requêtes complexes)
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout parallèle 5s dépassé')), 5000)
+        setTimeout(() => reject(new Error('Timeout parallèle 10s dépassé')), 10000)
       );
 
       const parallelResults = await Promise.race([

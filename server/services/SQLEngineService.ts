@@ -169,6 +169,46 @@ export class SQLEngineService {
       }
     });
 
+      // 3.5. Validation post-génération du SQL
+      const queryTypeDetected = this.analyzeQueryType(request.naturalLanguageQuery);
+      const postValidation = await this.validateGeneratedSQL(generatedSQL, queryTypeDetected);
+      
+      if (!postValidation.isValid) {
+        logger.warn('SQL généré invalide - violations détectées', {
+          metadata: {
+            service: 'SQLEngineService',
+            operation: 'executeNaturalLanguageQuery',
+            queryId,
+            violations: postValidation.violations,
+            warnings: postValidation.warnings
+          }
+        });
+        
+        return {
+          success: false,
+          error: {
+            type: "validation",
+            message: "SQL généré ne respecte pas les guardrails",
+            details: {
+              violations: postValidation.violations,
+              warnings: postValidation.warnings,
+              sql: generatedSQL
+            }
+          }
+        };
+      }
+
+      if (postValidation.warnings.length > 0) {
+        logger.info('Avertissements SQL post-génération', {
+          metadata: {
+            service: 'SQLEngineService',
+            operation: 'executeNaturalLanguageQuery',
+            queryId,
+            warnings: postValidation.warnings
+          }
+        });
+      }
+
       // 4. Parsing et validation sécurité SQL
       const securityCheck = await this.validateSQLSecurity(generatedSQL, request.userId, request.userRole);
       if (!securityCheck.isSecure) {
@@ -333,73 +373,552 @@ export class SQLEngineService {
   }
 
   // ========================================
-  // CONSTRUCTION DU CONTEXTE INTELLIGENT
+  // TYPES DE REQUÊTES ET TEMPLATES SPÉCIALISÉS
+  // ========================================
+
+  private readonly QUERY_TYPES = {
+    KPI_METRICS: 'kpi_metrics',
+    LIST_DETAILS: 'list_details', 
+    COMPARISONS: 'comparisons',
+    ANALYTICS: 'analytics',
+    SEARCH: 'search'
+  } as const;
+
+  private readonly PROMPT_TEMPLATES = {
+    kpi_metrics: {
+      focus: ['COUNT', 'SUM', 'AVG', 'GROUP BY', 'HAVING'],
+      guardrails: `
+-- KPI/METRICS SPECIFIC RULES:
+-- Must use GROUP BY for dimensions
+-- Limit to 100 rows for aggregated results
+-- Use DATE_TRUNC for time grouping
+-- Include COUNT(*) for volume metrics`,
+      examples: [
+        `-- Monthly revenue by project type
+SELECT 
+  DATE_TRUNC('month', date_created) as month,
+  project_type,
+  COUNT(*) as total_projects,
+  SUM(montant_total) as revenue
+FROM projects
+WHERE date_created >= NOW() - INTERVAL '12 months'
+GROUP BY 1, 2
+ORDER BY 1 DESC, 4 DESC
+LIMIT 100;`
+      ]
+    },
+    list_details: {
+      focus: ['WHERE', 'ORDER BY', 'LIMIT', 'OFFSET', 'JOIN'],
+      guardrails: `
+-- LIST/DETAILS SPECIFIC RULES:
+-- Must include ORDER BY clause
+-- Must include LIMIT/OFFSET for pagination
+-- Maximum 50 rows per page
+-- Include relevant JOIN for details`,
+      examples: [
+        `-- List recent projects with details
+SELECT 
+  p.id, p.name, p.status, p.date_created,
+  u.name as responsable_name
+FROM projects p
+LEFT JOIN users u ON p.responsable_user_id = u.id
+WHERE p.status = 'active'
+ORDER BY p.date_created DESC
+LIMIT 50 OFFSET 0;`
+      ]
+    },
+    comparisons: {
+      focus: ['CTE', 'CASE WHEN', 'LAG', 'LEAD', 'JOIN'],
+      guardrails: `
+-- COMPARISON SPECIFIC RULES:
+-- Use CTEs for readability
+-- Maximum 24 months timeframe
+-- Use CASE WHEN for categorization
+-- Include delta calculations`,
+      examples: [
+        `-- Compare current vs previous period
+WITH current_period AS (
+  SELECT COUNT(*) as current_count, SUM(montant_total) as current_revenue
+  FROM projects
+  WHERE date_created >= NOW() - INTERVAL '3 months'
+),
+previous_period AS (
+  SELECT COUNT(*) as previous_count, SUM(montant_total) as previous_revenue
+  FROM projects
+  WHERE date_created >= NOW() - INTERVAL '6 months' 
+    AND date_created < NOW() - INTERVAL '3 months'
+)
+SELECT 
+  c.current_count, p.previous_count,
+  c.current_revenue, p.previous_revenue,
+  CASE 
+    WHEN p.previous_count > 0 
+    THEN ROUND(((c.current_count - p.previous_count)::numeric / p.previous_count) * 100, 2)
+    ELSE NULL
+  END as count_change_pct
+FROM current_period c, previous_period p;`
+      ]
+    },
+    analytics: {
+      focus: ['CTE', 'WINDOW', 'RANK', 'DENSE_RANK', 'PERCENTILE'],
+      guardrails: `
+-- ANALYTICS SPECIFIC RULES:
+-- Prefer CTEs over subqueries
+-- Limit window functions usage
+-- Include appropriate indexes hints
+-- Max 3 analytical functions per query`,
+      examples: [
+        `-- Top performers analysis
+WITH project_stats AS (
+  SELECT 
+    responsable_user_id,
+    COUNT(*) as project_count,
+    AVG(montant_total) as avg_revenue,
+    RANK() OVER (ORDER BY COUNT(*) DESC) as rank_by_count
+  FROM projects
+  WHERE date_created >= NOW() - INTERVAL '6 months'
+  GROUP BY responsable_user_id
+)
+SELECT * FROM project_stats
+WHERE rank_by_count <= 10
+ORDER BY rank_by_count;`
+      ]
+    },
+    search: {
+      focus: ['LIKE', 'ILIKE', 'SIMILAR TO', 'GIN INDEX', 'TEXT SEARCH'],
+      guardrails: `
+-- SEARCH SPECIFIC RULES:
+-- Use ILIKE for case-insensitive search
+-- Add % wildcards appropriately
+-- Consider GIN indexes for text
+-- Limit results to 100`,
+      examples: [
+        `-- Search projects by name or description
+SELECT 
+  id, name, description, status, date_created
+FROM projects
+WHERE name ILIKE '%menuiserie%' 
+   OR description ILIKE '%menuiserie%'
+ORDER BY date_created DESC
+LIMIT 100;`
+      ]
+    }
+  };
+
+  // ========================================
+  // CONSTRUCTION DU CONTEXTE INTELLIGENT AMÉLIORÉ
   // ========================================
 
   /**
    * Utilise BusinessContextService pour générer un contexte métier intelligent et adaptatif
+   * AMÉLIORATION PHASE 4: Templates adaptatifs et guardrails contextuels
    */
   private async buildIntelligentContext(request: SQLQueryRequest): Promise<string> {
+    const startTime = Date.now();
+    
     try {
-      logger.info('Génération contexte intelligent', {
-      metadata: {
-        service: 'SQLEngineService',
-        operation: 'generateIntelligentContext',
-        userId: request.userId,
-        userRole: request.userRole
-      }
-    });
+      // 1. Détection du type de requête
+      const queryType = this.analyzeQueryType(request.naturalLanguageQuery);
       
-      // Utilisation du BusinessContextService pour un contexte complet et adaptatif
+      logger.info('Contexte intelligent - Type détecté', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'buildIntelligentContext',
+          queryType,
+          userId: request.userId,
+          userRole: request.userRole
+        }
+      });
+      
+      // 2. Récupération du contexte enrichi de BusinessContextService
       const enrichedContext = await this.businessContextService.buildIntelligentContextForSQL(
         request.userId,
         request.userRole,
         request.naturalLanguageQuery
       );
 
-      // Ajout du contexte utilisateur s'il existe
-      const userContext = request.context ? `\nCONTEXTE UTILISATEUR:\n${request.context}\n` : "";
+      // 3. Sélection du template adapté
+      const template = this.PROMPT_TEMPLATES[queryType as keyof typeof this.PROMPT_TEMPLATES];
+      
+      // 4. Construction des guardrails adaptifs
+      const adaptiveGuardrails = this.buildAdaptiveGuardrails(queryType, request.userRole);
+      
+      // 5. Génération des hints de performance contextuels
+      const performanceHints = this.generatePerformanceHints(request.naturalLanguageQuery, queryType);
+      
+      // 6. Sélection d'exemples pertinents
+      const relevantExamples = this.selectRelevantExamples(queryType, request.naturalLanguageQuery);
+      
+      // 7. Construction du prompt optimisé pour Claude/GPT
+      const optimizedPrompt = this.buildOptimizedPrompt({
+        userContext: request.context,
+        enrichedContext,
+        queryType,
+        template,
+        guardrails: adaptiveGuardrails,
+        performanceHints,
+        examples: relevantExamples,
+        userRole: request.userRole
+      });
 
-      // Instructions techniques pour génération SQL (strictes, concises + performance guardrails)
-      const sqlInstructions = `
-CRITICAL RULES (MANDATORY):
-1. Return a single SELECT SQL query ONLY
-2. NO commentary, NO explanations, NO markdown formatting
-3. PostgreSQL syntax, read-only strict
-4. LIMIT ${request.userRole === 'admin' ? MAX_RESULTS_ADMIN : MAX_RESULTS_DEFAULT}
-5. Apply RBAC filters from context
-6. Ensure all CASE statements are properly closed with END
-7. Query MUST end with a semicolon (;)
-8. Do NOT truncate - generate complete, valid SQL
+      // 8. Métriques de qualité
+      await this.trackPromptQuality(queryType, Date.now() - startTime);
 
-PERFORMANCE GUARDRAILS (MANDATORY - Target <3s execution):
-9. DEFAULT timeframe: WHERE date >= NOW() - INTERVAL '12 months' (if no timeframe in user query)
-10. MAXIMUM 3 joins - minimize table joins, use CTEs if needed
-11. AVOID window functions (ROW_NUMBER, RANK, LEAD, LAG) - use subqueries instead
-12. AVOID correlated subqueries - prefer EXISTS or JOINs
-13. ENSURE selective predicates on indexed columns (date, status, project_id, responsable_user_id)
-14. NO CROSS joins, NO SELECT *
-15. Prefer pre-aggregated data when available
-`;
-
-      return `${userContext}
-
-${enrichedContext}
-
-${sqlInstructions}`;
+      return optimizedPrompt;
 
     } catch (error) {
       logger.error('Erreur génération contexte intelligent', {
-      metadata: {
-        service: 'SQLEngineService',
-        operation: 'generateIntelligentContext',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
-    });
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'buildIntelligentContext',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
       
-      // Fallback vers contexte basique en cas d'erreur
+      // Fallback vers contexte basique
       return this.buildFallbackContext(request);
+    }
+  }
+
+  /**
+   * Analyse le type de requête pour sélectionner le template approprié
+   */
+  private analyzeQueryType(query: string): string {
+    const queryLower = query.toLowerCase();
+    
+    // Patterns pour KPI/Métriques
+    if (/\b(kpi|métrique|indicateur|performance|taux|moyenne|total|somme|nombre)\b/i.test(query) ||
+        /\b(combien|quel est le|quelle est la)\b/i.test(query)) {
+      return this.QUERY_TYPES.KPI_METRICS;
+    }
+    
+    // Patterns pour Comparaisons
+    if (/\b(comparer|comparaison|versus|vs|évolution|delta|différence|changement)\b/i.test(query) ||
+        /\b(par rapport|entre|avant et après)\b/i.test(query)) {
+      return this.QUERY_TYPES.COMPARISONS;
+    }
+    
+    // Patterns pour Analyses
+    if (/\b(analyser|analyse|tendance|pattern|corrélation|distribution|répartition)\b/i.test(query) ||
+        /\b(top|meilleur|pire|classement|rang)\b/i.test(query)) {
+      return this.QUERY_TYPES.ANALYTICS;
+    }
+    
+    // Patterns pour Recherche
+    if (/\b(chercher|rechercher|trouver|contient|contenant|avec|sans)\b/i.test(query) ||
+        query.includes('%') || query.includes('*')) {
+      return this.QUERY_TYPES.SEARCH;
+    }
+    
+    // Par défaut: Liste/Détails
+    return this.QUERY_TYPES.LIST_DETAILS;
+  }
+
+  /**
+   * Construit des guardrails adaptatifs selon le type de requête
+   */
+  private buildAdaptiveGuardrails(queryType: string, userRole: string): string {
+    const baseGuardrails = [
+      '-- MANDATORY RULES:',
+      '-- Return ONLY valid PostgreSQL SELECT query',
+      '-- NO comments in the SQL output',
+      `-- RBAC: Apply ${userRole} role filters`
+    ];
+
+    const specificGuardrails: Record<string, string[]> = {
+      [this.QUERY_TYPES.KPI_METRICS]: [
+        '-- GROUP BY all non-aggregate columns',
+        '-- LIMIT 100 for aggregated results',
+        '-- Use appropriate time grouping (DATE_TRUNC)',
+        '-- Include COUNT(*) for volume context'
+      ],
+      [this.QUERY_TYPES.LIST_DETAILS]: [
+        '-- MANDATORY: Include ORDER BY clause',
+        '-- MANDATORY: Include LIMIT (max 50)',
+        '-- Support OFFSET for pagination',
+        '-- Join only necessary tables'
+      ],
+      [this.QUERY_TYPES.COMPARISONS]: [
+        '-- Use CTEs for clear structure',
+        '-- Maximum 24 months timeframe',
+        '-- Include percentage changes',
+        '-- Handle NULL cases in calculations'
+      ],
+      [this.QUERY_TYPES.ANALYTICS]: [
+        '-- Prefer CTEs over nested subqueries',
+        '-- Limit to 3 window functions',
+        '-- Use appropriate indexes',
+        '-- Consider query performance'
+      ],
+      [this.QUERY_TYPES.SEARCH]: [
+        '-- Use ILIKE for case-insensitive',
+        '-- Add wildcards (%) appropriately',
+        '-- Consider text search indexes',
+        '-- LIMIT 100 maximum results'
+      ]
+    };
+
+    return [...baseGuardrails, ...(specificGuardrails[queryType] || [])].join('\n');
+  }
+
+  /**
+   * Génère des hints de performance contextuels
+   */
+  private generatePerformanceHints(query: string, queryType: string): string[] {
+    const hints: string[] = [];
+    const queryLower = query.toLowerCase();
+
+    // Hints pour jointures
+    if (queryLower.includes('project') && queryLower.includes('offer')) {
+      hints.push('-- HINT: Use index on projects.id and offers.project_id');
+    }
+
+    // Hints pour filtres de date
+    if (/\b(date|période|mois|année|semaine)\b/.test(queryLower)) {
+      hints.push('-- HINT: Ensure date filters use indexed columns (date_created, date_updated)');
+    }
+
+    // Hints pour agrégations
+    if (queryType === this.QUERY_TYPES.KPI_METRICS && queryLower.includes('montant')) {
+      hints.push('-- HINT: Consider parallel aggregation for large datasets');
+    }
+
+    // Hints pour recherche texte
+    if (queryType === this.QUERY_TYPES.SEARCH) {
+      hints.push('-- HINT: GIN indexes available on name and description columns');
+    }
+
+    // Hints pour les CTEs
+    if (queryType === this.QUERY_TYPES.COMPARISONS || queryType === this.QUERY_TYPES.ANALYTICS) {
+      hints.push('-- HINT: CTEs are materialized, use them for complex calculations');
+    }
+
+    return hints;
+  }
+
+  /**
+   * Sélectionne les exemples SQL les plus pertinents
+   */
+  private selectRelevantExamples(queryType: string, query: string): string[] {
+    const template = this.PROMPT_TEMPLATES[queryType as keyof typeof this.PROMPT_TEMPLATES];
+    const examples = [...template.examples];
+    
+    // Ajouter des exemples supplémentaires selon le contexte
+    const queryLower = query.toLowerCase();
+    
+    if (queryLower.includes('projet') && queryType === this.QUERY_TYPES.KPI_METRICS) {
+      examples.push(`-- Projects KPI example
+SELECT 
+  status, 
+  COUNT(*) as count,
+  AVG(EXTRACT(DAY FROM NOW() - date_created)) as avg_age_days
+FROM projects
+WHERE date_created >= NOW() - INTERVAL '3 months'
+GROUP BY status
+ORDER BY count DESC;`);
+    }
+
+    if (queryLower.includes('fournisseur') && queryType === this.QUERY_TYPES.LIST_DETAILS) {
+      examples.push(`-- Suppliers list example
+SELECT 
+  s.id, s.name, s.contact_email,
+  COUNT(sr.id) as request_count
+FROM suppliers s
+LEFT JOIN supplier_requests sr ON s.id = sr.supplier_id
+GROUP BY s.id, s.name, s.contact_email
+ORDER BY request_count DESC
+LIMIT 25;`);
+    }
+
+    return examples.slice(0, 3); // Maximum 3 exemples
+  }
+
+  /**
+   * Construit le prompt final optimisé
+   */
+  private buildOptimizedPrompt(params: {
+    userContext?: string;
+    enrichedContext: string;
+    queryType: string;
+    template: any;
+    guardrails: string;
+    performanceHints: string[];
+    examples: string[];
+    userRole: string;
+  }): string {
+    const sections: string[] = [];
+    
+    // 1. CONTEXT
+    sections.push('=== CONTEXT ===');
+    if (params.userContext) {
+      sections.push(`User Context: ${params.userContext}`);
+    }
+    sections.push(`Query Type: ${params.queryType}`);
+    sections.push(`User Role: ${params.userRole}`);
+    sections.push('');
+
+    // 2. SCHEMA
+    sections.push('=== SCHEMA & BUSINESS CONTEXT ===');
+    sections.push(params.enrichedContext);
+    sections.push('');
+
+    // 3. EXAMPLES
+    sections.push('=== SQL EXAMPLES ===');
+    sections.push(params.examples.join('\n\n'));
+    sections.push('');
+
+    // 4. GUARDRAILS
+    sections.push('=== GUARDRAILS ===');
+    sections.push(params.guardrails);
+    sections.push(params.template.guardrails);
+    if (params.performanceHints.length > 0) {
+      sections.push('\n-- PERFORMANCE HINTS:');
+      sections.push(params.performanceHints.join('\n'));
+    }
+    sections.push('');
+
+    // 5. QUERY INSTRUCTION
+    sections.push('=== QUERY ===');
+    sections.push('Generate a single, complete PostgreSQL SELECT query.');
+    sections.push('Output ONLY the SQL query, no explanations.');
+    sections.push(`Focus on: ${params.template.focus.join(', ')}`);
+    sections.push(`LIMIT: ${params.userRole === 'admin' ? MAX_RESULTS_ADMIN : MAX_RESULTS_DEFAULT}`);
+
+    return sections.join('\n');
+  }
+
+  /**
+   * Système de validation post-génération SQL
+   * Vérifie que le SQL généré respecte les guardrails et bonnes pratiques
+   */
+  async validateGeneratedSQL(sql: string, queryType: string): Promise<{
+    isValid: boolean;
+    violations: string[];
+    warnings: string[];
+  }> {
+    const violations: string[] = [];
+    const warnings: string[] = [];
+    const sqlLower = sql.toLowerCase();
+
+    try {
+      // Parse SQL avec le parser
+      const ast = sqlParser.astify(sql);
+
+      // 1. Vérifier présence LIMIT (sauf pour aggregations)
+      if (queryType !== this.QUERY_TYPES.KPI_METRICS && !sqlLower.includes('limit')) {
+        violations.push('Missing LIMIT clause for non-aggregated query');
+      }
+
+      // 2. Valider timeframe raisonnable
+      const timeframeMatch = sqlLower.match(/interval\s+'(\d+)\s+(year|month|day)s?'/);
+      if (timeframeMatch) {
+        const amount = parseInt(timeframeMatch[1]);
+        const unit = timeframeMatch[2];
+        if ((unit === 'year' && amount > 5) || (unit === 'month' && amount > 60)) {
+          violations.push(`Timeframe too large: ${amount} ${unit}s (max 5 years)`);
+        }
+      }
+
+      // 3. Contrôler nombre de jointures
+      const joinCount = (sqlLower.match(/\bjoin\b/g) || []).length;
+      if (joinCount > 4) {
+        violations.push(`Too many JOINs: ${joinCount} (max 4)`);
+      }
+
+      // 4. Détecter SELECT *
+      if (sqlLower.includes('select *') || sqlLower.includes('select\n*')) {
+        violations.push('SELECT * not allowed, specify columns explicitly');
+      }
+
+      // 5. Vérifications spécifiques par type
+      if (queryType === this.QUERY_TYPES.LIST_DETAILS && !sqlLower.includes('order by')) {
+        violations.push('Missing ORDER BY clause for list query');
+      }
+
+      if (queryType === this.QUERY_TYPES.KPI_METRICS && !sqlLower.includes('group by')) {
+        warnings.push('KPI query without GROUP BY - consider adding dimensions');
+      }
+
+      // 6. Vérifier les fonctions window si limitées
+      if (queryType !== this.QUERY_TYPES.ANALYTICS) {
+        const windowFunctions = ['row_number', 'rank', 'dense_rank', 'lead', 'lag'];
+        const foundWindows = windowFunctions.filter(fn => sqlLower.includes(fn));
+        if (foundWindows.length > 0) {
+          warnings.push(`Window functions used in ${queryType}: ${foundWindows.join(', ')}`);
+        }
+      }
+
+      // 7. Vérification de la terminaison par point-virgule
+      if (!sql.trim().endsWith(';')) {
+        violations.push('SQL query must end with semicolon (;)');
+      }
+
+      // 8. Vérification des CTEs pour les comparaisons
+      if (queryType === this.QUERY_TYPES.COMPARISONS && !sqlLower.includes('with ')) {
+        warnings.push('Comparison query without CTEs - consider using CTEs for better readability');
+      }
+
+      // 9. Vérification de l'utilisation des index hints
+      if (joinCount > 2 && !sqlLower.includes('/*')) {
+        warnings.push('Complex query without index hints - consider adding performance hints');
+      }
+
+      // 10. Vérification des limites de pagination
+      if (queryType === this.QUERY_TYPES.LIST_DETAILS) {
+        const limitMatch = sqlLower.match(/limit\s+(\d+)/);
+        if (limitMatch && parseInt(limitMatch[1]) > 100) {
+          violations.push(`LIMIT too high for list query: ${limitMatch[1]} (max 100)`);
+        }
+      }
+
+    } catch (parseError) {
+      violations.push(`SQL parsing error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+    }
+
+    return {
+      isValid: violations.length === 0,
+      violations,
+      warnings
+    };
+  }
+
+  /**
+   * Track des métriques de qualité des prompts
+   */
+  private async trackPromptQuality(
+    queryType: string,
+    generationTime: number,
+    success: boolean = true,
+    retryCount: number = 0
+  ): Promise<void> {
+    try {
+      await this.eventBus.publish('sql_engine.prompt_metrics', {
+        queryType,
+        generationTime,
+        success,
+        retryCount,
+        timestamp: new Date()
+      });
+
+      logger.info('Métriques prompt SQL', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'trackPromptQuality',
+          queryType,
+          generationTime,
+          success,
+          retryCount
+        }
+      });
+    } catch (error) {
+      logger.error('Erreur tracking métriques', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'trackPromptQuality',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
     }
   }
 

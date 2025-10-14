@@ -538,12 +538,12 @@ export class SQLEngineService {
       examples: [
         `-- Monthly revenue by project type
 SELECT 
-  DATE_TRUNC('month', date_created) as month,
+  DATE_TRUNC('month', created_at) as month,
   project_type,
   COUNT(*) as total_projects,
   SUM(montant_total) as revenue
 FROM projects
-WHERE date_created >= NOW() - INTERVAL '12 months'
+WHERE created_at >= NOW() - INTERVAL '12 months'
 GROUP BY 1, 2
 ORDER BY 1 DESC, 4 DESC
 LIMIT 100;`
@@ -560,12 +560,12 @@ LIMIT 100;`
       examples: [
         `-- List recent projects with details
 SELECT 
-  p.id, p.name, p.status, p.date_created,
+  p.id, p.name, p.status, p.created_at,
   u.name as responsable_name
 FROM projects p
 LEFT JOIN users u ON p.responsible_user_id = u.id
 WHERE p.status = 'active'
-ORDER BY p.date_created DESC
+ORDER BY p.created_at DESC
 LIMIT 50 OFFSET 0;`
       ]
     },
@@ -854,9 +854,9 @@ LIMIT 100;`
 SELECT 
   status, 
   COUNT(*) as count,
-  AVG(EXTRACT(DAY FROM NOW() - date_created)) as avg_age_days
+  AVG(EXTRACT(DAY FROM NOW() - created_at)) as avg_age_days
 FROM projects
-WHERE date_created >= NOW() - INTERVAL '3 months'
+WHERE created_at >= NOW() - INTERVAL '3 months'
 GROUP BY status
 ORDER BY count DESC;`);
     }

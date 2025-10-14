@@ -7106,8 +7106,23 @@ app.post("/api/chatbot/query",
         logger.info('Préparation réponse error', {
           metadata: { userId, statusCode, errorType: result.error?.type }
         });
+        
+        // Enrichir la réponse avec le debugInfo si demandé
+        const errorResponse = {
+          success: false,
+          error: result.error,
+          debugInfo: requestBody.options?.includeDebugInfo ? {
+            generatedSQL: result.debugInfo?.generatedSQL,
+            validationErrors: result.debugInfo?.validationErrors,
+            queryAnalysis: result.debugInfo?.queryAnalysis,
+            executionTime: result.debugInfo?.executionTime,
+            rbacFilters: result.debugInfo?.rbacFilters,
+            tablesAccessed: result.debugInfo?.tablesAccessed
+          } : result.debugInfo // Toujours inclure le debugInfo s'il existe
+        };
+        
         res.setHeader('Content-Type', 'application/json');
-        const jsonResponse = JSON.stringify(result, safeJsonReplacer);
+        const jsonResponse = JSON.stringify(errorResponse, safeJsonReplacer);
         logger.info('JSON stringifié', {
           metadata: { bytes: jsonResponse.length, statusCode }
         });

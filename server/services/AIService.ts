@@ -47,7 +47,7 @@ const DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-20250514";  // Modèle Claude Sonn
 const DEFAULT_GPT_MODEL = "gpt-5";  // Modèle GPT-5 par défaut
 const CACHE_EXPIRY_HOURS = 24;  // Cache valide 24h
 const MAX_RETRY_ATTEMPTS = 2;  // Réduit pour éviter les boucles longues
-const REQUEST_TIMEOUT_MS = 8000;  // 8 secondes timeout optimisé
+const REQUEST_TIMEOUT_MS = 15000;  // 15 secondes timeout pour éviter les échecs
 const RATE_LIMIT_PER_USER_PER_HOUR = 100;
 
 // Coûts estimés par token (en euros) - estimations approximatives
@@ -783,7 +783,7 @@ export class AIService {
   ): Promise<AiQueryResponse> {
     
     // Logs enrichis pour debugging
-    logger.info('Exécution requête IA', {
+    logger.info('Début requête IA', {
       metadata: {
         service: 'AIService',
         operation: 'executeModelQuery',
@@ -791,6 +791,9 @@ export class AIService {
         queryLength: request.query.length,
         complexity: request.complexity || 'simple',
         hasContext: !!request.context,
+        contextLength: request.context?.length || 0,
+        timeout: REQUEST_TIMEOUT_MS,
+        timestamp: new Date().toISOString(),
         requestId,
         userRole: request.userRole
       }
@@ -865,12 +868,12 @@ export class AIService {
       lastError = error;
     }
 
-    // Tentative fallback avec timeout réduit (5s)
+    // Tentative fallback avec timeout étendu (10s)
     if (modelSelection.fallbackAvailable && !fallbackAttempted) {
       const fallbackModel = modelSelection.selectedModel === "claude_sonnet_4" ? "gpt_5" : "claude_sonnet_4";
-      const fallbackTimeout = 5000; // 5s pour le fallback
+      const fallbackTimeout = 10000; // 10s pour le fallback
       
-      logger.info('Tentative fallback avec timeout réduit', {
+      logger.info('Tentative fallback avec timeout étendu', {
         metadata: {
           service: 'AIService',
           operation: 'executeModelQuery',
@@ -973,18 +976,20 @@ export class AIService {
   private generateSimplifiedSQL(request: AiQueryRequest): string {
     const queryLower = request.query.toLowerCase();
     
-    // Détection basique d'entités pour SQL simplifié
+    // Détection basique d'entités pour SQL simplifié avec ORDER BY
     if (queryLower.includes('projet') || queryLower.includes('projects')) {
-      return "SELECT id, name, status, created_at FROM projects LIMIT 10;";
+      return "SELECT id, name, status, created_at FROM projects ORDER BY created_at DESC LIMIT 10;";
     } else if (queryLower.includes('offre') || queryLower.includes('offer')) {
-      return "SELECT id, title, amount, status FROM offers LIMIT 10;";
+      return "SELECT id, title, amount, status, created_at FROM offers ORDER BY created_at DESC LIMIT 10;";
     } else if (queryLower.includes('client')) {
-      return "SELECT id, name, email, created_at FROM clients LIMIT 10;";
+      return "SELECT id, name, email, created_at FROM clients ORDER BY created_at DESC LIMIT 10;";
     } else if (queryLower.includes('fournisseur') || queryLower.includes('supplier')) {
-      return "SELECT id, name, contact, rating FROM suppliers LIMIT 10;";
+      return "SELECT id, name, contact, rating, created_at FROM suppliers ORDER BY created_at DESC LIMIT 10;";
+    } else if (queryLower.includes('devis')) {
+      return "SELECT id, reference, amount, status, created_at FROM devis ORDER BY created_at DESC LIMIT 10;";
     } else {
-      // Requête générique
-      return "SELECT COUNT(*) as total FROM projects WHERE status = 'active';";
+      // Requête générique avec ORDER BY
+      return "SELECT id, name, status, created_at FROM projects ORDER BY created_at DESC LIMIT 10;";
     }
   }
 
@@ -1424,6 +1429,7 @@ export class AIService {
   "data_quality_insights": ["Observations sur la qualité des données"],
   "predictive_indicators": ["Indicateurs prédictifs identifiés"]
 }`;
+    }
 
     // Enrichissement selon contexte disponible
     let enrichedPrompt = basePrompt;

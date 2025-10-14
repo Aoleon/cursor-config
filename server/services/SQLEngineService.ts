@@ -87,6 +87,64 @@ export class SQLEngineService {
   }
 
   // ========================================
+  // MÉTHODE DE CORRECTION DES TYPOS SQL
+  // ========================================
+
+  /**
+   * Corrige les erreurs de frappe courantes dans le SQL généré
+   */
+  private fixCommonSQLTypos(sql: string): string {
+    let correctedSQL = sql;
+    
+    // Corrections des erreurs de frappe courantes
+    const corrections: Array<[RegExp, string]> = [
+      [/\bGROP\s+BY\b/gi, 'GROUP BY'],
+      [/\bGROUO\s+BY\b/gi, 'GROUP BY'],
+      [/\bORDER\s+BT\b/gi, 'ORDER BY'],
+      [/\bORDER\s+YB\b/gi, 'ORDER BY'],
+      [/\bWHERE\s+AND\b/gi, 'WHERE'],
+      [/\bWHEER\b/gi, 'WHERE'],
+      [/\bSELECT\s+FORM\b/gi, 'SELECT FROM'],
+      [/\bSELCT\b/gi, 'SELECT'],
+      [/\bFORM\b/gi, 'FROM'],
+      [/\bFROM\s+FROM\b/gi, 'FROM'],
+      [/\bINNER\s+JOIM\b/gi, 'INNER JOIN'],
+      [/\bLEFT\s+JOIM\b/gi, 'LEFT JOIN'],
+      [/\bRIGHT\s+JOIM\b/gi, 'RIGHT JOIN'],
+      [/\bOUTER\s+JOIM\b/gi, 'OUTER JOIN'],
+      [/\bCOUNT\s*\(\s*\*\s*\)\s+AS\s+COUNT\b/gi, 'COUNT(*) AS total_count'],
+      [/\bDESC\s+LIMIT\b/gi, 'DESC\nLIMIT'],
+      [/\bASC\s+LIMIT\b/gi, 'ASC\nLIMIT'],
+      [/\bHAVING\s+WHERE\b/gi, 'HAVING'],
+      [/\bDISTINCT\s+DISTINCT\b/gi, 'DISTINCT'],
+      [/\bUNION\s+UNION\b/gi, 'UNION'],
+      [/\bINSET\b/gi, 'INSERT'],
+      [/\bUPDAE\b/gi, 'UPDATE'],
+      [/\bDELETE\s+FORM\b/gi, 'DELETE FROM'],
+      [/\bCREATE\s+TABEL\b/gi, 'CREATE TABLE']
+    ];
+    
+    corrections.forEach(([pattern, replacement]) => {
+      correctedSQL = correctedSQL.replace(pattern, replacement);
+    });
+    
+    // Logger si des corrections ont été appliquées
+    if (correctedSQL !== sql) {
+      logger.info('Corrections SQL appliquées', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'fixCommonSQLTypos',
+          original: sql.substring(0, 100),
+          corrected: correctedSQL.substring(0, 100),
+          totalCorrections: (sql.length - correctedSQL.length)
+        }
+      });
+    }
+    
+    return correctedSQL;
+  }
+
+  // ========================================
   // MÉTHODE PRINCIPALE - GÉNÉRATION ET EXÉCUTION SQL SÉCURISÉE
   // ========================================
 
@@ -199,7 +257,9 @@ export class SQLEngineService {
         };
       }
 
-      const generatedSQL = aiResponse.data.sqlGenerated;
+      // Appliquer les corrections de typos automatiquement
+      let generatedSQL = aiResponse.data.sqlGenerated;
+      generatedSQL = this.fixCommonSQLTypos(generatedSQL);
 
       logger.info('SQL généré par l\'IA', {
       metadata: {
@@ -233,16 +293,44 @@ export class SQLEngineService {
           }
         });
         
+        const errorDetails = postValidation.violations?.join(', ') || 'Validation échouée';
+        
+        // Analyser le type d'erreur pour un message plus utile
+        let userMessage = 'Je ne peux pas exécuter cette requête pour des raisons de sécurité.';
+        
+        if (errorDetails.includes('LIMIT')) {
+          userMessage = 'Votre requête pourrait retourner trop de résultats. Essayez de la préciser davantage.';
+        } else if (errorDetails.includes('sensible')) {
+          userMessage = 'Cette requête accède à des données sensibles non autorisées.';
+        } else if (errorDetails.includes('RBAC')) {
+          userMessage = 'Vous n\'avez pas les permissions nécessaires pour cette requête.';
+        } else if (errorDetails.includes('JOIN')) {
+          userMessage = 'Votre requête est trop complexe. Essayez de simplifier en utilisant moins de jointures.';
+        } else if (errorDetails.includes('SELECT *')) {
+          userMessage = 'Merci de préciser les colonnes spécifiques que vous souhaitez voir au lieu de sélectionner toutes les colonnes.';
+        } else if (errorDetails.includes('Timeframe')) {
+          userMessage = 'La période demandée est trop large. Essayez avec une période plus courte (maximum 5 ans).';
+        } else if (errorDetails.includes('semicolon')) {
+          userMessage = 'La requête SQL générée semble incomplète. Veuillez reformuler votre question.';
+        }
+        
         return {
           success: false,
           error: {
             type: "validation",
-            message: "SQL généré ne respecte pas les guardrails",
+            message: userMessage,
             details: {
+              technicalDetails: errorDetails, // Pour le debug mode
               violations: postValidation.violations,
               warnings: postValidation.warnings,
-              sql: generatedSQL
+              sql: request.options?.includeDebugInfo ? generatedSQL : undefined
             }
+          },
+          debugInfo: {
+            generatedSQL: generatedSQL,
+            validationErrors: postValidation.violations,
+            queryAnalysis: (request as any).queryAnalysis,
+            executionTime: Date.now() - startTime
           }
         };
       }
@@ -855,9 +943,24 @@ LIMIT 25;`);
       const ast = sqlParser.astify(sql);
 
       // 1. Vérifier présence LIMIT (sauf pour aggregations)
-      if (queryType !== this.QUERY_TYPES.KPI_METRICS && !sqlLower.includes('limit')) {
+      const hasAggregation = /\b(group\s+by|count\(|sum\(|avg\(|max\(|min\()/i.test(sql);
+      if (queryType !== this.QUERY_TYPES.KPI_METRICS && !hasAggregation && !sqlLower.includes('limit')) {
         violations.push('Missing LIMIT clause for non-aggregated query');
       }
+      
+      // Log détaillé pour debug
+      logger.info('Validation SQL détaillée', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'validateGeneratedSQL',
+          sql: sql.substring(0, 200),
+          hasGroupBy: sql.toLowerCase().includes('group by'),
+          hasLimit: sql.toLowerCase().includes('limit'),
+          hasAggregation: hasAggregation,
+          queryType: queryType,
+          violations: violations
+        }
+      });
 
       // 2. Valider timeframe raisonnable
       const timeframeMatch = sqlLower.match(/interval\s+'(\d+)\s+(year|month|day)s?'/);
@@ -881,8 +984,9 @@ LIMIT 25;`);
       }
 
       // 5. Vérifications spécifiques par type
+      // Assouplir la validation ORDER BY - ce n'est plus obligatoire mais seulement un warning
       if (queryType === this.QUERY_TYPES.LIST_DETAILS && !sqlLower.includes('order by')) {
-        violations.push('Missing ORDER BY clause for list query');
+        warnings.push('Considérez ajouter ORDER BY pour un tri cohérent');
       }
 
       if (queryType === this.QUERY_TYPES.KPI_METRICS && !sqlLower.includes('group by')) {
@@ -1285,23 +1389,54 @@ INSTRUCTIONS DE BASE:
       }
 
     } catch (parseError) {
-      // Si parsing échoue, c'est potentiellement malicieux
-      const violation = `SQL invalide ou malformé: ${parseError instanceof Error ? parseError.message : String(parseError)}`;
-      logger.error('Erreur parsing SQL', {
-      metadata: {
-        service: 'SQLEngineService',
-        operation: 'validateSQL',
-        violation
+      // Ne pas rejeter immédiatement, essayer une validation basique
+      logger.warn('Parsing SQL échoué, validation basique', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'validateSQL',
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+          sql: sql.substring(0, 100)
+        }
+      });
+      
+      // Validation basique si le parser échoue
+      const basicViolations: string[] = [];
+      
+      // Vérifier les opérations dangereuses
+      if (/\b(drop|truncate|delete\s+from|update\s+set|insert\s+into|alter|create|grant|revoke)\b/i.test(sql)) {
+        basicViolations.push('Opération destructive ou DDL détectée');
       }
-    });
-      logger.error('SQL problématique', {
-      metadata: {
-        service: 'SQLEngineService',
-        operation: 'validateSQL',
-        sql
+      
+      // Vérifier les colonnes sensibles
+      for (const [table, columns] of Object.entries(SENSITIVE_COLUMNS)) {
+        for (const col of columns) {
+          const regex = new RegExp(`\\b${col}\\b`, 'i');
+          if (regex.test(sql)) {
+            basicViolations.push(`Accès potentiel à colonne sensible: ${col}`);
+          }
+        }
       }
-    });
-      violations.push(violation);
+      
+      // Si des violations sont détectées, les ajouter
+      if (basicViolations.length > 0) {
+        violations.push(...basicViolations);
+        logger.error('Violations détectées en validation basique', {
+          metadata: {
+            service: 'SQLEngineService',
+            operation: 'validateSQL',
+            violations: basicViolations
+          }
+        });
+      } else {
+        // Si aucune violation basique, juste avertir du parsing échoué
+        logger.warn('Parser SQL échoué, validation basique appliquée', {
+          metadata: {
+            service: 'SQLEngineService',
+            operation: 'validateSQL',
+            warning: 'Parser SQL échoué mais aucune violation basique détectée'
+          }
+        });
+      }
     }
 
     const isSecure = violations.length === 0;

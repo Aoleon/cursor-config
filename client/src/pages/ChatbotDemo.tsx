@@ -487,21 +487,56 @@ export default function ChatbotDemo() {
         });
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur chatbot:", error);
+      
+      // Extraire les informations d'erreur et debug
+      const errorData = error?.response?.data || error;
+      const errorContent = errorData?.error?.message || 
+                           errorData?.message || 
+                           "Désolé, une erreur s'est produite lors du traitement de votre requête.";
+      
+      // Capturer le SQL généré même en cas d'erreur
+      if (showDebug && errorData?.debugInfo?.generatedSQL) {
+        setCurrentSQLDetails({
+          rawSQL: errorData.debugInfo.generatedSQL,
+          rbacFilters: errorData.debugInfo.rbacFilters,
+          performanceHints: errorData.debugInfo.performanceHints,
+          tablesAccessed: errorData.debugInfo.tablesAccessed
+        });
+        
+        // Afficher les métriques d'erreur
+        setCurrentMetrics({
+          executionTime: errorData.debugInfo.executionTime,
+          queryType: errorData.debugInfo.queryAnalysis?.queryType,
+          complexity: errorData.debugInfo.queryAnalysis?.complexity
+        });
+      }
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "Désolé, une erreur s'est produite lors du traitement de votre requête.",
-        timestamp: new Date()
+        content: errorContent,
+        timestamp: new Date(),
+        queryData: showDebug && errorData?.debugInfo ? {
+          sql: errorData.debugInfo.generatedSQL,
+          confidence: 0,
+          error: true,
+          validationErrors: errorData.debugInfo.validationErrors,
+          technicalDetails: errorData.error?.details?.technicalDetails
+        } : undefined
       };
       
       setMessages(prev => [...prev, errorMessage]);
       
+      // Toast avec plus d'informations en mode debug
+      const toastDescription = showDebug && errorData?.debugInfo?.validationErrors 
+        ? `Erreur: ${errorData.debugInfo.validationErrors.join(', ')}`
+        : "Impossible de traiter votre requête";
+      
       toast({
         title: "Erreur",
-        description: "Impossible de traiter votre requête",
+        description: toastDescription,
         variant: "destructive"
       });
     } finally {
@@ -816,7 +851,15 @@ export default function ChatbotDemo() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label className="text-sm font-medium mb-2">SQL Brut</Label>
+                <Label className="text-sm font-medium mb-2 flex items-center gap-2">
+                  SQL Brut
+                  {currentMetrics.confidence === 0 && (
+                    <Badge variant="destructive" className="text-xs">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      Erreur
+                    </Badge>
+                  )}
+                </Label>
                 <pre className="text-xs bg-gray-900 text-gray-100 p-3 rounded overflow-x-auto">
                   {currentSQLDetails.rawSQL}
                 </pre>

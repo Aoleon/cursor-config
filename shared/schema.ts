@@ -5144,7 +5144,7 @@ export interface AiQueryResponse {
     query: string;
     sqlGenerated?: string;
     explanation?: string;
-    modelUsed: "claude_sonnet_4" | "gpt_5";
+    modelUsed: "claude_sonnet_4" | "gpt_5" | "degraded" | "degraded_cache";
     tokensUsed: number;
     responseTimeMs: number;
     fromCache: boolean;
@@ -5180,7 +5180,7 @@ export interface AiUsageStats {
 
 // Types pour configuration et routing
 export interface ModelSelectionResult {
-  selectedModel: "claude_sonnet_4" | "gpt_5";
+  selectedModel: "claude_sonnet_4" | "gpt_5" | "degraded" | "degraded_cache";
   reason: string;
   confidence: number;
   appliedRules: string[];

@@ -340,6 +340,7 @@ const MessageBubble: React.FC<{
             {onFeedback && message.conversationId && (
               <div className="flex gap-2">
                 <Button
+                  data-testid={`feedback-positive-${message.conversationId}`}
                   size="sm"
                   variant="ghost"
                   onClick={() => onFeedback(message.conversationId!, 'positive')}
@@ -349,6 +350,7 @@ const MessageBubble: React.FC<{
                   <span className="text-xs">Utile</span>
                 </Button>
                 <Button
+                  data-testid={`feedback-negative-${message.conversationId}`}
                   size="sm"
                   variant="ghost"
                   onClick={() => onFeedback(message.conversationId!, 'negative')}
@@ -552,6 +554,7 @@ export default function ChatbotDemo() {
                 <div className="flex items-center gap-2">
                   <Label htmlFor="debug-mode" className="text-sm">Mode Debug</Label>
                   <Switch
+                    data-testid="debug-mode-toggle"
                     id="debug-mode"
                     checked={showDebug}
                     onCheckedChange={setShowDebug}
@@ -629,8 +632,9 @@ export default function ChatbotDemo() {
                       value={category.id}
                       className="space-y-2 mt-4"
                     >
-                      {category.queries.map(query => (
+                      {category.queries.map((query, index) => (
                         <Button
+                          data-testid={`preset-query-${category.id}-${index}`}
                           key={query.id}
                           variant="outline"
                           className="w-full justify-start text-left h-auto p-3 hover:bg-primary/5"
@@ -763,6 +767,7 @@ export default function ChatbotDemo() {
                     <div className="flex flex-wrap gap-2">
                       {suggestions.slice(0, 3).map((suggestion, idx) => (
                         <Button
+                          data-testid={`suggestion-${idx}`}
                           key={idx}
                           variant="outline"
                           size="sm"
@@ -778,6 +783,7 @@ export default function ChatbotDemo() {
                   
                   <div className="flex gap-2">
                     <Input
+                      data-testid="chatbot-input"
                       placeholder="Posez votre question..."
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
@@ -786,6 +792,7 @@ export default function ChatbotDemo() {
                       className="flex-1"
                     />
                     <Button
+                      data-testid="chatbot-send"
                       onClick={() => handleQuery(input)}
                       disabled={!input.trim() || chatbotQuery.isPending}
                     >

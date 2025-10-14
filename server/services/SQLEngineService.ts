@@ -120,22 +120,71 @@ export class SQLEngineService {
         };
       }
 
-      // 2. Construction du contexte intelligent métier
+      // 2. Construction du contexte intelligent métier AVEC ANALYSE D'INTENTION
       const enrichedContext = await this.buildIntelligentContext(request);
 
-      // 3. Génération SQL via IA (optimisé pour performance <15s)
+      // 2.5 UTILISATION DE L'ANALYSE D'INTENTION
+      const queryAnalysis = (request as any).queryAnalysis;
+      const queryComplexity = queryAnalysis?.complexity || this.detectQueryComplexity(request.naturalLanguageQuery);
+      const queryType = queryAnalysis?.queryType || this.analyzeQueryType(request.naturalLanguageQuery);
+      
+      logger.info('Analyse d\'intention reçue', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'executeNaturalLanguageQuery',
+          queryType,
+          complexity: queryComplexity,
+          entities: queryAnalysis?.entities,
+          temporalContext: queryAnalysis?.temporalContext,
+          hasAnalysis: !!queryAnalysis
+        }
+      });
+
+      // 3. Génération SQL via IA avec CONTEXTE D'INTENTION
       // Version du prompt pour invalidation cache automatique si prompt change
-      const PROMPT_VERSION = "v2_perf_guardrails_2025"; // Incrémentez si vous changez les guardrails
-      const versionedContext = `[PROMPT_VERSION:${PROMPT_VERSION}]\n${enrichedContext}`;
+      const PROMPT_VERSION = "v3_intention_aware_2025"; // Version avec analyse d'intention
+      
+      // Sélection du template approprié basé sur l'analyse
+      let contextTemplate = '';
+      if (queryType && this.PROMPT_TEMPLATES[queryType as keyof typeof this.PROMPT_TEMPLATES]) {
+        const template = this.PROMPT_TEMPLATES[queryType as keyof typeof this.PROMPT_TEMPLATES];
+        contextTemplate = `\nTYPE DE REQUÊTE: ${queryType}\n${template.guardrails}\n`;
+        logger.info('Template spécialisé utilisé', {
+          metadata: {
+            service: 'SQLEngineService',
+            operation: 'executeNaturalLanguageQuery',
+            queryType,
+            templateUsed: true
+          }
+        });
+      }
+      
+      const versionedContext = `[PROMPT_VERSION:${PROMPT_VERSION}]\n${enrichedContext}\n${contextTemplate}`;
+      
+      // Ajustement des limites et timeouts basé sur la complexité
+      const adjustedTimeout = queryComplexity === 'complex' || queryComplexity === 'expert' 
+        ? QUERY_TIMEOUT_COMPLEX 
+        : QUERY_TIMEOUT_DEFAULT;
+        
+      const adjustedMaxResults = queryComplexity === 'expert' && request.userRole === 'admin'
+        ? MAX_RESULTS_ADMIN
+        : request.maxResults || MAX_RESULTS_DEFAULT;
       
       const aiRequest: AiQueryRequest = {
         query: request.naturalLanguageQuery,
-        context: versionedContext, // Inclut version pour cache automatique invalidation
+        context: versionedContext, // Inclut version et template spécialisé
         userRole: request.userRole,
-        complexity: this.detectQueryComplexity(request.naturalLanguageQuery),
+        complexity: queryComplexity, // Utilise l'analyse transmise
         queryType: "text_to_sql",
-        useCache: !request.dryRun, // Réactivé avec prompt versionné
-        maxTokens: 8192 // Aligné avec AIService pour requêtes SQL complexes
+        useCache: !request.dryRun,
+        maxTokens: queryComplexity === 'expert' ? 10000 : 8192,
+        // Transmission des données d'analyse pour optimisation
+        metadata: {
+          queryAnalysis: queryAnalysis,
+          templateType: queryType,
+          adjustedTimeout,
+          adjustedMaxResults
+        }
       };
 
       const aiResponse = await this.aiService.generateSQL(aiRequest);
@@ -1102,7 +1151,7 @@ INSTRUCTIONS DE BASE:
           }
         }
 
-        // 4. COLUMN WHITELISTING ET VALIDATION
+        // 4. COLUMN WHITELISTING ET VALIDATION - RENFORCÉ
         logger.info('Validation des colonnes', {
       metadata: {
         service: 'SQLEngineService',
@@ -1119,23 +1168,65 @@ INSTRUCTIONS DE BASE:
       }
     });
         
+        // SÉCURITÉ CRITIQUE : Vérification stricte des colonnes sensibles
+        const accessedSensitiveColumns: string[] = [];
+        
         for (const { table, column } of columnsInQuery) {
-          // Vérifier colonnes sensibles
-          if (table && SENSITIVE_COLUMNS[table]?.includes(column)) {
-            if (userRole !== 'admin') {
-              const violation = `Colonne sensible non autorisée pour rôle ${userRole}: ${table}.${column}`;
-              logger.warn('Violation sécurité SQL', {
-      metadata: {
-        service: 'SQLEngineService',
-        operation: 'validateSQL',
-        violation
-      }
-    });
-              violations.push(violation);
-              continue;
+          // Vérifier colonnes sensibles - REJET IMMÉDIAT
+          if (table && SENSITIVE_COLUMNS[table]) {
+            const sensitiveCols = SENSITIVE_COLUMNS[table];
+            if (sensitiveCols.includes(column)) {
+              if (userRole !== 'admin') {
+                // REJET IMMÉDIAT - pas de continuation
+                const violation = `SÉCURITÉ CRITIQUE: Accès interdit aux colonnes sensibles pour rôle ${userRole}: ${table}.${column}`;
+                logger.error('Violation sécurité CRITIQUE', {
+                  metadata: {
+                    service: 'SQLEngineService',
+                    operation: 'validateSQL',
+                    violation,
+                    table,
+                    column,
+                    userRole,
+                    severity: 'CRITICAL'
+                  }
+                });
+                violations.push(violation);
+                accessedSensitiveColumns.push(`${table}.${column}`);
+                // Ne pas ajouter aux colonnes autorisées
+                continue;
+              } else {
+                // Admin peut accéder, mais on log
+                logger.warn('Admin accède à colonne sensible', {
+                  metadata: {
+                    service: 'SQLEngineService',
+                    operation: 'validateSQL',
+                    table,
+                    column,
+                    userRole: 'admin'
+                  }
+                });
+              }
             }
           }
-          allowedColumns.push(column);
+          
+          // Ajouter seulement les colonnes non sensibles ou admin
+          if (!accessedSensitiveColumns.includes(`${table}.${column}`)) {
+            allowedColumns.push(column);
+          }
+        }
+        
+        // Si accès à colonnes sensibles détecté, REJETER IMMÉDIATEMENT
+        if (accessedSensitiveColumns.length > 0 && userRole !== 'admin') {
+          logger.error('Requête rejetée - colonnes sensibles', {
+            metadata: {
+              service: 'SQLEngineService',
+              operation: 'validateSQL',
+              accessedSensitiveColumns,
+              userRole,
+              severity: 'CRITICAL'
+            }
+          });
+          violations.push(`REJET SÉCURITÉ: Accès refusé aux colonnes sensibles: ${accessedSensitiveColumns.join(', ')}`);
         }
 
         // 5. DÉTECTION INJECTIONS AVANCÉES VIA AST
@@ -1394,6 +1485,22 @@ INSTRUCTIONS DE BASE:
       const violations: string[] = [];
       let filteredSQL = sql;
       const parameters: any[] = [userId]; // Premier paramètre toujours userId
+      let rbacFiltersRequired = false;
+      let rbacFiltersApplied = false;
+
+      // SÉCURITÉ CRITIQUE: Pour non-admin, les filtres RBAC sont OBLIGATOIRES
+      if (userRole !== 'admin' && allowedTables.length > 0) {
+        rbacFiltersRequired = true;
+        logger.info('Filtres RBAC obligatoires pour non-admin', {
+          metadata: {
+            service: 'SQLEngineService',
+            operation: 'applyRBACFilters',
+            userRole,
+            tables: allowedTables,
+            userId
+          }
+        });
+      }
 
       // 1. Vérification permissions par table
       for (const table of allowedTables) {
@@ -1406,38 +1513,123 @@ INSTRUCTIONS DE BASE:
 
         const permission = await this.rbacService.validateTableAccess(accessCheck);
         if (!permission.allowed) {
-          violations.push(`Accès refusé à la table: ${table} - ${permission.denialReason}`);
+          violations.push(`SÉCURITÉ: Accès refusé à la table: ${table} - ${permission.denialReason}`);
+          logger.error('Accès table refusé', {
+            metadata: {
+              service: 'SQLEngineService',
+              operation: 'applyRBACFilters',
+              table,
+              reason: permission.denialReason,
+              severity: 'HIGH'
+            }
+          });
           continue;
         }
 
-        // 2. Application filtres automatiques selon le rôle
+        // 2. Application FORCÉE des filtres pour non-admin
         if (userRole !== 'admin') {
           if (this.hasUserIdColumn(table)) {
-            // Filtre automatique par userId pour données personnelles
+            // OBLIGATOIRE: Filtre par userId pour données personnelles
             const userIdFilter = this.buildUserIdFilter(table, parameters.length);
+            if (!userIdFilter) {
+              violations.push(`SÉCURITÉ CRITIQUE: Impossible d'appliquer filtre utilisateur sur ${table}`);
+              logger.error('Filtre RBAC impossible', {
+                metadata: {
+                  service: 'SQLEngineService',
+                  operation: 'applyRBACFilters',
+                  table,
+                  severity: 'CRITICAL'
+                }
+              });
+              continue;
+            }
+            
             filteredSQL = this.injectWhereClause(filteredSQL, table, userIdFilter);
-            filtersApplied.push(`Filtre utilisateur sur ${table}`);
-          }
-
-          if (this.hasDepartementColumn(table)) {
-            // TODO: Récupérer département utilisateur et appliquer filtre
-            // Pour l'instant on laisse ouvert, mais c'est prévu dans le système
+            filtersApplied.push(`Filtre utilisateur FORCÉ sur ${table}`);
+            rbacFiltersApplied = true;
+            
+            logger.info('Filtre RBAC appliqué', {
+              metadata: {
+                service: 'SQLEngineService',
+                operation: 'applyRBACFilters',
+                table,
+                filter: userIdFilter
+              }
+            });
+          } else if (this.hasDepartementColumn(table)) {
+            // OBLIGATOIRE: Au minimum restreindre l'accès
+            logger.warn('Table sans filtre userId, restriction département requise', {
+              metadata: {
+                service: 'SQLEngineService',
+                operation: 'applyRBACFilters',
+                table,
+                warning: 'département_filter_needed'
+              }
+            });
+            // Pour l'instant, on rejette si pas de filtre utilisateur disponible
+            if (!rbacFiltersApplied) {
+              violations.push(`SÉCURITÉ: Table ${table} nécessite filtres RBAC non disponibles`);
+            }
           }
         }
 
         // 3. Masquage colonnes sensibles selon le rôle
         if (permission.deniedColumns && permission.deniedColumns.length > 0) {
           filteredSQL = this.maskSensitiveColumns(filteredSQL, table, permission.deniedColumns);
-          filtersApplied.push(`Colonnes masquées sur ${table}: ${permission.deniedColumns.join(', ')}`);
+          filtersApplied.push(`Colonnes sensibles MASQUÉES sur ${table}: ${permission.deniedColumns.join(', ')}`);
+          logger.info('Colonnes sensibles masquées', {
+            metadata: {
+              service: 'SQLEngineService',
+              operation: 'applyRBACFilters',
+              table,
+              maskedColumns: permission.deniedColumns
+            }
+          });
         }
       }
 
+      // VALIDATION CRITIQUE: Si filtres requis mais pas appliqués, REJETER
+      if (rbacFiltersRequired && !rbacFiltersApplied && filtersApplied.length === 0) {
+        const criticalViolation = 'SÉCURITÉ CRITIQUE: Filtres RBAC obligatoires non appliqués pour utilisateur non-admin';
+        logger.error(criticalViolation, {
+          metadata: {
+            service: 'SQLEngineService',
+            operation: 'applyRBACFilters',
+            userRole,
+            userId,
+            tables: allowedTables,
+            severity: 'CRITICAL',
+            action: 'REJECT_QUERY'
+          }
+        });
+        violations.push(criticalViolation);
+      }
+
+      // Si violations critiques, REJETER la requête
       if (violations.length > 0) {
+        logger.error('Requête REJETÉE - violations RBAC', {
+          metadata: {
+            service: 'SQLEngineService',
+            operation: 'applyRBACFilters',
+            violations,
+            userRole,
+            severity: 'CRITICAL'
+          }
+        });
         return {
           success: false,
           rbacViolations: violations
         };
       }
+
+      logger.info('Filtres RBAC appliqués avec succès', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'applyRBACFilters',
+          filtersApplied,
+          userRole
+        }
+      });
 
       return {
         success: true,

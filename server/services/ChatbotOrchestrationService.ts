@@ -556,10 +556,23 @@ export class ChatbotOrchestrationService {
       
       const sqlStartTime = Date.now();
 
+      // CONNEXION ANALYSE D'INTENTION - Transmission complète au SQLEngine
+      const queryAnalysis = {
+        complexity: queryComplexity,
+        pattern: queryPattern,
+        entities: queryPattern.entities,
+        queryType: queryPattern.queryType,
+        temporalContext: queryPattern.temporalContext,
+        aggregations: queryPattern.aggregations,
+        filters: queryPattern.filters,
+        focusAreas: focusAreas
+      };
+
       const sqlQueryRequest = {
         naturalLanguageQuery: request.query,
         context: request.context || businessContextResponse?.context ? 
           JSON.stringify(businessContextResponse.context) : undefined,
+        queryAnalysis, // ANALYSE D'INTENTION TRANSMISE ICI
         dryRun: request.options?.dryRun || false,
         maxResults: request.options?.maxResults || 1000,
         timeoutMs: request.options?.timeoutMs || 30000,
@@ -3048,163 +3061,301 @@ export class ChatbotOrchestrationService {
   }
 
   // ========================================
-  // SYSTÈME DE CACHE LRU AMÉLIORÉ
+  // SYSTÈME DE CACHE LRU AMÉLIORÉ - VRAIE IMPLÉMENTATION
   // ========================================
 
-  private queryCache = new Map<string, {
-    data: any;
-    timestamp: number;
-    hits: number;
-    ttl: number;
-    queryPattern: any;
-  }>();
-  
-  private readonly MAX_CACHE_ENTRIES = 1000;
-  private readonly DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes par défaut
-  
   /**
-   * Implémente un cache LRU avec TTL adaptatif
-   * @param key Clé de cache
-   * @param data Données à mettre en cache
-   * @param queryPattern Pattern de la requête pour TTL adaptatif
+   * Classe LRU Cache réelle avec TTL et gestion mémoire
    */
-  private setCacheLRU(key: string, data: any, queryPattern: any): void {
-    // Nettoyage si le cache est plein
-    if (this.queryCache.size >= this.MAX_CACHE_ENTRIES) {
-      // Supprimer l'entrée la moins récemment utilisée
-      const oldestKey = this.findLRUEntry();
-      if (oldestKey) {
-        this.queryCache.delete(oldestKey);
+  private lruCache = (() => {
+    class LRUCache {
+    private cache: Map<string, {
+      value: any;
+      timestamp: number;
+      ttl: number;
+      hits: number;
+      queryPattern?: any;
+    }>;
+    private maxSize: number;
+    private readonly DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes par défaut
+
+    constructor(maxSize = 1000) {
+      this.cache = new Map();
+      this.maxSize = maxSize;
+    }
+
+    /**
+     * Récupère une valeur du cache avec gestion LRU
+     */
+    get(key: string): any {
+      const entry = this.cache.get(key);
+      if (!entry) {
+        logger.debug('Cache miss', {
+          metadata: {
+            service: 'LRUCache',
+            operation: 'get',
+            key,
+            cacheSize: this.cache.size
+          }
+        });
+        return null;
       }
-    }
-    
-    // Calcul du TTL adaptatif basé sur le type de requête
-    const ttl = this.calculateAdaptiveTTL(queryPattern);
-    
-    this.queryCache.set(key, {
-      data,
-      timestamp: Date.now(),
-      hits: 0,
-      ttl,
-      queryPattern
-    });
-  }
-  
-  /**
-   * Récupère une entrée du cache avec mise à jour LRU
-   * @param key Clé de cache
-   * @returns Les données cachées ou null si expirées/inexistantes
-   */
-  private getCacheLRU(key: string): any | null {
-    const entry = this.queryCache.get(key);
-    
-    if (!entry) {
-      return null;
-    }
-    
-    // Vérifier l'expiration
-    if (Date.now() - entry.timestamp > entry.ttl) {
-      this.queryCache.delete(key);
-      return null;
-    }
-    
-    // Mise à jour des hits et du timestamp pour LRU
-    entry.hits++;
-    entry.timestamp = Date.now();
-    
-    // Ajuster le TTL si la requête est populaire
-    if (entry.hits > 10) {
-      entry.ttl = Math.min(entry.ttl * 1.5, 30 * 60 * 1000); // Max 30 minutes
-    }
-    
-    return entry.data;
-  }
-  
-  /**
-   * Trouve l'entrée la moins récemment utilisée
-   * @returns La clé de l'entrée LRU
-   */
-  private findLRUEntry(): string | null {
-    let oldestKey: string | null = null;
-    let oldestTime = Date.now();
-    
-    for (const [key, entry] of this.queryCache.entries()) {
-      // Pondération par hits pour éviter de supprimer les entrées populaires
-      const effectiveAge = entry.timestamp + (entry.hits * 60000); // Bonus de 1 minute par hit
-      if (effectiveAge < oldestTime) {
-        oldestTime = effectiveAge;
-        oldestKey = key;
+
+      // Vérification TTL
+      if (Date.now() > entry.timestamp + entry.ttl) {
+        this.cache.delete(key);
+        logger.debug('Cache entry expired', {
+          metadata: {
+            service: 'LRUCache',
+            operation: 'get',
+            key,
+            ttl: entry.ttl,
+            age: Date.now() - entry.timestamp
+          }
+        });
+        return null;
       }
-    }
-    
-    return oldestKey;
-  }
-  
-  /**
-   * Calcule un TTL adaptatif basé sur le type de requête
-   * @param queryPattern Pattern de la requête
-   * @returns TTL en millisecondes
-   */
-  private calculateAdaptiveTTL(queryPattern: any): number {
-    // KPIs : cache plus long car changent moins souvent
-    if (queryPattern.queryType === 'kpi') {
-      return 15 * 60 * 1000; // 15 minutes
-    }
-    
-    // Comparaisons temporelles : cache court car dépendent du temps
-    if (queryPattern.queryType === 'comparison' || queryPattern.temporalContext?.type === 'relative') {
-      return 2 * 60 * 1000; // 2 minutes
-    }
-    
-    // Listes et détails : cache moyen
-    if (queryPattern.queryType === 'list' || queryPattern.queryType === 'detail') {
-      return 5 * 60 * 1000; // 5 minutes
-    }
-    
-    // Actions : pas de cache
-    if (queryPattern.queryType === 'action') {
-      return 0;
-    }
-    
-    // Par défaut
-    return this.DEFAULT_TTL_MS;
-  }
-  
-  /**
-   * Invalide le cache intelligemment basé sur les événements
-   * @param event Type d'événement
-   * @param entityType Type d'entité affectée
-   */
-  private invalidateCacheByEvent(event: string, entityType: string): void {
-    const keysToDelete: string[] = [];
-    
-    for (const [key, entry] of this.queryCache.entries()) {
-      // Invalider si l'entité est mentionnée dans le pattern
-      if (entry.queryPattern.entities?.includes(entityType)) {
-        keysToDelete.push(key);
-        continue;
+
+      // Déplacer en fin pour LRU (plus récent)
+      this.cache.delete(key);
+      entry.hits++;
+      entry.timestamp = Date.now();
+      
+      // Augmenter TTL si populaire
+      if (entry.hits > 10) {
+        entry.ttl = Math.min(entry.ttl * 1.5, 30 * 60 * 1000);
       }
       
-      // Invalider les KPIs si modification majeure
-      if (event === 'major_update' && entry.queryPattern.queryType === 'kpi') {
-        keysToDelete.push(key);
-      }
+      this.cache.set(key, entry);
+      
+      logger.debug('Cache hit', {
+        metadata: {
+          service: 'LRUCache',
+          operation: 'get',
+          key,
+          hits: entry.hits,
+          ttl: entry.ttl,
+          cacheSize: this.cache.size
+        }
+      });
+      
+      return entry.value;
     }
-    
-    // Suppression des clés invalidées
-    for (const key of keysToDelete) {
-      this.queryCache.delete(key);
-    }
-    
-    logger.info('Cache invalidé', {
-      metadata: {
-        service: 'ChatbotOrchestrationService',
-        operation: 'invalidateCache',
-        event,
-        entityType,
-        keysInvalidated: keysToDelete.length
+
+    /**
+     * Ajoute ou met à jour une entrée dans le cache
+     */
+    set(key: string, value: any, ttl?: number, queryPattern?: any): void {
+      // Éviction si plein (supprime le premier = le plus ancien)
+      if (this.cache.size >= this.maxSize) {
+        const firstKey = this.cache.keys().next().value;
+        if (firstKey) {
+          this.cache.delete(firstKey);
+          logger.debug('Cache eviction (LRU)', {
+            metadata: {
+              service: 'LRUCache',
+              operation: 'set',
+              evictedKey: firstKey,
+              reason: 'max_size_reached',
+              maxSize: this.maxSize
+            }
+          });
+        }
       }
-    });
+
+      const effectiveTTL = ttl || this.calculateAdaptiveTTL(queryPattern);
+      
+      this.cache.set(key, {
+        value,
+        timestamp: Date.now(),
+        ttl: effectiveTTL,
+        hits: 0,
+        queryPattern
+      });
+
+      logger.debug('Cache set', {
+        metadata: {
+          service: 'LRUCache',
+          operation: 'set',
+          key,
+          ttl: effectiveTTL,
+          cacheSize: this.cache.size,
+          queryType: queryPattern?.queryType
+        }
+      });
+    }
+
+    /**
+     * Invalide des entrées basées sur un pattern
+     */
+    invalidateByPattern(entityType: string, event: string): number {
+      const keysToDelete: string[] = [];
+      
+      for (const [key, entry] of this.cache.entries()) {
+        if (entry.queryPattern?.entities?.includes(entityType)) {
+          keysToDelete.push(key);
+        } else if (event === 'major_update' && entry.queryPattern?.queryType === 'kpi') {
+          keysToDelete.push(key);
+        }
+      }
+      
+      for (const key of keysToDelete) {
+        this.cache.delete(key);
+      }
+      
+      if (keysToDelete.length > 0) {
+        logger.info('Cache invalidation par pattern', {
+          metadata: {
+            service: 'LRUCache',
+            operation: 'invalidateByPattern',
+            entityType,
+            event,
+            keysInvalidated: keysToDelete.length,
+            remainingSize: this.cache.size
+          }
+        });
+      }
+      
+      return keysToDelete.length;
+    }
+
+    /**
+     * Calcule un TTL adaptatif basé sur le pattern
+     */
+    private calculateAdaptiveTTL(queryPattern?: any): number {
+      if (!queryPattern) return this.DEFAULT_TTL_MS;
+      
+      // KPIs : cache plus long
+      if (queryPattern.queryType === 'kpi') {
+        return 15 * 60 * 1000; // 15 minutes
+      }
+      
+      // Comparaisons temporelles : cache court
+      if (queryPattern.queryType === 'comparison' || 
+          queryPattern.temporalContext?.type === 'relative') {
+        return 2 * 60 * 1000; // 2 minutes
+      }
+      
+      // Listes et détails : cache moyen
+      if (queryPattern.queryType === 'list' || 
+          queryPattern.queryType === 'detail') {
+        return 5 * 60 * 1000; // 5 minutes
+      }
+      
+      // Actions : pas de cache
+      if (queryPattern.queryType === 'action') {
+        return 30 * 1000; // 30 secondes seulement
+      }
+      
+      return this.DEFAULT_TTL_MS;
+    }
+
+    /**
+     * Nettoie les entrées expirées
+     */
+    cleanup(): number {
+      const now = Date.now();
+      let cleaned = 0;
+      
+      for (const [key, entry] of this.cache.entries()) {
+        if (now > entry.timestamp + entry.ttl) {
+          this.cache.delete(key);
+          cleaned++;
+        }
+      }
+      
+      if (cleaned > 0) {
+        logger.debug('Cache cleanup', {
+          metadata: {
+            service: 'LRUCache',
+            operation: 'cleanup',
+            entriesCleaned: cleaned,
+            remainingSize: this.cache.size
+          }
+        });
+      }
+      
+      return cleaned;
+    }
+
+    /**
+     * Obtient des statistiques du cache
+     */
+    getStats(): {
+      size: number;
+      maxSize: number;
+      utilization: number;
+      oldestEntry?: number;
+      newestEntry?: number;
+    } {
+      let oldestTimestamp = Date.now();
+      let newestTimestamp = 0;
+      
+      for (const entry of this.cache.values()) {
+        if (entry.timestamp < oldestTimestamp) {
+          oldestTimestamp = entry.timestamp;
+        }
+        if (entry.timestamp > newestTimestamp) {
+          newestTimestamp = entry.timestamp;
+        }
+      }
+      
+      return {
+        size: this.cache.size,
+        maxSize: this.maxSize,
+        utilization: (this.cache.size / this.maxSize) * 100,
+        oldestEntry: this.cache.size > 0 ? Date.now() - oldestTimestamp : undefined,
+        newestEntry: this.cache.size > 0 ? Date.now() - newestTimestamp : undefined
+      };
+    }
+
+    /**
+     * Vide complètement le cache
+     */
+    clear(): void {
+      const previousSize = this.cache.size;
+      this.cache.clear();
+      logger.info('Cache cleared', {
+        metadata: {
+          service: 'LRUCache',
+          operation: 'clear',
+          previousSize
+        }
+      });
+    }
+  }
+    
+    return new LRUCache(1000);
+  })();
+  
+  /**
+   * Méthodes wrapper pour compatibilité avec le code existant
+   */
+  private setCacheLRU(key: string, data: any, queryPattern: any): void {
+    this.lruCache.set(key, data, undefined, queryPattern);
+  }
+  
+  private getCacheLRU(key: string): any | null {
+    return this.lruCache.get(key);
+  }
+  
+  /**
+   * Invalide le cache basé sur les événements
+   */
+  private invalidateCacheByEvent(event: string, entityType: string): void {
+    const invalidatedCount = this.lruCache.invalidateByPattern(entityType, event);
+    
+    if (invalidatedCount > 0) {
+      logger.info('Cache invalidé par événement', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'invalidateCacheByEvent',
+          event,
+          entityType,
+          keysInvalidated: invalidatedCount
+        }
+      });
+    }
   }
   
   /**

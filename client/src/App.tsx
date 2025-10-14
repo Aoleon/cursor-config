@@ -64,6 +64,8 @@ import ComparaisonDevis from "@/pages/comparaison-devis";
 import ChatbotPage from "@/pages/chatbot";
 // Import de la démo chatbot avancée
 import ChatbotDemo from "@/pages/ChatbotDemo";
+// Import de la page administration
+import Administration from "@/pages/administration";
 import BugReportButton from "@/components/BugReportButton";
 
 function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
@@ -180,6 +182,9 @@ function Router() {
       <Route path="/be-dashboard">
         <Redirect to="/dashboard/be" />
       </Route>
+      
+      {/* ============= ADMINISTRATION ============= */}
+      <Route path="/administration" component={() => <ProtectedRoute component={Administration} />} />
       <Route path="/batigest" component={() => <ProtectedRoute component={BatigestPage} />} />
       {/* Validation technique pour Julien LAMBOROT */}
       <Route path="/technical-alerts" component={() => <ProtectedRoute component={TechnicalAlerts} />} />

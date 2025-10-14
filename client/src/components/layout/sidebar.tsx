@@ -35,7 +35,8 @@ import {
   CalendarDays,
   BarChart3,
   Bot,
-  Sparkles
+  Sparkles,
+  Shield
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -57,9 +58,6 @@ const navigation: NavigationItem[] = [
   // ============= DASHBOARDS STANDARDISÉS ============= //
   { name: "Dashboard Dirigeant", href: "/dashboard/executive", icon: BarChart3 },
   { name: "Dashboard BE", href: "/dashboard/be", icon: Settings },
-  
-  // ============= ASSISTANT IA ============= //
-  { name: "Démo Chatbot IA", href: "/chatbot-demo", icon: Sparkles },
   
   // ============= GESTION OFFRES ============= //
   { 
@@ -94,7 +92,18 @@ const navigation: NavigationItem[] = [
   // ============= RESSOURCES TRANSVERSALES ============= //
   { name: "Équipes", href: "/teams", icon: Users },
   { name: "Fournisseurs", href: "/suppliers", icon: Truck },
-  { name: "Batigest", href: "/batigest", icon: Database },
+  
+  // ============= ADMINISTRATION ============= //
+  { 
+    name: "Administration", 
+    href: "/administration", 
+    icon: Shield,
+    relatedPaths: ["/administration", "/chatbot-demo", "/batigest"],
+    subItems: [
+      { name: "Démo Chatbot IA", href: "/chatbot-demo", icon: Sparkles, description: "Test du chatbot IA Saxium" },
+      { name: "Batigest", href: "/batigest", icon: Database, description: "Interface de gestion Batigest" },
+    ]
+  },
 ];
 
 

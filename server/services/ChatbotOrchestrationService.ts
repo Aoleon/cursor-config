@@ -151,13 +151,46 @@ export class ChatbotOrchestrationService {
     let rbacFiltersApplied: string[] = [];
     let securityChecksPassed: string[] = [];
 
+    // === NOUVELLE ANALYSE DE PATTERN AVANCÉE ===
+    const queryPattern = this.analyzeQueryPattern(request.query);
+    const queryComplexity = this.detectQueryComplexity(request.query);
+    const focusAreas = this.detectFocusAreas(request.query);
+    
+    // === VÉRIFICATION CACHE LRU AMÉLIORÉ ===
+    const cacheKey = `${request.userId}_${request.userRole}_${request.query.toLowerCase().trim()}`;
+    const cachedResult = this.getCacheLRU(cacheKey);
+    
+    if (cachedResult) {
+      logger.info('Cache hit LRU', {
+        metadata: {
+          service: 'ChatbotOrchestrationService',
+          operation: 'processQueryParallel',
+          cacheKey,
+          queryType: queryPattern.queryType,
+          complexity: queryComplexity
+        }
+      });
+      
+      // Retourner le résultat caché avec enrichissement
+      return {
+        ...cachedResult,
+        execution_time_ms: Date.now() - startTime,
+        cache_hit: true,
+        metadata: {
+          ...cachedResult.metadata,
+          cache_source: 'lru',
+          original_execution_time: cachedResult.execution_time_ms
+        }
+      };
+    }
+
     // === INSTRUMENTATION PERFORMANCE : Démarrage tracing pipeline parallèle ===
     this.performanceMetrics.startPipelineTrace(
       traceId, 
       request.userId, 
       request.userRole, 
       request.query,
-      this.detectQueryComplexity(request.query)
+      queryComplexity
     );
 
     try {
@@ -329,6 +362,41 @@ export class ChatbotOrchestrationService {
         debugInfo.rbac_check_ms = rbacTime;
       }
 
+      // === VALIDATION GARDE-FOUS MÉTIER ===
+      const businessValidation = this.validateBusinessCoherence(request, queryPattern);
+      if (!businessValidation.isValid) {
+        logger.warn('Requête bloquée par garde-fous métier', {
+          metadata: {
+            service: 'ChatbotOrchestrationService',
+            operation: 'processQueryParallel',
+            warnings: businessValidation.warnings,
+            suggestions: businessValidation.suggestions
+          }
+        });
+        
+        return this.createErrorResponse(
+          conversationId,
+          request.query,
+          "business_rule",
+          businessValidation.warnings.join('. '),
+          businessValidation.suggestions.join('. ')
+        );
+      }
+      
+      // === ENRICHISSEMENT DU CONTEXTE AVEC TEMPLATES SQL ===
+      const sqlTemplate = this.generateOptimizedSQLTemplate(queryPattern, queryPattern.entities);
+      
+      debugInfo.queryAnalysis = {
+        queryType: queryPattern.queryType,
+        entities: queryPattern.entities,
+        temporalContext: queryPattern.temporalContext,
+        aggregations: queryPattern.aggregations,
+        filters: queryPattern.filters,
+        focusAreas: focusAreas,
+        complexity: queryComplexity,
+        sqlHints: sqlTemplate.hints
+      };
+
       // ========================================
       // 4. DISPATCH PARALLÈLE PRINCIPAL - CONTEXTE + MODÈLE
       // ========================================
@@ -340,20 +408,26 @@ export class ChatbotOrchestrationService {
         metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'handleParallelQuery',
-          context: { parallelExecution: 'context_model_dispatch' }
+          context: { parallelExecution: 'context_model_dispatch' },
+          queryType: queryPattern.queryType,
+          complexity: queryComplexity
         }
       });
 
-      // Préparation des promesses parallèles
+      // Préparation des promesses parallèles avec contexte enrichi
       const businessContextRequest = {
         userId: request.userId,
         user_role: request.userRole,
         query_hint: request.query,
-        complexity_preference: this.detectQueryComplexity(request.query),
-        focus_areas: this.detectFocusAreas(request.query),
+        complexity_preference: queryComplexity,
+        focus_areas: focusAreas,
         include_temporal: true,
         cache_duration_minutes: 60,
-        personalization_level: "advanced" as const
+        personalization_level: "advanced" as const,
+        // Enrichissement avec les nouvelles données
+        query_pattern: queryPattern,
+        sql_template: sqlTemplate,
+        business_validation: businessValidation
       };
 
       // EXÉCUTION PARALLÈLE avec Promise.allSettled et timeout
@@ -553,34 +627,48 @@ export class ChatbotOrchestrationService {
       });
 
       // ========================================
-      // 6. GÉNÉRATION RÉPONSE CONVERSATIONNELLE (IDENTIQUE)
+      // 6. GÉNÉRATION RÉPONSE CONVERSATIONNELLE ENRICHIE
       // ========================================
       this.performanceMetrics.startStep(traceId, 'response_formatting', { 
         resultCount: sqlResult.results?.length || 0,
-        parallelMode: true
+        parallelMode: true,
+        queryType: queryPattern.queryType
       });
 
       const responseFormattingStartTime = Date.now();
 
-      const explanation = this.generateExplanation(
+      // === GÉNÉRATION D'EXPLICATION ENRICHIE ===
+      const enrichedExplanation = this.generateEnrichedExplanation(
         request.query,
         sqlResult.results || [],
-        request.userRole
+        request.userRole,
+        queryPattern,
+        sqlResult.metadata || {}
       );
 
-      const suggestions = await this.generateContextualSuggestions(
+      // === SUGGESTIONS INTELLIGENTES CONTEXTUELLES ===
+      const enhancedSuggestions = await this.generateEnhancedSuggestions(
         request.userId,
         request.userRole,
         request.query,
-        sqlResult.results || []
+        sqlResult.results || [],
+        queryPattern
+      );
+
+      // === MÉTADONNÉES CONTEXTUELLES ===
+      const contextualMetadata = this.generateContextualMetadata(
+        sqlResult.results || [],
+        queryPattern,
+        sqlResult.sql || '',
+        Date.now() - startTime
       );
 
       const responseFormattingTime = Date.now() - responseFormattingStartTime;
 
       this.performanceMetrics.endStep(traceId, 'response_formatting', true, { 
         responseFormattingTime,
-        explanationLength: explanation.length,
-        suggestionsCount: suggestions.length,
+        explanationLength: enrichedExplanation.length,
+        suggestionsCount: enhancedSuggestions.length,
         parallelMode: true
       });
 
@@ -1139,21 +1227,42 @@ export class ChatbotOrchestrationService {
       }));
 
       // ========================================
-      // 8. CONSTRUCTION RÉPONSE FINALE
+      // 8. CONSTRUCTION RÉPONSE FINALE ENRICHIE
       // ========================================
       const response: ChatbotQueryResponse = {
         success: true,
         conversation_id: conversationId,
         query: request.query,
-        explanation,
+        explanation: enrichedExplanation,
         sql: this.shouldIncludeSQL(request.userRole) ? sqlResult.sql : undefined,
         results: sqlResult.results || [],
-        suggestions,
+        suggestions: enhancedSuggestions,
         confidence: sqlResult.confidence || 0,
         execution_time_ms: totalExecutionTime,
-        model_used: sqlResult.metadata?.aiModelUsed,
-        cache_hit: sqlResult.metadata?.cacheHit || false
+        model_used: sqlResult.metadata?.aiModelUsed || modelSelection?.selectedModel,
+        cache_hit: sqlResult.metadata?.cacheHit || false,
+        // Enrichissement avec métadonnées contextuelles
+        metadata: {
+          ...contextualMetadata,
+          queryAnalysis: {
+            type: queryPattern.queryType,
+            complexity: queryComplexity,
+            entities: queryPattern.entities,
+            temporalContext: queryPattern.temporalContext,
+            aggregations: queryPattern.aggregations
+          },
+          performanceOptimization: {
+            sqlHints: sqlTemplate.hints,
+            estimatedComplexity: sqlTemplate.estimatedComplexity,
+            cacheStrategy: this.calculateAdaptiveTTL(queryPattern)
+          }
+        }
       };
+      
+      // === MISE EN CACHE LRU DU RÉSULTAT ===
+      if (sqlResult.success && !request.options?.dryRun) {
+        this.setCacheLRU(cacheKey, response, queryPattern);
+      }
 
       // Debug info si demandé - ENRICHI avec métriques détaillées
       if (request.options?.includeDebugInfo) {
@@ -2532,5 +2641,1414 @@ export class ChatbotOrchestrationService {
       'high': '🔴 Élevé'
     };
     return displays[riskLevel] || riskLevel;
+  }
+
+  // ========================================
+  // NOUVELLES MÉTHODES D'AMÉLIORATION - PHASE OPTIMISATION
+  // ========================================
+
+  /**
+   * Détecte la complexité d'une requête avec analyse avancée
+   * @param query La requête en langage naturel
+   * @returns Le niveau de complexité: simple, complex, expert
+   */
+  private detectQueryComplexity(query: string): "simple" | "complex" | "expert" {
+    const queryLower = query.toLowerCase();
+    
+    // Patterns pour détecter la complexité
+    const expertPatterns = [
+      // Requêtes temporelles complexes
+      /comparaison|évolution|tendance|progression/,
+      /vs\s+(mois|année|trimestre|semaine)\s+dernier/,
+      /année\s+sur\s+année|yoy|mom/,
+      
+      // Agrégations multiples
+      /moyenne.*et.*somme|total.*et.*moyenne/,
+      /groupé?\s+par.*et.*par/,
+      
+      // Requêtes multi-entités avec conditions
+      /projets?.*et.*devis.*avec|offres?.*et.*fournisseurs?.*où/,
+      
+      // Analyses avancées
+      /corrélation|prédiction|forecast|projection/,
+      /top\s+\d+.*par.*groupe/,
+      /répartition|distribution|ventilation/
+    ];
+    
+    const complexPatterns = [
+      // Temporel simple
+      /cette\s+(semaine|mois|année)|aujourd'hui|hier/,
+      /depuis|entre.*et|jusqu'à/,
+      
+      // Agrégations simples
+      /somme|total|moyenne|compte|nombre/,
+      /maximum|minimum|max|min/,
+      
+      // Comparaisons simples
+      /plus\s+que|moins\s+que|supérieur|inférieur/,
+      
+      // Multi-entités simples
+      /projets?\s+et\s+devis|offres?\s+et\s+ao/
+    ];
+    
+    // Calcul du score de complexité
+    let complexityScore = 0;
+    
+    // Score pour patterns experts
+    for (const pattern of expertPatterns) {
+      if (pattern.test(queryLower)) {
+        complexityScore += 3;
+      }
+    }
+    
+    // Score pour patterns complexes
+    for (const pattern of complexPatterns) {
+      if (pattern.test(queryLower)) {
+        complexityScore += 1;
+      }
+    }
+    
+    // Score basé sur la longueur et les mots-clés
+    const wordCount = query.split(/\s+/).length;
+    if (wordCount > 20) complexityScore += 2;
+    else if (wordCount > 10) complexityScore += 1;
+    
+    // Détection de sous-requêtes ou conditions multiples
+    const hasSubQuery = /\(.*\)/.test(query) || query.includes(' où ') || query.includes(' avec ');
+    if (hasSubQuery) complexityScore += 2;
+    
+    // Détection de jointures implicites
+    const entities = this.detectBusinessEntities(query);
+    if (entities.length > 2) complexityScore += 2;
+    else if (entities.length > 1) complexityScore += 1;
+    
+    // Classification finale
+    if (complexityScore >= 6) return "expert";
+    if (complexityScore >= 2) return "complex";
+    return "simple";
+  }
+
+  /**
+   * Détecte les zones de focus dans une requête
+   * @param query La requête en langage naturel
+   * @returns Les zones de focus identifiées
+   */
+  private detectFocusAreas(query: string): string[] {
+    const focusAreas: string[] = [];
+    const queryLower = query.toLowerCase();
+    
+    // Mapping des patterns vers les focus areas
+    const focusPatterns: Record<string, RegExp[]> = {
+      'financial': [
+        /montant|prix|coût|budget|factur|chiffr|rentab|marge|ca\b/,
+        /recette|dépense|bénéfice|profit/
+      ],
+      'temporal': [
+        /date|période|temps|délai|retard|planning|échéance/,
+        /aujourd|hier|demain|semaine|mois|année|trimestre/
+      ],
+      'performance': [
+        /kpi|indicateur|performance|métrique|taux|ratio/,
+        /conversion|productivité|efficacité|rendement/
+      ],
+      'resources': [
+        /équipe|ressource|personne|be\b|bureau\s+d'étude/,
+        /charge|capacité|disponibilité|occupation/
+      ],
+      'workflow': [
+        /statut|état|phase|étape|validation|workflow/,
+        /en cours|terminé|validé|brouillon|attente/
+      ],
+      'comparison': [
+        /compar|vs\b|versus|évolution|progression|tendance/,
+        /différence|écart|variation/
+      ],
+      'aggregation': [
+        /total|somme|moyenne|compte|nombre|statistique/,
+        /groupé|par\s+\w+|répartition|distribution/
+      ]
+    };
+    
+    // Détection des focus areas
+    for (const [area, patterns] of Object.entries(focusPatterns)) {
+      for (const pattern of patterns) {
+        if (pattern.test(queryLower)) {
+          if (!focusAreas.includes(area)) {
+            focusAreas.push(area);
+          }
+          break; // Une seule détection par area suffit
+        }
+      }
+    }
+    
+    // Si aucun focus détecté, ajouter "general"
+    if (focusAreas.length === 0) {
+      focusAreas.push('general');
+    }
+    
+    return focusAreas;
+  }
+
+  /**
+   * Analyse le pattern de requête pour identifier le type de question
+   * @param query La requête en langage naturel
+   * @returns Le type de question et des métadonnées associées
+   */
+  private analyzeQueryPattern(query: string): {
+    queryType: 'kpi' | 'detail' | 'list' | 'comparison' | 'aggregation' | 'action';
+    entities: string[];
+    temporalContext: any;
+    aggregations: string[];
+    filters: any[];
+  } {
+    const queryLower = query.toLowerCase();
+    
+    // Détection du type de requête
+    let queryType: 'kpi' | 'detail' | 'list' | 'comparison' | 'aggregation' | 'action' = 'list';
+    
+    if (/kpi|indicateur|métrique|taux|performance/.test(queryLower)) {
+      queryType = 'kpi';
+    } else if (/détail|information|spécifique|concernant/.test(queryLower)) {
+      queryType = 'detail';
+    } else if (/compar|vs|évolution|tendance|progression/.test(queryLower)) {
+      queryType = 'comparison';
+    } else if (/somme|total|moyenne|compte|groupé|répartition/.test(queryLower)) {
+      queryType = 'aggregation';
+    } else if (/créer|modifier|supprimer|valider|envoyer|transformer/.test(queryLower)) {
+      queryType = 'action';
+    } else if (/liste|tous|affiche|montre/.test(queryLower)) {
+      queryType = 'list';
+    }
+    
+    // Détection des entités métier
+    const entities = this.detectBusinessEntities(query);
+    
+    // Analyse temporelle
+    const temporalContext = this.analyzeTemporalContext(query);
+    
+    // Détection des agrégations
+    const aggregations = this.detectAggregations(query);
+    
+    // Détection des filtres
+    const filters = this.detectQueryFilters(query);
+    
+    return {
+      queryType,
+      entities,
+      temporalContext,
+      aggregations,
+      filters
+    };
+  }
+
+  /**
+   * Détecte les entités métier dans une requête
+   * @param query La requête en langage naturel
+   * @returns Liste des entités métier détectées
+   */
+  private detectBusinessEntities(query: string): string[] {
+    const entities: string[] = [];
+    const queryLower = query.toLowerCase();
+    
+    // Mapping des patterns d'entités métier JLM
+    const entityPatterns: Record<string, RegExp[]> = {
+      'project': [/projet/],
+      'offer': [/offre/, /devis/],
+      'ao': [/ao\b/, /appel.*offre/],
+      'supplier': [/fournisseur/],
+      'contact': [/contact/, /client/, /architecte/, /maître.*ouvrage/, /maître.*œuvre/],
+      'task': [/tâche/, /activité/],
+      'team': [/équipe/, /be\b/, /bureau.*étude/, /ressource/],
+      'milestone': [/jalon/, /milestone/, /étape/, /livrable/],
+      'lot': [/lot\b/],
+      'chantier': [/chantier/, /site/],
+      'material': [/matériau/, /matériaux/, /menuiserie/, /fenêtre/, /porte/],
+      'validation': [/validation/, /bouclage/, /visa/],
+      'invoice': [/facture/, /facturation/],
+      'payment': [/paiement/, /règlement/],
+      'document': [/document/, /fichier/, /pdf/, /plan/, /cctp/]
+    };
+    
+    // Détection des entités
+    for (const [entity, patterns] of Object.entries(entityPatterns)) {
+      for (const pattern of patterns) {
+        if (pattern.test(queryLower)) {
+          if (!entities.includes(entity)) {
+            entities.push(entity);
+          }
+          break;
+        }
+      }
+    }
+    
+    return entities;
+  }
+
+  /**
+   * Analyse le contexte temporel d'une requête
+   * @param query La requête en langage naturel
+   * @returns Le contexte temporel détecté
+   */
+  private analyzeTemporalContext(query: string): {
+    type: 'absolute' | 'relative' | 'range' | 'comparison' | 'none';
+    period?: string;
+    startDate?: string;
+    endDate?: string;
+    comparisonPeriod?: string;
+  } {
+    const queryLower = query.toLowerCase();
+    const now = new Date();
+    
+    // Détection de dates absolues
+    const absoluteDatePattern = /\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/;
+    if (absoluteDatePattern.test(query)) {
+      return { type: 'absolute', period: 'specific_date' };
+    }
+    
+    // Détection de périodes relatives
+    const relativePatterns: Record<string, string> = {
+      'aujourd\'hui': 'today',
+      'hier': 'yesterday',
+      'demain': 'tomorrow',
+      'cette semaine': 'this_week',
+      'semaine dernière': 'last_week',
+      'ce mois': 'this_month',
+      'mois dernier': 'last_month',
+      'cette année': 'this_year',
+      'année dernière': 'last_year',
+      'ce trimestre': 'this_quarter',
+      'trimestre dernier': 'last_quarter'
+    };
+    
+    for (const [pattern, period] of Object.entries(relativePatterns)) {
+      if (queryLower.includes(pattern)) {
+        return { type: 'relative', period };
+      }
+    }
+    
+    // Détection de plages temporelles
+    if (/entre.*et|du.*au|depuis.*jusqu/.test(queryLower)) {
+      return { type: 'range', period: 'custom_range' };
+    }
+    
+    // Détection de comparaisons temporelles
+    if (/vs|versus|comparé|par rapport/.test(queryLower)) {
+      const comparisonPeriod = 
+        queryLower.includes('année') ? 'year' :
+        queryLower.includes('mois') ? 'month' :
+        queryLower.includes('semaine') ? 'week' : 'period';
+      return { type: 'comparison', comparisonPeriod };
+    }
+    
+    // Détection de périodes glissantes
+    if (/derniers?\s+\d+\s+(jours?|semaines?|mois|années?)/.test(queryLower)) {
+      return { type: 'relative', period: 'rolling' };
+    }
+    
+    return { type: 'none' };
+  }
+
+  /**
+   * Détecte les agrégations demandées dans une requête
+   * @param query La requête en langage naturel
+   * @returns Liste des agrégations détectées
+   */
+  private detectAggregations(query: string): string[] {
+    const aggregations: string[] = [];
+    const queryLower = query.toLowerCase();
+    
+    const aggregationPatterns: Record<string, RegExp[]> = {
+      'sum': [/somme/, /total/, /cumul/],
+      'avg': [/moyenne/, /moy\b/],
+      'count': [/compte/, /nombre/, /combien/, /quantité/],
+      'max': [/maximum/, /max\b/, /plus\s+(grand|élevé|haut)/],
+      'min': [/minimum/, /min\b/, /plus\s+(petit|faible|bas)/],
+      'group_by': [/par\s+\w+/, /groupé/, /répartition/, /ventilation/],
+      'distinct': [/distinct/, /unique/, /différent/],
+      'percentage': [/pourcentage/, /%/, /taux/, /ratio/, /proportion/],
+      'median': [/médiane/],
+      'stddev': [/écart[- ]type/, /variance/, /dispersion/]
+    };
+    
+    for (const [agg, patterns] of Object.entries(aggregationPatterns)) {
+      for (const pattern of patterns) {
+        if (pattern.test(queryLower)) {
+          if (!aggregations.includes(agg)) {
+            aggregations.push(agg);
+          }
+          break;
+        }
+      }
+    }
+    
+    return aggregations;
+  }
+
+  /**
+   * Détecte les filtres dans une requête
+   * @param query La requête en langage naturel
+   * @returns Liste des filtres détectés
+   */
+  private detectQueryFilters(query: string): any[] {
+    const filters: any[] = [];
+    const queryLower = query.toLowerCase();
+    
+    // Détection des filtres de statut
+    const statusPatterns: Record<string, string[]> = {
+      'en_cours': ['en cours', 'actif', 'active'],
+      'termine': ['terminé', 'fini', 'clos', 'clôturé'],
+      'valide': ['validé', 'approuvé', 'confirmé'],
+      'brouillon': ['brouillon', 'draft', 'en préparation'],
+      'en_attente': ['en attente', 'en suspens', 'pending']
+    };
+    
+    for (const [status, patterns] of Object.entries(statusPatterns)) {
+      for (const pattern of patterns) {
+        if (queryLower.includes(pattern)) {
+          filters.push({ type: 'status', value: status });
+          break;
+        }
+      }
+    }
+    
+    // Détection des filtres numériques
+    const numericPatterns = [
+      /supérieur\s+à\s+(\d+)/,
+      /inférieur\s+à\s+(\d+)/,
+      /entre\s+(\d+)\s+et\s+(\d+)/,
+      /plus\s+de\s+(\d+)/,
+      /moins\s+de\s+(\d+)/
+    ];
+    
+    for (const pattern of numericPatterns) {
+      const match = queryLower.match(pattern);
+      if (match) {
+        filters.push({ 
+          type: 'numeric', 
+          operator: pattern.source.includes('supérieur') ? '>' : 
+                    pattern.source.includes('inférieur') ? '<' : 
+                    pattern.source.includes('entre') ? 'between' : '=',
+          value: match[1],
+          value2: match[2] // Pour between
+        });
+      }
+    }
+    
+    // Détection des filtres géographiques
+    const geoPatterns = /département\s+(\d{2})|région\s+(\w+)|ville\s+(\w+)/;
+    const geoMatch = queryLower.match(geoPatterns);
+    if (geoMatch) {
+      filters.push({
+        type: 'geographic',
+        value: geoMatch[1] || geoMatch[2] || geoMatch[3]
+      });
+    }
+    
+    return filters;
+  }
+
+  // ========================================
+  // SYSTÈME DE CACHE LRU AMÉLIORÉ
+  // ========================================
+
+  private queryCache = new Map<string, {
+    data: any;
+    timestamp: number;
+    hits: number;
+    ttl: number;
+    queryPattern: any;
+  }>();
+  
+  private readonly MAX_CACHE_ENTRIES = 1000;
+  private readonly DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes par défaut
+  
+  /**
+   * Implémente un cache LRU avec TTL adaptatif
+   * @param key Clé de cache
+   * @param data Données à mettre en cache
+   * @param queryPattern Pattern de la requête pour TTL adaptatif
+   */
+  private setCacheLRU(key: string, data: any, queryPattern: any): void {
+    // Nettoyage si le cache est plein
+    if (this.queryCache.size >= this.MAX_CACHE_ENTRIES) {
+      // Supprimer l'entrée la moins récemment utilisée
+      const oldestKey = this.findLRUEntry();
+      if (oldestKey) {
+        this.queryCache.delete(oldestKey);
+      }
+    }
+    
+    // Calcul du TTL adaptatif basé sur le type de requête
+    const ttl = this.calculateAdaptiveTTL(queryPattern);
+    
+    this.queryCache.set(key, {
+      data,
+      timestamp: Date.now(),
+      hits: 0,
+      ttl,
+      queryPattern
+    });
+  }
+  
+  /**
+   * Récupère une entrée du cache avec mise à jour LRU
+   * @param key Clé de cache
+   * @returns Les données cachées ou null si expirées/inexistantes
+   */
+  private getCacheLRU(key: string): any | null {
+    const entry = this.queryCache.get(key);
+    
+    if (!entry) {
+      return null;
+    }
+    
+    // Vérifier l'expiration
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.queryCache.delete(key);
+      return null;
+    }
+    
+    // Mise à jour des hits et du timestamp pour LRU
+    entry.hits++;
+    entry.timestamp = Date.now();
+    
+    // Ajuster le TTL si la requête est populaire
+    if (entry.hits > 10) {
+      entry.ttl = Math.min(entry.ttl * 1.5, 30 * 60 * 1000); // Max 30 minutes
+    }
+    
+    return entry.data;
+  }
+  
+  /**
+   * Trouve l'entrée la moins récemment utilisée
+   * @returns La clé de l'entrée LRU
+   */
+  private findLRUEntry(): string | null {
+    let oldestKey: string | null = null;
+    let oldestTime = Date.now();
+    
+    for (const [key, entry] of this.queryCache.entries()) {
+      // Pondération par hits pour éviter de supprimer les entrées populaires
+      const effectiveAge = entry.timestamp + (entry.hits * 60000); // Bonus de 1 minute par hit
+      if (effectiveAge < oldestTime) {
+        oldestTime = effectiveAge;
+        oldestKey = key;
+      }
+    }
+    
+    return oldestKey;
+  }
+  
+  /**
+   * Calcule un TTL adaptatif basé sur le type de requête
+   * @param queryPattern Pattern de la requête
+   * @returns TTL en millisecondes
+   */
+  private calculateAdaptiveTTL(queryPattern: any): number {
+    // KPIs : cache plus long car changent moins souvent
+    if (queryPattern.queryType === 'kpi') {
+      return 15 * 60 * 1000; // 15 minutes
+    }
+    
+    // Comparaisons temporelles : cache court car dépendent du temps
+    if (queryPattern.queryType === 'comparison' || queryPattern.temporalContext?.type === 'relative') {
+      return 2 * 60 * 1000; // 2 minutes
+    }
+    
+    // Listes et détails : cache moyen
+    if (queryPattern.queryType === 'list' || queryPattern.queryType === 'detail') {
+      return 5 * 60 * 1000; // 5 minutes
+    }
+    
+    // Actions : pas de cache
+    if (queryPattern.queryType === 'action') {
+      return 0;
+    }
+    
+    // Par défaut
+    return this.DEFAULT_TTL_MS;
+  }
+  
+  /**
+   * Invalide le cache intelligemment basé sur les événements
+   * @param event Type d'événement
+   * @param entityType Type d'entité affectée
+   */
+  private invalidateCacheByEvent(event: string, entityType: string): void {
+    const keysToDelete: string[] = [];
+    
+    for (const [key, entry] of this.queryCache.entries()) {
+      // Invalider si l'entité est mentionnée dans le pattern
+      if (entry.queryPattern.entities?.includes(entityType)) {
+        keysToDelete.push(key);
+        continue;
+      }
+      
+      // Invalider les KPIs si modification majeure
+      if (event === 'major_update' && entry.queryPattern.queryType === 'kpi') {
+        keysToDelete.push(key);
+      }
+    }
+    
+    // Suppression des clés invalidées
+    for (const key of keysToDelete) {
+      this.queryCache.delete(key);
+    }
+    
+    logger.info('Cache invalidé', {
+      metadata: {
+        service: 'ChatbotOrchestrationService',
+        operation: 'invalidateCache',
+        event,
+        entityType,
+        keysInvalidated: keysToDelete.length
+      }
+    });
+  }
+  
+  /**
+   * Précharge le cache avec les KPIs principaux
+   * @param userRole Rôle de l'utilisateur pour personnalisation
+   */
+  async warmupCache(userRole: string): Promise<void> {
+    const warmupQueries = this.getWarmupQueries(userRole);
+    
+    for (const query of warmupQueries) {
+      try {
+        const request: ChatbotQueryRequest = {
+          query,
+          userId: 'system',
+          userRole,
+          options: { dryRun: false }
+        };
+        
+        // Exécution en arrière-plan sans attendre
+        this.processChatbotQuery(request).catch(error => {
+          logger.warn('Erreur warmup cache', {
+            metadata: {
+              service: 'ChatbotOrchestrationService',
+              operation: 'warmupCache',
+              query,
+              error: error instanceof Error ? error.message : String(error)
+            }
+          });
+        });
+      } catch (error) {
+        // Ignorer les erreurs de warmup
+      }
+    }
+  }
+  
+  /**
+   * Retourne les requêtes de warmup selon le rôle
+   * @param userRole Rôle de l'utilisateur
+   * @returns Liste des requêtes à préchauffer
+   */
+  private getWarmupQueries(userRole: string): string[] {
+    const baseQueries = [
+      "KPI principaux du mois",
+      "Projets en cours",
+      "Alertes actives"
+    ];
+    
+    const roleSpecificQueries: Record<string, string[]> = {
+      'admin': [
+        "Performance globale ce mois",
+        "Charge BE actuelle",
+        "Taux de conversion AO"
+      ],
+      'chef_projet': [
+        "Mes projets actifs",
+        "Planning de la semaine",
+        "Ressources disponibles"
+      ],
+      'commercial': [
+        "Opportunités en cours",
+        "Pipeline commercial",
+        "Offres à relancer"
+      ],
+      'be_manager': [
+        "Charge équipe BE",
+        "Validations en attente",
+        "Projets prioritaires"
+      ]
+    };
+    
+    return [...baseQueries, ...(roleSpecificQueries[userRole] || [])];
+  }
+
+  // ========================================
+  // TEMPLATES SQL OPTIMISÉS
+  // ========================================
+
+  /**
+   * Génère un template SQL optimisé basé sur le pattern de requête
+   * @param queryPattern Pattern analysé de la requête
+   * @param entities Entités métier détectées
+   * @returns Template SQL avec hints de performance
+   */
+  private generateOptimizedSQLTemplate(queryPattern: any, entities: string[]): {
+    template: string;
+    hints: string[];
+    estimatedComplexity: number;
+  } {
+    const hints: string[] = [];
+    let template = '';
+    let estimatedComplexity = 1;
+    
+    // Templates pour KPIs
+    if (queryPattern.queryType === 'kpi') {
+      template = this.getKPITemplate(queryPattern, entities);
+      hints.push('USE_INDEX_FOR_AGGREGATION');
+      hints.push('ENABLE_PARALLEL_EXECUTION');
+      estimatedComplexity = 2;
+    }
+    
+    // Templates pour comparaisons
+    else if (queryPattern.queryType === 'comparison') {
+      template = this.getComparisonTemplate(queryPattern, entities);
+      hints.push('USE_WINDOW_FUNCTIONS');
+      hints.push('OPTIMIZE_FOR_TEMPORAL_QUERIES');
+      estimatedComplexity = 3;
+    }
+    
+    // Templates pour agrégations
+    else if (queryPattern.queryType === 'aggregation') {
+      template = this.getAggregationTemplate(queryPattern, entities);
+      hints.push('USE_MATERIALIZED_VIEW_IF_EXISTS');
+      hints.push('ENABLE_HASH_AGGREGATION');
+      estimatedComplexity = 2;
+    }
+    
+    // Templates pour listes simples
+    else if (queryPattern.queryType === 'list') {
+      template = this.getListTemplate(queryPattern, entities);
+      hints.push('USE_COVERING_INDEX');
+      hints.push('LIMIT_EARLY');
+      estimatedComplexity = 1;
+    }
+    
+    // Détection des jointures nécessaires
+    const requiredJoins = this.detectRequiredJoins(entities);
+    if (requiredJoins.length > 0) {
+      hints.push(`REQUIRED_JOINS: ${requiredJoins.join(', ')}`);
+      estimatedComplexity += requiredJoins.length * 0.5;
+    }
+    
+    // Optimisations temporelles
+    if (queryPattern.temporalContext?.type !== 'none') {
+      hints.push('USE_DATE_INDEX');
+      if (queryPattern.temporalContext.type === 'range') {
+        hints.push('PARTITION_PRUNING_ON_DATE');
+      }
+    }
+    
+    return { template, hints, estimatedComplexity };
+  }
+  
+  /**
+   * Détecte les jointures nécessaires basées sur les entités
+   * @param entities Liste des entités métier
+   * @returns Liste des jointures requises
+   */
+  private detectRequiredJoins(entities: string[]): string[] {
+    const joins: string[] = [];
+    const entityRelations: Record<string, string[]> = {
+      'project': ['offers', 'project_tasks', 'project_timelines', 'team_resources'],
+      'offer': ['projects', 'ao_documents', 'chiffrage_elements', 'suppliers'],
+      'ao': ['ao_documents', 'offers', 'contacts'],
+      'supplier': ['offers', 'validation_milestones'],
+      'team': ['team_resources', 'projects', 'project_tasks'],
+      'milestone': ['validation_milestones', 'projects'],
+      'chantier': ['projects', 'project_tasks', 'date_alerts']
+    };
+    
+    const tablesNeeded = new Set<string>();
+    
+    for (const entity of entities) {
+      const relatedTables = entityRelations[entity] || [];
+      relatedTables.forEach(table => tablesNeeded.add(table));
+    }
+    
+    // Déterminer les jointures basées sur les tables nécessaires
+    if (tablesNeeded.has('offers') && tablesNeeded.has('projects')) {
+      joins.push('offers_projects');
+    }
+    if (tablesNeeded.has('projects') && tablesNeeded.has('project_tasks')) {
+      joins.push('projects_tasks');
+    }
+    if (tablesNeeded.has('offers') && tablesNeeded.has('suppliers')) {
+      joins.push('offers_suppliers');
+    }
+    
+    return joins;
+  }
+  
+  /**
+   * Template SQL pour les KPIs
+   */
+  private getKPITemplate(queryPattern: any, entities: string[]): string {
+    return `
+      -- Template KPI optimisé
+      WITH kpi_data AS (
+        SELECT 
+          COUNT(*) as total_count,
+          SUM(montant) as total_montant,
+          AVG(montant) as avg_montant,
+          MAX(montant) as max_montant
+        FROM main_table
+        WHERE date_column >= :start_date AND date_column <= :end_date
+      )
+      SELECT * FROM kpi_data;
+    `;
+  }
+  
+  /**
+   * Template SQL pour les comparaisons
+   */
+  private getComparisonTemplate(queryPattern: any, entities: string[]): string {
+    return `
+      -- Template comparaison temporelle optimisé
+      WITH period_current AS (
+        SELECT metric, value
+        FROM main_table
+        WHERE date_column >= :current_start AND date_column <= :current_end
+      ),
+      period_previous AS (
+        SELECT metric, value
+        FROM main_table  
+        WHERE date_column >= :previous_start AND date_column <= :previous_end
+      )
+      SELECT 
+        c.metric,
+        c.value as current_value,
+        p.value as previous_value,
+        ((c.value - p.value) / p.value * 100) as variation_percent
+      FROM period_current c
+      JOIN period_previous p ON c.metric = p.metric;
+    `;
+  }
+  
+  /**
+   * Template SQL pour les agrégations
+   */
+  private getAggregationTemplate(queryPattern: any, entities: string[]): string {
+    return `
+      -- Template agrégation optimisé
+      SELECT 
+        group_column,
+        COUNT(*) as count,
+        SUM(value_column) as total,
+        AVG(value_column) as average,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY value_column) as median
+      FROM main_table
+      WHERE filter_conditions
+      GROUP BY group_column
+      HAVING count > :min_count
+      ORDER BY total DESC
+      LIMIT :limit;
+    `;
+  }
+  
+  /**
+   * Template SQL pour les listes
+   */
+  private getListTemplate(queryPattern: any, entities: string[]): string {
+    return `
+      -- Template liste optimisé
+      SELECT 
+        id, name, status, date_created, montant
+      FROM main_table
+      WHERE status IN (:statuses)
+        AND date_column >= :start_date
+      ORDER BY date_created DESC
+      LIMIT :limit OFFSET :offset;
+    `;
+  }
+
+  // ========================================
+  // GARDE-FOUS MÉTIER
+  // ========================================
+
+  /**
+   * Valide la cohérence métier d'une requête
+   * @param request Requête chatbot
+   * @param queryPattern Pattern analysé
+   * @returns Validation et avertissements
+   */
+  private validateBusinessCoherence(
+    request: ChatbotQueryRequest,
+    queryPattern: any
+  ): {
+    isValid: boolean;
+    warnings: string[];
+    suggestions: string[];
+  } {
+    const warnings: string[] = [];
+    const suggestions: string[] = [];
+    let isValid = true;
+    
+    // Validation temporelle
+    if (queryPattern.temporalContext?.type === 'range') {
+      const dateValidation = this.validateTemporalCoherence(queryPattern.temporalContext);
+      if (!dateValidation.isValid) {
+        warnings.push(dateValidation.warning);
+        suggestions.push(dateValidation.suggestion);
+      }
+    }
+    
+    // Détection de requêtes potentiellement coûteuses
+    const costAnalysis = this.analyzeQueryCost(queryPattern, request.userRole);
+    if (costAnalysis.isExpensive) {
+      warnings.push(`⚠️ Cette requête pourrait prendre du temps (${costAnalysis.estimatedTime}s)`);
+      suggestions.push(costAnalysis.optimizationSuggestion);
+      
+      // Bloquer si trop coûteuse pour le rôle
+      if (costAnalysis.shouldBlock) {
+        isValid = false;
+        warnings.push("❌ Requête trop complexe pour votre niveau d'accès");
+      }
+    }
+    
+    // Validation des limites par rôle
+    const limitValidation = this.validateRoleLimits(request.userRole, queryPattern);
+    if (!limitValidation.isValid) {
+      isValid = false;
+      warnings.push(limitValidation.warning);
+      suggestions.push(limitValidation.suggestion);
+    }
+    
+    // Validation de la cohérence métier JLM
+    const businessValidation = this.validateJLMBusinessRules(queryPattern);
+    if (!businessValidation.isValid) {
+      warnings.push(businessValidation.warning);
+      suggestions.push(businessValidation.suggestion);
+    }
+    
+    return { isValid, warnings, suggestions };
+  }
+  
+  /**
+   * Valide la cohérence temporelle
+   */
+  private validateTemporalCoherence(temporalContext: any): {
+    isValid: boolean;
+    warning: string;
+    suggestion: string;
+  } {
+    // Vérifier que la plage n'est pas trop large
+    if (temporalContext.type === 'range') {
+      // Logique pour calculer la durée de la plage
+      // Pour l'instant, on considère qu'une plage > 1 an est suspecte
+      return {
+        isValid: true, // À implémenter selon les dates réelles
+        warning: '',
+        suggestion: ''
+      };
+    }
+    
+    return { isValid: true, warning: '', suggestion: '' };
+  }
+  
+  /**
+   * Analyse le coût estimé d'une requête
+   */
+  private analyzeQueryCost(queryPattern: any, userRole: string): {
+    isExpensive: boolean;
+    estimatedTime: number;
+    shouldBlock: boolean;
+    optimizationSuggestion: string;
+  } {
+    let estimatedTime = 1; // secondes
+    
+    // Facteurs de coût
+    if (queryPattern.queryType === 'comparison') estimatedTime *= 2;
+    if (queryPattern.queryType === 'aggregation') estimatedTime *= 1.5;
+    if (queryPattern.entities.length > 2) estimatedTime *= queryPattern.entities.length * 0.7;
+    if (queryPattern.aggregations.includes('group_by')) estimatedTime *= 1.5;
+    if (queryPattern.temporalContext?.type === 'range') estimatedTime *= 1.2;
+    
+    // Limites par rôle
+    const roleLimits: Record<string, number> = {
+      'admin': 30,
+      'chef_projet': 15,
+      'commercial': 10,
+      'be_manager': 15,
+      'viewer': 5
+    };
+    
+    const maxTime = roleLimits[userRole] || 10;
+    
+    return {
+      isExpensive: estimatedTime > 5,
+      estimatedTime: Math.round(estimatedTime),
+      shouldBlock: estimatedTime > maxTime,
+      optimizationSuggestion: estimatedTime > 5 ? 
+        "Essayez de réduire la période ou le nombre d'entités analysées" :
+        ""
+    };
+  }
+  
+  /**
+   * Valide les limites selon le rôle utilisateur
+   */
+  private validateRoleLimits(userRole: string, queryPattern: any): {
+    isValid: boolean;
+    warning: string;
+    suggestion: string;
+  } {
+    // Définition des limites par rôle
+    const limits: Record<string, any> = {
+      'viewer': {
+        maxEntities: 1,
+        allowedQueryTypes: ['list', 'detail'],
+        maxTimeRange: 30 // jours
+      },
+      'commercial': {
+        maxEntities: 2,
+        allowedQueryTypes: ['list', 'detail', 'kpi'],
+        maxTimeRange: 90
+      },
+      'chef_projet': {
+        maxEntities: 3,
+        allowedQueryTypes: ['list', 'detail', 'kpi', 'aggregation'],
+        maxTimeRange: 365
+      },
+      'be_manager': {
+        maxEntities: 3,
+        allowedQueryTypes: ['list', 'detail', 'kpi', 'aggregation'],
+        maxTimeRange: 365
+      },
+      'admin': {
+        maxEntities: 10,
+        allowedQueryTypes: ['list', 'detail', 'kpi', 'aggregation', 'comparison', 'action'],
+        maxTimeRange: 9999
+      }
+    };
+    
+    const userLimits = limits[userRole] || limits['viewer'];
+    
+    // Validation du nombre d'entités
+    if (queryPattern.entities.length > userLimits.maxEntities) {
+      return {
+        isValid: false,
+        warning: `Votre rôle ne permet pas de requêter plus de ${userLimits.maxEntities} entité(s) à la fois`,
+        suggestion: "Simplifiez votre requête en vous concentrant sur une entité principale"
+      };
+    }
+    
+    // Validation du type de requête
+    if (!userLimits.allowedQueryTypes.includes(queryPattern.queryType)) {
+      return {
+        isValid: false,
+        warning: `Les requêtes de type "${queryPattern.queryType}" ne sont pas autorisées pour votre rôle`,
+        suggestion: "Contactez votre administrateur si vous avez besoin de cet accès"
+      };
+    }
+    
+    return { isValid: true, warning: '', suggestion: '' };
+  }
+  
+  /**
+   * Valide les règles métier spécifiques JLM
+   */
+  private validateJLMBusinessRules(queryPattern: any): {
+    isValid: boolean;
+    warning: string;
+    suggestion: string;
+  } {
+    // Règles métier JLM spécifiques
+    
+    // Règle: Les comparaisons de chantiers nécessitent au moins 1 mois de données
+    if (queryPattern.entities.includes('chantier') && 
+        queryPattern.queryType === 'comparison') {
+      if (queryPattern.temporalContext?.period === 'week') {
+        return {
+          isValid: false,
+          warning: "Les comparaisons de chantiers nécessitent au moins 1 mois de données",
+          suggestion: "Utilisez une période mensuelle ou plus longue pour comparer les chantiers"
+        };
+      }
+    }
+    
+    // Règle: Les KPIs financiers sont limités aux rôles autorisés
+    if (queryPattern.queryType === 'kpi' && 
+        queryPattern.focusAreas?.includes('financial')) {
+      // Cette validation devrait être faite via RBAC
+      // Ici on met juste un warning
+      return {
+        isValid: true,
+        warning: "",
+        suggestion: ""
+      };
+    }
+    
+    return { isValid: true, warning: '', suggestion: '' };
+  }
+
+  // ========================================
+  // MÉTHODES D'ENRICHISSEMENT DES RÉPONSES
+  // ========================================
+
+  /**
+   * Génère une explication enrichie avec métadonnées contextuelles
+   * @param query La requête originale
+   * @param results Les résultats de la requête
+   * @param userRole Le rôle de l'utilisateur
+   * @param queryPattern Le pattern analysé de la requête
+   * @param metadata Métadonnées supplémentaires
+   * @returns Une explication enrichie et contextualisée
+   */
+  private generateEnrichedExplanation(
+    query: string,
+    results: any[],
+    userRole: string,
+    queryPattern: any,
+    metadata: any
+  ): string {
+    let explanation = '';
+    
+    // Introduction contextuelle selon le type de requête
+    switch (queryPattern.queryType) {
+      case 'kpi':
+        explanation = `📊 **Indicateurs clés de performance**\n\n`;
+        break;
+      case 'comparison':
+        explanation = `📈 **Analyse comparative**\n\n`;
+        break;
+      case 'aggregation':
+        explanation = `📊 **Analyse agrégée**\n\n`;
+        break;
+      case 'list':
+        explanation = `📋 **Liste des résultats**\n\n`;
+        break;
+      case 'detail':
+        explanation = `🔍 **Détails spécifiques**\n\n`;
+        break;
+      default:
+        explanation = `📌 **Résultats de votre requête**\n\n`;
+    }
+    
+    // Résumé des résultats
+    if (results.length === 0) {
+      explanation += `❌ Aucun résultat trouvé pour votre requête.\n\n`;
+      
+      // Suggestions spécifiques selon le contexte
+      if (queryPattern.temporalContext?.type !== 'none') {
+        explanation += `💡 **Conseil** : Essayez d'élargir la période temporelle.\n`;
+      }
+      if (queryPattern.filters?.length > 0) {
+        explanation += `💡 **Conseil** : Vérifiez les filtres appliqués ou essayez avec moins de critères.\n`;
+      }
+    } else {
+      explanation += `✅ **${results.length} résultat${results.length > 1 ? 's' : ''} trouvé${results.length > 1 ? 's' : ''}**\n\n`;
+      
+      // Contexte temporel
+      if (queryPattern.temporalContext?.type !== 'none') {
+        explanation += `📅 **Période analysée** : `;
+        switch (queryPattern.temporalContext.type) {
+          case 'relative':
+            explanation += `${queryPattern.temporalContext.period}\n`;
+            break;
+          case 'range':
+            explanation += `Plage personnalisée\n`;
+            break;
+          case 'comparison':
+            explanation += `Comparaison ${queryPattern.temporalContext.comparisonPeriod}\n`;
+            break;
+          default:
+            explanation += `Période spécifique\n`;
+        }
+      }
+      
+      // Entités analysées
+      if (queryPattern.entities.length > 0) {
+        explanation += `🏢 **Entités concernées** : ${queryPattern.entities.join(', ')}\n`;
+      }
+      
+      // Agrégations appliquées
+      if (queryPattern.aggregations.length > 0) {
+        explanation += `📊 **Calculs appliqués** : ${queryPattern.aggregations.join(', ')}\n`;
+      }
+      
+      // Insights principaux selon le type de données
+      if (queryPattern.queryType === 'kpi' && results.length > 0) {
+        explanation += `\n**Points clés** :\n`;
+        // Analyser les tendances principales
+        const firstResult = results[0];
+        Object.keys(firstResult).slice(0, 3).forEach(key => {
+          if (typeof firstResult[key] === 'number') {
+            explanation += `• ${key}: ${this.formatNumber(firstResult[key])}\n`;
+          }
+        });
+      }
+      
+      // Avertissements si données partielles
+      if (results.length >= 1000) {
+        explanation += `\n⚠️ **Note** : Résultats limités aux 1000 premiers enregistrements.\n`;
+      }
+    }
+    
+    // Métadonnées de performance
+    if (metadata?.executionTime) {
+      explanation += `\n⏱️ **Temps d'exécution** : ${metadata.executionTime}ms\n`;
+    }
+    
+    return explanation;
+  }
+
+  /**
+   * Génère des suggestions améliorées basées sur le contexte et les résultats
+   * @param userId ID de l'utilisateur
+   * @param userRole Rôle de l'utilisateur
+   * @param query Requête originale
+   * @param results Résultats obtenus
+   * @param queryPattern Pattern de la requête
+   * @returns Suggestions contextuelles enrichies
+   */
+  private async generateEnhancedSuggestions(
+    userId: string,
+    userRole: string,
+    query: string,
+    results: any[],
+    queryPattern: any
+  ): Promise<string[]> {
+    const suggestions: string[] = [];
+    
+    // Suggestions basées sur le type de requête
+    switch (queryPattern.queryType) {
+      case 'kpi':
+        suggestions.push('Voir l\'évolution de ces KPIs sur le mois dernier');
+        suggestions.push('Comparer avec la même période l\'année dernière');
+        suggestions.push('Détailler par équipe ou par projet');
+        break;
+        
+      case 'comparison':
+        suggestions.push('Analyser les facteurs de variation');
+        suggestions.push('Voir le détail par semaine');
+        suggestions.push('Exporter les données pour analyse approfondie');
+        break;
+        
+      case 'aggregation':
+        if (!queryPattern.aggregations.includes('group_by')) {
+          suggestions.push('Grouper les résultats par catégorie');
+        }
+        suggestions.push('Voir la distribution en pourcentages');
+        suggestions.push('Afficher les valeurs extrêmes');
+        break;
+        
+      case 'list':
+        if (results.length > 20) {
+          suggestions.push('Filtrer par statut ou par date');
+        }
+        suggestions.push('Voir les statistiques globales');
+        suggestions.push('Exporter la liste complète');
+        break;
+        
+      case 'detail':
+        suggestions.push('Voir l\'historique des modifications');
+        suggestions.push('Comparer avec des éléments similaires');
+        suggestions.push('Voir les documents associés');
+        break;
+    }
+    
+    // Suggestions basées sur les entités détectées
+    if (queryPattern.entities.includes('project')) {
+      suggestions.push('Voir le planning détaillé du projet');
+      suggestions.push('Analyser la charge de travail associée');
+    }
+    
+    if (queryPattern.entities.includes('offer')) {
+      suggestions.push('Comparer les taux de conversion des offres');
+      suggestions.push('Voir les offres en attente de validation');
+    }
+    
+    if (queryPattern.entities.includes('supplier')) {
+      suggestions.push('Analyser la performance des fournisseurs');
+      suggestions.push('Voir les commandes en cours');
+    }
+    
+    // Suggestions temporelles
+    if (queryPattern.temporalContext?.type === 'none') {
+      suggestions.push('Ajouter un filtre temporel pour plus de précision');
+    } else if (queryPattern.temporalContext?.type === 'relative') {
+      suggestions.push('Comparer avec la période précédente');
+    }
+    
+    // Suggestions basées sur les résultats
+    if (results.length === 0) {
+      suggestions.push('Élargir les critères de recherche');
+      suggestions.push('Vérifier l\'orthographe des termes');
+      suggestions.push('Consulter l\'aide pour la syntaxe des requêtes');
+    } else if (results.length === 1) {
+      suggestions.push('Voir les éléments similaires');
+      suggestions.push('Afficher l\'historique complet');
+    }
+    
+    // Personnalisation par rôle
+    const roleSuggestions = DEFAULT_SUGGESTIONS_BY_ROLE[userRole as keyof typeof DEFAULT_SUGGESTIONS_BY_ROLE] || [];
+    suggestions.push(...roleSuggestions.slice(0, 2));
+    
+    // Limiter et dédupliquer
+    const uniqueSuggestions = Array.from(new Set(suggestions));
+    return uniqueSuggestions.slice(0, 6);
+  }
+
+  /**
+   * Génère des métadonnées contextuelles pour enrichir la réponse
+   * @param results Résultats de la requête
+   * @param queryPattern Pattern analysé
+   * @param sql SQL généré
+   * @param executionTime Temps d'exécution
+   * @returns Métadonnées contextuelles
+   */
+  private generateContextualMetadata(
+    results: any[],
+    queryPattern: any,
+    sql: string,
+    executionTime: number
+  ): any {
+    const metadata: any = {
+      recordCount: results.length,
+      executionTimeMs: executionTime,
+      queryComplexity: this.detectQueryComplexity(queryPattern.query || ''),
+      performanceRating: this.getPerformanceRating(executionTime)
+    };
+    
+    // Analyse temporelle
+    if (queryPattern.temporalContext?.type !== 'none') {
+      metadata.temporalAnalysis = {
+        type: queryPattern.temporalContext.type,
+        period: queryPattern.temporalContext.period,
+        comparisonEnabled: queryPattern.temporalContext.type === 'comparison'
+      };
+    }
+    
+    // Statistiques sur les résultats
+    if (results.length > 0) {
+      metadata.resultStatistics = {
+        hasData: true,
+        isComplete: results.length < 1000,
+        dataQuality: this.assessDataQuality(results)
+      };
+      
+      // Détection de colonnes numériques pour stats
+      const firstResult = results[0];
+      const numericColumns = Object.keys(firstResult).filter(key => 
+        typeof firstResult[key] === 'number'
+      );
+      
+      if (numericColumns.length > 0) {
+        metadata.numericSummary = {};
+        numericColumns.forEach(col => {
+          const values = results.map(r => r[col]).filter(v => v !== null && v !== undefined);
+          if (values.length > 0) {
+            metadata.numericSummary[col] = {
+              min: Math.min(...values),
+              max: Math.max(...values),
+              avg: values.reduce((a, b) => a + b, 0) / values.length,
+              count: values.length
+            };
+          }
+        });
+      }
+    }
+    
+    // Analyse de la requête SQL
+    if (sql) {
+      metadata.sqlAnalysis = {
+        hasJoins: /JOIN/i.test(sql),
+        hasAggregations: /GROUP BY|SUM|AVG|COUNT/i.test(sql),
+        hasFilters: /WHERE/i.test(sql),
+        hasOrdering: /ORDER BY/i.test(sql),
+        estimatedCost: this.estimateSQLCost(sql)
+      };
+    }
+    
+    // Recommandations d'optimisation
+    if (executionTime > 3000) {
+      metadata.optimizationHints = [
+        'Considérer l\'ajout d\'index sur les colonnes fréquemment filtrées',
+        'Limiter la période temporelle pour réduire le volume de données',
+        'Utiliser la pagination pour les grandes listes'
+      ];
+    }
+    
+    return metadata;
+  }
+
+  /**
+   * Formate un nombre pour l'affichage
+   */
+  private formatNumber(value: number): string {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(2)}M`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(2)}K`;
+    } else if (Number.isInteger(value)) {
+      return value.toString();
+    } else {
+      return value.toFixed(2);
+    }
+  }
+
+  /**
+   * Évalue la performance d'une requête
+   */
+  private getPerformanceRating(executionTime: number): string {
+    if (executionTime < 500) return 'excellent';
+    if (executionTime < 2000) return 'good';
+    if (executionTime < 5000) return 'acceptable';
+    return 'needs_optimization';
+  }
+
+  /**
+   * Évalue la qualité des données retournées
+   */
+  private assessDataQuality(results: any[]): string {
+    if (results.length === 0) return 'no_data';
+    
+    // Vérifier les valeurs nulles
+    let nullCount = 0;
+    const totalFields = results.length * Object.keys(results[0]).length;
+    
+    results.forEach(row => {
+      Object.values(row).forEach(value => {
+        if (value === null || value === undefined) nullCount++;
+      });
+    });
+    
+    const nullPercentage = (nullCount / totalFields) * 100;
+    
+    if (nullPercentage < 5) return 'excellent';
+    if (nullPercentage < 20) return 'good';
+    if (nullPercentage < 40) return 'acceptable';
+    return 'poor';
+  }
+
+  /**
+   * Estime le coût d'une requête SQL
+   */
+  private estimateSQLCost(sql: string): number {
+    let cost = 1;
+    
+    // Facteurs de coût
+    if (/JOIN/gi.test(sql)) {
+      const joinCount = (sql.match(/JOIN/gi) || []).length;
+      cost += joinCount * 2;
+    }
+    
+    if (/GROUP BY/i.test(sql)) cost += 1.5;
+    if (/ORDER BY/i.test(sql)) cost += 0.5;
+    if (/DISTINCT/i.test(sql)) cost += 1;
+    if (/UNION/i.test(sql)) cost += 3;
+    if (/HAVING/i.test(sql)) cost += 1;
+    
+    // Sous-requêtes
+    const subqueryCount = (sql.match(/SELECT.*FROM.*SELECT/gi) || []).length;
+    cost += subqueryCount * 3;
+    
+    return cost;
   }
 }

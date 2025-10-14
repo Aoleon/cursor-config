@@ -18,14 +18,13 @@ import { storage, type IStorage } from './storage-poc';
 import { eventBus, type EventBus } from './eventBus';
 import { logger } from './utils/logger';
 
-// Module imports - add more as we migrate
+// Module imports - all modules now migrated
 import { createAuthRouter } from './modules/auth';
-// Future imports (commented out until modules are created):
-// import { createChiffrageRouter } from './modules/chiffrage';
-// import { createSuppliersRouter } from './modules/suppliers';
-// import { createProjectsRouter } from './modules/projects';
-// import { createAnalyticsRouter } from './modules/analytics';
-// import { createDocumentsRouter } from './modules/documents';
+import { createChiffrageRouter } from './modules/chiffrage';
+import { createSuppliersRouter } from './modules/suppliers';
+import { createProjectsRouter } from './modules/projects';
+import { createAnalyticsRouter } from './modules/analytics';
+import { createDocumentsRouter } from './modules/documents';
 
 // Service imports
 import { AuditService } from './services/AuditService';
@@ -70,38 +69,73 @@ export async function registerModularRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Chiffrage Module (to be implemented)
-  // const chiffrageRouter = createChiffrageRouter(storage as IStorage, eventBus);
-  // app.use('/api/chiffrage', chiffrageRouter);
-  // logger.info('Module Chiffrage monté avec succès');
+  // Chiffrage Module
+  const chiffrageRouter = createChiffrageRouter(storage as IStorage, eventBus);
+  app.use(chiffrageRouter);
+  logger.info('Module Chiffrage monté avec succès', {
+    metadata: {
+      module: 'RoutesIndex',
+      operation: 'mountRouter',
+      moduleName: 'chiffrage',
+      routes: ['/api/dpgf', '/api/chiffrage', '/api/validation/milestones', '/api/quotations']
+    }
+  });
 
-  // Suppliers Module (to be implemented)
-  // const suppliersRouter = createSuppliersRouter(storage as IStorage, eventBus);
-  // app.use('/api/suppliers', suppliersRouter);
-  // logger.info('Module Suppliers monté avec succès');
+  // Suppliers Module
+  const suppliersRouter = createSuppliersRouter(storage as IStorage, eventBus);
+  app.use(suppliersRouter);
+  logger.info('Module Suppliers monté avec succès', {
+    metadata: {
+      module: 'RoutesIndex',
+      operation: 'mountRouter',
+      moduleName: 'suppliers',
+      routes: ['/api/suppliers', '/api/supplier-sessions', '/api/supplier-quotes']
+    }
+  });
 
-  // Projects Module (to be implemented)
-  // const projectsRouter = createProjectsRouter(storage as IStorage, eventBus);
-  // app.use('/api/projects', projectsRouter);
-  // logger.info('Module Projects monté avec succès');
+  // Projects Module
+  const projectsRouter = createProjectsRouter(storage as IStorage, eventBus);
+  app.use(projectsRouter);
+  logger.info('Module Projects monté avec succès', {
+    metadata: {
+      module: 'RoutesIndex',
+      operation: 'mountRouter',
+      moduleName: 'projects',
+      routes: ['/api/projects', '/api/sav', '/api/visa-architecte']
+    }
+  });
 
-  // Analytics Module (to be implemented)
-  // const analyticsRouter = createAnalyticsRouter(storage as IStorage, eventBus);
-  // app.use('/api/analytics', analyticsRouter);
-  // logger.info('Module Analytics monté avec succès');
+  // Analytics Module
+  const analyticsRouter = createAnalyticsRouter(storage as IStorage, eventBus);
+  app.use(analyticsRouter);
+  logger.info('Module Analytics monté avec succès', {
+    metadata: {
+      module: 'RoutesIndex',
+      operation: 'mountRouter',
+      moduleName: 'analytics',
+      routes: ['/api/analytics', '/api/predictive', '/api/dashboard']
+    }
+  });
 
-  // Documents Module (to be implemented)  
-  // const documentsRouter = createDocumentsRouter(storage as IStorage, eventBus);
-  // app.use('/api/documents', documentsRouter);
-  // logger.info('Module Documents monté avec succès');
+  // Documents Module
+  const documentsRouter = createDocumentsRouter(storage as IStorage, eventBus);
+  app.use(documentsRouter);
+  logger.info('Module Documents monté avec succès', {
+    metadata: {
+      module: 'RoutesIndex',
+      operation: 'mountRouter',
+      moduleName: 'documents',
+      routes: ['/api/ocr', '/api/pdf', '/api/documents', '/api/objects', '/api/templates']
+    }
+  });
 
   logger.info('Routes modulaires initialisées avec succès', {
     metadata: {
       module: 'RoutesIndex',
       operation: 'registerModularRoutes',
       stage: 'complete',
-      modulesLoaded: ['auth'],
-      modulesPending: ['chiffrage', 'suppliers', 'projects', 'analytics', 'documents']
+      modulesLoaded: ['auth', 'chiffrage', 'suppliers', 'projects', 'analytics', 'documents'],
+      modulesPending: []
     }
   });
 }

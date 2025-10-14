@@ -1840,8 +1840,11 @@ INSTRUCTIONS DE BASE:
         }, timeoutMs);
       });
 
-      // Créer la promesse de requête
-      const queryPromise = db.execute(sql`${decodedSQL}`);
+      // Créer la promesse de requête  
+      // Pour exécuter du SQL dynamique dans Drizzle, on doit utiliser le sql operator correctement
+      // On crée un objet SQL à partir de la chaîne avec sql.raw ou une méthode équivalente
+      const sqlQuery = sql.raw(decodedSQL);
+      const queryPromise = db.execute(sqlQuery);
       
       try {
         // Race entre la requête et le timeout
@@ -1884,6 +1887,20 @@ INSTRUCTIONS DE BASE:
       }
 
     } catch (error) {
+      // Log détaillé de l'erreur pour diagnostic
+      logger.error('Erreur exécution SQL sécurisée', error as Error, {
+        metadata: {
+          module: 'SQLEngineService',
+          operation: 'executeSecureSQL',
+          sqlPreview: decodedSQL.substring(0, 200),
+          errorDetails: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          } : String(error)
+        }
+      });
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),

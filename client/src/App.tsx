@@ -62,6 +62,8 @@ import SupplierPortal from "@/pages/supplier-portal";
 import ComparaisonDevis from "@/pages/comparaison-devis";
 // Import du chatbot full-page
 import ChatbotPage from "@/pages/chatbot";
+// Import de la démo chatbot avancée
+import ChatbotDemo from "@/pages/ChatbotDemo";
 import BugReportButton from "@/components/BugReportButton";
 
 function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
@@ -186,6 +188,7 @@ function Router() {
       
       {/* ============= ASSISTANT IA - Chatbot full-page ============= */}
       <Route path="/chatbot" component={() => <ProtectedRoute component={ChatbotPage} />} />
+      <Route path="/chatbot-demo" component={() => <ProtectedRoute component={ChatbotDemo} />} />
       
       {/* ============= REDIRECTIONS GRACIEUSES - Intelligence Temporelle ============= */}
       {/* REDIRECTIONS GRACIEUSES: Intelligence Temporelle maintenant intégrée dans Executive Dashboard */}

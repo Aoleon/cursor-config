@@ -33,7 +33,9 @@ import {
   Database,
   Settings,
   CalendarDays,
-  BarChart3
+  BarChart3,
+  Bot,
+  Sparkles
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -55,6 +57,9 @@ const navigation: NavigationItem[] = [
   // ============= DASHBOARDS STANDARDISÉS ============= //
   { name: "Dashboard Dirigeant", href: "/dashboard/executive", icon: BarChart3 },
   { name: "Dashboard BE", href: "/dashboard/be", icon: Settings },
+  
+  // ============= ASSISTANT IA ============= //
+  { name: "Démo Chatbot IA", href: "/chatbot-demo", icon: Sparkles },
   
   // ============= GESTION OFFRES ============= //
   { 

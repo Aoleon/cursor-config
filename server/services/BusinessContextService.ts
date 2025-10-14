@@ -996,7 +996,15 @@ export class BusinessContextService {
           constraints: ['NOT NULL']
         },
         {
-          name: 'date_echeance',
+          name: 'created_at',
+          type: 'timestamp',
+          businessName: 'Date de création',
+          description: 'Date de création du projet dans le système',
+          examples: ['2025-01-15T10:30:00', '2025-02-20T14:15:00'],
+          nullable: false
+        },
+        {
+          name: 'date_livraison_prevue',
           type: 'timestamp',
           businessName: 'Date livraison prévue',
           description: 'Date de livraison contractuelle au client',

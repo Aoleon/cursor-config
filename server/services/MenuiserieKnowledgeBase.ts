@@ -679,7 +679,7 @@ const MENUISERIE_TERMINOLOGY = {
     
     // Colonnes courantes
     "project_status": "statut du projet",
-    "date_echeance": "date d'échéance",
+    "date_livraison_prevue": "date d'échéance",
     "responsible_user_id": "responsable projet",
     "material_type": "type de matériau",
     "material_color": "couleur/finition",
@@ -707,7 +707,7 @@ const MENUISERIE_TERMINOLOGY = {
     "fournisseurs menuiserie": "suppliers",
     
     "statut du projet": "project_status",
-    "date d'échéance": "date_echeance", 
+    "date d'échéance": "date_livraison_prevue", 
     "responsable projet": "responsible_user_id",
     "type de matériau": "material_type",
     "couleur/finition": "material_color",
@@ -715,7 +715,7 @@ const MENUISERIE_TERMINOLOGY = {
     "montant total": "price_total",
     
     // Expressions métier courantes
-    "projets en retard": "projects WHERE date_echeance < NOW() AND status != 'termine'",
+    "projets en retard": "projects WHERE date_livraison_prevue < NOW() AND status != 'termine'",
     "projets de l'équipe": "projects WHERE responsible_user_id IN (team_members)",
     "offres en cours": "offers WHERE status IN ('etude_technique', 'en_cours_chiffrage')",
     "planning cette semaine": "project_timelines WHERE date_debut <= DATE_ADD(NOW(), INTERVAL 7 DAY)",

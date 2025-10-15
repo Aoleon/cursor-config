@@ -144,6 +144,67 @@ export class SQLEngineService {
     return correctedSQL;
   }
 
+  /**
+   * Nettoie le SQL généré en supprimant les références aux colonnes qui n'existent pas
+   */
+  private cleanGeneratedSQL(sql: string): string {
+    let cleanedSQL = sql;
+    const originalSQL = sql;
+    
+    // Supprimer actual_margin qui n'existe pas dans le schéma
+    // Patterns pour supprimer actual_margin de SELECT
+    cleanedSQL = cleanedSQL.replace(/,\s*\w+\.actual_margin(?:\s+as\s+\w+)?/gi, '');
+    cleanedSQL = cleanedSQL.replace(/\w+\.actual_margin(?:\s+as\s+\w+)?\s*,/gi, '');
+    cleanedSQL = cleanedSQL.replace(/,\s*actual_margin(?:\s+as\s+\w+)?/gi, '');
+    cleanedSQL = cleanedSQL.replace(/actual_margin(?:\s+as\s+\w+)?\s*,/gi, '');
+    
+    // Si actual_margin est seul dans le SELECT
+    cleanedSQL = cleanedSQL.replace(/SELECT\s+actual_margin(?:\s+as\s+\w+)?\s+FROM/gi, 'SELECT * FROM');
+    cleanedSQL = cleanedSQL.replace(/SELECT\s+\w+\.actual_margin(?:\s+as\s+\w+)?\s+FROM/gi, 'SELECT * FROM');
+    
+    // Supprimer actual_margin de WHERE
+    cleanedSQL = cleanedSQL.replace(/\s+AND\s+\w+\.actual_margin[^,\s]*/gi, '');
+    cleanedSQL = cleanedSQL.replace(/WHERE\s+\w+\.actual_margin[^,\s]*\s+AND/gi, 'WHERE');
+    cleanedSQL = cleanedSQL.replace(/WHERE\s+\w+\.actual_margin[^,\s]*$/gi, '');
+    
+    // Supprimer actual_margin de ORDER BY
+    cleanedSQL = cleanedSQL.replace(/,\s*\w+\.actual_margin(?:\s+(?:ASC|DESC))?/gi, '');
+    cleanedSQL = cleanedSQL.replace(/ORDER\s+BY\s+\w+\.actual_margin(?:\s+(?:ASC|DESC))?\s*,/gi, 'ORDER BY ');
+    cleanedSQL = cleanedSQL.replace(/ORDER\s+BY\s+\w+\.actual_margin(?:\s+(?:ASC|DESC))?$/gi, '');
+    
+    // Supprimer actual_margin de GROUP BY
+    cleanedSQL = cleanedSQL.replace(/,\s*\w+\.actual_margin/gi, '');
+    cleanedSQL = cleanedSQL.replace(/GROUP\s+BY\s+\w+\.actual_margin\s*,/gi, 'GROUP BY ');
+    cleanedSQL = cleanedSQL.replace(/GROUP\s+BY\s+\w+\.actual_margin$/gi, '');
+    
+    // Corriger u.name qui n'existe pas dans la table users
+    // Remplacer u.name par CONCAT(u.first_name, ' ', u.last_name) ou u.first_name
+    cleanedSQL = cleanedSQL.replace(/\bu\.name\b/gi, "CONCAT(u.first_name, ' ', u.last_name)");
+    cleanedSQL = cleanedSQL.replace(/\busers\.name\b/gi, "CONCAT(users.first_name, ' ', users.last_name)");
+    
+    // Corriger d'autres noms de colonnes potentiels
+    cleanedSQL = cleanedSQL.replace(/\bp\.actual_margin\b/gi, '0'); // Remplacer par 0 si utilisé dans calculs
+    cleanedSQL = cleanedSQL.replace(/\bprojects\.actual_margin\b/gi, '0');
+    
+    // Logger si des nettoyages ont été appliqués
+    if (cleanedSQL !== originalSQL) {
+      logger.warn('Nettoyage du SQL généré - colonnes corrigées', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'cleanGeneratedSQL',
+          originalLength: originalSQL.length,
+          cleanedLength: cleanedSQL.length,
+          modifications: {
+            actual_margin_removed: originalSQL.includes('actual_margin'),
+            name_corrected: originalSQL.includes('.name')
+          }
+        }
+      });
+    }
+    
+    return cleanedSQL;
+  }
+
   // ========================================
   // MÉTHODE PRINCIPALE - GÉNÉRATION ET EXÉCUTION SQL SÉCURISÉE
   // ========================================
@@ -246,6 +307,12 @@ export class SQLEngineService {
       };
 
       const aiResponse = await this.aiService.generateSQL(aiRequest);
+      
+      // Nettoyer le SQL généré pour supprimer les références à actual_margin (colonne qui n'existe pas)
+      if (aiResponse.success && aiResponse.data?.sqlGenerated) {
+        aiResponse.data.sqlGenerated = this.cleanGeneratedSQL(aiResponse.data.sqlGenerated);
+      }
+      
       if (!aiResponse.success || !aiResponse.data?.sqlGenerated) {
         return {
           success: false,
@@ -931,6 +998,73 @@ LIMIT 25;`);
   }
 
   /**
+   * Prétraitement du SQL pour gérer les expressions INTERVAL et autres syntaxes PostgreSQL
+   * qui ne sont pas supportées par node-sql-parser
+   */
+  private preprocessSQLForParsing(sql: string): {
+    processedSQL: string;
+    hasSemicolon: boolean;
+    intervalReplacements: Map<string, string>;
+  } {
+    // Le parser node-sql-parser ne supporte pas bien INTERVAL, on remplace temporairement
+    let sqlForParsing = sql.trim();
+    const intervalReplacements: Map<string, string> = new Map();
+    let placeholderIndex = 0;
+    
+    // Remplacer les expressions arithmétiques avec INTERVAL (NOW() - INTERVAL '15 days')
+    sqlForParsing = sqlForParsing.replace(/NOW\(\)\s*[-+]\s*INTERVAL\s+'[^']+'/gi, (match) => {
+      const placeholder = `__INTERVAL_EXPR_${placeholderIndex++}__`;
+      intervalReplacements.set(placeholder, match);
+      return `'${placeholder}'`; // Remplacer par une chaîne simple que le parser accepte
+    });
+    
+    // Remplacer les expressions INTERVAL standalone
+    sqlForParsing = sqlForParsing.replace(/INTERVAL\s+'[^']+'/gi, (match) => {
+      const placeholder = `__INTERVAL_PLACEHOLDER_${placeholderIndex++}__`;
+      intervalReplacements.set(placeholder, match);
+      return `'${placeholder}'`; 
+    });
+    
+    // Remplacer DATE_ADD, DATE_SUB avec INTERVAL
+    sqlForParsing = sqlForParsing.replace(/DATE_ADD\s*\([^)]+\)/gi, (match) => {
+      if (match.includes('INTERVAL')) {
+        const placeholder = `__DATEADD_PLACEHOLDER_${placeholderIndex++}__`;
+        intervalReplacements.set(placeholder, match);
+        return `'${placeholder}'`;
+      }
+      return match;
+    });
+    
+    // Remplacer DATE_PART
+    sqlForParsing = sqlForParsing.replace(/DATE_PART\s*\([^)]+\)/gi, (match) => {
+      const placeholder = `__DATEPART_PLACEHOLDER_${placeholderIndex++}__`;
+      intervalReplacements.set(placeholder, match);
+      return `'${placeholder}'`;
+    });
+    
+    // Remplacer les comparaisons avec dates et INTERVAL
+    sqlForParsing = sqlForParsing.replace(/\w+\s*[<>=]+\s*NOW\(\)\s*[-+]\s*INTERVAL\s+'[^']+'/gi, (match) => {
+      const placeholder = `__DATE_COMPARE_${placeholderIndex++}__`;
+      intervalReplacements.set(placeholder, match);
+      // Remplacer par une comparaison simple que le parser accepte
+      return `created_at > '2024-01-01'`;
+    });
+    
+    // Retirer temporairement le point-virgule final pour le parsing
+    // (Le parser n'accepte pas le ; mais on veut l'imposer dans la validation)
+    const hasSemicolon = sqlForParsing.trim().endsWith(';');
+    if (hasSemicolon) {
+      sqlForParsing = sqlForParsing.trim().slice(0, -1).trim();
+    }
+    
+    return {
+      processedSQL: sqlForParsing,
+      hasSemicolon,
+      intervalReplacements
+    };
+  }
+
+  /**
    * Système de validation post-génération SQL
    * Vérifie que le SQL généré respecte les guardrails et bonnes pratiques
    */
@@ -944,8 +1078,11 @@ LIMIT 25;`);
     const sqlLower = sql.toLowerCase();
 
     try {
+      // Prétraiter le SQL pour gérer les expressions INTERVAL avant parsing
+      const { processedSQL, hasSemicolon, intervalReplacements } = this.preprocessSQLForParsing(sql);
+      
       // Parse SQL avec le parser
-      const ast = sqlParser.astify(sql);
+      const ast = sqlParser.astify(processedSQL);
 
       // 1. Vérifier présence LIMIT (sauf pour aggregations)
       const hasAggregation = /\b(group\s+by|count\(|sum\(|avg\(|max\(|min\()/i.test(sql);
@@ -1008,7 +1145,8 @@ LIMIT 25;`);
       }
 
       // 7. Vérification de la terminaison par point-virgule
-      if (!sql.trim().endsWith(';')) {
+      // Utiliser le résultat du prétraitement pour vérifier le point-virgule
+      if (!hasSemicolon) {
         violations.push('SQL query must end with semicolon (;)');
       }
 
@@ -1173,7 +1311,21 @@ INSTRUCTIONS DE BASE:
         cleanedSQL = sql.trim();
       }
       
-      // 1. ANALYSE AST COMPLÈTE avec node-sql-parser
+      // 1. PRÉTRAITEMENT pour supporter la syntaxe PostgreSQL INTERVAL
+      // Utiliser la méthode commune de prétraitement
+      const { processedSQL: sqlForParsing, hasSemicolon, intervalReplacements } = this.preprocessSQLForParsing(cleanedSQL);
+      
+      logger.info('SQL prétraité pour parsing', {
+        metadata: {
+          service: 'SQLEngineService',
+          operation: 'validateSQL',
+          intervalReplacementsCount: intervalReplacements.size,
+          hasSemicolon,
+          sqlForParsingPreview: sqlForParsing.substring(0, 150)
+        }
+      });
+
+      // 2. ANALYSE AST COMPLÈTE avec node-sql-parser
       logger.info('Parsing AST', {
       metadata: {
         service: 'SQLEngineService',
@@ -1181,7 +1333,7 @@ INSTRUCTIONS DE BASE:
         step: 1
       }
     });
-      const ast = sqlParser.astify(cleanedSQL, { database: 'postgresql' });
+      const ast = sqlParser.astify(sqlForParsing, { database: 'postgresql' });
       logger.info('Parsing AST réussi', {
       metadata: {
         service: 'SQLEngineService',

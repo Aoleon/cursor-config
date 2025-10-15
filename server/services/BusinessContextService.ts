@@ -1028,14 +1028,6 @@ export class BusinessContextService {
           nullable: true
         },
         {
-          name: 'actual_margin',
-          type: 'decimal(12,2)',
-          businessName: 'Marge réelle',
-          description: 'Marge réellement réalisée sur le projet',
-          examples: ['8500.00', '22000.00', '45000.00'],
-          nullable: true
-        },
-        {
           name: 'responsible_user_id',
           type: 'varchar',
           businessName: 'Chef de projet',
@@ -1086,11 +1078,11 @@ export class BusinessContextService {
       sqlExamples: [
         {
           description: 'Projets en retard avec responsables',
-          sql: `SELECT p.id, p.date_echeance, u.name as chef_projet, 
-                  DATE_PART('day', p.date_echeance - NOW()) as jours_retard
+          sql: `SELECT p.id, p.date_livraison_prevue, u.name as chef_projet, 
+                  DATE_PART('day', p.date_livraison_prevue - NOW()) as jours_retard
                 FROM projects p
                 JOIN users u ON p.responsible_user_id = u.id
-                WHERE p.date_echeance < NOW() 
+                WHERE p.date_livraison_prevue < NOW() 
                   AND p.status NOT IN ('termine', 'sav')
                 ORDER BY jours_retard DESC`,
           explanation: 'Identifie tous les projets en retard avec nombre de jours et responsables'
@@ -1098,8 +1090,8 @@ export class BusinessContextService {
         {
           description: 'Rentabilité moyenne par type de projet',
           sql: `SELECT 
-                  p.project_type,
-                  AVG((p.actual_margin / p.montant_final) * 100) as marge_moyenne_pct,
+                  p.menuiserie_type,
+                  AVG((p.montant_final - p.budget) / p.montant_final * 100) as marge_moyenne_pct,
                   COUNT(*) as nb_projets
                 FROM projects p
                 WHERE p.status = 'termine' 
@@ -1705,8 +1697,8 @@ export class BusinessContextService {
       'urgent': 'WITH HIGH PRIORITY OR critical severity',
       
       // Indicateurs métier
-      'rentabilité': '(actual_margin / montant_final * 100)',
-      'marge': 'margin_percentage OR actual_margin',
+      'rentabilité': '((montant_final - budget) / montant_final * 100)',
+      'marge': 'margin_percentage OR ((montant_final - budget) / montant_final * 100)',
       'taux de transformation': 'COUNT(status=\'signe\') / COUNT(*)',
       'charge de travail': 'current_load',
       'disponibilité': 'availability_percentage'
@@ -1721,7 +1713,7 @@ export class BusinessContextService {
       financier: {
         description: 'Contexte pour analyses financières et chiffrage',
         tables: ['offers', 'projects', 'chiffrage_elements'],
-        key_columns: ['montant_final', 'budget', 'actual_margin', 'margin_percentage', 'unit_price'],
+        key_columns: ['montant_final', 'budget', 'margin_percentage', 'unit_price'],
         aggregations: ['SUM', 'AVG', 'MIN', 'MAX'],
         business_rules: [
           'Marge minimale cible: 15%',
@@ -1738,7 +1730,7 @@ export class BusinessContextService {
       temporel: {
         description: 'Contexte pour planning et gestion des délais',
         tables: ['project_timelines', 'date_alerts', 'projects', 'aos'],
-        key_columns: ['start_date', 'end_date', 'actual_end_date', 'date_echeance', 'deadline'],
+        key_columns: ['start_date', 'end_date', 'actual_end_date', 'date_livraison_prevue', 'deadline'],
         functions: ['DATE_PART', 'INTERVAL', 'NOW()', 'DATE_TRUNC'],
         business_rules: [
           'Alerte retard si actual_end_date > end_date',
@@ -1880,7 +1872,7 @@ export class BusinessContextService {
       'jalon': 'validation_milestones',
       
       // Termes d'action → Clauses SQL
-      'en retard': 'WHERE date_echeance < NOW()',
+      'en retard': 'WHERE date_livraison_prevue < NOW()',
       'urgent': 'WHERE severity = \'critical\' OR priority = \'high\'',
       'cette semaine': 'WHERE date >= DATE_TRUNC(\'week\', NOW())',
       'ce mois': 'WHERE date >= DATE_TRUNC(\'month\', NOW())',
@@ -1892,7 +1884,7 @@ export class BusinessContextService {
       'signé': 'WHERE status = \'signe\'',
       
       // Métriques métier
-      'rentabilité': '(actual_margin / montant_final * 100) as rentabilite_pct',
+      'rentabilité': '((montant_final - budget) / montant_final * 100) as rentabilite_pct',
       'marge': 'margin_percentage',
       'charge': 'current_load',
       'disponibilité': 'availability_percentage',
@@ -1996,12 +1988,12 @@ export class BusinessContextService {
         },
         sql_to_business: {
           "project_status": "statut du projet",
-          "date_echeance": "date d'échéance",
+          "date_livraison_prevue": "date d'échéance",
           "responsible_user_id": "responsable projet"
         },
         business_to_sql: {
           "statut du projet": "project_status",
-          "date d'échéance": "date_echeance",
+          "date d'échéance": "date_livraison_prevue",
           "responsable projet": "responsible_user_id"
         }
       }
@@ -2041,7 +2033,7 @@ export class BusinessContextService {
           businessExamples: ["etude", "planification", "chantier", "visa_architecte"]
         },
         {
-          name: "date_echeance",
+          name: "date_livraison_prevue",
           businessName: "Date d'échéance",
           type: "timestamp",
           description: "Date de livraison prévue au client",
@@ -2286,7 +2278,7 @@ export class BusinessContextService {
         id: "planning-retards-projets",
         category: "planning",
         user_query: "Quels sont mes projets en retard sur échéance de livraison ?",
-        sql_example: "SELECT p.id, p.nom, p.date_echeance, p.status, DATEDIFF(NOW(), p.date_echeance) as jours_retard FROM projects p WHERE p.responsible_user_id = :user_id AND p.date_echeance < NOW() AND p.status NOT IN ('termine', 'livre') ORDER BY jours_retard DESC",
+        sql_example: "SELECT p.id, p.nom, p.date_livraison_prevue, p.status, DATEDIFF(NOW(), p.date_livraison_prevue) as jours_retard FROM projects p WHERE p.responsible_user_id = :user_id AND p.date_livraison_prevue < NOW() AND p.status NOT IN ('termine', 'livre') ORDER BY jours_retard DESC",
         explanation: "Identifie les projets assignés en retard sur leur date d'échéance prévue, avec calcul du nombre de jours de retard",
         applicable_roles: ["chef_projet", "admin"],
         complexity: "simple",
@@ -2313,7 +2305,7 @@ export class BusinessContextService {
         id: "planning-charge-be",
         category: "planning",
         user_query: "Quelle est la charge de travail du BE cette semaine ?",
-        sql_example: "SELECT u.nom, COUNT(p.id) as nb_projets_etude, SUM(CASE WHEN p.date_echeance < DATE_ADD(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as urgent FROM users u JOIN projects p ON u.id = p.responsible_user_id WHERE u.role = 'technicien_be' AND p.status IN ('etude', 'visa_architecte') GROUP BY u.id, u.nom ORDER BY nb_projets_etude DESC",
+        sql_example: "SELECT u.nom, COUNT(p.id) as nb_projets_etude, SUM(CASE WHEN p.date_livraison_prevue < DATE_ADD(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as urgent FROM users u JOIN projects p ON u.id = p.responsible_user_id WHERE u.role = 'technicien_be' AND p.status IN ('etude', 'visa_architecte') GROUP BY u.id, u.nom ORDER BY nb_projets_etude DESC",
         explanation: "Analyse la répartition de la charge des techniciens BE avec focus sur les urgences de la semaine",
         applicable_roles: ["chef_projet", "admin", "technicien_be"],
         complexity: "complex",

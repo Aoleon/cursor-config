@@ -45,6 +45,11 @@ The application features a modern fullstack architecture.
 - **Testing Infrastructure**:
     - **Unit Tests**: Vitest tests in `client/src/lib/__tests__/` with comprehensive coverage for critical utilities (30 tests for normalizeApiResponse with 100% coverage).
     - **E2E Tests**: Playwright regression tests for all workflow pages ensuring refactoring doesn't break functionality.
+- **Draft System** (October 2025): Implemented a complete draft AO (Appel d'Offres) system allowing users to save incomplete forms:
+    - **Database Schema**: Added `is_draft` boolean column to `aos` table; made `client`, `location`, and `departement` columns nullable to support partial data
+    - **Backend Validation**: Conditional validation in POST /api/aos route - uses `createAoDraftSchema` (only reference required) when `isDraft=true`, or `insertAoSchema` (all fields required) otherwise
+    - **Frontend**: "Enregistrer comme brouillon" button in `/create-ao` that validates only the reference field and cleans empty fields before submission
+    - **Bug Fixes**: Corrected OCR `processPDF()` API call signature (removed unsupported options parameter); resolved database NOT NULL constraint issues for draft functionality
 - **Technical Implementations**: Includes a robust error handling system, standardized API routes with `asyncHandler`, and Zod validation for POST routes. The development workflow involves `npm run dev`, `npm run db:push`, and `npm test`.
 
 ## External Dependencies

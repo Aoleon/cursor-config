@@ -135,14 +135,11 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
         }
       });
 
-      // Parse options
-      const options: OCROptions = req.body.options;
-
       // Initialize OCR service
       await ocrService.initialize();
 
-      // Process PDF
-      const result = await ocrService.processPDF(req.file.buffer, options);
+      // Process PDF (processPDF only accepts buffer parameter)
+      const result = await ocrService.processPDF(req.file.buffer);
 
       eventBus.emit('document:ocr:processed', {
         filename: req.file.originalname,

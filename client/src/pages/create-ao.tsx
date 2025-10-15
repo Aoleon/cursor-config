@@ -484,8 +484,19 @@ export default function CreateAO() {
       return;
     }
     
-    console.log('[DEBUG] Saving as draft with reference:', data.reference);
-    createAoMutation.mutate({ ...data, isDraft: true });
+    // Nettoyer les données : ne garder que les champs remplis
+    const cleanData: any = { reference: data.reference, isDraft: true };
+    
+    // Ajouter seulement les champs qui ont une valeur
+    Object.keys(data).forEach((key) => {
+      const value = (data as any)[key];
+      if (value !== "" && value !== null && value !== undefined && key !== "reference") {
+        cleanData[key] = value;
+      }
+    });
+    
+    console.log('[DEBUG] Saving as draft with clean data:', cleanData);
+    createAoMutation.mutate(cleanData);
   };
 
   // Fonction pour gérer l'upload et l'OCR du PDF

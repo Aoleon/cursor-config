@@ -4,7 +4,18 @@
  */
 
 import { z } from "zod";
-import { offerStatusEnum, projectStatusEnum, menuiserieTypeEnum } from "../shared/schema";
+import { offerStatusEnum, projectStatusEnum, menuiserieTypeEnum, insertAoSchema } from "../shared/schema";
+
+// ======================================
+// Schémas pour les brouillons d'AO
+// ======================================
+
+// Schéma pour créer un brouillon d'AO (validation moins stricte)
+// Seule la référence est requise pour un brouillon
+export const createAoDraftSchema = insertAoSchema.partial().extend({
+  reference: z.string().min(1, "La référence est obligatoire"),
+  isDraft: z.boolean().optional(),
+});
 
 // ======================================
 // Schémas pour les routes d'offres

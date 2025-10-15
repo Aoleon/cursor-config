@@ -1138,9 +1138,9 @@ export const users = pgTable("users", {
 export const aos = pgTable("aos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   reference: varchar("reference").notNull().unique(),
-  client: varchar("client").notNull(),
-  location: varchar("location").notNull(),
-  departement: departementEnum("departement").notNull(),
+  client: varchar("client"), // Optionnel pour permettre les brouillons
+  location: varchar("location"), // Optionnel pour permettre les brouillons
+  departement: departementEnum("departement"), // Optionnel pour permettre les brouillons
   
   // Informations générales étendues
   intituleOperation: text("intitule_operation"),

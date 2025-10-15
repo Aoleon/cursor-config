@@ -56,7 +56,8 @@ import {
   transformToProjectSchema,
   createProjectSchema,
   updateProjectSchema,
-  createProjectTaskSchema
+  createProjectTaskSchema,
+  createAoDraftSchema
 } from "./validation-schemas";
 import { documentProcessor, type ExtractedAOData } from "./documentProcessor";
 import { registerChiffrageRoutes } from "./routes/chiffrage";
@@ -805,10 +806,19 @@ app.get("/api/aos/:id",
 app.post("/api/aos", 
   isAuthenticated,
   rateLimits.creation,
-  validateBody(insertAoSchema),
   asyncHandler(async (req, res) => {
+    // Validation conditionnelle : brouillon ou AO complet
+    const isDraft = req.body.isDraft === true;
+    const validationSchema = isDraft ? createAoDraftSchema : insertAoSchema;
+    
+    // Valider le corps de la requête
+    const validationResult = validationSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      throw new ValidationError('Validation error', validationResult.error.errors);
+    }
+    
     // Préparer les données avec les champs calculés
-    let aoData: any = { ...req.body };
+    let aoData: any = { ...validationResult.data };
     
     // Si une date de sortie AO est fournie, calculer automatiquement la date limite de remise
     if (aoData.dateSortieAO) {
@@ -844,6 +854,7 @@ app.post("/api/aos",
           method: 'POST',
           aoId: ao.id,
           reference: ao.reference,
+          isDraft: aoData.isDraft || false,
           userId: req.user?.id
         }
       });

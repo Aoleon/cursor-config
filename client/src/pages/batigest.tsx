@@ -24,6 +24,67 @@ import {
   RotateCcw
 } from "lucide-react";
 
+// Interfaces de types
+interface ConnectionTestResponse {
+  connected: boolean;
+  mode?: string;
+  message?: string;
+}
+
+interface DashboardData {
+  analyse?: {
+    caRealise: number;
+    caPrevu: number;
+    tauxMarge: number;
+    devisSoumis: number;
+  };
+}
+
+interface DevisItem {
+  id: string;
+  numero: string;
+  client: string;
+  montantHT: number;
+  statut: string;
+  dateCreation: string;
+  dateValidite: string;
+}
+
+interface DevisResponse {
+  devis: DevisItem[];
+}
+
+interface CoefficientsResponse {
+  coefficientsParFamille: Array<{
+    famille: string;
+    coefficient: number;
+    marge: number;
+  }>;
+}
+
+interface FacturationsResponse {
+  analyse?: {
+    nombreFactures?: number;
+  };
+  factures?: Array<{
+    id: string;
+    projet: string;
+    montant: number;
+    statut: string;
+    dateEcheance: string;
+  }>;
+}
+
+interface AnalyticsHistoryResponse {
+  analytics: Array<{
+    id: string;
+    periode: string;
+    type: string;
+    resultat: any;
+    dateGeneration: string;
+  }>;
+}
+
 // Schémas de validation
 const analyticsFormSchema = z.object({
   startDate: z.string().optional(),
@@ -60,39 +121,36 @@ export default function BatigestPage() {
   });
 
   // Queries
-  const { data: dashboardData, isLoading: isDashboardLoading } = useQuery({
+  const { data: dashboardData, isLoading: isDashboardLoading } = useQuery<DashboardData>({
     queryKey: ['/api/batigest/dashboard'],
   });
 
-  const { data: connectionTest, isLoading: isConnectionLoading, refetch: refetchConnection } = useQuery({
+  const { data: connectionTest, isLoading: isConnectionLoading, refetch: refetchConnection } = useQuery<ConnectionTestResponse>({
     queryKey: ['/api/batigest/connection-test'],
     refetchOnWindowFocus: false
   });
 
-  const { data: devisData, isLoading: isDevisLoading } = useQuery({
+  const { data: devisData, isLoading: isDevisLoading } = useQuery<DevisResponse>({
     queryKey: ['/api/batigest/devis-clients', devisFilters],
     enabled: Object.keys(devisFilters).length > 0 || true
   });
 
-  const { data: coefficientsData, isLoading: isCoefficientsLoading } = useQuery({
+  const { data: coefficientsData, isLoading: isCoefficientsLoading } = useQuery<CoefficientsResponse>({
     queryKey: ['/api/batigest/coefficients-marges'],
   });
 
-  const { data: facturationsData, isLoading: isFacturationsLoading } = useQuery({
+  const { data: facturationsData, isLoading: isFacturationsLoading } = useQuery<FacturationsResponse>({
     queryKey: ['/api/batigest/facturations-en-cours'],
   });
 
-  const { data: analyticsHistory, isLoading: isAnalyticsHistoryLoading } = useQuery({
+  const { data: analyticsHistory, isLoading: isAnalyticsHistoryLoading } = useQuery<AnalyticsHistoryResponse>({
     queryKey: ['/api/batigest/analytics-history'],
   });
 
   // Mutations
   const generateAnalyticsMutation = useMutation({
     mutationFn: (data: AnalyticsFormData) => 
-      apiRequest('/api/batigest/generate-analytics', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      }),
+      apiRequest('POST', '/api/batigest/generate-analytics', data),
     onSuccess: () => {
       toast({
         title: "Analytics générés",
@@ -472,8 +530,8 @@ export default function BatigestPage() {
                           Chargement des devis...
                         </TableCell>
                       </TableRow>
-                    ) : devisData?.devis?.length > 0 ? (
-                      devisData.devis.map((devis: any) => (
+                    ) : (devisData?.devis?.length ?? 0) > 0 ? (
+                      devisData?.devis?.map((devis: any) => (
                         <TableRow key={devis.NUMERO_DEVIS} data-testid={`row-devis-${devis.NUMERO_DEVIS}`}>
                           <TableCell className="font-medium">{devis.NUMERO_DEVIS}</TableCell>
                           <TableCell>{devis.CLIENT_NOM}</TableCell>
@@ -514,8 +572,8 @@ export default function BatigestPage() {
                           Chargement des coefficients...
                         </TableCell>
                       </TableRow>
-                    ) : coefficientsData?.coefficientsParFamille?.length > 0 ? (
-                      coefficientsData.coefficientsParFamille.map((coeff: any) => (
+                    ) : (coefficientsData?.coefficientsParFamille?.length ?? 0) > 0 ? (
+                      coefficientsData?.coefficientsParFamille?.map((coeff: any) => (
                         <TableRow key={coeff.famille} data-testid={`row-coeff-${coeff.famille}`}>
                           <TableCell className="font-medium">{coeff.famille}</TableCell>
                           <TableCell>{coeff.coefficientMoyen.toFixed(2)}</TableCell>
@@ -559,8 +617,8 @@ export default function BatigestPage() {
                           Chargement des facturations...
                         </TableCell>
                       </TableRow>
-                    ) : facturationsData?.analyse?.factures?.length > 0 ? (
-                      facturationsData.analyse.factures.map((facture: any) => {
+                    ) : (facturationsData?.factures?.length ?? 0) > 0 ? (
+                      facturationsData?.factures?.map((facture: any) => {
                         const isLate = new Date(facture.DATE_ECHEANCE) < new Date();
                         const daysDiff = Math.floor((new Date().getTime() - new Date(facture.DATE_ECHEANCE).getTime()) / (1000 * 3600 * 24));
                         
@@ -620,8 +678,8 @@ export default function BatigestPage() {
                           Chargement de l'historique...
                         </TableCell>
                       </TableRow>
-                    ) : analyticsHistory?.analytics?.length > 0 ? (
-                      analyticsHistory.analytics.map((analytics: any) => (
+                    ) : (analyticsHistory?.analytics?.length ?? 0) > 0 ? (
+                      analyticsHistory?.analytics?.map((analytics: any) => (
                         <TableRow key={analytics.id} data-testid={`row-analytics-${analytics.id}`}>
                           <TableCell className="font-medium">{analytics.periode}</TableCell>
                           <TableCell>{formatCurrency(parseFloat(analytics.chiffreAffairesRealise))}</TableCell>

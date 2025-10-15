@@ -248,9 +248,12 @@ export default function KanbanBoard() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
-  const { data: projects = [], isLoading } = useQuery<any[]>({
+  const { data: projectsData, isLoading } = useQuery<any>({
     queryKey: ['/api/projects']
   })
+  
+  // Extract the projects array from the API response
+  const projects = projectsData?.data || []
 
   const updateProjectMutation = useMutation({
     mutationFn: async ({ projectId, status }: { projectId: string, status: ProjectStatus }) => {

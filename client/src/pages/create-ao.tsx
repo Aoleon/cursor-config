@@ -19,7 +19,7 @@ import { LotsManager } from "@/components/ao/LotsManager";
 import { ContactSelector } from "@/components/contacts/ContactSelector";
 import { MaitreOuvrageForm } from "@/components/contacts/MaitreOuvrageForm";
 import { MaitreOeuvreForm } from "@/components/contacts/MaitreOeuvreForm";
-import { FileText, Calendar, MapPin, User, Building, Upload, AlertCircle, CheckCircle, Loader2, RefreshCw } from "lucide-react";
+import { FileText, Calendar, MapPin, User, Building, Upload, AlertCircle, CheckCircle, Loader2, RefreshCw, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -654,8 +654,30 @@ export default function CreateAO() {
   // Fonction pour gérer le changement de fichier
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setPdfFile(e.target.files[0]);
-      setOcrResult(null);
+      const file = e.target.files[0];
+      
+      // Valider que c'est un PDF
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        setPdfFile(file);
+        setOcrResult(null);
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Veuillez sélectionner un fichier PDF uniquement",
+          variant: "destructive",
+        });
+        // Réinitialiser l'input pour permettre une nouvelle sélection
+        e.target.value = '';
+      }
+    }
+  };
+  
+  // Fonction pour supprimer le fichier sélectionné
+  const handleRemoveFile = () => {
+    setPdfFile(null);
+    setOcrResult(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -750,20 +772,31 @@ export default function CreateAO() {
                           </p>
                         </div>
                       </div>
-                      <Button 
-                        onClick={handlePdfUpload} 
-                        disabled={processing}
-                        type="button"
-                      >
-                        {processing ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Traitement...
-                          </>
-                        ) : (
-                          "Analyser avec OCR"
-                        )}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleRemoveFile}
+                          type="button"
+                          title="Supprimer le fichier"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          onClick={handlePdfUpload} 
+                          disabled={processing}
+                          type="button"
+                        >
+                          {processing ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Traitement...
+                            </>
+                          ) : (
+                            "Analyser avec OCR"
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   )}
 

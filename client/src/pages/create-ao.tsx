@@ -67,6 +67,15 @@ const createAoSchema = z.object({
   specificLocation: z.string().optional(), 
   estimatedDelay: z.enum(["Express (1-2 semaines)", "Standard (4-6 semaines)", "Long terme (8+ semaines)"]).optional(),
   clientRecurrency: z.enum(["Nouveau client", "Client récurrent", "Client premium"]),
+  
+  // Système de brouillon
+  isDraft: z.boolean().optional(),
+});
+
+// Schéma pour brouillon (validation moins stricte)
+const createAoDraftSchema = createAoSchema.partial().extend({
+  reference: z.string().min(1, "La référence est obligatoire"),
+  isDraft: z.boolean().optional(),
 });
 
 type CreateAoFormData = z.infer<typeof createAoSchema>;
@@ -459,7 +468,24 @@ export default function CreateAO() {
     setIsAutoRetrying(false);
     
     console.log('[DEBUG] Submitting AO creation with reference:', data.reference);
-    createAoMutation.mutate(data);
+    createAoMutation.mutate({ ...data, isDraft: false });
+  };
+
+  // Fonction pour sauvegarder comme brouillon
+  const saveAsDraft = () => {
+    const data = form.getValues();
+    // Ne valider que la référence pour un brouillon
+    if (!data.reference) {
+      toast({
+        title: "Erreur",
+        description: "La référence est obligatoire même pour un brouillon",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log('[DEBUG] Saving as draft with reference:', data.reference);
+    createAoMutation.mutate({ ...data, isDraft: true });
   };
 
   // Fonction pour gérer l'upload et l'OCR du PDF
@@ -1338,31 +1364,44 @@ export default function CreateAO() {
             </Card>
 
             {/* Actions */}
-            <div className="flex justify-end space-x-4">
+            <div className="flex justify-between items-center">
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => setLocation("/aos")}
-                data-testid="button-cancel"
-              >
-                Annuler
-              </Button>
-              <Button
-                type="submit"
+                variant="ghost"
+                onClick={saveAsDraft}
                 disabled={createAoMutation.isPending || isAutoRetrying}
-                data-testid="button-create-ao"
+                data-testid="button-save-draft"
               >
-                {isAutoRetrying ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    🔄 Tentative automatique {retryCountRef.current + 1}/5 en cours...
-                  </>
-                ) : createAoMutation.isPending ? (
-                  "Création..."
-                ) : (
-                  "Créer l'AO"
-                )}
+                <FileText className="mr-2 h-4 w-4" />
+                Enregistrer comme brouillon
               </Button>
+              
+              <div className="flex space-x-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setLocation("/aos")}
+                  data-testid="button-cancel"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createAoMutation.isPending || isAutoRetrying}
+                  data-testid="button-create-ao"
+                >
+                  {isAutoRetrying ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      🔄 Tentative automatique {retryCountRef.current + 1}/5 en cours...
+                    </>
+                  ) : createAoMutation.isPending ? (
+                    "Création..."
+                  ) : (
+                    "Créer l'AO"
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
               </Form>

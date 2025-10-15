@@ -1208,6 +1208,7 @@ export const aos = pgTable("aos", {
   
   // Workflow et statut
   status: aoStatusEnum("status").default("etude"), // Statut workflow AO (défaut: étude pour être visible immédiatement)
+  isDraft: boolean("is_draft").default(false), // Indique si l'AO est un brouillon (incomplet)
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

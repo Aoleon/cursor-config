@@ -88,18 +88,18 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
   const allTasks = allTasksData?.data || [];
 
   const filteredProjects = selectedProjectId 
-    ? projects.filter(p => p.id === selectedProjectId)
+    ? projects.filter((p: any) => p.id === selectedProjectId)
     : projects;
 
   const getTasksForProject = (projectId: string) => {
-    return allTasks.filter(task => task.projectId === projectId);
+    return allTasks.filter((task: any) => task.projectId === projectId);
   };
 
   const getProjectProgress = (projectId: string) => {
     const tasks = getTasksForProject(projectId);
     if (tasks.length === 0) return 0;
     
-    const completedTasks = tasks.filter(task => task.status === 'termine').length;
+    const completedTasks = tasks.filter((task: any) => task.status === 'termine').length;
     return Math.round((completedTasks / tasks.length) * 100);
   };
 
@@ -107,7 +107,7 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
     const tasks = getTasksForProject(project.id);
     if (tasks.length === 0) return null;
 
-    const sortedTasks = tasks.sort((a, b) => {
+    const sortedTasks = tasks.sort((a: any, b: any) => {
       const aDate = a.startDate ? new Date(a.startDate).getTime() : 0;
       const bDate = b.startDate ? new Date(b.startDate).getTime() : 0;
       return aDate - bDate;
@@ -210,7 +210,7 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
       {/* Vue Liste détaillée */}
       {viewMode === "list" && (
         <div className="space-y-6">
-          {filteredProjects.map((project) => {
+          {filteredProjects.map((project: any) => {
             const projectTasks = getTasksForProject(project.id);
             const progress = getProjectProgress(project.id);
             const timespan = getProjectTimespan(project);
@@ -265,18 +265,18 @@ export default function TimelineView({ selectedProjectId }: TimelineViewProps) {
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-on-surface">Tâches du projet</h4>
                         <span className="text-sm text-on-surface-muted">
-                          {projectTasks.filter(t => t.status === 'termine').length} / {projectTasks.length} terminées
+                          {projectTasks.filter((t: any) => t.status === 'termine').length} / {projectTasks.length} terminées
                         </span>
                       </div>
                       
                       <div className="grid gap-3">
                         {projectTasks
-                          .sort((a, b) => {
+                          .sort((a: any, b: any) => {
                             const aDate = a.startDate ? new Date(a.startDate).getTime() : 0;
                             const bDate = b.startDate ? new Date(b.startDate).getTime() : 0;
                             return aDate - bDate;
                           })
-                          .map((task) => (
+                          .map((task: any) => (
                           <div key={task.id} className={`p-4 rounded-lg border-l-4 ${getPriorityColor('normale')}`}>
                             <div className="flex items-start justify-between">
                               <div className="flex-1">

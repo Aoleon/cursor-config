@@ -94,6 +94,7 @@ export default function CreateAO() {
   const [ocrProgress, setOcrProgress] = useState(0);
   const [ocrResult, setOcrResult] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // États pour la gestion des références dupliquées
   const [duplicateReferenceError, setDuplicateReferenceError] = useState<{
@@ -603,6 +604,50 @@ export default function CreateAO() {
     } finally {
       setProcessing(false);
       setOcrProgress(0);
+    }
+  };
+
+  // Gestionnaires pour le drag and drop
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Vérifier si on quitte vraiment la zone de drop
+    if (e.currentTarget === e.target) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      
+      // Valider que c'est un PDF
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        setPdfFile(file);
+        setOcrResult(null);
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Veuillez déposer un fichier PDF uniquement",
+          variant: "destructive",
+        });
+      }
     }
   };
 

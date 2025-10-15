@@ -414,7 +414,7 @@ export default function BatigestPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Tous les statuts</SelectItem>
+                              <SelectItem value="all">Tous les statuts</SelectItem>
                               <SelectItem value="BROUILLON">Brouillon</SelectItem>
                               <SelectItem value="VALIDE">Validé</SelectItem>
                               <SelectItem value="ENVOYE">Envoyé</SelectItem>

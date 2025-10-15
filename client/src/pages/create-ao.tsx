@@ -701,10 +701,26 @@ export default function CreateAO() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                    <Upload className="mx-auto h-12 w-12 text-on-surface-muted" />
-                    <p className="mt-2 text-sm text-on-surface-muted">
-                      Glissez-déposez un fichier PDF ou cliquez pour parcourir
+                  <div 
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                      isDragging 
+                        ? "border-primary bg-primary/10" 
+                        : "border-border"
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <Upload className={`mx-auto h-12 w-12 ${
+                      isDragging ? "text-primary" : "text-on-surface-muted"
+                    }`} />
+                    <p className={`mt-2 text-sm ${
+                      isDragging ? "text-primary" : "text-on-surface-muted"
+                    }`}>
+                      {isDragging 
+                        ? "Déposez le fichier PDF ici" 
+                        : "Glissez-déposez un fichier PDF ou cliquez pour parcourir"}
                     </p>
                     <input
                       ref={fileInputRef}

@@ -166,15 +166,16 @@ function Router() {
       <Route path="/offers/:id/chiffrage" component={() => <ProtectedRoute component={Chiffrage} />} />
       <Route path="/offers/create" component={() => <ProtectedRoute component={CreateAO} />} />
       <Route path="/offers/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
-      <Route path="/projects" component={() => <ProtectedRoute component={Projects} />} />
-      <Route path="/projects/:id" component={() => <ProtectedRoute component={ProjectDetail} />} />
-      <Route path="/projects/:id/planning" component={() => <ProtectedRoute component={Planning} />} />
-      {/* Phases projets - Composants spécialisés par phase chronologique */}
+      {/* Phases projets - Routes statiques AVANT les routes dynamiques */}
       <Route path="/projects/study" component={() => <ProtectedRoute component={ProjectStudy} />} />
       <Route path="/projects/planning" component={() => <ProtectedRoute component={ProjectPlanning} />} />
       <Route path="/projects/supply" component={() => <ProtectedRoute component={ProjectSupply} />} />
       <Route path="/projects/worksite" component={() => <ProtectedRoute component={ProjectWorksite} />} />
       <Route path="/projects/support" component={() => <ProtectedRoute component={ProjectSupport} />} />
+      {/* Routes dynamiques avec :id APRÈS les routes statiques */}
+      <Route path="/projects" component={() => <ProtectedRoute component={Projects} />} />
+      <Route path="/projects/:id" component={() => <ProtectedRoute component={ProjectDetail} />} />
+      <Route path="/projects/:id/planning" component={() => <ProtectedRoute component={Planning} />} />
       
       {/* ============= ENTITÉS TRANSVERSALES ============= */}
       {/* ============= PROJETS - Phases post-signature chronologiques ============= */}

@@ -101,10 +101,11 @@ export function useGanttWorkload({
   const teamWorkload: WorkloadCalculation = useMemo(() => {
     const workloadByPeriod: WorkloadCalculation = {};
 
-    // Filtrer les projets actifs (phases de production)
+    // Filtrer les projets actifs (phases de production) avec dates valides
     const activeProjects = ganttItems.filter(item => 
       item.type === 'project' && 
-      ['planification', 'approvisionnement', 'chantier'].includes(item.status)
+      ['planification', 'approvisionnement', 'chantier'].includes(item.status) &&
+      item.startDate && item.endDate // S'assurer que les dates existent
     );
 
     if (viewMode === 'week') {
@@ -119,6 +120,9 @@ export function useGanttWorkload({
           const projectDetails: WorkloadProject[] = [];
           
           activeProjects.forEach(project => {
+            // S'assurer que les dates du projet existent
+            if (!project.startDate || !project.endDate) return;
+            
             // Vérifier s'il y a intersection entre le projet et la période
             const projectStart = new Date(Math.max(project.startDate.getTime(), weekStart.getTime()));
             const projectEnd = new Date(Math.min(project.endDate.getTime(), weekEnd.getTime()));
@@ -178,6 +182,9 @@ export function useGanttWorkload({
       const projectDetails: WorkloadProject[] = [];
       
       activeProjects.forEach(project => {
+        // S'assurer que les dates du projet existent
+        if (!project.startDate || !project.endDate) return;
+        
         // Vérifier s'il y a intersection entre le projet et la période
         const projectStart = new Date(Math.max(project.startDate.getTime(), monthStart.getTime()));
         const projectEnd = new Date(Math.min(project.endDate.getTime(), monthEnd.getTime()));
@@ -295,6 +302,9 @@ export function useGanttWorkload({
     const workloadByItem: ItemWorkloadCalculation = {};
     
     ganttItems.forEach(item => {
+      // Vérifier que l'item a des dates valides
+      if (!item.startDate || !item.endDate) return;
+      
       const estimatedHours = typeof item.estimatedHours === 'string' 
         ? parseFloat(item.estimatedHours) || 0 
         : item.estimatedHours || 0;

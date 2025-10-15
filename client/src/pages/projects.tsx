@@ -62,7 +62,8 @@ export default function Projects() {
           {
             label: "Nouveau Projet",
             variant: "default",
-            icon: "plus"
+            icon: "plus",
+            onClick: () => setLocation('/projects/new')
           }
         ]}
       />

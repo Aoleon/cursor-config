@@ -298,7 +298,7 @@ export default function CreateAO() {
         if (status === 409) {
           toast({
             title: "Conflit de données",
-            description: errorData.error || "Cette ressource existe déjà.",
+            description: typeof errorData.error === 'string' ? errorData.error : errorData.error?.message || "Cette ressource existe déjà.",
             variant: "destructive",
           });
           return;
@@ -308,7 +308,7 @@ export default function CreateAO() {
         if (status === 400) {
           toast({
             title: "Erreur de validation",
-            description: errorData.error || errorData.details?.message || "Certains champs obligatoires sont manquants.",
+            description: typeof errorData.error === 'string' ? errorData.error : errorData.error?.message || errorData.details?.message || "Certains champs obligatoires sont manquants.",
             variant: "destructive",
           });
           return;
@@ -317,7 +317,7 @@ export default function CreateAO() {
         // Autres erreurs avec message spécifique
         toast({
           title: "Erreur lors de la création",
-          description: errorData.error || "Impossible de créer l'AO. Veuillez réessayer.",
+          description: typeof errorData.error === 'string' ? errorData.error : errorData.error?.message || "Impossible de créer l'AO. Veuillez réessayer.",
           variant: "destructive",
         });
         return;

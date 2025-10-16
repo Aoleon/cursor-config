@@ -152,6 +152,13 @@ export function useRealtimeNotifications(options: NotificationOptions = {}) {
         return '🎯';
       case EventTypeEnum.TECHNICAL_ALERT:
         return '🔧';
+      // Batigest events
+      case EventTypeEnum.BATIGEST_EXPORT_QUEUED:
+        return '📤';
+      case EventTypeEnum.BATIGEST_EXPORT_SYNCED:
+        return '✅';
+      case EventTypeEnum.BATIGEST_EXPORT_ERROR:
+        return '❌';
       default:
         return '📢';
     }

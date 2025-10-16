@@ -787,6 +787,90 @@ export class EventBus extends EventEmitter {
   }
 
   // ========================================
+  // ÉVÉNEMENTS BATIGEST ERP SYNCHRONIZATION
+  // ========================================
+
+  // Export mis en queue pour synchronisation
+  public publishBatigestExportQueued(params: {
+    exportId: string;
+    documentType: 'purchase_order' | 'client_quote';
+    documentId: string;
+    userId?: string;
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.BATIGEST_EXPORT_QUEUED,
+      entity: 'batigest',
+      entityId: params.exportId,
+      severity: 'info',
+      affectedQueryKeys: [
+        ['/api/batigest/exports/all'],
+        ['/api/batigest/stats'],
+      ],
+      userId: params.userId,
+      metadata: {
+        documentType: params.documentType,
+        documentId: params.documentId,
+      },
+    });
+
+    this.publish(event);
+  }
+
+  // Export synchronisé avec succès
+  public publishBatigestExportSynced(params: {
+    exportId: string;
+    documentType: 'purchase_order' | 'client_quote';
+    documentId: string;
+    userId?: string;
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.BATIGEST_EXPORT_SYNCED,
+      entity: 'batigest',
+      entityId: params.exportId,
+      severity: 'success',
+      affectedQueryKeys: [
+        ['/api/batigest/exports/all'],
+        ['/api/batigest/stats'],
+      ],
+      userId: params.userId,
+      metadata: {
+        documentType: params.documentType,
+        documentId: params.documentId,
+      },
+    });
+
+    this.publish(event);
+  }
+
+  // Erreur lors de la synchronisation
+  public publishBatigestExportError(params: {
+    exportId: string;
+    documentType: 'purchase_order' | 'client_quote';
+    documentId: string;
+    error: string;
+    userId?: string;
+  }): void {
+    const event = createRealtimeEvent({
+      type: EventTypeEnum.BATIGEST_EXPORT_ERROR,
+      entity: 'batigest',
+      entityId: params.exportId,
+      severity: 'error',
+      affectedQueryKeys: [
+        ['/api/batigest/exports/all'],
+        ['/api/batigest/stats'],
+      ],
+      userId: params.userId,
+      metadata: {
+        documentType: params.documentType,
+        documentId: params.documentId,
+        error: params.error,
+      },
+    });
+
+    this.publish(event);
+  }
+
+  // ========================================
   // ÉVÉNEMENTS CACHE CONTEXTUEL PHASE 2 PERFORMANCE
   // ========================================
 

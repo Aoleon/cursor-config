@@ -88,7 +88,12 @@ export enum EventType {
   
   // Événements chatbot et apprentissage adaptatif
   CHATBOT_QUERY_PROCESSED = 'chatbot.query_processed',
-  CHATBOT_FEEDBACK_RECEIVED = 'chatbot.feedback_received'
+  CHATBOT_FEEDBACK_RECEIVED = 'chatbot.feedback_received',
+  
+  // Batigest ERP Synchronization
+  BATIGEST_EXPORT_QUEUED = 'batigest.export_queued',
+  BATIGEST_EXPORT_SYNCED = 'batigest.export_synced',
+  BATIGEST_EXPORT_ERROR = 'batigest.export_error'
 }
 
 // ========================================
@@ -216,7 +221,7 @@ export type EventPayload =
 export const realtimeEventSchema = z.object({
   id: z.string().uuid(),
   type: z.nativeEnum(EventType),
-  entity: z.enum(['offer', 'project', 'task', 'validation', 'supplier', 'system', 'technical', 'date_intelligence', 'business_alert', 'alert_threshold']),
+  entity: z.enum(['offer', 'project', 'task', 'validation', 'supplier', 'system', 'technical', 'date_intelligence', 'business_alert', 'alert_threshold', 'batigest']),
   entityId: z.string(),
   
   // Relations pour navigation et contexte
@@ -575,6 +580,33 @@ export const eventMessageTemplates: Record<EventType, (event: RealtimeEvent) => 
   [EventType.PREDICTIVE_SNAPSHOT_SAVED]: (event) => ({
     title: "📊 Prédiction calculée",
     message: `Snapshot prédictif ${event.metadata?.calculation_type || 'général'} sauvegardé ${event.metadata?.triggers_evaluation ? '(déclenche évaluation seuils)' : ''}`
+  }),
+
+  // === TEMPLATES CHATBOT ===
+  [EventType.CHATBOT_QUERY_PROCESSED]: (event) => ({
+    title: "💬 Requête chatbot traitée",
+    message: `Requête traitée avec succès ${event.metadata?.query_text ? ': "' + event.metadata.query_text.substring(0, 50) + '..."' : ''}`
+  }),
+
+  [EventType.CHATBOT_FEEDBACK_RECEIVED]: (event) => ({
+    title: "⭐ Feedback chatbot reçu",
+    message: `Feedback ${event.metadata?.rating || 'reçu'} pour la requête ${event.metadata?.query_id || event.entityId}`
+  }),
+
+  // === TEMPLATES BATIGEST ERP ===
+  [EventType.BATIGEST_EXPORT_QUEUED]: (event) => ({
+    title: "📤 Export Batigest en attente",
+    message: `Export ${event.metadata?.documentType === 'client_quote' ? 'devis client' : 'bon de commande'} mis en queue pour synchronisation`
+  }),
+
+  [EventType.BATIGEST_EXPORT_SYNCED]: (event) => ({
+    title: "✅ Synchronisation Batigest réussie",
+    message: `${event.metadata?.documentType === 'client_quote' ? 'Devis client' : 'Bon de commande'} synchronisé avec Batigest avec succès`
+  }),
+
+  [EventType.BATIGEST_EXPORT_ERROR]: (event) => ({
+    title: "❌ Erreur synchronisation Batigest",
+    message: `Erreur lors de la synchronisation ${event.metadata?.documentType === 'client_quote' ? 'du devis' : 'du bon de commande'}: ${event.metadata?.error || 'erreur inconnue'}`
   }),
 };
 

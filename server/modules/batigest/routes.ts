@@ -120,12 +120,11 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         downloadedAt: exportItem.downloadedAt || new Date()
       });
 
-      eventBus.emit('batigest:export:imported', {
+      eventBus.publishBatigestExportSynced({
         exportId: id,
-        documentType: exportItem.documentType,
-        documentReference: exportItem.documentReference,
-        batigestReference,
-        agentId
+        documentType: exportItem.documentType === 'bon_commande' ? 'purchase_order' : 'client_quote',
+        documentId: exportItem.documentId,
+        userId: (req as any).user?.id
       });
 
       sendSuccess(res, { success: true });
@@ -165,12 +164,12 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         lastRetryAt: new Date()
       });
 
-      eventBus.emit('batigest:export:error', {
+      eventBus.publishBatigestExportError({
         exportId: id,
-        documentType: exportItem.documentType,
-        documentReference: exportItem.documentReference,
-        errorMessage,
-        agentId
+        documentType: exportItem.documentType === 'bon_commande' ? 'purchase_order' : 'client_quote',
+        documentId: exportItem.documentId,
+        error: errorMessage || 'Erreur de synchronisation',
+        userId: (req as any).user?.id
       });
 
       sendSuccess(res, { success: true });
@@ -383,10 +382,11 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             status: 'ready'
           });
 
-          eventBus.emit('batigest:export:created', {
+          eventBus.publishBatigestExportQueued({
             exportId: exportQueue.id,
-            documentType: 'bon_commande',
-            documentReference: order.reference
+            documentType: 'purchase_order',
+            documentId: order.id,
+            userId: req.user?.id
           });
         }
       }
@@ -559,10 +559,11 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             batigestExportId: exportQueue.id
           });
 
-          eventBus.emit('batigest:export:created', {
+          eventBus.publishBatigestExportQueued({
             exportId: exportQueue.id,
-            documentType: 'devis_client',
-            documentReference: quote.reference
+            documentType: 'client_quote',
+            documentId: quote.id,
+            userId: req.user?.id
           });
         }
       }

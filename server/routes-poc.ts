@@ -5547,7 +5547,9 @@ app.get('/api/analytics/metrics',
     const dateRange = query.period ? parsePeriod(query.period) : getDefaultPeriod();
     
     let metrics;
-    switch (query.metricType) {
+    const metricType = query.metricType || 'all';
+    
+    switch (metricType) {
       case 'conversion':
         metrics = await analyticsService.conversionCalculatorAPI.calculateAOToOfferConversion(dateRange);
         break;
@@ -5563,11 +5565,14 @@ app.get('/api/analytics/metrics',
       case 'margin':
         metrics = await analyticsService.marginCalculatorAPI.calculateMarginAnalysis(dateRange);
         break;
+      case 'all':
       default:
-        throw new ValidationError('Type de métrique non supporté');
+        // Return all metrics when metricType is not specified or is 'all'
+        metrics = await analyticsService.getBusinessMetrics(query);
+        break;
     }
     
-    logger.info('[Analytics] Métriques business calculées', { metadata: { metricType: query.metricType } });
+    logger.info('[Analytics] Métriques business calculées', { metadata: { metricType } });
     
     sendSuccess(res, {
       metrics,
@@ -5617,7 +5622,7 @@ app.get('/api/analytics/benchmarks',
       benchmarks,
       topPerformers,
       entityType: query.entityType
-    }, "Benchmarks de performance récupérés avec succès");
+    });
   })
 );
 

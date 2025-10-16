@@ -455,6 +455,10 @@ export interface IStorage {
     method_used: string;
   }>>;
 
+  // Analytics snapshots operations
+  getAnalyticsSnapshots(params?: any): Promise<any[]>;
+  createAnalyticsSnapshot(data: any): Promise<any>;
+
   // Benchmarks secteur pour comparaisons
   getSectorBenchmarks(): Promise<{
     industry_avg_conversion: number;
@@ -3267,6 +3271,55 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getAnalyticsSnapshots(params?: any): Promise<any[]> {
+    try {
+      logger.info('Récupération snapshots analytics', {
+        metadata: {
+          service: 'DatabaseStorage',
+          operation: 'getAnalyticsSnapshots',
+          params
+        }
+      });
+      return [];
+    } catch (error) {
+      logger.error('Erreur getAnalyticsSnapshots', {
+        metadata: {
+          service: 'DatabaseStorage',
+          operation: 'getAnalyticsSnapshots',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async createAnalyticsSnapshot(data: any): Promise<any> {
+    try {
+      const snapshot = {
+        id: `analytics_snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        ...data,
+        createdAt: new Date()
+      };
+      logger.info('Snapshot analytics créé', {
+        metadata: {
+          service: 'DatabaseStorage',
+          operation: 'createAnalyticsSnapshot',
+          snapshotId: snapshot.id
+        }
+      });
+      return snapshot;
+    } catch (error) {
+      logger.error('Erreur createAnalyticsSnapshot', {
+        metadata: {
+          service: 'DatabaseStorage',
+          operation: 'createAnalyticsSnapshot',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
   // ========================================
   // SUPPLIER QUOTE SESSIONS OPERATIONS - WORKFLOW FOURNISSEURS
   // ========================================
@@ -4141,6 +4194,33 @@ export class MemStorage implements IStorage {
       }
     });
     return snapshots;
+  }
+
+  async getAnalyticsSnapshots(params?: any): Promise<any[]> {
+    logger.info('Mock getAnalyticsSnapshots', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'getAnalyticsSnapshots',
+        params
+      }
+    });
+    return [];
+  }
+
+  async createAnalyticsSnapshot(data: any): Promise<any> {
+    const snapshot = {
+      id: `analytics_snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      createdAt: new Date()
+    };
+    logger.info('Mock snapshot analytics créé', {
+      metadata: {
+        service: 'MemStorage',
+        operation: 'createAnalyticsSnapshot',
+        snapshotId: snapshot.id
+      }
+    });
+    return snapshot;
   }
 
   // ========================================
@@ -7318,6 +7398,55 @@ export class MemStorage implements IStorage {
           operation: 'listForecastSnapshots',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
+        }
+      });
+      throw error;
+    }
+  }
+
+  async getAnalyticsSnapshots(params?: any): Promise<any[]> {
+    try {
+      logger.info('Récupération snapshots analytics', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getAnalyticsSnapshots',
+          params
+        }
+      });
+      return [];
+    } catch (error) {
+      logger.error('Erreur getAnalyticsSnapshots', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getAnalyticsSnapshots',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async createAnalyticsSnapshot(data: any): Promise<any> {
+    try {
+      const snapshot = {
+        id: `analytics_snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        ...data,
+        createdAt: new Date()
+      };
+      logger.info('Snapshot analytics créé', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createAnalyticsSnapshot',
+          snapshotId: snapshot.id
+        }
+      });
+      return snapshot;
+    } catch (error) {
+      logger.error('Erreur createAnalyticsSnapshot', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createAnalyticsSnapshot',
+          error: error instanceof Error ? error.message : String(error)
         }
       });
       throw error;

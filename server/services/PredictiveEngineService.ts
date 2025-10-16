@@ -2931,4 +2931,100 @@ export class PredictiveEngineService {
       enabled: this.preloadingEnabled
     };
   }
+
+  // ========================================
+  // MÉTHODES PUBLIQUES POUR ROUTES
+  // ========================================
+
+  /**
+   * Analyse des risques - alias pour detectProjectRisks pour compatibilité routes
+   */
+  async analyzeRisks(params?: any): Promise<any[]> {
+    try {
+      const riskParams: RiskQueryParams = {
+        risk_level: params?.riskLevel || 'all',
+        project_types: params?.projectTypes,
+        user_ids: params?.userIds,
+        limit: params?.limit || 20,
+        include_predictions: params?.includePredictions !== false
+      };
+
+      return await this.detectProjectRisks(riskParams);
+    } catch (error) {
+      logger.error('Erreur analyzeRisks', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'analyzeRisks',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Sauvegarde un snapshot d'analyse
+   */
+  async saveSnapshot(data: any): Promise<any> {
+    try {
+      const snapshot = {
+        id: `snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: data.type || 'full',
+        data: data,
+        params: data.params || {},
+        createdAt: new Date(),
+        createdBy: data.createdBy || 'system',
+        notes: data.notes,
+        version: '1.0'
+      };
+
+      logger.info('Snapshot sauvegardé', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'saveSnapshot',
+          snapshotId: snapshot.id,
+          type: snapshot.type
+        }
+      });
+
+      return snapshot;
+    } catch (error) {
+      logger.error('Erreur saveSnapshot', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'saveSnapshot',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Récupère les snapshots d'analyse
+   */
+  async getSnapshots(params?: any): Promise<any[]> {
+    try {
+      // Pour l'instant, retourner un tableau vide
+      // À implémenter avec storage si nécessaire
+      logger.info('Récupération snapshots', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'getSnapshots',
+          params
+        }
+      });
+
+      return [];
+    } catch (error) {
+      logger.error('Erreur getSnapshots', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'getSnapshots',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
 }

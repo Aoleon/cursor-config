@@ -3,9 +3,11 @@ import { EventBus } from "../eventBus";
 import type { 
   KpiSnapshot, InsertKpiSnapshot,
   BusinessMetric, InsertBusinessMetric,
-  PerformanceBenchmark, InsertPerformanceBenchmark,
-  ProjectStatus
+  PerformanceBenchmark, InsertPerformanceBenchmark
 } from "@shared/schema";
+import { projectStatusEnum } from "@shared/schema";
+
+type ProjectStatus = typeof projectStatusEnum.enumValues[number];
 import { logger } from '../utils/logger';
 
 // ========================================
@@ -153,6 +155,7 @@ class ConversionCalculator {
 
       // Filtrer par période
       const periodAos = aos.filter(ao => {
+        if (!ao.createdAt) return false;
         const createdAt = new Date(ao.createdAt);
         return createdAt >= period.from && createdAt <= period.to;
       });
@@ -250,6 +253,7 @@ class ConversionCalculator {
 
       // Filtrer offres par période
       const periodOffers = offers.filter(offer => {
+        if (!offer.createdAt) return false;
         const createdAt = new Date(offer.createdAt);
         return createdAt >= period.from && createdAt <= period.to;
       });
@@ -386,7 +390,8 @@ class DelayCalculator {
 
       // Filtrer par période
       const relevantTimelines = timelines.filter(timeline => {
-        const startDate = new Date(timeline.startDate);
+        if (!timeline.plannedStartDate) return false;
+        const startDate = new Date(timeline.plannedStartDate);
         return startDate >= period.from && startDate <= period.to;
       });
 
@@ -395,8 +400,8 @@ class DelayCalculator {
       const delaysByGroup: Record<string, number[]> = {};
 
       for (const timeline of relevantTimelines) {
-        if (timeline.endDate && timeline.actualEndDate) {
-          const plannedEnd = new Date(timeline.endDate);
+        if (timeline.plannedEndDate && timeline.actualEndDate) {
+          const plannedEnd = new Date(timeline.plannedEndDate);
           const actualEnd = new Date(timeline.actualEndDate);
           const delayDays = Math.max(0, (actualEnd.getTime() - plannedEnd.getTime()) / (1000 * 60 * 60 * 24));
           
@@ -498,8 +503,8 @@ class DelayCalculator {
       const minDelay = thresholds[severity];
 
       for (const timeline of timelines) {
-        if (timeline.endDate) {
-          const plannedEnd = new Date(timeline.endDate);
+        if (timeline.plannedEndDate) {
+          const plannedEnd = new Date(timeline.plannedEndDate);
           const now = new Date();
           const actualEnd = timeline.actualEndDate ? new Date(timeline.actualEndDate) : now;
           
@@ -567,14 +572,14 @@ class DelayCalculator {
         // Timelines associées
         const userTimelines = timelines.filter(t => 
           userProjects.some(p => p.id === t.projectId) && 
-          t.endDate && t.actualEndDate
+          t.plannedEndDate && t.actualEndDate
         );
 
         if (userTimelines.length === 0) continue;
 
         // Calcul des délais
         const delays = userTimelines.map(t => {
-          const planned = new Date(t.endDate!);
+          const planned = new Date(t.plannedEndDate!);
           const actual = new Date(t.actualEndDate!);
           return Math.max(0, (actual.getTime() - planned.getTime()) / (1000 * 60 * 60 * 24));
         });
@@ -588,7 +593,7 @@ class DelayCalculator {
 
         teamMetrics.push({
           userId: user.id,
-          userName: user.name,
+          userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown',
           averageDelay,
           onTimePercentage,
           totalProjects: userProjects.length,
@@ -643,15 +648,15 @@ class RevenueCalculator {
       const byMonth: Array<{ month: string; forecast: number; probability: number }> = [];
 
       for (const offer of activeOffers) {
-        const probability = conversionProbabilities[offer.status] || 0;
-        const amount = offer.finalAmount ? parseFloat(offer.finalAmount.toString()) : 
-                     (offer.estimatedAmount ? parseFloat(offer.estimatedAmount.toString()) : 0);
+        const probability = conversionProbabilities[offer.status || 'en_cours_chiffrage'] || 0;
+        const amount = offer.montantFinalHT ? parseFloat(offer.montantFinalHT.toString()) : 
+                     (offer.montantEstime ? parseFloat(offer.montantEstime.toString()) : 0);
         
         const forecastAmount = amount * probability;
         totalForecast += forecastAmount;
 
         // Par catégorie
-        const category = offer.menuiserieType;
+        const category = offer.menuiserieType || 'unknown';
         if (!byCategory[category]) {
           byCategory[category] = 0;
         }
@@ -917,10 +922,14 @@ class TeamLoadCalculator {
         // Calcul heures assignées
         let totalAssignedHours = 0;
         for (const workload of userWorkload) {
-          totalAssignedHours += workload.hoursPlanned || 0;
+          totalAssignedHours += parseFloat(workload.plannedHours?.toString() || '0');
         }
         for (const resource of userResources) {
-          totalAssignedHours += resource.allocatedHours || 0;
+          // Estimate hours from date range if available
+          if (resource.startDate && resource.endDate) {
+            const days = Math.ceil((new Date(resource.endDate).getTime() - new Date(resource.startDate).getTime()) / (1000 * 60 * 60 * 24));
+            totalAssignedHours += (days * 7); // Assume 7 hours per day
+          }
         }
 
         // Capacité théorique (en semaines dans la période)
@@ -934,8 +943,8 @@ class TeamLoadCalculator {
         let totalPlannedHours = 0;
         let totalActualHours = 0;
         for (const workload of userWorkload) {
-          totalPlannedHours += workload.hoursPlanned || 0;
-          totalActualHours += workload.hoursActual || 0;
+          totalPlannedHours += parseFloat(workload.plannedHours?.toString() || '0');
+          totalActualHours += parseFloat(workload.actualHours?.toString() || '0');
         }
         const efficiency = totalPlannedHours > 0 ? (totalActualHours / totalPlannedHours) * 100 : 100;
 
@@ -953,7 +962,7 @@ class TeamLoadCalculator {
 
         teamMetrics.push({
           userId: user.id,
-          userName: user.name,
+          userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown',
           loadPercentage,
           hoursAssigned: totalAssignedHours,
           capacityHours,
@@ -996,29 +1005,23 @@ class TeamLoadCalculator {
 
         // Efficacité temporelle (respect des délais)
         const onTimeProjects = userTimelines.filter(t => {
-          if (!t.endDate || !t.actualEndDate) return false;
-          const planned = new Date(t.endDate);
+          if (!t.plannedEndDate || !t.actualEndDate) return false;
+          const planned = new Date(t.plannedEndDate);
           const actual = new Date(t.actualEndDate);
           return actual <= planned;
         }).length;
 
         const efficiency = userTimelines.length > 0 ? (onTimeProjects / userTimelines.length) * 100 : 0;
 
-        // Score qualité (approximation basée sur nombre de réserves)
-        let totalReserves = 0;
-        let totalReservesResolved = 0;
-        for (const project of userProjects) {
-          totalReserves += project.reservesCount || 0;
-          totalReservesResolved += project.reservesResolved || 0;
-        }
-        const qualityScore = totalReserves > 0 ? (totalReservesResolved / totalReserves) * 100 : 100;
+        // Score qualité (approximation - utiliser 100% par défaut car les champs réserves n'existent pas encore)
+        const qualityScore = 100;
 
         // Score collaboration (simplified)
         const collaborationScore = 85; // Score par défaut
 
         efficiencyMetrics.push({
           userId: user.id,
-          userName: user.name,
+          userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown',
           efficiency,
           deliveredOnTime: (onTimeProjects / Math.max(1, userTimelines.length)) * 100,
           qualityScore,
@@ -1134,11 +1137,11 @@ class MarginCalculator {
 
 export class AnalyticsService {
   // Architecture modulaire avec calculs spécialisés
-  private conversionCalculator: ConversionCalculator;
-  private delayCalculator: DelayCalculator;
-  private revenueCalculator: RevenueCalculator;
-  private teamLoadCalculator: TeamLoadCalculator;
-  private marginCalculator: MarginCalculator;
+  private conversionCalculator!: ConversionCalculator;
+  private delayCalculator!: DelayCalculator;
+  private revenueCalculator!: RevenueCalculator;
+  private teamLoadCalculator!: TeamLoadCalculator;
+  private marginCalculator!: MarginCalculator;
 
   // Cache et performance
   private cache: Map<string, any> = new Map();
@@ -1416,11 +1419,13 @@ export class AnalyticsService {
   }
 
   private invalidateCache(pattern: string): void {
+    const keysToDelete: string[] = [];
     for (const [key] of this.cache) {
       if (key.includes(pattern)) {
-        this.cache.delete(key);
+        keysToDelete.push(key);
       }
     }
+    keysToDelete.forEach(key => this.cache.delete(key));
   }
 
   public clearCache(): void {
@@ -1528,6 +1533,363 @@ export class AnalyticsService {
     }
 
     return recommendations;
+  }
+
+  // ========================================
+  // MÉTHODES PUBLIQUES POUR ROUTES
+  // ========================================
+
+  async getBusinessMetrics(params: any): Promise<any> {
+    try {
+      const period: DateRange = {
+        from: params.dateFrom ? new Date(params.dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to: params.dateTo ? new Date(params.dateTo) : new Date()
+      };
+
+      const [conversions, revenue, teamLoad, margins] = await Promise.all([
+        this.conversionCalculator.calculatePipelineConversion(period),
+        this.revenueCalculator.calculateRevenueForecast(period),
+        this.teamLoadCalculator.calculateTeamLoad(period),
+        this.marginCalculator.calculateMarginAnalysis(period)
+      ]);
+
+      return {
+        revenue: {
+          total: revenue.amount,
+          byMonth: revenue.byMonth.reduce((acc, m) => ({ ...acc, [m.month]: m.forecast }), {}),
+          byClient: {}, // À implémenter
+          growth: 0 // À calculer
+        },
+        conversion: {
+          rate: conversions.globalConversion,
+          aoToOffer: conversions.aoToOffer,
+          offerToProject: conversions.offerToProject,
+          funnel: [
+            { stage: 'AO', count: 0, percentage: 100 },
+            { stage: 'Offre', count: 0, percentage: conversions.aoToOffer },
+            { stage: 'Projet', count: 0, percentage: conversions.offerToProject }
+          ]
+        },
+        performance: {
+          averageProjectDuration: 0, // À calculer
+          onTimeDelivery: 0, // À calculer
+          clientSatisfaction: 0, // À calculer
+          teamUtilization: teamLoad.length > 0 ? teamLoad.reduce((sum, t) => sum + t.loadPercentage, 0) / teamLoad.length : 0
+        },
+        pipeline: {
+          aoCount: 0, // À calculer
+          offerCount: 0, // À calculer
+          projectCount: 0, // À calculer
+          totalValue: revenue.amount,
+          expectedRevenue: revenue.amount
+        }
+      };
+    } catch (error) {
+      logger.error('Erreur getBusinessMetrics', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'getBusinessMetrics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async getDashboardStats(): Promise<any> {
+    try {
+      const [aos, offers, projects] = await Promise.all([
+        this.storage.getAos(),
+        this.storage.getOffers(),
+        this.storage.getProjects()
+      ]);
+
+      const activeProjects = projects.filter(p => 
+        p.status && !['termine', 'archive'].includes(p.status)
+      );
+
+      const totalRevenue = projects.reduce((sum, p) => 
+        sum + parseFloat(p.budget?.toString() || '0'), 0
+      );
+
+      const period: DateRange = {
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to: new Date()
+      };
+
+      const conversions = await this.conversionCalculator.calculatePipelineConversion(period);
+
+      return {
+        totalAos: aos.length,
+        totalOffers: offers.length,
+        totalProjects: projects.length,
+        activeProjects: activeProjects.length,
+        totalRevenue,
+        conversionRate: conversions.globalConversion,
+        averageProjectValue: projects.length > 0 ? totalRevenue / projects.length : 0,
+        teamUtilization: 0 // À calculer
+      };
+    } catch (error) {
+      logger.error('Erreur getDashboardStats', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'getDashboardStats',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async getDashboardKPIs(): Promise<any> {
+    // Alias pour getRealtimeKPIs pour compatibilité
+    return this.getRealtimeKPIs();
+  }
+
+  async getPipelineAnalytics(filters?: any): Promise<any> {
+    try {
+      const period: DateRange = {
+        from: filters?.dateFrom ? new Date(filters.dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to: filters?.dateTo ? new Date(filters.dateTo) : new Date()
+      };
+
+      const [aos, offers, projects, conversions] = await Promise.all([
+        this.storage.getAos(),
+        this.storage.getOffers(),
+        this.storage.getProjects(),
+        this.conversionCalculator.calculatePipelineConversion(period)
+      ]);
+
+      return {
+        aoCount: aos.length,
+        offerCount: offers.length,
+        projectCount: projects.length,
+        stages: [
+          {
+            name: 'AO',
+            count: aos.length,
+            value: 0,
+            averageTime: 0,
+            conversion: conversions.aoToOffer
+          },
+          {
+            name: 'Offre',
+            count: offers.length,
+            value: 0,
+            averageTime: 0,
+            conversion: conversions.offerToProject
+          },
+          {
+            name: 'Projet',
+            count: projects.length,
+            value: 0,
+            averageTime: 0,
+            conversion: 100
+          }
+        ],
+        bottlenecks: [
+          {
+            stage: conversions.bottleneckPhase,
+            severity: 'medium' as const,
+            impact: 0,
+            recommendation: 'Améliorer le taux de conversion'
+          }
+        ]
+      };
+    } catch (error) {
+      logger.error('Erreur getPipelineAnalytics', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'getPipelineAnalytics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async getBenchmarks(params: any): Promise<any> {
+    try {
+      const period: DateRange = {
+        from: params?.dateFrom ? new Date(params.dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to: params?.dateTo ? new Date(params.dateTo) : new Date()
+      };
+
+      const entity: BenchmarkEntity = {
+        type: params?.entityType || 'user',
+        id: params?.entityId || 'default'
+      };
+
+      return await this.generateBenchmarks(entity, period);
+    } catch (error) {
+      logger.error('Erreur getBenchmarks', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'getBenchmarks',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async getRealtimeMetrics(): Promise<any[]> {
+    try {
+      const kpis = await this.getRealtimeKPIs();
+      
+      return [
+        {
+          metric: 'conversion_rate',
+          value: kpis.conversionRate,
+          timestamp: kpis.lastUpdated,
+          delta: 0,
+          trend: []
+        },
+        {
+          metric: 'forecast_revenue',
+          value: kpis.forecastRevenue,
+          timestamp: kpis.lastUpdated,
+          delta: 0,
+          trend: []
+        },
+        {
+          metric: 'team_load',
+          value: kpis.teamLoadAvg,
+          timestamp: kpis.lastUpdated,
+          delta: 0,
+          trend: []
+        },
+        {
+          metric: 'delayed_projects',
+          value: kpis.delayedProjectsCount,
+          timestamp: kpis.lastUpdated,
+          delta: 0,
+          trend: []
+        }
+      ];
+    } catch (error) {
+      logger.error('Erreur getRealtimeMetrics', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'getRealtimeMetrics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async analyzeBottlenecks(): Promise<any[]> {
+    try {
+      const period: DateRange = {
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to: new Date()
+      };
+
+      const [conversions, delays] = await Promise.all([
+        this.conversionCalculator.calculatePipelineConversion(period),
+        this.delayCalculator.calculateAverageDelays(period, 'phase')
+      ]);
+
+      const bottlenecks: any[] = [];
+
+      // Analyser les conversions
+      if (conversions.aoToOffer < 50) {
+        bottlenecks.push({
+          id: 'conversion-ao-offer',
+          process: 'conversion',
+          stage: 'ao_to_offer',
+          severity: 70,
+          impact: {
+            delayDays: 0,
+            affectedProjects: 0,
+            costImpact: 0
+          },
+          causes: ['Taux de conversion faible AO vers Offre'],
+          recommendations: [
+            {
+              action: 'Améliorer qualification des AOs',
+              expectedImprovement: 20,
+              effort: 'medium' as const
+            }
+          ]
+        });
+      }
+
+      // Analyser les délais
+      if (delays.average > 5) {
+        bottlenecks.push({
+          id: 'delays-critical',
+          process: 'execution',
+          stage: 'all',
+          severity: 80,
+          impact: {
+            delayDays: delays.average,
+            affectedProjects: delays.criticalCount,
+            costImpact: delays.average * delays.criticalCount * 500
+          },
+          causes: ['Délais moyens supérieurs à 5 jours'],
+          recommendations: [
+            {
+              action: 'Optimiser la planification',
+              expectedImprovement: 30,
+              effort: 'high' as const
+            }
+          ]
+        });
+      }
+
+      return bottlenecks;
+    } catch (error) {
+      logger.error('Erreur analyzeBottlenecks', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'analyzeBottlenecks',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async exportData(request: any): Promise<any> {
+    try {
+      let data: any;
+
+      switch (request.type) {
+        case 'kpis':
+          data = await this.getRealtimeKPIs();
+          break;
+        case 'metrics':
+          data = await this.getBusinessMetrics({});
+          break;
+        case 'dashboard':
+          data = await this.getDashboardStats();
+          break;
+        default:
+          data = await this.getRealtimeKPIs();
+      }
+
+      const jsonData = JSON.stringify(data, null, 2);
+      const buffer = Buffer.from(jsonData, 'utf-8');
+
+      return {
+        filename: `analytics-${request.type}-${Date.now()}.${request.format}`,
+        mimeType: request.format === 'json' ? 'application/json' : 'text/csv',
+        size: buffer.length,
+        data: request.format === 'json' ? data : buffer,
+        generatedAt: new Date()
+      };
+    } catch (error) {
+      logger.error('Erreur exportData', {
+        metadata: {
+          service: 'AnalyticsService',
+          operation: 'exportData',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
   }
 
   // ========================================

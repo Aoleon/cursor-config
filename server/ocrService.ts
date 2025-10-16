@@ -2286,9 +2286,10 @@ Réponses publiées au plus tard le 22/03/2025
         }
       });
 
-      // Émettre une alerte technique si le seuil est dépassé
+      // NOTE: Alerte technique consolidée sera publiée dans parseAOFields
+      // Ne pas publier d'alerte individuelle ici pour éviter les doublons
       if (result.shouldAlert && aoReference) {
-        logger.info('Alerte technique déclenchée', {
+        logger.info('Alerte technique déclenchée (sera publiée dans parseAOFields)', {
           metadata: {
             service: 'OCRService',
             operation: 'computeTechnicalScoring',
@@ -2296,39 +2297,6 @@ Réponses publiées au plus tard le 22/03/2025
             score: result.totalScore
           }
         });
-        
-        try {
-          eventBus.publishTechnicalAlert({
-            aoReference,
-            score: result.totalScore,
-            triggeredCriteria: result.triggeredCriteria,
-            metadata: {
-              evidences: specialCriteria.evidences,
-              scoreDetails: result.details,
-              timestamp: new Date().toISOString(),
-              source: 'OCR',
-              confidence: 95 // Confiance OCR
-            }
-          });
-          
-          logger.info('Alerte technique publiée via EventBus', {
-            metadata: {
-              service: 'OCRService',
-              operation: 'computeTechnicalScoring',
-              aoReference: aoReference
-            }
-          });
-        } catch (error) {
-          logger.error('Erreur publication alerte technique', {
-            metadata: {
-              service: 'OCRService',
-              operation: 'computeTechnicalScoring',
-              aoReference: aoReference,
-              error: error instanceof Error ? error.message : String(error),
-              stack: error instanceof Error ? error.stack : undefined
-            }
-          });
-        }
       }
 
       return result;
@@ -2681,41 +2649,8 @@ Réponses publiées au plus tard le 22/03/2025
             }
           });
           
-          // Publier alerte technique via EventBus
-          try {
-            eventBus.publishTechnicalAlert({
-              aoId: processedFields.reference || 'unknown',
-              aoReference: processedFields.reference || 'unknown',
-              score: rule.severity === 'critical' ? 95 : (rule.severity === 'warning' ? 75 : 50),
-              triggeredCriteria: [`Rule: ${rule.id}`],
-              metadata: {
-                detectedMaterials: (processedFields.materials || []).map(m => m.material),
-                alertRules: [rule.id],
-                evidences: this.gatherRuleEvidences(rule, processedFields),
-                timestamp: new Date().toISOString(),
-                source: 'OCR-evaluateMaterialColorRules',
-                confidence: 95
-              }
-            });
-            
-            logger.info('Alerte matériau-couleur publiée', {
-              metadata: {
-                service: 'OCRService',
-                operation: 'evaluateMaterialColorRules',
-                ruleId: rule.id
-              }
-            });
-          } catch (eventError) {
-            logger.error('Erreur publication alerte matériau-couleur', {
-              metadata: {
-                service: 'OCRService',
-                operation: 'evaluateMaterialColorRules',
-                ruleId: rule.id,
-                error: eventError instanceof Error ? eventError.message : String(eventError),
-                stack: eventError instanceof Error ? eventError.stack : undefined
-              }
-            });
-          }
+          // NOTE: Alerte consolidée sera publiée dans parseAOFields
+          // Ne pas publier d'alerte individuelle ici pour éviter les doublons
         }
       }
     } catch (error) {

@@ -795,12 +795,14 @@ export default function CreateAO() {
                       accept=".pdf"
                       onChange={handleFileChange}
                       className="hidden"
+                      data-testid="input-pdf-file"
                     />
                     <Button
                       variant="outline"
                       className="mt-4"
                       onClick={() => fileInputRef.current?.click()}
                       type="button"
+                      data-testid="button-select-pdf"
                     >
                       Sélectionner un PDF
                     </Button>
@@ -831,6 +833,7 @@ export default function CreateAO() {
                           onClick={handlePdfUpload} 
                           disabled={processing}
                           type="button"
+                          data-testid="button-analyze-ocr"
                         >
                           {processing ? (
                             <>

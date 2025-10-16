@@ -1527,12 +1527,14 @@ Réponses publiées au plus tard le 22/03/2025
     
     // Patterns pour détecter différents formats de lots
     const lotPatterns = [
-      // Format "Lot X: Description"
-      /(?:lot\s+)?(\d+[a-z]?)\s*[:\-]\s*([^\n,]+)/gi,
-      // Format "XX: Description" ou "XXa: Description"  
-      /^(\d{1,3}[a-z]?)\s*[:\-]\s*([^\n,]+)/gim,
-      // Format avec tirets ou points "07.1: Menuiseries extérieures"
-      /(\d{1,2}\.?\d?[a-z]?)\s*[:\-]\s*([^\n,]+)/gi,
+      // Format "LOT N°X – Description" ou "LOT N°X : Description" (Unicode dashes + colon)
+      /(?:lot\s+)?n°\s*(\d+[a-z]?)\s*[:\-–—]\s*([^\n,]+)/gi,
+      // Format "Lot X: Description" ou "Lot X - Description" (avec Unicode dashes)
+      /(?:lot\s+)?(\d+[a-z]?)\s*[:\-–—]\s*([^\n,]+)/gi,
+      // Format "XX: Description" ou "XXa: Description" (avec Unicode dashes)
+      /^(\d{1,3}[a-z]?)\s*[:\-–—]\s*([^\n,]+)/gim,
+      // Format avec tirets ou points "07.1: Menuiseries extérieures" (avec Unicode dashes)
+      /(\d{1,2}\.?\d?[a-z]?)\s*[:\-–—]\s*([^\n,]+)/gi,
     ];
     
     // Trouver la section des lots

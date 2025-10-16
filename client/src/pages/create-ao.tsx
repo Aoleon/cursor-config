@@ -66,7 +66,7 @@ const createAoSchema = z.object({
   projectSize: z.enum(["Petit projet", "Projet moyen", "Grand projet"]).optional(),
   specificLocation: z.string().optional(), 
   estimatedDelay: z.enum(["Express (1-2 semaines)", "Standard (4-6 semaines)", "Long terme (8+ semaines)"]).optional(),
-  clientRecurrency: z.enum(["Nouveau client", "Client récurrent", "Client premium"]),
+  clientRecurrency: z.enum(["Nouveau client", "Client récurrent", "Client premium"]).optional(),
   
   // Système de brouillon
   isDraft: z.boolean().optional(),
@@ -157,6 +157,8 @@ export default function CreateAO() {
         montantEstime: data.montantEstime ? parseFloat(data.montantEstime) : undefined,
         maitreOuvrageId: selectedMaitreOuvrage?.id,
         maitreOeuvreId: selectedMaitreOeuvre?.id,
+        // Garantir une valeur par défaut pour clientRecurrency (centralisé)
+        clientRecurrency: data.clientRecurrency || "Nouveau client",
       };
       
       const response = await fetch("/api/aos", {
@@ -468,7 +470,13 @@ export default function CreateAO() {
     setIsAutoRetrying(false);
     
     console.log('[DEBUG] Submitting AO creation with reference:', data.reference);
-    createAoMutation.mutate({ ...data, isDraft: false });
+    // Ajouter une valeur par défaut pour clientRecurrency si non fournie
+    const aoData = {
+      ...data,
+      clientRecurrency: data.clientRecurrency || "Nouveau client",
+      isDraft: false
+    };
+    createAoMutation.mutate(aoData);
   };
 
   // Fonction pour sauvegarder comme brouillon

@@ -70,6 +70,21 @@ The application features a modern fullstack architecture.
       - Fixed routes-poc.ts to use correct service method calls with proper parameters
     - **Result**: Both endpoints now return 200 OK with valid JSON responses; zero LSP errors in analytics module files
     - **Note**: `server/routes-poc.ts` is a deprecated legacy file (11,588 lines) no longer in execution path; its 306 LSP errors can be safely ignored as modular routes in `server/modules/` are the active source of truth
+- **OCR Lot Extraction Unicode Enhancement** (October 2025): Fixed regex patterns to support French AO lot formats with Unicode characters:
+    - **Problem**: PDFs using "LOT N°1 – Menuiseries" (Unicode en dash `–` + ordinal indicators) yielded 0 lots extracted due to ASCII-only regex patterns
+    - **Solution**: Enhanced `extractLots()` in `server/ocrService.ts` with comprehensive Unicode support:
+      - Character class `[°º]` covers both degree sign (°) and masculine ordinal (º) indicators
+      - Unicode dash class `[\-–—]` supports ASCII hyphen (-), en dash (–), and em dash (—)
+      - Colon separator (`:`) added alongside dashes for format variations
+    - **Supported French AO Lot Formats**:
+      - `LOT N°X – Description` (degree + en dash)
+      - `LOT NºX – Description` (ordinal + en dash)
+      - `LOT N°X - Description` (degree + ASCII dash)
+      - `LOT N°X : Description` (degree + colon)
+      - `LOT X - Description` (fallback without ordinal)
+      - `XX - Description` (plain number format)
+    - **Validation**: Node.js testing confirms regex correctly captures numero and designation without separator artifacts
+    - **Known Limitations**: OCR POC uses simulated text (not real Tesseract); E2E testing via Playwright couldn't trigger OCR endpoint; regex validated via direct Node.js testing instead
 - **Technical Implementations**: Includes a robust error handling system, standardized API routes with `asyncHandler`, and Zod validation for POST routes. The development workflow involves `npm run dev`, `npm run db:push`, and `npm test`.
 
 ## External Dependencies

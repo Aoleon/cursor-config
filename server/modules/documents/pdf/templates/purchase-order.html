@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bon de Commande - [reference]</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Arial', sans-serif;
+      font-size: 11pt;
+      line-height: 1.4;
+      color: #333;
+    }
+    
+    .header {
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .header h1 {
+      color: #2563eb;
+      font-size: 24pt;
+      margin-bottom: 10px;
+    }
+    
+    .header .reference {
+      font-size: 14pt;
+      color: #666;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+    
+    .info-box {
+      background: #f8f9fa;
+      padding: 15px;
+      border-left: 4px solid #2563eb;
+    }
+    
+    .info-box h3 {
+      color: #2563eb;
+      font-size: 12pt;
+      margin-bottom: 10px;
+    }
+    
+    .info-box p {
+      margin: 5px 0;
+      font-size: 10pt;
+    }
+    
+    .info-box .label {
+      font-weight: bold;
+      display: inline-block;
+      width: 120px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    thead {
+      background: #2563eb;
+      color: white;
+    }
+    
+    thead th {
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 10pt;
+    }
+    
+    tbody tr {
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    tbody tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+    
+    tbody td {
+      padding: 10px 12px;
+      font-size: 10pt;
+    }
+    
+    .text-right {
+      text-align: right;
+    }
+    
+    .text-center {
+      text-align: center;
+    }
+    
+    .totals {
+      margin-top: 30px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    
+    .totals-box {
+      width: 350px;
+      background: #f8f9fa;
+      padding: 15px;
+      border: 2px solid #2563eb;
+    }
+    
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .totals-row:last-child {
+      border-bottom: none;
+      font-weight: bold;
+      font-size: 12pt;
+      color: #2563eb;
+      padding-top: 12px;
+      border-top: 2px solid #2563eb;
+    }
+    
+    .conditions {
+      margin-top: 30px;
+      padding: 15px;
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+    }
+    
+    .conditions h3 {
+      color: #f59e0b;
+      margin-bottom: 10px;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #e5e7eb;
+      font-size: 9pt;
+      color: #666;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>BON DE COMMANDE FOURNISSEUR</h1>
+    <div class="reference">Référence: [reference]</div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-box">
+      <h3>Fournisseur</h3>
+      <p><span class="label">Nom:</span> [supplierName]</p>
+      {{#if supplierContact}}
+      <p><span class="label">Contact:</span> [supplierContact]</p>
+      {{/if}}
+      {{#if supplierEmail}}
+      <p><span class="label">Email:</span> [supplierEmail]</p>
+      {{/if}}
+    </div>
+
+    <div class="info-box">
+      <h3>Informations de livraison</h3>
+      {{#if deliveryAddress}}
+      <p><span class="label">Adresse:</span> [deliveryAddress]</p>
+      {{/if}}
+      {{#if expectedDeliveryDate}}
+      <p><span class="label">Date prévue:</span> {{date expectedDeliveryDate}}</p>
+      {{/if}}
+      <p><span class="label">Date commande:</span> {{date createdAt}}</p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 50px;">#</th>
+        <th>Désignation</th>
+        <th style="width: 80px;" class="text-center">Qté</th>
+        <th style="width: 100px;" class="text-right">Prix U. HT</th>
+        <th style="width: 120px;" class="text-right">Total HT</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td class="text-center">{{@index}}</td>
+        <td>{{this.description}}</td>
+        <td class="text-center">{{number this.quantity 0}}</td>
+        <td class="text-right">{{currency this.unitPrice}}</td>
+        <td class="text-right">{{currency this.total}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-box">
+      <div class="totals-row">
+        <span>Total HT:</span>
+        <span>{{currency totalHT}}</span>
+      </div>
+      <div class="totals-row">
+        <span>TVA:</span>
+        <span>{{currency totalTVA}}</span>
+      </div>
+      <div class="totals-row">
+        <span>Total TTC:</span>
+        <span>{{currency totalTTC}}</span>
+      </div>
+    </div>
+  </div>
+
+  {{#if paymentTerms}}
+  <div class="conditions">
+    <h3>Conditions de paiement</h3>
+    <p>[paymentTerms]</p>
+  </div>
+  {{/if}}
+
+  {{#if notes}}
+  <div class="conditions" style="background: #dbeafe; border-left-color: #2563eb;">
+    <h3 style="color: #2563eb;">Notes</h3>
+    <p>[notes]</p>
+  </div>
+  {{/if}}
+
+  <div class="footer">
+    <p>Document généré automatiquement par Saxium - {{date createdAt 'long'}}</p>
+  </div>
+</body>
+</html>

@@ -8882,6 +8882,246 @@ export interface CachePerformanceMetrics {
 }
 
 // ========================================
+// ENUMS WORKFLOW FOURNISSEURS & BATIGEST
+// ========================================
+
+// Statuts des bons de commande
+export const purchaseOrderStatusEnum = pgEnum("purchase_order_status", [
+  "draft", "sent", "confirmed", "delivered", "cancelled"
+]);
+
+// Statuts des devis clients
+export const clientQuoteStatusEnum = pgEnum("client_quote_status", [
+  "draft", "sent", "accepted", "rejected", "expired"
+]);
+
+// Statuts des exports Batigest
+export const batigestExportStatusEnum = pgEnum("batigest_export_status", [
+  "pending", "ready", "downloaded", "imported", "error"
+]);
+
+// Types de documents Batigest
+export const batigestDocumentTypeEnum = pgEnum("batigest_document_type", [
+  "devis_client", "facture", "bon_commande", "avoir"
+]);
+
+// ========================================
+// TABLES WORKFLOW FOURNISSEURS & BATIGEST
+// ========================================
+
+// Table des bons de commande fournisseur
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reference: varchar("reference", { length: 50 }).notNull().unique(),
+  
+  // Relations
+  aoId: varchar("ao_id").references(() => aos.id),
+  aoLotId: varchar("ao_lot_id").references(() => aoLots.id),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id),
+  supplierQuoteSessionId: varchar("supplier_quote_session_id").references(() => supplierQuoteSessions.id),
+  
+  // Informations fournisseur
+  supplierName: varchar("supplier_name").notNull(),
+  supplierContact: varchar("supplier_contact"),
+  supplierEmail: varchar("supplier_email"),
+  
+  // Montants
+  totalHT: decimal("total_ht", { precision: 12, scale: 2 }).notNull(),
+  totalTVA: decimal("total_tva", { precision: 12, scale: 2 }).notNull(),
+  totalTTC: decimal("total_ttc", { precision: 12, scale: 2 }).notNull(),
+  
+  // Lignes de commande
+  items: jsonb("items").$type<Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }>>().notNull(),
+  
+  // Livraison
+  deliveryAddress: text("delivery_address"),
+  expectedDeliveryDate: timestamp("expected_delivery_date"),
+  actualDeliveryDate: timestamp("actual_delivery_date"),
+  
+  // Conditions
+  paymentTerms: varchar("payment_terms"),
+  warranty: varchar("warranty"),
+  notes: text("notes"),
+  
+  // Statut et workflow
+  status: purchaseOrderStatusEnum("status").default("draft"),
+  
+  // Génération PDF
+  pdfUrl: text("pdf_url"),
+  pdfGeneratedAt: timestamp("pdf_generated_at"),
+  
+  // Audit
+  createdBy: varchar("created_by").references(() => users.id),
+  sentAt: timestamp("sent_at"),
+  confirmedAt: timestamp("confirmed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    supplierIdx: index("purchase_orders_supplier_idx").on(table.supplierId),
+    aoIdx: index("purchase_orders_ao_idx").on(table.aoId),
+    statusIdx: index("purchase_orders_status_idx").on(table.status),
+  };
+});
+
+// Table des devis clients
+export const clientQuotes = pgTable("client_quotes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reference: varchar("reference", { length: 50 }).notNull().unique(),
+  
+  // Relations
+  aoId: varchar("ao_id").references(() => aos.id),
+  projectId: varchar("project_id").references(() => projects.id),
+  
+  // Informations client
+  clientName: varchar("client_name").notNull(),
+  clientContact: varchar("client_contact"),
+  clientEmail: varchar("client_email"),
+  clientAddress: text("client_address"),
+  
+  // Montants
+  totalHT: decimal("total_ht", { precision: 12, scale: 2 }).notNull(),
+  totalTVA: decimal("total_tva", { precision: 12, scale: 2 }).notNull(),
+  totalTTC: decimal("total_ttc", { precision: 12, scale: 2 }).notNull(),
+  marge: decimal("marge", { precision: 12, scale: 2 }),
+  tauxMarge: decimal("taux_marge", { precision: 5, scale: 2 }),
+  
+  // Lignes de devis
+  items: jsonb("items").$type<Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }>>().notNull(),
+  
+  // Conditions commerciales
+  validityDate: timestamp("validity_date").notNull(),
+  paymentTerms: varchar("payment_terms"),
+  deliveryDelay: varchar("delivery_delay"),
+  warranty: varchar("warranty"),
+  notes: text("notes"),
+  
+  // Statut et workflow
+  status: clientQuoteStatusEnum("status").default("draft"),
+  
+  // Génération PDF
+  pdfUrl: text("pdf_url"),
+  pdfGeneratedAt: timestamp("pdf_generated_at"),
+  
+  // Export Batigest
+  batigestExportId: varchar("batigest_export_id"),
+  
+  // Audit
+  createdBy: varchar("created_by").references(() => users.id),
+  sentAt: timestamp("sent_at"),
+  acceptedAt: timestamp("accepted_at"),
+  rejectedAt: timestamp("rejected_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    aoIdx: index("client_quotes_ao_idx").on(table.aoId),
+    projectIdx: index("client_quotes_project_idx").on(table.projectId),
+    statusIdx: index("client_quotes_status_idx").on(table.status),
+    batigestExportIdx: index("client_quotes_batigest_export_idx").on(table.batigestExportId),
+  };
+});
+
+// Table de la queue des exports Batigest
+export const batigestExportQueue = pgTable("batigest_export_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Type et référence du document
+  documentType: batigestDocumentTypeEnum("document_type").notNull(),
+  documentId: varchar("document_id").notNull(), // ID du devis client, bon de commande, etc.
+  documentReference: varchar("document_reference").notNull(),
+  
+  // Données export
+  exportData: jsonb("export_data").notNull().$type<{
+    xml?: string;
+    csv?: string;
+    metadata: Record<string, any>;
+  }>(),
+  
+  // Fichiers générés
+  xmlFileUrl: text("xml_file_url"),
+  csvFileUrl: text("csv_file_url"),
+  
+  // Statut synchronisation
+  status: batigestExportStatusEnum("status").default("pending"),
+  
+  // Tracking synchronisation
+  generatedAt: timestamp("generated_at").defaultNow(),
+  downloadedAt: timestamp("downloaded_at"),
+  importedAt: timestamp("imported_at"),
+  
+  // Agent Windows
+  agentId: varchar("agent_id"), // ID de l'agent Windows qui a récupéré l'export
+  agentVersion: varchar("agent_version"),
+  
+  // Batigest
+  batigestReference: varchar("batigest_reference"), // Référence retournée par Batigest après import
+  batigestResponse: jsonb("batigest_response"),
+  
+  // Gestion erreurs
+  errorMessage: text("error_message"),
+  errorDetails: jsonb("error_details"),
+  retryCount: integer("retry_count").default(0),
+  lastRetryAt: timestamp("last_retry_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    statusIdx: index("batigest_export_queue_status_idx").on(table.status),
+    documentIdx: index("batigest_export_queue_document_idx").on(table.documentType, table.documentId),
+    generatedAtIdx: index("batigest_export_queue_generated_at_idx").on(table.generatedAt),
+  };
+});
+
+// ========================================
+// SCHEMAS ZOD WORKFLOW FOURNISSEURS & BATIGEST
+// ========================================
+
+export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClientQuoteSchema = createInsertSchema(clientQuotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBatigestExportSchema = createInsertSchema(batigestExportQueue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ========================================
+// TYPES TYPESCRIPT WORKFLOW FOURNISSEURS & BATIGEST
+// ========================================
+
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
+
+export type ClientQuote = typeof clientQuotes.$inferSelect;
+export type InsertClientQuote = z.infer<typeof insertClientQuoteSchema>;
+
+export type BatigestExportQueue = typeof batigestExportQueue.$inferSelect;
+export type InsertBatigestExport = z.infer<typeof insertBatigestExportSchema>;
+
+// ========================================
 // ENUMS POUR RAPPORT DE BUGS - PHASE ALPHA
 // ========================================
 

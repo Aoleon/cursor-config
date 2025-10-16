@@ -10,6 +10,7 @@ import {
   supplierQuoteSessions, aoLotSuppliers, supplierDocuments, supplierQuoteAnalysis,
   equipmentBatteries, marginTargets, projectSubElements, classificationTags, entityTags, employeeLabels, employeeLabelAssignments,
   bugReports,
+  purchaseOrders, clientQuotes, batigestExportQueue,
   type User, type UpsertUser, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
@@ -61,7 +62,10 @@ import {
   type EntityTag, type EntityTagInsert,
   type EmployeeLabel, type EmployeeLabelInsert,
   type EmployeeLabelAssignment, type EmployeeLabelAssignmentInsert,
-  type BugReport, type InsertBugReport
+  type BugReport, type InsertBugReport,
+  type PurchaseOrder, type InsertPurchaseOrder,
+  type ClientQuote, type InsertClientQuote,
+  type BatigestExportQueue, type InsertBatigestExportQueue
 } from "@shared/schema";
 import { db } from "./db"; // Utilise la config existante avec pool optimisé
 import type { EventBus } from "./eventBus";
@@ -632,6 +636,28 @@ export interface IStorage {
 
   // Bug Reports operations - Système de rapport de bugs
   createBugReport(bugReport: InsertBugReport): Promise<BugReport>;
+
+  // ========================================
+  // BATIGEST INTEGRATION - PHASE 5
+  // ========================================
+
+  // Purchase Orders operations - Gestion des bons de commande fournisseurs
+  getPurchaseOrders(filters?: { supplierId?: string; status?: string }): Promise<any[]>;
+  getPurchaseOrder(id: string): Promise<any | undefined>;
+  createPurchaseOrder(order: any): Promise<any>;
+  updatePurchaseOrder(id: string, order: Partial<any>): Promise<any>;
+
+  // Client Quotes operations - Gestion des devis clients
+  getClientQuotes(filters?: { clientName?: string; status?: string }): Promise<any[]>;
+  getClientQuote(id: string): Promise<any | undefined>;
+  createClientQuote(quote: any): Promise<any>;
+  updateClientQuote(id: string, quote: Partial<any>): Promise<any>;
+
+  // Batigest Export Queue operations - Queue de synchronisation Batigest
+  getBatigestExportsByStatus(status: string, limit?: number): Promise<any[]>;
+  getBatigestExportById(id: string): Promise<any | undefined>;
+  createBatigestExport(exportData: any): Promise<any>;
+  updateBatigestExport(id: string, data: Partial<any>): Promise<any>;
 }
 
 // ========================================
@@ -8168,6 +8194,179 @@ export class MemStorage implements IStorage {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
+      throw error;
+    }
+  }
+
+  // ========================================
+  // BATIGEST INTEGRATION OPERATIONS
+  // ========================================
+
+  // Purchase Orders operations
+  async getPurchaseOrders(filters?: { supplierId?: string; status?: string }): Promise<PurchaseOrder[]> {
+    try {
+      let query = db.select().from(purchaseOrders);
+      const conditions = [];
+      
+      if (filters?.supplierId) {
+        conditions.push(eq(purchaseOrders.supplierId, filters.supplierId));
+      }
+      if (filters?.status) {
+        conditions.push(eq(purchaseOrders.status, filters.status));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions)) as any;
+      }
+      
+      return await query;
+    } catch (error) {
+      logger.error('Erreur getPurchaseOrders', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  async getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined> {
+    try {
+      const [result] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, id));
+      return result;
+    } catch (error) {
+      logger.error('Erreur getPurchaseOrder', { metadata: { error, id } });
+      throw error;
+    }
+  }
+
+  async createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder> {
+    try {
+      const [result] = await db.insert(purchaseOrders).values(order).returning();
+      logger.info(`Bon de commande créé: ${result.reference}`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur createPurchaseOrder', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  async updatePurchaseOrder(id: string, order: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
+    try {
+      const [result] = await db
+        .update(purchaseOrders)
+        .set({ ...order, updatedAt: new Date() })
+        .where(eq(purchaseOrders.id, id))
+        .returning();
+      return result;
+    } catch (error) {
+      logger.error('Erreur updatePurchaseOrder', { metadata: { error, id } });
+      throw error;
+    }
+  }
+
+  // Client Quotes operations
+  async getClientQuotes(filters?: { clientName?: string; status?: string }): Promise<ClientQuote[]> {
+    try {
+      let query = db.select().from(clientQuotes);
+      const conditions = [];
+      
+      if (filters?.clientName) {
+        conditions.push(ilike(clientQuotes.clientName, `%${filters.clientName}%`));
+      }
+      if (filters?.status) {
+        conditions.push(eq(clientQuotes.status, filters.status));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions)) as any;
+      }
+      
+      return await query;
+    } catch (error) {
+      logger.error('Erreur getClientQuotes', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  async getClientQuote(id: string): Promise<ClientQuote | undefined> {
+    try {
+      const [result] = await db.select().from(clientQuotes).where(eq(clientQuotes.id, id));
+      return result;
+    } catch (error) {
+      logger.error('Erreur getClientQuote', { metadata: { error, id } });
+      throw error;
+    }
+  }
+
+  async createClientQuote(quote: InsertClientQuote): Promise<ClientQuote> {
+    try {
+      const [result] = await db.insert(clientQuotes).values(quote).returning();
+      logger.info(`Devis client créé: ${result.reference}`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur createClientQuote', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  async updateClientQuote(id: string, quote: Partial<InsertClientQuote>): Promise<ClientQuote> {
+    try {
+      const [result] = await db
+        .update(clientQuotes)
+        .set({ ...quote, updatedAt: new Date() })
+        .where(eq(clientQuotes.id, id))
+        .returning();
+      return result;
+    } catch (error) {
+      logger.error('Erreur updateClientQuote', { metadata: { error, id } });
+      throw error;
+    }
+  }
+
+  // Batigest Export Queue operations
+  async getBatigestExportsByStatus(status: string, limit = 50): Promise<BatigestExportQueue[]> {
+    try {
+      const results = await db
+        .select()
+        .from(batigestExportQueue)
+        .where(eq(batigestExportQueue.status, status))
+        .orderBy(desc(batigestExportQueue.generatedAt))
+        .limit(limit);
+      return results;
+    } catch (error) {
+      logger.error('Erreur getBatigestExportsByStatus', { metadata: { error, status } });
+      throw error;
+    }
+  }
+
+  async getBatigestExportById(id: string): Promise<BatigestExportQueue | undefined> {
+    try {
+      const [result] = await db.select().from(batigestExportQueue).where(eq(batigestExportQueue.id, id));
+      return result;
+    } catch (error) {
+      logger.error('Erreur getBatigestExportById', { metadata: { error, id } });
+      throw error;
+    }
+  }
+
+  async createBatigestExport(exportData: InsertBatigestExportQueue): Promise<BatigestExportQueue> {
+    try {
+      const [result] = await db.insert(batigestExportQueue).values(exportData).returning();
+      logger.info(`Export Batigest créé: ${result.documentReference} (${result.documentType})`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur createBatigestExport', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  async updateBatigestExport(id: string, data: Partial<InsertBatigestExportQueue>): Promise<BatigestExportQueue> {
+    try {
+      const [result] = await db
+        .update(batigestExportQueue)
+        .set(data)
+        .where(eq(batigestExportQueue.id, id))
+        .returning();
+      return result;
+    } catch (error) {
+      logger.error('Erreur updateBatigestExport', { metadata: { error, id } });
       throw error;
     }
   }

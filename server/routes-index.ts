@@ -12,7 +12,7 @@
  * 4. Old routes-poc.ts continues to work during migration
  */
 
-import type { Express } from 'express';
+import type { Express, Router } from 'express';
 import { setupAuth } from './replitAuth';
 import { storage, type IStorage } from './storage-poc';
 import { eventBus, type EventBus } from './eventBus';
@@ -25,6 +25,7 @@ import { createSuppliersRouter } from './modules/suppliers';
 import { createProjectsRouter } from './modules/projects';
 import { createAnalyticsRouter } from './modules/analytics';
 import { createDocumentsRouter } from './modules/documents';
+import { createBatigestRouter } from './modules/batigest';
 
 // Service imports
 import { AuditService } from './services/AuditService';
@@ -132,6 +133,18 @@ export async function registerModularRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Batigest Integration Module
+  const batigestRouter = createBatigestRouter(storage as IStorage, eventBus);
+  app.use(batigestRouter);
+  logger.info('Module Batigest monté avec succès', {
+    metadata: {
+      module: 'RoutesIndex',
+      operation: 'mountRouter',
+      moduleName: 'batigest',
+      routes: ['/api/batigest/exports', '/api/batigest/status', '/api/documents/generate-purchase-order', '/api/documents/generate-client-quote']
+    }
+  });
+
   // Monitoring Module
   app.use('/api/monitoring', monitoringRouter);
   logger.info('Module Monitoring monté avec succès', {
@@ -148,7 +161,7 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       module: 'RoutesIndex',
       operation: 'registerModularRoutes',
       stage: 'complete',
-      modulesLoaded: ['auth', 'chiffrage', 'suppliers', 'projects', 'analytics', 'documents'],
+      modulesLoaded: ['auth', 'chiffrage', 'suppliers', 'projects', 'analytics', 'documents', 'batigest'],
       modulesPending: []
     }
   });

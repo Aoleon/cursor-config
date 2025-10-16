@@ -50,6 +50,11 @@ The application features a modern fullstack architecture.
     - **Backend Validation**: Conditional validation in POST /api/aos route - uses `createAoDraftSchema` (only reference required) when `isDraft=true`, or `insertAoSchema` (all fields required) otherwise
     - **Frontend**: "Enregistrer comme brouillon" button in `/create-ao` that validates only the reference field and cleans empty fields before submission
     - **Bug Fixes**: Corrected OCR `processPDF()` API call signature (removed unsupported options parameter); resolved database NOT NULL constraint issues for draft functionality
+- **Technical Alert Consolidation** (October 2025): Fixed infinite scrolling toast bug in OCR technical alerts:
+    - **Problem**: OCR was publishing 5 duplicate alerts (3 from material rules + 2 from scoring) causing toast spam
+    - **Solution**: Removed individual `publishTechnicalAlert()` calls from `evaluateMaterialColorRules()` and `computeTechnicalScoring()`; kept only consolidated alert in `parseAOFields()`
+    - **Frontend**: Initialized `useRealtimeNotifications` globally in `AppLayout.tsx` with `enableToasts: true`; added 🔧 icon for `TECHNICAL_ALERT` events
+    - **Result**: Single consolidated alert per OCR process instead of 5 duplicates
 - **Technical Implementations**: Includes a robust error handling system, standardized API routes with `asyncHandler`, and Zod validation for POST routes. The development workflow involves `npm run dev`, `npm run db:push`, and `npm test`.
 
 ## External Dependencies

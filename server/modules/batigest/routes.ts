@@ -612,5 +612,53 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
     })
   );
 
+  /**
+   * GET /api/batigest/exports/all
+   * Récupère TOUS les exports avec pagination et filtres
+   */
+  router.get('/api/batigest/exports/all',
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      const { status, documentType, page, limit } = req.query;
+      
+      logger.info('[Batigest] Récupération exports avec filtres', {
+        metadata: {
+          route: '/api/batigest/exports/all',
+          method: 'GET',
+          filters: { status, documentType, page, limit }
+        }
+      });
+
+      const result = await storage.getBatigestExportsAll({
+        status: status as string,
+        documentType: documentType as string,
+        page: page ? parseInt(page as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined
+      });
+
+      sendSuccess(res, result);
+    })
+  );
+
+  /**
+   * GET /api/batigest/stats
+   * Statistiques générales de synchronisation
+   */
+  router.get('/api/batigest/stats',
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Batigest] Récupération statistiques', {
+        metadata: {
+          route: '/api/batigest/stats',
+          method: 'GET'
+        }
+      });
+
+      const stats = await storage.getBatigestStats();
+
+      sendSuccess(res, stats);
+    })
+  );
+
   return router;
 }

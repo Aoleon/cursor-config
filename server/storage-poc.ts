@@ -659,6 +659,24 @@ export interface IStorage {
   getBatigestExportById(id: string): Promise<any | undefined>;
   createBatigestExport(exportData: any): Promise<any>;
   updateBatigestExport(id: string, data: Partial<any>): Promise<any>;
+  getBatigestExportsAll(filters?: {
+    status?: string;
+    documentType?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: BatigestExportQueue[];
+    total: number;
+    page: number;
+    limit: number;
+  }>;
+  getBatigestStats(): Promise<{
+    totalExports: number;
+    successRate7days: number;
+    lastSyncDate: Date | null;
+    pendingCount: number;
+    errorRate: number;
+  }>;
 }
 
 // ========================================
@@ -8378,6 +8396,126 @@ export class MemStorage implements IStorage {
       return result;
     } catch (error) {
       logger.error('Erreur updateBatigestExport', { metadata: { error, id } });
+      throw error;
+    }
+  }
+
+  async getBatigestExportsAll(filters?: {
+    status?: string;
+    documentType?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: BatigestExportQueue[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    try {
+      const page = filters?.page || 1;
+      const limit = filters?.limit || 20;
+      const offset = (page - 1) * limit;
+
+      let query = db.select().from(batigestExportQueue).$dynamic();
+      let countQuery = db.select({ count: count() }).from(batigestExportQueue).$dynamic();
+
+      const conditions = [];
+
+      if (filters?.status) {
+        conditions.push(eq(batigestExportQueue.status, filters.status));
+      }
+
+      if (filters?.documentType) {
+        conditions.push(eq(batigestExportQueue.documentType, filters.documentType));
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions)) as any;
+        countQuery = countQuery.where(and(...conditions)) as any;
+      }
+
+      const [data, totalResult] = await Promise.all([
+        query.orderBy(desc(batigestExportQueue.generatedAt)).limit(limit).offset(offset),
+        countQuery
+      ]);
+
+      const total = totalResult[0]?.count || 0;
+
+      return {
+        data,
+        total: Number(total),
+        page,
+        limit
+      };
+    } catch (error) {
+      logger.error('Erreur getBatigestExportsAll', { metadata: { error, filters } });
+      throw error;
+    }
+  }
+
+  async getBatigestStats(): Promise<{
+    totalExports: number;
+    successRate7days: number;
+    lastSyncDate: Date | null;
+    pendingCount: number;
+    errorRate: number;
+  }> {
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const [totalResult] = await db.select({ count: count() }).from(batigestExportQueue);
+      const totalExports = Number(totalResult?.count || 0);
+
+      const [recentExports] = await db
+        .select({ count: count() })
+        .from(batigestExportQueue)
+        .where(gte(batigestExportQueue.generatedAt, sevenDaysAgo));
+      const recentCount = Number(recentExports?.count || 0);
+
+      const [successExports] = await db
+        .select({ count: count() })
+        .from(batigestExportQueue)
+        .where(
+          and(
+            eq(batigestExportQueue.status, 'imported'),
+            gte(batigestExportQueue.generatedAt, sevenDaysAgo)
+          )
+        );
+      const successCount = Number(successExports?.count || 0);
+
+      const successRate7days = recentCount > 0 ? (successCount / recentCount) * 100 : 0;
+
+      const [lastSync] = await db
+        .select({ importedAt: batigestExportQueue.importedAt })
+        .from(batigestExportQueue)
+        .where(eq(batigestExportQueue.status, 'imported'))
+        .orderBy(desc(batigestExportQueue.importedAt))
+        .limit(1);
+
+      const [pendingResult] = await db
+        .select({ count: count() })
+        .from(batigestExportQueue)
+        .where(eq(batigestExportQueue.status, 'pending'));
+      const pendingCount = Number(pendingResult?.count || 0);
+
+      const [errorResult] = await db
+        .select({ count: count() })
+        .from(batigestExportQueue)
+        .where(eq(batigestExportQueue.status, 'error'));
+      const errorCount = Number(errorResult?.count || 0);
+
+      const errorRate = totalExports > 0 ? (errorCount / totalExports) * 100 : 0;
+
+      return {
+        totalExports,
+        successRate7days,
+        lastSyncDate: lastSync?.importedAt || null,
+        pendingCount,
+        errorRate
+      };
+    } catch (error) {
+      logger.error('Erreur getBatigestStats', { metadata: { error } });
       throw error;
     }
   }

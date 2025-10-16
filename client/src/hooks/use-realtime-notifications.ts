@@ -119,6 +119,8 @@ export function useRealtimeNotifications(options: NotificationOptions = {}) {
         return '🔗';
       case EventTypeEnum.GANTT_MILESTONE_CREATED:
         return '🎯';
+      case EventTypeEnum.TECHNICAL_ALERT:
+        return '🔧';
       default:
         return '📢';
     }

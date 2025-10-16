@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import Sidebar from "./sidebar";
 import ChatbotSidebar from "@/components/ChatbotSidebar";
 import ChatbotToggle from "@/components/ChatbotToggle";
+import { useRealtimeNotifications } from "@/hooks/use-realtime-notifications";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -11,6 +12,9 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children, showSidebar = true, showChatbot = true }: AppLayoutProps) {
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  
+  // Initialize realtime notifications globally to show toasts
+  useRealtimeNotifications({ enableToasts: true, enableCacheInvalidation: true });
 
   const toggleChatbot = () => {
     setIsChatbotOpen(!isChatbotOpen);

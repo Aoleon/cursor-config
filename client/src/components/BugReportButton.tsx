@@ -410,7 +410,7 @@ export default function BugReportButton() {
         <Button
           variant="outline"
           size="sm"
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 gap-2"
+          className="fixed bottom-4 right-4 z-50 gap-2"
           data-testid="bug-report-trigger"
         >
           <Bug className="h-4 w-4" />

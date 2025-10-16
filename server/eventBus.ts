@@ -775,6 +775,7 @@ export class EventBus extends EventEmitter {
       ],
       userId: params.userId,
       metadata: {
+        aoId: params.aoId,
         score: params.score,
         triggeredCriteria: params.triggeredCriteria,
         aoReference: params.aoReference,

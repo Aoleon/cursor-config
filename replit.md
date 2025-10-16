@@ -62,6 +62,14 @@ The application features a modern fullstack architecture.
     - **Memory Protection**: Capped at 1000 events with automatic trimming to 500 newest entries applied in both customHandler and main paths
     - **Module-Level Singleton**: Shared `processedEventIds` Set survives component remounts while remaining isolated per session
     - **Implementation**: `client/src/hooks/use-realtime-notifications.ts` with flow: Filter → Dedup check → Handle → Mark processed → Trim → Save
+- **Analytics Routes Critical Fixes** (October 2025): Resolved 400 errors in analytics endpoints by implementing missing service methods:
+    - **Problem**: `/api/analytics/benchmarks` and `/api/analytics/metrics` returned 400 errors due to missing method implementations
+    - **Solution**: 
+      - Added `getAnalyticsSnapshots()` and `createAnalyticsSnapshot()` to IStorage interface
+      - Implemented methods across all 3 storage classes (DatabaseStorage, MemStorage, POC storage)
+      - Fixed routes-poc.ts to use correct service method calls with proper parameters
+    - **Result**: Both endpoints now return 200 OK with valid JSON responses; zero LSP errors in analytics module files
+    - **Note**: `server/routes-poc.ts` is a deprecated legacy file (11,588 lines) no longer in execution path; its 306 LSP errors can be safely ignored as modular routes in `server/modules/` are the active source of truth
 - **Technical Implementations**: Includes a robust error handling system, standardized API routes with `asyncHandler`, and Zod validation for POST routes. The development workflow involves `npm run dev`, `npm run db:push`, and `npm test`.
 
 ## External Dependencies

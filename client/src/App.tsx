@@ -69,8 +69,9 @@ import Administration from "@/pages/administration";
 import BugReportButton from "@/components/BugReportButton";
 // Import du dashboard monitoring
 import MonitoringDashboard from "@/pages/monitoring";
-// Import du générateur de bons de commande
+// Import des générateurs de documents Batigest
 import PurchaseOrderGenerator from "@/pages/batigest/purchase-order-generator";
+import ClientQuoteGenerator from "@/pages/batigest/client-quote-generator";
 
 function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -193,6 +194,7 @@ function Router() {
       <Route path="/administration" component={() => <ProtectedRoute component={Administration} />} />
       <Route path="/batigest" component={() => <ProtectedRoute component={BatigestPage} />} />
       <Route path="/batigest/purchase-orders/new" component={() => <ProtectedRoute component={PurchaseOrderGenerator} />} />
+      <Route path="/batigest/client-quotes/new" component={() => <ProtectedRoute component={ClientQuoteGenerator} />} />
       {/* Validation technique pour Julien LAMBOROT */}
       <Route path="/technical-alerts" component={() => <ProtectedRoute component={TechnicalAlerts} />} />
       {/* Configuration et paramètres */}

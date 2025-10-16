@@ -404,7 +404,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
   /**
    * POST /api/documents/generate-client-quote
-   * Génère un devis client avec PDF et export Batigest optionnels
+   * Génère un devis client avec 2 modes:
+   * - Mode PREVIEW (generatePDF=true, exportToBatigest=false): génère PDF sans créer en DB
+   * - Mode PRODUCTION (autres cas): crée en DB, exporte vers Batigest, retourne JSON
    */
   router.post('/api/documents/generate-client-quote',
     isAuthenticated,
@@ -419,8 +421,114 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           reference: quoteData.reference,
           generatePDF,
           exportToBatigest,
+          mode: (generatePDF && !exportToBatigest) ? 'PREVIEW' : 'PRODUCTION',
           userId: req.user?.id
         }
+      });
+
+      // ========================================
+      // MODE PREVIEW: Générer PDF sans persister en DB
+      // ========================================
+      if (generatePDF && !exportToBatigest) {
+        logger.info('[Batigest] Mode PREVIEW - Génération PDF à la volée (sans DB)', {
+          metadata: { reference: quoteData.reference }
+        });
+
+        try {
+          // Charger le template client-quote
+          const templatePath = 'templates/client-quote.html';
+          const templateContent = await loadTemplate(templatePath);
+          
+          const template: PDFTemplate = {
+            id: 'client-quote',
+            name: 'Devis Client',
+            type: 'handlebars',
+            content: templateContent
+          };
+
+          // Calculer les totaux avec Number() pour éviter concaténation
+          const items = quoteData.items || [];
+          const totalHT = items.reduce((sum: number, item: any) => sum + Number(item.total ?? 0), 0);
+          const totalTVA = totalHT * 0.20; // TVA 20% par défaut
+          const totalTTC = totalHT + totalTVA;
+
+          // Calculer la date de validité
+          const validityDate = quoteData.validityDate 
+            ? new Date(quoteData.validityDate)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 jours par défaut
+
+          // Préparer le contexte pour le template
+          const context = {
+            reference: quoteData.reference,
+            clientName: quoteData.clientName || '',
+            clientContact: quoteData.clientContact || '',
+            clientEmail: quoteData.clientEmail || '',
+            clientPhone: quoteData.clientPhone || '',
+            clientAddress: quoteData.clientAddress || '',
+            validityDate,
+            deliveryDelay: quoteData.deliveryDelay || '',
+            createdAt: new Date(),
+            items: items.map((item: any, index: number) => ({
+              ...item,
+              index: index + 1
+            })),
+            totalHT: new Decimal(totalHT),
+            totalTVA: new Decimal(totalTVA),
+            totalTTC: new Decimal(totalTTC),
+            paymentTerms: quoteData.paymentTerms || '',
+            warranty: quoteData.warranty || '',
+            notes: quoteData.notes || ''
+          };
+
+          // Générer le PDF avec PDFTemplateEngine
+          const pdfEngine = await createPDFEngine();
+          const renderOptions: RenderOptions = {
+            template,
+            context: {
+              data: context
+            },
+            layout: {
+              pageSize: 'A4',
+              orientation: 'portrait',
+              margins: { top: 20, right: 20, bottom: 20, left: 20 }
+            }
+          };
+
+          const result = await pdfEngine.render(renderOptions);
+
+          if (!result.success || !result.pdf) {
+            throw new ValidationError('Échec de la génération du PDF: ' + 
+              (result.errors?.map(e => e.message).join(', ') || 'Erreur inconnue'));
+          }
+
+          logger.info('[Batigest] PDF preview généré avec succès', {
+            metadata: {
+              reference: quoteData.reference,
+              pdfSize: result.pdf.length,
+              renderTime: result.metadata?.renderTime
+            }
+          });
+
+          // Retourner le PDF en tant que blob
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `inline; filename="DV_${quoteData.reference}.pdf"`);
+          res.send(result.pdf);
+          return;
+
+        } catch (error) {
+          logger.error('[Batigest] Erreur génération PDF preview', error as Error, {
+            reference: quoteData.reference
+          });
+          throw new ValidationError('Impossible de générer le PDF: ' + 
+            (error instanceof Error ? error.message : 'Erreur inconnue'));
+        }
+      }
+
+      // ========================================
+      // MODE PRODUCTION: Créer en DB + Export Batigest
+      // ========================================
+      logger.info('[Batigest] Mode PRODUCTION - Création en DB', {
+        metadata: { reference: quoteData.reference, exportToBatigest }
       });
 
       // Créer le devis client

@@ -463,7 +463,7 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
   // Upload object to storage
   router.post('/api/objects/upload',
     isAuthenticated,
-    rateLimits.fileUpload,
+    rateLimits.upload,
     uploadMiddleware.single('file'),
     validateBody(uploadObjectSchema),
     asyncHandler(async (req: any, res: Response) => {

@@ -46,7 +46,7 @@ import type {
 
 // Validation schemas
 const projectQuerySchema = z.object({
-  status: projectStatusEnum.optional(),
+  status: z.enum(["passation", "etude", "visa_architecte", "planification", "approvisionnement", "chantier", "sav"]).optional(),
   clientId: z.string().uuid().optional(),
   search: z.string().optional(),
   includeArchived: z.enum(['true', 'false']).optional().default('false'),

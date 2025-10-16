@@ -23,7 +23,7 @@ import { insertPurchaseOrderSchema, insertClientQuoteSchema } from '@shared/sche
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createPDFEngine, loadTemplate, type PDFTemplate, type RenderOptions } from '../documents/pdf';
-import { Decimal } from 'decimal.js-light';
+import Decimal from 'decimal.js-light';
 
 // Validation schemas
 const markSyncedSchema = z.object({

@@ -452,7 +452,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
   // Upload supplier document
   router.post('/api/supplier-workflow/documents/upload',
     isAuthenticated,
-    rateLimits.fileUpload,
+    rateLimits.upload,
     uploadMiddleware.single('document'),
     asyncHandler(async (req: any, res: Response) => {
       if (!req.file) {

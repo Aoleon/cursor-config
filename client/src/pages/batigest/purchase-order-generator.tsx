@@ -112,7 +112,17 @@ export default function PurchaseOrderGenerator() {
   // Query pour charger les AOs disponibles
   const { data: aos = [], isLoading: isLoadingAos, error: aosError } = useQuery<AO[]>({
     queryKey: ["/api/aos"],
-    enabled: true
+    enabled: true,
+    queryFn: async () => {
+      const response = await fetch('/api/aos');
+      if (!response.ok) throw new Error('Failed to fetch AOs');
+      const result = await response.json();
+      // Handle both direct array and wrapped response
+      if (Array.isArray(result)) return result;
+      if (result.data && Array.isArray(result.data)) return result.data;
+      if (result.success && result.data && Array.isArray(result.data)) return result.data;
+      return [];
+    }
   });
 
   // Query pour charger les lots d'un AO sélectionné

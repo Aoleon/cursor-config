@@ -109,46 +109,52 @@ const useConsoleLogger = () => {
       args: args.length <= 3 ? args : args.slice(0, 3), // Limiter les args pour éviter trop de mémoire
     };
 
-    setLogs(prevLogs => {
-      const updatedLogs = [...prevLogs, newLog];
-      // Appliquer la limite FIFO
-      const limitedLogs = updatedLogs.slice(-CONSOLE_LOGGER_CONFIG.MAX_LOGS);
-      
-      // Sauvegarder en localStorage avec timestamp d'expiration
-      try {
-        const storageData = {
-          logs: limitedLogs,
-          expiry: Date.now() + (CONSOLE_LOGGER_CONFIG.EXPIRY_HOURS * 60 * 60 * 1000),
-        };
-        localStorage.setItem(CONSOLE_LOGGER_CONFIG.STORAGE_KEY, JSON.stringify(storageData));
-      } catch (error) {
-        console.warn('Impossible de sauvegarder les logs en localStorage:', error);
-      }
-      
-      return limitedLogs;
+    // Différer la mise à jour pour éviter les setState pendant le rendu d'autres composants
+    queueMicrotask(() => {
+      setLogs(prevLogs => {
+        const updatedLogs = [...prevLogs, newLog];
+        // Appliquer la limite FIFO
+        const limitedLogs = updatedLogs.slice(-CONSOLE_LOGGER_CONFIG.MAX_LOGS);
+        
+        // Sauvegarder en localStorage avec timestamp d'expiration
+        try {
+          const storageData = {
+            logs: limitedLogs,
+            expiry: Date.now() + (CONSOLE_LOGGER_CONFIG.EXPIRY_HOURS * 60 * 60 * 1000),
+          };
+          localStorage.setItem(CONSOLE_LOGGER_CONFIG.STORAGE_KEY, JSON.stringify(storageData));
+        } catch (error) {
+          console.warn('Impossible de sauvegarder les logs en localStorage:', error);
+        }
+        
+        return limitedLogs;
+      });
     });
   }, [formatConsoleArgs]);
 
   // Fonction pour charger les logs depuis localStorage
   const loadStoredLogs = useCallback(() => {
-    try {
-      const stored = localStorage.getItem(CONSOLE_LOGGER_CONFIG.STORAGE_KEY);
-      if (stored) {
-        const storageData = JSON.parse(stored);
-        
-        // Vérifier l'expiration
-        if (storageData.expiry && Date.now() < storageData.expiry) {
-          if (Array.isArray(storageData.logs)) {
-            setLogs(storageData.logs);
+    // Différer le chargement pour éviter les setState pendant le rendu d'autres composants
+    queueMicrotask(() => {
+      try {
+        const stored = localStorage.getItem(CONSOLE_LOGGER_CONFIG.STORAGE_KEY);
+        if (stored) {
+          const storageData = JSON.parse(stored);
+          
+          // Vérifier l'expiration
+          if (storageData.expiry && Date.now() < storageData.expiry) {
+            if (Array.isArray(storageData.logs)) {
+              setLogs(storageData.logs);
+            }
+          } else {
+            // Nettoyer les logs expirés
+            localStorage.removeItem(CONSOLE_LOGGER_CONFIG.STORAGE_KEY);
           }
-        } else {
-          // Nettoyer les logs expirés
-          localStorage.removeItem(CONSOLE_LOGGER_CONFIG.STORAGE_KEY);
         }
+      } catch (error) {
+        console.warn('Erreur lors du chargement des logs depuis localStorage:', error);
       }
-    } catch (error) {
-      console.warn('Erreur lors du chargement des logs depuis localStorage:', error);
-    }
+    });
   }, []);
 
   // Setup des intercepteurs console

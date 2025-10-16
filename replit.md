@@ -19,13 +19,14 @@ Saxium is a fullstack application designed for quoting and project management in
 The application features a modern fullstack architecture.
 - **Frontend**: Built with React, TypeScript, Vite, Wouter for routing, shadcn/ui, Tailwind CSS, and Radix UI. It leverages React Query for data fetching and `react-hook-form` with Zod for form management, incorporating `data-testid` for testing.
 - **Backend**: Implemented using Express, TypeScript, and Drizzle ORM.
-  - **Modular Routes**: Refactored from monolithic 11,647-line file into 6 clean modules:
+  - **Modular Routes**: Refactored from monolithic 11,647-line file into 7 clean modules:
     - `server/modules/auth/` - Authentication, OIDC, sessions
     - `server/modules/chiffrage/` - DPGF calculations, validations
     - `server/modules/suppliers/` - Supplier quotes, OCR analysis
     - `server/modules/projects/` - Project management, timelines
     - `server/modules/analytics/` - KPIs, dashboards, reports
     - `server/modules/documents/` - OCR, PDF generation, templates
+    - `server/modules/batigest/` - Batigest ERP integration, export queue, Windows agent sync
   - **PDF Template Engine**: New robust system for template-based PDF generation:
     - `PDFTemplateEngine` - Main orchestrator with caching
     - `PlaceholderResolver` - Handles [placeholders], nested paths, formatters
@@ -85,6 +86,22 @@ The application features a modern fullstack architecture.
       - `XX - Description` (plain number format)
     - **Validation**: Node.js testing confirms regex correctly captures numero and designation without separator artifacts
     - **Known Limitations**: OCR POC uses simulated text (not real Tesseract); E2E testing via Playwright couldn't trigger OCR endpoint; regex validated via direct Node.js testing instead
+- **Batigest Integration System** (October 2025): Complete file-based synchronization system with Sage Batigest ERP:
+    - **Database Schema**: 3 new tables (`purchase_orders`, `client_quotes`, `batigest_export_queue`) + 4 enums for workflow management
+    - **Export Service**: `BatigestExportService` converts Saxium data to Sage-compliant XML/CSV formats (devis client & bons de commande)
+    - **PDF Templates**: HTML templates for purchase orders and client quotes using Handlebars with PDFTemplateEngine integration
+    - **API Module**: Complete `server/modules/batigest/` with routes for:
+      - Export queue management (GET /api/batigest/exports/pending, download, mark-synced, mark-error)
+      - Document generation (POST /api/documents/generate-purchase-order, /api/documents/generate-client-quote)
+      - Sync status tracking (GET /api/batigest/status)
+    - **Windows Agent**: PowerShell script (`batigest-sync-agent.ps1`) for automated polling and import:
+      - Polls Saxium API every 5 minutes for pending exports
+      - Downloads XML/CSV files and auto-imports to Batigest via file system
+      - Returns sync status and error handling
+      - Configurable via Windows Scheduled Tasks
+    - **Documentation**: Complete installation guide in `BATIGEST_INSTALLATION.md` with step-by-step setup instructions
+    - **Workflow**: Saxium generates export → queue → Windows agent downloads → Batigest imports → sync confirmation
+    - **Security**: All endpoints protected with `isAuthenticated` middleware
 - **Technical Implementations**: Includes a robust error handling system, standardized API routes with `asyncHandler`, and Zod validation for POST routes. The development workflow involves `npm run dev`, `npm run db:push`, and `npm test`.
 
 ## External Dependencies

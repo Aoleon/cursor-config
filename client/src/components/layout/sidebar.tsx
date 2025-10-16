@@ -102,6 +102,7 @@ const navigation: NavigationItem[] = [
     subItems: [
       { name: "Démo Chatbot IA", href: "/chatbot-demo", icon: Sparkles, description: "Test du chatbot IA Saxium" },
       { name: "Batigest", href: "/batigest", icon: Database, description: "Interface de gestion Batigest" },
+      { name: "Bons de Commande", href: "/batigest/purchase-orders/new", icon: FileText, description: "Générer bons de commande fournisseur" },
     ]
   },
 ];

@@ -115,32 +115,10 @@ export function createLDMData(data: Partial<import('./types').LDMTemplateData>):
 }
 
 // Factory function for quick setup
-export async function createPDFEngine(config?: import('./types').PDFTemplateEngineConfig): Promise<PDFTemplateEngine> {
-  const engine = PDFTemplateEngine.getInstance(config);
+export async function createPDFEngine(config?: import('./types').PDFTemplateEngineConfig): Promise<import('./PDFTemplateEngine').PDFTemplateEngine> {
+  const { PDFTemplateEngine: Engine } = await import('./PDFTemplateEngine');
+  const engine = Engine.getInstance(config);
   
-  // Pre-load common templates if needed
-  if (config?.preloadTemplates) {
-    const templates = [
-      { id: 'ldm-basic', path: TEMPLATES.LDM.BASIC },
-      { id: 'ldm-complex', path: TEMPLATES.LDM.COMPLEX },
-      { id: 'ldm-visual', path: TEMPLATES.LDM.VISUAL }
-    ];
-
-    for (const template of templates) {
-      try {
-        const content = await loadTemplate(template.path);
-        await engine.compileTemplate({
-          id: template.id,
-          name: template.id,
-          type: 'handlebars',
-          content
-        });
-      } catch (error) {
-        console.warn(`Failed to preload template ${template.id}:`, error);
-      }
-    }
-  }
-
   return engine;
 }
 

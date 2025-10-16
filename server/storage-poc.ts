@@ -191,6 +191,7 @@ export interface IStorage {
   
   // Chiffrage Elements operations - Module de chiffrage POC
   getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]>;
+  getChiffrageElementsByLot(lotId: string): Promise<ChiffrageElement[]>;
   createChiffrageElement(element: InsertChiffrageElement): Promise<ChiffrageElement>;
   updateChiffrageElement(id: string, element: Partial<InsertChiffrageElement>): Promise<ChiffrageElement>;
   deleteChiffrageElement(id: string): Promise<void>;
@@ -1723,6 +1724,12 @@ export class DatabaseStorage implements IStorage {
   async getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]> {
     return await db.select().from(chiffrageElements)
       .where(eq(chiffrageElements.offerId, offerId))
+      .orderBy(chiffrageElements.position, chiffrageElements.createdAt);
+  }
+
+  async getChiffrageElementsByLot(lotId: string): Promise<ChiffrageElement[]> {
+    return await db.select().from(chiffrageElements)
+      .where(eq(chiffrageElements.lotId, lotId))
       .orderBy(chiffrageElements.position, chiffrageElements.createdAt);
   }
 
@@ -4472,6 +4479,10 @@ export class MemStorage implements IStorage {
   }
 
   async getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]> {
+    return [];
+  }
+
+  async getChiffrageElementsByLot(lotId: string): Promise<ChiffrageElement[]> {
     return [];
   }
 

@@ -82,6 +82,31 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
     })
   );
 
+  // Get chiffrage elements (items) for a lot
+  router.get('/api/ao-lots/:lotId/items', 
+    isAuthenticated, 
+    asyncHandler(async (req: any, res: Response) => {
+      const { lotId } = req.params;
+      
+      logger.info('[Chiffrage] Récupération items du lot', { 
+        metadata: { 
+          route: '/api/ao-lots/:lotId/items',
+          method: 'GET',
+          lotId,
+          userId: req.user?.id
+        }
+      });
+      
+      const items = await storage.getChiffrageElementsByLot(lotId);
+      
+      res.json({
+        success: true,
+        data: items,
+        count: items.length
+      });
+    })
+  );
+
   // Create new chiffrage element
   router.post('/api/offers/:offerId/chiffrage-elements', 
     isAuthenticated,

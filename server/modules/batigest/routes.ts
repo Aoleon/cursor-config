@@ -22,6 +22,8 @@ import { batigestExportService } from '../../services/BatigestExportService';
 import { insertPurchaseOrderSchema, insertClientQuoteSchema } from '@shared/schema';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { createPDFEngine, loadTemplate, type PDFTemplate, type RenderOptions } from '../documents/pdf';
+import { Decimal } from 'decimal.js-light';
 
 // Validation schemas
 const markSyncedSchema = z.object({
@@ -105,7 +107,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
       const exportItem = await storage.getBatigestExportById(id);
       if (!exportItem) {
-        throw new NotFoundError('Export Batigest', id);
+        throw new NotFoundError(`Export Batigest ${id}`);
       }
 
       await storage.updateBatigestExport(id, {
@@ -152,7 +154,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
       const exportItem = await storage.getBatigestExportById(id);
       if (!exportItem) {
-        throw new NotFoundError('Export Batigest', id);
+        throw new NotFoundError(`Export Batigest ${id}`);
       }
 
       await storage.updateBatigestExport(id, {
@@ -196,7 +198,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
       const exportItem = await storage.getBatigestExportById(id);
       if (!exportItem) {
-        throw new NotFoundError('Export Batigest', id);
+        throw new NotFoundError(`Export Batigest ${id}`);
       }
 
       const fileContent = format === 'csv' 
@@ -226,7 +228,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
   /**
    * POST /api/documents/generate-purchase-order
-   * Génère un bon de commande fournisseur avec PDF optionnel
+   * Génère un bon de commande fournisseur avec 2 modes:
+   * - Mode PREVIEW (generatePDF=true, exportToBatigest=false): génère PDF sans créer en DB
+   * - Mode PRODUCTION (autres cas): crée en DB, exporte vers Batigest, retourne JSON
    */
   router.post('/api/documents/generate-purchase-order',
     isAuthenticated,
@@ -241,11 +245,122 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           reference: orderData.reference,
           generatePDF,
           exportToBatigest,
+          mode: (generatePDF && !exportToBatigest) ? 'PREVIEW' : 'PRODUCTION',
           userId: req.user?.id
         }
       });
 
-      // Créer le bon de commande
+      // ========================================
+      // MODE PREVIEW: Générer PDF sans persister en DB
+      // ========================================
+      if (generatePDF && !exportToBatigest) {
+        logger.info('[Batigest] Mode PREVIEW - Génération PDF à la volée (sans DB)', {
+          metadata: { reference: orderData.reference }
+        });
+
+        try {
+          // Charger le template purchase-order
+          const templatePath = 'templates/purchase-order.html';
+          const templateContent = await loadTemplate(templatePath);
+          
+          const template: PDFTemplate = {
+            id: 'purchase-order',
+            name: 'Bon de Commande Fournisseur',
+            type: 'handlebars',
+            content: templateContent
+          };
+
+          // Récupérer les données du fournisseur si besoin
+          let supplierName = 'Fournisseur';
+          if (orderData.supplierId) {
+            try {
+              const supplier = await storage.getSupplierById(orderData.supplierId);
+              if (supplier) {
+                supplierName = supplier.nom;
+              }
+            } catch (err) {
+              logger.warn('[Batigest] Impossible de récupérer le fournisseur', err as Error);
+            }
+          }
+
+          // Calculer les totaux
+          const items = orderData.items || [];
+          const totalHT = items.reduce((sum: number, item: any) => sum + Number(item.total ?? 0), 0);
+          const totalTVA = totalHT * 0.20; // TVA 20% par défaut
+          const totalTTC = totalHT + totalTVA;
+
+          // Préparer le contexte pour le template
+          const context = {
+            reference: orderData.reference,
+            supplierName,
+            supplierContact: orderData.supplierContact || '',
+            supplierEmail: orderData.supplierEmail || '',
+            deliveryAddress: orderData.deliveryAddress || '',
+            expectedDeliveryDate: orderData.expectedDeliveryDate || null,
+            createdAt: new Date(),
+            items: items.map((item: any, index: number) => ({
+              ...item,
+              index: index + 1
+            })),
+            totalHT: new Decimal(totalHT),
+            totalTVA: new Decimal(totalTVA),
+            totalTTC: new Decimal(totalTTC),
+            paymentTerms: orderData.paymentTerms || '',
+            notes: orderData.notes || ''
+          };
+
+          // Générer le PDF avec PDFTemplateEngine
+          const pdfEngine = await createPDFEngine();
+          const renderOptions: RenderOptions = {
+            template,
+            context: {
+              data: context
+            },
+            layout: {
+              pageSize: 'A4',
+              orientation: 'portrait',
+              margins: { top: 20, right: 20, bottom: 20, left: 20 }
+            }
+          };
+
+          const result = await pdfEngine.render(renderOptions);
+
+          if (!result.success || !result.pdf) {
+            throw new ValidationError('Échec de la génération du PDF: ' + 
+              (result.errors?.map(e => e.message).join(', ') || 'Erreur inconnue'));
+          }
+
+          logger.info('[Batigest] PDF preview généré avec succès', {
+            metadata: {
+              reference: orderData.reference,
+              pdfSize: result.pdf.length,
+              renderTime: result.metadata?.renderTime
+            }
+          });
+
+          // Retourner le PDF en tant que blob
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `inline; filename="BC_${orderData.reference}.pdf"`);
+          res.send(result.pdf);
+          return;
+
+        } catch (error) {
+          logger.error('[Batigest] Erreur génération PDF preview', error as Error, {
+            reference: orderData.reference
+          });
+          throw new ValidationError('Impossible de générer le PDF: ' + 
+            (error instanceof Error ? error.message : 'Erreur inconnue'));
+        }
+      }
+
+      // ========================================
+      // MODE PRODUCTION: Créer en DB + Export Batigest
+      // ========================================
+      logger.info('[Batigest] Mode PRODUCTION - Création en DB', {
+        metadata: { reference: orderData.reference, exportToBatigest }
+      });
+
+      // Créer le bon de commande en base de données
       const order = await storage.createPurchaseOrder({
         ...orderData,
         createdBy: req.user?.id

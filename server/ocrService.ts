@@ -1527,8 +1527,8 @@ Réponses publiées au plus tard le 22/03/2025
     
     // Patterns pour détecter différents formats de lots
     const lotPatterns = [
-      // Format "LOT N°X – Description" ou "LOT N°X : Description" (Unicode dashes + colon)
-      /(?:lot\s+)?n°\s*(\d+[a-z]?)\s*[:\-–—]\s*([^\n,]+)/gi,
+      // Format "LOT N°X – Description" ou "LOT NºX : Description" (both ordinal indicators + Unicode dashes + colon)
+      /(?:lot\s+)?n[°º]\s*(\d+[a-z]?)\s*[:\-–—]\s*([^\n,]+)/gi,
       // Format "Lot X: Description" ou "Lot X - Description" (avec Unicode dashes)
       /(?:lot\s+)?(\d+[a-z]?)\s*[:\-–—]\s*([^\n,]+)/gi,
       // Format "XX: Description" ou "XXa: Description" (avec Unicode dashes)

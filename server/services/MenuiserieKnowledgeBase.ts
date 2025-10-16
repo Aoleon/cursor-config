@@ -1045,6 +1045,47 @@ export const AO_PATTERNS: Record<string, RegExp[]> = {
     /(?:certifié|certification|norme|conforme)\s+([A-Z0-9\s\-]+)/i,
     /(?:CE|NF|CSTB|ACOTHERM|CEKAL)/g,
   ],
+  
+  // Localisation (utilise les patterns d'adresse et ville)
+  location: [
+    /(?:localisation|emplacement|lieu d'exécution|site)\s*:?\s*([^\n]+)/i,
+    /(?:adresse|lieu|site)\s*:?\s*([^\n]+)/i,
+    /(\d{1,3}[,\s]+(?:rue|avenue|boulevard|chemin|allée|place|impasse)[^\n]+)/i,
+  ],
+  
+  // Type de marché
+  typeMarche: [
+    /(?:marché public|appel d'offres public|procédure publique)/i,
+    /(?:marché privé|chantier privé|procédure privée)/i,
+  ],
+  
+  // Types de menuiserie
+  menuiserie: [
+    /\b(?:fenêtre|fenetre|baie vitrée|châssis|ouvrant)\b/i,
+    /\b(?:porte|porte d'entrée|portillon)\b/i,
+    /\b(?:volet|volet roulant|volet battant|store)\b/i,
+    /\b(?:portail|portail coulissant|portail battant)\b/i,
+    /\b(?:cloison|séparation|partition)\b/i,
+    /\b(?:verrière|verriere|vitrage|façade vitrée)\b/i,
+  ],
+  
+  // Départements (priorité 50 et 62 pour JLM)
+  departement: [
+    /\b(?:50|manche|saint-lô|cherbourg)\b/i,
+    /\b(?:62|pas-de-calais|arras|calais|boulogne)\b/i,
+  ],
+  
+  // Bureau d'études
+  bureauEtudes: [
+    /(?:bureau d'études|be|bet|ingénierie)\s*:?\s*([^\n]+)/i,
+    /(?:bet|b\.e\.t\.)\s*:?\s*([^\n]+)/i,
+  ],
+  
+  // Contacts (email et téléphone combinés)
+  contact: [
+    /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/gi,
+    /(?:tél|téléphone|phone|mobile)\s*:?\s*((?:\+33|0)\s*[1-9](?:\s*\d{2}){4})/gi,
+  ],
 };
 
 /**

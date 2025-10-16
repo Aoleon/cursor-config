@@ -21,6 +21,37 @@ const defaultOptions: NotificationOptions = {
   enableCacheInvalidation: true,
 };
 
+// Module-level singleton to track processed events across all hook instances and remounts
+// Persisted in sessionStorage to survive page refreshes
+const STORAGE_KEY = 'saxium-processed-events';
+const MAX_PROCESSED_EVENTS = 1000;
+
+// Load processed event IDs from sessionStorage on module initialization
+const loadProcessedEvents = (): Set<string> => {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return new Set(Array.isArray(parsed) ? parsed : []);
+    }
+  } catch (error) {
+    console.warn('Failed to load processed events from sessionStorage:', error);
+  }
+  return new Set();
+};
+
+// Save processed event IDs to sessionStorage
+const saveProcessedEvents = (eventIds: Set<string>) => {
+  try {
+    const array = Array.from(eventIds);
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(array));
+  } catch (error) {
+    console.warn('Failed to save processed events to sessionStorage:', error);
+  }
+};
+
+const processedEventIds = loadProcessedEvents();
+
 export function useRealtimeNotifications(options: NotificationOptions = {}) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -152,14 +183,33 @@ export function useRealtimeNotifications(options: NotificationOptions = {}) {
   const handleRealtimeEvent = useCallback((event: RealtimeEvent) => {
     console.log('Realtime notification received:', event.type, event.entityId);
     
-    // Apply filtering
+    // Apply filtering first - if event doesn't match this hook's filter, skip entirely
+    // This ensures we only dedupe events that this specific hook instance would handle
     if (!shouldShowEvent(event)) {
+      return;
+    }
+    
+    // Check if event was already processed by THIS hook's filter criteria
+    if (processedEventIds.has(event.id)) {
+      console.log('Skipping duplicate event:', event.id);
       return;
     }
     
     // Custom handler has priority
     if (mergedOptions.customHandler) {
       mergedOptions.customHandler(event);
+      // Mark as processed after custom handler
+      processedEventIds.add(event.id);
+      
+      // Prevent memory leaks: apply same trimming as main path
+      if (processedEventIds.size > MAX_PROCESSED_EVENTS) {
+        const entries = Array.from(processedEventIds);
+        const toKeep = entries.slice(Math.floor(entries.length / 2));
+        processedEventIds.clear();
+        toKeep.forEach(id => processedEventIds.add(id));
+      }
+      
+      saveProcessedEvents(processedEventIds);
       return;
     }
     
@@ -193,6 +243,21 @@ export function useRealtimeNotifications(options: NotificationOptions = {}) {
         });
       });
     }
+    
+    // Mark event as processed after successful handling (toast shown and/or cache invalidated)
+    processedEventIds.add(event.id);
+    
+    // Prevent memory leaks: if we exceed max capacity, keep newest half
+    // Note: Set iteration order is insertion order, so oldest entries are first
+    if (processedEventIds.size > MAX_PROCESSED_EVENTS) {
+      const entries = Array.from(processedEventIds);
+      const toKeep = entries.slice(Math.floor(entries.length / 2));
+      processedEventIds.clear();
+      toKeep.forEach(id => processedEventIds.add(id));
+    }
+    
+    // Persist to sessionStorage to survive page refreshes
+    saveProcessedEvents(processedEventIds);
     
   }, [toast, queryClient, mergedOptions]);
 

@@ -59,6 +59,7 @@ export function LotsManager({ lots, onLotsChange, disabled = false }: LotsManage
         title: "Erreur",
         description: "Le numéro et la désignation du lot sont obligatoires",
         variant: "destructive",
+        duration: 10000, // 10s pour erreurs de validation
       });
       return;
     }
@@ -69,6 +70,7 @@ export function LotsManager({ lots, onLotsChange, disabled = false }: LotsManage
         title: "Erreur",
         description: "Ce numéro de lot existe déjà",
         variant: "destructive",
+        duration: 10000, // 10s pour erreurs de validation
       });
       return;
     }

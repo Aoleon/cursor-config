@@ -55,6 +55,13 @@ The application features a modern fullstack architecture.
     - **Solution**: Removed individual `publishTechnicalAlert()` calls from `evaluateMaterialColorRules()` and `computeTechnicalScoring()`; kept only consolidated alert in `parseAOFields()`
     - **Frontend**: Initialized `useRealtimeNotifications` globally in `AppLayout.tsx` with `enableToasts: true`; added 🔧 icon for `TECHNICAL_ALERT` events
     - **Result**: Single consolidated alert per OCR process instead of 5 duplicates
+- **Toast Deduplication System** (October 2025): Implemented robust realtime event deduplication to prevent blinking/looping toasts:
+    - **Filter-First Architecture**: Events filtered by hook criteria before deduplication check, preventing cross-hook event suppression
+    - **Post-Processing Deduplication**: Event IDs marked as processed only AFTER successful handling (toast shown, cache invalidated, or custom handler executed)
+    - **sessionStorage Persistence**: Processed event IDs persisted to survive page refreshes and HMR rebuilds
+    - **Memory Protection**: Capped at 1000 events with automatic trimming to 500 newest entries applied in both customHandler and main paths
+    - **Module-Level Singleton**: Shared `processedEventIds` Set survives component remounts while remaining isolated per session
+    - **Implementation**: `client/src/hooks/use-realtime-notifications.ts` with flow: Filter → Dedup check → Handle → Mark processed → Trim → Save
 - **Technical Implementations**: Includes a robust error handling system, standardized API routes with `asyncHandler`, and Zod validation for POST routes. The development workflow involves `npm run dev`, `npm run db:push`, and `npm test`.
 
 ## External Dependencies

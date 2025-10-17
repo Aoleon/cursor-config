@@ -32,6 +32,13 @@ The application features a modern fullstack architecture.
   - **E2E Workflow Tests**: Comprehensive Playwright tests for critical workflows:
     - `ao-complete.spec.ts`: AO creation → OCR → lots extraction → supplier workflow (100% UI-driven)
     - `fournisseur-quote-complete.spec.ts`: Supplier quote workflow with robust Map-based bookkeeping (hybrid UI/API with TODOs for missing UI components)
+    - `monday-sync-bidirectional.spec.ts`: Monday.com sync bidirectionnelle complète (11 scénarios production-ready):
+      - Export Saxium → Monday (projets/AOs) avec validation badges UI
+      - Import Monday → Saxium via webhook HMAC-SHA256 sécurisé
+      - Webhook idempotence renforcé (eventId cache avec timestamps proof)
+      - Gestion conflicts Monday-priority avec audit logging
+      - Persistence restart-safe (cache rebuild DB)
+      - EventBus notifications WebSocket temps-réel
 - **Retry System**: Unified exponential backoff retry mechanism (`server/utils/retry-helper.ts`) with automatic retry for network errors, rate limits (429), and server errors (5xx) across all external API services (Monday.com, Claude, OpenAI).
 - **Intelligent Cache System**: Centralized CacheService with in-memory adapter (Redis-ready architecture) for frequent queries:
   - Monday.com boards cached (10min TTL)

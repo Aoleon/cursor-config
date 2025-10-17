@@ -85,6 +85,7 @@ export function DocumentUploadZone({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={!isUploading ? handleClickUpload : undefined}
+        data-testid="upload-zone-ao-pdf"
       >
         <Upload className={`h-8 w-8 mx-auto mb-2 ${
           isDragOver ? 'text-primary' : 'text-muted-foreground'
@@ -106,6 +107,7 @@ export function DocumentUploadZone({
             e.stopPropagation();
             handleClickUpload();
           }}
+          data-testid="button-upload-file"
         >
           <Plus className="h-4 w-4 mr-2" />
           Ajouter des fichiers
@@ -119,6 +121,7 @@ export function DocumentUploadZone({
         className="hidden"
         onChange={handleFileInputChange}
         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.dwg"
+        data-testid="input-file-upload"
       />
 
       {/* Progrès d'upload */}

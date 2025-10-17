@@ -12,7 +12,7 @@ export class DateIntelligenceRulesSeeder {
   /**
    * Initialise toutes les règles métier pré-configurées
    */
-  static async seedDefaultRules(): Promise<void> {
+  static async seedDefaultRules(): Promise<{seeded: boolean; count: number}> {
     console.log('[DateIntelligenceSeeder] Initialisation des règles métier menuiserie...');
     
     // CORRECTION BLOCKER 4: Confirmer le nombre de règles pré-configurées attendues
@@ -32,7 +32,7 @@ export class DateIntelligenceRulesSeeder {
         console.log(`[DateIntelligenceSeeder] ${existingRules.length} règles déjà présentes, aucun seeding nécessaire`);
         // Log de confirmation même si pas de seeding
         console.log(`[DateIntelligenceSeeder] VALIDATION CONFIRMATION - Total règles en base: ${existingRules.length}/${expectedRulesCount} règles attendues`);
-        return;
+        return {seeded: false, count: existingRules.length};
       }
       
       let seededCount = 0;
@@ -72,6 +72,8 @@ export class DateIntelligenceRulesSeeder {
       if (seededCount > 0) {
         console.log('[DateIntelligenceSeeder] 🎯 Règles métier menuiserie françaises prêtes pour utilisation');
       }
+      
+      return {seeded: true, count: seededCount};
       
     } catch (error) {
       console.error('[DateIntelligenceSeeder] Erreur lors du seeding des règles:', error);
@@ -212,7 +214,7 @@ export class DateIntelligenceRulesSeeder {
       const duplicateNames = ruleNames.filter((name, index) => ruleNames.indexOf(name) !== index);
       
       if (duplicateNames.length > 0) {
-        issues.push(`Règles avec noms dupliqués: ${[...new Set(duplicateNames)].join(', ')}`);
+        issues.push(`Règles avec noms dupliqués: ${Array.from(new Set(duplicateNames)).join(', ')}`);
       }
       
       // Vérification 2: Règles avec durée base invalide
@@ -238,7 +240,7 @@ export class DateIntelligenceRulesSeeder {
       const requiredPhases = ['etude', 'planification', 'approvisionnement', 'chantier'];
       const coveredPhases = new Set(allRules.filter(r => r.phase).map(r => r.phase));
       
-      const missingPhases = requiredPhases.filter(phase => !coveredPhases.has(phase));
+      const missingPhases = requiredPhases.filter(phase => !coveredPhases.has(phase as any));
       if (missingPhases.length > 0) {
         warnings.push(`Phases sans règles spécifiques: ${missingPhases.join(', ')}`);
       }
@@ -276,12 +278,26 @@ export async function initializeDefaultRules(): Promise<void> {
     console.log('[DateIntelligenceSeeder] Initialisation automatique des règles métier...');
     
     // Seeder les règles par défaut si nécessaire
-    await DateIntelligenceRulesSeeder.seedDefaultRules();
+    const seedResult = await DateIntelligenceRulesSeeder.seedDefaultRules();
     
-    // Valider la cohérence
+    // TOUJOURS valider la cohérence (même si pas de nouveau seeding)
     const validation = await DateIntelligenceRulesSeeder.validateRulesConsistency();
     if (!validation.isValid) {
       console.warn('[DateIntelligenceSeeder] Issues détectées dans les règles:', validation.issues);
+      console.log('[DateIntelligenceSeeder] 🔧 Auto-correction: Réinitialisation des règles invalides...');
+      
+      // AUTO-FIX: Reset et re-seed avec le code corrigé
+      await DateIntelligenceRulesSeeder.resetAllRules();
+      
+      // Re-valider après auto-fix
+      const revalidation = await DateIntelligenceRulesSeeder.validateRulesConsistency();
+      if (revalidation.isValid) {
+        console.log('[DateIntelligenceSeeder] ✅ Auto-correction réussie - Validation: SUCCÈS');
+      } else {
+        console.error('[DateIntelligenceSeeder] ❌ Auto-correction échouée - Issues persistent:', revalidation.issues);
+      }
+    } else {
+      console.log('[DateIntelligenceSeeder] ✅ Validation initiale: SUCCÈS - Aucune issue détectée');
     }
     
     if (validation.warnings.length > 0) {

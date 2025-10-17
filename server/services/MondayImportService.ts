@@ -427,6 +427,257 @@ export class MondayImportService {
 
     return mappings;
   }
+
+  async syncFromMonday(params: {
+    boardId: string;
+    itemId: string;
+    changeType: 'create' | 'update' | 'delete';
+    data?: any;
+    mondayUpdatedAt?: Date;
+  }): Promise<void> {
+    const { boardId, itemId, changeType, data, mondayUpdatedAt } = params;
+    
+    logger.info('[MondayImportService] Sync depuis Monday', {
+      service: 'MondayImportService',
+      metadata: {
+        operation: 'syncFromMonday',
+        boardId,
+        itemId,
+        changeType
+      }
+    });
+    
+    try {
+      // Get item details from Monday.com
+      const item = await mondayService.getItem(itemId);
+      
+      // Determine entity type based on item characteristics
+      // For now, default to project. Could be extended with board mapping logic
+      const entityType = this.determineEntityType(item, boardId);
+      
+      if (changeType === 'delete') {
+        // Handle deletion
+        if (entityType === 'project') {
+          // Note: We would need a deleteProject method in storage
+          logger.info('[MondayImportService] Projet suppression détectée', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'syncFromMonday',
+              itemId,
+              changeType: 'delete'
+            }
+          });
+        } else if (entityType === 'ao') {
+          logger.info('[MondayImportService] AO suppression détectée', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'syncFromMonday',
+              itemId,
+              changeType: 'delete'
+            }
+          });
+        }
+        return;
+      }
+      
+      // Map to Saxium entity
+      let saxiumEntity: any;
+      let createdId: string | undefined;
+      
+      if (entityType === 'project') {
+        const mapping: ImportMapping = {
+          mondayBoardId: boardId,
+          targetEntity: 'project',
+          columnMappings: [] // Will use default mapping
+        };
+        
+        const projectData = this.mapItemToProject(item, mapping);
+        
+        if (changeType === 'create') {
+          const created = await storage.createProject(projectData);
+          createdId = created.id;
+          saxiumEntity = created;
+        } else if (changeType === 'update') {
+          // Try to find existing project by Monday ID or name
+          const projects = await storage.getProjects();
+          const existingProject = projects.find(p => 
+            p.mondayId === itemId || p.name === item.name
+          );
+          
+          if (existingProject) {
+            // CONFLICT DETECTION: Compare timestamps
+            const saxiumUpdatedAt = existingProject.updatedAt;
+            const mondayTime = mondayUpdatedAt || new Date();
+            
+            if (saxiumUpdatedAt && saxiumUpdatedAt > mondayTime) {
+              // Conflict detected: Saxium is more recent than Monday
+              logger.warn('[Conflict] Saxium plus récent que Monday', {
+                service: 'MondayImportService',
+                metadata: {
+                  operation: 'syncFromMonday',
+                  projectId: existingProject.id,
+                  mondayId: itemId,
+                  saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
+                  mondayUpdatedAt: mondayTime.toISOString(),
+                  strategy: 'Monday-priority (override)'
+                }
+              });
+              
+              // Emit conflict event for audit
+              eventBus.emit('monday:sync:conflict', {
+                entityType: 'project',
+                entityId: existingProject.id,
+                mondayId: itemId,
+                saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
+                mondayUpdatedAt: mondayTime.toISOString(),
+                resolution: 'monday_wins'
+              });
+            }
+            
+            // ALWAYS apply Monday changes (Monday-priority strategy)
+            saxiumEntity = await storage.updateProject(existingProject.id, projectData);
+            createdId = existingProject.id;
+          } else {
+            // Create if not found
+            const created = await storage.createProject(projectData);
+            createdId = created.id;
+            saxiumEntity = created;
+          }
+        }
+      } else if (entityType === 'ao') {
+        const mapping: ImportMapping = {
+          mondayBoardId: boardId,
+          targetEntity: 'ao',
+          columnMappings: []
+        };
+        
+        const aoData = this.mapItemToAO(item, mapping);
+        
+        if (changeType === 'create') {
+          const created = await storage.createAo(aoData);
+          createdId = created.id;
+          saxiumEntity = created;
+        } else if (changeType === 'update') {
+          // Try to find existing AO by Monday ID or reference
+          const aos = await storage.getAos();
+          const existingAo = aos.find(a => 
+            a.mondayId === itemId || a.reference === item.name
+          );
+          
+          if (existingAo) {
+            // CONFLICT DETECTION: Compare timestamps
+            const saxiumUpdatedAt = existingAo.updatedAt;
+            const mondayTime = mondayUpdatedAt || new Date();
+            
+            if (saxiumUpdatedAt && saxiumUpdatedAt > mondayTime) {
+              // Conflict detected: Saxium is more recent than Monday
+              logger.warn('[Conflict] Saxium plus récent que Monday', {
+                service: 'MondayImportService',
+                metadata: {
+                  operation: 'syncFromMonday',
+                  aoId: existingAo.id,
+                  mondayId: itemId,
+                  saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
+                  mondayUpdatedAt: mondayTime.toISOString(),
+                  strategy: 'Monday-priority (override)'
+                }
+              });
+              
+              // Emit conflict event for audit
+              eventBus.emit('monday:sync:conflict', {
+                entityType: 'ao',
+                entityId: existingAo.id,
+                mondayId: itemId,
+                saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
+                mondayUpdatedAt: mondayTime.toISOString(),
+                resolution: 'monday_wins'
+              });
+            }
+            
+            // ALWAYS apply Monday changes (Monday-priority strategy)
+            saxiumEntity = await storage.updateAo(existingAo.id, aoData);
+            createdId = existingAo.id;
+          } else {
+            // Create if not found
+            const created = await storage.createAo(aoData);
+            createdId = created.id;
+            saxiumEntity = created;
+          }
+        }
+      }
+      
+      // Emit success event
+      if (createdId) {
+        // Map entity type to valid RealtimeEvent entity
+        const eventEntity = entityType === 'ao' ? 'offer' : entityType;
+        
+        eventBus.publish({
+          id: crypto.randomUUID(),
+          type: 'monday:sync:success' as any,
+          entity: eventEntity as 'project' | 'offer' | 'supplier',
+          entityId: createdId,
+          message: `${entityType} synchronisé depuis Monday.com`,
+          severity: 'success',
+          affectedQueryKeys: [
+            [`/api/${entityType}s`],
+            [`/api/${entityType}s`, createdId]
+          ],
+          userId: 'monday-sync',
+          timestamp: new Date().toISOString(),
+          metadata: {
+            mondayId: itemId,
+            boardId,
+            changeType
+          }
+        });
+      }
+      
+      logger.info('[MondayImportService] Sync terminée avec succès', {
+        service: 'MondayImportService',
+        metadata: {
+          operation: 'syncFromMonday',
+          entityType,
+          entityId: createdId,
+          mondayId: itemId,
+          changeType
+        }
+      });
+    } catch (error) {
+      logger.error('[MondayImportService] Erreur sync depuis Monday', {
+        service: 'MondayImportService',
+        metadata: {
+          operation: 'syncFromMonday',
+          boardId,
+          itemId,
+          changeType,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
+      throw error;
+    }
+  }
+
+  private determineEntityType(item: MondayItem, boardId: string): 'project' | 'ao' | 'supplier' {
+    // Simple heuristic: check if item has fields that suggest it's an AO
+    const hasReferenceField = item.column_values.some(cv => 
+      cv.id.toLowerCase().includes('ref') || 
+      cv.id.toLowerCase().includes('reference')
+    );
+    
+    const hasDateLimiteField = item.column_values.some(cv => 
+      cv.id.toLowerCase().includes('date_limite') ||
+      cv.id.toLowerCase().includes('deadline')
+    );
+    
+    // If it looks like an AO (has reference and deadline), classify as AO
+    if (hasReferenceField && hasDateLimiteField) {
+      return 'ao';
+    }
+    
+    // Default to project
+    return 'project';
+  }
 }
 
 export const mondayImportService = new MondayImportService();

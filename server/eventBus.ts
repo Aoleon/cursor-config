@@ -886,8 +886,8 @@ export class EventBus extends EventEmitter {
     userId?: string;
   }): void {
     const event = createRealtimeEvent({
-      type: EventTypeEnum.SYSTEM_CACHE_EVENT,
-      entity: 'cache',
+      type: EventTypeEnum.SYSTEM_MAINTENANCE,
+      entity: 'system',
       entityId: params.cacheKey,
       severity: params.action === 'miss' ? 'info' : 'success',
       message: `Cache ${params.action} pour ${params.entityType}:${params.entityId} (${params.executionTimeMs}ms)`,
@@ -918,8 +918,8 @@ export class EventBus extends EventEmitter {
     isScheduled: boolean;
   }): void {
     const event = createRealtimeEvent({
-      type: EventTypeEnum.SYSTEM_CACHE_PREWARMING,
-      entity: 'cache',
+      type: EventTypeEnum.SYSTEM_MAINTENANCE,
+      entity: 'system',
       entityId: 'prewarming-system',
       severity: 'success',
       title: '🔥 Cache Prewarming Exécuté',
@@ -952,8 +952,8 @@ export class EventBus extends EventEmitter {
     entityType?: string;
   }): void {
     const event = createRealtimeEvent({
-      type: EventTypeEnum.SYSTEM_PERFORMANCE_OPTIMIZATION,
-      entity: 'performance',
+      type: EventTypeEnum.SYSTEM_MAINTENANCE,
+      entity: 'system',
       entityId: params.optimizationType,
       severity: 'success',
       title: '🚀 Optimisation Performance Détectée',

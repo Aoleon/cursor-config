@@ -9,6 +9,7 @@ import { storage, type IStorage } from "./storage-poc";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { securityHeaders, sanitizeQuery, rateLimits } from "./middleware/security";
 import { databaseErrorHandler, addRequestId } from "./middleware/db-error-handler";
+import { correlationMiddleware, setCorrelationId, generateCorrelationId } from "./middleware/correlation";
 import { logger } from './utils/logger';
 
 const app = express();
@@ -23,10 +24,17 @@ app.use(addRequestId); // Ajoute un ID unique pour tracer les requêtes
 // ========================================
 // MIDDLEWARES DE PARSING (avec limites de sécurité)
 // ========================================
-app.use(express.json({ 
-  limit: '10mb',
-  strict: true 
-}));
+// Skip JSON parsing pour webhook Monday (nécessite raw body)
+app.use((req, res, next) => {
+  if (req.path === '/api/monday/webhook') {
+    return next();
+  }
+  express.json({ 
+    limit: '10mb',
+    strict: true 
+  })(req, res, next);
+});
+
 app.use(express.urlencoded({ 
   extended: false,
   limit: '10mb'
@@ -36,6 +44,11 @@ app.use(express.urlencoded({
 // RATE LIMITING GLOBAL
 // ========================================
 app.use(rateLimits.general);
+
+// ========================================
+// CORRELATION ID MIDDLEWARE - PHASE 1
+// ========================================
+app.use(correlationMiddleware);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -68,6 +81,22 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // ========================================
+  // PHASE 5 - CORRELATION ID POUR CONTEXTES NON-HTTP
+  // ========================================
+  // Définir correlation ID pour le démarrage du serveur
+  const startupCorrelationId = generateCorrelationId('startup');
+  setCorrelationId(startupCorrelationId);
+  
+  logger.info('Démarrage serveur Saxium', {
+    metadata: {
+      module: 'ExpressApp',
+      operation: 'startup',
+      nodeVersion: process.version,
+      environment: process.env.NODE_ENV || 'development'
+    }
+  });
+  
   // Initialize WebSocket manager with eventBus
   const wsManager = new WebSocketManager(eventBus);
   

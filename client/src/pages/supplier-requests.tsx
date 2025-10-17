@@ -204,7 +204,7 @@ export default function SupplierRequests() {
         ) : (
           <div className="grid gap-4">
             {requests.map((request: SupplierRequest) => (
-              <Card key={request.id} className="hover:shadow-md transition-shadow">
+              <Card key={request.id} className="hover:shadow-md transition-shadow" data-testid={`card-request-${request.id}`}>
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <div>

@@ -12,6 +12,7 @@ import { getNotifier } from '../monitoring/notifier';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { CircuitBreakerManager } from '../utils/circuit-breaker';
+import { getCacheService } from '../services/CacheService';
 
 const router = Router();
 
@@ -662,6 +663,116 @@ function getCircuitBreakerStatus(): {
     details: statuses
   };
 }
+
+// ========================================
+// CACHE MONITORING
+// ========================================
+
+/**
+ * Récupère les statistiques du cache
+ * GET /api/monitoring/cache
+ */
+router.get('/cache', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const cacheService = getCacheService();
+    const stats = await cacheService.getStats();
+    
+    logger.info('Cache stats récupérées', {
+      metadata: {
+        route: '/api/monitoring/cache',
+        method: 'GET',
+        userId: (req as any).user?.id
+      }
+    });
+    
+    res.json({
+      success: true,
+      timestamp: new Date(),
+      cache: {
+        hits: stats.hits,
+        misses: stats.misses,
+        hitRate: stats.hitRate,
+        size: stats.size,
+        totalKeys: stats.keys.length,
+        keys: stats.keys
+      }
+    });
+  } catch (error) {
+    logger.error('Erreur récupération stats cache', error as Error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Impossible de récupérer les statistiques du cache'
+    });
+  }
+});
+
+// ========================================
+// LOGS MONITORING WITH CORRELATION ID - PHASE 4
+// ========================================
+
+/**
+ * Endpoint pour récupérer et filtrer les logs par correlation ID
+ * GET /api/monitoring/logs?correlationId=xxx&level=error&limit=100
+ */
+router.get('/logs', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { correlationId, level, limit = '100' } = req.query;
+    
+    logger.info('Requête de logs avec filtres', {
+      metadata: {
+        route: '/api/monitoring/logs',
+        method: 'GET',
+        userId: (req as any).user?.id,
+        filters: { correlationId, level, limit }
+      }
+    });
+    
+    // Note: Dans une implémentation complète, les logs seraient stockés dans une base de données
+    // ou un système de log aggregation (Elasticsearch, Datadog, etc.) qui permettrait
+    // de faire des requêtes filtrées. Pour l'instant, on retourne des informations
+    // sur le système de correlation ID et comment l'utiliser.
+    
+    res.json({
+      success: true,
+      timestamp: new Date(),
+      documentation: {
+        message: 'Le système de correlation ID est activé',
+        usage: {
+          description: 'Tous les logs incluent maintenant un correlation ID automatiquement',
+          headerName: 'X-Correlation-ID',
+          example: 'Les requêtes HTTP incluent un header X-Correlation-ID dans la réponse',
+          filtering: {
+            byCorrelationId: `GET /api/monitoring/logs?correlationId=${correlationId || 'abc-123-def'}`,
+            byLevel: `GET /api/monitoring/logs?level=${level || 'error'}`,
+            combined: `GET /api/monitoring/logs?correlationId=${correlationId || 'abc-123-def'}&level=${level || 'error'}&limit=${limit}`
+          }
+        },
+        implementation: {
+          middleware: 'Correlation middleware actif - génère ou extrait UUID depuis headers',
+          logger: 'Logger enrichi automatiquement avec correlation ID depuis AsyncLocalStorage',
+          externalAPIs: 'Propagation vers Monday.com, Claude AI, OpenAI avec header X-Correlation-ID',
+          retrySystem: 'Retry logs incluent correlation ID pour traçabilité complète',
+          nonHTTP: 'Contextes non-HTTP (startup, cron) gèrent leurs propres correlation IDs'
+        }
+      },
+      filters: {
+        correlationId: correlationId || null,
+        level: level || null,
+        limit: parseInt(limit as string)
+      },
+      note: 'Pour une implémentation complète avec stockage de logs, intégrer un système de log aggregation comme Elasticsearch, Datadog, ou CloudWatch'
+    });
+    
+  } catch (error) {
+    logger.error('Erreur récupération logs', error as Error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Impossible de récupérer les logs'
+    });
+  }
+});
 
 // Démarrer le gestionnaire d'alertes au démarrage
 alertManager.start();

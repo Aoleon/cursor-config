@@ -33,6 +33,7 @@ import {
 import { AnalyticsService } from '../../services/AnalyticsService';
 import { PredictiveEngineService } from '../../services/PredictiveEngineService';
 import { getPerformanceMetricsService } from '../../services/PerformanceMetricsService';
+import { getCacheService, TTL_CONFIG } from '../../services/CacheService';
 import type {
   AnalyticsFiltersRequest,
   AnalyticsQueryParams,
@@ -92,6 +93,20 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
     validateQuery(analyticsFiltersSchema.optional()),
     asyncHandler(async (req: any, res: Response) => {
       const filters: AnalyticsFiltersRequest = req.query;
+      const cacheService = getCacheService();
+      const cacheKey = cacheService.buildKey('analytics', 'kpis', { userId: req.user?.id, filters });
+      
+      const cached = await cacheService.get<any>(cacheKey);
+      if (cached) {
+        logger.debug('[Analytics] KPIs récupérés depuis cache', {
+          metadata: {
+            route: '/api/analytics/kpis',
+            cacheHit: true,
+            userId: req.user?.id
+          }
+        });
+        return sendSuccess(res, cached);
+      }
       
       logger.info('[Analytics] Récupération KPIs', {
         metadata: {
@@ -104,7 +119,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
 
       const kpis = await analyticsService.getRealtimeKPIs(filters);
       
-      const dashboard: KPIDashboard = {
+      const dashboard = {
         kpis,
         lastUpdated: new Date(),
         period: {
@@ -113,6 +128,8 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         },
         filters
       };
+
+      await cacheService.set(cacheKey, dashboard, TTL_CONFIG.ANALYTICS_KPI);
 
       sendSuccess(res, dashboard);
     })
@@ -128,6 +145,20 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
     validateQuery(metricQuerySchema.optional()),
     asyncHandler(async (req: any, res: Response) => {
       const params: AnalyticsQueryParams = req.query;
+      const cacheService = getCacheService();
+      const cacheKey = cacheService.buildKey('analytics', 'metrics', { userId: req.user?.id, params });
+      
+      const cached = await cacheService.get<{ metrics: any }>(cacheKey);
+      if (cached) {
+        logger.debug('[Analytics] Métriques récupérées depuis cache', {
+          metadata: {
+            route: '/api/analytics/metrics',
+            cacheHit: true,
+            userId: req.user?.id
+          }
+        });
+        return sendSuccess(res, cached);
+      }
       
       logger.info('[Analytics] Récupération métriques business', {
         metadata: {
@@ -144,7 +175,10 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         metrics: params.metrics ? params.metrics : []
       });
 
-      sendSuccess(res, { metrics });
+      const response = { metrics };
+      await cacheService.set(cacheKey, response, TTL_CONFIG.ANALYTICS_METRICS);
+
+      sendSuccess(res, response);
     })
   );
 
@@ -444,6 +478,21 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.get('/api/analytics/realtime',
     isAuthenticated,
     asyncHandler(async (req: any, res: Response) => {
+      const cacheService = getCacheService();
+      const cacheKey = cacheService.buildKey('analytics', 'realtime', { userId: req.user?.id });
+      
+      const cached = await cacheService.get<any>(cacheKey);
+      if (cached) {
+        logger.debug('[Analytics] Métriques temps réel récupérées depuis cache', {
+          metadata: {
+            route: '/api/analytics/realtime',
+            cacheHit: true,
+            userId: req.user?.id
+          }
+        });
+        return sendSuccess(res, cached);
+      }
+
       logger.info('[Analytics] Récupération métriques temps réel', {
         metadata: {
           route: '/api/analytics/realtime',
@@ -453,6 +502,8 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       const metrics = await analyticsService.getRealtimeMetrics();
+      await cacheService.set(cacheKey, metrics, TTL_CONFIG.ANALYTICS_REALTIME);
+
       sendSuccess(res, metrics);
     })
   );

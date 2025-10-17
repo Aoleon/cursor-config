@@ -306,9 +306,33 @@ export async function cleanupTestData(page: Page, ids: {
   offers?: string[];
   suppliers?: string[];
   lots?: Array<{ id: string; aoId: string }>;
+  supplierRequests?: string[];
+  quoteSessions?: string[];
+  documents?: string[];
 }): Promise<void> {
   const cleanupPromises: Promise<void>[] = [];
 
+  // Cleanup documents first (they reference other entities)
+  if (ids.documents) {
+    cleanupPromises.push(...ids.documents.map(id => deleteDocumentViaAPI(page, id)));
+  }
+  
+  // Cleanup quote sessions (they reference requests)
+  if (ids.quoteSessions) {
+    cleanupPromises.push(...ids.quoteSessions.map(id => deleteQuoteSessionViaAPI(page, id)));
+  }
+  
+  // Cleanup supplier requests (they reference suppliers and AOs)
+  if (ids.supplierRequests) {
+    cleanupPromises.push(...ids.supplierRequests.map(id => deleteSupplierRequestViaAPI(page, id)));
+  }
+  
+  // Cleanup lots (they reference AOs)
+  if (ids.lots) {
+    cleanupPromises.push(...ids.lots.map(({ id, aoId }) => deleteLotViaAPI(page, id, aoId)));
+  }
+
+  // Cleanup main entities
   if (ids.aos) {
     cleanupPromises.push(...ids.aos.map(id => deleteAOViaAPI(page, id)));
   }
@@ -320,9 +344,6 @@ export async function cleanupTestData(page: Page, ids: {
   }
   if (ids.suppliers) {
     cleanupPromises.push(...ids.suppliers.map(id => deleteSupplierViaAPI(page, id)));
-  }
-  if (ids.lots) {
-    cleanupPromises.push(...ids.lots.map(({ id, aoId }) => deleteLotViaAPI(page, id, aoId)));
   }
 
   await Promise.allSettled(cleanupPromises);
@@ -407,4 +428,67 @@ export async function createSupplierRequest(page: Page, data: {
 
   const result = await response.json();
   return result.data?.id || result.id;
+}
+
+/**
+ * Crée une session de devis fournisseur via l'API
+ */
+export async function createQuoteSessionViaAPI(page: Page, data: {
+  aoId: string;
+  supplierId: string;
+  requestId?: string;
+  status?: string;
+  ocrData?: {
+    confidence?: number;
+    extractedAmount?: number;
+    extractedReference?: string;
+    qualityScore?: number;
+    totalAmountHT?: number;
+    totalAmountTTC?: number;
+    completenessScore?: number;
+  };
+}): Promise<string> {
+  const response = await page.request.post('/api/supplier-quote-sessions', {
+    data,
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Failed to create quote session: ${response.status()} ${await response.text()}`);
+  }
+
+  const result = await response.json();
+  return result.data?.id || result.id;
+}
+
+/**
+ * Supprime une demande fournisseur via l'API
+ */
+export async function deleteSupplierRequestViaAPI(page: Page, requestId: string): Promise<void> {
+  const response = await page.request.delete(`/api/supplier-requests/${requestId}`);
+  
+  if (!response.ok() && response.status() !== 404) {
+    console.warn(`Failed to delete supplier request ${requestId}: ${response.status()}`);
+  }
+}
+
+/**
+ * Supprime une session de devis via l'API
+ */
+export async function deleteQuoteSessionViaAPI(page: Page, sessionId: string): Promise<void> {
+  const response = await page.request.delete(`/api/supplier-quote-sessions/${sessionId}`);
+  
+  if (!response.ok() && response.status() !== 404) {
+    console.warn(`Failed to delete quote session ${sessionId}: ${response.status()}`);
+  }
+}
+
+/**
+ * Supprime un document via l'API
+ */
+export async function deleteDocumentViaAPI(page: Page, documentId: string): Promise<void> {
+  const response = await page.request.delete(`/api/documents/${documentId}`);
+  
+  if (!response.ok() && response.status() !== 404) {
+    console.warn(`Failed to delete document ${documentId}: ${response.status()}`);
+  }
 }

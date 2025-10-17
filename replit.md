@@ -29,6 +29,36 @@ The application features a modern fullstack architecture.
 - **Business Services**: Includes `DateIntelligenceService` for intelligent project planning, `OCRService` for text extraction, `AIService` for structured quote analysis, and an `EventBus` for inter-service coordination.
 - **API Response Handling**: Centralized `normalizeApiResponse<T>()` helper ensures consistent and type-safe handling of all API responses.
 - **Testing Infrastructure**: Includes Vitest for unit tests and Playwright for E2E regression tests.
+  - **E2E Workflow Tests**: Comprehensive Playwright tests for critical workflows:
+    - `ao-complete.spec.ts`: AO creation → OCR → lots extraction → supplier workflow (100% UI-driven)
+    - `fournisseur-quote-complete.spec.ts`: Supplier quote workflow with robust Map-based bookkeeping (hybrid UI/API with TODOs for missing UI components)
+- **Retry System**: Unified exponential backoff retry mechanism (`server/utils/retry-helper.ts`) with automatic retry for network errors, rate limits (429), and server errors (5xx) across all external API services (Monday.com, Claude, OpenAI).
+- **Intelligent Cache System**: Centralized CacheService with in-memory adapter (Redis-ready architecture) for frequent queries:
+  - Monday.com boards cached (10min TTL)
+  - Analytics KPIs/metrics cached (1-2min TTL)
+  - EventBus-driven proactive invalidation on data changes
+  - Monitoring endpoint `/api/monitoring/cache` for hit/miss metrics
+  - Automated cache warmup on startup
+- **Correlation IDs System**: AsyncLocalStorage-based request tracing for complete end-to-end observability:
+  - Automatic UUID v4 generation for all HTTP requests
+  - Transparent logger enrichment with `[cid:xxxxxxxx]` format
+  - Header propagation to external APIs (Monday.com, Claude, OpenAI)
+  - Monitoring endpoint with `correlationId` filter for debugging
+- **Monday.com Export System**: MondayExportService provides idempotent Saxium→Monday export for projects/AOs:
+  - Automatic EventBus triggers on `project:created`, `ao:created` events
+  - Manual export endpoints with retry logic and correlation tracking
+  - GraphQL mutations with exponential backoff (3 retries)
+  - Success/failure notifications via EventBus (`monday:export:success`, `monday:export:failed`)
+- **Monday.com Webhook System**: Secure webhook endpoint for Monday→Saxium synchronization:
+  - POST `/api/monday/webhook` with HMAC-SHA256 signature validation (base64, timing-safe)
+  - Idempotence via eventId cache (Set, 1000 events max)
+  - Rate limiting (100 requests/minute)
+  - Auto-sync via MondayImportService.syncFromMonday() for create/update/delete events
+  - EventBus notifications (`monday:webhook:received`, `monday:sync:success`)
+  - **Conflict Management MVP**: Monday-priority strategy with timestamp-based conflict detection
+    - SyncAuditService for structured audit logging via EventBus
+    - Emits `monday:sync:conflict` events when Saxium data is more recent
+    - Always applies Monday changes (Monday-priority policy) with conflict logging
 - **Draft System**: Allows users to save incomplete forms (Appel d'Offres) with conditional backend validation and frontend support.
 - **Technical Alerts & Toast Deduplication**: Consolidated OCR technical alerts and implemented a robust real-time event deduplication system for notifications using `sessionStorage` persistence.
 - **OCR Lot Extraction**: Enhanced regex patterns in `server/ocrService.ts` to support Unicode characters in French AO lot formats.

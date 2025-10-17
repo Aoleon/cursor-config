@@ -1,4 +1,4 @@
-import type { InsertDateIntelligenceRule, ProjectStatus } from "@shared/schema";
+import type { InsertDateIntelligenceRule } from "@shared/schema";
 
 // ========================================
 // RÈGLES MÉTIER MENUISERIE FRANÇAISE
@@ -121,8 +121,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["contract_signed", "notification_attribution"],
     durationFormula: null,
     baseDuration: 30, // 1 mois réglementaire
-    multiplierFactor: 1.0,
-    bufferPercentage: 0.10, // 10% buffer pour administration
+    multiplierFactor: "1.00",
+    bufferPercentage: "0.10", // 10% buffer pour administration
     minDuration: 21,
     maxDuration: 45,
     workingDaysOnly: false, // Délai calendaire
@@ -145,8 +145,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["contract_signed"],
     durationFormula: null,
     baseDuration: 7, // 1 semaine
-    multiplierFactor: 1.0,
-    bufferPercentage: 0.05,
+    multiplierFactor: "1.00",
+    bufferPercentage: "0.05",
     minDuration: 3,
     maxDuration: 14,
     workingDaysOnly: true,
@@ -172,8 +172,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["project_started", "technical_data_received"],
     durationFormula: "base_duration * complexity_multiplier * surface_factor",
     baseDuration: 8, // jours ouvrés
-    multiplierFactor: 1.0,
-    bufferPercentage: 0.20, // 20% buffer pour aléas techniques
+    multiplierFactor: "1.00",
+    bufferPercentage: "0.20", // 20% buffer pour aléas techniques
     minDuration: 5,
     maxDuration: 15,
     workingDaysOnly: true,
@@ -196,8 +196,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["project_started", "site_survey_completed"],
     durationFormula: null,
     baseDuration: 15, // jours ouvrés
-    multiplierFactor: 1.8, // Facteur élevé pour complexité
-    bufferPercentage: 0.30, // 30% buffer complexité élevée
+    multiplierFactor: "1.80", // Facteur élevé pour complexité
+    bufferPercentage: "0.30", // 30% buffer complexité élevée
     minDuration: 10,
     maxDuration: 25,
     workingDaysOnly: true,
@@ -220,8 +220,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["existing_survey_completed", "technical_constraints_identified"],
     durationFormula: null,
     baseDuration: 12, // Plus long pour l'existant
-    multiplierFactor: 1.3, // Facteur rénovation
-    bufferPercentage: 0.25, // 25% buffer pour imprévus existant
+    multiplierFactor: "1.30", // Facteur rénovation
+    bufferPercentage: "0.25", // 25% buffer pour imprévus existant
     minDuration: 8,
     maxDuration: 20,
     workingDaysOnly: true,
@@ -247,8 +247,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["execution_plans_ready", "architect_notification_sent"],
     durationFormula: null,
     baseDuration: 5, // jours ouvrés
-    multiplierFactor: 1.0,
-    bufferPercentage: 0.40, // 40% buffer - délai externe
+    multiplierFactor: "1.00",
+    bufferPercentage: "0.40", // 40% buffer - délai externe
     minDuration: 3,
     maxDuration: 10,
     workingDaysOnly: true,
@@ -272,8 +272,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["visa_approved", "plans_finalized"],
     durationFormula: null,
     baseDuration: 5, // jours ouvrés
-    multiplierFactor: 1.0,
-    bufferPercentage: 0.15,
+    multiplierFactor: "1.00",
+    bufferPercentage: "0.15",
     minDuration: 3,
     maxDuration: 10,
     workingDaysOnly: true,
@@ -299,8 +299,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["orders_confirmed", "production_scheduled"],
     durationFormula: null,
     baseDuration: 10, // jours ouvrés
-    multiplierFactor: 0.9, // PVC plus rapide
-    bufferPercentage: 0.10,
+    multiplierFactor: "0.90", // PVC plus rapide
+    bufferPercentage: "0.10",
     minDuration: 7,
     maxDuration: 15,
     workingDaysOnly: true,
@@ -324,8 +324,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["custom_orders_confirmed", "wood_sourcing_validated"],
     durationFormula: null,
     baseDuration: 21, // 3 semaines
-    multiplierFactor: 1.4, // Bois sur-mesure plus long
-    bufferPercentage: 0.20,
+    multiplierFactor: "1.40", // Bois sur-mesure plus long
+    bufferPercentage: "0.20",
     minDuration: 15,
     maxDuration: 35,
     workingDaysOnly: true,
@@ -348,8 +348,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["alu_orders_confirmed"],
     durationFormula: null,
     baseDuration: 14, // 2 semaines
-    multiplierFactor: 1.0,
-    bufferPercentage: 0.15,
+    multiplierFactor: "1.00",
+    bufferPercentage: "0.15",
     minDuration: 10,
     maxDuration: 21,
     workingDaysOnly: true,
@@ -376,8 +376,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["materials_delivered", "site_ready"],
     durationFormula: "base_duration * accessibility_factor * team_efficiency",
     baseDuration: 8, // jours ouvrés
-    multiplierFactor: 0.85, // Conditions favorables été
-    bufferPercentage: 0.10,
+    multiplierFactor: "0.85", // Conditions favorables été
+    bufferPercentage: "0.10",
     minDuration: 5,
     maxDuration: 15,
     workingDaysOnly: true,
@@ -401,8 +401,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["materials_delivered", "weather_window_confirmed"],
     durationFormula: null,
     baseDuration: 8, // jours ouvrés
-    multiplierFactor: 1.3, // Contraintes hivernales
-    bufferPercentage: 0.25, // 25% buffer météo
+    multiplierFactor: "1.30", // Contraintes hivernales
+    bufferPercentage: "0.25", // 25% buffer météo
     minDuration: 8,
     maxDuration: 20,
     workingDaysOnly: true,
@@ -425,8 +425,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["crane_scheduled", "access_permits_obtained"],
     durationFormula: null,
     baseDuration: 8, // jours ouvrés base
-    multiplierFactor: 1.6, // Facteur accessibilité difficile
-    bufferPercentage: 0.20,
+    multiplierFactor: "1.60", // Facteur accessibilité difficile
+    bufferPercentage: "0.20",
     minDuration: 10,
     maxDuration: 25,
     workingDaysOnly: true,
@@ -450,8 +450,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["installation_completed", "client_reception"],
     durationFormula: null,
     baseDuration: 2, // jours ouvrés
-    multiplierFactor: 1.0,
-    bufferPercentage: 0.50, // 50% buffer - dépend du client
+    multiplierFactor: "1.00",
+    bufferPercentage: "0.50", // 50% buffer - dépend du client
     minDuration: 1,
     maxDuration: 5,
     workingDaysOnly: true,
@@ -477,10 +477,10 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     },
     triggerEvents: ["abf_consultation_required"],
     durationFormula: null,
-    baseDuration: 0, // Pas de durée base - multiplicateur seulement
-    multiplierFactor: 1.8, // +80% pour contraintes patrimoniales
-    bufferPercentage: 0.35,
-    minDuration: 0,
+    baseDuration: 10, // Délai consultation ABF et contraintes patrimoniales
+    multiplierFactor: "1.80", // +80% pour contraintes patrimoniales
+    bufferPercentage: "0.35",
+    minDuration: 5,
     maxDuration: 365,
     workingDaysOnly: true,
     excludeHolidays: true,
@@ -501,10 +501,10 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     },
     triggerEvents: ["vacation_period_overlap"],
     durationFormula: null,
-    baseDuration: 0,
-    multiplierFactor: 1.5, // +50% pendant congés
-    bufferPercentage: 0.30,
-    minDuration: 0,
+    baseDuration: 5, // Délai additionnel pendant congés (disponibilité réduite)
+    multiplierFactor: "1.50", // +50% pendant congés
+    bufferPercentage: "0.30",
+    minDuration: 3,
     maxDuration: 365,
     workingDaysOnly: true,
     excludeHolidays: true,
@@ -530,8 +530,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["warranty_maintenance_scheduled", "periodic_inspection"],
     durationFormula: null,
     baseDuration: 1, // jour ouvré
-    multiplierFactor: 1.0,
-    bufferPercentage: 0.30, // 30% buffer dépendances client
+    multiplierFactor: "1.00",
+    bufferPercentage: "0.30", // 30% buffer dépendances client
     minDuration: 1,
     maxDuration: 3,
     workingDaysOnly: true,
@@ -555,8 +555,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["complex_pvc_delivered", "specialized_team_available"],
     durationFormula: null,
     baseDuration: 12, // jours ouvrés
-    multiplierFactor: 1.4, // Complexité PVC élevée
-    bufferPercentage: 0.20,
+    multiplierFactor: "1.40", // Complexité PVC élevée
+    bufferPercentage: "0.20",
     minDuration: 8,
     maxDuration: 18,
     workingDaysOnly: true,
@@ -580,8 +580,8 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
     triggerEvents: ["composite_orders_confirmed", "specialized_supplier_validated"],
     durationFormula: null,
     baseDuration: 18, // jours ouvrés (plus long que standard)
-    multiplierFactor: 1.6, // Nouveaux matériaux plus complexes
-    bufferPercentage: 0.25,
+    multiplierFactor: "1.60", // Nouveaux matériaux plus complexes
+    bufferPercentage: "0.25",
     minDuration: 12,
     maxDuration: 30,
     workingDaysOnly: true,
@@ -601,7 +601,7 @@ export const DEFAULT_MENUISERIE_RULES: Omit<InsertDateIntelligenceRule, 'created
  * Obtenir les règles applicables à un contexte donné
  */
 export function getApplicableRules(
-  phase: ProjectStatus | null,
+  phase: string | null,
   projectType?: string,
   complexity?: string,
   conditions?: Record<string, any>

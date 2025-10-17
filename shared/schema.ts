@@ -1206,6 +1206,12 @@ export const aos = pgTable("aos", {
   estimatedDelay: varchar("estimated_delay"),        // "->01/10/25" format parsing
   clientRecurrency: clientRecurrencyEnum("client_recurrency"),    // Type de client Monday.com Phase 1
   
+  // ========================================
+  // EXPORT MONDAY.COM - TRACKING
+  // ========================================
+  mondayId: varchar("monday_id"),                 // ID Monday.com après export (nullable)
+  lastExportedAt: timestamp("last_exported_at"),  // Date dernier export vers Monday.com
+  
   // Workflow et statut
   status: aoStatusEnum("status").default("etude"), // Statut workflow AO (défaut: étude pour être visible immédiatement)
   isDraft: boolean("is_draft").default(false), // Indique si l'AO est un brouillon (incomplet)
@@ -1632,6 +1638,12 @@ export const projects = pgTable("projects", {
   projectSubtype: varchar("project_subtype"),        // "men_ext", "men_int", "bardage"
   geographicZone: varchar("geographic_zone"),        // "BOULOGNE", "ETAPLES", "LONGUENESSE"
   buildingCount: integer("building_count"),          // Bât A/B/C organisation
+
+  // ========================================
+  // EXPORT MONDAY.COM - TRACKING
+  // ========================================
+  mondayId: varchar("monday_id"),                 // ID Monday.com après export (nullable)
+  lastExportedAt: timestamp("last_exported_at"),  // Date dernier export vers Monday.com
 
   // ========================================
   // MÉTADONNÉES (existantes)

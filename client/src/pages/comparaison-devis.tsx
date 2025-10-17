@@ -634,7 +634,7 @@ export default function ComparaisonDevis() {
               </TableHeader>
               <TableBody>
                 {/* Ligne prix HT */}
-                <TableRow>
+                <TableRow data-testid="row-price">
                   <TableCell className="font-medium sticky left-0 bg-background">
                     <div className="flex items-center gap-2">
                       <Euro className="h-4 w-4" />
@@ -642,14 +642,16 @@ export default function ComparaisonDevis() {
                     </div>
                   </TableCell>
                   {comparisonData.suppliers.map((supplier) => (
-                    <TableCell key={supplier.supplierId} className="text-center">
+                    <TableCell key={supplier.supplierId} className="text-center" data-testid={`row-supplier-${supplier.supplierId}`}>
                       <div className={cn(
                         "font-semibold p-2 rounded",
                         isBestOffer(supplier, 'price') && "bg-green-100 text-green-800"
-                      )} data-testid={`price-ht-${supplier.supplierId}`}>
+                      )} data-testid={`amount-supplier-${supplier.supplierId}`}>
                         {formatPrice(supplier.ocrData?.totalAmountHT)}
                         {isBestOffer(supplier, 'price') && (
-                          <Star className="h-4 w-4 inline ml-1" />
+                          <Badge variant="default" className="ml-2 bg-green-600" data-testid="badge-best-supplier">
+                            Meilleur prix
+                          </Badge>
                         )}
                       </div>
                     </TableCell>
@@ -730,7 +732,7 @@ export default function ComparaisonDevis() {
                     </div>
                   </TableCell>
                   {comparisonData.suppliers.map((supplier) => (
-                    <TableCell key={supplier.supplierId} className="text-center" data-testid={`quality-score-${supplier.supplierId}`}>
+                    <TableCell key={supplier.supplierId} className="text-center" data-testid={`score-supplier-${supplier.supplierId}`}>
                       {getQualityBadge(supplier.ocrData?.qualityScore, supplier.ocrData?.requiresManualReview)}
                       {supplier.ocrData?.confidence && (
                         <div className="text-xs text-muted-foreground mt-1">
@@ -764,7 +766,7 @@ export default function ComparaisonDevis() {
                               size="sm"
                               variant="default"
                               disabled={!supplier.ocrData}
-                              data-testid={`button-select-${supplier.supplierId}`}
+                              data-testid={`button-select-supplier-${supplier.supplierId}`}
                             >
                               <CheckCircle className="h-4 w-4 mr-1" />
                               Sélectionner

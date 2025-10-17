@@ -146,6 +146,12 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, project: Partial<InsertProject>): Promise<Project>;
   
+  // Monday.com Export Tracking
+  updateProjectMondayId(projectId: string, mondayId: string): Promise<void>;
+  updateAOMondayId(aoId: string, mondayId: string): Promise<void>;
+  getProjectsToExport(limit?: number): Promise<Project[]>; // mondayId = null
+  getAOsToExport(limit?: number): Promise<Ao[]>; // mondayId = null
+  
   // Project task operations - Planning partagé
   getProjectTasks(projectId: string): Promise<(ProjectTask & { assignedUser?: User })[]>;
   getAllTasks(): Promise<(ProjectTask & { assignedUser?: User })[]>;
@@ -1092,6 +1098,69 @@ export class DatabaseStorage implements IStorage {
       retries: 3,
       service: 'StoragePOC',
       operation: 'updateProject'
+    });
+  }
+
+  // Monday.com Export Tracking
+  async updateProjectMondayId(projectId: string, mondayId: string): Promise<void> {
+    await safeUpdate('projects', async () => {
+      await db
+        .update(projects)
+        .set({ 
+          mondayId: mondayId,
+          lastExportedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(projects.id, projectId));
+    }, 1, {
+      retries: 3,
+      service: 'StoragePOC',
+      operation: 'updateProjectMondayId'
+    });
+  }
+
+  async updateAOMondayId(aoId: string, mondayId: string): Promise<void> {
+    await safeUpdate('aos', async () => {
+      await db
+        .update(aos)
+        .set({ 
+          mondayId: mondayId,
+          lastExportedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(aos.id, aoId));
+    }, 1, {
+      retries: 3,
+      service: 'StoragePOC',
+      operation: 'updateAOMondayId'
+    });
+  }
+
+  async getProjectsToExport(limit: number = 100): Promise<Project[]> {
+    return safeQuery('projects', async () => {
+      const projectsToExport = await db
+        .select()
+        .from(projects)
+        .where(sql`${projects.mondayId} IS NULL`)
+        .limit(limit);
+      return projectsToExport;
+    }, {
+      service: 'StoragePOC',
+      operation: 'getProjectsToExport'
+    });
+  }
+
+  async getAOsToExport(limit: number = 100): Promise<Ao[]> {
+    return safeQuery('aos', async () => {
+      const aosToExport = await db
+        .select()
+        .from(aos)
+        .where(sql`${aos.mondayId} IS NULL`)
+        .limit(limit);
+      return aosToExport;
+    }, {
+      service: 'StoragePOC',
+      operation: 'getAOsToExport'
     });
   }
 

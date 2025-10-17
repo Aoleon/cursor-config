@@ -1,13 +1,17 @@
 /**
  * Service de logging structuré pour Saxium
  * Remplace les console.log dispersés avec un système unifié et configurable
+ * Intègre automatiquement les correlation IDs pour traçabilité complète
  */
+
+import { getCorrelationId } from '../middleware/correlation';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 type LogContext = {
   service?: string;
   userId?: string;
   traceId?: string;
+  correlationId?: string;
   metadata?: Record<string, any>;
 };
 
@@ -59,10 +63,11 @@ class Logger {
       const emoji = this.getLevelEmoji(entry.level);
       const timestamp = new Date(entry.timestamp).toLocaleTimeString('fr-FR');
       const contextStr = entry.context?.service ? `[${entry.context.service}]` : `[${this.serviceName}]`;
+      const correlationStr = entry.context?.correlationId ? ` [cid:${entry.context.correlationId.substring(0, 8)}]` : '';
       const traceStr = entry.context?.traceId ? ` (trace:${entry.context.traceId.substring(0, 8)})` : '';
       const metaStr = entry.context?.metadata ? ` ${JSON.stringify(entry.context.metadata)}` : '';
       
-      return `${emoji} ${timestamp} ${contextStr}${traceStr} ${entry.message}${metaStr}`;
+      return `${emoji} ${timestamp} ${contextStr}${correlationStr}${traceStr} ${entry.message}${metaStr}`;
     } else {
       // Format JSON pour production (facilite parsing par outils monitoring)
       return JSON.stringify(entry);
@@ -85,9 +90,13 @@ class Logger {
 
   /**
    * Méthode centrale de logging
+   * Auto-enrichit le contexte avec correlation ID si disponible
    */
   private log(level: LogLevel, message: string, context?: LogContext, error?: Error): void {
     if (!this.shouldLog(level)) return;
+
+    // Récupérer correlation ID depuis AsyncLocalStorage
+    const correlationId = getCorrelationId();
 
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
@@ -95,7 +104,9 @@ class Logger {
       message,
       context: {
         service: context?.service || this.serviceName,
-        ...context
+        ...context,
+        // Auto-inclure correlationId si disponible et pas déjà fourni
+        ...(correlationId && !context?.correlationId && { correlationId })
       }
     };
 

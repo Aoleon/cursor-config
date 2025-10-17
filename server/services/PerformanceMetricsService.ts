@@ -1,4 +1,4 @@
-import { IStorage } from "../storage-poc";
+import { IStorage, storage } from "../storage-poc";
 import { db } from "../db";
 import { sql, eq, and, desc, gte, lte, asc } from "drizzle-orm";
 import crypto from "crypto";
@@ -2101,9 +2101,9 @@ export class PerformanceMetricsService {
 
 let performanceMetricsInstance: PerformanceMetricsService | null = null;
 
-export function getPerformanceMetricsService(storage: IStorage): PerformanceMetricsService {
+export function getPerformanceMetricsService(): PerformanceMetricsService {
   if (!performanceMetricsInstance) {
-    performanceMetricsInstance = new PerformanceMetricsService(storage);
+    performanceMetricsInstance = new PerformanceMetricsService(storage as IStorage);
   }
   return performanceMetricsInstance;
 }

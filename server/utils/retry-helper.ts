@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { getCorrelationId } from '../middleware/correlation';
 
 /**
  * Options pour la configuration du système de retry

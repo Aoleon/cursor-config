@@ -1,6 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
 import { logger } from '../utils/logger';
 import { withRetry, isRetryableError } from '../utils/retry-helper';
+import { getCacheService, TTL_CONFIG } from './CacheService';
+import { getCorrelationId } from '../middleware/correlation';
 
 export interface MondayBoard {
   id: string;
@@ -85,6 +87,9 @@ class MondayService {
   }
 
   private async executeQuery<T = any>(query: string, variables?: any): Promise<T> {
+    // Récupérer correlation ID pour propagation
+    const correlationId = getCorrelationId();
+    
     return withRetry(
       async () => {
         try {
@@ -97,9 +102,14 @@ class MondayService {
             }
           });
 
+          // Ajouter correlation ID dans headers si disponible
           const response = await this.client.post('', {
             query,
             variables
+          }, {
+            headers: {
+              ...(correlationId && { 'X-Correlation-ID': correlationId })
+            }
           });
 
           if (response.data.errors) {
@@ -141,6 +151,22 @@ class MondayService {
   }
 
   async getBoards(limit: number = 50): Promise<MondayBoard[]> {
+    const cacheService = getCacheService();
+    const cacheKey = cacheService.buildKey('monday', 'boards', { limit });
+    
+    const cached = await cacheService.get<MondayBoard[]>(cacheKey);
+    if (cached) {
+      logger.debug('Boards récupérés depuis cache', {
+        service: 'MondayService',
+        metadata: {
+          operation: 'getBoards',
+          cacheHit: true,
+          count: cached.length
+        }
+      });
+      return cached;
+    }
+
     const query = `
       query GetBoards($limit: Int!) {
         boards(limit: $limit) {
@@ -155,16 +181,20 @@ class MondayService {
     `;
 
     const result = await this.executeQuery<{ boards: MondayBoard[] }>(query, { limit });
+    const boards = result.boards || [];
     
-    logger.info('Boards Monday.com récupérés', {
+    await cacheService.set(cacheKey, boards, TTL_CONFIG.MONDAY_BOARDS_LIST);
+    
+    logger.info('Boards Monday.com récupérés et mis en cache', {
       service: 'MondayService',
       metadata: {
         operation: 'getBoards',
-        count: result.boards?.length || 0
+        count: boards.length,
+        cacheTTL: TTL_CONFIG.MONDAY_BOARDS_LIST
       }
     });
 
-    return result.boards || [];
+    return boards;
   }
 
   async getBoardColumns(boardId: string): Promise<MondayColumn[]> {
@@ -248,6 +278,22 @@ class MondayService {
   }
 
   async getBoardData(boardId: string): Promise<MondayBoardData> {
+    const cacheService = getCacheService();
+    const cacheKey = cacheService.buildKey('monday', 'board', { boardId });
+    
+    const cached = await cacheService.get<MondayBoardData>(cacheKey);
+    if (cached) {
+      logger.debug('Board data récupérées depuis cache', {
+        service: 'MondayService',
+        metadata: {
+          operation: 'getBoardData',
+          boardId,
+          cacheHit: true
+        }
+      });
+      return cached;
+    }
+
     const query = `
       query GetBoardData($boardIds: [ID!]!, $limit: Int!) {
         boards(ids: $boardIds) {
@@ -293,17 +339,7 @@ class MondayService {
       throw new Error(`Board ${boardId} not found`);
     }
 
-    logger.info('Données complètes board récupérées', {
-      service: 'MondayService',
-      metadata: {
-        operation: 'getBoardData',
-        boardId,
-        columnCount: boardData.columns?.length || 0,
-        itemCount: boardData.items_page?.items?.length || 0
-      }
-    });
-
-    return {
+    const response: MondayBoardData = {
       board: {
         id: boardData.id,
         name: boardData.name,
@@ -315,6 +351,21 @@ class MondayService {
       columns: boardData.columns || [],
       items: boardData.items_page?.items || []
     };
+
+    await cacheService.set(cacheKey, response, TTL_CONFIG.MONDAY_BOARD_DETAIL);
+
+    logger.info('Données complètes board récupérées et mises en cache', {
+      service: 'MondayService',
+      metadata: {
+        operation: 'getBoardData',
+        boardId,
+        columnCount: response.columns.length,
+        itemCount: response.items.length,
+        cacheTTL: TTL_CONFIG.MONDAY_BOARD_DETAIL
+      }
+    });
+
+    return response;
   }
 
   async testConnection(): Promise<boolean> {
@@ -351,6 +402,51 @@ class MondayService {
       });
       return false;
     }
+  }
+
+  async getItem(itemId: string): Promise<MondayItem> {
+    const query = `
+      query GetItem($itemId: ID!) {
+        items(ids: [$itemId]) {
+          id
+          name
+          column_values {
+            id
+            type
+            text
+            value
+          }
+          group {
+            id
+            title
+          }
+          board {
+            id
+          }
+        }
+      }
+    `;
+
+    const result = await this.executeQuery<{ items: MondayItem[] }>(query, { 
+      itemId: parseInt(itemId) 
+    });
+
+    const item = result.items?.[0];
+
+    if (!item) {
+      throw new Error(`Item ${itemId} not found on Monday.com`);
+    }
+
+    logger.info('Item Monday.com récupéré', {
+      service: 'MondayService',
+      metadata: {
+        operation: 'getItem',
+        itemId,
+        itemName: item.name
+      }
+    });
+
+    return item;
   }
 
   extractColumnValue(columnValue: MondayColumnValue): any {

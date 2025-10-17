@@ -13,6 +13,11 @@ import { createAnalyticsRouter } from "./modules/analytics/routes";
 import { createDocumentsRouter } from "./modules/documents/routes";
 import { setupMondayModule } from "./modules/monday";
 
+// Import cache service
+import { getCacheService } from "./services/CacheService";
+import { mondayService } from "./services/MondayService";
+import { logger } from "./utils/logger";
+
 export async function registerRoutes(app: Express) {
   // 1. Setup authentication FIRST (required by modular routes)
   await setupAuth(app);
@@ -43,7 +48,55 @@ export async function registerRoutes(app: Express) {
   // Mount Monday.com integration module
   setupMondayModule(app);
   
-  // 5. Register legacy POC routes and create HTTP server (must be last)
+  // 5. Setup cache service with EventBus integration
+  const cacheService = getCacheService();
+  cacheService.setupEventBusIntegration(eventBus);
+  
+  logger.info('[CacheService] Intégration EventBus configurée', {
+    metadata: {
+      module: 'Routes',
+      operation: 'registerRoutes'
+    }
+  });
+  
+  // 6. Warmup cache with frequently accessed data
+  logger.info('[CacheService] Démarrage warmup cache', {
+    metadata: {
+      module: 'Routes',
+      operation: 'registerRoutes'
+    }
+  });
+  
+  await cacheService.warmupCache([
+    async () => {
+      try {
+        await mondayService.getBoards(50);
+        logger.info('[CacheService] Monday boards préchargés', {
+          metadata: {
+            module: 'Routes',
+            operation: 'warmupCache'
+          }
+        });
+      } catch (error) {
+        logger.warn('[CacheService] Erreur préchargement Monday boards', {
+          metadata: {
+            module: 'Routes',
+            operation: 'warmupCache',
+            error: error instanceof Error ? error.message : String(error)
+          }
+        });
+      }
+    }
+  ]);
+  
+  logger.info('[CacheService] Warmup cache terminé', {
+    metadata: {
+      module: 'Routes',
+      operation: 'registerRoutes'
+    }
+  });
+  
+  // 7. Register legacy POC routes and create HTTP server (must be last)
   const server = await registerPocRoutes(app);
   
   return server;

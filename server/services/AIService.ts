@@ -11,6 +11,7 @@ import { logger } from '../utils/logger';
 import { withRetry, isRetryableError } from '../utils/retry-helper';
 import { CircuitBreaker, CircuitBreakerManager } from '../utils/circuit-breaker';
 import { API_LIMITS, getModelConfig } from '../config/api-limits';
+import { getCorrelationId } from '../middleware/correlation';
 
 // Référence blueprints: javascript_anthropic et javascript_openai intégrés
 /*
@@ -1149,16 +1150,20 @@ export class AIService {
    */
   private async executeClaude(request: AiQueryRequest, requestId: string): Promise<AiQueryResponse> {
     const startTime = Date.now();
+    // Récupérer correlation ID pour propagation
+    const correlationId = getCorrelationId();
 
     const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql", undefined, request.complexity);
     const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole, undefined, request.complexity);
 
-    // Appel simple sans timeout (géré par withRetry)
+    // Appel simple sans timeout (géré par withRetry) avec correlation header
     const response = await this.anthropic.messages.create({
       model: DEFAULT_CLAUDE_MODEL,
       max_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
       messages: [{ role: 'user', content: userPrompt }],
       system: systemPrompt,
+    }, {
+      headers: correlationId ? { 'X-Correlation-ID': correlationId } : undefined
     });
 
     const responseTime = Date.now() - startTime;
@@ -1193,11 +1198,13 @@ export class AIService {
     }
 
     const startTime = Date.now();
+    // Récupérer correlation ID pour propagation
+    const correlationId = getCorrelationId();
 
     const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql", undefined, request.complexity);
     const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole, undefined, request.complexity);
 
-    // Appel simple sans timeout (géré par withRetry)
+    // Appel simple sans timeout (géré par withRetry) avec correlation header
     const response = await this.openai.chat.completions.create({
       model: DEFAULT_GPT_MODEL,
       messages: [
@@ -1206,6 +1213,8 @@ export class AIService {
       ],
       response_format: { type: "json_object" },
       max_completion_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
+    }, {
+      headers: correlationId ? { 'X-Correlation-ID': correlationId } : undefined
     });
 
     const responseTime = Date.now() - startTime;

@@ -48,8 +48,7 @@ interface ImportPreview {
 const ENTITY_TYPES = [
   { value: 'project', label: 'Projets', icon: '🏗️' },
   { value: 'ao', label: 'Appels d\'Offres', icon: '📋' },
-  { value: 'supplier', label: 'Fournisseurs', icon: '🏭' },
-  { value: 'task', label: 'Tâches', icon: '✅' }
+  { value: 'supplier', label: 'Fournisseurs', icon: '🏭' }
 ];
 
 const FIELD_OPTIONS: Record<string, { value: string; label: string }[]> = {
@@ -117,7 +116,7 @@ export default function MondayImportPage() {
 
   // Import mutation
   const importMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (mappingsToUse: ColumnMapping[]) => {
       if (!selectedBoard) throw new Error('Aucun board sélectionné');
       
       const response = await fetch('/api/monday/import', {
@@ -127,7 +126,7 @@ export default function MondayImportPage() {
         body: JSON.stringify({
           boardId: selectedBoard,
           targetEntity,
-          columnMappings
+          columnMappings: mappingsToUse
         })
       });
       
@@ -178,10 +177,13 @@ export default function MondayImportPage() {
   };
 
   const handleImport = () => {
-    if (columnMappings.length === 0 && previewData?.suggestedMappings) {
-      setColumnMappings(previewData.suggestedMappings);
-    }
-    importMutation.mutate();
+    // Use current mappings or suggested mappings if none manually set
+    const mappingsToUse = columnMappings.length > 0 
+      ? columnMappings 
+      : (previewData?.suggestedMappings || []);
+    
+    // Pass mappings directly to mutation instead of relying on state
+    importMutation.mutate(mappingsToUse);
   };
 
   const updateMapping = (mondayColumnId: string, saxiumField: string) => {

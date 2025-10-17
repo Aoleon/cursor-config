@@ -15,6 +15,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { FileText, Search, Calendar, MapPin, Building, Plus, Star, Eye, Edit, Home, Users } from "lucide-react";
+import { SyncStatusBadge } from "@/components/monday/SyncStatusBadge";
+import { useMondaySync } from "@/hooks/useMondaySync";
 
 interface UnifiedOffersDisplayProps {
   showCreateButton?: boolean;
@@ -31,6 +33,22 @@ export default function UnifiedOffersDisplay({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("tous");
   const { toast } = useToast();
+  
+  // Active les notifications Monday sync
+  useMondaySync();
+  
+  // Récupérer les statuts de synchronisation Monday
+  const { data: syncStatusesData } = useQuery<any>({
+    queryKey: ["/api/monday/sync-status"],
+    refetchInterval: 30000, // Refresh toutes les 30s
+  });
+  
+  const syncStatuses = syncStatusesData?.data || [];
+  
+  // Fonction pour récupérer le statut de sync d'un AO
+  const getSyncStatus = (aoId: string) => {
+    return syncStatuses.find((s: any) => s.entityId === aoId && s.entityType === 'ao');
+  };
 
   const { data: offers = [], isLoading, isError, error } = useQuery({
     queryKey: [endpoint, search, statusFilter],
@@ -451,6 +469,12 @@ export default function UnifiedOffersDisplay({
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap items-center gap-2">
                           {getStatusBadge(offer)}
+                          <SyncStatusBadge
+                            status={getSyncStatus(offer.id)?.lastStatus}
+                            lastSyncedAt={getSyncStatus(offer.id)?.lastSyncedAt}
+                            mondayId={getSyncStatus(offer.id)?.mondayId}
+                            conflictReason={getSyncStatus(offer.id)?.conflictReason}
+                          />
                           {getMenuiserieTypeBadge(offer.menuiserieType)}
                           {offer.clientRecurrency && (
                             <Badge className="bg-success/10 text-success">

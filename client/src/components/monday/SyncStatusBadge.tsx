@@ -3,7 +3,7 @@ import { CheckCircle, AlertCircle, Clock, XCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SyncStatusBadgeProps {
-  status: 'synced' | 'syncing' | 'error' | 'conflict' | null;
+  status?: 'synced' | 'syncing' | 'error' | 'conflict' | null;
   lastSyncedAt?: Date;
   conflictReason?: string;
   mondayId?: string;
@@ -15,8 +15,6 @@ export function SyncStatusBadge({
   conflictReason, 
   mondayId 
 }: SyncStatusBadgeProps) {
-  if (!status) return null;
-  
   const config = {
     synced: {
       icon: CheckCircle,
@@ -41,10 +39,17 @@ export function SyncStatusBadge({
       variant: 'outline' as const,
       label: 'Sync Conflict',
       color: 'text-orange-600'
+    },
+    notSynced: {
+      icon: Clock,
+      variant: 'outline' as const,
+      label: 'Not synced',
+      color: 'text-gray-400'
     }
   };
   
-  const { icon: Icon, variant, label, color } = config[status];
+  const currentStatus = status || 'notSynced';
+  const { icon: Icon, variant, label, color } = config[currentStatus];
   
   const tooltipContent = (
     <div className="text-xs">
@@ -72,7 +77,7 @@ export function SyncStatusBadge({
           <Badge 
             variant={variant}
             className="flex items-center gap-1"
-            data-testid={`sync-status-${status}`}
+            data-testid={`monday-sync-badge-${currentStatus}`}
           >
             <Icon className={`h-3 w-3 ${color}`} />
             <span className="text-xs">{label}</span>

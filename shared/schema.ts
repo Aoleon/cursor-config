@@ -1211,6 +1211,9 @@ export const aos = pgTable("aos", {
   // ========================================
   mondayId: varchar("monday_id"),                 // ID Monday.com après export (nullable)
   lastExportedAt: timestamp("last_exported_at"),  // Date dernier export vers Monday.com
+  mondaySyncStatus: varchar("monday_sync_status", { length: 20 }), // Status: synced, syncing, error, conflict
+  mondayConflictReason: text("monday_conflict_reason"),            // Raison du conflit si status=conflict
+  mondayLastSyncedAt: timestamp("monday_last_synced_at"),          // Date dernier changement de status
   
   // Workflow et statut
   status: aoStatusEnum("status").default("etude"), // Statut workflow AO (défaut: étude pour être visible immédiatement)
@@ -1644,6 +1647,9 @@ export const projects = pgTable("projects", {
   // ========================================
   mondayId: varchar("monday_id"),                 // ID Monday.com après export (nullable)
   lastExportedAt: timestamp("last_exported_at"),  // Date dernier export vers Monday.com
+  mondaySyncStatus: varchar("monday_sync_status", { length: 20 }), // Status: synced, syncing, error, conflict
+  mondayConflictReason: text("monday_conflict_reason"),            // Raison du conflit si status=conflict
+  mondayLastSyncedAt: timestamp("monday_last_synced_at"),          // Date dernier changement de status
 
   // ========================================
   // MÉTADONNÉES (existantes)

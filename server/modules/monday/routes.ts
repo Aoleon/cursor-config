@@ -5,6 +5,7 @@ import { mondayService } from '../../services/MondayService';
 import { mondayImportService } from '../../services/MondayImportService';
 import { mondayExportService } from '../../services/MondayExportService';
 import { mondayWebhookService } from '../../services/MondayWebhookService';
+import { syncAuditService } from '../../services/SyncAuditService';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler } from '../../utils/error-handler';
 import { logger } from '../../utils/logger';
@@ -297,6 +298,39 @@ router.post('/api/monday/webhook',
       success: true,
       message: 'Webhook accepted',
       correlationId
+    });
+  })
+);
+
+// ========================================
+// SYNC STATUS ENDPOINT - Get sync statuses
+// ========================================
+
+// GET /api/monday/sync-status - Récupérer statuts de synchronisation
+router.get('/api/monday/sync-status',
+  isAuthenticated,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { entityIds } = req.query;
+
+    logger.info('Récupération statuts synchronisation Monday', {
+      service: 'MondayRoutes',
+      metadata: { 
+        operation: 'getSyncStatus',
+        hasFilter: !!entityIds
+      }
+    });
+
+    let statuses = syncAuditService.getAllSyncStatuses();
+
+    // Filter by entityIds if provided
+    if (entityIds) {
+      const ids = (entityIds as string).split(',');
+      statuses = statuses.filter(s => ids.includes(s.entityId));
+    }
+
+    res.json({
+      success: true,
+      data: statuses
     });
   })
 );

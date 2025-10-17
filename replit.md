@@ -59,6 +59,14 @@ The application features a modern fullstack architecture.
     - SyncAuditService for structured audit logging via EventBus
     - Emits `monday:sync:conflict` events when Saxium data is more recent
     - Always applies Monday changes (Monday-priority policy) with conflict logging
+- **Monday.com UI Sync Indicators**: Visual sync status badges and real-time notifications:
+  - DB persistence via mondaySyncStatus, mondayConflictReason, mondayLastSyncedAt columns (projects/aos)
+  - SyncAuditService rebuilds cache from DB at startup (restart-safe states)
+  - Event listeners persist sync states (synced/conflict/error) to DB
+  - GET `/api/monday/sync-status` endpoint with entityIds filter
+  - SyncStatusBadge component (CheckCircle, Clock, XCircle, AlertCircle icons, tooltip details, data-testid)
+  - useMondaySync hook for WebSocket events, toast notifications, React Query cache invalidation
+  - Integration in projects.tsx with 30s refetch polling + real-time WebSocket updates
 - **Draft System**: Allows users to save incomplete forms (Appel d'Offres) with conditional backend validation and frontend support.
 - **Technical Alerts & Toast Deduplication**: Consolidated OCR technical alerts and implemented a robust real-time event deduplication system for notifications using `sessionStorage` persistence.
 - **OCR Lot Extraction**: Enhanced regex patterns in `server/ocrService.ts` to support Unicode characters in French AO lot formats.

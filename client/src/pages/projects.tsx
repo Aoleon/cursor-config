@@ -16,17 +16,35 @@ import { fr } from "date-fns/locale";
 import KanbanBoard from "@/components/projects/kanban-board";
 import WorkloadPlanner from "@/components/projects/workload-planner";
 import TimelineView from "@/components/projects/timeline-view";
+import { SyncStatusBadge } from "@/components/monday/SyncStatusBadge";
+import { useMondaySync } from "@/hooks/useMondaySync";
 
 export default function Projects() {
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
+  
+  // Active les notifications Monday sync
+  useMondaySync();
+  
   // Authentication temporarily disabled for development
   const { data: projectsData, isLoading: projectsLoading, error } = useQuery<any>({
     queryKey: ["/api/projects"],
   });
   
+  // Récupérer les statuts de synchronisation Monday
+  const { data: syncStatusesData } = useQuery<any>({
+    queryKey: ["/api/monday/sync-status"],
+    refetchInterval: 30000, // Refresh toutes les 30s
+  });
+  
   // Extraire les données du format API { success: true, data: [...] }
   const projects = projectsData?.data || [];
+  const syncStatuses = syncStatusesData?.data || [];
+  
+  // Fonction pour récupérer le statut de sync d'un projet
+  const getSyncStatus = (projectId: string) => {
+    return syncStatuses.find((s: any) => s.entityId === projectId && s.entityType === 'project');
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -118,6 +136,12 @@ export default function Projects() {
                         <Badge className={getStatusColor(project.status)}>
                           {getStatusLabel(project.status)}
                         </Badge>
+                        <SyncStatusBadge
+                          status={getSyncStatus(project.id)?.lastStatus}
+                          lastSyncedAt={getSyncStatus(project.id)?.lastSyncedAt}
+                          mondayId={getSyncStatus(project.id)?.mondayId}
+                          conflictReason={getSyncStatus(project.id)?.conflictReason}
+                        />
                         <Button 
                           variant="outline" 
                           size="sm"

@@ -73,6 +73,8 @@ import MonitoringDashboard from "@/pages/monitoring";
 import PurchaseOrderGenerator from "@/pages/batigest/purchase-order-generator";
 import ClientQuoteGenerator from "@/pages/batigest/client-quote-generator";
 import BatigestDashboard from "@/pages/batigest/dashboard";
+// Import de l'intégration Monday.com
+import MondayImport from "@/pages/monday/monday-import";
 
 function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -197,6 +199,9 @@ function Router() {
       <Route path="/batigest/dashboard" component={() => <ProtectedRoute component={BatigestDashboard} />} />
       <Route path="/batigest/purchase-order-generator" component={() => <ProtectedRoute component={PurchaseOrderGenerator} />} />
       <Route path="/batigest/client-quote-generator" component={() => <ProtectedRoute component={ClientQuoteGenerator} />} />
+      
+      {/* ============= MONDAY.COM INTEGRATION ============= */}
+      <Route path="/monday/import" component={() => <ProtectedRoute component={MondayImport} />} />
       {/* Validation technique pour Julien LAMBOROT */}
       <Route path="/technical-alerts" component={() => <ProtectedRoute component={TechnicalAlerts} />} />
       {/* Configuration et paramètres */}

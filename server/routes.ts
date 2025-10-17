@@ -11,6 +11,7 @@ import { createSuppliersRouter } from "./modules/suppliers/routes";
 import { createProjectsRouter } from "./modules/projects/routes";
 import { createAnalyticsRouter } from "./modules/analytics/routes";
 import { createDocumentsRouter } from "./modules/documents/routes";
+import { setupMondayModule } from "./modules/monday";
 
 export async function registerRoutes(app: Express) {
   // 1. Setup authentication FIRST (required by modular routes)
@@ -38,6 +39,9 @@ export async function registerRoutes(app: Express) {
   app.use(projectsRouter);
   app.use(analyticsRouter);
   app.use(documentsRouter);
+  
+  // Mount Monday.com integration module
+  setupMondayModule(app);
   
   // 5. Register legacy POC routes and create HTTP server (must be last)
   const server = await registerPocRoutes(app);

@@ -315,7 +315,7 @@ export default function MondayImportPage() {
 
       {/* Step 2: Column Mapping Preview */}
       {showPreview && previewData && (
-        <Card data-testid="card-column-mapping">
+        <Card data-testid="preview-section">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ArrowRight className="w-5 h-5" />

@@ -32,7 +32,6 @@ export interface MondayItem {
 
 export interface MondayColumnValue {
   id: string;
-  title: string;
   type: string;
   text?: string;
   value?: string;
@@ -191,7 +190,6 @@ class MondayService {
               name
               column_values {
                 id
-                title
                 type
                 text
                 value
@@ -250,7 +248,6 @@ class MondayService {
               name
               column_values {
                 id
-                title
                 type
                 text
                 value

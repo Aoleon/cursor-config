@@ -126,8 +126,8 @@ class MondayService {
 
   async getBoards(limit: number = 50): Promise<MondayBoard[]> {
     const query = `
-      query {
-        boards(limit: ${limit}) {
+      query GetBoards($limit: Int!) {
+        boards(limit: $limit) {
           id
           name
           description
@@ -138,7 +138,7 @@ class MondayService {
       }
     `;
 
-    const result = await this.executeQuery<{ boards: MondayBoard[] }>(query);
+    const result = await this.executeQuery<{ boards: MondayBoard[] }>(query, { limit });
     
     logger.info('Boards Monday.com récupérés', {
       service: 'MondayService',
@@ -153,8 +153,8 @@ class MondayService {
 
   async getBoardColumns(boardId: string): Promise<MondayColumn[]> {
     const query = `
-      query {
-        boards(ids: [${boardId}]) {
+      query GetBoardColumns($boardIds: [ID!]!) {
+        boards(ids: $boardIds) {
           columns {
             id
             title
@@ -165,7 +165,9 @@ class MondayService {
       }
     `;
 
-    const result = await this.executeQuery<{ boards: { columns: MondayColumn[] }[] }>(query);
+    const result = await this.executeQuery<{ boards: { columns: MondayColumn[] }[] }>(query, { 
+      boardIds: [parseInt(boardId)] 
+    });
     const columns = result.boards?.[0]?.columns || [];
 
     logger.info('Colonnes board récupérées', {
@@ -182,9 +184,9 @@ class MondayService {
 
   async getBoardItems(boardId: string, limit: number = 500): Promise<MondayItem[]> {
     const query = `
-      query {
-        boards(ids: [${boardId}]) {
-          items_page(limit: ${limit}) {
+      query GetBoardItems($boardIds: [ID!]!, $limit: Int!) {
+        boards(ids: $boardIds) {
+          items_page(limit: $limit) {
             items {
               id
               name
@@ -210,7 +212,10 @@ class MondayService {
           items: MondayItem[] 
         } 
       }[] 
-    }>(query);
+    }>(query, { 
+      boardIds: [parseInt(boardId)], 
+      limit 
+    });
 
     const items = result.boards?.[0]?.items_page?.items || [];
 
@@ -228,8 +233,8 @@ class MondayService {
 
   async getBoardData(boardId: string): Promise<MondayBoardData> {
     const query = `
-      query {
-        boards(ids: [${boardId}]) {
+      query GetBoardData($boardIds: [ID!]!, $limit: Int!) {
+        boards(ids: $boardIds) {
           id
           name
           description
@@ -242,7 +247,7 @@ class MondayService {
             type
             settings_str
           }
-          items_page(limit: 500) {
+          items_page(limit: $limit) {
             items {
               id
               name
@@ -262,7 +267,10 @@ class MondayService {
       }
     `;
 
-    const result = await this.executeQuery<{ boards: any[] }>(query);
+    const result = await this.executeQuery<{ boards: any[] }>(query, { 
+      boardIds: [parseInt(boardId)], 
+      limit: 500 
+    });
     const boardData = result.boards?.[0];
 
     if (!boardData) {

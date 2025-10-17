@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { logger } from '../utils/logger';
+import { withRetry, isRetryableError } from '../utils/retry-helper';
 
 export interface MondayBoard {
   id: string;
@@ -84,44 +85,59 @@ class MondayService {
   }
 
   private async executeQuery<T = any>(query: string, variables?: any): Promise<T> {
-    try {
-      logger.info('Exécution requête Monday.com GraphQL', {
-        service: 'MondayService',
-        metadata: {
-          operation: 'executeQuery',
-          queryLength: query.length,
-          hasVariables: !!variables
-        }
-      });
+    return withRetry(
+      async () => {
+        try {
+          logger.info('Exécution requête Monday.com GraphQL', {
+            service: 'MondayService',
+            metadata: {
+              operation: 'executeQuery',
+              queryLength: query.length,
+              hasVariables: !!variables
+            }
+          });
 
-      const response = await this.client.post('', {
-        query,
-        variables
-      });
+          const response = await this.client.post('', {
+            query,
+            variables
+          });
 
-      if (response.data.errors) {
-        logger.error('Erreurs GraphQL Monday.com', {
-          service: 'MondayService',
-          metadata: {
-            operation: 'executeQuery',
-            errors: response.data.errors
+          if (response.data.errors) {
+            logger.error('Erreurs GraphQL Monday.com', {
+              service: 'MondayService',
+              metadata: {
+                operation: 'executeQuery',
+                errors: response.data.errors
+              }
+            });
+            throw new Error(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors)}`);
           }
-        });
-        throw new Error(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors)}`);
-      }
 
-      return response.data.data as T;
-    } catch (error: any) {
-      logger.error('Erreur requête Monday.com', {
-        service: 'MondayService',
-        metadata: {
-          operation: 'executeQuery',
-          error: error.message,
-          status: error.response?.status
+          return response.data.data as T;
+        } catch (error: any) {
+          logger.error('Erreur requête Monday.com', {
+            service: 'MondayService',
+            metadata: {
+              operation: 'executeQuery',
+              error: error.message,
+              status: error.response?.status
+            }
+          });
+          throw error;
         }
-      });
-      throw error;
-    }
+      },
+      {
+        maxRetries: 3,
+        initialDelay: 1000,
+        retryCondition: (error: any) => {
+          // Retry on network errors, rate limits, and temporary server errors
+          if (error?.code === 'ECONNRESET' || error?.code === 'ETIMEDOUT') return true;
+          if (error?.response?.status === 429) return true; // Rate limit
+          if (error?.response?.status >= 500 && error?.response?.status < 600) return true;
+          return false;
+        }
+      }
+    );
   }
 
   async getBoards(limit: number = 50): Promise<MondayBoard[]> {

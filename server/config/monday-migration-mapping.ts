@@ -5,16 +5,6 @@
  * Basée sur l'analyse du schéma et les patterns identifiés
  */
 
-import type { 
-  AoCategory, 
-  AoOperationalStatus, 
-  ProjectStatus,
-  SupplierStatus,
-  PriorityLevel,
-  ClientRecurrency,
-  Departement
-} from '@shared/schema';
-
 /**
  * Configuration de mapping pour une entité
  */
@@ -22,7 +12,7 @@ export interface EntityMappingConfig {
   boardId?: string; // ID du board Monday.com (à configurer)
   columnMappings: Record<string, string>; // monday_column_id → saxium_field
   enumMappings: Record<string, Record<string, any>>; // field → { MondayValue: saxiumValue }
-  transformations?: Record<string, (value: any) => any>; // Transformations custom
+  transformations?: Record<string, (value: any, item?: any) => any>; // Transformations custom
   requiredFields: string[]; // Champs obligatoires Saxium
   mondayFields: string[]; // Champs Monday.com à préserver
 }
@@ -54,7 +44,6 @@ export const aosMappingConfig: EntityMappingConfig = {
     'text_mksnx1hc': 'description',   // Monday "Texte" → Saxium description
     
     // Extensions Monday.com (colonnes réelles)
-    'color1': 'typeMarche',           // Monday "Type Marché" (status)
     'multiple_person': 'personnes',   // Monday "Personnes" (people) - utilisateurs assignés
     'statut_1': 'statutChiffrage',    // Monday "Chiffrage" (status)
     'statut_16': 'statutDevis',       // Monday "Devis" (status)
@@ -65,37 +54,35 @@ export const aosMappingConfig: EntityMappingConfig = {
   },
 
   enumMappings: {
+    // Valeurs réelles Monday.com analysées (18/10/2025)
     aoCategory: {
-      'MEXT': 'MEXT',
-      'MINT': 'MINT',
-      'HALL': 'HALL',
-      'SERRURERIE': 'SERRURERIE',
-      'BARDAGE': 'BARDAGE',
-      'AUTRE': 'AUTRE'
+      'Menu Ext': 'MEXT',
+      'Menu int': 'MINT',
+      'Mext/Bardage': 'BARDAGE',
+      'Bardage': 'BARDAGE',
+      'Mext/Mint': 'MINT',
+      'TCE': 'AUTRE',
+      'CAPSO': 'AUTRE',
+      'Charpente / Ossature': 'AUTRE',
+      'Etanchéité / Couverture': 'AUTRE',
+      'Parquet': 'AUTRE'
     },
     
     operationalStatus: {
-      'A RELANCER': 'a_relancer',
-      'AO EN COURS': 'en_cours',
-      'EN COURS': 'en_cours',
-      'GAGNE': 'gagne',
-      'PERDU': 'perdu',
-      'ABANDONNE': 'abandonne',
-      'EN ATTENTE': 'en_attente'
+      'A Faire': 'en_attente',
+      'En cours': 'en_cours',
+      'Faite': 'gagne',  // Passation faite = gagné
+      '5': 'en_cours'    // Fallback nombre
     },
 
     priority: {
-      'Très faible': 'tres_faible',
-      'Faible': 'faible',
-      'Normale': 'normale',
-      'Élevée': 'elevee',
-      'Critique': 'critique'
-    },
-
-    clientRecurrency: {
-      'Nouveau client': 'Nouveau client',
-      'Client récurrent': 'Client récurrent',
-      'Client premium': 'Client premium'
+      'Critical ⚠️️': 'critique',
+      'High': 'elevee',
+      'Medium': 'normale',
+      'Low': 'faible',
+      'A confirmer': 'normale',
+      'Plus Tard': 'faible',
+      '5': 'normale'  // Fallback nombre
     }
   },
 
@@ -140,6 +127,42 @@ export const aosMappingConfig: EntityMappingConfig = {
     menuiserieType: (value: string | undefined) => {
       if (value) return value;
       return 'autre'; // Par défaut: autre
+    },
+
+    // DATES: Convertir strings ISO Monday → Date objects Saxium
+    dueDate: (value: any) => {
+      if (!value || value === null) return undefined;
+      if (value instanceof Date) return value;
+      const parsed = new Date(value);
+      return isNaN(parsed.getTime()) ? undefined : parsed;
+    },
+
+    dateButoir: (value: any) => {
+      if (!value || value === null) return undefined;
+      if (value instanceof Date) return value;
+      const parsed = new Date(value);
+      return isNaN(parsed.getTime()) ? undefined : parsed;
+    },
+
+    dateVisite: (value: any) => {
+      if (!value || value === null) return undefined;
+      if (value instanceof Date) return value;
+      const parsed = new Date(value);
+      return isNaN(parsed.getTime()) ? undefined : parsed;
+    },
+
+    dateAccord: (value: any) => {
+      if (!value || value === null) return undefined;
+      if (value instanceof Date) return value;
+      const parsed = new Date(value);
+      return isNaN(parsed.getTime()) ? undefined : parsed;
+    },
+
+    dateDemarrage: (value: any) => {
+      if (!value || value === null) return undefined;
+      if (value instanceof Date) return value;
+      const parsed = new Date(value);
+      return isNaN(parsed.getTime()) ? undefined : parsed;
     }
   },
 

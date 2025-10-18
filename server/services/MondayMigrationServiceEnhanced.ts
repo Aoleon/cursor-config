@@ -502,19 +502,9 @@ export class MondayMigrationServiceEnhanced {
     const values = new Map<string, any>();
 
     for (const columnValue of item.column_values || []) {
-      // Utiliser text si disponible, sinon parser value JSON
-      let value: any = columnValue.text;
-
-      // Pour certains types, parser value JSON
-      if (columnValue.value && columnValue.type === 'dropdown') {
-        try {
-          const parsed = JSON.parse(columnValue.value);
-          value = parsed.labels?.[0] || columnValue.text;
-        } catch {
-          value = columnValue.text;
-        }
-      }
-
+      // Utiliser la méthode extractColumnValue de MondayService
+      // qui gère tous les types Monday (status, dropdown, people, numbers, date, etc.)
+      const value = this.mondayService.extractColumnValue(columnValue);
       values.set(columnValue.id, value);
     }
 

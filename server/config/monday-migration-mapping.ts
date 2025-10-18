@@ -172,59 +172,105 @@ export const aosMappingConfig: EntityMappingConfig = {
 
 /**
  * MAPPING PROJECTS (CHANTIERS)
+ * Board ID: 5296947311 (368 items)
+ * Analysé le 18/10/2025 - Vraies colonnes Monday.com
  */
 export const projectsMappingConfig: EntityMappingConfig = {
-  boardId: process.env.MONDAY_PROJECTS_BOARD_ID || '', // À configurer
+  boardId: '5296947311', // Board Projects Monday.com (368 items)
   
   columnMappings: {
-    // Champs de base
-    'name': 'name',
-    'client': 'client',
-    'location': 'location',
-    'city': 'city',
-    'status': 'status',
-    'start_date': 'startDate',
-    'end_date': 'endDate',
-    'budget': 'budget',
-    'description': 'description',
-    
-    // Extensions Monday.com
-    'site_address': 'siteAddress',
-    'start_planned': 'startDatePlanned',
-    'end_planned': 'endDatePlanned',
-    'contract_amount': 'contractAmount',
-    'lot_count': 'lotCount',
-    'project_subtype': 'projectSubtype',
-    'geographic_zone': 'geographicZone',
-    'building_count': 'buildingCount',
-    'monday_project_id': 'mondayProjectId',
-    'monday_item_id': 'mondayItemId'
+    // Vraies colonnes Monday identifiées
+    'name': 'name',                     // Nom du projet
+    'texte': 'client',                  // MOA → client
+    'dup__of_moa': 'maitreOeuvre',      // MOE → extension
+    'texte1': 'codeChantier',           // Num Chantier
+    'text': 'codeDevis',                // Num Devis (peut servir de reference unique)
+    'label': 'lot',                     // Lot (status) → category
+    'statut3': 'status',                // Etat → status
+    'statut6': 'passation',             // Passation (status) → extension
+    'chiffres': 'budget',               // CA HT → budget
+    'date_mkn1s5d4': 'startDate',       // Date Etude → startDate
+    'person': 'personnes',              // Personne (people)
+    'dup__of_ca_ht': 'nombreHeures',    // Nb Heures
+    'monday_item_id': 'mondayItemId'    // ID item Monday (pour sync)
   },
 
   enumMappings: {
+    // statut3 → status (valeurs réelles analysées)
+    // IMPORTANT: Utilise uniquement les valeurs du projectStatusEnum schema
     status: {
-      'NOUVEAUX': 'passation',
-      'PASSATION': 'passation',
-      'ETUDE': 'etude',
-      'En cours': 'etude',
-      'VISA': 'visa_architecte',
-      'VISA ARCHITECTE': 'visa_architecte',
-      'PLANIFICATION': 'planification',
-      'APPROVISIONNEMENT': 'approvisionnement',
-      'CHANTIER': 'chantier',
-      'SAV': 'sav'
+      'Nouveau': 'passation',
+      'Etude A faire': 'etude',
+      'En cours': 'chantier',       // En production → chantier
+      'Fait': 'chantier',            // Terminé → chantier (projet fini)
+      'Réceptionné': 'sav',          // Livré/Réceptionné → SAV (après livraison)
+      '5': 'chantier'                // Fallback nombre
+    },
+
+    // label → lot (réutiliser mapping AOs)
+    lot: {
+      'Menu Ext': 'MEXT',
+      'Menu int': 'MINT',
+      'Mext/Bardage': 'BARDAGE',
+      'Bardage': 'BARDAGE',
+      'Mext/Mint': 'MINT',
+      'TCE': 'AUTRE',
+      'CAPSO': 'AUTRE',
+      'Charpente / Ossature': 'AUTRE',
+      'Etanchéité / Couverture': 'AUTRE',
+      'Parquet': 'AUTRE'
     }
   },
 
   transformations: {
-    // Calculer endDate si non fourni (startDate + 90 jours par défaut)
-    endDate: (value: Date | undefined, item: any) => {
-      if (value) return value;
-      if (item.startDate) {
-        const start = new Date(item.startDate);
-        return new Date(start.getTime() + 90 * 24 * 60 * 60 * 1000);
+    // CRITIQUE: Transformation du nom (required)
+    name: (value: string | undefined, item: any) => {
+      if (value && value.trim()) return value.trim();
+      
+      // Fallback: utiliser codeDevis ou codeChantier
+      if (item.codeDevis && item.codeDevis.trim()) {
+        return `Projet-${item.codeDevis.trim()}`;
       }
-      return undefined;
+      if (item.codeChantier && item.codeChantier.trim()) {
+        return `Projet-${item.codeChantier.trim()}`;
+      }
+      
+      // Dernier recours: Monday item ID
+      const mondayId = item.mondayItemId || item.id;
+      if (mondayId) {
+        return `Projet-${mondayId}`;
+      }
+      
+      return `Projet-${Date.now().toString().slice(-6)}`;
+    },
+
+    // CRITIQUE: Transformation client (required avec fallback)
+    client: (value: string | undefined, item: any) => {
+      if (value && value.trim()) return value.trim();
+      
+      // Fallback vers maitreOeuvre si MOA vide
+      if (item.maitreOeuvre && item.maitreOeuvre.trim()) {
+        return item.maitreOeuvre.trim();
+      }
+      
+      // Dernier recours: Client inconnu
+      return 'Client inconnu';
+    },
+
+    // CRITIQUE: Transformation location (required avec fallback)
+    location: (value: string | undefined, item: any) => {
+      if (value && value.trim()) return value.trim();
+      
+      // Fallback: location par défaut
+      return 'Non spécifié';
+    },
+
+    // DATES: Convertir strings ISO Monday → Date objects Saxium
+    startDate: (value: any) => {
+      if (!value || value === null) return undefined;
+      if (value instanceof Date) return value;
+      const parsed = new Date(value);
+      return isNaN(parsed.getTime()) ? undefined : parsed;
     }
   },
 

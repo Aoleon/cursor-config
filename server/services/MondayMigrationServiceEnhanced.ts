@@ -10,7 +10,7 @@
  */
 
 import { MondayService, type MondayItem, type MondayColumnValue } from './MondayService';
-import { IStorage } from '../storage-poc';
+import { IMigrationStorage } from '../storage-migration';
 import { logger } from '../utils/logger';
 import { withRetry } from '../utils/retry-helper';
 import { 
@@ -79,7 +79,7 @@ export interface MigrationReport {
 export class MondayMigrationServiceEnhanced {
   private mondayService: MondayService;
 
-  constructor(private storage: IStorage) {
+  constructor(private storage: IMigrationStorage) {
     this.mondayService = new MondayService();
   }
 
@@ -565,7 +565,7 @@ export class MondayMigrationServiceEnhanced {
 // Export singleton
 let enhancedService: MondayMigrationServiceEnhanced | null = null;
 
-export function getMondayMigrationServiceEnhanced(storage: IStorage): MondayMigrationServiceEnhanced {
+export function getMondayMigrationServiceEnhanced(storage: IMigrationStorage): MondayMigrationServiceEnhanced {
   if (!enhancedService) {
     enhancedService = new MondayMigrationServiceEnhanced(storage);
   }

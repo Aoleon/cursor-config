@@ -74,6 +74,27 @@ The application features a modern fullstack architecture.
   - SyncStatusBadge component (5 états : synced, syncing, error, conflict, notSynced) avec fallback "Not synced" si status undefined, icons Lucide, tooltip, data-testid
   - useMondaySync hook for WebSocket events, toast notifications, React Query cache invalidation
   - Integration in projects.tsx and unified-offers-display.tsx (AOs/Offers/Dashboard) with 30s refetch polling + real-time WebSocket updates
+- **Monday.com Historical Data Migration** (Completed 18/10/2025): One-time import of all historical Monday data into Saxium
+  - **Infrastructure**: `MondaySchemaAnalyzer`, `MondayMigrationServiceEnhanced` with cursor-based pagination (500 items/page), `monday-migration-mapping.ts` config
+  - **CLI Tool**: `server/scripts/migrate-from-monday.ts` with options: `--entity` (aos/projects), `--dry-run`, `--verbose`, `--limit`, `--offset`
+  - **Board Configuration**:
+    - AOs (Appels d'Offres): Board ID `3946257560` (827 items)
+    - Projects (Chantiers): Board ID `5296947311` (368 items)
+  - **Migration Results** (Production execution 18/10/2025):
+    - **827/827 AOs** imported successfully (100%) in 52.51s
+    - **368/368 Projects** imported successfully (100%) in 54.63s
+    - **Total: 1195/1195 items** (100% success rate)
+  - **Reference Format**: Uses Monday native IDs (`AO-18072968632`, `Projet-7833135734`) for guaranteed uniqueness
+  - **mondayItemId Preservation**: All migrated items store original Monday ID in `mondayItemId` field for bidirectional sync
+  - **Column Mappings AOs**: `text7`→client (MOA), `lot`→aoCategory, `color2`→operationalStatus, `priority__1`→priority, `numeric`→amountEstimate, etc.
+  - **Column Mappings Projects**: `texte`→client (MOA), `statut3`→status, `label`→lot, `chiffres`→budget, `date_mkn1s5d4`→startDate, etc.
+  - **Enum Alignments**: Monday values mapped to Saxium schema (e.g., "Menu Ext"→MEXT, "Menu Int"→MINT, "High"→elevee, "Nouveau"→planification)
+  - **Performance Optimization**: Batch parallel inserts (20 items/batch via Promise.allSettled) reduced time from >10min to ~1min per entity
+  - **Critical Fixes Applied**:
+    - Removed non-existent `monday_item_id` column mapping
+    - Modified `transformItem()` to preserve Monday native ID (`item.id`) before column mapping
+    - Reference transformation uses mondayItemId for uniqueness (avoided 35 duplicate names in Monday)
+  - **Future Cleanup**: If mondayItemId sync no longer needed, run `UPDATE aos SET monday_item_id = NULL; UPDATE projects SET monday_item_id = NULL;`
 - **Draft System**: Allows users to save incomplete forms (Appel d'Offres) with conditional backend validation and frontend support.
 - **Technical Alerts & Toast Deduplication**: Consolidated OCR technical alerts and implemented a robust real-time event deduplication system for notifications using `sessionStorage` persistence.
 - **OCR Lot Extraction**: Enhanced regex patterns in `server/ocrService.ts` to support Unicode characters in French AO lot formats.

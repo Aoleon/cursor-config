@@ -194,19 +194,21 @@ export const projectsMappingConfig: EntityMappingConfig = {
   enumMappings: {
     // statut3 → status (valeurs réelles analysées)
     // IMPORTANT: Utilise uniquement les valeurs du projectStatusEnum schema
+    // Valid values: etude, planification, approvisionnement, chantier, sav
     status: {
-      'Nouveau': 'passation',
+      'Nouveau': 'planification',    // Nouveau projet → planification
       'Etude A faire': 'etude',
-      'En cours': 'chantier',       // En production → chantier
-      'Fait': 'chantier',            // Terminé → chantier (projet fini)
-      'Réceptionné': 'sav',          // Livré/Réceptionné → SAV (après livraison)
-      '5': 'chantier'                // Fallback nombre
+      'En cours': 'chantier',        // En production → chantier
+      'Fait': 'chantier',             // Terminé → chantier (projet fini)
+      'Réceptionné': 'sav',           // Livré/Réceptionné → SAV (après livraison)
+      '5': 'chantier'                 // Fallback nombre
     },
 
     // label → lot (réutiliser mapping AOs)
     lot: {
       'Menu Ext': 'MEXT',
       'Menu int': 'MINT',
+      'Menu Int': 'MINT',  // Support uppercase 'I' variant
       'Mext/Bardage': 'BARDAGE',
       'Bardage': 'BARDAGE',
       'Mext/Mint': 'MINT',

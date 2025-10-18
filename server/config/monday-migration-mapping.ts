@@ -31,30 +31,37 @@ export interface EntityMappingConfig {
  * MAPPING AOS (APPELS D'OFFRES)
  */
 export const aosMappingConfig: EntityMappingConfig = {
-  boardId: process.env.MONDAY_AO_BOARD_ID || '', // À configurer
+  boardId: '3946257560', // Board AO Monday.com (analysé le 18/10/2025)
   
   columnMappings: {
-    // Mappings de base - CRITIQUES pour required fields
-    'name': 'reference',          // Monday name → Saxium reference (avec transformation si vide)
-    'client': 'client',           // Monday client → Saxium client (CORRIGÉ)
-    'client_name': 'clientName',  // Monday client_name → Saxium clientName (extension)
-    'city': 'city',
-    'location': 'location',
-    'category': 'aoCategory',
-    'status': 'operationalStatus',
-    'priority': 'priority',
-    'amount': 'amountEstimate',
-    'due_date': 'dueDate',
-    'description': 'description',
-    'tags': 'tags',
-    'intitule': 'intituleOperation', // Monday intitule → Saxium intituleOperation
+    // Mappings de base - COLONNES RÉELLES BOARD AO (ID: 3946257560)
+    'name': 'reference',              // Monday name → Saxium reference (transformation avec mondayItemId si vide)
+    'text7': 'client',                // Monday "MOA" (Maître d'Ouvrage) → Saxium client
+    'text9': 'maitreOeuvre',          // Monday "MOE" (Maître d'Œuvre) → extension Saxium
+    'location': 'location',           // Monday "Lieu" → Saxium location
+    'lot': 'aoCategory',              // Monday "LOT" (status) → Saxium aoCategory
+    'color2': 'operationalStatus',    // Monday "Passation" (status) → Saxium operationalStatus
+    'priority__1': 'priority',        // Monday "Priority" (status) → Saxium priority
+    'numeric': 'amountEstimate',      // Monday "CA HT" → Saxium amountEstimate
+    'date24': 'dueDate',              // Monday "Rendu" → Saxium dueDate
+    'date': 'dateButoir',             // Monday "Bouclage AO" → extension Saxium
+    'date8': 'dateVisite',            // Monday "Visite de site" → extension Saxium
+    'text0': 'codeDevis',             // Monday "Code Devis" → extension Saxium
+    'texte0': 'codeChantier',         // Monday "Code chantier" → extension Saxium
+    'label': 'anneeProduction',       // Monday "Année Prod" → extension Saxium
+    'chiffres': 'ds',                 // Monday "DS" → extension Saxium
+    'numeric3': 'nombreHeures',       // Monday "Nombre heures" → extension Saxium
+    'text_mksnx1hc': 'description',   // Monday "Texte" → Saxium description
     
-    // Extensions Monday.com
-    'project_size': 'projectSize',
-    'specific_location': 'specificLocation',
-    'estimated_delay': 'estimatedDelay',
-    'client_type': 'clientRecurrency',
-    'monday_item_id': 'mondayItemId'
+    // Extensions Monday.com (colonnes réelles)
+    'color1': 'typeMarche',           // Monday "Type Marché" (status)
+    'multiple_person': 'personnes',   // Monday "Personnes" (people) - utilisateurs assignés
+    'statut_1': 'statutChiffrage',    // Monday "Chiffrage" (status)
+    'statut_16': 'statutDevis',       // Monday "Devis" (status)
+    'statut_1__1': 'demandePrix',     // Monday "Demande de prix" (status)
+    'date__1': 'dateAccord',          // Monday "Date Accord"
+    'date_mknxpk8d': 'dateDemarrage', // Monday "Démarrage"
+    'monday_item_id': 'mondayItemId'  // ID item Monday (pour sync)
   },
 
   enumMappings: {
@@ -93,40 +100,40 @@ export const aosMappingConfig: EntityMappingConfig = {
   },
 
   transformations: {
-    // Transformation date estimatedDelay format "->DD/MM/YY"
-    estimatedDelay: (value: string | undefined) => {
-      if (!value) return undefined;
+    // CRITIQUE: Générer référence unique basée sur Monday item ID
+    // Stratégie: name si présent, sinon "AO-{mondayItemId}" pour garantir unicité
+    reference: (value: string | undefined, item: any) => {
+      if (value && value.trim()) return value.trim();
       
-      // Format Monday.com: "->01/10/25"
-      const match = value.match(/->(\d{2})\/(\d{2})\/(\d{2})/);
-      if (match) {
-        const [, day, month, year] = match;
-        const fullYear = parseInt(year) + 2000;
-        return new Date(`${fullYear}-${month}-${day}`);
+      // Utiliser Monday item ID pour garantir unicité
+      const mondayId = item.mondayItemId || item.id;
+      if (mondayId) {
+        return `AO-${mondayId}`;
       }
       
-      return undefined;
-    },
-
-    // CRITIQUE: Générer référence unique si non fournie
-    reference: (value: string | undefined, item: any) => {
-      if (value) return value;
+      // Fallback: timestamp (peu probable)
       const timestamp = Date.now().toString().slice(-6);
-      const category = item.aoCategory || 'AO';
-      return `${category}-${timestamp}`;
+      return `AO-${timestamp}`;
     },
 
-    // CRITIQUE: Valeur par défaut pour client si non fourni
+    // CRITIQUE: Extraire client depuis text7 (MOA - Maître d'Ouvrage)
+    // Si vide, fallback vers "Client inconnu"
     client: (value: string | undefined, item: any) => {
-      if (value) return value;
-      // Fallback vers clientName si client vide
-      return item.clientName || 'Client inconnu';
+      if (value && value.trim()) return value.trim();
+      
+      // Fallback vers maitreOeuvre si MOA vide
+      if (item.maitreOeuvre && item.maitreOeuvre.trim()) {
+        return item.maitreOeuvre.trim();
+      }
+      
+      // Dernier recours: Client inconnu
+      return 'Client inconnu';
     },
 
     // CRITIQUE: Valeur par défaut pour source (required dans schéma)
     source: (value: string | undefined) => {
       if (value) return value;
-      return 'website'; // Par défaut: website
+      return 'website'; // Par défaut: website (AO vient souvent du site)
     },
 
     // CRITIQUE: Valeur par défaut pour menuiserieType (required dans schéma)

@@ -604,5 +604,6 @@ class MondayService {
   }
 }
 
-// Singleton instance
+// Export class and singleton instance
+export { MondayService };
 export const mondayService = new MondayService();

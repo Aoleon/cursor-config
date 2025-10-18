@@ -277,6 +277,132 @@ class MondayService {
     return items;
   }
 
+  /**
+   * NOUVELLE MÉTHODE - Récupère TOUS les items d'un board avec pagination par curseur
+   * Gère la pagination Monday.com correctement avec items_page.cursor
+   */
+  async getBoardItemsPaginated(boardId: string, limit: number = 500): Promise<MondayItem[]> {
+    const allItems: MondayItem[] = [];
+    let cursor: string | null = null;
+    let hasMore = true;
+    let pageCount = 0;
+
+    logger.info('Démarrage pagination Monday.com', {
+      service: 'MondayService',
+      metadata: {
+        operation: 'getBoardItemsPaginated',
+        boardId,
+        limit
+      }
+    });
+
+    while (hasMore) {
+      const query = `
+        query GetBoardItemsPaginated($boardIds: [ID!]!, $limit: Int!, $cursor: String) {
+          boards(ids: $boardIds) {
+            items_page(limit: $limit, cursor: $cursor) {
+              cursor
+              items {
+                id
+                name
+                column_values {
+                  id
+                  type
+                  text
+                  value
+                }
+                group {
+                  id
+                  title
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result: { 
+        boards: { 
+          items_page: { 
+            items: MondayItem[];
+            cursor: string | null;
+          } 
+        }[] 
+      } = await this.executeQuery<{ 
+        boards: { 
+          items_page: { 
+            items: MondayItem[];
+            cursor: string | null;
+          } 
+        }[] 
+      }>(query, { 
+        boardIds: [parseInt(boardId)], 
+        limit,
+        cursor 
+      });
+
+      const itemsPage: { items: MondayItem[]; cursor: string | null } | undefined = result.boards?.[0]?.items_page;
+      
+      if (!itemsPage) {
+        logger.warn('Aucune page items_page trouvée', {
+          service: 'MondayService',
+          metadata: {
+            operation: 'getBoardItemsPaginated',
+            boardId,
+            pageCount
+          }
+        });
+        break;
+      }
+
+      const items = itemsPage.items || [];
+      allItems.push(...items);
+      pageCount++;
+
+      // Vérifier si il y a une autre page
+      cursor = itemsPage.cursor;
+      hasMore = cursor !== null && cursor !== undefined && cursor !== '';
+
+      logger.debug('Page récupérée', {
+        service: 'MondayService',
+        metadata: {
+          operation: 'getBoardItemsPaginated',
+          pageCount,
+          itemsInPage: items.length,
+          totalSoFar: allItems.length,
+          hasMore,
+          nextCursor: cursor ? cursor.substring(0, 20) + '...' : null
+        }
+      });
+
+      // Sécurité: éviter boucle infinie
+      if (pageCount > 100) {
+        logger.error('Trop de pages, arrêt de la pagination', {
+          service: 'MondayService',
+          metadata: {
+            operation: 'getBoardItemsPaginated',
+            boardId,
+            pageCount,
+            totalItems: allItems.length
+          }
+        });
+        break;
+      }
+    }
+
+    logger.info('Pagination terminée', {
+      service: 'MondayService',
+      metadata: {
+        operation: 'getBoardItemsPaginated',
+        boardId,
+        totalItems: allItems.length,
+        totalPages: pageCount
+      }
+    });
+
+    return allItems;
+  }
+
   async getBoardData(boardId: string): Promise<MondayBoardData> {
     const cacheService = getCacheService();
     const cacheKey = cacheService.buildKey('monday', 'board', { boardId });
@@ -294,8 +420,9 @@ class MondayService {
       return cached;
     }
 
+    // Récupérer les métadonnées du board
     const query = `
-      query GetBoardData($boardIds: [ID!]!, $limit: Int!) {
+      query GetBoardMetadata($boardIds: [ID!]!) {
         boards(ids: $boardIds) {
           id
           name
@@ -309,35 +436,21 @@ class MondayService {
             type
             settings_str
           }
-          items_page(limit: $limit) {
-            items {
-              id
-              name
-              column_values {
-                id
-                type
-                text
-                value
-              }
-              group {
-                id
-                title
-              }
-            }
-          }
         }
       }
     `;
 
     const result = await this.executeQuery<{ boards: any[] }>(query, { 
-      boardIds: [parseInt(boardId)], 
-      limit: 500 
+      boardIds: [parseInt(boardId)]
     });
     const boardData = result.boards?.[0];
 
     if (!boardData) {
       throw new Error(`Board ${boardId} not found`);
     }
+
+    // Récupérer TOUS les items avec pagination
+    const items = await this.getBoardItemsPaginated(boardId);
 
     const response: MondayBoardData = {
       board: {
@@ -349,7 +462,7 @@ class MondayService {
         workspace_id: boardData.workspace_id
       },
       columns: boardData.columns || [],
-      items: boardData.items_page?.items || []
+      items: items
     };
 
     await cacheService.set(cacheKey, response, TTL_CONFIG.MONDAY_BOARD_DETAIL);

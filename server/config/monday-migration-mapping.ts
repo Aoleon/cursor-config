@@ -49,8 +49,7 @@ export const aosMappingConfig: EntityMappingConfig = {
     'statut_16': 'statutDevis',       // Monday "Devis" (status)
     'statut_1__1': 'demandePrix',     // Monday "Demande de prix" (status)
     'date__1': 'dateAccord',          // Monday "Date Accord"
-    'date_mknxpk8d': 'dateDemarrage', // Monday "Démarrage"
-    'monday_item_id': 'mondayItemId'  // ID item Monday (pour sync)
+    'date_mknxpk8d': 'dateDemarrage'  // Monday "Démarrage"
   },
 
   enumMappings: {
@@ -88,17 +87,15 @@ export const aosMappingConfig: EntityMappingConfig = {
 
   transformations: {
     // CRITIQUE: Générer référence unique basée sur Monday item ID
-    // Stratégie: name si présent, sinon "AO-{mondayItemId}" pour garantir unicité
+    // TOUJOURS utiliser mondayItemId pour éviter doublons (35 noms dupliqués dans Monday)
     reference: (value: string | undefined, item: any) => {
-      if (value && value.trim()) return value.trim();
-      
-      // Utiliser Monday item ID pour garantir unicité
+      // TOUJOURS utiliser Monday item ID pour garantir unicité
       const mondayId = item.mondayItemId || item.id;
       if (mondayId) {
         return `AO-${mondayId}`;
       }
       
-      // Fallback: timestamp (peu probable)
+      // Fallback: timestamp (peu probable si item Monday valide)
       const timestamp = Date.now().toString().slice(-6);
       return `AO-${timestamp}`;
     },
@@ -191,8 +188,7 @@ export const projectsMappingConfig: EntityMappingConfig = {
     'chiffres': 'budget',               // CA HT → budget
     'date_mkn1s5d4': 'startDate',       // Date Etude → startDate
     'person': 'personnes',              // Personne (people)
-    'dup__of_ca_ht': 'nombreHeures',    // Nb Heures
-    'monday_item_id': 'mondayItemId'    // ID item Monday (pour sync)
+    'dup__of_ca_ht': 'nombreHeures'     // Nb Heures
   },
 
   enumMappings: {

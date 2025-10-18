@@ -301,6 +301,14 @@ export class MondayMigrationServiceEnhanced {
     const config = getMappingConfig(entityType);
     const transformed: any = {};
 
+    // CRITIQUE: Préserver Monday item ID natif AVANT mapping pour transformations
+    // L'ID Monday natif (ex: 18115615455) doit être disponible pour les transformations
+    const originalMondayId = item.id;
+    
+    // CRITIQUE: Ajouter mondayItemId AVANT le mapping des colonnes
+    // Permet aux transformations (comme reference) d'utiliser mondayItemId
+    transformed.mondayItemId = originalMondayId;
+
     // Extraire valeurs des colonnes Monday
     const columnValues = this.extractColumnValues(item);
 
@@ -336,9 +344,6 @@ export class MondayMigrationServiceEnhanced {
 
     // Ajouter champs Monday pour traçabilité
     for (const mondayField of config.mondayFields) {
-      if (mondayField === 'mondayItemId') {
-        transformed.mondayItemId = item.id;
-      }
       if (mondayField === 'mondayId') {
         transformed.mondayId = item.id; // Monday item ID
       }
@@ -387,8 +392,9 @@ export class MondayMigrationServiceEnhanced {
   }
 
   /**
-   * BULK INSERT avec gestion doublons
+   * BULK INSERT avec gestion doublons - OPTIMISÉ AVEC BATCHES PARALLÈLES
    * Skip items si mondayId existe déjà
+   * Utilise Promise.allSettled pour traiter 20 items en parallèle par batch
    */
   async bulkInsert(
     items: any[],
@@ -405,7 +411,7 @@ export class MondayMigrationServiceEnhanced {
     skippedDetails: Array<{ mondayId: string; reason: string }>;
     errors: Array<{ mondayId: string; error: string }>;
   }> {
-    const batchSize = options.batchSize || 100;
+    const PARALLEL_BATCH_SIZE = 20; // Process 20 items in parallel per batch
     const result = {
       inserted: 0,
       skipped: 0,
@@ -414,46 +420,74 @@ export class MondayMigrationServiceEnhanced {
       errors: [] as Array<{ mondayId: string; error: string }>
     };
 
-    logger.info('Démarrage bulk insert', {
+    logger.info('Démarrage bulk insert (parallel batches)', {
       metadata: {
         service: 'MondayMigrationServiceEnhanced',
         operation: 'bulkInsert',
         totalItems: items.length,
-        batchSize,
+        parallelBatchSize: PARALLEL_BATCH_SIZE,
         skipExisting: options.skipExisting
       }
     });
 
-    // Traiter par batches
-    for (let i = 0; i < items.length; i += batchSize) {
-      const batch = items.slice(i, i + batchSize);
+    const totalBatches = Math.ceil(items.length / PARALLEL_BATCH_SIZE);
+    let batchNumber = 0;
 
-      for (const item of batch) {
-        try {
-          // Vérifier doublon si skip activé
+    // Traiter par batches parallèles
+    for (let i = 0; i < items.length; i += PARALLEL_BATCH_SIZE) {
+      batchNumber++;
+      const batch = items.slice(i, i + PARALLEL_BATCH_SIZE);
+
+      // Process batch items in parallel using Promise.allSettled
+      const results = await Promise.allSettled(
+        batch.map(async (item) => {
+          // Check for duplicates if skip enabled
           if (options.skipExisting && item.mondayId) {
             const exists = await this.checkIfExists(item.mondayId, entityType);
             
             if (exists) {
-              result.skipped++;
-              result.skippedDetails.push({
+              return {
+                status: 'skipped' as const,
                 mondayId: item.mondayId,
                 reason: 'Already exists in database'
-              });
-              continue;
+              };
             }
           }
 
-          // Insérer via storage interface
+          // Insert via storage interface
           const created = await this.insertEntity(item, entityType);
-          
-          result.inserted++;
-          result.successful.push(created.id);
+          return {
+            status: 'inserted' as const,
+            id: created.id,
+            mondayId: item.mondayId
+          };
+        })
+      );
 
-        } catch (error) {
+      // Process settled results
+      for (let j = 0; j < results.length; j++) {
+        const settledResult = results[j];
+        const item = batch[j];
+
+        if (settledResult.status === 'fulfilled') {
+          const value = settledResult.value;
+          if (value.status === 'skipped') {
+            result.skipped++;
+            result.skippedDetails.push({
+              mondayId: value.mondayId,
+              reason: value.reason
+            });
+          } else if (value.status === 'inserted') {
+            result.inserted++;
+            result.successful.push(value.id);
+          }
+        } else {
+          // Rejected promise = error
           result.errors.push({
             mondayId: item.mondayId || 'unknown',
-            error: error instanceof Error ? error.message : String(error)
+            error: settledResult.reason instanceof Error 
+              ? settledResult.reason.message 
+              : String(settledResult.reason)
           });
 
           if (options.verbose) {
@@ -462,22 +496,31 @@ export class MondayMigrationServiceEnhanced {
                 service: 'MondayMigrationServiceEnhanced',
                 operation: 'bulkInsert',
                 mondayId: item.mondayId,
-                error: error instanceof Error ? error.message : String(error)
+                error: settledResult.reason instanceof Error 
+                  ? settledResult.reason.message 
+                  : String(settledResult.reason)
               }
             });
           }
         }
       }
 
-      // Log progression
-      logger.info('Batch progression', {
+      // Progress logging with percentage
+      const processedSoFar = Math.min(i + PARALLEL_BATCH_SIZE, items.length);
+      const percentage = ((processedSoFar / items.length) * 100).toFixed(1);
+
+      logger.info(`Batch ${batchNumber}/${totalBatches}: ${processedSoFar}/${items.length} items (${percentage}%)`, {
         metadata: {
           service: 'MondayMigrationServiceEnhanced',
           operation: 'bulkInsert',
-          progress: Math.min(i + batchSize, items.length),
+          batchNumber,
+          totalBatches,
+          processedSoFar,
           total: items.length,
+          percentage,
           inserted: result.inserted,
-          skipped: result.skipped
+          skipped: result.skipped,
+          errors: result.errors.length
         }
       });
     }

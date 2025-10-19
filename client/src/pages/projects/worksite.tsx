@@ -56,7 +56,8 @@ export default function ProjectWorksite() {
     queryFn: async () => {
       const response = await fetch("/api/tasks/all");
       if (!response.ok) throw new Error("Failed to fetch project tasks");
-      return response.json();
+      const result = await response.json();
+      return Array.isArray(result) ? result : (result?.data || []);
     },
   });
 
@@ -66,7 +67,8 @@ export default function ProjectWorksite() {
     queryFn: async () => {
       const response = await fetch("/api/teams");
       if (!response.ok) throw new Error("Failed to fetch teams");
-      return response.json();
+      const result = await response.json();
+      return Array.isArray(result) ? result : (result?.data || []);
     },
   });
 

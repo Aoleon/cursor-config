@@ -67,7 +67,8 @@ export default function ProjectSupport() {
     queryFn: async () => {
       const response = await fetch("/api/support-tickets");
       if (!response.ok) throw new Error("Failed to fetch support tickets");
-      return response.json();
+      const result = await response.json();
+      return Array.isArray(result) ? result : (result?.data || []);
     },
   });
 

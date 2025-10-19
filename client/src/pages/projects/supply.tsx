@@ -55,7 +55,8 @@ export default function ProjectSupply() {
     queryFn: async () => {
       const response = await fetch("/api/supplier-requests");
       if (!response.ok) throw new Error("Failed to fetch supplier requests");
-      return response.json();
+      const result = await response.json();
+      return result?.data || [];
     },
   });
 

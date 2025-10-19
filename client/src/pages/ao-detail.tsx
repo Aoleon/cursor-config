@@ -173,7 +173,8 @@ export default function AoDetail() {
     queryFn: async () => {
       const response = await fetch(`/api/aos/${id}/lots`);
       if (!response.ok) throw new Error('Failed to fetch AO lots');
-      return response.json();
+      const result = await response.json();
+      return Array.isArray(result) ? result : (result?.data || []);
     },
     enabled: !!id,
   });

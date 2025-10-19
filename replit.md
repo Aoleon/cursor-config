@@ -30,6 +30,11 @@ The application features a modern fullstack architecture.
 - **API Response Handling**: Centralized `normalizeApiResponse<T>()` helper ensures consistent and type-safe handling of all API responses.
   - **Frontend Pattern**: All `useQuery` hooks must extract `.data` from API responses: `const result = await response.json(); return result?.data || [];`
   - **Backend Validation**: All search parameters validated with `typeof search === 'string'` before calling `.toLowerCase()` (5 occurrences fixed in `storage-poc.ts` and `routes-poc.ts`)
+  - **Navigation Alignment (19/10/2025)**: Fixed UI navigation to display 1195 Monday items correctly:
+    - `/workflow/etude-technique`: Displays Monday AOs in status "nouveau" via `/api/aos?status=nouveau` with mutation to `/api/aos/:id/validate-etude`
+    - `/dashboard`: "AOs Récents" section displays Monday AOs via `/api/aos`
+    - `/aos` redirect: Changed from `/workflow/etude-technique` → `/offers` (which displays all 827 Monday AOs)
+    - All project phase pages verified correct: use `/api/projects` with appropriate status filters
 - **Testing Infrastructure**: Includes Vitest for unit tests and Playwright for E2E regression tests.
   - **E2E Workflow Tests**: Comprehensive Playwright tests for critical workflows:
     - `ao-complete.spec.ts`: AO creation → OCR → lots extraction → supplier workflow (100% UI-driven)

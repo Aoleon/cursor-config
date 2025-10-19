@@ -34,16 +34,34 @@ export default function ProjectPlanningPage() {
   // Récupérer toutes les tâches pour les jalons
   const { data: allTasks = [], isLoading: tasksLoading } = useQuery<ProjectTask[]>({
     queryKey: ['/api', 'tasks', 'all'],
+    queryFn: async () => {
+      const response = await fetch('/api/tasks/all');
+      if (!response.ok) throw new Error('Failed to fetch tasks');
+      const result = await response.json();
+      return result?.data || [];
+    },
   });
 
   // Récupérer les priorités pour les alertes
   const { data: priorities = [] } = useQuery<PriorityItem[]>({
     queryKey: ['/api', 'priorities'],
+    queryFn: async () => {
+      const response = await fetch('/api/priorities');
+      if (!response.ok) throw new Error('Failed to fetch priorities');
+      const result = await response.json();
+      return result?.data || [];
+    },
   });
 
   // Récupérer les alertes critiques
   const { data: criticalAlerts = [] } = useQuery<CriticalAlert[]>({
     queryKey: ['/api', 'priorities', 'alerts'],
+    queryFn: async () => {
+      const response = await fetch('/api/priorities/alerts');
+      if (!response.ok) throw new Error('Failed to fetch critical alerts');
+      const result = await response.json();
+      return result?.data || [];
+    },
   });
 
   // Mutation pour mettre à jour les dates des projets

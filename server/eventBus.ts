@@ -395,7 +395,7 @@ export class EventBus extends EventEmitter {
     metadata?: Record<string, any>;
   }): void {
     const event = createRealtimeEvent({
-      type: EventType.TECHNICAL_ALERT,
+      type: EventTypeEnum.TECHNICAL_ALERT,
       entity: 'technical',
       entityId: params.alertId,
       severity: params.action === 'bypassed' ? 'warning' : 'success',
@@ -423,7 +423,7 @@ export class EventBus extends EventEmitter {
     assignedToUserId?: string;
   }): void {
     const event = createRealtimeEvent({
-      type: EventType.TECHNICAL_ALERT,
+      type: EventTypeEnum.TECHNICAL_ALERT,
       entity: 'technical',
       entityId: params.alertId,
       severity: 'warning',
@@ -1321,7 +1321,7 @@ export class EventBus extends EventEmitter {
     };
   }): void {
     const event = createRealtimeEvent({
-      type: EventType.SYSTEM_MAINTENANCE, // Utiliser le type système existant pour escalade
+      type: EventTypeEnum.SYSTEM_MAINTENANCE, // Utiliser le type système existant pour escalade
       entity: params.entity,
       entityId: params.entityId,
       severity: 'error',
@@ -1355,7 +1355,7 @@ export class EventBus extends EventEmitter {
     const severityMap = { minor: 'info' as const, major: 'warning' as const, critical: 'error' as const };
     
     const event = createRealtimeEvent({
-      type: EventType.DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED,
+      type: EventTypeEnum.DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED,
       entity: 'date_intelligence',
       entityId: params.conflictId,
       severity: severityMap[params.severity],
@@ -1389,7 +1389,7 @@ export class EventBus extends EventEmitter {
     feasibility: 'high' | 'medium' | 'low';
   }): void {
     const event = createRealtimeEvent({
-      type: EventType.DATE_INTELLIGENCE_ALERT_CREATED,
+      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
       entity: 'date_intelligence',
       entityId: params.opportunityId,
       severity: 'info',
@@ -1426,7 +1426,7 @@ export class EventBus extends EventEmitter {
     const riskIcons = { low: '🟡', medium: '🟠', high: '🔴' };
     
     const event = createRealtimeEvent({
-      type: EventType.DATE_INTELLIGENCE_ALERT_CREATED,
+      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
       entity: 'date_intelligence',
       entityId: params.riskId,
       severity: severityMap[params.riskLevel],
@@ -1468,7 +1468,7 @@ export class EventBus extends EventEmitter {
                        params.daysRemaining <= 3 ? '⏰' : '📅';
     
     const event = createRealtimeEvent({
-      type: EventType.DATE_INTELLIGENCE_ALERT_CREATED,
+      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
       entity: 'date_intelligence',
       entityId: params.deadlineId,
       severity,

@@ -33,9 +33,9 @@ export default function SupplierRequests() {
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
-        const data = await response.json();
-        console.log("✅ Données reçues:", data?.length, "demandes fournisseurs");
-        return data || [];
+        const result = await response.json();
+        console.log("✅ Données reçues:", result?.data?.length, "demandes fournisseurs");
+        return result.data || [];
       } catch (err) {
         console.error("❌ Erreur lors de la récupération des demandes:", err);
         throw err;

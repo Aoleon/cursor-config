@@ -28,6 +28,8 @@ The application features a modern fullstack architecture.
 - **Error Handling**: A unified system utilizing `error-handler.ts`, `logger.ts`, and `errorHandler.ts` middleware provides typed errors.
 - **Business Services**: Includes `DateIntelligenceService` for intelligent project planning, `OCRService` for text extraction, `AIService` for structured quote analysis, and an `EventBus` for inter-service coordination.
 - **API Response Handling**: Centralized `normalizeApiResponse<T>()` helper ensures consistent and type-safe handling of all API responses.
+  - **Frontend Pattern**: All `useQuery` hooks must extract `.data` from API responses: `const result = await response.json(); return result?.data || [];`
+  - **Backend Validation**: All search parameters validated with `typeof search === 'string'` before calling `.toLowerCase()` (5 occurrences fixed in `storage-poc.ts` and `routes-poc.ts`)
 - **Testing Infrastructure**: Includes Vitest for unit tests and Playwright for E2E regression tests.
   - **E2E Workflow Tests**: Comprehensive Playwright tests for critical workflows:
     - `ao-complete.spec.ts`: AO creation → OCR → lots extraction → supplier workflow (100% UI-driven)

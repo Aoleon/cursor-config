@@ -8177,7 +8177,7 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
           aosData = aosData.filter(ao => ao.mondayItemId);
           
           // Appliquer recherche si fournie
-          if (search) {
+          if (search && typeof search === 'string') {
             aosData = aosData.filter(ao => 
               ao.client?.toLowerCase().includes(search.toLowerCase()) ||
               ao.city?.toLowerCase().includes(search.toLowerCase()) ||
@@ -8219,7 +8219,7 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
           projectsData = projectsData.filter(project => project.mondayProjectId);
           
           // Appliquer recherche si fournie
-          if (search) {
+          if (search && typeof search === 'string') {
             projectsData = projectsData.filter(project => 
               project.name?.toLowerCase().includes(search.toLowerCase()) ||
               project.client?.toLowerCase().includes(search.toLowerCase()) ||
@@ -8265,7 +8265,7 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
           );
           
           // Appliquer recherche si fournie
-          if (search) {
+          if (search && typeof search === 'string') {
             usersData = usersData.filter(user => 
               user.firstName?.toLowerCase().includes(search.toLowerCase()) ||
               user.lastName?.toLowerCase().includes(search.toLowerCase()) ||

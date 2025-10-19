@@ -1030,7 +1030,7 @@ export class DatabaseStorage implements IStorage {
     let filteredProjects = baseProjects;
     
     // Filtrage par recherche si fournie
-    if (search) {
+    if (search && typeof search === 'string') {
       const searchLower = search.toLowerCase();
       filteredProjects = baseProjects.filter(project =>
         project.name?.toLowerCase().includes(searchLower) ||
@@ -4428,7 +4428,7 @@ export class MemStorage implements IStorage {
     let suppliers = Array.from(this.suppliers.values());
     
     // Filtrage par recherche (nom)
-    if (search) {
+    if (search && typeof search === 'string') {
       const searchLower = search.toLowerCase();
       suppliers = suppliers.filter(supplier => 
         supplier.name.toLowerCase().includes(searchLower)

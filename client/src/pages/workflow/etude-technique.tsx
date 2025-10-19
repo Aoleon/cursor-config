@@ -23,44 +23,41 @@ export default function EtudeTechnique() {
   const queryClient = useQueryClient();
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
 
-  // Récupérer les Offers en étude technique
+  // Récupérer les AOs Monday en statut "nouveau" (étude technique)
   const { data: offers, isLoading, error } = useQuery({
-    queryKey: ["/api/offers", { status: "etude_technique" }],
+    queryKey: ["/api/aos", { status: "nouveau" }],
     queryFn: async () => {
-      const response = await fetch("/api/offers?status=etude_technique");
+      const response = await fetch("/api/aos?status=nouveau");
       if (!response.ok) {
         throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
       }
       const result = await response.json();
-      return Array.isArray(result) ? result : [];
+      // Extraire .data du format normalizeApiResponse
+      return result?.data || [];
     },
     retry: 1,
     staleTime: 30000,
   });
 
-  // Mutation pour valider l'étude technique
+  // Mutation pour valider l'étude technique d'un AO Monday
   const validateEtudeMutation = useMutation({
-    mutationFn: async (offerId: string) => {
+    mutationFn: async (aoId: string) => {
       const response = await apiRequest(
         "POST",
-        `/api/offers/${offerId}/request-suppliers`,
-        { 
-          status: "en_attente_fournisseurs",
-          validatedBy: "current-user",
-          validatedAt: new Date()
-        }
+        `/api/aos/${aoId}/validate-etude`,
+        {}
       );
       return response.json();
     },
-    onSuccess: (data, offerId) => {
-      // Invalider les queries reliées
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "etude_technique" }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "en_attente_fournisseurs" }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+    onSuccess: (data, aoId) => {
+      // Invalider les queries reliées pour les AOs Monday
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "nouveau" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_cours_chiffrage" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       
       toast({
         title: "Étude technique validée",
-        description: "Le dossier passe en demande de prix fournisseurs",
+        description: "L'AO passe maintenant en phase de chiffrage",
       });
     },
     onError: (error) => {
@@ -179,7 +176,7 @@ export default function EtudeTechnique() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-600">
-                  {offers?.filter((offer: any) => !offer.cctpAnalyzed).length || 0}
+                  {(offers ?? []).filter((offer: any) => !offer.cctpAnalyzed).length}
                 </div>
                 <p className="text-xs text-muted-foreground">Documents techniques</p>
               </CardContent>
@@ -191,7 +188,7 @@ export default function EtudeTechnique() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {offers?.filter((offer: any) => offer.technicalDetailsComplete).length || 0}
+                  {(offers ?? []).filter((offer: any) => offer.technicalDetailsComplete).length}
                 </div>
                 <p className="text-xs text-muted-foreground">Études complètes</p>
               </CardContent>

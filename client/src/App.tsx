@@ -151,7 +151,7 @@ function Router() {
       
       {/* ============= APPELS D'OFFRE - Redirections vers workflow cohérent ============= */}
       <Route path="/aos">
-        <Redirect to="/workflow/etude-technique" />
+        <Redirect to="/offers" />
       </Route>
       <Route path="/aos/:id" component={() => <ProtectedRoute component={AoDetail} />} />
       <Route path="/aos/:id/edit" component={() => <ProtectedRoute component={AoDetail} />} />

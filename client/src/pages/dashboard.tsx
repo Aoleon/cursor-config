@@ -32,7 +32,7 @@ export default function Dashboard() {
             <UnifiedOffersDisplay 
               showCreateButton={false} 
               title="Appels d'Offres Récents"
-              endpoint="/api/offers"
+              endpoint="/api/aos"
             />
           </TabsContent>
 

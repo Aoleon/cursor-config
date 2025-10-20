@@ -376,7 +376,7 @@ export class MondayMigrationServiceEnhanced {
       
     } catch (error) {
       if (error instanceof ZodError) {
-        const fieldErrors = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+        const fieldErrors = error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
         
         logger.warn('Validation Zod échouée', {
           metadata: {

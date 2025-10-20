@@ -423,7 +423,7 @@ export function validateMondayAoData(data: MondayAoData): MondayAoData {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
       throw new Error(`Validation Monday.com AO échouée: ${errorMessages}`);
     }
     throw error;
@@ -455,7 +455,7 @@ export function validateMondayProjectData(data: MondayProjectData): MondayProjec
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
       throw new Error(`Validation Monday.com Project échouée: ${errorMessages}`);
     }
     throw error;

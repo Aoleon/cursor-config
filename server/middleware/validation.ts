@@ -105,7 +105,7 @@ export function validate(
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const validationError = fromZodError(error);
+        const validationError = fromZodError(error as ZodError<any>);
         return res.status(400).json({
           success: false,
           error: 'Erreur de validation',
@@ -160,8 +160,8 @@ export const commonParamSchemas = {
 
   // Pagination commune
   pagination: z.object({
-    page: z.string().regex(/^\d+$/).transform(Number).default('1'),
-    limit: z.string().regex(/^\d+$/).transform(Number).default('10'),
+    page: z.string().regex(/^\d+$/).transform(Number).default(1),
+    limit: z.string().regex(/^\d+$/).transform(Number).default(10),
     search: z.string().optional(),
     status: z.string().optional()
   })
@@ -172,8 +172,8 @@ export const commonQuerySchemas = {
   search: z.object({
     search: z.string().min(1, 'Le terme de recherche ne peut pas être vide').optional(),
     status: z.string().optional(),
-    limit: z.string().regex(/^\d+$/).transform(Number).default('50'),
-    offset: z.string().regex(/^\d+$/).transform(Number).default('0')
+    limit: z.string().regex(/^\d+$/).transform(Number).default(50),
+    offset: z.string().regex(/^\d+$/).transform(Number).default(0)
   }),
 
   dateRange: z.object({

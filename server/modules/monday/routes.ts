@@ -130,7 +130,7 @@ router.post('/api/monday/import',
       return res.status(400).json({
         success: false,
         error: 'Invalid request body',
-        details: validation.error.errors
+        details: validation.error.issues
       });
     }
 

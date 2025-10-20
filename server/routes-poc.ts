@@ -814,7 +814,7 @@ app.post("/api/aos",
     // Valider le corps de la requête
     const validationResult = validationSchema.safeParse(req.body);
     if (!validationResult.success) {
-      throw new ValidationError('Validation error', validationResult.error.errors);
+      throw new ValidationError('Validation error', validationResult.error.issues);
     }
     
     // Préparer les données avec les champs calculés

@@ -199,7 +199,7 @@ export function useBusinessRules(filters?: RulesFilter) {
       CreateRuleSchema.parse(ruleData);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errors.push(...error.errors.map(e => e.message));
+        errors.push(...error.issues.map(e => e.message));
       }
     }
 

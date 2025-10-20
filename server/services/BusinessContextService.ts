@@ -133,7 +133,7 @@ export class BusinessContextService {
           error: {
             type: "validation",
             message: "Requête invalide",
-            details: validationResult.error.errors
+            details: validationResult.error.issues
           }
         };
       }
@@ -240,7 +240,7 @@ export class BusinessContextService {
           error: {
             type: "validation",
             message: "Requête d'enrichissement invalide",
-            details: validationResult.error.errors
+            details: validationResult.error.issues
           }
         };
       }
@@ -322,7 +322,7 @@ export class BusinessContextService {
           error: {
             type: "validation",
             message: "Données d'apprentissage invalides",
-            details: validationResult.error.errors
+            details: validationResult.error.issues
           }
         };
       }

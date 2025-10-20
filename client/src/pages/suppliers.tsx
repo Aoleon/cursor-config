@@ -116,9 +116,9 @@ export default function Suppliers() {
   });
   const supplierRequests = supplierRequestsData?.data || [];
 
-  // Fetch offers for dropdown
+  // Fetch AOs Monday for dropdown
   const { data: offersData } = useQuery<any>({
-    queryKey: ['/api/offers/'],
+    queryKey: ['/api/aos'],
   });
   const offers = (offersData?.data || []).filter((offer: any) => 
     ['nouveau', 'en_chiffrage', 'en_validation'].includes(offer.status)

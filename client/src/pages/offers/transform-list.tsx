@@ -10,12 +10,12 @@ export default function TransformList() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Mutation pour transformer une offre en projet
+  // Mutation pour transformer un AO en projet
   const transformToProjectMutation = useMutation({
-    mutationFn: async (offerId: string) => {
+    mutationFn: async (aoId: string) => {
       const response = await apiRequest(
         "POST",
-        `/api/offers/${offerId}/transform-to-project`,
+        `/api/aos/${aoId}/transform-to-project`,
         {
           transformedBy: "current-user",
           transformedAt: new Date()
@@ -23,14 +23,14 @@ export default function TransformList() {
       );
       return response.json();
     },
-    onSuccess: (data, offerId) => {
+    onSuccess: (data, aoId) => {
       // Invalider les queries reliées
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", "transform"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", "transform"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       
       toast({
-        title: "Offre transformée en projet",
+        title: "AO transformé en projet",
         description: "Le projet a été créé avec succès et les tâches de base ajoutées",
       });
     },
@@ -43,23 +43,23 @@ export default function TransformList() {
     }
   });
 
-  // Récupérer les offres prêtes à transformer
+  // Récupérer les AOs Monday prêts à transformer
   const { data: offers = [], isLoading, error } = useQuery({
-    queryKey: ["/api/offers", "transform"],
+    queryKey: ["/api/aos", "transform"],
     queryFn: async () => {
-      console.log("🔍 Chargement des offres prêtes à transformer...");
+      console.log("🔍 Chargement des AOs prêts à transformer...");
       try {
-        const response = await fetch("/api/offers?status=fin_etudes_validee,valide,signe");
+        const response = await fetch("/api/aos?status=fin_etudes_validee,valide,signe");
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
         const result = await response.json();
         // L'API retourne { success: true, data: [...] }
         const data = Array.isArray(result) ? result : (result?.data || []);
-        console.log("✅ Données reçues:", data?.length, "offres à transformer");
+        console.log("✅ Données reçues:", data?.length, "AOs à transformer");
         return data;
       } catch (err) {
-        console.error("❌ Erreur lors de la récupération des offres:", err);
+        console.error("❌ Erreur lors de la récupération des AOs:", err);
         throw err;
       }
     },

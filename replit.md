@@ -30,14 +30,22 @@ The application features a modern fullstack architecture.
 - **API Response Handling**: Centralized `normalizeApiResponse<T>()` helper ensures consistent and type-safe handling of all API responses.
   - **Frontend Pattern**: All `useQuery` hooks must extract `.data` from API responses: `const result = await response.json(); return result?.data || [];`
   - **Backend Validation**: All search parameters validated with `typeof search === 'string'` before calling `.toLowerCase()` (5 occurrences fixed in `storage-poc.ts` and `routes-poc.ts`)
-  - **Navigation Alignment (19/10/2025)**: Fixed UI navigation to display 1195 Monday items correctly across all workflow stages:
-    - **Workflow Pages (6 corrected)**: All workflow/BE pages migrated from `/api/offers` → `/api/aos`
-      - `/workflow/etude-technique`: Monday AOs "nouveau" → mutation `/api/aos/:id/validate-etude`
-      - `/workflow/chiffrage`: Monday AOs "en_cours_chiffrage" → mutation `/api/aos/:id/validate-chiffrage`
-      - `/workflow/suppliers-pending`: Monday AOs "valide,signe,transforme_en_projet"
-      - `/be-dashboard`: BE statistics from `/api/aos/` (827 AOs)
-      - `/validation-be`: Monday AOs "en_attente_validation" → mutation `PATCH /api/aos/:id/validate`
-      - `/dashboard`: "AOs Récents" section via `/api/aos`
+  - **Navigation Alignment (19-20/10/2025)**: Fixed UI navigation to display 1195 Monday items correctly across all workflow stages:
+    - **Workflow Pages (11 corrected)**: All workflow/BE pages migrated from `/api/offers` → `/api/aos`
+      - **Première vague (6 pages)** :
+        - `/workflow/etude-technique`: Monday AOs "nouveau" → mutation `/api/aos/:id/validate-etude`
+        - `/workflow/chiffrage`: Monday AOs "en_cours_chiffrage" → mutation `/api/aos/:id/validate-chiffrage`
+        - `/workflow/suppliers-pending`: Monday AOs "valide,signe,transforme_en_projet"
+        - `/be-dashboard`: BE statistics from `/api/aos` (827 AOs)
+        - `/validation-be`: Monday AOs "en_attente_validation" → mutation `PATCH /api/aos/:id/validate`
+        - `/dashboard`: "AOs Récents" section via `/api/aos`
+      - **Deuxième vague (5 pages)** :
+        - `/offers/chiffrage-list`: Monday AOs "en_attente_fournisseurs,en_cours_chiffrage" → mutation `/api/aos/:id/start-chiffrage`
+        - `/offers/validation-list`: Monday AOs "en_attente_validation" → mutation `/api/aos/:id/validate-studies`
+        - `/offers/transform-list`: Monday AOs "fin_etudes_validee,valide,signe" → mutation `/api/aos/:id/transform-to-project`
+        - `/pricing`: Dropdown AOs Monday pour tarification
+        - `/suppliers`: Dropdown AOs Monday pour demandes fournisseurs
+    - **Cache Coherence** : Toutes les clés de cache standardisées sur `['/api/aos']` (sans slash trailing) pour garantir les invalidations React Query
     - **Redirects**: `/aos` → `/offers` (displays all 827 Monday AOs)
     - **Project Pages**: All 5 phases verified (study, planning, supply, worksite, support) use `/api/projects` correctly
     - **Safety Patterns**: All pages use `(array ?? []).filter(...)` to prevent undefined crashes

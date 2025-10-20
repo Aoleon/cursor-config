@@ -51,7 +51,7 @@ export default function BEDashboard() {
 
   // Fetch AOs Monday data for BE statistics
   const { data: offers = [] } = useQuery<OfferItem[]>({
-    queryKey: ['/api/aos/'],
+    queryKey: ['/api/aos'],
     select: selectOffers
   });
 

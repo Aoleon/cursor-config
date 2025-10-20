@@ -56,13 +56,14 @@ export default function Pricing() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch offers for pricing
-  const { data: offers = [], isLoading: offersLoading } = useQuery<Offer[]>({
-    queryKey: ['/api/offers/'],
-    select: (data) => data.filter(offer => 
-      ['brouillon', 'en_cours_chiffrage', 'en_attente_validation'].includes(offer.status)
-    ),
+  // Fetch AOs Monday for pricing
+  const { data: aosResponse, isLoading: offersLoading } = useQuery<any>({
+    queryKey: ['/api/aos'],
   });
+  
+  const offers = ((aosResponse?.data || []) as Offer[]).filter((offer: Offer) => 
+    ['brouillon', 'en_cours_chiffrage', 'en_attente_validation'].includes(offer.status)
+  );
 
   // Fetch quotations for selected offer
   const { data: quotations = [], isLoading: quotationsLoading } = useQuery<Quotation[]>({

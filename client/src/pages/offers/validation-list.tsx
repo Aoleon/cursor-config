@@ -10,12 +10,12 @@ export default function ValidationList() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Mutation pour valider les études d'une offre
+  // Mutation pour valider les études d'un AO
   const validateStudiesMutation = useMutation({
-    mutationFn: async (offerId: string) => {
+    mutationFn: async (aoId: string) => {
       const response = await apiRequest(
         "POST",
-        `/api/offers/${offerId}/validate-studies`,
+        `/api/aos/${aoId}/validate-studies`,
         {
           validatedBy: "current-user",
           validatedAt: new Date()
@@ -23,15 +23,15 @@ export default function ValidationList() {
       );
       return response.json();
     },
-    onSuccess: (data, offerId) => {
+    onSuccess: (data, aoId) => {
       // Invalider les queries reliées
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "en_attente_validation" }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "fin_etudes_validee" }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_attente_validation" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "fin_etudes_validee" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       
       toast({
         title: "Fin d'études validée",
-        description: "L'offre peut maintenant être transformée en projet",
+        description: "L'AO peut maintenant être transformé en projet",
       });
     },
     onError: (error) => {
@@ -43,28 +43,28 @@ export default function ValidationList() {
     }
   });
 
-  // Récupérer les offres en attente de validation
+  // Récupérer les AOs Monday en attente de validation
   const { data: offers = [], isLoading, error } = useQuery({
-    queryKey: ["/api/offers", { status: "en_attente_validation" }],
+    queryKey: ["/api/aos", { status: "en_attente_validation" }],
     queryFn: async () => {
-      console.log("🔍 Chargement des offres en attente de validation...");
+      console.log("🔍 Chargement des AOs en attente de validation...");
       try {
-        // Récupérer uniquement les offres en statut "en_attente_validation"
-        // Une offre doit passer explicitement de "en_cours_chiffrage" à "en_attente_validation"
-        // quand le chiffrage est terminé et elle est prête pour validation
-        const response = await fetch("/api/offers?status=en_attente_validation");
+        // Récupérer uniquement les AOs en statut "en_attente_validation"
+        // Un AO doit passer explicitement de "en_cours_chiffrage" à "en_attente_validation"
+        // quand le chiffrage est terminé et il est prêt pour validation
+        const response = await fetch("/api/aos?status=en_attente_validation");
         const result = await response.json();
         
         // L'API retourne { success: true, data: [...] }
-        const offersData = Array.isArray(result) ? result : (result?.data || []);
+        const aosData = Array.isArray(result) ? result : (result?.data || []);
         
         console.log("✅ Données reçues:", {
-          attenteValidation: offersData?.length || 0,
-          total: offersData?.length || 0
+          attenteValidation: aosData?.length || 0,
+          total: aosData?.length || 0
         });
-        return offersData;
+        return aosData;
       } catch (err) {
-        console.error("❌ Erreur lors de la récupération des offres:", err);
+        console.error("❌ Erreur lors de la récupération des AOs:", err);
         throw err;
       }
     },

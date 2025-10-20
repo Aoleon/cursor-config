@@ -12,12 +12,12 @@ export default function ChiffrageList() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Mutation pour démarrer le chiffrage d'une offre
+  // Mutation pour démarrer le chiffrage d'un AO
   const startChiffrageMutation = useMutation({
-    mutationFn: async (offerId: string) => {
+    mutationFn: async (aoId: string) => {
       const response = await apiRequest(
         "POST",
-        `/api/offers/${offerId}/start-chiffrage`,
+        `/api/aos/${aoId}/start-chiffrage`,
         {
           startedBy: "current-user",
           startedAt: new Date()
@@ -25,12 +25,12 @@ export default function ChiffrageList() {
       );
       return response.json();
     },
-    onSuccess: (data, offerId) => {
+    onSuccess: (data, aoId) => {
       // Invalider les queries reliées avec les nouvelles clés cohérentes
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: ["en_attente_fournisseurs", "en_cours_chiffrage"] }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "en_attente_fournisseurs" }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", { status: "en_cours_chiffrage" }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: ["en_attente_fournisseurs", "en_cours_chiffrage"] }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_attente_fournisseurs" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_cours_chiffrage" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       
       toast({
         title: "Chiffrage démarré",
@@ -46,31 +46,31 @@ export default function ChiffrageList() {
     }
   });
 
-  // Récupérer les offres prêtes pour chiffrage et en cours de chiffrage
+  // Récupérer les AOs Monday prêts pour chiffrage et en cours de chiffrage
   const { data: offers = [], isLoading, error } = useQuery({
-    queryKey: ["/api/offers", { status: ["en_attente_fournisseurs", "en_cours_chiffrage"] }],
+    queryKey: ["/api/aos", { status: ["en_attente_fournisseurs", "en_cours_chiffrage"] }],
     queryFn: async () => {
-      console.log("🔍 Chargement des offres pour chiffrage...");
+      console.log("🔍 Chargement des AOs pour chiffrage...");
       try {
-        // Récupérer les offres prêtes à chiffrer ET en cours de chiffrage
+        // Récupérer les AOs prêts à chiffrer ET en cours de chiffrage
         const [resAttente, resEnCours] = await Promise.all([
-          fetch("/api/offers?status=en_attente_fournisseurs").then(r => r.json()),
-          fetch("/api/offers?status=en_cours_chiffrage").then(r => r.json())
+          fetch("/api/aos?status=en_attente_fournisseurs").then(r => r.json()),
+          fetch("/api/aos?status=en_cours_chiffrage").then(r => r.json())
         ]);
         
         // Extraire les données des réponses formatées avec sendSuccess
-        const offersAttenteFournisseurs = resAttente?.data || [];
-        const offersEnCoursChiffrage = resEnCours?.data || [];
+        const aosAttenteFournisseurs = resAttente?.data || [];
+        const aosEnCoursChiffrage = resEnCours?.data || [];
         
-        const allOffers = [...offersAttenteFournisseurs, ...offersEnCoursChiffrage];
+        const allOffers = [...aosAttenteFournisseurs, ...aosEnCoursChiffrage];
         console.log("✅ Données reçues:", {
-          pretAChiffrer: offersAttenteFournisseurs?.length || 0,
-          enCoursChiffrage: offersEnCoursChiffrage?.length || 0,
+          pretAChiffrer: aosAttenteFournisseurs?.length || 0,
+          enCoursChiffrage: aosEnCoursChiffrage?.length || 0,
           total: allOffers.length
         });
         return allOffers;
       } catch (err) {
-        console.error("❌ Erreur lors de la récupération des offres:", err);
+        console.error("❌ Erreur lors de la récupération des AOs:", err);
         throw err;
       }
     },

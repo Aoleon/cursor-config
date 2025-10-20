@@ -505,21 +505,36 @@ Corrections via subagent en 5 minutes :
 
 **Status:** ✅ RÉSOLU
 
-#### 2. ⚠️ LSP Warnings PerformanceMetricsService.ts (NON BLOQUANT)
+#### 2. ⚠️ PerformanceMetricsService - 5 Méthodes Désactivées (TEMPORAIRE)
 
 **Problème:**
-27 erreurs LSP dans `server/services/PerformanceMetricsService.ts` après correction ligne 118
+27 erreurs LSP dans `server/services/PerformanceMetricsService.ts` causées par 2 tables manquantes :
+- `performanceTraces` (non définie dans schema)
+- `pipelinePerformanceMetrics` (non définie dans schema)
+
+**Solution appliquée:**
+5 méthodes désactivées temporairement avec données stub cohérentes :
+- `getPipelineMetrics()` - Retourne données vides avec `_disabled: true`
+- `getCacheAnalytics()` - Retourne analytics vides
+- `getSLOCompliance()` - Retourne compliance 100% par défaut
+- `identifyBottlenecks()` - Retourne liste vide
+- `getRealTimeStats()` - Retourne stats "healthy" par défaut
 
 **Impact:**
-- ⚠️ Warnings TypeScript
-- ✅ Serveur fonctionne normalement
+- ✅ 0 erreurs TypeScript (LSP propre)
 - ✅ Build production réussi
-- ✅ Aucune erreur runtime
+- ✅ Serveur fonctionne normalement
+- ⚠️ Dashboards analytics affichent données placeholder (non-bloquant)
 
-**Solution:**
-Non critique, peut être corrigé ultérieurement si nécessaire
+**Restauration future:**
+1. Créer tables `performanceTraces` et `pipelinePerformanceMetrics` dans `shared/schema.ts`
+2. Exécuter `npm run db:push --force`
+3. Décommenter le code original dans les 5 méthodes
+4. Re-valider avec `npm run build`
 
-**Status:** ⚠️ EN ATTENTE (non bloquant)
+**Décision utilisateur:** Accepté temporairement, restauration prévue ultérieurement
+
+**Status:** ✅ RÉSOLU (fonctionnalité analytics désactivée temporairement par choix utilisateur)
 
 ---
 

@@ -761,18 +761,189 @@ Corrections via subagent en 5 minutes :
 
 ---
 
+## 📦 Phase 5 - Zod 4 Migration (COMPLÉTÉE)
+
+**Date:** 20 octobre 2025  
+**Temps total:** 45 minutes  
+**Méthode:** Migration MAJOR validation library
+
+### Package Migré
+
+| Package | Version Précédente | Version Installée | Type Update |
+|---------|-------------------|-------------------|-------------|
+| **zod** | 3.25.76 | **4.0.0** | **MAJOR** |
+
+**Total:** 1 package MAJOR
+
+**Modifications npm:**
+- 🔄 1 package modifié
+- ⏱️ Installation: 4 secondes
+- 📦 **1040 packages** au total après mise à jour
+
+### Breaking Changes Corrigés
+
+#### 1. ✅ .default() Type Mismatch After .transform()
+
+**Problème:** Zod 4 exige que `.default()` reçoive le type POST-transformation, pas PRE-transformation
+
+**Fichier:** `server/middleware/validation.ts`
+
+**Lignes impactées:**
+- 166-167: pagination schema (page, limit)
+- 178-179: search schema (limit, offset)
+
+**Solution:**
+```typescript
+// AVANT (Zod 3 - type pré-transformation)
+z.string().transform(Number).default('1')  // ❌ Error: Expected number, received string
+z.string().transform(Number).default('10') // ❌
+
+// APRÈS (Zod 4 - type post-transformation)
+z.string().transform(Number).default(1)    // ✅ Correct: number after transform
+z.string().transform(Number).default(10)   // ✅
+```
+
+**Impact:** 4 occurrences corrigées dans les schemas de validation courants (pagination, search)
+
+#### 2. ✅ ZodError.errors → ZodError.issues
+
+**Problème:** Zod 4 renomme la propriété `.errors` en `.issues` pour cohérence API
+
+**Fichiers impactés (9 occurrences):**
+1. **server/routes-poc.ts** ligne 817  
+   `validationResult.error.errors` → `validationResult.error.issues`
+
+2. **server/modules/monday/routes.ts** ligne 133  
+   `validation.error.errors` → `validation.error.issues`
+
+3. **server/utils/mondayValidator.ts** lignes 426, 458 (2×)  
+   `error.errors.map(...)` → `error.issues.map(...)`
+
+4. **server/services/BusinessContextService.ts** lignes 136, 243, 325 (3×)  
+   `validationResult.error.errors` → `validationResult.error.issues`
+
+5. **server/services/MondayMigrationServiceEnhanced.ts** ligne 379  
+   `error.errors.map(...)` → `error.issues.map(...)`
+
+6. **client/src/hooks/use-business-rules.ts** ligne 202  
+   `error.errors.map(...)` → `error.issues.map(...)` (frontend)
+
+**Solution appliquée:** Migration systématique via subagent (7 fichiers, 9 occurrences)
+
+#### 3. ✅ Type Cast Sécurité fromZodError
+
+**Problème:** `fromZodError()` (zod-validation-error) attend `ZodError<any>` pas `ZodError<unknown>`
+
+**Fichier:** `server/middleware/validation.ts` ligne 111
+
+**Solution:**
+```typescript
+// AVANT
+fromZodError(error)  // ❌ Type 'ZodError<unknown>' not assignable to 'ZodError<any>'
+
+// APRÈS
+fromZodError(error as ZodError<any>)  // ✅ Explicit cast for compatibility
+```
+
+### Tests Effectués
+
+#### 1. ✅ Compilation & LSP
+```bash
+npm run check
+```
+**Résultat:** ✅ 0 erreurs LSP liées à Zod 4
+- 23 erreurs LSP pré-existantes (mondayValidator, BusinessContextService, use-business-rules) confirmées NON sur lignes modifiées
+
+#### 2. ✅ Build Production
+```bash
+npm run build
+```
+**Résultat:** ✅ Réussi en 26.68s
+- Vite build frontend successful (3809 modules transformed)
+- esbuild backend successful
+- Warnings pré-existants uniquement (duplicate keys/members)
+
+#### 3. ✅ Workflow Démarrage
+**Résultat:** ✅ Statut RUNNING
+- 375 projets chargés sans erreur
+- 827 AOs Monday synchronisés
+- Validation middleware actif (41 routes utilisent validate())
+- Aucune erreur Zod dans les logs startup
+
+#### 4. ✅ Validation Endpoints
+**Tests validation query params avec coercion Zod 4:**
+- ✅ Pagination defaults appliqués (`?page=1&limit=10` → types `number`)
+- ✅ Nested coercion fonctionnel (`?filters[limit]=10` → `typeof === 'number'`)
+- ✅ stripUnknown actif (nested objects sanitisés)
+- ✅ Error handling correct (error.issues accessible)
+
+### Compatibilité
+
+**Zod 4 Features Utilisées:**
+- ✅ Type-safe defaults post-transformation
+- ✅ Unified error.issues API
+- ✅ Improved TypeScript inference (faster type-checking)
+- ✅ Smaller bundle size (performance gains)
+
+**Backward Compatibility:**
+- ✅ `message` parameter still supported (deprecated but works)
+- ✅ Existing `.strict()` / `.passthrough()` methods functional
+- ✅ No changes required to schema definitions (z.object(), z.string(), etc.)
+
+### Validation Architect
+
+**Date:** 20 octobre 2025  
+**Reviewer:** Architect Agent (Opus 4.0)  
+**Decision:** ✅ **PRODUCTION-READY**
+
+**Findings:**
+- ✅ Breaking changes résolus complètement (.default types + error.issues)
+- ✅ Runtime validation fonctionne end-to-end (flat + nested coercions)
+- ✅ Build production stable, serveur opérationnel (375 projets)
+- ✅ LSP errors pré-existants (23) confirmés non-bloquants
+- ✅ Curl spot-checks retournent structured success payloads
+
+**Recommendations:**
+1. Monitor prod logs for unexpected validation payload shapes during first rollout
+2. Schedule cleanup of legacy LSP errors (mondayValidator/BusinessContextService) when bandwidth allows
+3. Begin planning Phase 6 (Vite 7, Tailwind 4, React 19) now that Zod 4 stable
+
+**Status:** ✅ **COMPLÉTÉE - APPROVED FOR PRODUCTION**
+
+---
+
 ## 🔄 Prochaines Étapes
+
+### Migrations Complétées ✅
+
+- ✅ **Express 5.1.0** - Migration MAJOR framework (Phase 1)
+- ✅ **Zod 4.0.0** - Migration MAJOR validation library (Phase 5)
 
 ### Packages NON Recommandés (DÉFÉRÉS)
 
 **Ne PAS mettre à jour maintenant:**
-- ❌ React 19 (breaking changes compilateur)
-- ❌ Vite 7 (refonte architecture)
-- ❌ Tailwind 4 (migration CSS-first)
-- ❌ Zod 4 (API changes massifs)
-- ❌ Express 5 (middleware changes)
+- ❌ **React 19** (breaking changes compilateur JSX, hooks)
+- ❌ **Vite 7** (refonte architecture build, plugins incompatibles)
+- ❌ **Tailwind 4** (migration CSS-first, nouvelle syntaxe)
 
 **Raison:** Breaking changes trop importants, nécessitent refactoring complet
+
+### Prochaines Phases Recommandées
+
+**Phase 6 - Vite 7 Migration:**
+- ⏳ Attendre stabilisation écosystème plugins
+- 📋 Auditer plugins Vite actuels (cartographer, runtime-error-modal)
+- 🔍 Tester build performance avant migration
+
+**Phase 7 - Tailwind 4 Migration:**
+- ⏳ Requiert Vite 7 préalablement installé
+- 📋 Inventorier customizations CSS (`index.css`, themes)
+- 🔍 Tester composants shadcn/ui compatibilité
+
+**Phase 8 - React 19 Migration:**
+- ⏳ Dernière migration (impacts tous composants)
+- 📋 Audit hooks (useEffect, useState, custom hooks)
+- 🔍 Tester avec React Query v5 + Wouter routing
 
 ---
 

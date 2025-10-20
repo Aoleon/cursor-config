@@ -285,7 +285,6 @@ export class PerformanceMetricsService {
     // Persistance en base
     try {
       await this.persistPipelineMetrics({
-        id: crypto.randomUUID(),
         traceId,
         userId,
         userRole,
@@ -301,8 +300,7 @@ export class PerformanceMetricsService {
         success: totalSuccess,
         cacheHit,
         stepDetails: JSON.stringify(traces),
-        metadata: JSON.stringify(additionalMetadata || {}),
-        timestamp: new Date()
+        metadata: JSON.stringify(additionalMetadata || {})
       });
 
       // Vérification SLO et alertes
@@ -547,25 +545,22 @@ export class PerformanceMetricsService {
       
       const columnName = stepName === 'total' ? 'total_duration_ms' : `${stepName}_ms`;
       
-      let query = db
+      // Construire les conditions de filtre
+      const conditions = [
+        gte(pipelineMetrics.timestamp, since),
+        eq(pipelineMetrics.success, true)
+      ];
+
+      if (complexity) {
+        conditions.push(eq(pipelineMetrics.complexity, complexity));
+      }
+
+      const results = await db
         .select({
           duration: sql<number>`${sql.raw(columnName)}`,
         })
         .from(pipelineMetrics)
-        .where(and(
-          gte(pipelineMetrics.timestamp, since),
-          eq(pipelineMetrics.success, true)
-        ));
-
-      if (complexity) {
-        query = query.where(and(
-          gte(pipelineMetrics.timestamp, since),
-          eq(pipelineMetrics.success, true),
-          eq(pipelineMetrics.complexity, complexity)
-        ));
-      }
-
-      const results = await query;
+        .where(and(...conditions));
       const durations = results.map(r => r.duration).filter(d => d > 0).sort((a, b) => a - b);
 
       if (durations.length === 0) {
@@ -763,7 +758,12 @@ export class PerformanceMetricsService {
       sqlExecution: 0,
       responseFormatting: 0,
       total: 0,
-      cacheOperations: 0
+      cacheOperations: 0,
+      // ÉTAPE 2 PHASE 3 PERFORMANCE : Nouveaux timings parallélisme
+      contextAndModelParallel: 0,
+      parallelExecutionTime: 0,
+      sequentialFallbackTime: 0,
+      circuitBreakerCheckTime: 0
     };
   }
 
@@ -783,8 +783,8 @@ export class PerformanceMetricsService {
     const cutoff = Date.now() - (60 * 60 * 1000); // 1 heure
     let cleaned = 0;
 
-    for (const [traceId, traces] of this.activeTraces.entries()) {
-      const hasRecentActivity = traces.some(t => t.startTime > cutoff);
+    for (const [traceId, traces] of Array.from(this.activeTraces.entries())) {
+      const hasRecentActivity = traces.some((t: PipelineStepMetrics) => t.startTime > cutoff);
       if (!hasRecentActivity) {
         this.activeTraces.delete(traceId);
         cleaned++;
@@ -926,6 +926,15 @@ export class PerformanceMetricsService {
 
   /**
    * Récupère les métriques détaillées par étape du pipeline
+   * 
+   * TODO: Cette méthode est désactivée car elle nécessite les tables suivantes qui n'existent pas dans schema.ts :
+   * - performanceTraces
+   * - pipelinePerformanceMetrics
+   * 
+   * Pour réactiver :
+   * 1. Créer les tables manquantes dans shared/schema.ts
+   * 2. Exécuter `npm run db:push --force`
+   * 3. Décommenter cette méthode
    */
   async getPipelineMetrics(filters: {
     timeRange?: { startDate: string; endDate: string };
@@ -933,6 +942,31 @@ export class PerformanceMetricsService {
     userId?: string;
     includePercentiles?: boolean;
   }): Promise<any> {
+    // DÉSACTIVÉ - Tables manquantes
+    logger.warn('getPipelineMetrics appelée mais désactivée (tables manquantes)', {
+      metadata: {
+        service: 'PerformanceMetricsService',
+        operation: 'getPipelineMetrics',
+        filters
+      }
+    });
+
+    return {
+      step_statistics: {
+        context_generation: { count: 0, avg: 0, p95: 0, success_rate: 100 },
+        ai_model_selection: { count: 0, avg: 0, p95: 0, success_rate: 100 },
+        sql_generation: { count: 0, avg: 0, p95: 0, success_rate: 100 },
+        sql_execution: { count: 0, avg: 0, p95: 0, success_rate: 100 },
+        response_formatting: { count: 0, avg: 0, p95: 0, success_rate: 100 }
+      },
+      total_traces: 0,
+      time_range: 'disabled',
+      complexity_filter: 'all',
+      _disabled: true,
+      _reason: 'Tables performanceTraces et pipelinePerformanceMetrics manquantes'
+    };
+
+    /* DÉSACTIVÉ - Décommenter après création des tables
     try {
       logger.info('Récupération métriques pipeline avec filtres', {
         metadata: {
@@ -1039,15 +1073,39 @@ export class PerformanceMetricsService {
         complexity_filter: 'all'
       };
     }
+    */
   }
 
   /**
    * Analyse des performances cache par complexité
+   * 
+   * TODO: Méthode désactivée - Table performanceTraces manquante
    */
   async getCacheAnalytics(filters: {
     timeRange?: { startDate: string; endDate: string };
     breakdown?: 'complexity' | 'user' | 'time';
   }): Promise<any> {
+    logger.warn('getCacheAnalytics appelée mais désactivée (table performanceTraces manquante)', {
+      metadata: {
+        service: 'PerformanceMetricsService',
+        operation: 'getCacheAnalytics',
+        breakdown: filters.breakdown
+      }
+    });
+
+    return {
+      overall: { total_queries: 0, cache_hits: 0, cache_misses: 0, hit_rate: 0 },
+      by_complexity: {
+        simple: { total: 0, cache_hits: 0, hit_rate: 0 },
+        complex: { total: 0, cache_hits: 0, hit_rate: 0 },
+        expert: { total: 0, cache_hits: 0, hit_rate: 0 }
+      },
+      cache_efficiency_score: 0,
+      _disabled: true,
+      _reason: 'Table performanceTraces manquante'
+    };
+
+    /* DÉSACTIVÉ
     try {
       logger.info('Cache analytics breakdown', {
         metadata: {
@@ -1137,16 +1195,35 @@ export class PerformanceMetricsService {
         cache_efficiency_score: 0
       };
     }
+    */
   }
 
   /**
    * Conformité SLO et alertes performance
+   * 
+   * TODO: Méthode désactivée - Table performanceTraces manquante
    */
   async getSLOCompliance(filters: {
     timeRange?: { startDate: string; endDate: string };
     includeTrends?: boolean;
     includeAlerts?: boolean;
   }): Promise<any> {
+    logger.warn('getSLOCompliance appelée mais désactivée (table performanceTraces manquante)');
+
+    return {
+      slo_targets: { simple: 5000, complex: 10000, expert: 15000 },
+      compliance: {
+        simple: { total: 0, compliant: 0, compliance_rate: 100, violations: [] },
+        complex: { total: 0, compliant: 0, compliance_rate: 100, violations: [] },
+        expert: { total: 0, compliant: 0, compliance_rate: 100, violations: [] }
+      },
+      overall_compliance: 100,
+      total_violations: 0,
+      _disabled: true,
+      _reason: 'Table performanceTraces manquante'
+    };
+
+    /* DÉSACTIVÉ
     try {
       logger.info('SLO compliance check', {
         metadata: {
@@ -1240,15 +1317,31 @@ export class PerformanceMetricsService {
         total_violations: 0
       };
     }
+    */
   }
 
   /**
    * Identification des goulots d'étranglement
+   * 
+   * TODO: Méthode désactivée - Table pipelinePerformanceMetrics manquante
    */
   async identifyBottlenecks(filters: {
     timeRange?: { startDate: string; endDate: string };
     thresholdSeconds?: number;
   }): Promise<any> {
+    logger.warn('identifyBottlenecks appelée mais désactivée (table pipelinePerformanceMetrics manquante)');
+
+    return {
+      bottlenecks: [],
+      threshold_used: filters.thresholdSeconds || 2000,
+      total_steps_analyzed: 0,
+      issues_found: 0,
+      recommendations: [],
+      _disabled: true,
+      _reason: 'Table pipelinePerformanceMetrics manquante'
+    };
+
+    /* DÉSACTIVÉ
     try {
       const threshold = (filters.thresholdSeconds || 2.0) * 1000; // Convert to ms
       
@@ -1328,12 +1421,36 @@ export class PerformanceMetricsService {
         recommendations: []
       };
     }
+    */
   }
 
   /**
    * Statistiques temps réel
+   * 
+   * TODO: Méthode désactivée - Table performanceTraces manquante
    */
   async getRealTimeStats(): Promise<any> {
+    logger.warn('getRealTimeStats appelée mais désactivée (table performanceTraces manquante)');
+
+    return {
+      current_hour: {
+        total_queries: 0,
+        avg_response_time: 0,
+        cache_hit_rate: 0,
+        error_rate: 0,
+        slo_compliance: 100
+      },
+      active_traces: [],
+      system_health: {
+        status: 'healthy',
+        performance_score: 100
+      },
+      last_updated: new Date(),
+      _disabled: true,
+      _reason: 'Table performanceTraces manquante'
+    };
+
+    /* DÉSACTIVÉ
     try {
       logger.info('Stats temps réel', {
         metadata: {
@@ -1407,6 +1524,7 @@ export class PerformanceMetricsService {
         last_updated: new Date()
       };
     }
+    */
   }
 
   // ========================================

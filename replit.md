@@ -25,6 +25,25 @@ The application features a modern fullstack architecture.
 - **Database**: PostgreSQL, hosted on Neon, managed with Drizzle ORM for schema definition and migrations.
 - **AI**: Integrates Anthropic Claude and OpenAI for advanced functionalities, complemented by Tesseract.js for OCR.
 - **Folder Structure**: Divided into `client/` for frontend, `server/` for backend, `shared/` for common code (e.g., Drizzle schema and Zod types), and `attached_assets/` for static assets.
+- **Data Architecture - AOs vs Offers**:
+  - **AOs Monday** (`/api/aos`): 827 historical items imported from Monday.com board (Appels d'Offres)
+    - Read-only reference data representing client project requests
+    - Used in workflow pages for pipeline management
+    - Support Monday bidirectional sync via webhooks
+  - **Offers Saxium** (`/api/offers`): New offers created within Saxium application
+    - Active working documents for pricing and project conversion
+    - Can be linked to an AO Monday via `aoId` field
+    - Support chiffrage-elements, DPGF generation, and project transformation
+  - **Hybrid ID Resolution**: Routes `/api/offers/:id` accept EITHER offer ID OR AO Monday ID
+    - Backend searches by offer ID first, then by `aoId` if not found
+    - Enables seamless navigation from AO workflows to offer detail pages
+    - Critical for chiffrage workflow: clicking AO opens related offer's chiffrage module
+  - **Chiffrage-Elements**: Linked exclusively to Offers Saxium via `/api/offers/:id/chiffrage-elements`
+    - Not directly attachable to AOs Monday (architectural decision)
+    - To work on an AO, create a linked Offer Saxium first
+  - **Cache Key Consistency**: All `/api/aos` and `/api/offers` queries use keys WITHOUT trailing slash
+    - Correct: `['/api/aos']`, `['/api/offers']`, `['/api/aos', {status: 'nouveau'}]`
+    - Incorrect: `['/api/aos/']`, `['/api/offers/']` (creates separate cache, breaks invalidation)
 - **Error Handling**: A unified system utilizing `error-handler.ts`, `logger.ts`, and `errorHandler.ts` middleware provides typed errors.
 - **Business Services**: Includes `DateIntelligenceService` for intelligent project planning, `OCRService` for text extraction, `AIService` for structured quote analysis, and an `EventBus` for inter-service coordination.
 - **API Response Handling**: Centralized `normalizeApiResponse<T>()` helper ensures consistent and type-safe handling of all API responses.

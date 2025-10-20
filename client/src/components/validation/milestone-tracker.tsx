@@ -106,9 +106,9 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
   const [milestoneToReject, setMilestoneToReject] = useState<MilestoneItem | null>(null);
   const { toast } = useToast();
 
-  // Fetch offers for selection
+  // Fetch offers for selection (Offres Saxium, pas AOs Monday)
   const { data: offers = [] } = useQuery<OfferItem[]>({
-    queryKey: ['/api/offers/'],
+    queryKey: ['/api/offers'],
     select: selectOffers
   });
 
@@ -135,7 +135,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/validation-milestones/'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/offers/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/offers'] });
       setIsValidationDialogOpen(false);
       toast({
         title: "Jalon validé",
@@ -158,7 +158,7 @@ export default function MilestoneTracker({ offerId }: MilestoneTrackerProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/validation-milestones/'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/offers/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/offers'] });
       toast({
         title: "Statut mis à jour",
         description: "Le statut du jalon a été mis à jour.",

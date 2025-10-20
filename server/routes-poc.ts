@@ -3178,7 +3178,7 @@ app.post("/api/documents/analyze",
 // Cette section est maintenant obsolète car la fonctionnalité est gérée par la route principale
 
 // Route pour servir les objets/fichiers depuis l'object storage
-app.get("/api/objects/:objectPath(*)", 
+app.get("/api/objects/:objectPath/*splat", 
   isAuthenticated, 
   asyncHandler(async (req, res) => {
     const objectStorageService = new ObjectStorageService();
@@ -5533,8 +5533,8 @@ const analyticsLogger = (req: any, res: any, next: any) => {
   next();
 };
 
-// Application du middleware analytics
-app.use('/api/analytics/*', analyticsLogger);
+// Application du middleware analytics (automatically applies to all /api/analytics/* routes)
+app.use('/api/analytics', analyticsLogger);
 
 // 1. KPIs Temps Réel
 app.get('/api/analytics/kpis', 
@@ -5931,8 +5931,8 @@ const predictiveLogger = (req: any, res: any, next: any) => {
   next();
 };
 
-// Application du middleware predictive
-app.use('/api/predictive/*', predictiveLogger);
+// Application du middleware predictive (automatically applies to all /api/predictive/* routes)
+app.use('/api/predictive', predictiveLogger);
 
 // 1. GET /api/predictive/revenue - Revenue Forecasting
 app.get('/api/predictive/revenue', 

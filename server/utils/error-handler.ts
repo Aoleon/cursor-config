@@ -141,10 +141,8 @@ export async function withErrorHandling<T>(
     
     // Capturer l'erreur dans le système de monitoring
     errorCollector.capture(normalizedError, {
-      service: context.service,
-      operation: context.operation,
       userId: context.userId,
-      duration,
+      endpoint: context.operation,
       ...context.metadata
     });
     

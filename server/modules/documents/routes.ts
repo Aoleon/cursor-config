@@ -506,14 +506,14 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
   );
 
   // Get object from storage
-  router.get('/api/objects/:objectPath(*)',
+  router.get('/api/objects/:objectPath/*splat',
     isAuthenticated,
     asyncHandler(async (req: any, res: Response) => {
       const { objectPath } = req.params;
       
       logger.info('[Objects] Récupération objet', {
         metadata: {
-          route: '/api/objects/:objectPath(*)',
+          route: '/api/objects/:objectPath/*splat',
           method: 'GET',
           objectPath,
           userId: req.user?.id

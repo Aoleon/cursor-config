@@ -163,6 +163,18 @@ export async function setupAuth(app: Express) {
   ) => {
     try {
       const claims = tokens.claims();
+      if (!claims) {
+        logger.error('Claims OIDC manquants', {
+          metadata: {
+            module: 'ReplitAuth',
+            operation: 'verifyOIDC',
+            error: 'No claims returned from OIDC token',
+            stack: undefined
+          }
+        });
+        return verified(new Error('No claims returned from OIDC token'), null);
+      }
+      
       logger.info('OIDC verify callback - claims reçus', {
         metadata: {
           module: 'ReplitAuth',
@@ -197,7 +209,7 @@ export async function setupAuth(app: Express) {
         firstName: dbUser.firstName,
         lastName: dbUser.lastName,
         profileImageUrl: dbUser.profileImageUrl,
-        role: determineUserRole(dbUser.email),
+        role: determineUserRole(dbUser.email ?? ''),
         // Ajouter les données OIDC nécessaires
         claims: claims,
         access_token: tokens.access_token,
@@ -310,7 +322,7 @@ export async function setupAuth(app: Express) {
           firstName: dbUser.firstName,
           lastName: dbUser.lastName,
           profileImageUrl: dbUser.profileImageUrl,
-          role: determineUserRole(dbUser.email),
+          role: determineUserRole(dbUser.email ?? ''),
           claims: {
             sub: dbUser.id,
             email: dbUser.email,

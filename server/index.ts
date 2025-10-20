@@ -190,7 +190,7 @@ app.use((req, res, next) => {
   const dateIntelligenceService = new DateIntelligenceService(storageInterface);
   const menuiserieRules = new MenuiserieDetectionRules(storageInterface);
   const analyticsService = new AnalyticsService(storageInterface, eventBus);
-  const predictiveEngineService = new PredictiveEngineService(storageInterface, analyticsService);
+  const predictiveEngineService = new PredictiveEngineService(storageInterface);
   
   // ========================================
   // CORRECTION CRITIQUE : INTÉGRATION EVENTBUS → PREDICTIVEENGINESERVICE
@@ -415,7 +415,7 @@ app.use((req, res, next) => {
   // ========================================
   
   // Handler pour les routes non trouvées (avant le catch-all de Vite)
-  app.use('/api/*', notFoundHandler);
+  app.use('/api', notFoundHandler);
   
   // Middleware de gestion d'erreurs de base de données
   app.use(databaseErrorHandler);

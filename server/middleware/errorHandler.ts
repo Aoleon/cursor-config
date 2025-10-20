@@ -147,11 +147,13 @@ export class ErrorLogger {
   static logValidationError(error: ZodError, req?: Request) {
     const validationError = fromZodError(error);
     logger.warn('ERREUR VALIDATION', {
-      message: validationError.message,
-      url: req?.originalUrl,
-      method: req?.method,
-      type: 'VALIDATION',
-      issues: error.issues
+      metadata: {
+        message: validationError.message,
+        url: req?.originalUrl,
+        method: req?.method,
+        type: 'VALIDATION',
+        issues: error.issues
+      }
     });
   }
 }
@@ -173,26 +175,26 @@ export function errorHandler(
 
   // Gestion des nouvelles erreurs typées (de error-handler.ts)
   if (err instanceof ValidationError) {
-    const formatted = formatErrorResponse(err, { operation: 'validation', path: req.originalUrl });
+    const formatted = formatErrorResponse(err);
     res.status(400).json(formatted);
     return;
   }
 
   if (err instanceof NotFoundError) {
-    const formatted = formatErrorResponse(err, { operation: 'resource_lookup', path: req.originalUrl });
+    const formatted = formatErrorResponse(err);
     res.status(404).json(formatted);
     return;
   }
 
   if (err instanceof AuthenticationError) {
-    const formatted = formatErrorResponse(err, { operation: 'authentication', path: req.originalUrl });
+    const formatted = formatErrorResponse(err);
     res.status(401).json(formatted);
     return;
   }
 
   // Gestion des autres erreurs typées de utils/error-handler.ts
   if (err instanceof UtilsAppError) {
-    const formatted = formatErrorResponse(err, { operation: req.method, path: req.originalUrl });
+    const formatted = formatErrorResponse(err);
     res.status(err.statusCode).json(formatted);
     return;
   }

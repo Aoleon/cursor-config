@@ -23,23 +23,15 @@ interface AuthenticatedRequest extends Request {
       [key: string]: any;
     };
   };
-  session?: {
-    user?: {
-      id?: string;
-      email?: string;
-      role?: string;
-      isBasicAuth?: boolean;
-    };
-  };
 }
 
 /**
  * Key generator that returns user ID for authenticated users
- * Returns undefined for non-authenticated users to use default IP handling
+ * Returns undefined for non-authenticated users (lets express-rate-limit handle IP normalization)
  */
 const generateKey = (req: AuthenticatedRequest): string | undefined => {
-  const userId = req.user?.id || req.user?.claims?.sub || req.session?.user?.id;
-  const userEmail = req.user?.email || req.user?.claims?.email || req.session?.user?.email;
+  const userId = req.user?.id || req.user?.claims?.sub || (req.session as any)?.user?.id;
+  const userEmail = req.user?.email || req.user?.claims?.email || (req.session as any)?.user?.email;
   
   if (userId) {
     logger.debug('[RateLimiter] Key generated for user', {
@@ -53,14 +45,13 @@ const generateKey = (req: AuthenticatedRequest): string | undefined => {
     return `user:${userId}`;
   }
   
-  logger.debug('[RateLimiter] Using default IP-based rate limiting', {
+  logger.debug('[RateLimiter] Using IP-based rate limiting', {
     metadata: {
       ip: req.ip,
       path: req.originalUrl
     }
   });
-  // Return undefined to let express-rate-limit handle IP normalization for IPv4/IPv6 compatibility
-  // This avoids the ValidationError for custom keyGenerators with direct IP usage
+  // Let express-rate-limit handle IP normalization (IPv4/IPv6 compatible)
   return undefined;
 };
 
@@ -68,8 +59,8 @@ const generateKey = (req: AuthenticatedRequest): string | undefined => {
  * Custom handler for rate limit exceeded
  */
 const rateLimitHandler = (req: AuthenticatedRequest, res: Response): void => {
-  const userId = req.user?.id || req.user?.claims?.sub || req.session?.user?.id;
-  const userEmail = req.user?.email || req.user?.claims?.email || req.session?.user?.email;
+  const userId = req.user?.id || req.user?.claims?.sub || (req.session as any)?.user?.id;
+  const userEmail = req.user?.email || req.user?.claims?.email || (req.session as any)?.user?.email;
   
   // Monitor the rate limit hit
   monitorRateLimit(req.originalUrl, userId, userEmail);
@@ -116,10 +107,10 @@ export const rateLimits = {
     handler: rateLimitHandler,
     skip: (req: AuthenticatedRequest) => {
       // Skip rate limiting for admin users
-      const userRole = req.user?.role || req.session?.user?.role;
+      const userRole = req.user?.role || (req.session as any)?.user?.role;
       return userRole === 'admin' || userRole === 'super_admin';
     }
-  } as Options),
+  }),
 
   // Authentication endpoints: 5 attempts per 15 minutes
   auth: rateLimit({
@@ -131,7 +122,7 @@ export const rateLimits = {
     skipSuccessfulRequests: true, // Only count failed attempts
     keyGenerator: generateKey,
     handler: rateLimitHandler
-  } as Options),
+  }),
 
   // Password reset: 3 attempts per hour
   passwordReset: rateLimit({
@@ -142,7 +133,7 @@ export const rateLimits = {
     legacyHeaders: false,
     keyGenerator: generateKey,
     handler: rateLimitHandler
-  } as Options),
+  }),
 
   // General API endpoints: 100 requests per minute
   general: rateLimit({
@@ -154,10 +145,10 @@ export const rateLimits = {
     keyGenerator: generateKey,
     skip: (req: AuthenticatedRequest) => {
       // Skip for admin users
-      const userRole = req.user?.role || req.session?.user?.role;
+      const userRole = req.user?.role || (req.session as any)?.user?.role;
       return userRole === 'admin' || userRole === 'super_admin';
     }
-  } as Options),
+  }),
 
   // Supplier portal: 30 requests per minute
   supplier: rateLimit({
@@ -168,7 +159,7 @@ export const rateLimits = {
     legacyHeaders: false,
     // No keyGenerator specified - express-rate-limit will handle IP normalization for IPv4/IPv6
     handler: rateLimitHandler
-  } as Options),
+  }),
 
   // OCR processing: 5 requests per 5 minutes (resource intensive)
   ocr: rateLimit({
@@ -179,7 +170,7 @@ export const rateLimits = {
     legacyHeaders: false,
     keyGenerator: generateKey,
     handler: rateLimitHandler
-  } as Options),
+  }),
 
   // Document analysis: 5 requests per 5 minutes
   documentAnalysis: rateLimit({
@@ -190,7 +181,7 @@ export const rateLimits = {
     legacyHeaders: false,
     keyGenerator: generateKey,
     handler: rateLimitHandler
-  } as Options),
+  }),
 
   // PDF generation: 20 requests per minute
   pdfGeneration: rateLimit({
@@ -201,7 +192,7 @@ export const rateLimits = {
     legacyHeaders: false,
     keyGenerator: generateKey,
     handler: rateLimitHandler
-  } as Options),
+  }),
 
   // Project endpoints: 100 requests per minute
   projects: rateLimit({
@@ -211,7 +202,7 @@ export const rateLimits = {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: generateKey
-  } as Options),
+  }),
 
   // File upload: 10 uploads per minute
   upload: rateLimit({
@@ -222,7 +213,7 @@ export const rateLimits = {
     legacyHeaders: false,
     keyGenerator: generateKey,
     handler: rateLimitHandler
-  } as Options),
+  }),
 
   // Processing endpoints: Similar to OCR for resource intensive operations
   processing: rateLimit({
@@ -233,7 +224,7 @@ export const rateLimits = {
     legacyHeaders: false,
     keyGenerator: generateKey,
     handler: rateLimitHandler
-  } as Options),
+  }),
 
   // Creation endpoints: 20 creations per minute
   creation: rateLimit({
@@ -244,7 +235,7 @@ export const rateLimits = {
     legacyHeaders: false,
     keyGenerator: generateKey,
     handler: rateLimitHandler
-  } as Options),
+  }),
 
   // Analytics: 50 requests per minute
   analytics: rateLimit({
@@ -254,7 +245,7 @@ export const rateLimits = {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: generateKey
-  } as Options),
+  }),
   
   // Email sending: 5 per 10 minutes
   email: rateLimit({
@@ -265,7 +256,7 @@ export const rateLimits = {
     legacyHeaders: false,
     keyGenerator: generateKey,
     handler: rateLimitHandler
-  } as Options)
+  })
 };
 
 // Export a function to create custom rate limiters
@@ -297,5 +288,5 @@ export function createRateLimiter(options: {
     skipSuccessfulRequests: options.skipSuccessfulRequests,
     keyGenerator: keyGen as any,
     handler: rateLimitHandler
-  } as Options);
+  });
 }

@@ -39,7 +39,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
 
   // Fetch AOs for dropdown
   const { data: aos = [] } = useQuery({
-    queryKey: ['/api/aos/'],
+    queryKey: ['/api/aos'],
   });
 
   // Fetch users for responsible assignment

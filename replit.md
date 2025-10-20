@@ -39,6 +39,8 @@ The application features a modern fullstack architecture.
 - **Draft System**: Allows users to save incomplete forms with conditional backend validation.
 - **Technical Alerts & Toast Deduplication**: Consolidated OCR technical alerts and implemented a robust real-time event deduplication system.
 - **OCR Lot Extraction**: Enhanced regex patterns in `server/ocrService.ts` to support Unicode characters.
+- **SPA Routing Stability** (Oct 2025): Fixed PathError crashes from `/*splat` route via fallback middleware in `server/index.ts`. Fallback activates ONLY when Vite's route fails, preserving HMR. Tested stable across 2+ restarts. Known non-critical warning: `@vitejs/plugin-react can't detect preamble` (app functions normally).
+  - **Future Enhancement** (when `server/vite.ts` becomes editable): Return Vite instance from `setupVite()` to enable `vite.transformIndexHtml()` in fallback for full HMR preservation.
 
 ## External Dependencies
 - **Replit Services**: Utilizes Replit for OIDC authentication, PostgreSQL (via `DATABASE_URL`), and Object Storage.

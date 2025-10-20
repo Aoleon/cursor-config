@@ -20,7 +20,7 @@ import {
   CheckCircle2,
   Calendar as CalendarIcon
 } from 'lucide-react';
-import { DragDropContext, Droppable, Draggable, type DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import type { ProjectTimeline } from '@shared/schema';
 
 // Composant pour les contrôles du Gantt

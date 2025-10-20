@@ -26,9 +26,9 @@ export default function Planification() {
 
   // Récupérer les projets en planification
   const { data: projects, isLoading } = useQuery({
-    queryKey: ["/api/projects/planification"],
+    queryKey: ["/api/workflow/projects", { status: "planification" }],
     queryFn: async () => {
-      const response = await fetch("/api/projects?status=planification");
+      const response = await fetch("/api/workflow/projects?status=planification");
       const result = await response.json();
       return normalizeApiResponse(result);
     }

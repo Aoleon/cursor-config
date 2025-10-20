@@ -8,7 +8,7 @@ import { createChiffrageRouter } from "./modules/chiffrage/routes";
 import { createBatigestRouter } from "./modules/batigest/routes";
 import { createAuthRouter } from "./modules/auth/routes";
 import { createSuppliersRouter } from "./modules/suppliers/routes";
-import { createProjectsRouter } from "./modules/projects/routes";
+// TEMPORARILY DISABLED: import { createProjectsRouter } from "./modules/projects/routes";
 import { createAnalyticsRouter } from "./modules/analytics/routes";
 import { createDocumentsRouter } from "./modules/documents/routes";
 import { setupMondayModule } from "./modules/monday";
@@ -19,6 +19,9 @@ import { mondayService } from "./services/MondayService";
 import { logger } from "./utils/logger";
 
 export async function registerRoutes(app: Express) {
+  // FORCE RELOAD TEST - Projects module should be disabled
+  logger.info('[Routes] Starting routes registration - Projects module DISABLED');
+  
   // 1. Setup authentication FIRST (required by modular routes)
   await setupAuth(app);
   
@@ -33,7 +36,7 @@ export async function registerRoutes(app: Express) {
   const batigestRouter = createBatigestRouter(storageInterface, eventBus);
   const authRouter = createAuthRouter(storageInterface, eventBus);
   const suppliersRouter = createSuppliersRouter(storageInterface, eventBus);
-  const projectsRouter = createProjectsRouter(storageInterface, eventBus);
+  // TEMPORARILY DISABLED: const projectsRouter = createProjectsRouter(storageInterface, eventBus);
   const analyticsRouter = createAnalyticsRouter(storageInterface, eventBus);
   const documentsRouter = createDocumentsRouter(storageInterface, eventBus);
   
@@ -41,7 +44,7 @@ export async function registerRoutes(app: Express) {
   app.use(batigestRouter);
   app.use(authRouter);
   app.use(suppliersRouter);
-  app.use(projectsRouter);
+  // TEMPORARILY DISABLED: app.use(projectsRouter);
   app.use(analyticsRouter);
   app.use(documentsRouter);
   

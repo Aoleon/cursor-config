@@ -1739,13 +1739,29 @@ app.get("/api/projects",
   asyncHandler(async (req, res) => {
     const { search, status } = req.query;
     
+    logger.info('[ROUTE-POC] /api/projects endpoint appelé', {
+      metadata: { search, status, route: 'routes-poc.ts' }
+    });
+    
     // Validation réussie : status est garanti valide ou undefined
     const projects = await storage.getProjects(
       search as string, 
       status as string
     );
     
+    logger.info('[ROUTE-POC] Projects reçus, avant sendSuccess', {
+      metadata: { 
+        projectsCount: projects.length,
+        projectsType: typeof projects,
+        isArray: Array.isArray(projects)
+      }
+    });
+    
     sendSuccess(res, projects);
+    
+    logger.info('[ROUTE-POC] sendSuccess appelé', {
+      metadata: { done: true }
+    });
   })
 );
 

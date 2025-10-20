@@ -1018,14 +1018,27 @@ export class DatabaseStorage implements IStorage {
 
   // Project operations (5 étapes POC)
   async getProjects(search?: string, status?: string): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]> {
-    let query = db.select().from(projects).orderBy(desc(projects.createdAt));
+    let query = db.select().from(projects);
     
-    // Filtrage par statut si fourni
+    // Filtrage par statut si fourni (DOIT être AVANT orderBy en Drizzle)
     if (status) {
       query = query.where(eq(projects.status, status as any));
     }
     
+    // Tri par date de création (DOIT être APRÈS where en Drizzle)
+    query = query.orderBy(desc(projects.createdAt));
+    
     const baseProjects = await query;
+    
+    logger.info('[Projects] Base projects récupérés', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getProjects',
+        count: baseProjects.length,
+        search,
+        status
+      }
+    });
 
     let filteredProjects = baseProjects;
     
@@ -1038,6 +1051,15 @@ export class DatabaseStorage implements IStorage {
         project.location?.toLowerCase().includes(searchLower) ||
         project.description?.toLowerCase().includes(searchLower)
       );
+      
+      logger.info('[Projects] Projets filtrés par recherche', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getProjects',
+          count: filteredProjects.length,
+          search
+        }
+      });
     }
 
     const result = [];
@@ -1054,6 +1076,14 @@ export class DatabaseStorage implements IStorage {
 
       result.push({ ...project, responsibleUser, offer });
     }
+    
+    logger.info('[Projects] Projets enrichis retournés', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getProjects',
+        count: result.length
+      }
+    });
 
     return result;
   }

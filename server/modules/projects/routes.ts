@@ -145,14 +145,27 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         }
       });
 
-      const projects = await storage.getProjects({
-        ...params,
-        includeArchived: params.includeArchived === 'true',
-        limit: parseInt(req.query.limit),
-        offset: parseInt(req.query.offset)
-      });
+      const projects = await storage.getProjects(
+        params.search,
+        params.status
+      );
 
-      sendPaginatedSuccess(res, projects.data, projects.total);
+      // Apply filters
+      let filteredProjects = projects;
+      if (params.includeArchived !== 'true') {
+        filteredProjects = projects.filter(p => !p.archived);
+      }
+
+      // Apply pagination
+      const limit = parseInt(req.query.limit) || 20;
+      const offset = parseInt(req.query.offset) || 0;
+      const paginatedProjects = filteredProjects.slice(offset, offset + limit);
+
+      sendPaginatedSuccess(res, paginatedProjects, {
+        page: Math.floor(offset / limit) + 1,
+        limit,
+        total: filteredProjects.length
+      });
     })
   );
 

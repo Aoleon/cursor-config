@@ -240,7 +240,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ROUTES PROJETS & PLANIFICATION
   // ========================================
 
-  app.get("/api/projects", 
+  app.get("/api/workflow/projects", 
     isAuthenticated, 
     validateQuery(workflowProjectsQuerySchema),
     asyncHandler(async (req, res) => {

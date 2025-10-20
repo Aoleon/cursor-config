@@ -1,3 +1,4 @@
+// @ts-ignore - Tailwind 4 types (.d.mts) resolution issue with TypeScript bundler
 import type { Config } from "tailwindcss";
 
 export default {

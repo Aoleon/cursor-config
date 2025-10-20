@@ -25,13 +25,13 @@ export default function Chiffrage() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Récupérer les offres en chiffrage
+  // Récupérer les AOs Monday en chiffrage
   const { data: offers, isLoading, error } = useQuery({
-    queryKey: ["/api/offers", "chiffrage"],
+    queryKey: ["/api/aos", { status: "en_cours_chiffrage" }],
     queryFn: async () => {
-      console.log("🔍 Chargement des offres en chiffrage...");
+      console.log("🔍 Chargement des AOs en chiffrage...");
       try {
-        const response = await fetch("/api/offers?status=en_cours_chiffrage");
+        const response = await fetch("/api/aos?status=en_cours_chiffrage");
         console.log("📡 Réponse API:", response.status, response.statusText);
         
         if (!response.ok) {
@@ -40,10 +40,10 @@ export default function Chiffrage() {
         
         const result = await response.json();
         const data = normalizeApiResponse(result);
-        console.log("✅ Données reçues:", data?.length, "offres");
+        console.log("✅ Données reçues:", data?.length, "AOs");
         return data;
       } catch (err) {
-        console.error("❌ Erreur lors de la récupération des offres:", err);
+        console.error("❌ Erreur lors de la récupération des AOs:", err);
         throw err;
       }
     },
@@ -53,10 +53,10 @@ export default function Chiffrage() {
 
   // Mutation pour valider le chiffrage
   const validateChiffrageMutation = useMutation({
-    mutationFn: async (offerId: string) => {
-      console.log("🔄 Validation du chiffrage pour l'offre:", offerId);
+    mutationFn: async (aoId: string) => {
+      console.log("🔄 Validation du chiffrage pour l'AO:", aoId);
       try {
-        const response = await fetch(`/api/offers/${offerId}/validate-chiffrage`, {
+        const response = await fetch(`/api/aos/${aoId}/validate-chiffrage`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -79,7 +79,9 @@ export default function Chiffrage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", "chiffrage"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_cours_chiffrage" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_attente_validation" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       toast({
         title: "Chiffrage validé",
         description: "Le devis peut être envoyé au client",
@@ -187,10 +189,10 @@ export default function Chiffrage() {
     }
   };
 
-  const handleViewDPGF = (offerId: string) => {
-    console.log("👁️ Visualisation DPGF pour l'offre:", offerId);
+  const handleViewDPGF = (aoId: string) => {
+    console.log("👁️ Visualisation DPGF pour l'AO:", aoId);
     try {
-      window.open(`/api/offers/${offerId}/dpgf/preview`, '_blank');
+      window.open(`/api/aos/${aoId}/dpgf/preview`, '_blank');
     } catch (err) {
       console.error("❌ Erreur visualisation DPGF:", err);
       toast({
@@ -201,12 +203,12 @@ export default function Chiffrage() {
     }
   };
 
-  const handleDownloadDPGF = (offerId: string) => {
-    console.log("⬇️ Téléchargement DPGF pour l'offre:", offerId);
+  const handleDownloadDPGF = (aoId: string) => {
+    console.log("⬇️ Téléchargement DPGF pour l'AO:", aoId);
     try {
       const link = document.createElement('a');
-      link.href = `/api/offers/${offerId}/dpgf/download`;
-      link.download = `DPGF-${offerId}.pdf`;
+      link.href = `/api/aos/${aoId}/dpgf/download`;
+      link.download = `DPGF-${aoId}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -277,7 +279,7 @@ export default function Chiffrage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-600" data-testid="stat-value-a-valider">
-                  {offers?.filter((offer: any) => offer.dpgfDocument && offer.montantEstime).length || 0}
+                  {(offers ?? []).filter((offer: any) => offer.dpgfDocument && offer.montantEstime).length}
                 </div>
                 <p className="text-xs text-muted-foreground">Devis prêts</p>
               </CardContent>
@@ -310,7 +312,7 @@ export default function Chiffrage() {
                     size="sm" 
                     className="mt-3"
                     data-testid="button-retry"
-                    onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/offers", "chiffrage"] })}
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_cours_chiffrage" }] })}
                   >
                     Réessayer
                   </Button>

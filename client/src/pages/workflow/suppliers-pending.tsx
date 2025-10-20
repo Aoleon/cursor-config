@@ -21,23 +21,23 @@ export default function SuppliersPending() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Récupérer les offres de chiffrage envoyées
+  // Récupérer les AOs Monday validés/signés
   const { data: offers, isLoading, error } = useQuery({
-    queryKey: ["/api/offers", "sent-quotes"],
+    queryKey: ["/api/aos", "sent-quotes"],
     queryFn: async () => {
-      console.log("🔍 Chargement des offres de chiffrage envoyées...");
+      console.log("🔍 Chargement des AOs validés/signés...");
       try {
-        const response = await fetch("/api/offers?status=valide,signe,transforme_en_projet");
+        const response = await fetch("/api/aos?status=valide,signe,transforme_en_projet");
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
         const result = await response.json();
         // L'API retourne { success: true, data: [...] }
         const data = Array.isArray(result) ? result : (result?.data || []);
-        console.log("✅ Données reçues:", data?.length, "offres envoyées");
+        console.log("✅ Données reçues:", data?.length, "AOs validés");
         return data;
       } catch (err) {
-        console.error("❌ Erreur lors de la récupération des offres:", err);
+        console.error("❌ Erreur lors de la récupération des AOs:", err);
         throw err;
       }
     },
@@ -169,7 +169,7 @@ export default function SuppliersPending() {
             variant="outline" 
             size="sm" 
             className="mt-3"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/offers", "sent-quotes"] })}
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/aos", "sent-quotes"] })}
           >
             Réessayer
           </Button>
@@ -207,7 +207,7 @@ export default function SuppliersPending() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {offers?.filter((offer: any) => offer.status === 'signe').length || 0}
+              {(offers ?? []).filter((offer: any) => offer.status === 'signe').length}
             </div>
             <p className="text-xs text-muted-foreground">Clients acceptés</p>
           </CardContent>
@@ -219,7 +219,7 @@ export default function SuppliersPending() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {offers?.filter((offer: any) => offer.status === 'transforme_en_projet').length || 0}
+              {(offers ?? []).filter((offer: any) => offer.status === 'transforme_en_projet').length}
             </div>
             <p className="text-xs text-muted-foreground">Projets actifs</p>
           </CardContent>

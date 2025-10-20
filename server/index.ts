@@ -411,10 +411,110 @@ app.use((req, res, next) => {
   }
 
   // ========================================
+  // CONFIGURATION VITE/STATIC (AVANT GESTIONNAIRES D'ERREURS)
+  // ========================================
+  
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
+  const env = app.get("env");
+  logger.info(`Configuration Vite/Static - environnement: ${env}`, {
+    metadata: {
+      module: 'ExpressApp',
+      operation: 'setupViteOrStatic',
+      environment: env
+    }
+  });
+  
+  if (env === "development") {
+    logger.info('Appel setupVite...', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'setupVite'
+      }
+    });
+    await setupVite(app, server);
+    logger.info('setupVite terminé avec succès', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'setupVite'
+      }
+    });
+  } else {
+    logger.info('Appel serveStatic...', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'serveStatic'
+      }
+    });
+    serveStatic(app);
+    logger.info('serveStatic terminé avec succès', {
+      metadata: {
+        module: 'ExpressApp',
+        operation: 'serveStatic'
+      }
+    });
+  }
+  
+  // ========================================
+  // FALLBACK SPA MANUEL (fix pour pattern /*splat non-standard dans vite.ts)
+  // ========================================
+  // Ce middleware de secours gère le routing SPA si le pattern /*splat de vite.ts ne fonctionne pas
+  // Utilise un middleware sans pattern pour éviter les problèmes avec path-to-regexp
+  if (env === "development") {
+    const fs = await import("fs");
+    const path = await import("path");
+    app.use(async (req, res, next) => {
+      // Skip si c'est une route API, WebSocket ou si la réponse a déjà été envoyée
+      if (req.originalUrl.startsWith('/api') || 
+          req.originalUrl.startsWith('/ws') ||
+          res.headersSent) {
+        return next();
+      }
+      
+      // Skip si ce n'est pas une requête GET
+      if (req.method !== 'GET') {
+        return next();
+      }
+      
+      try {
+        const clientTemplate = path.resolve(
+          import.meta.dirname,
+          "..",
+          "client",
+          "index.html",
+        );
+        
+        logger.info('SPA Fallback manuel - serving index.html', {
+          metadata: {
+            module: 'ExpressApp',
+            operation: 'spaFallback',
+            url: req.originalUrl
+          }
+        });
+        
+        // Lire et servir le fichier index.html
+        let template = await fs.promises.readFile(clientTemplate, "utf-8");
+        res.status(200).set({ "Content-Type": "text/html" }).send(template);
+      } catch (e) {
+        logger.error('Erreur SPA Fallback', {
+          metadata: {
+            module: 'ExpressApp',
+            operation: 'spaFallback',
+            error: e instanceof Error ? e.message : String(e),
+            stack: e instanceof Error ? e.stack : undefined
+          }
+        });
+        next(e);
+      }
+    });
+  }
+  
+  // ========================================
   // GESTION CENTRALISÉE DES ERREURS
   // ========================================
   
-  // Handler pour les routes non trouvées (avant le catch-all de Vite)
+  // Handler pour les routes non trouvées (seulement pour /api)
   app.use('/api', notFoundHandler);
   
   // Middleware de gestion d'erreurs de base de données
@@ -422,15 +522,6 @@ app.use((req, res, next) => {
   
   // Middleware global de gestion d'erreurs (doit être le dernier)
   app.use(errorHandler);
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
 
   // Setup WebSocket upgrade handler
   server.on('upgrade', (request, socket, head) => {

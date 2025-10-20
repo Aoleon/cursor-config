@@ -115,7 +115,7 @@ export class AIService {
     // Initialisation des services de contexte enrichi
     this.contextBuilder = getContextBuilderService(storage);
     this.contextCache = getContextCacheService(storage);
-    this.performanceMetrics = getPerformanceMetricsService(storage);
+    this.performanceMetrics = getPerformanceMetricsService();
     
     // Initialisation des circuit breakers
     this.circuitBreakerManager = CircuitBreakerManager.getInstance();
@@ -227,7 +227,7 @@ export class AIService {
     // Nettoyage périodique pour éviter la fuite mémoire
     if (this.degradedResponseCache.size > 100) {
       const now = Date.now();
-      for (const [key, value] of this.degradedResponseCache.entries()) {
+      for (const [key, value] of Array.from(this.degradedResponseCache.entries())) {
         if (now - value.timestamp > 3600000) { // Supprimer après 1h
           this.degradedResponseCache.delete(key);
         }
@@ -1108,15 +1108,7 @@ export class AIService {
           "Réponse dégradée après plusieurs tentatives",
           "Les services IA se rétabliront automatiquement",
           "Réessayez dans quelques instants pour une réponse complète"
-        ],
-        metadata: {
-          complexity: 'high',
-          timeout: true,
-          fallbackAttempted,
-          retryStats: retryStats,
-          lastError: lastError instanceof Error ? lastError.message : String(lastError),
-          totalAttempts: retryStats?.attempts || 0
-        }
+        ]
       }
     };
   }
@@ -1167,10 +1159,11 @@ export class AIService {
     });
 
     const responseTime = Date.now() - startTime;
-    const tokensUsed = this.estimateTokens(userPrompt + systemPrompt, response.content[0]?.text || "");
+    const responseText = response.content[0]?.type === 'text' ? response.content[0].text : "";
+    const tokensUsed = this.estimateTokens(userPrompt + systemPrompt, responseText);
 
     // Parse la réponse JSON structurée
-    const parsedResult = this.parseAIResponse(response.content[0]?.text || "");
+    const parsedResult = this.parseAIResponse(responseText);
 
     return {
       success: true,

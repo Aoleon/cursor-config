@@ -93,12 +93,14 @@ export default function ProjectDetail() {
   const { data: project, isLoading: projectLoading } = useQuery<ProjectDetail>({
     queryKey: [`/api/projects/${projectId}`],
     enabled: !!projectId,
+    select: (response: any) => response?.data
   });
 
   // Récupérer les tâches du projet
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<ProjectTask[]>({
     queryKey: [`/api/projects/${projectId}/tasks`],
     enabled: !!projectId,
+    select: (response: any) => response?.data || []
   });
 
   const updateTaskMutation = useMutation({

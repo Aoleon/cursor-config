@@ -256,7 +256,7 @@ app.use((req, res, next) => {
   );
   
   // Démarrer la surveillance périodique
-  periodicDetectionScheduler.start();
+  await periodicDetectionScheduler.start();
   logger.info('Système détection alertes opérationnel', {
     metadata: {
       module: 'ExpressApp',

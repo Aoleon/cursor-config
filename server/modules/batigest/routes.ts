@@ -24,6 +24,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createPDFEngine, loadTemplate, type PDFTemplate, type RenderOptions } from '../documents/pdf';
 import Decimal from 'decimal.js-light';
+import { withRetry } from '../../utils/retry-helper';
 
 // Validation schemas
 const markSyncedSchema = z.object({
@@ -322,7 +323,30 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             }
           };
 
-          const result = await pdfEngine.render(renderOptions);
+          // Wrapper avec retry pour gérer l'initialization asynchrone de Puppeteer
+          logger.debug('[Batigest] Tentative de génération PDF avec retry automatique', {
+            metadata: { reference: orderData.reference }
+          });
+
+          const result = await withRetry(
+            () => pdfEngine.render(renderOptions),
+            {
+              maxRetries: 2, // 3 tentatives au total
+              initialDelay: 500,
+              backoffMultiplier: 2,
+              retryCondition: () => true, // Retry sur toutes les erreurs (Puppeteer init)
+              onRetry: (attempt, delay, error) => {
+                logger.warn('[Batigest] Retry génération PDF (Puppeteer initialization)', {
+                  metadata: {
+                    reference: orderData.reference,
+                    attempt,
+                    delay,
+                    error: error instanceof Error ? error.message : String(error)
+                  }
+                });
+              }
+            }
+          );
 
           if (!result.success || !result.pdf) {
             throw new ValidationError('Échec de la génération du PDF: ' + 
@@ -494,7 +518,30 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             }
           };
 
-          const result = await pdfEngine.render(renderOptions);
+          // Wrapper avec retry pour gérer l'initialization asynchrone de Puppeteer
+          logger.debug('[Batigest] Tentative de génération PDF avec retry automatique', {
+            metadata: { reference: quoteData.reference }
+          });
+
+          const result = await withRetry(
+            () => pdfEngine.render(renderOptions),
+            {
+              maxRetries: 2, // 3 tentatives au total
+              initialDelay: 500,
+              backoffMultiplier: 2,
+              retryCondition: () => true, // Retry sur toutes les erreurs (Puppeteer init)
+              onRetry: (attempt, delay, error) => {
+                logger.warn('[Batigest] Retry génération PDF (Puppeteer initialization)', {
+                  metadata: {
+                    reference: quoteData.reference,
+                    attempt,
+                    delay,
+                    error: error instanceof Error ? error.message : String(error)
+                  }
+                });
+              }
+            }
+          );
 
           if (!result.success || !result.pdf) {
             throw new ValidationError('Échec de la génération du PDF: ' + 

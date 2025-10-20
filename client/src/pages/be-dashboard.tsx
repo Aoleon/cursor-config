@@ -49,9 +49,9 @@ export default function BEDashboard() {
     select: selectBeWorkload
   });
 
-  // Fetch offers data for BE statistics
+  // Fetch AOs Monday data for BE statistics
   const { data: offers = [] } = useQuery<OfferItem[]>({
-    queryKey: ['/api/offers/'],
+    queryKey: ['/api/aos/'],
     select: selectOffers
   });
 

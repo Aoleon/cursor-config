@@ -30,11 +30,18 @@ The application features a modern fullstack architecture.
 - **API Response Handling**: Centralized `normalizeApiResponse<T>()` helper ensures consistent and type-safe handling of all API responses.
   - **Frontend Pattern**: All `useQuery` hooks must extract `.data` from API responses: `const result = await response.json(); return result?.data || [];`
   - **Backend Validation**: All search parameters validated with `typeof search === 'string'` before calling `.toLowerCase()` (5 occurrences fixed in `storage-poc.ts` and `routes-poc.ts`)
-  - **Navigation Alignment (19/10/2025)**: Fixed UI navigation to display 1195 Monday items correctly:
-    - `/workflow/etude-technique`: Displays Monday AOs in status "nouveau" via `/api/aos?status=nouveau` with mutation to `/api/aos/:id/validate-etude`
-    - `/dashboard`: "AOs Récents" section displays Monday AOs via `/api/aos`
-    - `/aos` redirect: Changed from `/workflow/etude-technique` → `/offers` (which displays all 827 Monday AOs)
-    - All project phase pages verified correct: use `/api/projects` with appropriate status filters
+  - **Navigation Alignment (19/10/2025)**: Fixed UI navigation to display 1195 Monday items correctly across all workflow stages:
+    - **Workflow Pages (6 corrected)**: All workflow/BE pages migrated from `/api/offers` → `/api/aos`
+      - `/workflow/etude-technique`: Monday AOs "nouveau" → mutation `/api/aos/:id/validate-etude`
+      - `/workflow/chiffrage`: Monday AOs "en_cours_chiffrage" → mutation `/api/aos/:id/validate-chiffrage`
+      - `/workflow/suppliers-pending`: Monday AOs "valide,signe,transforme_en_projet"
+      - `/be-dashboard`: BE statistics from `/api/aos/` (827 AOs)
+      - `/validation-be`: Monday AOs "en_attente_validation" → mutation `PATCH /api/aos/:id/validate`
+      - `/dashboard`: "AOs Récents" section via `/api/aos`
+    - **Redirects**: `/aos` → `/offers` (displays all 827 Monday AOs)
+    - **Project Pages**: All 5 phases verified (study, planning, supply, worksite, support) use `/api/projects` correctly
+    - **Safety Patterns**: All pages use `(array ?? []).filter(...)` to prevent undefined crashes
+    - **Data Distinction**: `/api/aos` = 827 Monday AOs (historical), `/api/offers` = new Saxium offers
 - **Testing Infrastructure**: Includes Vitest for unit tests and Playwright for E2E regression tests.
   - **E2E Workflow Tests**: Comprehensive Playwright tests for critical workflows:
     - `ao-complete.spec.ts`: AO creation → OCR → lots extraction → supplier workflow (100% UI-driven)

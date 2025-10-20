@@ -37,23 +37,23 @@ export default function ValidationBE() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Récupérer les offres en attente de validation BE
+  // Récupérer les AOs Monday en attente de validation BE
   const { data: offers, isLoading, error } = useQuery({
-    queryKey: ["/api/offers", "validation"],
+    queryKey: ["/api/aos", { status: "en_attente_validation" }],
     queryFn: async () => {
-      console.log("🔍 Chargement des offres en attente de validation BE...");
+      console.log("🔍 Chargement des AOs en attente de validation BE...");
       try {
-        const response = await fetch("/api/offers?status=en_attente_validation");
+        const response = await fetch("/api/aos?status=en_attente_validation");
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
         const result = await response.json();
         // L'API retourne { success: true, data: [...] }
         const data = Array.isArray(result) ? result : (result?.data || []);
-        console.log("✅ Données reçues:", data?.length, "offres en attente de validation");
+        console.log("✅ Données reçues:", data?.length, "AOs en attente de validation");
         return data;
       } catch (err) {
-        console.error("❌ Erreur lors de la récupération des offres:", err);
+        console.error("❌ Erreur lors de la récupération des AOs:", err);
         throw err;
       }
     },
@@ -61,11 +61,11 @@ export default function ValidationBE() {
     staleTime: 30000,
   });
 
-  // Mutation pour valider une offre
+  // Mutation pour valider un AO
   const validateOfferMutation = useMutation({
     mutationFn: async ({ offerId, approved }: { offerId: string; approved: boolean }) => {
-      console.log(`${approved ? '✅' : '❌'} Validation de l'offre:`, offerId);
-      const response = await fetch(`/api/offers/${offerId}/validate`, {
+      console.log(`${approved ? '✅' : '❌'} Validation de l'AO:`, offerId);
+      const response = await fetch(`/api/aos/${offerId}/validate`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -84,13 +84,13 @@ export default function ValidationBE() {
       return response.json();
     },
     onSuccess: (_, { approved }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/offers", "validation"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_attente_validation" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       toast({
-        title: approved ? "Offre validée" : "Offre rejetée",
+        title: approved ? "AO validé" : "AO rejeté",
         description: approved 
-          ? "L'offre peut maintenant passer à l'étape suivante" 
-          : "L'offre a été rejetée et nécessite une révision",
+          ? "L'AO peut maintenant passer à l'étape suivante" 
+          : "L'AO a été rejeté et nécessite une révision",
       });
     },
     onError: (error: any) => {
@@ -163,7 +163,7 @@ export default function ValidationBE() {
                 variant="outline" 
                 size="sm" 
                 className="mt-3"
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/offers", "validation"] })}
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_attente_validation" }] })}
               >
                 Réessayer
               </Button>

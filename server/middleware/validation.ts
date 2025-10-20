@@ -2,6 +2,19 @@ import { Request, Response, NextFunction } from "express";
 import { z, ZodError, ZodSchema } from "zod";
 import { fromZodError } from "zod-validation-error";
 
+// Étendre l'interface Express Request pour ajouter req.validated
+declare global {
+  namespace Express {
+    interface Request {
+      validated?: {
+        query?: any;
+        params?: any;
+        body?: any;
+      };
+    }
+  }
+}
+
 // Interface pour les options de validation
 interface ValidationOptions {
   strict?: boolean; // Mode strict : rejeter les champs non définis
@@ -10,6 +23,37 @@ interface ValidationOptions {
 
 // Types pour les différentes sources de validation
 type ValidationSource = 'body' | 'params' | 'query';
+
+/**
+ * Deep mutation helper - Mute complètement un objet target avec les valeurs de source
+ * Compatible Express 5 - Gère les nested objects/arrays et transformations Zod
+ * 
+ * @param target - L'objet à muter (req.query, req.params, req.body)
+ * @param source - L'objet source validé par Zod (avec transformations appliquées)
+ * 
+ * PROBLÈME RÉSOLU:
+ * Object.assign() fait seulement une copie shallow (top-level)
+ * Les nested objects restent des références vers les anciens objets non-sanitisés
+ * 
+ * SOLUTION:
+ * 1. Vider toutes les propriétés existantes du target
+ * 2. Copier directement toutes les propriétés du source (inclut nested objects déjà transformés)
+ */
+function deepMutate(target: any, source: any): void {
+  // 1. Vider toutes les propriétés existantes
+  for (const key in target) {
+    if (Object.prototype.hasOwnProperty.call(target, key)) {
+      delete target[key];
+    }
+  }
+  
+  // 2. Copier toutes les propriétés de source vers target
+  // Note: source contient déjà les nested objects/arrays transformés par Zod
+  // L'assignation directe préserve la structure complète avec transformations
+  for (const [key, value] of Object.entries(source)) {
+    target[key] = value;
+  }
+}
 
 // Middleware de validation générique
 export function validate(
@@ -29,7 +73,10 @@ export function validate(
       };
 
       // Appliquer la validation selon les options
+      // Express 5: req.query, req.params, req.body sont read-only
+      // Solution: stocker les données validées/sanitisées dans req.validated
       let validatedData;
+      
       if (opts.stripUnknown) {
         validatedData = schema.parse(dataToValidate);
       } else {
@@ -42,8 +89,19 @@ export function validate(
         }
       }
 
-      // Remplacer les données par les données validées
-      (req as any)[source] = validatedData;
+      // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects/arrays
+      // deepMutate() remplace Object.assign() qui ne fait qu'une copie shallow
+      // Préserve TOUTES les transformations Zod (coercions, defaults, stripUnknown)
+      // Compatible avec nested objects: req.query.filters.limit transformé correctement
+      deepMutate(req[source], validatedData);
+      
+      // BACKWARD COMPATIBILITY: Stocker aussi dans req.validated pour routes existantes
+      if (!req.validated) {
+        req.validated = {};
+      }
+      req.validated[source] = validatedData;
+
+      // Validation réussie - si elle échoue, une erreur ZodError est levée
       next();
     } catch (error) {
       if (error instanceof ZodError) {
@@ -140,10 +198,20 @@ export function validateRequest(validations: {
   return (req: Request, res: Response, next: NextFunction) => {
     const errors: any[] = [];
 
+    // Initialiser req.validated si nécessaire
+    if (!req.validated) {
+      req.validated = {};
+    }
+
     // Valider le body si fourni
     if (validations.body) {
       try {
-        req.body = validations.body.parse(req.body);
+        // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects
+        const validatedBody = validations.body.parse(req.body);
+        deepMutate(req.body, validatedBody);
+        
+        // BACKWARD COMPATIBILITY: Stocker aussi dans req.validated
+        req.validated.body = validatedBody;
       } catch (error) {
         if (error instanceof ZodError) {
           errors.push({
@@ -157,7 +225,12 @@ export function validateRequest(validations: {
     // Valider les params si fourni
     if (validations.params) {
       try {
-        req.params = validations.params.parse(req.params);
+        // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects
+        const validatedParams = validations.params.parse(req.params);
+        deepMutate(req.params, validatedParams);
+        
+        // BACKWARD COMPATIBILITY: Stocker aussi dans req.validated
+        req.validated.params = validatedParams;
       } catch (error) {
         if (error instanceof ZodError) {
           errors.push({
@@ -171,7 +244,12 @@ export function validateRequest(validations: {
     // Valider la query si fournie
     if (validations.query) {
       try {
-        req.query = validations.query.parse(req.query);
+        // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects
+        const validatedQuery = validations.query.parse(req.query);
+        deepMutate(req.query, validatedQuery);
+        
+        // BACKWARD COMPATIBILITY: Stocker aussi dans req.validated
+        req.validated.query = validatedQuery;
       } catch (error) {
         if (error instanceof ZodError) {
           errors.push({

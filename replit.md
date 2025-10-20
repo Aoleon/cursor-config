@@ -1,7 +1,7 @@
 # Saxium - Application de Chiffrage BTP/Menuiserie
 
 ## Overview
-Saxium is a fullstack application designed for quoting and project management in the French construction and joinery (BTP/Menuiserie) sector. Its primary goal is to enhance operational efficiency through advanced automation and AI capabilities. Key features include OCR analysis of supplier quotes, intelligent planning generation using DateIntelligence, and AI-driven decision-making tools. The project aims to address significant market needs in the BTP/Menuiserie sector by improving operational efficiency and project management through advanced technology.
+Saxium is a fullstack application designed for quoting and project management in the French construction and joinery (BTP/Menuiserie) sector. Its primary goal is to enhance operational efficiency through advanced automation and AI capabilities. Key features include OCR analysis of supplier quotes, intelligent planning generation using DateIntelligence, and AI-driven decision-making tools. The project aims to address significant market needs by improving operational efficiency and project management through advanced technology.
 
 ## User Preferences
 - Always read `server/utils/README-UTILS.md` before modifying server code.
@@ -21,124 +21,24 @@ The application features a modern fullstack architecture.
 - **Backend**: Implemented using Express, TypeScript, and Drizzle ORM.
   - **Modular Routes**: Refactored into 7 modules: `auth`, `chiffrage`, `suppliers`, `projects`, `analytics`, `documents`, and `batigest`.
   - **PDF Template Engine**: A robust system for template-based PDF generation including `PDFTemplateEngine`, `PlaceholderResolver`, `ImageIntegrator`, `LayoutOptimizer`, and `TemplateValidator`.
-  - **Batigest Integration System**: A file-based synchronization system with Sage Batigest ERP using `BatigestExportService`, HTML PDF templates, and a PowerShell script for automated polling and import. Frontend provides generators for purchase orders and client quotes, and a real-time dashboard.
+  - **Batigest Integration System**: A file-based synchronization system with Sage Batigest ERP using `BatigestExportService`, HTML PDF templates, and a PowerShell script for automated polling and import.
 - **Database**: PostgreSQL, hosted on Neon, managed with Drizzle ORM for schema definition and migrations.
 - **AI**: Integrates Anthropic Claude and OpenAI for advanced functionalities, complemented by Tesseract.js for OCR.
 - **Folder Structure**: Divided into `client/` for frontend, `server/` for backend, `shared/` for common code (e.g., Drizzle schema and Zod types), and `attached_assets/` for static assets.
-- **Data Architecture - AOs vs Offers**:
-  - **AOs Monday** (`/api/aos`): 827 historical items imported from Monday.com board (Appels d'Offres)
-    - Read-only reference data representing client project requests
-    - Used in workflow pages for pipeline management
-    - Support Monday bidirectional sync via webhooks
-  - **Offers Saxium** (`/api/offers`): New offers created within Saxium application
-    - Active working documents for pricing and project conversion
-    - Can be linked to an AO Monday via `aoId` field
-    - Support chiffrage-elements, DPGF generation, and project transformation
-  - **Hybrid ID Resolution**: Routes `/api/offers/:id` accept EITHER offer ID OR AO Monday ID
-    - Backend searches by offer ID first, then by `aoId` if not found
-    - Enables seamless navigation from AO workflows to offer detail pages
-    - Critical for chiffrage workflow: clicking AO opens related offer's chiffrage module
-  - **Chiffrage-Elements**: Linked exclusively to Offers Saxium via `/api/offers/:id/chiffrage-elements`
-    - Not directly attachable to AOs Monday (architectural decision)
-    - To work on an AO, create a linked Offer Saxium first
-  - **Cache Key Consistency**: All `/api/aos` and `/api/offers` queries use keys WITHOUT trailing slash
-    - Correct: `['/api/aos']`, `['/api/offers']`, `['/api/aos', {status: 'nouveau'}]`
-    - Incorrect: `['/api/aos/']`, `['/api/offers/']` (creates separate cache, breaks invalidation)
+- **Data Architecture - AOs vs Offers**: Differentiates between historical "AOs Monday" (read-only client project requests) and "Offers Saxium" (active working documents). Offers can be linked to AOs. Hybrid ID resolution allows routes to accept either offer ID or AO Monday ID. Chiffrage-Elements are exclusively linked to Offers Saxium. Cache keys for `/api/aos` and `/api/offers` must be consistent (without trailing slash).
 - **Error Handling**: A unified system utilizing `error-handler.ts`, `logger.ts`, and `errorHandler.ts` middleware provides typed errors.
 - **Business Services**: Includes `DateIntelligenceService` for intelligent project planning, `OCRService` for text extraction, `AIService` for structured quote analysis, and an `EventBus` for inter-service coordination.
-- **API Response Handling**: Centralized `normalizeApiResponse<T>()` helper ensures consistent and type-safe handling of all API responses.
-  - **Frontend Pattern**: All `useQuery` hooks must extract `.data` from API responses: `const result = await response.json(); return result?.data || [];`
-  - **Backend Validation**: All search parameters validated with `typeof search === 'string'` before calling `.toLowerCase()` (5 occurrences fixed in `storage-poc.ts` and `routes-poc.ts`)
-  - **Navigation Alignment (19-20/10/2025)**: Fixed UI navigation to display 1195 Monday items correctly across all workflow stages:
-    - **Workflow Pages (11 corrected)**: All workflow/BE pages migrated from `/api/offers` → `/api/aos`
-      - **Première vague (6 pages)** :
-        - `/workflow/etude-technique`: Monday AOs "nouveau" → mutation `/api/aos/:id/validate-etude`
-        - `/workflow/chiffrage`: Monday AOs "en_cours_chiffrage" → mutation `/api/aos/:id/validate-chiffrage`
-        - `/workflow/suppliers-pending`: Monday AOs "valide,signe,transforme_en_projet"
-        - `/be-dashboard`: BE statistics from `/api/aos` (827 AOs)
-        - `/validation-be`: Monday AOs "en_attente_validation" → mutation `PATCH /api/aos/:id/validate`
-        - `/dashboard`: "AOs Récents" section via `/api/aos`
-      - **Deuxième vague (5 pages)** :
-        - `/offers/chiffrage-list`: Monday AOs "en_attente_fournisseurs,en_cours_chiffrage" → mutation `/api/aos/:id/start-chiffrage`
-        - `/offers/validation-list`: Monday AOs "en_attente_validation" → mutation `/api/aos/:id/validate-studies`
-        - `/offers/transform-list`: Monday AOs "fin_etudes_validee,valide,signe" → mutation `/api/aos/:id/transform-to-project`
-        - `/pricing`: Dropdown AOs Monday pour tarification
-        - `/suppliers`: Dropdown AOs Monday pour demandes fournisseurs
-    - **Cache Coherence** : Toutes les clés de cache standardisées sur `['/api/aos']` (sans slash trailing) pour garantir les invalidations React Query
-    - **Redirects**: `/aos` → `/offers` (displays all 827 Monday AOs)
-    - **Project Pages**: All 5 phases verified (study, planning, supply, worksite, support) use `/api/projects` correctly
-    - **Safety Patterns**: All pages use `(array ?? []).filter(...)` to prevent undefined crashes
-    - **Data Distinction**: `/api/aos` = 827 Monday AOs (historical), `/api/offers` = new Saxium offers
-- **Testing Infrastructure**: Includes Vitest for unit tests and Playwright for E2E regression tests.
-  - **E2E Workflow Tests**: Comprehensive Playwright tests for critical workflows:
-    - `ao-complete.spec.ts`: AO creation → OCR → lots extraction → supplier workflow (100% UI-driven)
-    - `fournisseur-quote-complete.spec.ts`: Supplier quote workflow with robust Map-based bookkeeping (hybrid UI/API with TODOs for missing UI components)
-    - `monday-sync-bidirectional.spec.ts`: Monday.com sync bidirectionnelle complète (11 scénarios production-ready):
-      - Export Saxium → Monday (projets/AOs) avec validation badges UI
-      - Import Monday → Saxium via webhook HMAC-SHA256 sécurisé
-      - Webhook idempotence renforcé (eventId cache avec timestamps proof)
-      - Gestion conflicts Monday-priority avec audit logging
-      - Persistence restart-safe (cache rebuild DB)
-      - EventBus notifications WebSocket temps-réel
-- **Retry System**: Unified exponential backoff retry mechanism (`server/utils/retry-helper.ts`) with automatic retry for network errors, rate limits (429), and server errors (5xx) across all external API services (Monday.com, Claude, OpenAI).
-- **Intelligent Cache System**: Centralized CacheService with in-memory adapter (Redis-ready architecture) for frequent queries:
-  - Monday.com boards cached (10min TTL)
-  - Analytics KPIs/metrics cached (1-2min TTL)
-  - EventBus-driven proactive invalidation on data changes
-  - Monitoring endpoint `/api/monitoring/cache` for hit/miss metrics
-  - Automated cache warmup on startup
-- **Correlation IDs System**: AsyncLocalStorage-based request tracing for complete end-to-end observability:
-  - Automatic UUID v4 generation for all HTTP requests
-  - Transparent logger enrichment with `[cid:xxxxxxxx]` format
-  - Header propagation to external APIs (Monday.com, Claude, OpenAI)
-  - Monitoring endpoint with `correlationId` filter for debugging
-- **Monday.com Export System**: MondayExportService provides idempotent Saxium→Monday export for projects/AOs:
-  - Automatic EventBus triggers on `project:created`, `ao:created` events
-  - Manual export endpoints with retry logic and correlation tracking
-  - GraphQL mutations with exponential backoff (3 retries)
-  - Success/failure notifications via EventBus (`monday:export:success`, `monday:export:failed`)
-- **Monday.com Webhook System**: Secure webhook endpoint for Monday→Saxium synchronization:
-  - POST `/api/monday/webhook` with HMAC-SHA256 signature validation (base64, timing-safe)
-  - Idempotence via eventId cache (Set, 1000 events max)
-  - Rate limiting (100 requests/minute)
-  - Auto-sync via MondayImportService.syncFromMonday() for create/update/delete events
-  - EventBus notifications (`monday:webhook:received`, `monday:sync:success`)
-  - **Conflict Management MVP**: Monday-priority strategy with timestamp-based conflict detection
-    - SyncAuditService for structured audit logging via EventBus
-    - Emits `monday:sync:conflict` events when Saxium data is more recent
-    - Always applies Monday changes (Monday-priority policy) with conflict logging
-- **Monday.com UI Sync Indicators**: Visual sync status badges and real-time notifications:
-  - DB persistence via mondaySyncStatus, mondayConflictReason, mondayLastSyncedAt columns (projects/aos)
-  - SyncAuditService rebuilds cache from DB at startup (restart-safe states)
-  - Event listeners persist sync states (synced/conflict/error) to DB
-  - GET `/api/monday/sync-status` endpoint with entityIds filter
-  - SyncStatusBadge component (5 états : synced, syncing, error, conflict, notSynced) avec fallback "Not synced" si status undefined, icons Lucide, tooltip, data-testid
-  - useMondaySync hook for WebSocket events, toast notifications, React Query cache invalidation
-  - Integration in projects.tsx and unified-offers-display.tsx (AOs/Offers/Dashboard) with 30s refetch polling + real-time WebSocket updates
-- **Monday.com Historical Data Migration** (Completed 18/10/2025): One-time import of all historical Monday data into Saxium
-  - **Infrastructure**: `MondaySchemaAnalyzer`, `MondayMigrationServiceEnhanced` with cursor-based pagination (500 items/page), `monday-migration-mapping.ts` config
-  - **CLI Tool**: `server/scripts/migrate-from-monday.ts` with options: `--entity` (aos/projects), `--dry-run`, `--verbose`, `--limit`, `--offset`
-  - **Board Configuration**:
-    - AOs (Appels d'Offres): Board ID `3946257560` (827 items)
-    - Projects (Chantiers): Board ID `5296947311` (368 items)
-  - **Migration Results** (Production execution 18/10/2025):
-    - **827/827 AOs** imported successfully (100%) in 52.51s
-    - **368/368 Projects** imported successfully (100%) in 54.63s
-    - **Total: 1195/1195 items** (100% success rate)
-  - **Reference Format**: Uses Monday native IDs (`AO-18072968632`, `Projet-7833135734`) for guaranteed uniqueness
-  - **mondayItemId Preservation**: All migrated items store original Monday ID in `mondayItemId` field for bidirectional sync
-  - **Column Mappings AOs**: `text7`→client (MOA), `lot`→aoCategory, `color2`→operationalStatus, `priority__1`→priority, `numeric`→amountEstimate, etc.
-  - **Column Mappings Projects**: `texte`→client (MOA), `statut3`→status, `label`→lot, `chiffres`→budget, `date_mkn1s5d4`→startDate, etc.
-  - **Enum Alignments**: Monday values mapped to Saxium schema (e.g., "Menu Ext"→MEXT, "Menu Int"→MINT, "High"→elevee, "Nouveau"→planification)
-  - **Performance Optimization**: Batch parallel inserts (20 items/batch via Promise.allSettled) reduced time from >10min to ~1min per entity
-  - **Critical Fixes Applied**:
-    - Removed non-existent `monday_item_id` column mapping
-    - Modified `transformItem()` to preserve Monday native ID (`item.id`) before column mapping
-    - Reference transformation uses mondayItemId for uniqueness (avoided 35 duplicate names in Monday)
-  - **Future Cleanup**: If mondayItemId sync no longer needed, run `UPDATE aos SET monday_item_id = NULL; UPDATE projects SET monday_item_id = NULL;`
-- **Draft System**: Allows users to save incomplete forms (Appel d'Offres) with conditional backend validation and frontend support.
-- **Technical Alerts & Toast Deduplication**: Consolidated OCR technical alerts and implemented a robust real-time event deduplication system for notifications using `sessionStorage` persistence.
-- **OCR Lot Extraction**: Enhanced regex patterns in `server/ocrService.ts` to support Unicode characters in French AO lot formats.
+- **API Response Handling**: Centralized `normalizeApiResponse<T>()` helper ensures consistent and type-safe handling of all API responses. Frontend `useQuery` hooks extract `.data`. Search parameters are validated backend.
+- **Testing Infrastructure**: Includes Vitest for unit tests and Playwright for E2E regression tests, covering critical workflows like AO creation, supplier quotes, and Monday.com synchronization.
+- **Retry System**: Unified exponential backoff retry mechanism (`server/utils/retry-helper.ts`) for external API calls.
+- **Intelligent Cache System**: Centralized `CacheService` with in-memory adapter (Redis-ready) for frequent queries, proactive invalidation via EventBus, and a monitoring endpoint.
+- **Correlation IDs System**: `AsyncLocalStorage`-based request tracing for end-to-end observability, enriching logs and propagating IDs to external APIs.
+- **Monday.com Export System**: `MondayExportService` provides idempotent Saxium→Monday export for projects/AOs via EventBus triggers and manual endpoints.
+- **Monday.com Webhook System**: Secure webhook endpoint (`/api/monday/webhook`) for Monday→Saxium synchronization with HMAC-SHA256 signature validation, idempotence, rate limiting, and conflict management (Monday-priority strategy).
+- **Monday.com UI Sync Indicators**: Visual sync status badges and real-time notifications in the UI, persisted in DB, with a `useMondaySync` hook for WebSocket events and cache invalidation.
+- **Draft System**: Allows users to save incomplete forms with conditional backend validation.
+- **Technical Alerts & Toast Deduplication**: Consolidated OCR technical alerts and implemented a robust real-time event deduplication system.
+- **OCR Lot Extraction**: Enhanced regex patterns in `server/ocrService.ts` to support Unicode characters.
 
 ## External Dependencies
 - **Replit Services**: Utilizes Replit for OIDC authentication, PostgreSQL (via `DATABASE_URL`), and Object Storage.

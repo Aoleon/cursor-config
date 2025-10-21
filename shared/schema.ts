@@ -2792,13 +2792,13 @@ export type InsertBeQualityControl = typeof beQualityControls.$inferInsert;
 // ========================================
 
 export type ProjectMilestone = typeof projectMilestones.$inferSelect;
-export type InsertProjectMilestone = typeof insertProjectMilestoneSchema._type;
+export type InsertProjectMilestone = z.infer<typeof insertProjectMilestoneSchema>;
 
 export type LotSupplierQuote = typeof lotSupplierQuotes.$inferSelect;
-export type InsertLotSupplierQuote = typeof insertLotSupplierQuoteSchema._type;
+export type InsertLotSupplierQuote = z.infer<typeof insertLotSupplierQuoteSchema>;
 
 export type ProjectSupplier = typeof projectSuppliers.$inferSelect;
-export type InsertProjectSupplier = typeof insertProjectSupplierSchema._type;
+export type InsertProjectSupplier = z.infer<typeof insertProjectSupplierSchema>;
 
 // ========================================
 // SCHÉMAS ZOD POUR VALIDATION POC
@@ -4874,7 +4874,7 @@ export const accessValidationRequestSchema = z.object({
   action: z.enum(["read", "write", "delete", "create", "export"]),
   columns: z.array(z.string()).optional(),
   recordId: z.string().optional(),
-  contextValues: z.record(z.any()).optional(),
+  contextValues: z.record(z.string(), z.any()).optional(),
 });
 
 // Schema pour requête d'audit
@@ -4903,7 +4903,7 @@ export const createContextSchema = z.object({
   sqlCondition: z.string().min(10),
   requiredParameters: z.array(z.string()).default([]),
   appliesTo: z.array(z.string()).default([]),
-  examples: z.record(z.any()).optional(),
+  examples: z.record(z.string(), z.any()).optional(),
 });
 
 // ========================================
@@ -6657,7 +6657,7 @@ export const createAuditEventSchema = z.object({
   executionTimeMs: z.number().optional(),
   responseSize: z.number().optional(),
   tags: z.array(z.string()).optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 // Schéma pour création d'alerte de sécurité (API)
@@ -6685,7 +6685,7 @@ export const createSecurityAlertSchema = z.object({
   assignedToUserId: z.string().optional(),
   correlationId: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 // ========================================
@@ -7120,12 +7120,12 @@ export const proposeActionSchema = z.object({
   type: z.enum(["create", "update", "delete", "business_action"]),
   entity: z.enum(["offer", "project", "ao", "contact", "task", "supplier", "team_member", "document", "validation", "milestone"]),
   operation: z.string().min(1).max(100),
-  parameters: z.record(z.any()),
+  parameters: z.record(z.string(), z.any()),
   targetEntityId: z.string().optional(),
   riskLevel: z.enum(["low", "medium", "high"]).optional(),
   confirmationRequired: z.boolean().default(true),
   expirationMinutes: z.number().min(1).max(1440).default(30), // 1 minute à 24 heures
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 // Schéma pour exécuter une action

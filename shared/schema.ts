@@ -9138,6 +9138,7 @@ export type InsertClientQuote = z.infer<typeof insertClientQuoteSchema>;
 
 export type BatigestExportQueue = typeof batigestExportQueue.$inferSelect;
 export type InsertBatigestExport = z.infer<typeof insertBatigestExportSchema>;
+export type InsertBatigestExportQueue = InsertBatigestExport;
 
 // ========================================
 // ENUMS POUR RAPPORT DE BUGS - PHASE ALPHA

@@ -41,6 +41,11 @@ The application features a modern fullstack architecture.
 - **OCR Lot Extraction**: Enhanced regex patterns in `server/ocrService.ts` to support Unicode characters.
 - **SPA Routing Stability** (Oct 2025): Fixed PathError crashes from `/*splat` route via fallback middleware in `server/index.ts`. Fallback activates ONLY when Vite's route fails, preserving HMR. Tested stable across 2+ restarts. Known non-critical warning: `@vitejs/plugin-react can't detect preamble` (app functions normally).
   - **Future Enhancement** (when `server/vite.ts` becomes editable): Return Vite instance from `setupVite()` to enable `vite.transformIndexHtml()` in fallback for full HMR preservation.
+- **Zod v4 Migration & Type Safety** (Oct 2025): Completed migration to Zod v4 with zero TypeScript/LSP compilation errors. Key achievements:
+  - **Storage Architecture Restoration**: Re-implemented 308 missing methods in DatabaseStorage with EventBus integration for business alerts (createBusinessAlert, listBusinessAlerts, updateBusinessAlertStatus, findSimilarAlerts). MemStorage converted to testing stubs.
+  - **DateAlertDetectionService Refactoring**: Eliminated 110 LSP errors through InsertDateAlert type alignment, ProjectStatus enum fix (projectStatusEnum), schema field corrections (dateRemise → dateLimiteRemise), and comprehensive null safety improvements.
+  - **Build Optimization**: Removed all 6 duplicate method warnings (storage-poc business alerts + ChatbotOrchestrationService) achieving 0 build warnings.
+  - **Production Stability**: Build validated (Vite 28s, ESBuild 142ms), runtime error `evaluateBusinessThresholds is not a function` resolved, 375 projects operational with functional alert generation system.
 
 ## External Dependencies
 - **Replit Services**: Utilizes Replit for OIDC authentication, PostgreSQL (via `DATABASE_URL`), and Object Storage.

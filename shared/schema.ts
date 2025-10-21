@@ -2820,8 +2820,47 @@ export const insertAoSchema = createInsertSchema(aos).omit({
   // Transform string dates from frontend to Date objects
   dateSortieAO: z.string().optional().transform((val) => val ? new Date(val) : undefined),
   dateAcceptationAO: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-  demarragePrevu: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  demarragePrevu: z.string().optional().transform((val) => val ? new Date(val) : undefined)
+    .refine((date) => {
+      if (!date) return true;
+      const maxFuture = new Date();
+      maxFuture.setFullYear(maxFuture.getFullYear() + 3);
+      return date <= maxFuture;
+    }, "La date de démarrage prévue ne peut pas être dans plus de 3 ans"),
   dateOS: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  
+  // NOUVELLES VALIDATIONS MÉTIER BTP
+  intituleOperation: z.string()
+    .min(3, "L'intitulé de l'opération doit contenir au moins 3 caractères")
+    .max(500, "L'intitulé ne peut pas dépasser 500 caractères")
+    .optional(),
+  
+  // NOUVELLE TRANSFORMATION: Normaliser les montants (enlever espaces, virgules)
+  montantEstime: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        // Enlever espaces, € et convertir virgule en point
+        const normalized = val.replace(/[\s€]/g, '').replace(',', '.');
+        // Chaîne vide → null pour champs optionnels
+        if (normalized === '') return null;
+        const parsed = Number(normalized);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      return val;
+    },
+    z.number()
+      .positive("Le montant estimé doit être positif")
+      .max(100000000, "Le montant estimé semble anormalement élevé (>100M€)")
+      .optional()
+      .or(z.null())
+  ),
+  
+  delaiContractuel: z.number()
+    .positive("Le délai contractuel doit être positif")
+    .max(3650, "Le délai contractuel ne peut pas dépasser 10 ans (3650 jours)")
+    .optional()
+    .or(z.null())
+    .or(z.undefined()),
 });
 
 export const insertAoLotSchema = createInsertSchema(aoLots).omit({
@@ -2853,12 +2892,220 @@ export const insertOfferSchema = createInsertSchema(offers).omit({
   createdAt: true,
   updatedAt: true,
   deadline: true, // Calculée automatiquement par le système (date limite remise)
+}).extend({
+  // VALIDATIONS MÉTIER OFFER
+  
+  // NOUVELLE TRANSFORMATION: Normaliser référence en MAJUSCULES
+  reference: z.preprocess(
+    (val) => typeof val === 'string' ? val.trim().toUpperCase() : val,
+    z.string()
+      .min(3, "La référence doit contenir au moins 3 caractères")
+      .max(50, "La référence ne peut pas dépasser 50 caractères")
+      .optional()
+  ),
+  
+  // NORMALISATION: Montants avec virgules/espaces
+  montantEstime: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const normalized = val.replace(/[\s€]/g, '').replace(',', '.');
+        // Chaîne vide → null pour champs optionnels
+        if (normalized === '') return null;
+        const parsed = Number(normalized);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      return val;
+    },
+    z.number()
+      .nonnegative("Le montant estimé ne peut pas être négatif")
+      .max(100000000, "Le montant estimé semble anormalement élevé (>100M€)")
+      .optional()
+      .or(z.null())
+  ),
+  
+  montantFinal: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const normalized = val.replace(/[\s€]/g, '').replace(',', '.');
+        // Chaîne vide → null pour champs optionnels
+        if (normalized === '') return null;
+        const parsed = Number(normalized);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      return val;
+    },
+    z.number()
+      .nonnegative("Le montant final ne peut pas être négatif")
+      .max(100000000, "Le montant final semble anormalement élevé (>100M€)")
+      .optional()
+      .or(z.null())
+  ),
+  
+  prorataEventuel: z.number()
+    .min(0, "Le prorata ne peut pas être négatif")
+    .max(100, "Le prorata ne peut pas dépasser 100%")
+    .optional()
+    .or(z.null())
+    .or(z.undefined()),
+    
+  dateLimiteRemise: z.string().optional()
+    .transform((val) => val ? new Date(val) : undefined)
+    .refine((date) => {
+      if (!date) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return date >= today;
+    }, "La date limite de remise ne peut pas être dans le passé")
+    .or(z.undefined()),
+  
+  dateSortieAO: z.string().optional()
+    .transform((val) => val ? new Date(val) : undefined)
+    .or(z.undefined()),
+  
+  demarragePrevu: z.string().optional()
+    .transform((val) => val ? new Date(val) : undefined)
+    .refine((date) => {
+      if (!date) return true;
+      const maxFuture = new Date();
+      maxFuture.setFullYear(maxFuture.getFullYear() + 3);
+      return date <= maxFuture;
+    }, "La date de démarrage prévue ne peut pas être dans plus de 3 ans")
+    .or(z.undefined()),
+  
+  delaiContractuel: z.string()
+    .regex(/^\d+$/, "Le délai contractuel doit être un nombre de jours")
+    .optional()
+    .or(z.null())
+    .or(z.undefined()),
 });
 
 export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  // VALIDATIONS MÉTIER PROJECT
+  
+  // NOUVELLE TRANSFORMATION: Normaliser nom (trim + capitalize first letter)
+  name: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        // Capitalize first letter of each word
+        return trimmed.split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+      }
+      return val;
+    },
+    z.string()
+      .min(3, "Le nom du projet doit contenir au moins 3 caractères")
+      .max(150, "Le nom du projet ne peut pas dépasser 150 caractères")
+  ),
+  
+  // NORMALISATION: Budget avec virgules/espaces
+  budget: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const normalized = val.replace(/[\s€]/g, '').replace(',', '.');
+        // Chaîne vide → null pour champs optionnels
+        if (normalized === '') return null;
+        const parsed = Number(normalized);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      return val;
+    },
+    z.number()
+      .positive("Le budget total doit être positif")
+      .max(100000000, "Le budget semble anormalement élevé (>100M€)")
+      .optional()
+      .or(z.null())
+  ),
+  
+  montantEstime: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const normalized = val.replace(/[\s€]/g, '').replace(',', '.');
+        // Chaîne vide → null pour champs optionnels
+        if (normalized === '') return null;
+        const parsed = Number(normalized);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      return val;
+    },
+    z.number()
+      .nonnegative("Le montant estimé ne peut pas être négatif")
+      .max(100000000, "Le montant semble anormalement élevé")
+      .optional()
+      .or(z.null())
+  ),
+  
+  montantFinal: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const normalized = val.replace(/[\s€]/g, '').replace(',', '.');
+        // Chaîne vide → null pour champs optionnels
+        if (normalized === '') return null;
+        const parsed = Number(normalized);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      return val;
+    },
+    z.number()
+      .nonnegative("Le montant final ne peut pas être négatif")
+      .max(100000000, "Le montant semble anormalement élevé")
+      .optional()
+      .or(z.null())
+  ),
+  
+  startDate: z.string().optional()
+    .transform((val) => val ? new Date(val) : undefined)
+    .refine((date) => {
+      if (!date) return true;
+      const maxFuture = new Date();
+      maxFuture.setFullYear(maxFuture.getFullYear() + 3);
+      return date <= maxFuture;
+    }, "La date de démarrage ne peut pas être dans plus de 3 ans")
+    .or(z.undefined()),
+  
+  endDate: z.string().optional()
+    .transform((val) => val ? new Date(val) : undefined)
+    .or(z.undefined()),
+  
+  delaiContractuel: z.number()
+    .positive("Le délai contractuel doit être positif")
+    .max(3650, "Le délai contractuel ne peut pas dépasser 10 ans (3650 jours)")
+    .optional()
+    .or(z.null())
+    .or(z.undefined()),
+}).superRefine((data, ctx) => {
+  // Validation croisée: endDate > startDate
+  if (data.startDate && data.endDate) {
+    const start = typeof data.startDate === 'string' 
+      ? new Date(data.startDate) 
+      : data.startDate;
+    const end = typeof data.endDate === 'string'
+      ? new Date(data.endDate)
+      : data.endDate;
+      
+    if (end <= start) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La date de fin doit être postérieure à la date de début",
+        path: ['endDate'],
+      });
+    }
+    
+    // Durée réaliste (max 5 ans)
+    const diffYears = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
+    if (diffYears > 5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La durée du projet ne peut pas dépasser 5 ans",
+        path: ['endDate'],
+      });
+    }
+  }
 });
 
 export const insertProjectTaskSchema = createInsertSchema(projectTasks).omit({
@@ -2901,6 +3148,101 @@ export const insertChiffrageElementSchema = createInsertSchema(chiffrageElements
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  // VALIDATIONS MÉTIER CHIFFRAGE
+  
+  // NOUVELLE TRANSFORMATION: Normaliser désignation (trim)
+  designation: z.preprocess(
+    (val) => typeof val === 'string' ? val.trim() : val,
+    z.string()
+      .min(3, "La désignation doit contenir au moins 3 caractères")
+      .max(300, "La désignation ne peut pas dépasser 300 caractères")
+  ),
+  
+  // NORMALISATION: Quantité avec virgules
+  quantity: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const normalized = val.replace(/[\s]/g, '').replace(',', '.');
+        return Number(normalized);
+      }
+      return val;
+    },
+    z.number()
+      .positive("La quantité doit être positive")
+      .max(1000000, "La quantité semble anormalement élevée")
+  ),
+  
+  // NORMALISATION: Prix avec virgules/espaces
+  unitPrice: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const normalized = val.replace(/[\s€]/g, '').replace(',', '.');
+        return Number(normalized);
+      }
+      return val;
+    },
+    z.number()
+      .nonnegative("Le prix unitaire ne peut pas être négatif")
+      .max(1000000, "Le prix unitaire semble anormalement élevé (>1M€)")
+  ),
+  
+  totalPrice: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const normalized = val.replace(/[\s€]/g, '').replace(',', '.');
+        // Chaîne vide → null pour champs optionnels
+        if (normalized === '') return null;
+        const parsed = Number(normalized);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      return val;
+    },
+    z.number()
+      .nonnegative("Le prix total ne peut pas être négatif")
+      .optional()
+      .or(z.null())
+  ),
+    
+  marginPercentage: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const normalized = val.replace(/[\s]/g, '').replace(',', '.');
+        // Chaîne vide → null pour champs optionnels
+        if (normalized === '') return null;
+        const parsed = Number(normalized);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      return val;
+    },
+    z.number()
+      .min(0, "Le taux de marge ne peut pas être négatif")
+      .max(200, "Le taux de marge ne peut pas dépasser 200%")
+      .optional()
+      .or(z.null())
+      .or(z.undefined())
+  ),
+  
+  coefficient: z.number()
+    .positive("Le coefficient doit être positif")
+    .max(10, "Le coefficient ne peut pas dépasser 10")
+    .optional()
+    .or(z.null())
+    .or(z.undefined()),
+}).superRefine((data, ctx) => {
+  // Validation cohérence: totalPrice ≈ quantity × unitPrice
+  if (data.quantity && data.unitPrice && data.totalPrice !== null && data.totalPrice !== undefined) {
+    const expectedTotal = Number(data.quantity) * Number(data.unitPrice);
+    const tolerance = expectedTotal * 0.02; // 2% de tolérance pour arrondi
+    
+    if (Math.abs(Number(data.totalPrice) - expectedTotal) > tolerance) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Le prix total (${data.totalPrice}€) ne correspond pas à quantité × prix unitaire (${expectedTotal.toFixed(2)}€)`,
+        path: ['totalPrice'],
+      });
+    }
+  }
 });
 
 export const insertDpgfDocumentSchema = createInsertSchema(dpgfDocuments).omit({
@@ -4605,8 +4947,8 @@ export const snapshotRequestSchema = z.object({
 export const metricQuerySchema = z.object({
   metricType: z.enum(['conversion', 'delay', 'revenue', 'team_load', 'margin']).optional(),
   groupBy: z.enum(['user', 'department', 'project_type', 'month', 'phase']).optional(),
-  limit: z.string().regex(/^\d+$/).transform(Number).refine(val => val >= 1 && val <= 100, { message: "Must be between 1 and 100" }).default('20').or(z.number().min(1).max(100).default(20)),
-  offset: z.string().regex(/^\d+$/).transform(Number).refine(val => val >= 0, { message: "Must be >= 0" }).default('0').or(z.number().min(0).default(0))
+  limit: z.string().regex(/^\d+$/).default('20').transform(Number).refine(val => val >= 1 && val <= 100, { message: "Must be between 1 and 100" }).or(z.number().min(1).max(100).default(20)),
+  offset: z.string().regex(/^\d+$/).default('0').transform(Number).refine(val => val >= 0, { message: "Must be >= 0" }).or(z.number().min(0).default(0))
 });
 
 export const benchmarkQuerySchema = z.object({
@@ -6025,8 +6367,8 @@ export const chatbotValidateRequestSchema = z.object({
 
 // Schéma pour GET /api/chatbot/history  
 export const chatbotHistoryRequestSchema = z.object({
-  limit: z.string().regex(/^\d+$/).transform(Number).refine(val => val >= 1 && val <= 100, { message: "Must be between 1 and 100" }).default('20').or(z.number().min(1).max(100).default(20)),
-  offset: z.string().regex(/^\d+$/).transform(Number).refine(val => val >= 0, { message: "Must be >= 0" }).default('0').or(z.number().min(0).default(0)),
+  limit: z.string().regex(/^\d+$/).default('20').transform(Number).refine(val => val >= 1 && val <= 100, { message: "Must be between 1 and 100" }).or(z.number().min(1).max(100).default(20)),
+  offset: z.string().regex(/^\d+$/).default('0').transform(Number).refine(val => val >= 0, { message: "Must be >= 0" }).or(z.number().min(0).default(0)),
   sessionId: z.string().optional(),
   startDate: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), {
     message: "Format de date invalide pour startDate"

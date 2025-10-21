@@ -11119,11 +11119,11 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
           metadata: { 
             route: '/api/employees/:userId/labels/:labelId',
             method: 'DELETE',
-            userId: req.params.userId,
+            targetUserId: req.params.userId,
             labelId: req.params.labelId,
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
+            authenticatedUserId: req.user?.id
           }
         });
         throw createError.database('Erreur lors de la suppression du label employé');

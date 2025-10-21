@@ -6,9 +6,12 @@ import { AnalyticsService } from "./AnalyticsService";
 import { PredictiveEngineService } from "./PredictiveEngineService";
 import type { 
   ProjectTimeline, DateAlert, InsertDateAlert, 
-  Project, ProjectStatus, DateIntelligenceRule,
+  Project, projectStatusEnum, DateIntelligenceRule,
   User, Offer, Ao, AlertThreshold, InsertBusinessAlert, ThresholdKey
 } from "@shared/schema";
+
+// Type alias for ProjectStatus from enum
+type ProjectStatus = typeof projectStatusEnum.enumValues[number];
 
 // ========================================
 // TYPES ET INTERFACES POUR DÉTECTION AVANCÉE
@@ -185,8 +188,8 @@ export class DateAlertDetectionService {
   // DÉTECTION PROACTIVE RETARDS
   // ========================================
   
-  async detectDelayRisks(projectId?: string): Promise<DateAlert[]> {
-    const alerts: DateAlert[] = [];
+  async detectDelayRisks(projectId?: string): Promise<InsertDateAlert[]> {
+    const alerts: InsertDateAlert[] = [];
     
     try {
       // Récupérer les projets actifs
@@ -254,16 +257,20 @@ export class DateAlertDetectionService {
   // ANALYSE CONFLITS PLANNING
   // ========================================
   
-  async detectPlanningConflicts(timeframe: TimeRange): Promise<DateAlert[]> {
-    const alerts: DateAlert[] = [];
+  async detectPlanningConflicts(timeframe: TimeRange): Promise<InsertDateAlert[]> {
+    const alerts: InsertDateAlert[] = [];
     
     try {
       // Récupérer toutes les timelines dans la période
       const allTimelines = await this.storage.getAllProjectTimelines();
-      const timelinesInRange = allTimelines.filter(tl => 
-        (tl.plannedStartDate >= timeframe.startDate && tl.plannedStartDate <= timeframe.endDate) ||
-        (tl.plannedEndDate >= timeframe.startDate && tl.plannedEndDate <= timeframe.endDate)
-      );
+      const timelinesInRange = allTimelines.filter(tl => {
+        // Skip timelines without dates
+        if (!tl.plannedStartDate || !tl.plannedEndDate) {
+          return false;
+        }
+        return (tl.plannedStartDate >= timeframe.startDate && tl.plannedStartDate <= timeframe.endDate) ||
+               (tl.plannedEndDate >= timeframe.startDate && tl.plannedEndDate <= timeframe.endDate);
+      });
       
       // 1. Détection conflits de ressources équipes
       const resourceConflicts = this.menuiserieRules.detectTeamResourceConflicts(timelinesInRange);
@@ -312,8 +319,8 @@ export class DateAlertDetectionService {
   // VÉRIFICATION ÉCHÉANCES CRITIQUES
   // ========================================
   
-  async checkCriticalDeadlines(daysAhead: number = 7): Promise<DateAlert[]> {
-    const alerts: DateAlert[] = [];
+  async checkCriticalDeadlines(daysAhead: number = 7): Promise<InsertDateAlert[]> {
+    const alerts: InsertDateAlert[] = [];
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() + daysAhead);
     
@@ -331,14 +338,14 @@ export class DateAlertDetectionService {
       // 2. Vérification échéances offres
       const offers = await this.storage.getOffers();
       for (const offer of offers) {
-        if (offer.dateRemise && new Date(offer.dateRemise) <= cutoffDate) {
+        if (offer.dateLimiteRemise && new Date(offer.dateLimiteRemise) <= cutoffDate) {
           const deadline: CriticalDeadline = {
             type: 'deadline_critical',
             entityType: 'offer',
             entityId: offer.id,
             entityReference: offer.reference || 'Offre sans référence',
-            deadline: new Date(offer.dateRemise),
-            daysRemaining: Math.ceil((new Date(offer.dateRemise).getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
+            deadline: new Date(offer.dateLimiteRemise),
+            daysRemaining: Math.ceil((new Date(offer.dateLimiteRemise).getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
             bufferDays: 2, // 2 jours de buffer par défaut pour offres
             preparationStatus: this.assessOfferPreparationStatus(offer),
             requiredActions: this.getOfferRequiredActions(offer)
@@ -394,8 +401,8 @@ export class DateAlertDetectionService {
   // DÉTECTION OPTIMISATIONS POSSIBLES
   // ========================================
   
-  async detectOptimizationOpportunities(): Promise<DateAlert[]> {
-    const alerts: DateAlert[] = [];
+  async detectOptimizationOpportunities(): Promise<InsertDateAlert[]> {
+    const alerts: InsertDateAlert[] = [];
     
     try {
       const projects = await this.storage.getProjects();

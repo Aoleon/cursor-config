@@ -2544,9 +2544,9 @@ Réponses publiées au plus tard le 22/03/2025
   }
 
   /**
-   * Calcule la confiance de détection d'un matériau
+   * Calcule la confiance de détection d'un matériau - VERSION V2
    */
-  private calculateMaterialConfidence(line: string, matches: RegExpMatchArray): number {
+  private calculateMaterialConfidenceV2(line: string, matches: RegExpMatchArray): number {
     let confidence = 0.8; // Base
     
     // Augmenter si terme technique présent
@@ -3294,7 +3294,7 @@ l.bernard@menuiseries-moderne.fr
         extractedData: data.processedFields,
         
         qualityScore: data.qualityScore.toString(),
-        completenessScore: data.completenessScore,
+        completenessScore: data.completenessScore.toString(),
         requiresManualReview: data.qualityScore < 70 || data.completenessScore < 60
       };
       

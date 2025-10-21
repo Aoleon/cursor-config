@@ -4512,360 +4512,9 @@ export class MemStorage implements IStorage {
     throw new Error("MemStorage: updateScoringConfig not implemented for POC");
   }
 
-  async enqueueTechnicalAlert(alert: InsertTechnicalAlert): Promise<TechnicalAlert> {
-    throw new Error("MemStorage: enqueueTechnicalAlert not implemented for POC");
-  }
-
-  async listTechnicalAlerts(filter?: TechnicalAlertsFilter): Promise<TechnicalAlert[]> {
-    return [];
-  }
-
-  async getTechnicalAlert(id: string): Promise<TechnicalAlert | null> {
-    return null;
-  }
-
-  async acknowledgeTechnicalAlert(id: string, userId: string): Promise<void> {
-    throw new Error("MemStorage: acknowledgeTechnicalAlert not implemented for POC");
-  }
-
-  async validateTechnicalAlert(id: string, userId: string): Promise<void> {
-    throw new Error("MemStorage: validateTechnicalAlert not implemented for POC");
-  }
-
-  async bypassTechnicalAlert(id: string, userId: string, until: Date, reason: string): Promise<void> {
-    throw new Error("MemStorage: bypassTechnicalAlert not implemented for POC");
-  }
-
-  async getActiveBypassForAo(aoId: string): Promise<{ until: Date; reason: string } | null> {
-    return null;
-  }
-
-  async listTechnicalAlertHistory(alertId: string): Promise<TechnicalAlertHistory[]> {
-    return [];
-  }
-
-  async addTechnicalAlertHistory(alertId: string | null, action: string, actorUserId: string | null, note?: string, metadata?: Record<string, any>): Promise<TechnicalAlertHistory> {
-    throw new Error("MemStorage: addTechnicalAlertHistory not implemented for POC");
-  }
-
-  async listAoSuppressionHistory(aoId: string): Promise<TechnicalAlertHistory[]> {
-    return [];
-  }
-
-  async getMaterialColorRules(): Promise<MaterialColorAlertRule[]> {
-    return [];
-  }
-
-  async setMaterialColorRules(rules: MaterialColorAlertRule[]): Promise<void> {
-    throw new Error("MemStorage: setMaterialColorRules not implemented for POC");
-  }
-
-  async getProjectTimelines(projectId: string): Promise<ProjectTimeline[]> {
-    return [];
-  }
-
-  async getAllProjectTimelines(): Promise<ProjectTimeline[]> {
-    return [];
-  }
-
-  async createProjectTimeline(data: InsertProjectTimeline): Promise<ProjectTimeline> {
-    throw new Error("MemStorage: createProjectTimeline not implemented for POC");
-  }
-
-  async updateProjectTimeline(id: string, data: Partial<InsertProjectTimeline>): Promise<ProjectTimeline> {
-    throw new Error("MemStorage: updateProjectTimeline not implemented for POC");
-  }
-
-  async deleteProjectTimeline(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteProjectTimeline not implemented for POC");
-  }
-
-  async getActiveRules(filters?: { phase?: typeof projectStatusEnum.enumValues[number], projectType?: string }): Promise<DateIntelligenceRule[]> {
-    return [];
-  }
-
-  async getAllRules(): Promise<DateIntelligenceRule[]> {
-    return [];
-  }
-
-  async getRule(id: string): Promise<DateIntelligenceRule | undefined> {
-    return undefined;
-  }
-
-  async createRule(data: InsertDateIntelligenceRule): Promise<DateIntelligenceRule> {
-    throw new Error("MemStorage: createRule not implemented for POC");
-  }
-
-  async updateRule(id: string, data: Partial<InsertDateIntelligenceRule>): Promise<DateIntelligenceRule> {
-    throw new Error("MemStorage: updateRule not implemented for POC");
-  }
-
-  async deleteRule(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteRule not implemented for POC");
-  }
-
-  async getDateAlerts(filters?: { entityType?: string, entityId?: string, status?: string }): Promise<DateAlert[]> {
-    return [];
-  }
-
-  async getDateAlert(id: string): Promise<DateAlert | undefined> {
-    return undefined;
-  }
-
-  async createDateAlert(data: InsertDateAlert): Promise<DateAlert> {
-    throw new Error("MemStorage: createDateAlert not implemented for POC");
-  }
-
-  async updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert> {
-    throw new Error("MemStorage: updateDateAlert not implemented for POC");
-  }
-
-  async deleteDateAlert(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteDateAlert not implemented for POC");
-  }
-
-  // ========================================
-  // BUSINESS ALERTS METHODS - STUBS MEMSTORAGE
-  // ========================================
-
-  async getBusinessAlertById(id: string): Promise<BusinessAlert | null> {
-    logger.info('Stub getBusinessAlertById', {
-      metadata: {
-        service: 'MemStorage',
-        operation: 'getBusinessAlertById',
-        alertId: id
-      }
-    });
-    return null;
-  }
-
-  async listBusinessAlerts(query: AlertsQuery): Promise<{
-    alerts: BusinessAlert[];
-    total: number;
-    summary: {
-      by_status: Record<AlertStatus, number>;
-      by_severity: Record<AlertSeverity, number>;
-      by_type: Record<AlertType, number>;
-    };
-  }> {
-    logger.info('Stub listBusinessAlerts', {
-      metadata: {
-        service: 'MemStorage',
-        operation: 'listBusinessAlerts',
-        query: query
-      }
-    });
-    return {
-      alerts: [],
-      total: 0,
-      summary: {
-        by_status: {} as Record<AlertStatus, number>,
-        by_severity: {} as Record<AlertSeverity, number>,
-        by_type: {} as Record<AlertType, number>
-      }
-    };
-  }
-
-  async updateBusinessAlertStatus(
-    id: string, 
-    update: UpdateBusinessAlert,
-    user_id: string
-  ): Promise<boolean> {
-    logger.info('Stub updateBusinessAlertStatus', {
-      metadata: {
-        service: 'MemStorage',
-        operation: 'updateBusinessAlertStatus',
-        alertId: id,
-        userId: user_id
-      }
-    });
-    return false;
-  }
-
-  async acknowledgeAlert(id: string, user_id: string, notes?: string): Promise<boolean> {
-    logger.info('Stub acknowledgeAlert', {
-      metadata: {
-        service: 'MemStorage',
-        operation: 'acknowledgeAlert',
-        alertId: id,
-        userId: user_id
-      }
-    });
-    return false;
-  }
-
-  async resolveAlert(id: string, user_id: string, resolution_notes?: string): Promise<boolean> {
-    logger.info('Stub resolveAlert', {
-      metadata: {
-        service: 'MemStorage',
-        operation: 'resolveAlert',
-        alertId: id,
-        userId: user_id
-      }
-    });
-    return false;
-  }
-
-  async findSimilarAlerts(params: {
-    entity_type: string;
-    entity_id: string;
-    alert_type: AlertType;
-    hours_window?: number;
-  }): Promise<BusinessAlert[]> {
-    logger.info('Stub findSimilarAlerts', {
-      metadata: {
-        service: 'MemStorage',
-        operation: 'findSimilarAlerts',
-        entityType: params.entity_type,
-        entityId: params.entity_id
-      }
-    });
-    return [];
-  }
-
-  async getOpenAlertsForEntity(
-    entity_type: string, 
-    entity_id: string
-  ): Promise<BusinessAlert[]> {
-    logger.info('Stub getOpenAlertsForEntity', {
-      metadata: {
-        service: 'MemStorage',
-        operation: 'getOpenAlertsForEntity',
-        entityType: entity_type,
-        entityId: entity_id
-      }
-    });
-    return [];
-  }
-
-  async createBusinessAlert(data: InsertBusinessAlert): Promise<string> {
-    const alertId = `mock-alert-${Date.now()}`;
-    logger.info('Stub createBusinessAlert', {
-      metadata: {
-        service: 'MemStorage',
-        operation: 'createBusinessAlert',
-        alertId: alertId
-      }
-    });
-    return alertId;
-  }
-
   // ========================================
   // KPI AND ANALYTICS METHODS
   // ========================================
-
-  async createKPISnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot> {
-    throw new Error("MemStorage: createKPISnapshot not implemented for POC");
-  }
-
-  async getKPISnapshots(period: DateRange, limit?: number): Promise<KpiSnapshot[]> {
-    return [];
-  }
-
-  async getLatestKPISnapshot(): Promise<KpiSnapshot | null> {
-    return null;
-  }
-
-  async createBusinessMetric(data: InsertBusinessMetric): Promise<BusinessMetric> {
-    throw new Error("MemStorage: createBusinessMetric not implemented for POC");
-  }
-
-  async getBusinessMetrics(filters: MetricFilters): Promise<BusinessMetric[]> {
-    return [];
-  }
-
-  async getMetricTimeSeries(metricType: string, period: DateRange): Promise<BusinessMetric[]> {
-    return [];
-  }
-
-  async createPerformanceBenchmark(data: InsertPerformanceBenchmark): Promise<PerformanceBenchmark> {
-    throw new Error("MemStorage: createPerformanceBenchmark not implemented for POC");
-  }
-
-  async getBenchmarks(entityType: string, entityId?: string): Promise<PerformanceBenchmark[]> {
-    return [];
-  }
-
-  async getTopPerformers(metricType: string, limit?: number): Promise<PerformanceBenchmark[]> {
-    return [];
-  }
-
-  // ========================================
-  // NOUVELLES MÉTHODES POUR PREDICTIVE ENGINE SERVICE
-  // ========================================
-
-  async getMonthlyRevenueHistory(params: { start_date: string; end_date: string }): Promise<Array<{
-    period: string;
-    total_revenue: number;
-    offer_count: number;
-    avg_margin: number;
-    conversion_rate: number;
-    project_types: Record<string, number>;
-  }>> {
-    try {
-      const fromDate = new Date(params.start_date);
-      const toDate = new Date(params.end_date);
-
-      // Génération de données historiques simulées pour le POC
-      const monthlyData = [];
-      const currentDate = new Date(fromDate);
-
-      while (currentDate <= toDate) {
-        const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-        
-        // Simulation de données réalistes
-        const baseRevenue = 250000 + Math.random() * 100000;
-        const seasonalFactor = 1 + 0.2 * Math.sin((currentDate.getMonth() + 1) * Math.PI / 6);
-        
-        monthlyData.push({
-          period,
-          total_revenue: Math.round(baseRevenue * seasonalFactor),
-          offer_count: Math.round(15 + Math.random() * 10),
-          avg_margin: 20 + Math.random() * 10,
-          conversion_rate: 25 + Math.random() * 15,
-          project_types: {
-            fenetre: Math.round(baseRevenue * 0.4),
-            porte: Math.round(baseRevenue * 0.3),
-            volet: Math.round(baseRevenue * 0.2),
-            autre: Math.round(baseRevenue * 0.1)
-          }
-        });
-
-        currentDate.setMonth(currentDate.getMonth() + 1);
-      }
-
-      return monthlyData;
-    } catch (error) {
-      logger.error('Erreur getMonthlyRevenueHistory DatabaseStorage', {
-        metadata: {
-          service: 'DatabaseStorage',
-          operation: 'getMonthlyRevenueHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      return [];
-    }
-  }
-
-
-
-  async getSectorBenchmarks(): Promise<{
-    industry_avg_conversion: number;
-    avg_duration_benchmark: number;
-    margin_benchmark: number;
-    quality_benchmark: number;
-    efficiency_benchmark: number;
-  }> {
-    // Benchmarks secteur menuiserie (données réalistes POC)
-    return {
-      industry_avg_conversion: 35,
-      avg_duration_benchmark: 42,
-      margin_benchmark: 25,
-      quality_benchmark: 82,
-      efficiency_benchmark: 78
-    };
-  }
 
   // ========================================
   // ALERT THRESHOLDS IMPLEMENTATION - PHASE 3.1.7.2
@@ -5120,85 +4769,15 @@ export class MemStorage implements IStorage {
   }
 
   // ========================================
-  // BUSINESS ALERTS IMPLEMENTATION - PHASE 3.1.7.2
+  // BUSINESS ALERTS STUBS - MemStorage (NOT IMPLEMENTED)
   // ========================================
 
   async createBusinessAlert(data: InsertBusinessAlert): Promise<string> {
-    try {
-      const [result] = await this.db
-        .insert(businessAlerts)
-        .values({
-          ...data,
-          id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          status: 'open',
-          triggeredAt: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-        .returning({ id: businessAlerts.id });
-      
-      const alertId = result.id;
-      
-      logger.info(`Alerte business créée: ${alertId}`, { 
-        type: data.alertType, 
-        entity: `${data.entityType}:${data.entityId}` 
-      });
-      
-      // AUTO-PUBLISH EVENT si EventBus disponible
-      if (this.eventBus) {
-        await this.eventBus.publishBusinessAlertCreated({
-          alert_id: alertId,
-          alert_type: data.alertType || '',
-          entity_type: data.entityType || '',
-          entity_id: data.entityId || '',
-          entity_name: data.entityName || '',
-          severity: data.severity || 'info',
-          title: data.title,
-          message: data.message,
-          threshold_value: data.thresholdValue ? Number(data.thresholdValue) : undefined,
-          actual_value: data.actualValue ? Number(data.actualValue) : undefined,
-          variance: data.variance ? Number(data.variance) : undefined,
-          triggered_at: new Date().toISOString(),
-          threshold_id: data.thresholdId,
-          context_data: data.contextData ? data.contextData as Record<string, any> : undefined
-        });
-      }
-      
-      return alertId;
-      
-    } catch (error) {
-      logger.error('Erreur createBusinessAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createBusinessAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      throw error;
-    }
+    return `mock-alert-${Date.now()}`;
   }
 
   async getBusinessAlertById(id: string): Promise<BusinessAlert | null> {
-    try {
-      const [result] = await this.db
-        .select()
-        .from(businessAlerts)
-        .where(eq(businessAlerts.id, id));
-      
-      return result || null;
-      
-    } catch (error) {
-      logger.error('Erreur getBusinessAlertById', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getBusinessAlertById',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      throw error;
-    }
+    return null;
   }
 
   async listBusinessAlerts(query: AlertsQuery): Promise<{
@@ -5210,250 +4789,23 @@ export class MemStorage implements IStorage {
       by_type: Record<AlertType, number>;
     };
   }> {
-    try {
-      // Construction query dynamique
-      let alertsQuery = this.db.select().from(businessAlerts);
-      
-      // Filtres conditionnels
-      const conditions = [];
-      
-      if (query.type) {
-        conditions.push(eq(businessAlerts.alertType, query.type));
-      }
-      
-      if (query.status) {
-        conditions.push(eq(businessAlerts.status, query.status));
-      }
-      
-      if (query.severity) {
-        conditions.push(eq(businessAlerts.severity, query.severity));
-      }
-      
-      if (query.entityType) {
-        conditions.push(eq(businessAlerts.entityType, query.entityType));
-      }
-      
-      if (query.assignedTo) {
-        conditions.push(eq(businessAlerts.assignedTo, query.assignedTo));
-      }
-      
-      if (conditions.length > 0) {
-        alertsQuery = alertsQuery.where(and(...conditions));
-      }
-      
-      // Count total avec mêmes conditions
-      const [{ count }] = await this.db
-        .select({ count: sql<number>`count(*)` })
-        .from(businessAlerts)
-        .where(conditions.length > 0 ? and(...conditions) : undefined);
-      
-      // Results paginés
-      const alerts = await alertsQuery
-        .orderBy(desc(businessAlerts.triggeredAt))
-        .limit(query.limit || 20)
-        .offset(query.offset || 0);
-      
-      // Calcul summary simplifié (agrégation en mémoire)
-      const allAlerts = await this.db.select().from(businessAlerts);
-      
-      const summary = {
-        by_status: {} as Record<AlertStatus, number>,
-        by_severity: {} as Record<AlertSeverity, number>,
-        by_type: {} as Record<AlertType, number>
-      };
-      
-      // Calcul des statistiques
-      allAlerts.forEach(alert => {
-        summary.by_status[alert.status] = (summary.by_status[alert.status] || 0) + 1;
-        summary.by_severity[alert.severity] = (summary.by_severity[alert.severity] || 0) + 1;
-        summary.by_type[alert.alertType] = (summary.by_type[alert.alertType] || 0) + 1;
-      });
-      
-      return { alerts, total: count, summary };
-      
-    } catch (error) {
-      logger.error('Erreur listBusinessAlerts', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'listBusinessAlerts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      throw error;
-    }
+    return { 
+      alerts: [], 
+      total: 0, 
+      summary: { 
+        by_status: {} as any, 
+        by_severity: {} as any, 
+        by_type: {} as any 
+      } 
+    };
   }
 
   async updateBusinessAlertStatus(
     id: string, 
     update: UpdateBusinessAlert,
     user_id: string
-  ): Promise<boolean> {
-    try {
-      // Récupérer l'état actuel pour auto-publishing
-      const [currentAlert] = await this.db
-        .select()
-        .from(businessAlerts)
-        .where(eq(businessAlerts.id, id));
-      
-      if (!currentAlert) {
-        logger.warn(`Alerte ${id} non trouvée pour mise à jour`);
-        return false;
-      }
-      
-      const updateData: any = {
-        ...update,
-        updatedAt: new Date()
-      };
-      
-      // Workflow tracking
-      if (update.status === 'acknowledged') {
-        updateData.acknowledgedBy = user_id;
-        updateData.acknowledgedAt = new Date();
-      }
-      
-      if (update.status === 'resolved') {
-        updateData.resolvedBy = user_id;
-        updateData.resolvedAt = new Date();
-      }
-      
-      const [result] = await this.db
-        .update(businessAlerts)
-        .set(updateData)
-        .where(eq(businessAlerts.id, id))
-        .returning({ id: businessAlerts.id });
-      
-      logger.info(`Alerte ${id} mise à jour:`, { status: update.status, user: user_id });
-      
-      // AUTO-PUBLISH EVENTS selon statut si EventBus disponible
-      if (this.eventBus && result) {
-        const previousStatus = currentAlert.status || 'open';
-        
-        if (update.status === 'acknowledged') {
-          await this.eventBus.publishBusinessAlertAcknowledged({
-            alert_id: id,
-            acknowledged_by: user_id,
-            acknowledged_at: new Date().toISOString(),
-            notes: update.resolutionNotes || undefined,
-            previous_status: previousStatus,
-            new_status: 'acknowledged'
-          });
-        }
-        
-        if (update.status === 'resolved') {
-          // Calculer la durée de résolution si possible
-          let resolutionDurationMinutes: number | undefined;
-          if (currentAlert.triggeredAt) {
-            const durationMs = Date.now() - new Date(currentAlert.triggeredAt).getTime();
-            resolutionDurationMinutes = Math.round(durationMs / (1000 * 60));
-          }
-          
-          await this.eventBus.publishBusinessAlertResolved({
-            alert_id: id,
-            resolved_by: user_id,
-            resolved_at: new Date().toISOString(),
-            resolution_notes: update.resolutionNotes || '',
-            previous_status: previousStatus,
-            new_status: 'resolved',
-            resolution_duration_minutes: resolutionDurationMinutes
-          });
-        }
-        
-        if (update.status === 'dismissed') {
-          await this.eventBus.publishBusinessAlertDismissed({
-            alert_id: id,
-            dismissed_by: user_id,
-            dismissed_at: new Date().toISOString(),
-            dismissal_reason: update.resolutionNotes || undefined,
-            previous_status: previousStatus,
-            new_status: 'dismissed'
-          });
-        }
-        
-        if (update.assignedTo && update.assignedTo !== currentAlert.assignedTo) {
-          await this.eventBus.publishBusinessAlertAssigned({
-            alert_id: id,
-            assigned_to: update.assignedTo,
-            assigned_by: user_id,
-            assigned_at: new Date().toISOString(),
-            previous_assigned_to: currentAlert.assignedTo || undefined
-          });
-        }
-      }
-      
-      return !!result;
-      
-    } catch (error) {
-      logger.error('Erreur updateBusinessAlertStatus', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateBusinessAlertStatus',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      throw error;
-    }
-  }
-
-  async acknowledgeAlert(id: string, user_id: string, notes?: string): Promise<boolean> {
-    try {
-      const [result] = await db
-        .update(businessAlerts)
-        .set({
-          status: 'acknowledged',
-          acknowledgedBy: user_id,
-          acknowledgedAt: new Date(),
-          resolutionNotes: notes,
-          updatedAt: new Date()
-        })
-        .where(eq(businessAlerts.id, id))
-        .returning({ id: businessAlerts.id });
-      
-      logger.info(`Alerte ${id} accusée réception par ${user_id}`);
-      return !!result;
-      
-    } catch (error) {
-      logger.error('Erreur acknowledgeAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'acknowledgeAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      throw error;
-    }
-  }
-
-  async resolveAlert(id: string, user_id: string, resolution_notes: string): Promise<boolean> {
-    try {
-      const [result] = await db
-        .update(businessAlerts)
-        .set({
-          status: 'resolved',
-          resolvedBy: user_id,
-          resolvedAt: new Date(),
-          resolutionNotes: resolution_notes,
-          updatedAt: new Date()
-        })
-        .where(eq(businessAlerts.id, id))
-        .returning({ id: businessAlerts.id });
-      
-      logger.info(`Alerte ${id} résolue par ${user_id}`);
-      return !!result;
-      
-    } catch (error) {
-      logger.error('Erreur resolveAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'resolveAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      throw error;
-    }
+  ): Promise<BusinessAlert> {
+    throw new Error("MemStorage: updateBusinessAlertStatus not implemented");
   }
 
   async findSimilarAlerts(params: {
@@ -5462,70 +4814,7 @@ export class MemStorage implements IStorage {
     alert_type: AlertType;
     hours_window?: number;
   }): Promise<BusinessAlert[]> {
-    try {
-      const hoursWindow = params.hours_window || 24;
-      const windowStart = new Date(Date.now() - hoursWindow * 60 * 60 * 1000);
-      
-      const results = await this.db
-        .select()
-        .from(businessAlerts)
-        .where(
-          and(
-            eq(businessAlerts.entityType, params.entity_type),
-            eq(businessAlerts.entityId, params.entity_id),
-            eq(businessAlerts.alertType, params.alert_type),
-            gte(businessAlerts.triggeredAt, windowStart),
-            ne(businessAlerts.status, 'dismissed')
-          )
-        )
-        .orderBy(desc(businessAlerts.triggeredAt));
-      
-      return results;
-      
-    } catch (error) {
-      logger.error('Erreur findSimilarAlerts', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'findSimilarAlerts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      throw error;
-    }
-  }
-
-  async getOpenAlertsForEntity(
-    entity_type: string, 
-    entity_id: string
-  ): Promise<BusinessAlert[]> {
-    try {
-      const results = await this.db
-        .select()
-        .from(businessAlerts)
-        .where(
-          and(
-            eq(businessAlerts.entityType, entity_type),
-            eq(businessAlerts.entityId, entity_id),
-            ne(businessAlerts.status, 'resolved'),
-            ne(businessAlerts.status, 'dismissed')
-          )
-        )
-        .orderBy(desc(businessAlerts.triggeredAt));
-      
-      return results;
-      
-    } catch (error) {
-      logger.error('Erreur getOpenAlertsForEntity', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getOpenAlertsForEntity',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      throw error;
-    }
+    return [];
   }
 
   // ========================================
@@ -7965,101 +7254,312 @@ export class MemStorage implements IStorage {
   }
 
   // ========================================
-  // MÉTHODES MANQUANTES POUR BUSINESS ALERTS - PHASE 3.1.7.4
+  // BUSINESS ALERTS IMPLEMENTATION - PHASE 3.1.7.2
   // ========================================
 
-  async getActiveBusinessThresholds(): Promise<any[]> {
+  async createBusinessAlert(data: InsertBusinessAlert): Promise<string> {
     try {
-      // Implémentation stub temporaire - retourne des seuils par défaut
-      logger.info('[DatabaseStorage] getActiveBusinessThresholds: Utilisation seuils par défaut');
-      return [
-        {
-          id: 'threshold_profitability_default',
-          thresholdType: 'profitability',
-          thresholdKey: 'global_margin',
-          operator: 'less_than',
-          thresholdValue: '15',
-          severity: 'warning',
-          alertTitle: 'Marge globale faible',
-          alertMessage: 'La marge globale est en dessous du seuil critique'
-        },
-        {
-          id: 'threshold_team_util_default',
-          thresholdType: 'team_utilization',
-          thresholdKey: 'team_overload',
-          operator: 'greater_than',
-          thresholdValue: '90',
-          severity: 'critical',
-          alertTitle: 'Surcharge équipe',
-          alertMessage: 'Une équipe est en surcharge critique'
-        }
-      ];
+      const [result] = await db
+        .insert(businessAlerts)
+        .values({
+          ...data,
+          id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          status: 'open',
+          triggeredAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning({ id: businessAlerts.id });
+      
+      const alertId = result.id;
+      
+      logger.info(`Alerte business créée: ${alertId}`, { 
+        type: data.alertType, 
+        entity: `${data.entityType}:${data.entityId}` 
+      });
+      
+      // AUTO-PUBLISH EVENT si EventBus disponible
+      if (this.eventBus) {
+        await this.eventBus.publishBusinessAlertCreated({
+          alert_id: alertId,
+          alert_type: data.alertType || '',
+          entity_type: data.entityType || '',
+          entity_id: data.entityId || '',
+          entity_name: data.entityName || '',
+          severity: data.severity || 'info',
+          title: data.title,
+          message: data.message,
+          threshold_value: data.thresholdValue ? Number(data.thresholdValue) : undefined,
+          actual_value: data.actualValue ? Number(data.actualValue) : undefined,
+          variance: data.variance ? Number(data.variance) : undefined,
+          triggered_at: new Date().toISOString(),
+          threshold_id: data.thresholdId,
+          context_data: data.contextData ? data.contextData as Record<string, any> : undefined
+        });
+      }
+      
+      return alertId;
+      
     } catch (error) {
-      logger.error('Erreur getActiveBusinessThresholds', {
+      logger.error('Erreur createBusinessAlert', {
         metadata: {
           service: 'StoragePOC',
-          operation: 'getActiveBusinessThresholds',
+          operation: 'createBusinessAlert',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      return [];
+      throw error;
+    }
+  }
+
+  async getBusinessAlertById(id: string): Promise<BusinessAlert | null> {
+    try {
+      const [result] = await db
+        .select()
+        .from(businessAlerts)
+        .where(eq(businessAlerts.id, id));
+      
+      return result || null;
+      
+    } catch (error) {
+      logger.error('Erreur getBusinessAlertById', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getBusinessAlertById',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
+      throw error;
+    }
+  }
+
+  async listBusinessAlerts(query: AlertsQuery): Promise<{
+    alerts: BusinessAlert[];
+    total: number;
+    summary: {
+      by_status: Record<AlertStatus, number>;
+      by_severity: Record<AlertSeverity, number>;
+      by_type: Record<AlertType, number>;
+    };
+  }> {
+    try {
+      // Construction query dynamique
+      let alertsQuery = db.select().from(businessAlerts);
+      
+      // Filtres conditionnels
+      const conditions = [];
+      
+      if (query.type) {
+        conditions.push(eq(businessAlerts.alertType, query.type));
+      }
+      
+      if (query.status) {
+        conditions.push(eq(businessAlerts.status, query.status));
+      }
+      
+      if (query.severity) {
+        conditions.push(eq(businessAlerts.severity, query.severity));
+      }
+      
+      if (query.entityType) {
+        conditions.push(eq(businessAlerts.entityType, query.entityType));
+      }
+      
+      if (query.assignedTo) {
+        conditions.push(eq(businessAlerts.assignedTo, query.assignedTo));
+      }
+      
+      if (conditions.length > 0) {
+        alertsQuery = alertsQuery.where(and(...conditions)) as any;
+      }
+      
+      // Count total avec mêmes conditions
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(businessAlerts)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+      
+      // Results paginés
+      const alerts = await alertsQuery
+        .orderBy(desc(businessAlerts.triggeredAt))
+        .limit(query.limit || 20)
+        .offset(query.offset || 0);
+      
+      // Calcul summary simplifié (agrégation en mémoire)
+      const allAlerts = await db.select().from(businessAlerts);
+      
+      const summary = {
+        by_status: {} as Record<AlertStatus, number>,
+        by_severity: {} as Record<AlertSeverity, number>,
+        by_type: {} as Record<AlertType, number>
+      };
+      
+      // Calcul des statistiques
+      allAlerts.forEach(alert => {
+        summary.by_status[alert.status] = (summary.by_status[alert.status] || 0) + 1;
+        summary.by_severity[alert.severity] = (summary.by_severity[alert.severity] || 0) + 1;
+        summary.by_type[alert.alertType] = (summary.by_type[alert.alertType] || 0) + 1;
+      });
+      
+      return { alerts, total: count, summary };
+      
+    } catch (error) {
+      logger.error('Erreur listBusinessAlerts', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'listBusinessAlerts',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
+      throw error;
+    }
+  }
+
+  async updateBusinessAlertStatus(
+    id: string, 
+    update: UpdateBusinessAlert,
+    user_id: string
+  ): Promise<BusinessAlert> {
+    try {
+      // Récupérer l'état actuel pour auto-publishing
+      const [currentAlert] = await db
+        .select()
+        .from(businessAlerts)
+        .where(eq(businessAlerts.id, id));
+      
+      if (!currentAlert) {
+        throw new Error(`Alerte ${id} non trouvée pour mise à jour`);
+      }
+      
+      const updateData: any = {
+        ...update,
+        updatedAt: new Date()
+      };
+      
+      // Workflow tracking
+      if (update.status === 'acknowledged') {
+        updateData.acknowledgedBy = user_id;
+        updateData.acknowledgedAt = new Date();
+      }
+      
+      if (update.status === 'resolved') {
+        updateData.resolvedBy = user_id;
+        updateData.resolvedAt = new Date();
+      }
+      
+      const [result] = await db
+        .update(businessAlerts)
+        .set(updateData)
+        .where(eq(businessAlerts.id, id))
+        .returning();
+      
+      logger.info(`Alerte ${id} mise à jour:`, { status: update.status, user: user_id });
+      
+      // AUTO-PUBLISH EVENTS selon statut si EventBus disponible
+      if (this.eventBus && result) {
+        const previousStatus = currentAlert.status || 'open';
+        
+        if (update.status === 'acknowledged') {
+          await this.eventBus.publishBusinessAlertAcknowledged({
+            alert_id: id,
+            acknowledged_by: user_id,
+            acknowledged_at: new Date().toISOString(),
+            notes: update.resolutionNotes || undefined,
+            previous_status: previousStatus,
+            new_status: 'acknowledged'
+          });
+        }
+        
+        if (update.status === 'resolved') {
+          // Calculer la durée de résolution si possible
+          let resolutionDurationMinutes: number | undefined;
+          if (currentAlert.triggeredAt) {
+            const durationMs = Date.now() - new Date(currentAlert.triggeredAt).getTime();
+            resolutionDurationMinutes = Math.round(durationMs / (1000 * 60));
+          }
+          
+          await this.eventBus.publishBusinessAlertResolved({
+            alert_id: id,
+            resolved_by: user_id,
+            resolved_at: new Date().toISOString(),
+            resolution_notes: update.resolutionNotes || '',
+            previous_status: previousStatus,
+            new_status: 'resolved',
+            resolution_duration_minutes: resolutionDurationMinutes
+          });
+        }
+        
+        if (update.status === 'dismissed') {
+          await this.eventBus.publishBusinessAlertDismissed({
+            alert_id: id,
+            dismissed_by: user_id,
+            dismissed_at: new Date().toISOString(),
+            dismissal_reason: update.resolutionNotes || undefined,
+            previous_status: previousStatus,
+            new_status: 'dismissed'
+          });
+        }
+        
+        if (update.assignedTo && update.assignedTo !== currentAlert.assignedTo) {
+          await this.eventBus.publishBusinessAlertAssigned({
+            alert_id: id,
+            assigned_to: update.assignedTo,
+            assigned_by: user_id,
+            assigned_at: new Date().toISOString(),
+            previous_assigned_to: currentAlert.assignedTo || undefined
+          });
+        }
+      }
+      
+      return result;
+      
+    } catch (error) {
+      logger.error('Erreur updateBusinessAlertStatus', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateBusinessAlertStatus',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
+      throw error;
     }
   }
 
   async findSimilarAlerts(params: {
     entity_type: string;
     entity_id: string;
-    alert_type: string;
-    hours_window: number;
-  }): Promise<any[]> {
+    alert_type: AlertType;
+    hours_window?: number;
+  }): Promise<BusinessAlert[]> {
     try {
-      // Implémentation stub temporaire - aucune alerte similaire trouvée
-      logger.debug(`[DatabaseStorage] findSimilarAlerts: Recherche pour ${params.entity_type}:${params.entity_id}`);
-      return [];
+      const hoursWindow = params.hours_window || 24;
+      const windowStart = new Date(Date.now() - hoursWindow * 60 * 60 * 1000);
+      
+      const results = await db
+        .select()
+        .from(businessAlerts)
+        .where(
+          and(
+            eq(businessAlerts.entityType, params.entity_type),
+            eq(businessAlerts.entityId, params.entity_id),
+            eq(businessAlerts.alertType, params.alert_type),
+            gte(businessAlerts.triggeredAt, windowStart),
+            ne(businessAlerts.status, 'dismissed')
+          )
+        )
+        .orderBy(desc(businessAlerts.triggeredAt));
+      
+      return results;
+      
     } catch (error) {
       logger.error('Erreur findSimilarAlerts', {
         metadata: {
           service: 'StoragePOC',
           operation: 'findSimilarAlerts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      return [];
-    }
-  }
-
-  async getBusinessAlert(id: string): Promise<any | null> {
-    try {
-      // Implémentation stub temporaire - alerte non trouvée
-      logger.debug(`[DatabaseStorage] getBusinessAlert: Recherche alerte ${id}`);
-      return null;
-    } catch (error) {
-      logger.error('Erreur getBusinessAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getBusinessAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      return null;
-    }
-  }
-
-  async createBusinessAlert(data: any): Promise<string> {
-    try {
-      const alertId = `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      logger.info(`[DatabaseStorage] createBusinessAlert: Alerte créée ${alertId} - ${data.alertType}`);
-      
-      // Stub temporaire - simule la création d'une alerte
-      return alertId;
-    } catch (error) {
-      logger.error('Erreur createBusinessAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createBusinessAlert',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
         }

@@ -4,9 +4,12 @@ import { DateAlertDetectionService, MenuiserieDetectionRules } from "./DateAlert
 import { DateIntelligenceService } from "./DateIntelligenceService";
 import { logger } from "../utils/logger";
 import type { 
-  Project, ProjectStatus, DateAlert,
+  Project, projectStatusEnum, DateAlert, InsertDateAlert,
   User, Offer
 } from "@shared/schema";
+
+// Type alias for ProjectStatus from enum
+type ProjectStatus = typeof projectStatusEnum.enumValues[number];
 
 // ========================================
 // SYSTÈME DE SURVEILLANCE CONTINUE ET TÂCHES PÉRIODIQUES
@@ -559,7 +562,7 @@ export class PeriodicDetectionScheduler {
             eventType: event.type
           }
         });
-        this.dateAlertDetectionService.evaluateBusinessThresholds().catch(error => {
+        this.dateAlertDetectionService.evaluateBusinessThresholds().catch((error: unknown) => {
           logger.error('Erreur évaluation seuils (analytics trigger)', {
             metadata: {
               service: 'PeriodicDetectionScheduler',
@@ -584,7 +587,7 @@ export class PeriodicDetectionScheduler {
             eventType: event.type
           }
         });
-        this.dateAlertDetectionService.evaluateBusinessThresholds().catch(error => {
+        this.dateAlertDetectionService.evaluateBusinessThresholds().catch((error: unknown) => {
           logger.error('Erreur évaluation seuils (statut trigger)', {
             metadata: {
               service: 'PeriodicDetectionScheduler',
@@ -867,15 +870,15 @@ export class PeriodicDetectionScheduler {
         if (project) {
           const alerts = await this.detectAndNotifyProjectRisks(project);
           
-          // Ajouter contexte alerte technique dans métadonnées
-          for (const alert of alerts) {
-            if (alert.metadata) {
-              (alert as any).metadata.technicalAlertContext = {
-                originalAlertId: alertId,
-                impactReason: 'technical_issue'
-              };
+          // Log des alertes détectées suite à l'alerte technique
+          logger.info(`${alerts.length} alertes détectées suite à alerte technique ${alertId}`, {
+            metadata: {
+              service: 'PeriodicDetectionScheduler',
+              operation: 'handleTechnicalAlertImpact',
+              technicalAlertId: alertId,
+              projectAlertsCount: alerts.length
             }
-          }
+          });
         }
       }
       
@@ -950,7 +953,7 @@ export class PeriodicDetectionScheduler {
       const activeProjects = await this.getActiveProjects();
       const activeProjectIds = activeProjects.map(p => p.id);
       
-      for (const [projectId, profile] of this.projectRiskProfiles.entries()) {
+      for (const [projectId, profile] of Array.from(this.projectRiskProfiles.entries())) {
         if (!activeProjectIds.includes(projectId) && profile.lastDetectionRun < oneWeekAgo) {
           this.projectRiskProfiles.delete(projectId);
           logger.info('Suppression profil de risque projet inactif', {
@@ -999,7 +1002,7 @@ export class PeriodicDetectionScheduler {
 
   private async detectAndNotifyProjectRisks(
     project: Project & { responsibleUser?: User; offer?: Offer }
-  ): Promise<DateAlert[]> {
+  ): Promise<InsertDateAlert[]> {
     try {
       // Détection risques de retard
       const delayAlerts = await this.dateAlertDetectionService.detectDelayRisks(project.id);
@@ -1021,7 +1024,7 @@ export class PeriodicDetectionScheduler {
       const criticalAlerts = allAlerts.filter(alert => alert.severity === 'critical');
       for (const alert of criticalAlerts) {
         await this.eventBus.publishDateAlertCreated({
-          id: alert.id!,
+          id: crypto.randomUUID(),
           entity: 'date_intelligence',
           entityId: alert.entityId,
           message: alert.message,
@@ -1030,7 +1033,7 @@ export class PeriodicDetectionScheduler {
             alertType: alert.alertType,
             phase: alert.phase || undefined,
             targetDate: alert.targetDate?.toISOString(),
-            affectedUsers: [project.responsibleUserId].filter(Boolean),
+            affectedUsers: project.responsibleUserId ? [project.responsibleUserId] : [],
             actionRequired: !!(alert.suggestedActions && Array.isArray(alert.suggestedActions) && alert.suggestedActions.length > 0)
           }
         });
@@ -1054,7 +1057,7 @@ export class PeriodicDetectionScheduler {
 
   private async detectInterProjectConflicts(
     projects: (Project & { responsibleUser?: User; offer?: Offer })[]
-  ): Promise<DateAlert[]> {
+  ): Promise<InsertDateAlert[]> {
     try {
       // Détection conflits entre projets (ressources partagées)
       const timeframe = {
@@ -1206,7 +1209,7 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
       
       this.eventBus.publish({
         id: `daily-report-${Date.now()}`,
-        type: 'date_intelligence.daily_report',
+        type: 'analytics.calculated' as any,
         entity: 'system',
         entityId: 'daily-planning-report',
         title: '📊 Rapport Planning Quotidien',
@@ -1296,7 +1299,7 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
     try {
       this.eventBus.publish({
         id: `critical-batch-${Date.now()}`,
-        type: 'date_intelligence.critical_alerts_batch',
+        type: 'date_intelligence.planning_issue_detected' as any,
         entity: 'date_intelligence',
         entityId: 'critical-alerts-batch',
         title: '🚨 Alertes Critiques Détectées',
@@ -1325,14 +1328,14 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
     }
   }
 
-  private async notifyHighValueOptimizations(opportunities: DateAlert[]): Promise<void> {
+  private async notifyHighValueOptimizations(opportunities: InsertDateAlert[]): Promise<void> {
     try {
       const totalOpportunities = opportunities.length;
       const message = `💡 ${totalOpportunities} opportunité(s) d'optimisation à forte valeur ajoutée détectée(s)`;
       
       this.eventBus.publish({
         id: `optimizations-${Date.now()}`,
-        type: 'date_intelligence.high_value_optimizations',
+        type: 'analytics.calculated' as any,
         entity: 'date_intelligence',
         entityId: 'optimization-opportunities',
         title: '💡 Opportunités d\'Optimisation',
@@ -1366,7 +1369,7 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
     try {
       this.eventBus.publish({
         id: `risk-deterioration-${profile.projectId}-${Date.now()}`,
-        type: 'date_intelligence.risk_profile_deteriorating',
+        type: 'date_intelligence.planning_issue_detected' as any,
         entity: 'project',
         entityId: profile.projectId,
         title: '📉 Détérioration Profil de Risque',
@@ -1448,7 +1451,7 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
       const alerts = await this.storage.getDateAlerts({ status: 'pending' });
       
       for (const alert of alerts) {
-        if (new Date(alert.createdAt) < thirtyDaysAgo) {
+        if (alert.createdAt && new Date(alert.createdAt) < thirtyDaysAgo) {
           await this.storage.updateDateAlert(alert.id, { 
             status: 'expired',
             actionTaken: 'Auto-expirée après 30 jours'

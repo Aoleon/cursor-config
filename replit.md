@@ -46,6 +46,7 @@ The application features a modern fullstack architecture.
   - **DateAlertDetectionService Refactoring**: Eliminated 110 LSP errors through InsertDateAlert type alignment, ProjectStatus enum fix (projectStatusEnum), schema field corrections (dateRemise → dateLimiteRemise), and comprehensive null safety improvements.
   - **Build Optimization**: Removed all 6 duplicate method warnings (storage-poc business alerts + ChatbotOrchestrationService) achieving 0 build warnings.
   - **Production Stability**: Build validated (Vite 28s, ESBuild 142ms), runtime error `evaluateBusinessThresholds is not a function` resolved, 375 projects operational with functional alert generation system.
+  - **Business Validations & Data Transformations** (Oct 21, 2025): Implemented advanced BTP-specific validations across 4 critical schemas (AO, Offer, Project, ChiffrageElement) with French error messages, amount ceilings (100M€), duration limits (10 years), cross-field validation via `.superRefine()`, and automatic data transformations (.preprocess()) for monetary amounts (spaces/€/commas→dots), reference normalization (uppercase), and project name capitalization. Edge cases handled: zero value preservation, empty string → null for optional fields. E2E tested: AO creation with formatted amounts validated successfully.
 
 ## External Dependencies
 - **Replit Services**: Utilizes Replit for OIDC authentication, PostgreSQL (via `DATABASE_URL`), and Object Storage.

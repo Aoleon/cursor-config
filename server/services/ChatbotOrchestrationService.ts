@@ -117,7 +117,7 @@ export class ChatbotOrchestrationService {
     this.actionExecutionService = actionExecutionService;
     this.eventBus = eventBus;
     this.storage = storage;
-    this.performanceMetrics = getPerformanceMetricsService(storage);
+    this.performanceMetrics = getPerformanceMetricsService();
   }
 
   // ========================================
@@ -1254,7 +1254,7 @@ export class ChatbotOrchestrationService {
         suggestions: suggestions,
         confidence: sqlResult.confidence || 0,
         execution_time_ms: totalExecutionTime,
-        model_used: sqlResult.metadata?.aiModelUsed || null,
+        model_used: sqlResult.metadata?.aiModelUsed ?? undefined,
         cache_hit: sqlResult.metadata?.cacheHit || false
       };
 
@@ -1997,32 +1997,6 @@ export class ChatbotOrchestrationService {
     return "simple";
   }
 
-  private detectFocusAreas(query: string): ("planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes")[] {
-    const queryLower = query.toLowerCase();
-    const areas: ("planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes")[] = [];
-
-    if (queryLower.includes('planning') || queryLower.includes('échéance') || queryLower.includes('délai')) {
-      areas.push("planning");
-    }
-    if (queryLower.includes('coût') || queryLower.includes('budget') || queryLower.includes('marge')) {
-      areas.push("finances");
-    }
-    if (queryLower.includes('équipe') || queryLower.includes('ressource') || queryLower.includes('charge')) {
-      areas.push("ressources");
-    }
-    if (queryLower.includes('qualité') || queryLower.includes('contrôle') || queryLower.includes('validation')) {
-      areas.push("qualite");
-    }
-    if (queryLower.includes('performance') || queryLower.includes('kpi') || queryLower.includes('indicateur')) {
-      areas.push("performance");
-    }
-    if (queryLower.includes('alerte') || queryLower.includes('problème') || queryLower.includes('retard')) {
-      areas.push("alertes");
-    }
-
-    return areas.length > 0 ? areas : ["performance"];
-  }
-
   private shouldIncludeSQL(userRole: string): boolean {
     // Seuls les administrateurs et BE managers peuvent voir le SQL généré
     return userRole === "admin" || userRole === "be_manager";
@@ -2637,134 +2611,50 @@ export class ChatbotOrchestrationService {
     return displays[riskLevel] || riskLevel;
   }
 
-  // ========================================
-  // NOUVELLES MÉTHODES D'AMÉLIORATION - PHASE OPTIMISATION
-  // ========================================
-
-  /**
-   * Détecte la complexité d'une requête avec analyse avancée
-   * @param query La requête en langage naturel
-   * @returns Le niveau de complexité: simple, complex, expert
-   */
-  private detectQueryComplexity(query: string): "simple" | "complex" | "expert" {
-    const queryLower = query.toLowerCase();
-    
-    // Patterns pour détecter la complexité
-    const expertPatterns = [
-      // Requêtes temporelles complexes
-      /comparaison|évolution|tendance|progression/,
-      /vs\s+(mois|année|trimestre|semaine)\s+dernier/,
-      /année\s+sur\s+année|yoy|mom/,
-      
-      // Agrégations multiples
-      /moyenne.*et.*somme|total.*et.*moyenne/,
-      /groupé?\s+par.*et.*par/,
-      
-      // Requêtes multi-entités avec conditions
-      /projets?.*et.*devis.*avec|offres?.*et.*fournisseurs?.*où/,
-      
-      // Analyses avancées
-      /corrélation|prédiction|forecast|projection/,
-      /top\s+\d+.*par.*groupe/,
-      /répartition|distribution|ventilation/
-    ];
-    
-    const complexPatterns = [
-      // Temporel simple
-      /cette\s+(semaine|mois|année)|aujourd'hui|hier/,
-      /depuis|entre.*et|jusqu'à/,
-      
-      // Agrégations simples
-      /somme|total|moyenne|compte|nombre/,
-      /maximum|minimum|max|min/,
-      
-      // Comparaisons simples
-      /plus\s+que|moins\s+que|supérieur|inférieur/,
-      
-      // Multi-entités simples
-      /projets?\s+et\s+devis|offres?\s+et\s+ao/
-    ];
-    
-    // Calcul du score de complexité
-    let complexityScore = 0;
-    
-    // Score pour patterns experts
-    for (const pattern of expertPatterns) {
-      if (pattern.test(queryLower)) {
-        complexityScore += 3;
-      }
-    }
-    
-    // Score pour patterns complexes
-    for (const pattern of complexPatterns) {
-      if (pattern.test(queryLower)) {
-        complexityScore += 1;
-      }
-    }
-    
-    // Score basé sur la longueur et les mots-clés
-    const wordCount = query.split(/\s+/).length;
-    if (wordCount > 20) complexityScore += 2;
-    else if (wordCount > 10) complexityScore += 1;
-    
-    // Détection de sous-requêtes ou conditions multiples
-    const hasSubQuery = /\(.*\)/.test(query) || query.includes(' où ') || query.includes(' avec ');
-    if (hasSubQuery) complexityScore += 2;
-    
-    // Détection de jointures implicites
-    const entities = this.detectBusinessEntities(query);
-    if (entities.length > 2) complexityScore += 2;
-    else if (entities.length > 1) complexityScore += 1;
-    
-    // Classification finale
-    if (complexityScore >= 6) return "expert";
-    if (complexityScore >= 2) return "complex";
-    return "simple";
-  }
-
   /**
    * Détecte les zones de focus dans une requête
    * @param query La requête en langage naturel
    * @returns Les zones de focus identifiées
    */
-  private detectFocusAreas(query: string): string[] {
-    const focusAreas: string[] = [];
+  private detectFocusAreas(query: string): ("planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes")[] {
+    const focusAreas: ("planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes")[] = [];
     const queryLower = query.toLowerCase();
     
     // Mapping des patterns vers les focus areas
-    const focusPatterns: Record<string, RegExp[]> = {
-      'financial': [
+    const focusPatterns: Record<"planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes", RegExp[]> = {
+      'finances': [
         /montant|prix|coût|budget|factur|chiffr|rentab|marge|ca\b/,
         /recette|dépense|bénéfice|profit/
       ],
-      'temporal': [
+      'planning': [
         /date|période|temps|délai|retard|planning|échéance/,
         /aujourd|hier|demain|semaine|mois|année|trimestre/
       ],
       'performance': [
         /kpi|indicateur|performance|métrique|taux|ratio/,
-        /conversion|productivité|efficacité|rendement/
+        /conversion|productivité|efficacité|rendement/,
+        /compar|vs\b|versus|évolution|progression|tendance/,
+        /différence|écart|variation/,
+        /total|somme|moyenne|compte|nombre|statistique/,
+        /groupé|par\s+\w+|répartition|distribution/
       ],
-      'resources': [
+      'ressources': [
         /équipe|ressource|personne|be\b|bureau\s+d'étude/,
         /charge|capacité|disponibilité|occupation/
       ],
-      'workflow': [
+      'qualite': [
         /statut|état|phase|étape|validation|workflow/,
-        /en cours|terminé|validé|brouillon|attente/
+        /en cours|terminé|validé|brouillon|attente/,
+        /qualité|contrôle|conformité|norme/
       ],
-      'comparison': [
-        /compar|vs\b|versus|évolution|progression|tendance/,
-        /différence|écart|variation/
-      ],
-      'aggregation': [
-        /total|somme|moyenne|compte|nombre|statistique/,
-        /groupé|par\s+\w+|répartition|distribution/
+      'alertes': [
+        /alerte|problème|erreur|critique|urgent/,
+        /retard|dépassement|conflit|incident/
       ]
     };
     
     // Détection des focus areas
-    for (const [area, patterns] of Object.entries(focusPatterns)) {
+    for (const [area, patterns] of Object.entries(focusPatterns) as Array<[typeof focusAreas[number], RegExp[]]>) {
       for (const pattern of patterns) {
         if (pattern.test(queryLower)) {
           if (!focusAreas.includes(area)) {
@@ -2775,9 +2665,9 @@ export class ChatbotOrchestrationService {
       }
     }
     
-    // Si aucun focus détecté, ajouter "general"
+    // Si aucun focus détecté, ajouter "performance"
     if (focusAreas.length === 0) {
-      focusAreas.push('general');
+      focusAreas.push('performance');
     }
     
     return focusAreas;
@@ -3172,7 +3062,7 @@ export class ChatbotOrchestrationService {
     invalidateByPattern(entityType: string, event: string): number {
       const keysToDelete: string[] = [];
       
-      for (const [key, entry] of this.cache.entries()) {
+      for (const [key, entry] of Array.from(this.cache.entries())) {
         if (entry.queryPattern?.entities?.includes(entityType)) {
           keysToDelete.push(key);
         } else if (event === 'major_update' && entry.queryPattern?.queryType === 'kpi') {
@@ -3238,7 +3128,7 @@ export class ChatbotOrchestrationService {
       const now = Date.now();
       let cleaned = 0;
       
-      for (const [key, entry] of this.cache.entries()) {
+      for (const [key, entry] of Array.from(this.cache.entries())) {
         if (now > entry.timestamp + entry.ttl) {
           this.cache.delete(key);
           cleaned++;
@@ -3272,7 +3162,7 @@ export class ChatbotOrchestrationService {
       let oldestTimestamp = Date.now();
       let newestTimestamp = 0;
       
-      for (const entry of this.cache.values()) {
+      for (const entry of Array.from(this.cache.values())) {
         if (entry.timestamp < oldestTimestamp) {
           oldestTimestamp = entry.timestamp;
         }
@@ -3352,7 +3242,11 @@ export class ChatbotOrchestrationService {
           query,
           userId: 'system',
           userRole,
-          options: { dryRun: false }
+          options: { 
+            dryRun: false,
+            explainQuery: false,
+            includeDebugInfo: false
+          }
         };
         
         // Exécution en arrière-plan sans attendre

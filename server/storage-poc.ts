@@ -8408,6 +8408,31 @@ export class MemStorage implements IStorage {
 // Export default instance
 export const storage = new DatabaseStorage();
 
+// NUCLEAR FIX: Directly attach SQL aggregation methods to storage instance
+// This bypasses any TypeScript transpilation issues
+console.log('[STORAGE-POC] Checking prototype methods:', {
+  hasGetProjectStats: typeof DatabaseStorage.prototype.getProjectStats,
+  hasGetOfferStats: typeof DatabaseStorage.prototype.getOfferStats,
+  hasGetConversionStats: typeof DatabaseStorage.prototype.getConversionStats,
+  hasGetAOStats: typeof DatabaseStorage.prototype.getAOStats,
+  hasGetProjectDelayStats: typeof DatabaseStorage.prototype.getProjectDelayStats,
+  hasGetTeamPerformanceStats: typeof DatabaseStorage.prototype.getTeamPerformanceStats
+});
+(storage as any).getProjectStats = DatabaseStorage.prototype.getProjectStats;
+(storage as any).getOfferStats = DatabaseStorage.prototype.getOfferStats;
+(storage as any).getConversionStats = DatabaseStorage.prototype.getConversionStats;
+(storage as any).getAOStats = DatabaseStorage.prototype.getAOStats;
+(storage as any).getProjectDelayStats = DatabaseStorage.prototype.getProjectDelayStats;
+(storage as any).getTeamPerformanceStats = DatabaseStorage.prototype.getTeamPerformanceStats;
+console.log('[STORAGE-POC] Methods attached. Checking storage instance:', {
+  hasGetProjectStats: typeof (storage as any).getProjectStats,
+  hasGetOfferStats: typeof (storage as any).getOfferStats,
+  hasGetConversionStats: typeof (storage as any).getConversionStats,
+  hasGetAOStats: typeof (storage as any).getAOStats,
+  hasGetProjectDelayStats: typeof (storage as any).getProjectDelayStats,
+  hasGetTeamPerformanceStats: typeof (storage as any).getTeamPerformanceStats
+});
+
 // FORCE: Assurer que createBugReport est disponible sur l'instance exportée
 if (!storage.createBugReport) {
   logger.error('CRITICAL FIX: createBugReport manque sur instance', {
@@ -8439,6 +8464,59 @@ if (!storage.createBugReport) {
     metadata: {
       service: 'StoragePOC',
       operation: 'criticalFix'
+    }
+  });
+}
+
+// FORCE: Assurer que les méthodes SQL d'agrégation sont disponibles sur l'instance
+console.log('[STORAGE-POC] Module-level code executing - checking SQL aggregation methods...');
+const dbStorage = storage as any;
+console.log('[STORAGE-POC] Methods check:', {
+  hasGetProjectStats: !!dbStorage.getProjectStats,
+  hasGetOfferStats: !!dbStorage.getOfferStats,
+  hasGetConversionStats: !!dbStorage.getConversionStats,
+  hasGetAOStats: !!dbStorage.getAOStats,
+  hasGetProjectDelayStats: !!dbStorage.getProjectDelayStats,
+  hasGetTeamPerformanceStats: !!dbStorage.getTeamPerformanceStats
+});
+if (!dbStorage.getProjectStats || !dbStorage.getOfferStats || !dbStorage.getConversionStats || 
+    !dbStorage.getAOStats || !dbStorage.getProjectDelayStats || !dbStorage.getTeamPerformanceStats) {
+  logger.error('CRITICAL FIX: Méthodes SQL d\'agrégation manquantes sur instance', {
+    metadata: {
+      service: 'StoragePOC',
+      operation: 'criticalFixSQLAggregations',
+      missing: {
+        getProjectStats: !dbStorage.getProjectStats,
+        getOfferStats: !dbStorage.getOfferStats,
+        getConversionStats: !dbStorage.getConversionStats,
+        getAOStats: !dbStorage.getAOStats,
+        getProjectDelayStats: !dbStorage.getProjectDelayStats,
+        getTeamPerformanceStats: !dbStorage.getTeamPerformanceStats
+      }
+    }
+  });
+  
+  // Bind all SQL aggregation methods from DatabaseStorage prototype
+  const proto = DatabaseStorage.prototype as any;
+  if (proto.getProjectStats) dbStorage.getProjectStats = proto.getProjectStats.bind(storage);
+  if (proto.getOfferStats) dbStorage.getOfferStats = proto.getOfferStats.bind(storage);
+  if (proto.getConversionStats) dbStorage.getConversionStats = proto.getConversionStats.bind(storage);
+  if (proto.getAOStats) dbStorage.getAOStats = proto.getAOStats.bind(storage);
+  if (proto.getProjectDelayStats) dbStorage.getProjectDelayStats = proto.getProjectDelayStats.bind(storage);
+  if (proto.getTeamPerformanceStats) dbStorage.getTeamPerformanceStats = proto.getTeamPerformanceStats.bind(storage);
+  
+  logger.info('CRITICAL FIX: Méthodes SQL d\'agrégation ajoutées avec succès', {
+    metadata: {
+      service: 'StoragePOC',
+      operation: 'criticalFixSQLAggregations',
+      added: {
+        getProjectStats: !!dbStorage.getProjectStats,
+        getOfferStats: !!dbStorage.getOfferStats,
+        getConversionStats: !!dbStorage.getConversionStats,
+        getAOStats: !!dbStorage.getAOStats,
+        getProjectDelayStats: !!dbStorage.getProjectDelayStats,
+        getTeamPerformanceStats: !!dbStorage.getTeamPerformanceStats
+      }
     }
   });
 }

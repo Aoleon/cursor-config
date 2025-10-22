@@ -11,6 +11,7 @@ import { securityHeaders, sanitizeQuery, rateLimits } from "./middleware/securit
 import { databaseErrorHandler, addRequestId } from "./middleware/db-error-handler";
 import { correlationMiddleware, setCorrelationId, generateCorrelationId } from "./middleware/correlation";
 import { logger } from './utils/logger';
+import compression from 'compression';
 
 const app = express();
 
@@ -49,6 +50,21 @@ app.use(rateLimits.general);
 // CORRELATION ID MIDDLEWARE - PHASE 1
 // ========================================
 app.use(correlationMiddleware);
+
+// ========================================
+// COMPRESSION MIDDLEWARE (gzip/brotli)
+// ========================================
+app.use(compression({
+  level: 6, // Niveau de compression (0-9, 6 = bon compromis vitesse/taille)
+  threshold: 1024, // Compresser seulement si > 1KB
+  filter: (req, res) => {
+    // Ne pas compresser si le client refuse ou si c'est déjà compressé
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();

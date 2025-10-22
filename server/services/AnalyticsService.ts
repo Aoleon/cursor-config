@@ -9,6 +9,7 @@ import { projectStatusEnum } from "@shared/schema";
 
 type ProjectStatus = typeof projectStatusEnum.enumValues[number];
 import { logger } from '../utils/logger';
+import { AnalyticsStorage } from '../storage/analytics';
 
 // ========================================
 // TYPES ET INTERFACES ANALYTICS MÉTIER
@@ -141,7 +142,10 @@ export interface BenchmarkEntity {
 // ========================================
 
 class ConversionCalculator {
-  constructor(private storage: IStorage) {}
+  constructor(
+    private storage: IStorage,
+    private analyticsStorage: AnalyticsStorage
+  ) {}
 
   async calculateAOToOfferConversion(
     period: DateRange, 
@@ -154,7 +158,7 @@ class ConversionCalculator {
         metadata: { period, filters }
       });
 
-      const conversionStats = await this.storage.getConversionStats(
+      const conversionStats = await this.analyticsStorage.getConversionStats(
         {
           from: period.from.toISOString(),
           to: period.to.toISOString()
@@ -229,7 +233,7 @@ class ConversionCalculator {
         metadata: { period, filters }
       });
 
-      const conversionStats = await this.storage.getConversionStats(
+      const conversionStats = await this.analyticsStorage.getConversionStats(
         {
           from: period.from.toISOString(),
           to: period.to.toISOString()
@@ -340,7 +344,10 @@ class ConversionCalculator {
 }
 
 class DelayCalculator {
-  constructor(private storage: IStorage) {}
+  constructor(
+    private storage: IStorage,
+    private analyticsStorage: AnalyticsStorage
+  ) {}
 
   async calculateAverageDelays(
     period: DateRange, 
@@ -352,7 +359,7 @@ class DelayCalculator {
         metadata: { period, groupBy }
       });
 
-      const delayStats = await this.storage.getProjectDelayStats({
+      const delayStats = await this.analyticsStorage.getProjectDelayStats({
         from: period.from.toISOString(),
         to: period.to.toISOString()
       });
@@ -369,7 +376,7 @@ class DelayCalculator {
 
       // For user grouping, we'll need to fetch team performance stats instead
       if (groupBy === 'user') {
-        const teamStats = await this.storage.getTeamPerformanceStats({
+        const teamStats = await this.analyticsStorage.getTeamPerformanceStats({
           from: period.from.toISOString(),
           to: period.to.toISOString()
         });
@@ -549,7 +556,10 @@ class DelayCalculator {
 }
 
 class RevenueCalculator {
-  constructor(private storage: IStorage) {}
+  constructor(
+    private storage: IStorage,
+    private analyticsStorage: AnalyticsStorage
+  ) {}
 
   async calculateRevenueForecast(
     period: DateRange, 
@@ -559,7 +569,7 @@ class RevenueCalculator {
       // OPTIMISATION: Utiliser SQL aggregations au lieu de charger tous les objets
       logger.debug('[AnalyticsService] calculateRevenueForecast - Using SQL aggregation');
       
-      const offerStats = await this.storage.getOfferStats({
+      const offerStats = await this.analyticsStorage.getOfferStats({
         dateFrom: period.from.toISOString(),
         dateTo: period.to.toISOString()
       });
@@ -750,11 +760,11 @@ class RevenueCalculator {
       logger.debug('[AnalyticsService] calculateMarginAnalysis - Using SQL aggregation');
       
       const [projectStats, offerStats] = await Promise.all([
-        this.storage.getProjectStats({
+        this.analyticsStorage.getProjectStats({
           dateFrom: period.from.toISOString(),
           dateTo: period.to.toISOString()
         }),
-        this.storage.getOfferStats({
+        this.analyticsStorage.getOfferStats({
           dateFrom: period.from.toISOString(),
           dateTo: period.to.toISOString()
         })
@@ -846,7 +856,10 @@ class RevenueCalculator {
 }
 
 class TeamLoadCalculator {
-  constructor(private storage: IStorage) {}
+  constructor(
+    private storage: IStorage,
+    private analyticsStorage: AnalyticsStorage
+  ) {}
 
   async calculateTeamLoad(period: DateRange): Promise<TeamLoadMetric[]> {
     try {
@@ -1065,11 +1078,14 @@ class TeamLoadCalculator {
 }
 
 class MarginCalculator {
-  constructor(private storage: IStorage) {}
+  constructor(
+    private storage: IStorage,
+    private analyticsStorage: AnalyticsStorage
+  ) {}
 
   async calculateMarginAnalysis(period: DateRange): Promise<MarginAnalysisMetric> {
     // Déléguer au RevenueCalculator qui a la même logique
-    const revenueCalculator = new RevenueCalculator(this.storage);
+    const revenueCalculator = new RevenueCalculator(this.storage, this.analyticsStorage);
     return await revenueCalculator.calculateMarginAnalysis(period);
   }
 }
@@ -1096,13 +1112,15 @@ export class AnalyticsService {
   ) {
     this.initializeCalculators();
   }
+  
+  private analyticsStorage = new AnalyticsStorage();
 
   private initializeCalculators(): void {
-    this.conversionCalculator = new ConversionCalculator(this.storage);
-    this.delayCalculator = new DelayCalculator(this.storage);
-    this.revenueCalculator = new RevenueCalculator(this.storage);
-    this.teamLoadCalculator = new TeamLoadCalculator(this.storage);
-    this.marginCalculator = new MarginCalculator(this.storage);
+    this.conversionCalculator = new ConversionCalculator(this.storage, this.analyticsStorage);
+    this.delayCalculator = new DelayCalculator(this.storage, this.analyticsStorage);
+    this.revenueCalculator = new RevenueCalculator(this.storage, this.analyticsStorage);
+    this.teamLoadCalculator = new TeamLoadCalculator(this.storage, this.analyticsStorage);
+    this.marginCalculator = new MarginCalculator(this.storage, this.analyticsStorage);
   }
 
   // ========================================

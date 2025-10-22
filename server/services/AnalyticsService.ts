@@ -426,50 +426,31 @@ class DelayCalculator {
 
   async calculateDelayedProjects(severity: 'minor' | 'major' | 'critical'): Promise<DelayedProjectMetric[]> {
     try {
-      const timelines = await this.storage.getAllProjectTimelines();
-      const projects = await this.storage.getProjects();
-      const delayedProjects: DelayedProjectMetric[] = [];
+      // OPTIMISATION LINE 430: Utiliser SQL JOIN au lieu de charger 375 projets
+      logger.debug('[AnalyticsService] calculateDelayedProjects - Using SQL aggregation with JOIN', {
+        metadata: { severity }
+      });
 
-      // Seuils selon sévérité
-      const thresholds = {
-        minor: 3,    // 3 jours
-        major: 7,    // 1 semaine  
-        critical: 14 // 2 semaines
-      };
+      const delayedProjectsData = await this.analyticsStorage.getDelayedProjects(severity);
 
-      const minDelay = thresholds[severity];
+      // Transform to DelayedProjectMetric with calculated fields
+      const delayedProjects: DelayedProjectMetric[] = delayedProjectsData.map(project => {
+        const dailyCost = 500; // Coût journalier moyen estimé
+        const impactFinancier = project.delayDays * dailyCost;
+        
+        // Score d'urgence basé sur délai et impact
+        const urgencyScore = Math.min(100, (project.delayDays / 30) * 50 + (impactFinancier / 10000) * 50);
 
-      for (const timeline of timelines) {
-        if (timeline.plannedEndDate) {
-          const plannedEnd = new Date(timeline.plannedEndDate);
-          const now = new Date();
-          const actualEnd = timeline.actualEndDate ? new Date(timeline.actualEndDate) : now;
-          
-          const delayDays = Math.max(0, (actualEnd.getTime() - plannedEnd.getTime()) / (1000 * 60 * 60 * 24));
-          
-          if (delayDays >= minDelay) {
-            const project = projects.find(p => p.id === timeline.projectId);
-            if (project) {
-              // Calcul impact financier approximatif
-              const dailyCost = 500; // Coût journalier moyen estimé
-              const impactFinancier = delayDays * dailyCost;
-              
-              // Score d'urgence basé sur délai et impact
-              const urgencyScore = Math.min(100, (delayDays / 30) * 50 + (impactFinancier / 10000) * 50);
-
-              delayedProjects.push({
-                projectId: project.id,
-                projectName: project.name,
-                phase: timeline.phase,
-                delayDays,
-                impactFinancier,
-                urgencyScore,
-                responsibleUserId: project.responsibleUserId || undefined
-              });
-            }
-          }
-        }
-      }
+        return {
+          projectId: project.projectId,
+          projectName: project.projectName,
+          phase: project.phase as ProjectStatus,
+          delayDays: project.delayDays,
+          impactFinancier,
+          urgencyScore,
+          responsibleUserId: project.responsibleUserId || undefined
+        };
+      });
 
       // Trier par score d'urgence décroissant
       return delayedProjects.sort((a, b) => b.urgencyScore - a.urgencyScore);
@@ -489,54 +470,30 @@ class DelayCalculator {
 
   async calculateTeamDelayPerformance(period: DateRange): Promise<TeamDelayMetric[]> {
     try {
-      const users = await this.storage.getUsers();
-      const projects = await this.storage.getProjects();
-      const timelines = await this.storage.getAllProjectTimelines();
-      
-      const teamMetrics: TeamDelayMetric[] = [];
+      // OPTIMISATION LINE 493: Utiliser SQL aggregation au lieu de charger 375 projets
+      logger.debug('[AnalyticsService] calculateTeamDelayPerformance - Using SQL aggregation', {
+        metadata: { period }
+      });
 
-      for (const user of users) {
-        // Projets de l'utilisateur dans la période
-        const userProjects = projects.filter(p => 
-          p.responsibleUserId === user.id && 
-          p.createdAt && 
-          new Date(p.createdAt) >= period.from && 
-          new Date(p.createdAt) <= period.to
-        );
+      const teamStats = await this.analyticsStorage.getTeamPerformanceStats({
+        from: period.from.toISOString(),
+        to: period.to.toISOString()
+      });
 
-        if (userProjects.length === 0) continue;
-
-        // Timelines associées
-        const userTimelines = timelines.filter(t => 
-          userProjects.some(p => p.id === t.projectId) && 
-          t.plannedEndDate && t.actualEndDate
-        );
-
-        if (userTimelines.length === 0) continue;
-
-        // Calcul des délais
-        const delays = userTimelines.map(t => {
-          const planned = new Date(t.plannedEndDate!);
-          const actual = new Date(t.actualEndDate!);
-          return Math.max(0, (actual.getTime() - planned.getTime()) / (1000 * 60 * 60 * 24));
-        });
-
-        const averageDelay = delays.reduce((a, b) => a + b, 0) / delays.length;
-        const onTimeCount = delays.filter(d => d <= 1).length; // <= 1 jour = à temps
-        const onTimePercentage = (onTimeCount / delays.length) * 100;
-        
+      // Transform to TeamDelayMetric with calculated performance score
+      const teamMetrics: TeamDelayMetric[] = teamStats.map(stats => {
         // Score de performance (0-100)
-        const performanceScore = Math.max(0, 100 - (averageDelay * 5) - ((100 - onTimePercentage) * 0.5));
+        const performanceScore = Math.max(0, 100 - (stats.avgDelayDays * 5) - ((100 - stats.onTimeRate) * 0.5));
 
-        teamMetrics.push({
-          userId: user.id,
-          userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown',
-          averageDelay,
-          onTimePercentage,
-          totalProjects: userProjects.length,
+        return {
+          userId: stats.userId,
+          userName: stats.userName,
+          averageDelay: stats.avgDelayDays,
+          onTimePercentage: stats.onTimeRate,
+          totalProjects: stats.projectCount,
           performanceScore
-        });
-      }
+        };
+      });
 
       // Trier par score décroissant
       return teamMetrics.sort((a, b) => b.performanceScore - a.performanceScore);
@@ -622,16 +579,15 @@ class RevenueCalculator {
         byCategory[category] += forecastAmount;
       }
 
-      // Projets signés (revenus confirmés)
-      const signedProjects = projects.filter(project => {
-        const createdAt = new Date(project.createdAt || 0);
-        return createdAt >= period.from && createdAt <= period.to;
+      // Projets signés (revenus confirmés) - Use SQL aggregation
+      const signedProjectStats = await this.analyticsStorage.getProjectStats({
+        dateFrom: period.from.toISOString(),
+        dateTo: period.to.toISOString(),
+        status: 'chantier' // Signed projects that became worksites
       });
-
-      for (const project of signedProjects) {
-        const amount = project.budget ? parseFloat(project.budget.toString()) : 0;
-        totalForecast += amount;
-      }
+      
+      // Add confirmed revenue from signed projects
+      totalForecast += signedProjectStats.totalBudget;
 
       // Analyse mensuelle
       const monthsInPeriod = Math.ceil((period.to.getTime() - period.from.getTime()) / (1000 * 60 * 60 * 24 * 30));
@@ -685,37 +641,28 @@ class RevenueCalculator {
 
   async calculateRevenueByCategory(period: DateRange): Promise<CategoryRevenueMetric[]> {
     try {
-      const projects = await this.storage.getProjects();
-      const offers = await this.storage.getOffers();
-
-      // Projets complétés dans la période
-      const completedProjects = projects.filter(project => {
-        const createdAt = new Date(project.createdAt || 0);
-        return createdAt >= period.from && createdAt <= period.to && project.budget;
+      // OPTIMISATION LINE 688: Utiliser SQL GROUP BY au lieu de charger 375 projets
+      logger.debug('[AnalyticsService] calculateRevenueByCategory - Using SQL aggregation', {
+        metadata: { period }
       });
 
-      // Grouper par catégorie
-      const categoryData: Record<string, { revenue: number; count: number }> = {};
-      let totalRevenue = 0;
+      const categoryStats = await this.analyticsStorage.getRevenueByCategoryStats({
+        from: period.from.toISOString(),
+        to: period.to.toISOString()
+      });
 
-      for (const project of completedProjects) {
-        const offer = offers.find(o => o.id === project.offerId);
-        const category = offer?.menuiserieType || 'autres';
-        const revenue = parseFloat(project.budget?.toString() || '0');
-
-        if (!categoryData[category]) {
-          categoryData[category] = { revenue: 0, count: 0 };
-        }
-        categoryData[category].revenue += revenue;
-        categoryData[category].count++;
-        totalRevenue += revenue;
+      if (categoryStats.length === 0) {
+        return [];
       }
 
-      // Calcul métriques par catégorie
+      // Calculate total revenue for market share
+      const totalRevenue = categoryStats.reduce((sum, cat) => sum + cat.revenue, 0);
+
+      // Build result with calculated metrics
       const result: CategoryRevenueMetric[] = [];
 
-      for (const [category, data] of Object.entries(categoryData)) {
-        const marketShare = totalRevenue > 0 ? (data.revenue / totalRevenue) * 100 : 0;
+      for (const stats of categoryStats) {
+        const marketShare = totalRevenue > 0 ? (stats.revenue / totalRevenue) * 100 : 0;
         
         // Calcul croissance (période précédente)
         const previousPeriod = {
@@ -723,16 +670,16 @@ class RevenueCalculator {
           to: period.from
         };
         const previousMetrics = await this.calculateRevenueByCategory(previousPeriod);
-        const previousCategory = previousMetrics.find(m => m.category === category);
-        const growth = previousCategory ? 
-          ((data.revenue - previousCategory.revenue) / previousCategory.revenue) * 100 : 0;
+        const previousCategory = previousMetrics.find(m => m.category === stats.category);
+        const growth = previousCategory && previousCategory.revenue > 0 ? 
+          ((stats.revenue - previousCategory.revenue) / previousCategory.revenue) * 100 : 0;
 
         // Profitabilité estimée (simplified)
         const profitability = 25; // 25% marge moyenne estimée
 
         result.push({
-          category,
-          revenue: data.revenue,
+          category: stats.category,
+          revenue: stats.revenue,
           growth,
           marketShare,
           profitability
@@ -944,46 +891,33 @@ class TeamLoadCalculator {
 
   async calculateTeamEfficiency(period: DateRange): Promise<TeamEfficiencyMetric[]> {
     try {
-      const users = await this.storage.getUsers();
-      const projects = await this.storage.getProjects();
-      const timelines = await this.storage.getAllProjectTimelines();
-      
-      const efficiencyMetrics: TeamEfficiencyMetric[] = [];
+      // OPTIMISATION LINE 948: Utiliser SQL aggregation au lieu de charger 375 projets
+      logger.debug('[AnalyticsService] calculateTeamEfficiency - Using SQL aggregation', {
+        metadata: { period }
+      });
 
-      for (const user of users) {
-        // Projets de l'utilisateur
-        const userProjects = projects.filter(p => p.responsibleUserId === user.id);
-        const userTimelines = timelines.filter(t => 
-          userProjects.some(p => p.id === t.projectId)
-        );
+      const teamStats = await this.analyticsStorage.getTeamPerformanceStats({
+        from: period.from.toISOString(),
+        to: period.to.toISOString()
+      });
 
-        if (userTimelines.length === 0) continue;
-
-        // Efficacité temporelle (respect des délais)
-        const onTimeProjects = userTimelines.filter(t => {
-          if (!t.plannedEndDate || !t.actualEndDate) return false;
-          const planned = new Date(t.plannedEndDate);
-          const actual = new Date(t.actualEndDate);
-          return actual <= planned;
-        }).length;
-
-        const efficiency = userTimelines.length > 0 ? (onTimeProjects / userTimelines.length) * 100 : 0;
-
+      // Transform to TeamEfficiencyMetric
+      const efficiencyMetrics: TeamEfficiencyMetric[] = teamStats.map(stats => {
         // Score qualité (approximation - utiliser 100% par défaut car les champs réserves n'existent pas encore)
         const qualityScore = 100;
 
         // Score collaboration (simplified)
         const collaborationScore = 85; // Score par défaut
 
-        efficiencyMetrics.push({
-          userId: user.id,
-          userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown',
-          efficiency,
-          deliveredOnTime: (onTimeProjects / Math.max(1, userTimelines.length)) * 100,
+        return {
+          userId: stats.userId,
+          userName: stats.userName,
+          efficiency: stats.onTimeRate, // On-time rate as efficiency metric
+          deliveredOnTime: stats.onTimeRate,
           qualityScore,
           collaborationScore
-        });
-      }
+        };
+      });
 
       return efficiencyMetrics.sort((a, b) => b.efficiency - a.efficiency);
 
@@ -1559,35 +1493,34 @@ export class AnalyticsService {
 
   async getDashboardStats(): Promise<any> {
     try {
-      const [aos, offers, projects] = await Promise.all([
-        this.storage.getAos(),
-        this.storage.getOffers(),
-        this.storage.getProjects()
-      ]);
-
-      const activeProjects = projects.filter(p => 
-        p.status && !['termine', 'archive'].includes(p.status)
-      );
-
-      const totalRevenue = projects.reduce((sum, p) => 
-        sum + parseFloat(p.budget?.toString() || '0'), 0
-      );
+      // OPTIMISATION LINE 1565: Utiliser SQL aggregations au lieu de charger 375 projets
+      logger.debug('[AnalyticsService] getDashboardStats - Using SQL aggregation');
 
       const period: DateRange = {
         from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         to: new Date()
       };
 
-      const conversions = await this.conversionCalculator.calculatePipelineConversion(period);
+      const [aoStats, offerStats, projectStats, conversions] = await Promise.all([
+        this.analyticsStorage.getAOStats(),
+        this.analyticsStorage.getOfferStats(),
+        this.analyticsStorage.getProjectStats(),
+        this.conversionCalculator.calculatePipelineConversion(period)
+      ]);
+
+      // Calculate active projects (not termine or archive)
+      const activeProjects = Object.entries(projectStats.byStatus)
+        .filter(([status]) => !['termine', 'archive'].includes(status))
+        .reduce((sum, [, stats]) => sum + stats.count, 0);
 
       return {
-        totalAos: aos.length,
-        totalOffers: offers.length,
-        totalProjects: projects.length,
-        activeProjects: activeProjects.length,
-        totalRevenue,
+        totalAos: aoStats.totalCount,
+        totalOffers: offerStats.totalCount,
+        totalProjects: projectStats.totalCount,
+        activeProjects,
+        totalRevenue: projectStats.totalBudget,
         conversionRate: conversions.globalConversion,
-        averageProjectValue: projects.length > 0 ? totalRevenue / projects.length : 0,
+        averageProjectValue: projectStats.avgBudget,
         teamUtilization: 0 // À calculer
       };
     } catch (error) {
@@ -1609,40 +1542,43 @@ export class AnalyticsService {
 
   async getPipelineAnalytics(filters?: any): Promise<any> {
     try {
+      // OPTIMISATION LINE 1620: Utiliser SQL aggregations au lieu de charger 375 projets
+      logger.debug('[AnalyticsService] getPipelineAnalytics - Using SQL aggregation');
+
       const period: DateRange = {
         from: filters?.dateFrom ? new Date(filters.dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         to: filters?.dateTo ? new Date(filters.dateTo) : new Date()
       };
 
-      const [aos, offers, projects, conversions] = await Promise.all([
-        this.storage.getAos(),
-        this.storage.getOffers(),
-        this.storage.getProjects(),
+      const [aoStats, offerStats, projectStats, conversions] = await Promise.all([
+        this.analyticsStorage.getAOStats(),
+        this.analyticsStorage.getOfferStats(),
+        this.analyticsStorage.getProjectStats(),
         this.conversionCalculator.calculatePipelineConversion(period)
       ]);
 
       return {
-        aoCount: aos.length,
-        offerCount: offers.length,
-        projectCount: projects.length,
+        aoCount: aoStats.totalCount,
+        offerCount: offerStats.totalCount,
+        projectCount: projectStats.totalCount,
         stages: [
           {
             name: 'AO',
-            count: aos.length,
+            count: aoStats.totalCount,
             value: 0,
             averageTime: 0,
             conversion: conversions.aoToOffer
           },
           {
             name: 'Offre',
-            count: offers.length,
+            count: offerStats.totalCount,
             value: 0,
             averageTime: 0,
             conversion: conversions.offerToProject
           },
           {
             name: 'Projet',
-            count: projects.length,
+            count: projectStats.totalCount,
             value: 0,
             averageTime: 0,
             conversion: 100

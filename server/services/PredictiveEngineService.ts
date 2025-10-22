@@ -1007,14 +1007,18 @@ export class PredictiveEngineService {
    */
   private async getCurrentKPIs(period: DateRange): Promise<any> {
     try {
-      // Use direct storage queries for KPIs
-      const offers = await this.storage.getOffers();
-      const projects = await this.storage.getProjects();
+      // OPTIMISATION: Use pagination to get counts instead of loading all data
+      const [offersResult, projectsResult] = await Promise.all([
+        this.storage.getOffersPaginated(undefined, undefined, 1, 0),
+        this.storage.getProjectsPaginated(undefined, undefined, 1, 0)
+      ]);
       
-      // Calculate conversion rate from offers to projects
-      const completedOffers = offers.filter((o: any) => o.status === 'termine');
-      const conversionRate = completedOffers.length > 0 
-        ? (projects.length / completedOffers.length) * 100 
+      // Get completed offers count using pagination
+      const completedOffersResult = await this.storage.getOffersPaginated(undefined, 'termine', 1, 0);
+      
+      // Calculate conversion rate from counts
+      const conversionRate = completedOffersResult.total > 0 
+        ? (projectsResult.total / completedOffersResult.total) * 100 
         : 25;
       
       return {

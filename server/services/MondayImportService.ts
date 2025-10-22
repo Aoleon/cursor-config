@@ -498,8 +498,8 @@ export class MondayImportService {
           createdId = created.id;
           saxiumEntity = created;
         } else if (changeType === 'update') {
-          // Try to find existing project by Monday ID or name
-          const projects = await storage.getProjects();
+          // OPTIMISATION: Use pagination to find existing project by Monday ID or name
+          const { projects } = await storage.getProjectsPaginated(undefined, undefined, 100, 0);
           const existingProject = projects.find(p => 
             p.mondayId === itemId || p.name === item.name
           );

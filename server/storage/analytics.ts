@@ -567,6 +567,104 @@ export class AnalyticsStorage {
       throw error;
     }
   }
+
+  /**
+   * NEW METHOD: Get delayed projects with SQL JOIN (for line 430 optimization)
+   */
+  async getDelayedProjects(severity: 'minor' | 'major' | 'critical'): Promise<Array<{
+    projectId: string;
+    projectName: string;
+    phase: string;
+    delayDays: number;
+    budget: number;
+    responsibleUserId: string | null;
+  }>> {
+    try {
+      logger.debug('[AnalyticsStorage] getDelayedProjects - SQL aggregation with JOIN', { metadata: { severity } });
+
+      // Thresholds by severity
+      const thresholds = {
+        minor: 3,
+        major: 7,
+        critical: 14
+      };
+      const minDelay = thresholds[severity];
+
+      // SQL query with JOIN to get delayed projects
+      const delayedProjects = await db
+        .select({
+          projectId: projects.id,
+          projectName: projects.name,
+          phase: projectTimelines.phase,
+          delayDays: sql<number>`CAST(GREATEST(0, EXTRACT(EPOCH FROM (COALESCE(${projectTimelines.actualEndDate}, NOW()) - ${projectTimelines.plannedEndDate})) / 86400) AS INTEGER)`,
+          budget: projects.budget,
+          responsibleUserId: projects.responsibleUserId
+        })
+        .from(projectTimelines)
+        .innerJoin(projects, eq(projectTimelines.projectId, projects.id))
+        .where(
+          and(
+            sql`${projectTimelines.plannedEndDate} IS NOT NULL`,
+            sql`EXTRACT(EPOCH FROM (COALESCE(${projectTimelines.actualEndDate}, NOW()) - ${projectTimelines.plannedEndDate})) / 86400 >= ${minDelay}`
+          )
+        );
+
+      return delayedProjects.map(p => ({
+        ...p,
+        delayDays: Number(p.delayDays),
+        budget: Number(p.budget || 0)
+      }));
+    } catch (error) {
+      logger.error('Error in getDelayedProjects', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  /**
+   * NEW METHOD: Get revenue by category with SQL GROUP BY (for line 688 optimization)
+   */
+  async getRevenueByCategoryStats(period: {
+    from: string;
+    to: string;
+  }): Promise<Array<{
+    category: string;
+    revenue: number;
+    projectCount: number;
+  }>> {
+    try {
+      logger.debug('[AnalyticsStorage] getRevenueByCategoryStats - SQL aggregation', { metadata: { period } });
+
+      const fromDate = new Date(period.from);
+      const toDate = new Date(period.to);
+
+      // Query projects with offers to get category (menuiserieType)
+      const categoryStats = await db
+        .select({
+          category: sql<string>`COALESCE(${offers.menuiserieType}, 'autres')`,
+          revenue: sum(projects.budget),
+          projectCount: count()
+        })
+        .from(projects)
+        .leftJoin(offers, eq(projects.offerId, offers.id))
+        .where(
+          and(
+            gte(projects.createdAt, fromDate),
+            lte(projects.createdAt, toDate),
+            sql`${projects.budget} IS NOT NULL`
+          )
+        )
+        .groupBy(sql`COALESCE(${offers.menuiserieType}, 'autres')`);
+
+      return categoryStats.map(stat => ({
+        category: stat.category || 'autres',
+        revenue: Number(stat.revenue || 0),
+        projectCount: Number(stat.projectCount || 0)
+      }));
+    } catch (error) {
+      logger.error('Error in getRevenueByCategoryStats', { metadata: { error } });
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

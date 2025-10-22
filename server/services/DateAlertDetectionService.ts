@@ -199,7 +199,9 @@ export class DateAlertDetectionService {
         const project = await this.storage.getProject(projectId);
         projects = project ? [project] : [];
       } else {
-        projects = await this.storage.getProjects();
+        // OPTIMISATION: Use pagination instead of loading 375 projects
+        const { projects: paginatedProjects } = await this.storage.getProjectsPaginated(undefined, undefined, 1000, 0);
+        projects = paginatedProjects;
       }
 
       // Analyser chaque projet pour détecter les risques de retard

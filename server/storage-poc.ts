@@ -1139,9 +1139,13 @@ export class DatabaseStorage implements IStorage {
           // Importer le service Batigest de façon dynamique pour éviter les imports circulaires
           const { batigestService } = await import('./batigestService');
           
-          // Rechercher le projet associé à cette offre
-          const projects = await this.getProjects();
-          const relatedProject = projects.find(p => p.offerId === id);
+          // OPTIMISATION: Use SQL query to find project by offerId instead of loading 375 projects
+          const relatedProjects = await db
+            .select()
+            .from(projects)
+            .where(eq(projects.offerId, id))
+            .limit(1);
+          const relatedProject = relatedProjects[0];
           
           if (relatedProject) {
             logger.info('Projet associé trouvé pour génération Batigest', {

@@ -245,7 +245,8 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     validateQuery(workflowProjectsQuerySchema),
     asyncHandler(async (req, res) => {
       const { status } = req.query;
-      const projects = await storage.getProjects();
+      // OPTIMISATION: Use pagination instead of loading 375 projects
+      const { projects } = await storage.getProjectsPaginated(undefined, status as string, 1000, 0);
       
       const enrichedProjects = projects.map((project: any) => {
         const baseProject = {
@@ -312,7 +313,8 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   );
 
   app.get("/api/projects/planning", isAuthenticated, asyncHandler(async (req, res) => {
-    const projects = await storage.getProjects();
+    // OPTIMISATION: Use pagination instead of loading 375 projects
+    const { projects } = await storage.getProjectsPaginated(undefined, undefined, 1000, 0);
     
     const planningData = projects.map((project: any) => ({
       ...project,
@@ -509,8 +511,13 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   // ========================================
 
   app.get("/api/priorities", asyncHandler(async (req, res) => {
-    const offers = await storage.getOffers();
-    const projects = await storage.getProjects();
+    // OPTIMISATION: Use pagination instead of loading ALL offers and projects
+    const [offersResult, projectsResult] = await Promise.all([
+      storage.getOffersPaginated(undefined, undefined, 1000, 0),
+      storage.getProjectsPaginated(undefined, undefined, 1000, 0)
+    ]);
+    const offers = offersResult.offers;
+    const projects = projectsResult.projects;
     
     const priorities = [
       ...offers.map((offer: any) => {
@@ -655,10 +662,13 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       throw new ValidationError(`La somme des poids doit être égale à 100% (reçu: ${totalWeight}%)`);
     }
     
-    const offers = await storage.getOffers();
-    const projects = await storage.getProjects();
+    // OPTIMISATION: Use pagination to get counts instead of loading all data
+    const [offersResult, projectsResult] = await Promise.all([
+      storage.getOffersPaginated(undefined, undefined, 1, 0),
+      storage.getProjectsPaginated(undefined, undefined, 1, 0)
+    ]);
     
-    const recalculatedCount = offers.length + projects.length;
+    const recalculatedCount = offersResult.total + projectsResult.total;
     
     if (eventBus) {
       const configEvent = createRealtimeEvent({
@@ -831,17 +841,22 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   }));
 
   app.get("/api/priorities/stats", asyncHandler(async (req, res) => {
-    const offers = await storage.getOffers();
-    const projects = await storage.getProjects();
+    // OPTIMISATION: Use pagination to get counts instead of loading 375 projects
+    const [offersResult, projectsResult] = await Promise.all([
+      storage.getOffersPaginated(undefined, undefined, 1, 0),
+      storage.getProjectsPaginated(undefined, undefined, 1, 0)
+    ]);
+    
+    const totalItems = offersResult.total + projectsResult.total;
     
     const stats = {
-      totalItems: offers.length + projects.length,
+      totalItems,
       byLevel: {
-        critique: Math.floor((offers.length + projects.length) * 0.15),
-        elevee: Math.floor((offers.length + projects.length) * 0.25),
-        normale: Math.floor((offers.length + projects.length) * 0.40),
-        faible: Math.floor((offers.length + projects.length) * 0.15),
-        tres_faible: Math.floor((offers.length + projects.length) * 0.05)
+        critique: Math.floor(totalItems * 0.15),
+        elevee: Math.floor(totalItems * 0.25),
+        normale: Math.floor(totalItems * 0.40),
+        faible: Math.floor(totalItems * 0.15),
+        tres_faible: Math.floor(totalItems * 0.05)
       },
       averageScore: 62.3,
       alertsActive: 3,

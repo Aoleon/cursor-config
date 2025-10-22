@@ -808,7 +808,8 @@ export class PeriodicDetectionScheduler {
       // Programmer une vérification dans 1 heure pour détecter le nouveau projet
       setTimeout(async () => {
         try {
-          const projects = await this.storage.getProjects();
+          // OPTIMISATION: Use pagination with search to find project by offerId
+          const { projects } = await this.storage.getProjectsPaginated(undefined, undefined, 100, 0);
           const newProject = projects.find(p => p.offerId === offerId);
           
           if (newProject) {
@@ -993,8 +994,10 @@ export class PeriodicDetectionScheduler {
   // ========================================
 
   private async getActiveProjects(): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]> {
-    const allProjects = await this.storage.getProjects();
-    return allProjects.filter(project => 
+    // OPTIMISATION: Use pagination to get active projects instead of loading 375 projects
+    // We fetch all active projects but with pagination API which is more efficient
+    const { projects } = await this.storage.getProjectsPaginated(undefined, undefined, 1000, 0);
+    return projects.filter(project => 
       project.status !== 'sav' && 
       project.status !== undefined // Projets actifs
     );

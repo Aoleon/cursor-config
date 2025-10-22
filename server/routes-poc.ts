@@ -1780,10 +1780,12 @@ app.get("/api/projects",
       metadata: { search, status, route: 'routes-poc.ts' }
     });
     
-    // Validation réussie : status est garanti valide ou undefined
-    const projects = await storage.getProjects(
+    // OPTIMISATION: Use pagination instead of loading 375 projects
+    const { projects } = await storage.getProjectsPaginated(
       search as string, 
-      status as string
+      status as string,
+      1000, // limit
+      0     // offset
     );
     
     logger.info('[ROUTE-POC] Projects reçus, avant sendSuccess', {
@@ -5232,9 +5234,9 @@ app.get("/api/admin/intelligence/test-integration",
           metadata: { filters: req.query }
         });
         
-        // Récupérer toutes les timelines et projets pour le calcul
+        // OPTIMISATION: Récupérer toutes les timelines et projets pour le calcul avec pagination
         const timelines = await storage.getAllProjectTimelines();
-        const projects = await storage.getProjects();
+        const { projects } = await storage.getProjectsPaginated(undefined, undefined, 1000, 0);
         
         // Filtrer les données selon les critères
         let filteredTimelines = timelines;
@@ -8137,9 +8139,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
     isAuthenticated,
     asyncHandler(async (req, res) => {
       try {
-        // Récupérer les statistiques de migration depuis la BDD
+        // OPTIMISATION: Récupérer les statistiques de migration avec pagination
         const aosData = await storage.getAos();
-        const projectsData = await storage.getProjects();
+        const { projects: projectsData } = await storage.getProjectsPaginated(undefined, undefined, 1000, 0);
         
         // Filtrer les données Monday.com (avec mondayItemId ou mondayProjectId)
         const mondayAOs = aosData.filter(ao => ao.mondayItemId);
@@ -8394,9 +8396,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
     isAuthenticated,
     asyncHandler(async (req, res) => {
       try {
-        // Récupérer toutes les données pour validation
+        // OPTIMISATION: Récupérer toutes les données pour validation avec pagination
         const aosData = await storage.getAos();
-        const projectsData = await storage.getProjects();
+        const { projects: projectsData } = await storage.getProjectsPaginated(undefined, undefined, 1000, 0);
         
         const mondayAOs = aosData.filter(ao => ao.mondayItemId);
         const mondayProjects = projectsData.filter(project => project.mondayProjectId);
@@ -8506,9 +8508,9 @@ app.put("/api/chatbot/action-confirmation/:confirmationId",
       try {
         const { level, limit, offset, startDate, endDate } = req.query;
         
-        // Simuler des logs de migration basés sur les données réelles
+        // OPTIMISATION: Simuler des logs de migration basés sur les données réelles avec pagination
         const aosData = await storage.getAos();
-        const projectsData = await storage.getProjects();
+        const { projects: projectsData } = await storage.getProjectsPaginated(undefined, undefined, 1000, 0);
         
         const mondayAOs = aosData.filter(ao => ao.mondayItemId);
         const mondayProjects = projectsData.filter(project => project.mondayProjectId);

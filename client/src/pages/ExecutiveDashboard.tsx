@@ -60,6 +60,21 @@ import { BusinessAlertsList } from '@/components/BusinessAlertsList';
 import { DateAlertsProvider } from '@/components/alerts/DateAlertsProvider';
 import IntelligentHeader from '@/components/navigation/IntelligentHeader';
 
+// ========================================
+// HELPER FUNCTIONS
+// ========================================
+
+/**
+ * Ensures that the input is always a valid array for Recharts
+ * Protects against undefined, null, objects, and other non-array values
+ */
+function ensureArray<T = any>(data: any): T[] {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  return [];
+}
+
 // Lazy loading des composants spécialisés pour optimiser les performances
 const DateIntelligenceDashboard = lazy(() => import('@/pages/DateIntelligenceDashboard'));
 const AlertsManagementPanel = lazy(() => import('@/pages/AlertsManagementPanel'));
@@ -334,7 +349,7 @@ function KPIOverview() {
 // ========================================
 
 const ConversionTrendChart = memo(({ data }: { data: any[] }) => {
-  const chartData = data || [];
+  const chartData = ensureArray(data);
   
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -358,7 +373,7 @@ const ConversionTrendChart = memo(({ data }: { data: any[] }) => {
 });
 
 const TeamLoadChart = memo(({ data }: { data: any[] }) => {
-  const chartData = data || [];
+  const chartData = ensureArray(data);
   
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -468,7 +483,7 @@ function PerformanceTab() {
             <Skeleton className="h-[300px] w-full" />
           ) : (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={marginAnalysis.data?.byCategory || []}>
+              <BarChart data={ensureArray(marginAnalysis.data?.byCategory)}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="category" />
                 <YAxis />
@@ -526,7 +541,7 @@ function PipelineTab() {
             <Skeleton className="h-[300px] w-full" />
           ) : (
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={pipeline.data?.forecast_3_months || []}>
+              <LineChart data={ensureArray(pipeline.data?.forecast_3_months)}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -739,11 +754,11 @@ const RevenueForecastChart = memo(({ data, method }: {
   data: PredictiveRevenueForecast[];
   method: string;
 }) => {
-  const chartData = data?.map(d => ({
+  const chartData = ensureArray(data?.map(d => ({
     month: d.target_period,
     forecast: d.revenue_forecast,
     confidence: d.confidence_level
-  })) || [];
+  })));
   
   return (
     <div className="h-64">

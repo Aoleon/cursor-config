@@ -54,8 +54,15 @@ export class WebSocketManager {
 
   private setupSessionStore() {
     const pgStore = connectPg(session);
+    
+    // Configuration optimisée pour Neon avec timeouts augmentés
+    const databaseUrl = new URL(process.env.DATABASE_URL!);
+    databaseUrl.searchParams.set('connect_timeout', '60'); // 60 secondes pour cold start Neon
+    databaseUrl.searchParams.set('statement_timeout', '30000'); // 30s pour les requêtes
+    databaseUrl.searchParams.set('idle_in_transaction_session_timeout', '60000'); // 60s pour transactions
+    
     this.sessionStore = new pgStore({
-      conString: process.env.DATABASE_URL,
+      conString: databaseUrl.toString(),
       createTableIfMissing: false,
       tableName: "sessions",
     });

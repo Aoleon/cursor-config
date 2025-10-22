@@ -6,6 +6,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import createMemoryStore from "memorystore";
 import { storage } from "./storage-poc";
 import { logger } from './utils/logger';
 
@@ -25,18 +26,52 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  // En développement, utiliser un store en mémoire pour éviter les cold starts Neon
+  // En production, utiliser PostgreSQL pour la persistance
+  let sessionStore;
+  
+  if (isDevelopment) {
+    // Store en mémoire pour développement (évite les timeouts Neon cold start)
+    const MemoryStore = createMemoryStore(session);
+    sessionStore = new MemoryStore({
+      checkPeriod: 86400000, // Nettoyage quotidien (24h)
+      ttl: sessionTtl,
+    });
+    logger.info('Session store: Mémoire (développement)', {
+      metadata: {
+        module: 'ReplitAuth',
+        operation: 'getSession',
+        context: { store: 'memory', reason: 'Éviter cold starts Neon en dev' }
+      }
+    });
+  } else {
+    // PostgreSQL pour production avec timeouts optimisés
+    const pgStore = connectPg(session);
+    const databaseUrl = new URL(process.env.DATABASE_URL!);
+    databaseUrl.searchParams.set('connect_timeout', '60');
+    databaseUrl.searchParams.set('statement_timeout', '30000');
+    databaseUrl.searchParams.set('idle_in_transaction_session_timeout', '60000');
+    
+    sessionStore = new pgStore({
+      conString: databaseUrl.toString(),
+      createTableIfMissing: true,
+      ttl: sessionTtl,
+      tableName: "sessions",
+    });
+    logger.info('Session store: PostgreSQL (production)', {
+      metadata: {
+        module: 'ReplitAuth',
+        operation: 'getSession',
+        context: { store: 'postgresql' }
+      }
+    });
+  }
   
   // Configuration adaptée selon l'environnement
   const isReplit = !!process.env.REPLIT_DOMAINS;
   const isProduction = process.env.NODE_ENV === 'production';
-  const isDevelopment = process.env.NODE_ENV === 'development';
   
   // DÉBOGAGE : Afficher les variables d'environnement
   logger.info('Configuration environnement session', {

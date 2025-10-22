@@ -592,7 +592,7 @@ function OperationsTab() {
               <Skeleton className="h-[300px] w-full" />
             ) : (
               <div className="space-y-4">
-                {(teamMetrics.data || []).map((member: any, index: number) => (
+                {ensureArray(teamMetrics.data).map((member: any, index: number) => (
                   <div key={index} className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">{member.userName}</span>
@@ -805,7 +805,7 @@ const RevenueForecastChart = memo(({ data, method }: {
 const ProjectRisksTable = memo(({ risks }: { risks: ProjectRiskAssessment[] }) => {
   return (
     <div className="space-y-3">
-      {risks?.map((risk) => (
+      {ensureArray(risks).map((risk) => (
         <div 
           key={risk.id} 
           className="border rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -858,7 +858,7 @@ const RecommendationsList = memo(({ recommendations }: { recommendations: Busine
   
   return (
     <div className="space-y-3">
-      {recommendations?.map((rec) => (
+      {ensureArray(recommendations).map((rec) => (
         <div 
           key={rec.id} 
           className="border rounded-lg p-3"

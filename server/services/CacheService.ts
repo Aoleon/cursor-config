@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger';
 import type { EventBus } from '../eventBus';
+import { RedisCacheAdapter } from './RedisCacheAdapter';
 
 // ========================================
 // TTL CONFIGURATION
@@ -481,17 +482,71 @@ export class CacheService {
   }
 }
 
-// Singleton instance
+// ========================================
+// ADAPTER FACTORY
+// ========================================
+
+/**
+ * Create cache adapter based on environment configuration
+ * Automatically selects Redis if REDIS_URL is available, otherwise uses Memory
+ */
+export function createCacheAdapter(): ICacheAdapter {
+  const redisUrl = process.env.REDIS_URL;
+
+  if (redisUrl) {
+    try {
+      logger.info('[CacheService] Creating RedisCacheAdapter', {
+        metadata: {
+          service: 'CacheService',
+          operation: 'createCacheAdapter',
+          adapter: 'Redis',
+          redisUrl: redisUrl.replace(/:[^:]*@/, ':***@') // Mask password
+        }
+      });
+      return new RedisCacheAdapter(redisUrl);
+    } catch (error) {
+      logger.error('[CacheService] Failed to create RedisCacheAdapter, falling back to Memory', {
+        metadata: {
+          service: 'CacheService',
+          operation: 'createCacheAdapter',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+    }
+  }
+
+  logger.info('[CacheService] Creating MemoryCacheAdapter', {
+    metadata: {
+      service: 'CacheService',
+      operation: 'createCacheAdapter',
+      adapter: 'Memory',
+      reason: redisUrl ? 'Redis connection failed' : 'No REDIS_URL configured'
+    }
+  });
+  
+  return new MemoryCacheAdapter();
+}
+
+// ========================================
+// SINGLETON INSTANCE
+// ========================================
+
 let cacheServiceInstance: CacheService | null = null;
 
 export function getCacheService(): CacheService {
   if (!cacheServiceInstance) {
-    cacheServiceInstance = new CacheService();
+    const adapter = createCacheAdapter();
+    cacheServiceInstance = new CacheService(adapter);
   }
   return cacheServiceInstance;
 }
 
 export function initializeCacheService(adapter?: ICacheAdapter): CacheService {
-  cacheServiceInstance = new CacheService(adapter);
+  if (adapter) {
+    cacheServiceInstance = new CacheService(adapter);
+  } else {
+    const autoAdapter = createCacheAdapter();
+    cacheServiceInstance = new CacheService(autoAdapter);
+  }
   return cacheServiceInstance;
 }

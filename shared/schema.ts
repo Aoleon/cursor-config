@@ -690,6 +690,13 @@ export const suppliers = pgTable("suppliers", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // PERFORMANCE OPTIMIZATION - Critical indexes for suppliers table (previously had NONE!)
+    statusIdx: index("suppliers_status_idx").on(table.status),
+    createdAtIdx: index("suppliers_created_at_idx").on(table.createdAt),
+    nameIdx: index("suppliers_name_idx").on(table.name),
+  };
 });
 
 // Table des jalons formels de projet - Phase 1
@@ -1230,6 +1237,9 @@ export const aos = pgTable("aos", {
     clientLocationIdx: index("aos_client_location_idx").on(table.client, table.location),
     dateCreatedIdx: index("aos_date_created_idx").on(table.dateSortieAO, table.createdAt),
     operationalStatusIdx: index("aos_operational_status_idx").on(table.operationalStatus),
+    // PERFORMANCE OPTIMIZATION - Single column indexes for frequent queries
+    mondayIdIdx: index("aos_monday_id_idx").on(table.mondayId),
+    createdAtIdx: index("aos_created_at_idx").on(table.createdAt),
   };
 });
 
@@ -1511,6 +1521,8 @@ export const offers = pgTable("offers", {
     statusClientIdx: index("offers_status_client_idx").on(table.status, table.client),
     responsibleStatusIdx: index("offers_responsible_status_idx").on(table.responsibleUserId, table.status),
     priorityStatusIdx: index("offers_priority_status_idx").on(table.isPriority, table.status),
+    // PERFORMANCE OPTIMIZATION - Single column index for ORDER BY queries
+    createdAtIdx: index("offers_created_at_idx").on(table.createdAt),
   };
 });
 
@@ -1665,6 +1677,9 @@ export const projects = pgTable("projects", {
     statusDateIdx: index("projects_status_date_idx").on(table.status, table.startDate),
     locationStatusIdx: index("projects_location_status_idx").on(table.location, table.status),
     createdStatusIdx: index("projects_created_status_idx").on(table.createdAt, table.status),
+    // PERFORMANCE OPTIMIZATION - Single column indexes for frequent WHERE queries
+    statusIdx: index("projects_status_idx").on(table.status),
+    mondayIdIdx: index("projects_monday_id_idx").on(table.mondayId),
   };
 });
 
@@ -1742,6 +1757,14 @@ export const projectTasks = pgTable("project_tasks", {
   parentTaskId: varchar("parent_task_id"), // Self-reference will be added via foreign key
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // PERFORMANCE OPTIMIZATION - Indexes for frequently used ORDER BY columns
+    projectIdIdx: index("project_tasks_project_id_idx").on(table.projectId),
+    positionIdx: index("project_tasks_position_idx").on(table.position),
+    startDateIdx: index("project_tasks_start_date_idx").on(table.startDate),
+    statusIdx: index("project_tasks_status_idx").on(table.status),
+  };
 });
 
 // Éléments de chiffrage pour le module de chiffrage et DPGF

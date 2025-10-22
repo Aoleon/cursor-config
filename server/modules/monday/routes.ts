@@ -307,26 +307,53 @@ router.post('/api/monday/webhook',
 // ========================================
 
 // GET /api/monday/sync-status - Récupérer statuts de synchronisation
+// Optimisé pour charger uniquement les statuts des entités visibles (réduction ~95%)
 router.get('/api/monday/sync-status',
   isAuthenticated,
   asyncHandler(async (req: Request, res: Response) => {
-    const { entityIds } = req.query;
+    const { entityIds, entityType } = req.query;
 
-    logger.info('Récupération statuts synchronisation Monday', {
+    // CRITICAL OPTIMIZATION: Si pas d'entityIds, retourner array vide au lieu de tous les statuts (375+)
+    // Évite de charger 375 statuts inutilement quand la page n'a pas encore de projets
+    if (!entityIds || (entityIds as string).trim() === '') {
+      logger.info('Statuts synchronisation - array vide retourné (OPTIMISÉ)', {
+        service: 'MondayRoutes',
+        metadata: { 
+          operation: 'getSyncStatus',
+          entityType: entityType || 'all',
+          reason: 'No entityIds provided - returning empty array instead of all statuses'
+        }
+      });
+
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    let statuses = syncAuditService.getAllSyncStatuses();
+    const totalStatuses = statuses.length;
+
+    // Filter by entityType if provided (e.g., 'project', 'ao')
+    if (entityType) {
+      statuses = statuses.filter(s => s.entityType === entityType);
+    }
+
+    // Filter by entityIds (optimization pour pagination)
+    const ids = (entityIds as string).split(',').filter(id => id.trim());
+    statuses = statuses.filter(s => ids.includes(s.entityId));
+    
+    logger.info('Statuts synchronisation filtrés (OPTIMISÉ)', {
       service: 'MondayRoutes',
       metadata: { 
         operation: 'getSyncStatus',
-        hasFilter: !!entityIds
+        totalStatuses,
+        requestedEntityIds: ids.length,
+        returnedStatuses: statuses.length,
+        reductionPercent: Math.round((1 - statuses.length / totalStatuses) * 100),
+        entityType: entityType || 'all'
       }
     });
-
-    let statuses = syncAuditService.getAllSyncStatuses();
-
-    // Filter by entityIds if provided
-    if (entityIds) {
-      const ids = (entityIds as string).split(',');
-      statuses = statuses.filter(s => ids.includes(s.entityId));
-    }
 
     res.json({
       success: true,

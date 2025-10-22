@@ -129,12 +129,14 @@ export interface IStorage {
   
   // AO operations - Base pour éviter double saisie
   getAos(): Promise<Ao[]>;
+  getAOsPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ aos: Array<Ao>, total: number }>;
   getAo(id: string): Promise<Ao | undefined>;
   createAo(ao: InsertAo): Promise<Ao>;
   updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao>;
   
   // Offer operations - Cœur du POC
   getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]>;
+  getOffersPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ offers: Array<Offer & { responsibleUser?: User; ao?: Ao }>, total: number }>;
   getOffer(id: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao }) | undefined>;
   createOffer(offer: InsertOffer): Promise<Offer>;
   updateOffer(id: string, offer: Partial<InsertOffer>): Promise<Offer>;
@@ -142,6 +144,7 @@ export interface IStorage {
   
   // Project operations - 5 étapes POC
   getProjects(search?: string, status?: string): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]>;
+  getProjectsPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ projects: Array<Project & { responsibleUser?: User; offer?: Offer }>, total: number }>;
   getProject(id: string): Promise<(Project & { responsibleUser?: User; offer?: Offer }) | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, project: Partial<InsertProject>): Promise<Project>;
@@ -683,6 +686,113 @@ export interface IStorage {
     pendingCount: number;
     errorRate: number;
   }>;
+
+  // ========================================
+  // ANALYTICS AGGREGATION METHODS - PERFORMANCE OPTIMIZED
+  // ========================================
+  
+  /**
+   * Get aggregated project statistics without loading full objects
+   * Returns SQL-computed aggregates by status
+   */
+  getProjectStats(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+    responsibleUserId?: string;
+    departement?: string;
+  }): Promise<{
+    totalCount: number;
+    byStatus: Record<string, { count: number; totalBudget: number; avgBudget: number }>;
+    totalBudget: number;
+    avgBudget: number;
+  }>;
+
+  /**
+   * Get aggregated offer statistics without loading full objects
+   * Returns SQL-computed aggregates by status
+   */
+  getOfferStats(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+    responsibleUserId?: string;
+    departement?: string;
+  }): Promise<{
+    totalCount: number;
+    byStatus: Record<string, { count: number; totalAmount: number; avgAmount: number }>;
+    totalAmount: number;
+    avgAmount: number;
+  }>;
+
+  /**
+   * Get aggregated AO statistics without loading full objects
+   * Returns SQL-computed aggregates
+   */
+  getAOStats(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    departement?: string;
+  }): Promise<{
+    totalCount: number;
+    byDepartement: Record<string, number>;
+  }>;
+
+  /**
+   * Get conversion statistics with SQL aggregations
+   * Returns conversion metrics without loading full objects
+   */
+  getConversionStats(period: {
+    from: string;
+    to: string;
+  }, filters?: {
+    userId?: string;
+    departement?: string;
+  }): Promise<{
+    aoToOffer: {
+      totalAOs: number;
+      totalOffersCreated: number;
+      conversionRate: number;
+      byUser?: Record<string, { aos: number; offers: number; rate: number }>;
+    };
+    offerToProject: {
+      totalOffers: number;
+      totalSignedOffers: number;
+      conversionRate: number;
+      byUser?: Record<string, { offers: number; signed: number; rate: number }>;
+    };
+  }>;
+
+  /**
+   * Get project delay statistics with SQL aggregations
+   * Returns delay metrics without loading full timelines
+   */
+  getProjectDelayStats(period: {
+    from: string;
+    to: string;
+  }): Promise<{
+    avgDelayDays: number;
+    medianDelayDays: number;
+    totalDelayed: number;
+    criticalDelayed: number; // > 7 days
+    byPhase: Record<string, { count: number; avgDelay: number }>;
+  }>;
+
+  /**
+   * Get team performance statistics with SQL aggregations
+   * Returns team metrics without loading full projects
+   */
+  getTeamPerformanceStats(period: {
+    from: string;
+    to: string;
+  }): Promise<Array<{
+    userId: string;
+    userName: string;
+    projectCount: number;
+    avgDelayDays: number;
+    onTimeCount: number;
+    onTimeRate: number;
+  }>>;
 }
 
 // ========================================
@@ -778,6 +888,62 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(aos).orderBy(desc(aos.createdAt));
   }
 
+  async getAOsPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ aos: Array<Ao>, total: number }> {
+    const actualLimit = Number(limit) || 20;
+    const actualOffset = Number(offset) || 0;
+
+    // Construire les conditions de filtrage
+    const conditions = [];
+    
+    if (status) {
+      conditions.push(eq(aos.status, status as any));
+    }
+    
+    if (search && typeof search === 'string') {
+      const searchConditions = [
+        ilike(aos.reference, `%${search}%`),
+        ilike(aos.client, `%${search}%`),
+        ilike(aos.location, `%${search}%`),
+        ilike(aos.intituleOperation, `%${search}%`)
+      ];
+      conditions.push(sql`(${sql.join(searchConditions, sql` OR `)})`);
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Query COUNT pour le total (avec les mêmes filtres)
+    const [countResult] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(aos)
+      .where(whereClause);
+    
+    const total = countResult?.count || 0;
+
+    // Query principale avec pagination
+    const aosResult = await db
+      .select()
+      .from(aos)
+      .where(whereClause)
+      .orderBy(desc(aos.createdAt))
+      .limit(actualLimit)
+      .offset(actualOffset);
+
+    logger.info('[AOs] AOs paginés retournés', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getAOsPaginated',
+        count: aosResult.length,
+        total,
+        limit: actualLimit,
+        offset: actualOffset,
+        search,
+        status
+      }
+    });
+
+    return { aos: aosResult, total };
+  }
+
   async getAo(id: string): Promise<Ao | undefined> {
     const [ao] = await db.select().from(aos).where(eq(aos.id, id));
     return ao;
@@ -849,6 +1015,74 @@ export class DatabaseStorage implements IStorage {
     }
 
     return result;
+  }
+
+  async getOffersPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ offers: Array<Offer & { responsibleUser?: User; ao?: Ao }>, total: number }> {
+    const actualLimit = Number(limit) || 20;
+    const actualOffset = Number(offset) || 0;
+
+    // Construire les conditions de filtrage
+    const conditions = [];
+    
+    if (status) {
+      conditions.push(eq(offers.status, status as any));
+    }
+    
+    if (search && typeof search === 'string') {
+      const searchConditions = [
+        ilike(offers.name, `%${search}%`),
+        ilike(offers.client, `%${search}%`),
+        ilike(offers.description, `%${search}%`)
+      ];
+      conditions.push(sql`(${sql.join(searchConditions, sql` OR `)})`);
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Query COUNT pour le total (avec les mêmes filtres)
+    const [countResult] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(offers)
+      .where(whereClause);
+    
+    const total = countResult?.count || 0;
+
+    // Query principale avec JOINs optimisés
+    const offersWithRelations = await db
+      .select({
+        offer: offers,
+        responsibleUser: users,
+        ao: aos
+      })
+      .from(offers)
+      .leftJoin(users, eq(offers.responsibleUserId, users.id))
+      .leftJoin(aos, eq(offers.aoId, aos.id))
+      .where(whereClause)
+      .orderBy(desc(offers.createdAt))
+      .limit(actualLimit)
+      .offset(actualOffset);
+
+    // Mapper les résultats
+    const result = offersWithRelations.map(row => ({
+      ...row.offer,
+      responsibleUser: row.responsibleUser || undefined,
+      ao: row.ao || undefined
+    }));
+
+    logger.info('[Offers] Offres paginées retournées', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getOffersPaginated',
+        count: result.length,
+        total,
+        limit: actualLimit,
+        offset: actualOffset,
+        search,
+        status
+      }
+    });
+
+    return { offers: result, total };
   }
 
   async getOffer(id: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao }) | undefined> {
@@ -1086,6 +1320,75 @@ export class DatabaseStorage implements IStorage {
     });
 
     return result;
+  }
+
+  async getProjectsPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ projects: Array<Project & { responsibleUser?: User; offer?: Offer }>, total: number }> {
+    const actualLimit = Number(limit) || 20;
+    const actualOffset = Number(offset) || 0;
+
+    // Construire les conditions de filtrage
+    const conditions = [];
+    
+    if (status) {
+      conditions.push(eq(projects.status, status as any));
+    }
+    
+    if (search && typeof search === 'string') {
+      const searchConditions = [
+        ilike(projects.name, `%${search}%`),
+        ilike(projects.client, `%${search}%`),
+        ilike(projects.location, `%${search}%`),
+        ilike(projects.description, `%${search}%`)
+      ];
+      conditions.push(sql`(${sql.join(searchConditions, sql` OR `)})`);
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Query COUNT pour le total (avec les mêmes filtres)
+    const [countResult] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(projects)
+      .where(whereClause);
+    
+    const total = countResult?.count || 0;
+
+    // Query principale avec JOINs optimisés
+    const projectsWithRelations = await db
+      .select({
+        project: projects,
+        responsibleUser: users,
+        offer: offers
+      })
+      .from(projects)
+      .leftJoin(users, eq(projects.responsibleUserId, users.id))
+      .leftJoin(offers, eq(projects.offerId, offers.id))
+      .where(whereClause)
+      .orderBy(desc(projects.createdAt))
+      .limit(actualLimit)
+      .offset(actualOffset);
+
+    // Mapper les résultats
+    const result = projectsWithRelations.map(row => ({
+      ...row.project,
+      responsibleUser: row.responsibleUser || undefined,
+      offer: row.offer || undefined
+    }));
+
+    logger.info('[Projects] Projets paginés retournés', {
+      metadata: {
+        service: 'StoragePOC',
+        operation: 'getProjectsPaginated',
+        count: result.length,
+        total,
+        limit: actualLimit,
+        offset: actualOffset,
+        search,
+        status
+      }
+    });
+
+    return { projects: result, total };
   }
 
   async getProject(id: string): Promise<(Project & { responsibleUser?: User; offer?: Offer }) | undefined> {
@@ -4147,6 +4450,10 @@ export class MemStorage implements IStorage {
     return [];
   }
 
+  async getAOsPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ aos: Array<Ao>, total: number }> {
+    return { aos: [], total: 0 };
+  }
+
   async getAo(id: string): Promise<Ao | undefined> {
     return undefined;
   }
@@ -4161,6 +4468,10 @@ export class MemStorage implements IStorage {
 
   async getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]> {
     return [];
+  }
+
+  async getOffersPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ offers: Array<Offer & { responsibleUser?: User; ao?: Ao }>, total: number }> {
+    return { offers: [], total: 0 };
   }
 
   async getOffer(id: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao }) | undefined> {
@@ -4181,6 +4492,10 @@ export class MemStorage implements IStorage {
 
   async getProjects(search?: string, status?: string): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]> {
     return [];
+  }
+
+  async getProjectsPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ projects: Array<Project & { responsibleUser?: User; offer?: Offer }>, total: number }> {
+    return { projects: [], total: 0 };
   }
 
   async getProject(id: string): Promise<(Project & { responsibleUser?: User; offer?: Offer }) | undefined> {
@@ -7561,6 +7876,529 @@ export class MemStorage implements IStorage {
       };
     } catch (error) {
       logger.error('Erreur getBatigestStats', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  // ========================================
+  // ANALYTICS AGGREGATION METHODS - PERFORMANCE OPTIMIZED
+  // ========================================
+
+  async getProjectStats(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+    responsibleUserId?: string;
+    departement?: string;
+  }): Promise<{
+    totalCount: number;
+    byStatus: Record<string, { count: number; totalBudget: number; avgBudget: number }>;
+    totalBudget: number;
+    avgBudget: number;
+  }> {
+    try {
+      logger.debug('[Storage] getProjectStats - SQL aggregation', { metadata: { filters } });
+
+      // Build WHERE conditions
+      const conditions: any[] = [];
+      if (filters?.dateFrom) {
+        conditions.push(gte(projects.createdAt, new Date(filters.dateFrom)));
+      }
+      if (filters?.dateTo) {
+        conditions.push(lte(projects.createdAt, new Date(filters.dateTo)));
+      }
+      if (filters?.status) {
+        conditions.push(eq(projects.status, filters.status as any));
+      }
+      if (filters?.responsibleUserId) {
+        conditions.push(eq(projects.responsibleUserId, filters.responsibleUserId));
+      }
+      if (filters?.departement) {
+        conditions.push(eq(projects.departement, filters.departement));
+      }
+
+      // Query 1: Overall stats
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      const [overallStats] = await db
+        .select({
+          totalCount: count(),
+          totalBudget: sum(projects.budget),
+          avgBudget: avg(projects.budget)
+        })
+        .from(projects)
+        .where(whereClause);
+
+      // Query 2: Stats by status
+      const statusStats = await db
+        .select({
+          status: projects.status,
+          count: count(),
+          totalBudget: sum(projects.budget),
+          avgBudget: avg(projects.budget)
+        })
+        .from(projects)
+        .where(whereClause)
+        .groupBy(projects.status);
+
+      // Build result
+      const byStatus: Record<string, { count: number; totalBudget: number; avgBudget: number }> = {};
+      for (const stat of statusStats) {
+        byStatus[stat.status] = {
+          count: Number(stat.count),
+          totalBudget: Number(stat.totalBudget || 0),
+          avgBudget: Number(stat.avgBudget || 0)
+        };
+      }
+
+      return {
+        totalCount: Number(overallStats?.totalCount || 0),
+        byStatus,
+        totalBudget: Number(overallStats?.totalBudget || 0),
+        avgBudget: Number(overallStats?.avgBudget || 0)
+      };
+    } catch (error) {
+      logger.error('Error in getProjectStats', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  async getOfferStats(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+    responsibleUserId?: string;
+    departement?: string;
+  }): Promise<{
+    totalCount: number;
+    byStatus: Record<string, { count: number; totalAmount: number; avgAmount: number }>;
+    totalAmount: number;
+    avgAmount: number;
+  }> {
+    try {
+      logger.debug('[Storage] getOfferStats - SQL aggregation', { metadata: { filters } });
+
+      // Build WHERE conditions
+      const conditions: any[] = [];
+      if (filters?.dateFrom) {
+        conditions.push(gte(offers.createdAt, new Date(filters.dateFrom)));
+      }
+      if (filters?.dateTo) {
+        conditions.push(lte(offers.createdAt, new Date(filters.dateTo)));
+      }
+      if (filters?.status) {
+        conditions.push(eq(offers.status, filters.status as any));
+      }
+      if (filters?.responsibleUserId) {
+        conditions.push(eq(offers.responsibleUserId, filters.responsibleUserId));
+      }
+      if (filters?.departement) {
+        conditions.push(eq(offers.departement, filters.departement));
+      }
+
+      // Query 1: Overall stats
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      const [overallStats] = await db
+        .select({
+          totalCount: count(),
+          totalAmount: sum(offers.montantFinalHT),
+          avgAmount: avg(offers.montantFinalHT)
+        })
+        .from(offers)
+        .where(whereClause);
+
+      // Query 2: Stats by status
+      const statusStats = await db
+        .select({
+          status: offers.status,
+          count: count(),
+          totalAmount: sum(offers.montantFinalHT),
+          avgAmount: avg(offers.montantFinalHT)
+        })
+        .from(offers)
+        .where(whereClause)
+        .groupBy(offers.status);
+
+      // Build result
+      const byStatus: Record<string, { count: number; totalAmount: number; avgAmount: number }> = {};
+      for (const stat of statusStats) {
+        byStatus[stat.status] = {
+          count: Number(stat.count),
+          totalAmount: Number(stat.totalAmount || 0),
+          avgAmount: Number(stat.avgAmount || 0)
+        };
+      }
+
+      return {
+        totalCount: Number(overallStats?.totalCount || 0),
+        byStatus,
+        totalAmount: Number(overallStats?.totalAmount || 0),
+        avgAmount: Number(overallStats?.avgAmount || 0)
+      };
+    } catch (error) {
+      logger.error('Error in getOfferStats', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  async getAOStats(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    departement?: string;
+  }): Promise<{
+    totalCount: number;
+    byDepartement: Record<string, number>;
+  }> {
+    try {
+      logger.debug('[Storage] getAOStats - SQL aggregation', { metadata: { filters } });
+
+      // Build WHERE conditions
+      const conditions: any[] = [];
+      if (filters?.dateFrom) {
+        conditions.push(gte(aos.createdAt, new Date(filters.dateFrom)));
+      }
+      if (filters?.dateTo) {
+        conditions.push(lte(aos.createdAt, new Date(filters.dateTo)));
+      }
+      if (filters?.departement) {
+        conditions.push(eq(aos.departement, filters.departement));
+      }
+
+      // Query 1: Overall stats
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      const [overallStats] = await db
+        .select({
+          totalCount: count()
+        })
+        .from(aos)
+        .where(whereClause);
+
+      // Query 2: Stats by departement
+      const deptStats = await db
+        .select({
+          departement: aos.departement,
+          count: count()
+        })
+        .from(aos)
+        .where(whereClause)
+        .groupBy(aos.departement);
+
+      // Build result
+      const byDepartement: Record<string, number> = {};
+      for (const stat of deptStats) {
+        if (stat.departement) {
+          byDepartement[stat.departement] = Number(stat.count);
+        }
+      }
+
+      return {
+        totalCount: Number(overallStats?.totalCount || 0),
+        byDepartement
+      };
+    } catch (error) {
+      logger.error('Error in getAOStats', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  async getConversionStats(period: {
+    from: string;
+    to: string;
+  }, filters?: {
+    userId?: string;
+    departement?: string;
+  }): Promise<{
+    aoToOffer: {
+      totalAOs: number;
+      totalOffersCreated: number;
+      conversionRate: number;
+      byUser?: Record<string, { aos: number; offers: number; rate: number }>;
+    };
+    offerToProject: {
+      totalOffers: number;
+      totalSignedOffers: number;
+      conversionRate: number;
+      byUser?: Record<string, { offers: number; signed: number; rate: number }>;
+    };
+  }> {
+    try {
+      logger.debug('[Storage] getConversionStats - SQL aggregation', { metadata: { period, filters } });
+
+      const fromDate = new Date(period.from);
+      const toDate = new Date(period.to);
+
+      // Build WHERE conditions for AOs
+      const aoConditions: any[] = [
+        gte(aos.createdAt, fromDate),
+        lte(aos.createdAt, toDate)
+      ];
+      if (filters?.departement) {
+        aoConditions.push(eq(aos.departement, filters.departement));
+      }
+
+      // Build WHERE conditions for Offers
+      const offerConditions: any[] = [
+        gte(offers.createdAt, fromDate),
+        lte(offers.createdAt, toDate)
+      ];
+      if (filters?.userId) {
+        offerConditions.push(eq(offers.responsibleUserId, filters.userId));
+      }
+      if (filters?.departement) {
+        offerConditions.push(eq(offers.departement, filters.departement));
+      }
+
+      // Query 1: AO to Offer conversion
+      const [aoStats] = await db
+        .select({
+          totalAOs: count()
+        })
+        .from(aos)
+        .where(and(...aoConditions));
+
+      const [offerStats] = await db
+        .select({
+          totalOffers: count()
+        })
+        .from(offers)
+        .where(and(...offerConditions));
+
+      const totalAOs = Number(aoStats?.totalAOs || 0);
+      const totalOffersCreated = Number(offerStats?.totalOffers || 0);
+      const aoToOfferRate = totalAOs > 0 ? (totalOffersCreated / totalAOs) * 100 : 0;
+
+      // Query 2: Offer to Project conversion
+      const [signedOfferStats] = await db
+        .select({
+          totalSigned: count()
+        })
+        .from(offers)
+        .where(and(...offerConditions, eq(offers.status, 'signe')));
+
+      const totalSignedOffers = Number(signedOfferStats?.totalSigned || 0);
+      const offerToProjectRate = totalOffersCreated > 0 ? (totalSignedOffers / totalOffersCreated) * 100 : 0;
+
+      // Query 3: By user stats (if needed)
+      let aoToOfferByUser: Record<string, { aos: number; offers: number; rate: number }> = {};
+      let offerToProjectByUser: Record<string, { offers: number; signed: number; rate: number }> = {};
+
+      if (filters?.userId || !filters) {
+        // Offer stats by user
+        const offersByUser = await db
+          .select({
+            userId: offers.responsibleUserId,
+            totalOffers: count(),
+            totalSigned: sum(sql`CASE WHEN ${offers.status} = 'signe' THEN 1 ELSE 0 END`)
+          })
+          .from(offers)
+          .where(and(...offerConditions))
+          .groupBy(offers.responsibleUserId);
+
+        for (const stat of offersByUser) {
+          if (stat.userId) {
+            const offersCount = Number(stat.totalOffers);
+            const signedCount = Number(stat.totalSigned || 0);
+            offerToProjectByUser[stat.userId] = {
+              offers: offersCount,
+              signed: signedCount,
+              rate: offersCount > 0 ? (signedCount / offersCount) * 100 : 0
+            };
+          }
+        }
+      }
+
+      return {
+        aoToOffer: {
+          totalAOs,
+          totalOffersCreated,
+          conversionRate: aoToOfferRate,
+          byUser: Object.keys(aoToOfferByUser).length > 0 ? aoToOfferByUser : undefined
+        },
+        offerToProject: {
+          totalOffers: totalOffersCreated,
+          totalSignedOffers,
+          conversionRate: offerToProjectRate,
+          byUser: Object.keys(offerToProjectByUser).length > 0 ? offerToProjectByUser : undefined
+        }
+      };
+    } catch (error) {
+      logger.error('Error in getConversionStats', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  async getProjectDelayStats(period: {
+    from: string;
+    to: string;
+  }): Promise<{
+    avgDelayDays: number;
+    medianDelayDays: number;
+    totalDelayed: number;
+    criticalDelayed: number;
+    byPhase: Record<string, { count: number; avgDelay: number }>;
+  }> {
+    try {
+      logger.debug('[Storage] getProjectDelayStats - SQL aggregation', { metadata: { period } });
+
+      const fromDate = new Date(period.from);
+      const toDate = new Date(period.to);
+
+      // Query timelines with delay calculations
+      const timelinesWithDelays = await db
+        .select({
+          phase: projectTimelines.phase,
+          delayDays: sql<number>`CAST(EXTRACT(EPOCH FROM (${projectTimelines.actualEndDate} - ${projectTimelines.plannedEndDate})) / 86400 AS INTEGER)`
+        })
+        .from(projectTimelines)
+        .where(
+          and(
+            gte(projectTimelines.plannedStartDate, fromDate),
+            lte(projectTimelines.plannedStartDate, toDate),
+            sql`${projectTimelines.plannedEndDate} IS NOT NULL`,
+            sql`${projectTimelines.actualEndDate} IS NOT NULL`
+          )
+        );
+
+      if (timelinesWithDelays.length === 0) {
+        return {
+          avgDelayDays: 0,
+          medianDelayDays: 0,
+          totalDelayed: 0,
+          criticalDelayed: 0,
+          byPhase: {}
+        };
+      }
+
+      // Calculate stats
+      const delays = timelinesWithDelays.map(t => Math.max(0, Number(t.delayDays) || 0));
+      const totalDelayed = delays.filter(d => d > 0).length;
+      const criticalDelayed = delays.filter(d => d > 7).length;
+      const avgDelayDays = delays.reduce((a, b) => a + b, 0) / delays.length;
+      
+      // Median calculation
+      const sortedDelays = [...delays].sort((a, b) => a - b);
+      const medianDelayDays = sortedDelays[Math.floor(sortedDelays.length / 2)];
+
+      // By phase
+      const byPhase: Record<string, { count: number; avgDelay: number }> = {};
+      const phaseGroups: Record<string, number[]> = {};
+      
+      for (const timeline of timelinesWithDelays) {
+        const delay = Math.max(0, Number(timeline.delayDays) || 0);
+        if (!phaseGroups[timeline.phase]) {
+          phaseGroups[timeline.phase] = [];
+        }
+        phaseGroups[timeline.phase].push(delay);
+      }
+
+      for (const [phase, phaseDelays] of Object.entries(phaseGroups)) {
+        byPhase[phase] = {
+          count: phaseDelays.length,
+          avgDelay: phaseDelays.reduce((a, b) => a + b, 0) / phaseDelays.length
+        };
+      }
+
+      return {
+        avgDelayDays,
+        medianDelayDays,
+        totalDelayed,
+        criticalDelayed,
+        byPhase
+      };
+    } catch (error) {
+      logger.error('Error in getProjectDelayStats', { metadata: { error } });
+      throw error;
+    }
+  }
+
+  async getTeamPerformanceStats(period: {
+    from: string;
+    to: string;
+  }): Promise<Array<{
+    userId: string;
+    userName: string;
+    projectCount: number;
+    avgDelayDays: number;
+    onTimeCount: number;
+    onTimeRate: number;
+  }>> {
+    try {
+      logger.debug('[Storage] getTeamPerformanceStats - SQL aggregation', { metadata: { period } });
+
+      const fromDate = new Date(period.from);
+      const toDate = new Date(period.to);
+
+      // Query projects with their delays and users
+      const projectsWithDelays = await db
+        .select({
+          userId: projects.responsibleUserId,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          delayDays: sql<number>`CAST(COALESCE(EXTRACT(EPOCH FROM (${projectTimelines.actualEndDate} - ${projectTimelines.plannedEndDate})) / 86400, 0) AS INTEGER)`
+        })
+        .from(projects)
+        .leftJoin(users, eq(projects.responsibleUserId, users.id))
+        .leftJoin(projectTimelines, eq(projects.id, projectTimelines.projectId))
+        .where(
+          and(
+            gte(projects.createdAt, fromDate),
+            lte(projects.createdAt, toDate),
+            sql`${projects.responsibleUserId} IS NOT NULL`
+          )
+        );
+
+      // Group by user
+      const userStats: Record<string, {
+        userName: string;
+        delays: number[];
+        onTimeCount: number;
+      }> = {};
+
+      for (const project of projectsWithDelays) {
+        if (!project.userId) continue;
+        
+        if (!userStats[project.userId]) {
+          const userName = project.firstName && project.lastName 
+            ? `${project.firstName} ${project.lastName}`
+            : project.email || 'Unknown';
+          
+          userStats[project.userId] = {
+            userName,
+            delays: [],
+            onTimeCount: 0
+          };
+        }
+
+        const delay = Math.max(0, Number(project.delayDays) || 0);
+        userStats[project.userId].delays.push(delay);
+        
+        if (delay <= 1) { // <= 1 day = on time
+          userStats[project.userId].onTimeCount++;
+        }
+      }
+
+      // Build result
+      const results = Object.entries(userStats).map(([userId, stats]) => {
+        const avgDelayDays = stats.delays.length > 0 
+          ? stats.delays.reduce((a, b) => a + b, 0) / stats.delays.length 
+          : 0;
+        const onTimeRate = stats.delays.length > 0 
+          ? (stats.onTimeCount / stats.delays.length) * 100 
+          : 0;
+
+        return {
+          userId,
+          userName: stats.userName,
+          projectCount: stats.delays.length,
+          avgDelayDays,
+          onTimeCount: stats.onTimeCount,
+          onTimeRate
+        };
+      });
+
+      return results.sort((a, b) => b.onTimeRate - a.onTimeRate);
+    } catch (error) {
+      logger.error('Error in getTeamPerformanceStats', { metadata: { error } });
       throw error;
     }
   }

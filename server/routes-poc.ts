@@ -749,10 +749,33 @@ app.get("/api/users/:id",
 
 app.get("/api/aos", 
   isAuthenticated,
-  validateQuery(commonQuerySchemas.search.optional()),
+  validateQuery(z.object({
+    search: z.string().optional(),
+    status: z.string().optional(),
+    limit: z.coerce.number().min(1).max(100).optional().default(20),
+    offset: z.coerce.number().min(0).optional().default(0)
+  })),
   asyncHandler(async (req, res) => {
-    const aos = await storage.getAos();
-    sendSuccess(res, aos);
+    const { search, status, limit, offset } = req.query;
+    const actualLimit = Number(limit) || 20;
+    const actualOffset = Number(offset) || 0;
+    
+    // Utiliser la version paginée optimisée
+    const { aos, total } = await storage.getAOsPaginated(
+      search as string,
+      status as string,
+      actualLimit,
+      actualOffset
+    );
+    
+    // Calculer le numéro de page à partir de l'offset
+    const page = Math.floor(actualOffset / actualLimit) + 1;
+    
+    sendPaginatedSuccess(res, aos, {
+      total,
+      limit: actualLimit,
+      page
+    });
   })
 );
 
@@ -1071,17 +1094,31 @@ app.post("/api/ocr/add-pattern",
 
 app.get("/api/offers", 
   isAuthenticated, 
-  validateQuery(offersQuerySchema),
+  validateQuery(offersQuerySchema.extend({
+    limit: z.coerce.number().min(1).max(100).optional().default(20),
+    offset: z.coerce.number().min(0).optional().default(0)
+  })),
   asyncHandler(async (req, res) => {
-    const { search, status } = req.query;
+    const { search, status, limit, offset } = req.query;
+    const actualLimit = Number(limit) || 20;
+    const actualOffset = Number(offset) || 0;
     
-    // Validation réussie : status est garanti valide ou undefined
-    const offers = await storage.getOffers(
+    // Utiliser la version paginée optimisée avec LEFT JOINs
+    const { offers, total } = await storage.getOffersPaginated(
       search as string, 
-      status as string
+      status as string,
+      actualLimit,
+      actualOffset
     );
     
-    sendSuccess(res, offers);
+    // Calculer le numéro de page à partir de l'offset
+    const page = Math.floor(actualOffset / actualLimit) + 1;
+    
+    sendPaginatedSuccess(res, offers, {
+      total,
+      limit: actualLimit,
+      page
+    });
   })
 );
 
@@ -5675,31 +5712,47 @@ app.get('/api/analytics/pipeline',
       { from: new Date(timeRange.startDate), to: new Date(timeRange.endDate) } :
       getDefaultPeriod();
     
-    // Calculer les métriques de pipeline en utilisant les services existants
-    const [conversionData, revenueData] = await Promise.all([
+    // OPTIMISATION: Utiliser SQL aggregations au lieu de charger 375 objets complets
+    logger.info('[Analytics Pipeline] Using SQL aggregations instead of loading all items');
+    
+    const [conversionData, revenueData, aoStats, offerStats, projectStats] = await Promise.all([
       analyticsService.conversionCalculatorAPI.calculateAOToOfferConversion(dateRange),
-      analyticsService.revenueCalculatorAPI.calculateRevenueForecast(dateRange)
+      analyticsService.revenueCalculatorAPI.calculateRevenueForecast(dateRange),
+      storage.getAOStats({
+        dateFrom: dateRange.from.toISOString(),
+        dateTo: dateRange.to.toISOString()
+      }),
+      storage.getOfferStats({
+        dateFrom: dateRange.from.toISOString(),
+        dateTo: dateRange.to.toISOString()
+      }),
+      storage.getProjectStats({
+        dateFrom: dateRange.from.toISOString(),
+        dateTo: dateRange.to.toISOString()
+      })
     ]);
     
-    // Agréger les données depuis storage
-    const aos = await storage.getAos();
-    const offers = await storage.getOffers();
-    const projects = await storage.getProjects();
-    
     const pipeline = {
-      ao_count: aos.length,
-      ao_total_value: aos.reduce((sum, ao) => sum + (ao.estimatedBudget || 0), 0),
-      offer_count: offers.length,
-      offer_total_value: offers.reduce((sum, offer) => sum + (offer.totalAmount || 0), 0),
-      project_count: projects.length,
-      project_total_value: projects.reduce((sum, project) => sum + (project.budgetEstimated || 0), 0),
-      ao_to_offer_rate: offers.length / Math.max(aos.length, 1) * 100,
-      offer_to_project_rate: projects.length / Math.max(offers.length, 1) * 100,
-      global_conversion_rate: projects.length / Math.max(aos.length, 1) * 100,
+      ao_count: aoStats.totalCount,
+      ao_total_value: 0, // AOs don't have budget in current schema, use 0
+      offer_count: offerStats.totalCount,
+      offer_total_value: offerStats.totalAmount,
+      project_count: projectStats.totalCount,
+      project_total_value: projectStats.totalBudget,
+      ao_to_offer_rate: aoStats.totalCount > 0 ? (offerStats.totalCount / aoStats.totalCount) * 100 : 0,
+      offer_to_project_rate: offerStats.totalCount > 0 ? (projectStats.totalCount / offerStats.totalCount) * 100 : 0,
+      global_conversion_rate: aoStats.totalCount > 0 ? (projectStats.totalCount / aoStats.totalCount) * 100 : 0,
       forecast_3_months: revenueData.forecastData || []
     };
     
-    logger.info('[Analytics] Métriques pipeline calculées', { metadata: { aoCount: aos.length, offerCount: offers.length, projectCount: projects.length } });
+    logger.info('[Analytics] Métriques pipeline calculées via SQL aggregation', { 
+      metadata: { 
+        aoCount: aoStats.totalCount, 
+        offerCount: offerStats.totalCount, 
+        projectCount: projectStats.totalCount,
+        optimized: true
+      } 
+    });
     
     sendSuccess(res, pipeline);
   })
@@ -5805,12 +5858,9 @@ app.get('/api/analytics/alerts',
 app.get('/api/analytics/bottlenecks', 
   isAuthenticated,
   asyncHandler(async (req, res) => {
-    // Analyser les goulots d'étranglement en regardant les délais et charges
-    const [projects, offers, tasks] = await Promise.all([
-      storage.getProjects(),
-      storage.getOffers(),
-      storage.getAllTasks()
-    ]);
+    // OPTIMISATION: Ne charger que les tasks nécessaires, pas tous les projects/offers
+    logger.info('[Analytics Bottlenecks] Loading only necessary data (tasks)');
+    const tasks = await storage.getAllTasks();
     
     // Identifier les phases qui prennent le plus de temps
     const phaseDelays = tasks.reduce((acc, task) => {

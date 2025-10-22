@@ -469,7 +469,17 @@ export class PredictiveEngineService {
       });
 
       // 2. PROJETS ACTIFS À ÉVALUER
-      const activeProjects = await this.storage.getProjects();
+      // OPTIMISATION: Utiliser getProjectsPaginated au lieu de tout charger
+      logger.debug('[PredictiveEngine] Loading projects with pagination instead of all 375 items');
+      const allProjectsResult = await this.storage.getProjectsPaginated({ 
+        limit: 1000, 
+        offset: 0,
+        filters: {
+          // Filter only active/in-progress projects for risk analysis
+          status: params.project_status
+        }
+      });
+      const activeProjects = allProjectsResult.projects;
       const filteredProjects = this.filterProjectsByParams(activeProjects, params);
       
       const riskyProjects: ProjectRiskAssessment[] = [];

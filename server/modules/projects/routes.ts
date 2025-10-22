@@ -145,26 +145,20 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         }
       });
 
-      const projects = await storage.getProjects(
-        params.search,
-        params.status
+      const limit = Number(params.limit) || 20;
+      const offset = Number(params.offset) || 0;
+
+      const { projects: paginatedProjects, total } = await storage.getProjectsPaginated(
+        params.search as string | undefined,
+        params.status,
+        limit,
+        offset
       );
-
-      // Apply filters
-      let filteredProjects = projects;
-      if (params.includeArchived !== 'true') {
-        filteredProjects = projects.filter(p => !p.archived);
-      }
-
-      // Apply pagination
-      const limit = parseInt(req.query.limit) || 20;
-      const offset = parseInt(req.query.offset) || 0;
-      const paginatedProjects = filteredProjects.slice(offset, offset + limit);
 
       sendPaginatedSuccess(res, paginatedProjects, {
         page: Math.floor(offset / limit) + 1,
         limit,
-        total: filteredProjects.length
+        total
       });
     })
   );

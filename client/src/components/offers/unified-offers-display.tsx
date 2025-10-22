@@ -14,7 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FileText, Search, Calendar, MapPin, Building, Plus, Star, Eye, Edit, Home, Users } from "lucide-react";
+import { FileText, Search, Calendar, MapPin, Building, Plus, Star, Eye, Edit, Home, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { SyncStatusBadge } from "@/components/monday/SyncStatusBadge";
 import { useMondaySync } from "@/hooks/useMondaySync";
 
@@ -32,48 +32,79 @@ export default function UnifiedOffersDisplay({
   const [_, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("tous");
+  const [page, setPage] = useState(1);
+  const limit = 20;
   const { toast } = useToast();
   
   // Active les notifications Monday sync
   useMondaySync();
-  
-  // Récupérer les statuts de synchronisation Monday
-  const { data: syncStatusesData } = useQuery<any>({
-    queryKey: ["/api/monday/sync-status"],
-    refetchInterval: 30000, // Refresh toutes les 30s
-  });
-  
-  const syncStatuses = syncStatusesData?.data || [];
-  
-  // Fonction pour récupérer le statut de sync d'un AO
-  const getSyncStatus = (aoId: string) => {
-    return syncStatuses.find((s: any) => s.entityId === aoId && s.entityType === 'ao');
-  };
 
-  const { data: offers = [], isLoading, isError, error } = useQuery({
-    queryKey: [endpoint, search, statusFilter],
+  const { data: offersResponse, isLoading, isError, error } = useQuery({
+    queryKey: [endpoint, { search, statusFilter, limit, offset: (page - 1) * limit }],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (statusFilter !== "tous") params.append('status', statusFilter);
+      params.append('limit', limit.toString());
+      params.append('offset', ((page - 1) * limit).toString());
       const queryString = params.toString();
       const response = await fetch(`${endpoint}${queryString ? `?${queryString}` : ''}`);
       if (!response.ok) throw new Error(`Erreur ${response.status}: ${response.statusText}`);
       const data = await response.json();
       
-      // Gérer les différents formats de réponse
+      // Retourner la réponse complète avec pagination
       if (data && typeof data === 'object' && 'data' in data) {
-        // Format {success: true, data: [...]} pour /api/aos
-        return Array.isArray(data.data) ? data.data : [];
-      } else if (Array.isArray(data)) {
-        // Format direct [...] pour /api/offers
         return data;
+      } else if (Array.isArray(data)) {
+        // Format direct [...] pour rétrocompatibilité
+        return { data, pagination: { page: 1, limit: data.length, total: data.length } };
       } else {
-        // Fallback pour tout autre format
-        return [];
+        return { data: [], pagination: { page: 1, limit: 20, total: 0 } };
       }
     },
   });
+
+  // Extraire les données et pagination
+  const offers = offersResponse?.data || [];
+  const pagination = offersResponse?.pagination || { page: 1, limit: 20, total: 0 };
+  const totalPages = Math.ceil(pagination.total / pagination.limit) || 1;
+
+  // Extraire les IDs des offres visibles sur la page actuelle (optimisation)
+  const visibleOfferIds = (Array.isArray(offers) ? offers : []).map((item: any) => item.id);
+  
+  // Déterminer si on doit charger les statuts de sync Monday
+  // NOTE: Seuls les AOs sont synchronisés avec Monday.com (pas les offers)
+  const isAOEndpoint = endpoint.includes('aos');
+  const entityType = 'ao'; // Backend n'accepte que 'project' ou 'ao'
+  
+  // Récupérer les statuts de synchronisation Monday UNIQUEMENT pour les AOs visibles
+  // Optimisation: charge ~20 statuts au lieu de 375 (réduction de 95%)
+  // Skip complètement pour les offers car ils ne sont pas synchronisés avec Monday
+  const { data: syncStatusesData } = useQuery<any>({
+    queryKey: ["/api/monday/sync-status", { 
+      entityIds: visibleOfferIds.join(','),
+      entityType: entityType
+    }],
+    queryFn: async ({ queryKey }) => {
+      const [url, params] = queryKey as [string, { entityIds: string; entityType: string }];
+      const queryParams = new URLSearchParams();
+      if (params.entityIds) queryParams.append('entityIds', params.entityIds);
+      if (params.entityType) queryParams.append('entityType', params.entityType);
+      const response = await fetch(`${url}?${queryParams}`);
+      if (!response.ok) throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    refetchInterval: 30000, // Refresh toutes les 30s
+    enabled: isAOEndpoint && visibleOfferIds.length > 0, // Only fetch for AOs
+  });
+  
+  const syncStatuses = syncStatusesData?.data || [];
+  
+  // Fonction pour récupérer le statut de sync d'une offre
+  const getSyncStatus = (offerId: string) => {
+    if (!isAOEndpoint) return undefined; // Pas de sync pour les offers
+    return syncStatuses.find((s: any) => s.entityId === offerId && s.entityType === entityType);
+  };
 
   const prioritizeMutation = useMutation({
     mutationFn: async ({ id, isPriority }: { id: string; isPriority: boolean }) => {
@@ -304,8 +335,9 @@ export default function UnifiedOffersDisplay({
             )}
           </div>
         ) : (
-          <div className="grid gap-4" data-testid="offers-list">
-            {offers.map((offer: any) => (
+          <>
+            <div className="grid gap-4" data-testid="offers-list">
+              {offers.map((offer: any) => (
               <Card 
                 key={offer.id} 
                 className="cursor-pointer transition-all hover:shadow-md hover:border-primary/20 border-2 border-transparent"
@@ -499,6 +531,38 @@ export default function UnifiedOffersDisplay({
               </Card>
             ))}
           </div>
+
+          {/* Contrôles de pagination */}
+          {pagination.total > limit && (
+            <div className="flex items-center justify-between mt-6 pt-6 border-t">
+              <div className="text-sm text-muted-foreground" data-testid="text-page-info">
+                Page {page} sur {totalPages} • Affichage {((page - 1) * limit) + 1}-{Math.min(page * limit, pagination.total)} sur {pagination.total} offres
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                  data-testid="button-pagination-previous"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Précédent
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page + 1)}
+                  disabled={page >= totalPages}
+                  data-testid="button-pagination-next"
+                >
+                  Suivant
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </CardContent>
     </Card>

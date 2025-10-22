@@ -457,22 +457,6 @@ app.use((req, res, next) => {
   }
   
   // ========================================
-  // FALLBACK SPA MANUEL - DÉSACTIVÉ
-  // ========================================
-  // Le fallback manuel a été désactivé car il servait le HTML brut sans transformation Vite,
-  // causant un écran blanc (seul le CSS se chargeait). Les middlewares Vite (montés par setupVite)
-  // gèrent maintenant correctement le routing SPA via la route /*splat.
-  // 
-  // Historique: Ce fallback avait été ajouté pour contourner un supposé problème avec /*splat,
-  // mais en réalité il interceptait TOUTES les requêtes avant que Vite ne puisse les transformer.
-  // 
-  // Si des problèmes de routing réapparaissent, la solution correcte est de :
-  // 1. Modifier server/vite.ts pour retourner l'instance Vite (quand éditable)
-  // 2. Utiliser vite.transformIndexHtml() dans ce fallback
-  // 
-  // Pour l'instant, les middlewares Vite suffisent et l'application fonctionne correctement.
-  
-  // ========================================
   // GESTION CENTRALISÉE DES ERREURS
   // ========================================
   

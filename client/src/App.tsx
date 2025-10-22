@@ -7,74 +7,79 @@ import { WebSocketProvider } from "@/providers/websocket-provider";
 import { DateAlertsProvider } from "@/components/alerts/DateAlertsProvider";
 import { useAuth } from "@/hooks/useAuth";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import NotFound from "@/pages/not-found";
-import Login from "@/pages/login";
 import { useLocation, Redirect } from "wouter";
-import { useEffect } from "react";
-import Dashboard from "@/pages/dashboard";
-import Offers from "@/pages/offers";
-import Projects from "@/pages/projects";
-import ProjectDetail from "@/pages/project-detail";
-import Planning from "@/pages/planning";
-import Teams from "@/pages/teams";
-import Suppliers from "@/pages/suppliers";
-import BEDashboard from "@/pages/be-dashboard";
-import OfferDetail from "@/pages/offer-detail";
-import CreateOffer from "@/pages/create-offer";
-import CreateAO from "@/pages/create-ao";
-import AoDetail from "@/pages/ao-detail";
-import Chiffrage from "@/pages/chiffrage";
-// Import des nouvelles pages pour les sous-étapes
-import ProjectPlanning from "@/pages/projects/planning";
-// Import des composants spécialisés par phase projet
-import ProjectStudy from "@/pages/projects/study";
-import ProjectSupply from "@/pages/projects/supply";
-import ProjectWorksite from "@/pages/projects/worksite";
-import ProjectSupport from "@/pages/projects/support";
-// Import des pages offers
-import ValidationList from "@/pages/offers/validation-list";
-import TransformList from "@/pages/offers/transform-list";
-import ChiffrageList from "@/pages/offers/chiffrage-list";
-// Import des pages workflow
-import EtudeTechnique from "@/pages/workflow/etude-technique";
-import ChiffrageWorkflow from "@/pages/workflow/chiffrage";
-import EnvoiDevis from "@/pages/workflow/envoi-devis";
-import PlanificationWorkflow from "@/pages/workflow/planification";
-import ChantierWorkflow from "@/pages/workflow/chantier";
-// import ValidationBE from "@/pages/validation-be"; // Not used
-import SupplierRequests from "@/pages/supplier-requests";
-import BatigestPage from "@/pages/batigest";
-import SettingsScoring from "@/pages/settings-scoring";
-import TechnicalAlerts from "@/pages/technical-alerts";
-// Import des pages Intelligence Temporelle - (DateIntelligenceDashboard maintenant intégré dans ExecutiveDashboard)
-// Import du Dashboard Dirigeant
-import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
-// Import du Dashboard Admin Sécurité
-import AdminSecurityDashboard from "@/pages/AdminSecurityDashboard";
-// Import du Dashboard Migration Monday.com
-import MondayMigrationDashboard from "@/pages/monday-migration-dashboard";
-// Import de la navigation intelligente
-import SmartLanding from "@/components/navigation/SmartLanding";
+import { lazy, Suspense, useEffect } from "react";
+import PageLoader from "@/components/PageLoader";
+
+// Components chargés immédiatement (critiques pour auth et navigation)
 import AppLayout from "@/components/layout/AppLayout";
-// Import du portail fournisseur
-import SupplierPortal from "@/pages/supplier-portal";
-// Import de la comparaison des devis
-import ComparaisonDevis from "@/pages/comparaison-devis";
-// Import du chatbot full-page
-import ChatbotPage from "@/pages/chatbot";
-// Import de la démo chatbot avancée
-import ChatbotDemo from "@/pages/ChatbotDemo";
-// Import de la page administration
-import Administration from "@/pages/administration";
+import SmartLanding from "@/components/navigation/SmartLanding";
 import BugReportButton from "@/components/BugReportButton";
-// Import du dashboard monitoring
-import MonitoringDashboard from "@/pages/monitoring";
-// Import des générateurs de documents Batigest
-import PurchaseOrderGenerator from "@/pages/batigest/purchase-order-generator";
-import ClientQuoteGenerator from "@/pages/batigest/client-quote-generator";
-import BatigestDashboard from "@/pages/batigest/dashboard";
-// Import de l'intégration Monday.com
-import MondayImport from "@/pages/monday/monday-import";
+
+// Pages chargées en lazy loading (toutes sauf login/not-found critiques)
+const Login = lazy(() => import("@/pages/login"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+// Dashboards
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const ExecutiveDashboard = lazy(() => import("@/pages/ExecutiveDashboard"));
+const BEDashboard = lazy(() => import("@/pages/be-dashboard"));
+const AdminSecurityDashboard = lazy(() => import("@/pages/AdminSecurityDashboard"));
+const MondayMigrationDashboard = lazy(() => import("@/pages/monday-migration-dashboard"));
+const MonitoringDashboard = lazy(() => import("@/pages/monitoring"));
+
+// Offers & AOs
+const Offers = lazy(() => import("@/pages/offers"));
+const OfferDetail = lazy(() => import("@/pages/offer-detail"));
+const CreateOffer = lazy(() => import("@/pages/create-offer"));
+const CreateAO = lazy(() => import("@/pages/create-ao"));
+const AoDetail = lazy(() => import("@/pages/ao-detail"));
+const Chiffrage = lazy(() => import("@/pages/chiffrage"));
+const ValidationList = lazy(() => import("@/pages/offers/validation-list"));
+const TransformList = lazy(() => import("@/pages/offers/transform-list"));
+const ChiffrageList = lazy(() => import("@/pages/offers/chiffrage-list"));
+
+// Projects
+const Projects = lazy(() => import("@/pages/projects"));
+const ProjectDetail = lazy(() => import("@/pages/project-detail"));
+const Planning = lazy(() => import("@/pages/planning"));
+const ProjectPlanning = lazy(() => import("@/pages/projects/planning"));
+const ProjectStudy = lazy(() => import("@/pages/projects/study"));
+const ProjectSupply = lazy(() => import("@/pages/projects/supply"));
+const ProjectWorksite = lazy(() => import("@/pages/projects/worksite"));
+const ProjectSupport = lazy(() => import("@/pages/projects/support"));
+
+// Workflow
+const EtudeTechnique = lazy(() => import("@/pages/workflow/etude-technique"));
+const ChiffrageWorkflow = lazy(() => import("@/pages/workflow/chiffrage"));
+const EnvoiDevis = lazy(() => import("@/pages/workflow/envoi-devis"));
+const PlanificationWorkflow = lazy(() => import("@/pages/workflow/planification"));
+const ChantierWorkflow = lazy(() => import("@/pages/workflow/chantier"));
+
+// Suppliers & Teams
+const Teams = lazy(() => import("@/pages/teams"));
+const Suppliers = lazy(() => import("@/pages/suppliers"));
+const SupplierRequests = lazy(() => import("@/pages/supplier-requests"));
+const SupplierPortal = lazy(() => import("@/pages/supplier-portal"));
+const ComparaisonDevis = lazy(() => import("@/pages/comparaison-devis"));
+
+// Batigest
+const BatigestPage = lazy(() => import("@/pages/batigest"));
+const BatigestDashboard = lazy(() => import("@/pages/batigest/dashboard"));
+const PurchaseOrderGenerator = lazy(() => import("@/pages/batigest/purchase-order-generator"));
+const ClientQuoteGenerator = lazy(() => import("@/pages/batigest/client-quote-generator"));
+
+// Monday.com
+const MondayImport = lazy(() => import("@/pages/monday/monday-import"));
+
+// Settings & Admin
+const Administration = lazy(() => import("@/pages/administration"));
+const SettingsScoring = lazy(() => import("@/pages/settings-scoring"));
+const TechnicalAlerts = lazy(() => import("@/pages/technical-alerts"));
+
+// Chatbot
+const ChatbotPage = lazy(() => import("@/pages/chatbot"));
+const ChatbotDemo = lazy(() => import("@/pages/ChatbotDemo"));
 
 function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -113,7 +118,8 @@ function ProtectedRoute({ component: Component, showSidebar = true }: { componen
 
 function Router() {
   return (
-    <Switch>
+    <Suspense fallback={<PageLoader message="Chargement de la page..." />}>
+      <Switch>
       {/* REDIRECTION AVEC RETURN URL: Support pour authentification */}
       <Route path="/login">
         {() => {
@@ -235,7 +241,8 @@ function Router() {
       </Route>
       
       <Route component={NotFound} />
-    </Switch>
+      </Switch>
+    </Suspense>
   );
 }
 

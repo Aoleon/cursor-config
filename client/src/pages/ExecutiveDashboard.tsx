@@ -833,7 +833,7 @@ const ProjectRisksTable = memo(({ risks }: { risks: ProjectRiskAssessment[] }) =
           
           {/* Facteurs risque principaux */}
           <div className="mt-2 flex flex-wrap gap-1">
-            {risk.risk_factors?.slice(0, 3).map((factor, idx) => (
+            {risk.risk_factors?.slice(0, 3).map((factor: any, idx: number) => (
               <span 
                 key={idx}
                 className={`text-xs px-2 py-1 rounded ${

@@ -457,58 +457,20 @@ app.use((req, res, next) => {
   }
   
   // ========================================
-  // FALLBACK SPA MANUEL (fix pour pattern /*splat non-standard dans vite.ts)
+  // FALLBACK SPA MANUEL - DÉSACTIVÉ
   // ========================================
-  // Ce middleware de secours gère le routing SPA si le pattern /*splat de vite.ts ne fonctionne pas
-  // Utilise un middleware sans pattern pour éviter les problèmes avec path-to-regexp
-  if (env === "development") {
-    const fs = await import("fs");
-    const path = await import("path");
-    app.use(async (req, res, next) => {
-      // Skip si c'est une route API, WebSocket ou si la réponse a déjà été envoyée
-      if (req.originalUrl.startsWith('/api') || 
-          req.originalUrl.startsWith('/ws') ||
-          res.headersSent) {
-        return next();
-      }
-      
-      // Skip si ce n'est pas une requête GET
-      if (req.method !== 'GET') {
-        return next();
-      }
-      
-      try {
-        const clientTemplate = path.resolve(
-          import.meta.dirname,
-          "..",
-          "client",
-          "index.html",
-        );
-        
-        logger.info('SPA Fallback manuel - serving index.html', {
-          metadata: {
-            module: 'ExpressApp',
-            operation: 'spaFallback',
-            url: req.originalUrl
-          }
-        });
-        
-        // Lire et servir le fichier index.html
-        let template = await fs.promises.readFile(clientTemplate, "utf-8");
-        res.status(200).set({ "Content-Type": "text/html" }).send(template);
-      } catch (e) {
-        logger.error('Erreur SPA Fallback', {
-          metadata: {
-            module: 'ExpressApp',
-            operation: 'spaFallback',
-            error: e instanceof Error ? e.message : String(e),
-            stack: e instanceof Error ? e.stack : undefined
-          }
-        });
-        next(e);
-      }
-    });
-  }
+  // Le fallback manuel a été désactivé car il servait le HTML brut sans transformation Vite,
+  // causant un écran blanc (seul le CSS se chargeait). Les middlewares Vite (montés par setupVite)
+  // gèrent maintenant correctement le routing SPA via la route /*splat.
+  // 
+  // Historique: Ce fallback avait été ajouté pour contourner un supposé problème avec /*splat,
+  // mais en réalité il interceptait TOUTES les requêtes avant que Vite ne puisse les transformer.
+  // 
+  // Si des problèmes de routing réapparaissent, la solution correcte est de :
+  // 1. Modifier server/vite.ts pour retourner l'instance Vite (quand éditable)
+  // 2. Utiliser vite.transformIndexHtml() dans ce fallback
+  // 
+  // Pour l'instant, les middlewares Vite suffisent et l'application fonctionne correctement.
   
   // ========================================
   // GESTION CENTRALISÉE DES ERREURS

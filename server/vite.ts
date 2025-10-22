@@ -41,9 +41,14 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
-  app.get("*", async (req, res, next) => {
-    const url = req.originalUrl;
+  // SPA fallback sans pattern - évite les problèmes path-to-regexp
+  app.use(async (req, res, next) => {
+    // Ignore si c'est une route API ou un asset
+    if (req.path.startsWith('/api') || req.path.startsWith('/ws') || req.path.includes('.')) {
+      return next();
+    }
 
+    const url = req.originalUrl;
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
@@ -52,7 +57,6 @@ export async function setupVite(app: Express, server: Server) {
         "index.html",
       );
 
-      // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,

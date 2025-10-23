@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre } from "@shared/schema";
+import { maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre, contacts } from "@shared/schema";
 import { eq, ilike, or, and } from "drizzle-orm";
 import type { 
   MaitreOuvrage, 
@@ -7,7 +7,9 @@ import type {
   ContactMaitreOeuvre,
   InsertMaitreOuvrage, 
   InsertMaitreOeuvre,
-  InsertContactMaitreOeuvre
+  InsertContactMaitreOeuvre,
+  Contact,
+  InsertContact
 } from "@shared/schema";
 import { logger } from './utils/logger';
 import type { NeonTransaction } from 'drizzle-orm/neon-serverless';
@@ -59,6 +61,32 @@ export interface ContactLinkResult {
   contact: MaitreOuvrage | MaitreOeuvre;
   confidence: number; // Score de confiance de la correspondance (0-1)
   reason: string; // Raison de la correspondance ou création
+}
+
+/**
+ * Données contact individuel (table contacts)
+ */
+export interface IndividualContactData {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  poste?: string; // Enum posteTypeEnum
+  address?: string;
+  notes?: string;
+  source: 'ocr_extraction' | 'monday_import' | 'manual';
+}
+
+/**
+ * Résultat find/create contact individuel
+ */
+export interface IndividualContactResult {
+  found: boolean;
+  created: boolean;
+  contact: Contact; // Type depuis @shared/schema
+  confidence: number;
+  reason: string;
 }
 
 /**
@@ -425,6 +453,188 @@ export class ContactService {
     }
     
     return results;
+  }
+  
+  /**
+   * Recherche un contact individuel existant par similarité
+   */
+  private async findSimilarContact(
+    data: IndividualContactData,
+    tx?: DrizzleTransaction
+  ): Promise<{ contact: Contact; confidence: number; reason: string } | null> {
+    const dbInstance = tx || db;
+    const candidates = await dbInstance
+      .select()
+      .from(contacts)
+      .where(eq(contacts.isActive, true));
+    
+    let bestMatch: { contact: Contact; confidence: number; reason: string } | null = null;
+    
+    for (const candidate of candidates) {
+      const score = this.calculateIndividualContactSimilarity(data, candidate);
+      
+      if (score.confidence > 0.8 && (!bestMatch || score.confidence > bestMatch.confidence)) {
+        bestMatch = {
+          contact: candidate,
+          confidence: score.confidence,
+          reason: score.reason
+        };
+      }
+    }
+    
+    return bestMatch;
+  }
+  
+  /**
+   * Calcule similarité contact individuel
+   */
+  private calculateIndividualContactSimilarity(
+    extracted: IndividualContactData,
+    existing: Contact
+  ): { confidence: number; reason: string } {
+    let score = 0;
+    const reasons: string[] = [];
+    
+    // Email exact = confiance max (architecte recommande)
+    if (extracted.email && existing.email && extracted.email.toLowerCase() === existing.email.toLowerCase()) {
+      score = 1.0;
+      reasons.push(`Email identique: ${extracted.email}`);
+      return { confidence: score, reason: reasons.join(', ') };
+    }
+    
+    // Prénom + Nom + Company (>= 0.85)
+    if (extracted.firstName && extracted.lastName && existing.firstName && existing.lastName) {
+      const firstNameSim = this.calculateTextSimilarity(extracted.firstName, existing.firstName);
+      const lastNameSim = this.calculateTextSimilarity(extracted.lastName, existing.lastName);
+      
+      // Moyenne pondérée prénom/nom
+      const nameSimilarity = (firstNameSim + lastNameSim) / 2;
+      
+      if (nameSimilarity > 0.85) {
+        score += 0.6;
+        reasons.push(`Nom similaire (${Math.round(nameSimilarity * 100)}%)`);
+        
+        // Company similaire renforce
+        if (extracted.company && existing.company) {
+          const companySim = this.calculateTextSimilarity(extracted.company, existing.company);
+          if (companySim > 0.85) {
+            score += 0.3;
+            reasons.push(`Entreprise similaire (${Math.round(companySim * 100)}%)`);
+          }
+        }
+      }
+    }
+    
+    // Téléphone tie-breaker
+    if (extracted.phone && existing.phone && score > 0.5) {
+      const cleanPhone1 = this.cleanPhoneNumber(extracted.phone);
+      const cleanPhone2 = this.cleanPhoneNumber(existing.phone);
+      if (cleanPhone1 === cleanPhone2) {
+        score += 0.2;
+        reasons.push('Téléphone identique');
+      }
+    }
+    
+    return {
+      confidence: Math.min(score, 1.0),
+      reason: reasons.length > 0 ? reasons.join(', ') : 'Aucune correspondance significative'
+    };
+  }
+  
+  /**
+   * Crée nouveau contact individuel
+   */
+  private async createContact(
+    data: IndividualContactData,
+    tx?: DrizzleTransaction
+  ): Promise<Contact> {
+    const dbInstance = tx || db;
+    
+    const contactData: InsertContact = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email || null,
+      phone: data.phone || null,
+      company: data.company || null,
+      poste: data.poste as any || null,
+      address: data.address || null,
+      notes: data.notes || `Créé automatiquement - Source: ${data.source}`
+    };
+    
+    const [newContact] = await dbInstance
+      .insert(contacts)
+      .values(contactData)
+      .returning();
+    
+    logger.info('Nouveau contact individuel créé', {
+      service: 'ContactService',
+      metadata: {
+        id: newContact.id,
+        firstName: newContact.firstName,
+        lastName: newContact.lastName,
+        email: newContact.email,
+        company: newContact.company
+      }
+    });
+    
+    return newContact;
+  }
+  
+  /**
+   * Recherche ou crée un contact individuel
+   */
+  async findOrCreateIndividualContact(
+    data: IndividualContactData,
+    tx?: DrizzleTransaction
+  ): Promise<IndividualContactResult> {
+    try {
+      // Rechercher contact existant
+      const existingMatch = await this.findSimilarContact(data, tx);
+      
+      if (existingMatch) {
+        logger.info('Contact individuel trouvé', {
+          service: 'ContactService',
+          metadata: {
+            id: existingMatch.contact.id,
+            firstName: existingMatch.contact.firstName,
+            lastName: existingMatch.contact.lastName,
+            confidence: existingMatch.confidence,
+            reason: existingMatch.reason
+          }
+        });
+        
+        return {
+          found: true,
+          created: false,
+          contact: existingMatch.contact,
+          confidence: existingMatch.confidence,
+          reason: `Correspondance trouvée: ${existingMatch.reason}`
+        };
+      }
+      
+      // Créer nouveau contact
+      const newContact = await this.createContact(data, tx);
+      
+      return {
+        found: false,
+        created: true,
+        contact: newContact,
+        confidence: 1.0,
+        reason: 'Nouveau contact créé automatiquement'
+      };
+      
+    } catch (error) {
+      logger.error('Erreur lors de findOrCreateIndividualContact', {
+        service: 'ContactService',
+        error: error instanceof Error ? error.message : String(error),
+        metadata: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email
+        }
+      });
+      throw error;
+    }
   }
 }
 

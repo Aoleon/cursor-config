@@ -14,7 +14,7 @@ import type {
 import { getBoardConfig } from './monday/defaultMappings';
 import { logger } from '../utils/logger';
 import type { IStorage } from '../storage-poc';
-import type { ExtractedContactData } from '../contactService';
+import type { ExtractedContactData, IndividualContactData } from '../contactService';
 
 export class MondayDataSplitter {
   private aoBaseExtractor: AOBaseExtractor;
@@ -51,6 +51,31 @@ export class MondayDataSplitter {
       siret: masterData.siret || undefined,
       role,
       source: 'ocr_extraction'
+    };
+  }
+
+  /**
+   * Mappe données contact depuis extracteur vers format IndividualContactData
+   */
+  private mapContactToIndividualData(
+    contactData: any
+  ): IndividualContactData {
+    // Parser le nom complet en prénom/nom
+    const fullName = contactData.name || '';
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    return {
+      firstName,
+      lastName,
+      email: contactData.email || undefined,
+      phone: contactData.telephone || contactData.phone || undefined,
+      company: contactData.company || contactData.entreprise || undefined,
+      poste: contactData.poste || undefined,
+      address: contactData.address || contactData.adresse || undefined,
+      notes: contactData.notes || undefined,
+      source: 'monday_import'
     };
   }
 
@@ -247,36 +272,73 @@ export class MondayDataSplitter {
           }
         }
 
-        // ÉTAPE 2: Extraction contacts
-        logger.info('Étape 2: Extraction contacts', {
-          service: 'MondayDataSplitter',
-          metadata: { aoId: createdAO.id }
-        });
-
+        // ÉTAPE 2: Extraire et PERSISTER contacts individuels avec déduplication
         const contacts = await this.contactExtractor.extract(context);
         context.extractedData.contacts = contacts;
 
+        logger.info('Extraction contacts', {
+          service: 'MondayDataSplitter',
+          metadata: {
+            aoId: createdAO.id,
+            contactsFound: contacts.length
+          }
+        });
+
         for (const contactData of contacts) {
           try {
-            const contact = await storage.createAoContact({
-              ...contactData,
-              aoId: createdAO.id
+            // Mapper vers IndividualContactData
+            const individualData = this.mapContactToIndividualData(contactData);
+            
+            // Déduplication via storage.findOrCreateContact
+            const contactResult = await storage.findOrCreateContact(individualData, tx);
+            
+            // Linker à l'AO via aoContacts
+            const linkType = contactData.linkType || 'contact_general';
+            const link = await storage.linkAoContact({
+              aoId: createdAO.id,
+              contactId: contactResult.contact.id,
+              linkType
             }, tx);
-            result.contactsCreated++;
-
-            logger.info('Contact créé', {
+            
+            logger.info('Contact traité', {
               service: 'MondayDataSplitter',
-              metadata: { contactId: contact.id, aoId: createdAO.id }
+              metadata: {
+                aoId: createdAO.id,
+                contactId: contactResult.contact.id,
+                firstName: contactResult.contact.firstName,
+                lastName: contactResult.contact.lastName,
+                email: contactResult.contact.email,
+                created: contactResult.created,
+                found: contactResult.found,
+                confidence: contactResult.confidence,
+                linkType,
+                linkCreated: link !== null
+              }
             });
+            
+            // Incrémenter compteur seulement si CRÉÉ (pas réutilisé)
+            if (contactResult.created) {
+              result.contactsCreated++;
+            }
+            
           } catch (error: any) {
             context.diagnostics.push({
-              level: 'warning',
+              level: 'error',
               extractor: 'ContactExtractor',
-              message: `Failed to create contact: ${error.message}`,
-              data: { contactData }
+              message: `Échec persistance contact: ${error.message}`,
+              data: { contactData, error: error.stack }
             });
           }
         }
+
+        logger.info('Contacts traités', {
+          service: 'MondayDataSplitter',
+          metadata: {
+            aoId: createdAO.id,
+            totalContacts: contacts.length,
+            contactsCreated: result.contactsCreated
+          }
+        });
 
         // ÉTAPE 3: Extraction lots
         logger.info('Étape 3: Extraction lots', {

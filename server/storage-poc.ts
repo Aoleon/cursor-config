@@ -65,7 +65,8 @@ import {
   type BugReport, type InsertBugReport,
   type PurchaseOrder, type InsertPurchaseOrder,
   type ClientQuote, type InsertClientQuote,
-  type BatigestExportQueue, type InsertBatigestExportQueue
+  type BatigestExportQueue, type InsertBatigestExportQueue,
+  type Contact
 } from "@shared/schema";
 import { db } from "./db"; // Utilise la config existante avec pool optimisé
 import type { EventBus } from "./eventBus";
@@ -76,7 +77,7 @@ import type { NeonTransaction } from 'drizzle-orm/neon-serverless';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import type * as schema from '@shared/schema';
 import { contactService } from './contactService';
-import type { ExtractedContactData, ContactLinkResult } from './contactService';
+import type { ExtractedContactData, ContactLinkResult, IndividualContactData, IndividualContactResult } from './contactService';
 
 // ========================================
 // TYPES POUR TRANSACTIONS
@@ -253,6 +254,18 @@ export interface IStorage {
     data: ExtractedContactData,
     tx?: DrizzleTransaction
   ): Promise<ContactLinkResult>;
+  
+  // Individual contacts deduplication
+  findOrCreateContact(
+    data: IndividualContactData,
+    tx?: DrizzleTransaction
+  ): Promise<IndividualContactResult>;
+  
+  // Link contact to AO
+  linkAoContact(
+    params: { aoId: string; contactId: string; linkType: string },
+    tx?: DrizzleTransaction
+  ): Promise<AoContacts | null>;
   
   // Contacts maître d'œuvre operations
   getContactsMaitreOeuvre(maitreOeuvreId: string): Promise<ContactMaitreOeuvre[]>;
@@ -2369,6 +2382,99 @@ export class DatabaseStorage implements IStorage {
       { ...data, role: 'maitre_oeuvre' },
       tx
     );
+  }
+
+  // Individual contacts deduplication
+  async findOrCreateContact(
+    data: IndividualContactData,
+    tx?: DrizzleTransaction
+  ): Promise<IndividualContactResult> {
+    return contactService.findOrCreateIndividualContact(data, tx);
+  }
+
+  /**
+   * Lie un contact à un AO via aoContacts
+   * Utilise l'index unique (ao_id, contact_id, link_type) pour idempotence
+   */
+  async linkAoContact(
+    params: { aoId: string; contactId: string; linkType: string },
+    tx?: DrizzleTransaction
+  ): Promise<AoContacts | null> {
+    const dbInstance = tx || db;
+    
+    try {
+      // Vérifier si le lien existe déjà (idempotence via unique index)
+      const existing = await dbInstance
+        .select()
+        .from(aoContacts)
+        .where(
+          and(
+            eq(aoContacts.ao_id, params.aoId),
+            eq(aoContacts.contact_id, params.contactId),
+            eq(aoContacts.link_type, params.linkType as any)
+          )
+        )
+        .limit(1);
+      
+      if (existing.length > 0) {
+        logger.debug('Lien AO-Contact déjà existant', {
+          service: 'Storage',
+          metadata: {
+            aoId: params.aoId,
+            contactId: params.contactId,
+            linkType: params.linkType
+          }
+        });
+        return existing[0];
+      }
+      
+      // Créer nouveau lien
+      const [newLink] = await dbInstance
+        .insert(aoContacts)
+        .values({
+          ao_id: params.aoId,
+          contact_id: params.contactId,
+          link_type: params.linkType as any
+        })
+        .returning();
+      
+      logger.info('Lien AO-Contact créé', {
+        service: 'Storage',
+        metadata: {
+          aoId: params.aoId,
+          contactId: params.contactId,
+          linkType: params.linkType,
+          linkId: newLink.id
+        }
+      });
+      
+      return newLink;
+      
+    } catch (error) {
+      // Si contrainte unique violée (race condition), retourner null
+      if (error instanceof Error && error.message.includes('unique_ao_contact')) {
+        logger.debug('Contrainte unique AO-Contact violée (race condition)', {
+          service: 'Storage',
+          metadata: {
+            aoId: params.aoId,
+            contactId: params.contactId,
+            linkType: params.linkType
+          }
+        });
+        return null;
+      }
+      
+      logger.error('Erreur linkAoContact', {
+        service: 'Storage',
+        error: error instanceof Error ? error.message : String(error),
+        metadata: {
+          aoId: params.aoId,
+          contactId: params.contactId,
+          linkType: params.linkType
+        }
+      });
+      throw error;
+    }
   }
 
   // Contacts maître d'œuvre operations
@@ -4929,6 +5035,66 @@ export class MemStorage implements IStorage {
       confidence: 1.0,
       reason: 'MemStorage stub - always creates'
     };
+  }
+
+  // Individual contacts deduplication stubs
+  async findOrCreateContact(
+    data: IndividualContactData,
+    tx?: DrizzleTransaction
+  ): Promise<IndividualContactResult> {
+    logger.info('MemStorage findOrCreateContact stub', {
+      service: 'MemStorage',
+      metadata: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email
+      }
+    });
+    
+    // Stub simple - toujours créer
+    const mockContact: Contact = {
+      id: `contact_${Date.now()}`,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email || null,
+      phone: data.phone || null,
+      company: data.company || null,
+      poste: data.poste as any || null,
+      address: data.address || null,
+      notes: 'MemStorage stub',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    return {
+      found: false,
+      created: true,
+      contact: mockContact,
+      confidence: 1.0,
+      reason: 'MemStorage stub - always creates'
+    };
+  }
+
+  async linkAoContact(
+    params: { aoId: string; contactId: string; linkType: string },
+    tx?: DrizzleTransaction
+  ): Promise<AoContacts | null> {
+    logger.info('MemStorage linkAoContact stub', {
+      service: 'MemStorage',
+      metadata: params
+    });
+    
+    // Stub simple
+    const mockLink: AoContacts = {
+      id: `aocontact_${Date.now()}`,
+      ao_id: params.aoId,
+      contact_id: params.contactId,
+      link_type: params.linkType as any,
+      createdAt: new Date()
+    };
+    
+    return mockLink;
   }
 
   async getContactsMaitreOeuvre(maitreOeuvreId: string): Promise<ContactMaitreOeuvre[]> {

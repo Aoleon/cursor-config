@@ -7557,6 +7557,12 @@ export const insertSupplierSpecializationsSchema = createInsertSchema(supplierSp
   updatedAt: true,
 });
 
+export const insertContactsSchema = createInsertSchema(contacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // ========================================
 // SCHÉMAS D'INSERTION POUR LES NOUVELLES TABLES MONDAY.COM  
 // ========================================
@@ -7662,6 +7668,9 @@ export type InsertProjectContacts = z.infer<typeof insertProjectContactsSchema>;
 
 export type SupplierSpecializations = typeof supplierSpecializations.$inferSelect;
 export type InsertSupplierSpecializations = z.infer<typeof insertSupplierSpecializationsSchema>;
+
+export type Contact = typeof contacts.$inferSelect;
+export type InsertContact = z.infer<typeof insertContactsSchema>;
 
 // Types pour les requêtes API
 export type ProposeActionRequest = z.infer<typeof proposeActionSchema> & {

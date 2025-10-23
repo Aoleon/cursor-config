@@ -133,6 +133,7 @@ export interface IStorage {
   getAo(id: string): Promise<Ao | undefined>;
   createAo(ao: InsertAo): Promise<Ao>;
   updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao>;
+  deleteAo(id: string): Promise<void>;
   
   // Offer operations - Cœur du POC
   getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]>;
@@ -986,6 +987,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(aos.id, id))
       .returning();
     return updatedAo;
+  }
+
+  async deleteAo(id: string): Promise<void> {
+    await db.delete(aos).where(eq(aos.id, id));
   }
 
   // Offer operations (cœur du POC)
@@ -4468,6 +4473,10 @@ export class MemStorage implements IStorage {
 
   async updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao> {
     throw new Error("MemStorage: updateAo not implemented for POC");
+  }
+
+  async deleteAo(id: string): Promise<void> {
+    throw new Error("MemStorage: deleteAo not implemented for POC");
   }
 
   async getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]> {

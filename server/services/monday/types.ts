@@ -106,4 +106,12 @@ export interface SplitResult {
   contactsCreated: number;
   mastersCreated: number;
   diagnostics: SplitterDiagnostic[];
+  extractedData?: { // Données extraites (rempli en mode dry-run)
+    ao?: any;
+    lots?: any[];
+    contacts?: any[];
+    maitresOuvrage?: any[];
+    maitresOeuvre?: any[];
+    addresses?: any[];
+  };
 }

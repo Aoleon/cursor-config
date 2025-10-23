@@ -137,12 +137,14 @@ export class MondayDataSplitter {
    * Éclate un item Monday vers multiples entités Saxium
    * Séquence : AO base → maîtres ouvrage/œuvre → contacts → lots → adresses
    * Utilise storage.transaction() pour garantir l'atomicité
+   * @param dryRun - Si true, rollback la transaction à la fin (ne sauvegarde pas en base, pour tests)
    */
   async splitItem(
     mondayItemId: string,
     boardId: string,
     storage: IStorage,
-    config?: MondaySplitterConfig
+    config?: MondaySplitterConfig,
+    dryRun: boolean = false
   ): Promise<SplitResult> {
     logger.info('Démarrage éclatement Monday item', {
       service: 'MondayDataSplitter',
@@ -421,6 +423,35 @@ export class MondayDataSplitter {
             metadata: { aoId: currentAO.id, addressData }
           });
         }
+
+        // DRY RUN : Si mode test, forcer rollback de la transaction
+        if (dryRun) {
+          // Capturer les données extraites dans le résultat avant rollback
+          // Normaliser les noms de clés (baseAO → ao, etc.)
+          result.extractedData = {
+            ao: context.extractedData.baseAO,
+            lots: context.extractedData.lots,
+            contacts: context.extractedData.contacts,
+            maitresOuvrage: masters.maitresOuvrage,
+            maitresOeuvre: masters.maitresOeuvre,
+            addresses: context.extractedData.addresses
+          };
+          result.diagnostics = context.diagnostics;
+          result.success = true; // Marqué comme succès même si rollbacké
+          
+          logger.info('Mode DRY RUN activé - Rollback transaction (données non sauvegardées)', {
+            service: 'MondayDataSplitter',
+            metadata: {
+              aoExtracted: !!context.extractedData.baseAO,
+              lotsExtracted: context.extractedData.lots?.length || 0,
+              contactsExtracted: context.extractedData.contacts?.length || 0,
+              maitresExtracted: (masters.maitresOuvrage.length + masters.maitresOeuvre.length)
+            }
+          });
+          
+          // Lancer erreur spéciale pour forcer rollback
+          throw new Error('DRY_RUN_ROLLBACK');
+        }
       }, {
         retries: 3,
         timeout: 30000,
@@ -444,6 +475,17 @@ export class MondayDataSplitter {
       return result;
 
     } catch (error: any) {
+      // Gestion spéciale du dry-run
+      if (error.message === 'DRY_RUN_ROLLBACK') {
+        logger.info('Dry-run terminé avec succès - Transaction rollbackée', {
+          service: 'MondayDataSplitter',
+          metadata: { mondayItemId, boardId }
+        });
+        
+        // Retourner le résultat capturé avant rollback
+        return result;
+      }
+      
       // Erreur - transaction automatiquement rollbackée par storage.transaction()
       logger.error('Erreur lors de l\'éclatement Monday', {
         service: 'MondayDataSplitter',

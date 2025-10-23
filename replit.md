@@ -18,6 +18,48 @@ Saxium is a fullstack application for quoting and project management in the Fren
 ## System Architecture
 The application uses a modern fullstack architecture with a React, TypeScript, Vite frontend and an Express, TypeScript, Drizzle ORM backend.
 
+### Monday.com Data Mapping Architecture (Oct 2025)
+
+**Configuration-Driven Extraction System**:
+- **Board-Specific Configs**: JSON files in `server/services/monday/boardConfigs/` define mappings per Monday board
+- **Dynamic Loading**: `getBoardConfig(boardId)` loads appropriate config, fallback to hardcoded defaults
+- **Supported Boards**: 
+  - `3946257560` (AO Planning 🖥️) - Production board with 828 items, 41 columns → 20+ fields mapped
+  - `8952933832` (Modèle MEXT) - Template board (empty), legacy config
+
+**Extractor Pipeline**:
+1. **AOBaseExtractor**: Core field mapping (client, location, dates, amounts, statuses)
+   - Iterates over `config.mappings.base + config.mappings.metadata`
+   - Handles 10+ column types: text, numbers, date, status, dropdown, timeline, location
+   - Enum mappings: Monday values → Saxium enums (priority, typeMarche, menuiserieType)
+   - Boolean transforms: status values → boolean flags (isSelected)
+   - Array wrapping: single values → tags array
+   - Default values: source=other, menuiserieType=autre, status=etude
+   - Draft detection: isDraft=true if client/montantEstime/dateLimiteRemise missing
+2. **ContactExtractor**: People columns → contacts table (MOA, architects)
+3. **LotExtractor**: Subitems → lots table
+4. **MasterExtractor**: Detects master projects
+
+**Column Type Transformations**:
+- `text` → String
+- `numbers` → parseFloat + special conversions (hours→days for delaiContractuel)
+- `date` → Date instance with timezone
+- `timeline` → {from, to} → split into dateSortieAO + dateLimiteRemise
+- `status/dropdown` → Enum mapping via `enumMapping` config + object unwrapping (handles `{text: "..."}` and `{label: "..."}`)
+- `location` → Extract city + departement from address
+- `people` → Skip (ContactExtractor handles)
+
+**Testing**:
+```bash
+# Test mapping on real Monday item (dry-run, no DB save)
+tsx scripts/test-monday-mapping.ts <mondayItemId>
+
+# Example with AO Planning item
+tsx scripts/test-monday-mapping.ts 7952357208
+```
+
+**Mapping Matrix**: `analysis/MONDAY_TO_SAXIUM_MAPPING_MATRIX.md` tracks 56 Saxium fields, mapping status, gaps, priority levels
+
 -   **Frontend**: React, TypeScript, Vite, Wouter, shadcn/ui, Tailwind CSS, Radix UI, React Query, `react-hook-form` with Zod.
 -   **Backend**: Express, TypeScript, Drizzle ORM. Features modular routes (`auth`, `chiffrage`, `suppliers`, `projects`, `analytics`, `documents`, `batigest`), a PDF template engine, and Batigest ERP integration.
 -   **Database**: PostgreSQL (Neon) with Drizzle ORM.

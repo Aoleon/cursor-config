@@ -107,17 +107,17 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
     
     // NUMBERS - Nombre → decimal ou integer
     if (type === 'numbers') {
-      const parsed = parseFloat(value);
+      let parsed = parseFloat(value);
       if (isNaN(parsed)) return null;
       
-      // Conversion spéciale: nombre heures → jours (delaiContractuel)
-      if (mapping.saxiumField === 'delaiContractuel') {
-        return Math.ceil(parsed / 8); // 8h = 1 jour
+      // Transformation personnalisée : hoursTodays
+      if (mapping.transform === 'hoursTodays') {
+        parsed = Math.ceil(parsed / 8); // 8h = 1 jour
       }
       
-      // Decimal pour montants
+      // Decimal pour montants (retourner string pour Drizzle)
       if (mapping.saxiumField === 'montantEstime' || mapping.saxiumField === 'prorataEventuel') {
-        return parsed.toString(); // Drizzle decimal attend string
+        return parsed.toString();
       }
       
       return parsed;
@@ -181,29 +181,55 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
     // LOCATION - {lat, lng, address, city, country}
     if (type === 'location') {
       if (typeof value === 'object') {
-        const location: any = {};
+        // Extraction dérivée de city et departement
+        const extractedCity = value.city || value.address?.split(',')[0]?.trim();
+        const codePostalMatch = value.address?.match(/\b(\d{2})\d{3}\b/);
+        const extractedDept = codePostalMatch ? codePostalMatch[1] : null;
         
-        // Extraire ville
-        if (value.city || value.address) {
-          location.city = value.city || value.address?.split(',')[0];
-        }
+        // Stocker city et departement directement dans aoData via le contexte
+        // (ces champs ne sont pas directement mappés mais dérivés de location)
+        const aoData = context.extractedData.baseAO || {};
+        if (extractedCity) aoData.city = extractedCity;
+        if (extractedDept) aoData.departement = extractedDept;
+        context.extractedData.baseAO = aoData;
         
-        // Extraire département depuis code postal
-        if (value.address) {
-          const codePostalMatch = value.address.match(/\b(\d{2})\d{3}\b/);
-          if (codePostalMatch) {
-            location.departement = codePostalMatch[1];
-          }
-        }
-        
-        // Retourner adresse complète pour location
+        // Retourner adresse complète pour le champ location
         return value.address || value.city || null;
       }
       return String(value);
     }
     
-    // PEOPLE - Personnes (géré par ContactExtractor, on skip ici)
+    // PHONE - Téléphone {phone, countryShortName}
+    if (type === 'phone') {
+      if (typeof value === 'object' && value.phone) {
+        return value.phone;
+      }
+      return String(value);
+    }
+    
+    // EMAIL - Email {email, text}
+    if (type === 'email') {
+      if (typeof value === 'object' && value.email) {
+        return value.email;
+      }
+      if (typeof value === 'object' && value.text) {
+        return value.text;
+      }
+      return String(value);
+    }
+    
+    // PEOPLE - Personnes (pour contactAO, extraire premier nom)
     if (type === 'people') {
+      if (mapping.saxiumField === 'contactAO') {
+        // Extraire nom de la première personne
+        if (Array.isArray(value) && value.length > 0) {
+          return value[0].name || value[0].email || null;
+        }
+        if (typeof value === 'object' && value.name) {
+          return value.name;
+        }
+      }
+      // Pour contacts multiples, géré par ContactExtractor
       return null;
     }
     

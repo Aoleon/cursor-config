@@ -123,7 +123,106 @@
         "saxiumField": "delaiContractuel",
         "type": "numbers",
         "required": false,
-        "description": "Nombre heures converti en jours (/ 8)"
+        "description": "Nombre heures converti en jours (/ 8)",
+        "transform": "hoursTodays"
+      },
+      {
+        "mondayColumnId": "date4",
+        "saxiumField": "dateSortieAO",
+        "type": "date",
+        "required": false,
+        "description": "Date de sortie de l'AO"
+      },
+      {
+        "mondayColumnId": "date8",
+        "saxiumField": "dateAcceptationAO",
+        "type": "date",
+        "required": false,
+        "description": "Date d'acceptation de l'AO"
+      },
+      {
+        "mondayColumnId": "date_1",
+        "saxiumField": "demarragePrevu",
+        "type": "date",
+        "required": false,
+        "description": "Date de démarrage prévue du projet"
+      },
+      {
+        "mondayColumnId": "date1",
+        "saxiumField": "dateLivraisonPrevue",
+        "type": "date",
+        "required": false,
+        "description": "Date de livraison prévue"
+      },
+      {
+        "mondayColumnId": "date6",
+        "saxiumField": "dateOS",
+        "type": "date",
+        "required": false,
+        "description": "Date d'ordre de service"
+      },
+      {
+        "mondayColumnId": "text__1",
+        "saxiumField": "bureauEtudes",
+        "type": "text",
+        "required": false,
+        "description": "Bureau d'études associé au projet"
+      },
+      {
+        "mondayColumnId": "text5",
+        "saxiumField": "bureauControle",
+        "type": "text",
+        "required": false,
+        "description": "Bureau de contrôle associé au projet"
+      },
+      {
+        "mondayColumnId": "text3",
+        "saxiumField": "sps",
+        "type": "text",
+        "required": false,
+        "description": "Service Prévention Sécurité (SPS)"
+      },
+      {
+        "mondayColumnId": "numeric5",
+        "saxiumField": "prorataEventuel",
+        "type": "numbers",
+        "required": false,
+        "description": "Pourcentage de prorata éventuel"
+      },
+      {
+        "mondayColumnId": "text6",
+        "saxiumField": "projectSize",
+        "type": "text",
+        "required": false,
+        "description": "Taille du projet (ex: 60 lgts, 85 lgts)"
+      },
+      {
+        "mondayColumnId": "text8",
+        "saxiumField": "specificLocation",
+        "type": "text",
+        "required": false,
+        "description": "Localisation spécifique (quartier, secteur)"
+      },
+      {
+        "mondayColumnId": "text4",
+        "saxiumField": "estimatedDelay",
+        "type": "text",
+        "required": false,
+        "description": "Délai estimé (format Monday: ->01/10/25)"
+      },
+      {
+        "mondayColumnId": "long_text",
+        "saxiumField": "cctp",
+        "type": "text",
+        "required": false,
+        "description": "Cahier des Clauses Techniques Particulières (CCTP)"
+      },
+      {
+        "mondayColumnId": "dup__of_client",
+        "saxiumField": "clientName",
+        "type": "text",
+        "required": false,
+        "description": "Nom alternatif du client (si différent)"
       }
     ],
     "contacts": [
@@ -140,6 +239,34 @@
         "type": "text",
         "required": false,
         "description": "Maître d'œuvre (MOE) - à linker via MasterEntityExtractor"
+      },
+      {
+        "mondayColumnId": "person",
+        "saxiumField": "contactAO",
+        "type": "people",
+        "required": false,
+        "description": "Contact principal pour cet AO → contactAONom"
+      },
+      {
+        "mondayColumnId": "tel_phone",
+        "saxiumField": "contactAOTelephone",
+        "type": "phone",
+        "required": false,
+        "description": "Téléphone du contact AO"
+      },
+      {
+        "mondayColumnId": "email",
+        "saxiumField": "contactAOEmail",
+        "type": "email",
+        "required": false,
+        "description": "Email du contact AO"
+      },
+      {
+        "mondayColumnId": "text1",
+        "saxiumField": "contactAOPoste",
+        "type": "text",
+        "required": false,
+        "description": "Poste du contact AO"
       }
     ],
     "lots": [

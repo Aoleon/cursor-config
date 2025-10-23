@@ -9,6 +9,12 @@ import type {
   InsertMaitreOeuvre,
   InsertContactMaitreOeuvre
 } from "@shared/schema";
+import { logger } from './utils/logger';
+import type { NeonTransaction } from 'drizzle-orm/neon-serverless';
+import type { ExtractTablesWithRelations } from 'drizzle-orm';
+import type * as schema from '@shared/schema';
+
+type DrizzleTransaction = NeonTransaction<typeof schema, ExtractTablesWithRelations<typeof schema>>;
 
 /**
  * Données extraites d'un contact par l'OCR enrichi
@@ -64,8 +70,9 @@ export class ContactService {
   /**
    * Recherche un maître d'ouvrage existant par similarité
    */
-  private async findSimilarMaitreOuvrage(extractedData: ExtractedContactData): Promise<{ contact: MaitreOuvrage; confidence: number; reason: string } | null> {
-    const candidates = await db.select().from(maitresOuvrage)
+  private async findSimilarMaitreOuvrage(extractedData: ExtractedContactData, tx?: DrizzleTransaction): Promise<{ contact: MaitreOuvrage; confidence: number; reason: string } | null> {
+    const dbInstance = tx || db;
+    const candidates = await dbInstance.select().from(maitresOuvrage)
       .where(eq(maitresOuvrage.isActive, true));
     
     let bestMatch: { contact: MaitreOuvrage; confidence: number; reason: string } | null = null;
@@ -88,8 +95,9 @@ export class ContactService {
   /**
    * Recherche un maître d'œuvre existant par similarité
    */
-  private async findSimilarMaitreOeuvre(extractedData: ExtractedContactData): Promise<{ contact: MaitreOeuvre; confidence: number; reason: string } | null> {
-    const candidates = await db.select().from(maitresOeuvre)
+  private async findSimilarMaitreOeuvre(extractedData: ExtractedContactData, tx?: DrizzleTransaction): Promise<{ contact: MaitreOeuvre; confidence: number; reason: string } | null> {
+    const dbInstance = tx || db;
+    const candidates = await dbInstance.select().from(maitresOeuvre)
       .where(eq(maitresOeuvre.isActive, true));
     
     let bestMatch: { contact: MaitreOeuvre; confidence: number; reason: string } | null = null;
@@ -225,7 +233,8 @@ export class ContactService {
   /**
    * Crée un nouveau maître d'ouvrage
    */
-  private async createMaitreOuvrage(extractedData: ExtractedContactData): Promise<MaitreOuvrage> {
+  private async createMaitreOuvrage(extractedData: ExtractedContactData, tx?: DrizzleTransaction): Promise<MaitreOuvrage> {
+    const dbInstance = tx || db;
     const maitreOuvrageData: InsertMaitreOuvrage = {
       nom: extractedData.nom,
       typeOrganisation: extractedData.typeOrganisation || null,
@@ -244,18 +253,28 @@ export class ContactService {
       notes: `Créé automatiquement par OCR - Source: ${extractedData.source}`,
     };
     
-    const [newMaitreOuvrage] = await db.insert(maitresOuvrage)
+    const [newMaitreOuvrage] = await dbInstance.insert(maitresOuvrage)
       .values(maitreOuvrageData)
       .returning();
     
-    console.log(`[ContactService] Nouveau maître d'ouvrage créé: ${newMaitreOuvrage.nom} (ID: ${newMaitreOuvrage.id})`);
+    logger.info('Nouveau maître d\'ouvrage créé', {
+      service: 'ContactService',
+      metadata: {
+        operation: 'createMaitreOuvrage',
+        nom: newMaitreOuvrage.nom,
+        id: newMaitreOuvrage.id,
+        siret: newMaitreOuvrage.siret
+      }
+    });
+    
     return newMaitreOuvrage;
   }
   
   /**
    * Crée un nouveau maître d'œuvre
    */
-  private async createMaitreOeuvre(extractedData: ExtractedContactData): Promise<MaitreOeuvre> {
+  private async createMaitreOeuvre(extractedData: ExtractedContactData, tx?: DrizzleTransaction): Promise<MaitreOeuvre> {
+    const dbInstance = tx || db;
     const maitreOeuvreData: InsertMaitreOeuvre = {
       nom: extractedData.nom,
       typeOrganisation: extractedData.typeOrganisation || null,
@@ -271,25 +290,46 @@ export class ContactService {
       notes: `Créé automatiquement par OCR - Source: ${extractedData.source}`,
     };
     
-    const [newMaitreOeuvre] = await db.insert(maitresOeuvre)
+    const [newMaitreOeuvre] = await dbInstance.insert(maitresOeuvre)
       .values(maitreOeuvreData)
       .returning();
     
-    console.log(`[ContactService] Nouveau maître d'œuvre créé: ${newMaitreOeuvre.nom} (ID: ${newMaitreOeuvre.id})`);
+    logger.info('Nouveau maître d\'œuvre créé', {
+      service: 'ContactService',
+      metadata: {
+        operation: 'createMaitreOeuvre',
+        nom: newMaitreOeuvre.nom,
+        id: newMaitreOeuvre.id,
+        siret: newMaitreOeuvre.siret,
+        specialites: newMaitreOeuvre.specialites
+      }
+    });
+    
     return newMaitreOeuvre;
   }
   
   /**
    * Recherche ou crée un contact selon les données extraites
    */
-  async findOrCreateContact(extractedData: ExtractedContactData): Promise<ContactLinkResult> {
+  async findOrCreateContact(extractedData: ExtractedContactData, tx?: DrizzleTransaction): Promise<ContactLinkResult> {
     try {
       if (extractedData.role === 'maitre_ouvrage') {
         // Rechercher un maître d'ouvrage existant
-        const existingMatch = await this.findSimilarMaitreOuvrage(extractedData);
+        const existingMatch = await this.findSimilarMaitreOuvrage(extractedData, tx);
         
         if (existingMatch) {
-          console.log(`[ContactService] Maître d'ouvrage trouvé: ${existingMatch.contact.nom} (confiance: ${Math.round(existingMatch.confidence * 100)}%)`);
+          logger.info('Maître d\'ouvrage trouvé', {
+            service: 'ContactService',
+            metadata: {
+              operation: 'findOrCreateContact',
+              role: 'maitre_ouvrage',
+              nom: existingMatch.contact.nom,
+              id: existingMatch.contact.id,
+              confidence: Math.round(existingMatch.confidence * 100),
+              reason: existingMatch.reason
+            }
+          });
+          
           return {
             found: true,
             created: false,
@@ -300,7 +340,7 @@ export class ContactService {
         }
         
         // Créer un nouveau maître d'ouvrage
-        const newContact = await this.createMaitreOuvrage(extractedData);
+        const newContact = await this.createMaitreOuvrage(extractedData, tx);
         return {
           found: false,
           created: true,
@@ -311,10 +351,21 @@ export class ContactService {
         
       } else if (extractedData.role === 'maitre_oeuvre') {
         // Rechercher un maître d'œuvre existant
-        const existingMatch = await this.findSimilarMaitreOeuvre(extractedData);
+        const existingMatch = await this.findSimilarMaitreOeuvre(extractedData, tx);
         
         if (existingMatch) {
-          console.log(`[ContactService] Maître d'œuvre trouvé: ${existingMatch.contact.nom} (confiance: ${Math.round(existingMatch.confidence * 100)}%)`);
+          logger.info('Maître d\'œuvre trouvé', {
+            service: 'ContactService',
+            metadata: {
+              operation: 'findOrCreateContact',
+              role: 'maitre_oeuvre',
+              nom: existingMatch.contact.nom,
+              id: existingMatch.contact.id,
+              confidence: Math.round(existingMatch.confidence * 100),
+              reason: existingMatch.reason
+            }
+          });
+          
           return {
             found: true,
             created: false,
@@ -325,7 +376,7 @@ export class ContactService {
         }
         
         // Créer un nouveau maître d'œuvre
-        const newContact = await this.createMaitreOeuvre(extractedData);
+        const newContact = await this.createMaitreOeuvre(extractedData, tx);
         return {
           found: false,
           created: true,
@@ -338,7 +389,14 @@ export class ContactService {
       throw new Error(`Type de contact non supporté: ${extractedData.role}`);
       
     } catch (error) {
-      console.error('[ContactService] Erreur lors de la recherche/création de contact:', error);
+      logger.error('Erreur lors de la recherche/création de contact', error as Error, {
+        service: 'ContactService',
+        metadata: {
+          operation: 'findOrCreateContact',
+          role: extractedData.role,
+          nom: extractedData.nom
+        }
+      });
       throw error;
     }
   }
@@ -346,15 +404,22 @@ export class ContactService {
   /**
    * Traite une liste de contacts extraits et retourne les résultats de liaison
    */
-  async processExtractedContacts(contactsData: ExtractedContactData[]): Promise<ContactLinkResult[]> {
+  async processExtractedContacts(contactsData: ExtractedContactData[], tx?: DrizzleTransaction): Promise<ContactLinkResult[]> {
     const results: ContactLinkResult[] = [];
     
     for (const contactData of contactsData) {
       try {
-        const result = await this.findOrCreateContact(contactData);
+        const result = await this.findOrCreateContact(contactData, tx);
         results.push(result);
       } catch (error) {
-        console.error(`[ContactService] Erreur lors du traitement du contact ${contactData.nom}:`, error);
+        logger.error('Erreur lors du traitement du contact', error as Error, {
+          service: 'ContactService',
+          metadata: {
+            operation: 'processExtractedContacts',
+            nom: contactData.nom,
+            role: contactData.role
+          }
+        });
         // Continuer avec les autres contacts même en cas d'erreur
       }
     }

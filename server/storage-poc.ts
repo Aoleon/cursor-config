@@ -70,8 +70,19 @@ import {
 import { db } from "./db"; // Utilise la config existante avec pool optimisé
 import type { EventBus } from "./eventBus";
 import { logger } from "./utils/logger";
-import { withTransaction, withSavepoint } from "./utils/database-helpers";
+import { withTransaction, withSavepoint, type TransactionOptions } from "./utils/database-helpers";
 import { safeQuery, safeInsert, safeUpdate, safeDelete } from "./utils/safe-query";
+import type { NeonTransaction } from 'drizzle-orm/neon-serverless';
+import type { ExtractTablesWithRelations } from 'drizzle-orm';
+import type * as schema from '@shared/schema';
+import { contactService } from './contactService';
+import type { ExtractedContactData, ContactLinkResult } from './contactService';
+
+// ========================================
+// TYPES POUR TRANSACTIONS
+// ========================================
+
+export type DrizzleTransaction = NeonTransaction<typeof schema, ExtractTablesWithRelations<typeof schema>>;
 
 // ========================================
 // TYPES POUR KPIs CONSOLIDÉS ET ANALYTICS
@@ -130,10 +141,10 @@ export interface IStorage {
   // AO operations - Base pour éviter double saisie
   getAos(): Promise<Ao[]>;
   getAOsPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ aos: Array<Ao>, total: number }>;
-  getAo(id: string): Promise<Ao | undefined>;
-  createAo(ao: InsertAo): Promise<Ao>;
+  getAo(id: string, tx?: DrizzleTransaction): Promise<Ao | undefined>;
+  createAo(ao: InsertAo, tx?: DrizzleTransaction): Promise<Ao>;
   updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao>;
-  deleteAo(id: string): Promise<void>;
+  deleteAo(id: string, tx?: DrizzleTransaction): Promise<void>;
   
   // Offer operations - Cœur du POC
   getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]>;
@@ -213,8 +224,8 @@ export interface IStorage {
   deleteDpgfDocument(id: string): Promise<void>;
   
   // AO Lots operations - Gestion des lots d'AO
-  getAoLots(aoId: string): Promise<AoLot[]>;
-  createAoLot(lot: InsertAoLot): Promise<AoLot>;
+  getAoLots(aoId: string, tx?: DrizzleTransaction): Promise<AoLot[]>;
+  createAoLot(lot: InsertAoLot, tx?: DrizzleTransaction): Promise<AoLot>;
   updateAoLot(id: string, lot: Partial<InsertAoLot>): Promise<AoLot>;
   deleteAoLot(id: string): Promise<void>;
   
@@ -231,6 +242,17 @@ export interface IStorage {
   createMaitreOeuvre(maitreOeuvre: InsertMaitreOeuvre): Promise<MaitreOeuvre>;
   updateMaitreOeuvre(id: string, maitreOeuvre: Partial<InsertMaitreOeuvre>): Promise<MaitreOeuvre>;
   deleteMaitreOeuvre(id: string): Promise<void>;
+  
+  // Contact deduplication methods
+  findOrCreateMaitreOuvrage(
+    data: ExtractedContactData,
+    tx?: DrizzleTransaction
+  ): Promise<ContactLinkResult>;
+  
+  findOrCreateMaitreOeuvre(
+    data: ExtractedContactData,
+    tx?: DrizzleTransaction
+  ): Promise<ContactLinkResult>;
   
   // Contacts maître d'œuvre operations
   getContactsMaitreOeuvre(maitreOeuvreId: string): Promise<ContactMaitreOeuvre[]>;
@@ -318,8 +340,8 @@ export interface IStorage {
   deleteTempsPose(id: string): Promise<void>;
   
   // AO-Contacts liaison operations
-  getAoContacts(aoId: string): Promise<AoContacts[]>;
-  createAoContact(contact: InsertAoContacts): Promise<AoContacts>;
+  getAoContacts(aoId: string, tx?: DrizzleTransaction): Promise<AoContacts[]>;
+  createAoContact(contact: InsertAoContacts, tx?: DrizzleTransaction): Promise<AoContacts>;
   deleteAoContact(id: string): Promise<void>;
   
   // Project-Contacts liaison operations
@@ -794,6 +816,16 @@ export interface IStorage {
     onTimeCount: number;
     onTimeRate: number;
   }>>;
+
+  /**
+   * Transaction wrapper
+   * Expose withTransaction helper via IStorage for services to use transactions
+   * without importing database-helpers directly
+   */
+  transaction<T>(
+    callback: (tx: DrizzleTransaction) => Promise<T>,
+    options?: TransactionOptions
+  ): Promise<T>;
 }
 
 // ========================================
@@ -945,15 +977,17 @@ export class DatabaseStorage implements IStorage {
     return { aos: aosResult, total };
   }
 
-  async getAo(id: string): Promise<Ao | undefined> {
-    const [ao] = await db.select().from(aos).where(eq(aos.id, id));
+  async getAo(id: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
+    const dbInstance = tx || db;
+    const [ao] = await dbInstance.select().from(aos).where(eq(aos.id, id));
     return ao;
   }
 
-  async createAo(ao: InsertAo): Promise<Ao> {
+  async createAo(ao: InsertAo, tx?: DrizzleTransaction): Promise<Ao> {
+    const dbInstance = tx || db;
     return safeInsert('aos', async () => {
       try {
-        const [newAo] = await db.insert(aos).values(ao).returning();
+        const [newAo] = await dbInstance.insert(aos).values(ao).returning();
         return newAo;
       } catch (error: any) {
         // Gestion spécifique des erreurs de contrainte d'unicité PostgreSQL
@@ -989,8 +1023,9 @@ export class DatabaseStorage implements IStorage {
     return updatedAo;
   }
 
-  async deleteAo(id: string): Promise<void> {
-    await db.delete(aos).where(eq(aos.id, id));
+  async deleteAo(id: string, tx?: DrizzleTransaction): Promise<void> {
+    const dbInstance = tx || db;
+    await dbInstance.delete(aos).where(eq(aos.id, id));
   }
 
   // Offer operations (cœur du POC)
@@ -2207,14 +2242,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // AO Lots operations - Gestion des lots d'AO
-  async getAoLots(aoId: string): Promise<AoLot[]> {
-    return await db.select().from(aoLots)
+  async getAoLots(aoId: string, tx?: DrizzleTransaction): Promise<AoLot[]> {
+    const dbInstance = tx || db;
+    return await dbInstance.select().from(aoLots)
       .where(eq(aoLots.aoId, aoId))
       .orderBy(aoLots.numero);
   }
 
-  async createAoLot(lot: InsertAoLot): Promise<AoLot> {
-    const [newLot] = await db.insert(aoLots).values(lot).returning();
+  async createAoLot(lot: InsertAoLot, tx?: DrizzleTransaction): Promise<AoLot> {
+    const dbInstance = tx || db;
+    const [newLot] = await dbInstance.insert(aoLots).values(lot).returning();
     return newLot;
   }
 
@@ -2311,6 +2348,27 @@ export class DatabaseStorage implements IStorage {
     await db.update(maitresOeuvre)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(maitresOeuvre.id, id));
+  }
+
+  // Contact deduplication methods
+  async findOrCreateMaitreOuvrage(
+    data: ExtractedContactData,
+    tx?: DrizzleTransaction
+  ): Promise<ContactLinkResult> {
+    return contactService.findOrCreateContact(
+      { ...data, role: 'maitre_ouvrage' },
+      tx
+    );
+  }
+
+  async findOrCreateMaitreOeuvre(
+    data: ExtractedContactData,
+    tx?: DrizzleTransaction
+  ): Promise<ContactLinkResult> {
+    return contactService.findOrCreateContact(
+      { ...data, role: 'maitre_oeuvre' },
+      tx
+    );
   }
 
   // Contacts maître d'œuvre operations
@@ -4412,6 +4470,13 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  async transaction<T>(
+    callback: (tx: DrizzleTransaction) => Promise<T>,
+    options?: TransactionOptions
+  ): Promise<T> {
+    return withTransaction(callback, options);
+  }
 }
 
 // ========================================
@@ -4463,11 +4528,11 @@ export class MemStorage implements IStorage {
     return { aos: [], total: 0 };
   }
 
-  async getAo(id: string): Promise<Ao | undefined> {
+  async getAo(id: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
     return undefined;
   }
 
-  async createAo(ao: InsertAo): Promise<Ao> {
+  async createAo(ao: InsertAo, tx?: DrizzleTransaction): Promise<Ao> {
     throw new Error("MemStorage: createAo not implemented for POC");
   }
 
@@ -4475,7 +4540,7 @@ export class MemStorage implements IStorage {
     throw new Error("MemStorage: updateAo not implemented for POC");
   }
 
-  async deleteAo(id: string): Promise<void> {
+  async deleteAo(id: string, tx?: DrizzleTransaction): Promise<void> {
     throw new Error("MemStorage: deleteAo not implemented for POC");
   }
 
@@ -4720,11 +4785,11 @@ export class MemStorage implements IStorage {
     throw new Error("MemStorage: deleteDpgfDocument not implemented for POC");
   }
 
-  async getAoLots(aoId: string): Promise<AoLot[]> {
+  async getAoLots(aoId: string, tx?: DrizzleTransaction): Promise<AoLot[]> {
     return [];
   }
 
-  async createAoLot(lot: InsertAoLot): Promise<AoLot> {
+  async createAoLot(lot: InsertAoLot, tx?: DrizzleTransaction): Promise<AoLot> {
     throw new Error("MemStorage: createAoLot not implemented for POC");
   }
 
@@ -4774,6 +4839,96 @@ export class MemStorage implements IStorage {
 
   async deleteMaitreOeuvre(id: string): Promise<void> {
     throw new Error("MemStorage: deleteMaitreOeuvre not implemented for POC");
+  }
+
+  // Contact deduplication methods
+  async findOrCreateMaitreOuvrage(
+    data: ExtractedContactData,
+    tx?: DrizzleTransaction
+  ): Promise<ContactLinkResult> {
+    logger.info('MemStorage findOrCreateMaitreOuvrage stub', {
+      service: 'MemStorage',
+      metadata: { nom: data.nom }
+    });
+    
+    // Stub simple pour POC - toujours créer
+    const mockEntity: MaitreOuvrage = {
+      id: `mo_${Date.now()}`,
+      nom: data.nom,
+      typeOrganisation: data.typeOrganisation || null,
+      adresse: data.adresse || null,
+      codePostal: data.codePostal || null,
+      ville: data.ville || null,
+      departement: data.departement as any || null,
+      telephone: data.telephone || null,
+      email: data.email || null,
+      siteWeb: data.siteWeb || null,
+      siret: data.siret || null,
+      contactPrincipalNom: data.contactPrincipalNom || null,
+      contactPrincipalPoste: data.contactPrincipalPoste || null,
+      contactPrincipalTelephone: data.contactPrincipalTelephone || null,
+      contactPrincipalEmail: data.contactPrincipalEmail || null,
+      notes: 'MemStorage stub',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      mondayItemId: null,
+      totalProjets: 0,
+      budgetTotal: null,
+      budgetMoyen: null,
+      dernierProjet: null
+    };
+    
+    return {
+      found: false,
+      created: true,
+      contact: mockEntity,
+      confidence: 1.0,
+      reason: 'MemStorage stub - always creates'
+    };
+  }
+
+  async findOrCreateMaitreOeuvre(
+    data: ExtractedContactData,
+    tx?: DrizzleTransaction
+  ): Promise<ContactLinkResult> {
+    logger.info('MemStorage findOrCreateMaitreOeuvre stub', {
+      service: 'MemStorage',
+      metadata: { nom: data.nom }
+    });
+    
+    // Stub similaire pour maître d'œuvre
+    const mockEntity: MaitreOeuvre = {
+      id: `moe_${Date.now()}`,
+      nom: data.nom,
+      typeOrganisation: data.typeOrganisation || null,
+      adresse: data.adresse || null,
+      codePostal: data.codePostal || null,
+      ville: data.ville || null,
+      departement: data.departement as any || null,
+      telephone: data.telephone || null,
+      email: data.email || null,
+      siteWeb: data.siteWeb || null,
+      siret: data.siret || null,
+      specialites: data.specialites || null,
+      notes: 'MemStorage stub',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      mondayItemId: null,
+      totalProjets: 0,
+      budgetTotal: null,
+      budgetMoyen: null,
+      dernierProjet: null
+    };
+    
+    return {
+      found: false,
+      created: true,
+      contact: mockEntity,
+      confidence: 1.0,
+      reason: 'MemStorage stub - always creates'
+    };
   }
 
   async getContactsMaitreOeuvre(maitreOeuvreId: string): Promise<ContactMaitreOeuvre[]> {
@@ -5756,9 +5911,10 @@ export class MemStorage implements IStorage {
   }
 
   // AO-Contacts liaison operations
-  async getAoContacts(aoId: string): Promise<AoContacts[]> {
+  async getAoContacts(aoId: string, tx?: DrizzleTransaction): Promise<AoContacts[]> {
     try {
-      const results = await this.db
+      const dbInstance = tx || this.db;
+      const results = await dbInstance
         .select()
         .from(aoContacts)
         .where(eq(aoContacts.ao_id, aoId));
@@ -5778,9 +5934,10 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async createAoContact(contact: InsertAoContacts): Promise<AoContacts> {
+  async createAoContact(contact: InsertAoContacts, tx?: DrizzleTransaction): Promise<AoContacts> {
     try {
-      const [result] = await this.db
+      const dbInstance = tx || this.db;
+      const [result] = await dbInstance
         .insert(aoContacts)
         .values({
           ...contact,
@@ -8414,6 +8571,17 @@ export class MemStorage implements IStorage {
       logger.error('Error in getTeamPerformanceStats', { metadata: { error } });
       throw error;
     }
+  }
+
+  async transaction<T>(
+    callback: (tx: DrizzleTransaction) => Promise<T>,
+    options?: TransactionOptions
+  ): Promise<T> {
+    logger.warn('MemStorage ne supporte pas les transactions réelles - exécution directe', {
+      service: 'MemStorage',
+      metadata: { operation: 'transaction' }
+    });
+    return callback(db as DrizzleTransaction);
   }
 
 }

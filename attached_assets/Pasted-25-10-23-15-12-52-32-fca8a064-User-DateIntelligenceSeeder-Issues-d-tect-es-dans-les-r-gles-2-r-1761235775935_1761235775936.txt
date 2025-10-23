@@ -1,0 +1,80 @@
+25-10-23 15:12:52.32
+fca8a064
+User
+[DateIntelligenceSeeder] Issues détectées dans les règles: [ '2 règles avec durée base invalide (≤ 0)' ]
+2025-10-23 15:42:52.36
+fca8a064
+User
+[PeriodicScheduler] Erreur évaluation périodique seuils: TypeError: this.dateAlertDetectionService.evaluateBusinessThresholds is not a function
+2025-10-23 15:42:52.36
+fca8a064
+User
+at Timeout._onTimeout (file:///home/runner/workspace/dist/index.js:15273:50)
+2025-10-23 15:42:52.36
+fca8a064
+User
+at listOnTimeout (node:internal/timers:581:17)
+2025-10-23 15:42:52.36
+fca8a064
+User
+at process.processTimers (node:internal/timers:519:7)
+2025-10-23 16:14:34.15
+fca8a064
+User
+[DateIntelligenceSeeder] Issues détectées dans les règles: [ '2 règles avec durée base invalide (≤ 0)' ]
+2025-10-23 16:35:40.63
+fca8a064
+User
+[DateIntelligenceSeeder] Issues détectées dans les règles: [ '2 règles avec durée base invalide (≤ 0)' ]
+2025-10-23 16:35:48.94
+fca8a064
+User
+[AlertNotification] Erreur notification alerte alert_1761230143846_2jw87nfjq: ReferenceError: EventType is not defined
+2025-10-23 16:35:48.94
+fca8a064
+User
+at EventBus.publishSystemAlert (file:///home/runner/workspace/dist/index.js:9187:17)
+2025-10-23 16:35:48.94
+fca8a064
+User
+at DateAlertDetectionService.notifyNewAlert (file:///home/runner/workspace/dist/index.js:14254:27)
+2025-10-23 16:35:48.94
+fca8a064
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-10-23 16:35:48.94
+fca8a064
+User
+at async DateAlertDetectionService.runPeriodicDetection (file:///home/runner/workspace/dist/index.js:13772:13)
+2025-10-23 16:35:48.94
+fca8a064
+User
+at async PeriodicDetectionScheduler.runImmediateDetection (file:///home/runner/workspace/dist/index.js:15573:34)
+2025-10-23 16:35:48.94
+fca8a064
+User
+at async PeriodicDetectionScheduler.start (file:///home/runner/workspace/dist/index.js:15035:9)
+2025-10-23 17:06:09.48
+fca8a064
+User
+[DateIntelligenceSeeder] Issues détectées dans les règles: [ '2 règles avec durée base invalide (≤ 0)' ]
+2025-10-23 17:36:09.69
+fca8a064
+User
+[PeriodicScheduler] Erreur évaluation périodique seuils: TypeError: this.dateAlertDetectionService.evaluateBusinessThresholds is not a function
+2025-10-23 17:36:09.69
+fca8a064
+User
+at Timeout._onTimeout (file:///home/runner/workspace/dist/index.js:15273:50)
+2025-10-23 17:36:09.69
+fca8a064
+User
+at listOnTimeout (node:internal/timers:581:17)
+2025-10-23 17:36:09.69
+fca8a064
+User
+at process.processTimers (node:internal/timers:519:7)
+2025-10-23 17:58:24.72
+fca8a064
+User
+[DateIntelligenceSeeder] Issues détectées dans les règles: [ '2

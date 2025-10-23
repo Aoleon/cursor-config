@@ -447,8 +447,7 @@ export class MondayDataSplitter {
       // Erreur - transaction automatiquement rollbackée par storage.transaction()
       logger.error('Erreur lors de l\'éclatement Monday', {
         service: 'MondayDataSplitter',
-        error: error.message,
-        metadata: { mondayItemId, boardId }
+        metadata: { mondayItemId, boardId, error: error.message }
       });
 
       result.success = false;

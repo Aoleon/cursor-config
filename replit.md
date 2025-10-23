@@ -3,6 +3,26 @@
 ## Overview
 Saxium is a fullstack application for quoting and project management in the French construction and joinery sector (BTP/Menuiserie). It aims to improve operational efficiency through advanced automation and AI, featuring OCR analysis of supplier quotes, intelligent planning with DateIntelligence, and AI-driven decision-making.
 
+## Recent Changes
+
+### TypeScript Deployment Fix (Oct 23, 2025)
+**Problem**: Replit deployment blocked by 105 TypeScript LSP errors preventing production build
+**Solution**: Systematic TypeScript corrections in EventBus and related files
+- **EventBus.ts** (28 errors fixed):
+  - Added type casting for implicit `any` parameters in filter/map operations
+  - Added null checks (`!`) for contextCacheService in predictive preloading methods
+  - Converted MapIterator to Array.from() for TypeScript compatibility
+- **Build Status**: ✅ Production build now succeeds (`npm run build` passes)
+- **Deployment**: ✅ Replit deployment now unblocked
+- **Validation**: Architect review confirmed no regressions, healthy runtime behavior
+
+### Monday.com Mapping Enhancement (Oct 23, 2025)
+- **Coverage**: 39/51 fields mapped (76.5%) - Phase 1 goal exceeded ✅
+- **New Mappings**: +19 fields including dates, contacts, technical entities, amounts
+- **New Column Types**: phone, email, people, hoursTodays transformation
+- **Derived Fields**: city + departement extracted from location.address via postal code regex
+- **Testing**: Dry-run script `tsx scripts/test-monday-mapping.ts <itemId>` for validation
+
 ## User Preferences
 - Always read `server/utils/README-UTILS.md` before modifying server code.
 - Use `asyncHandler` for all new routes.

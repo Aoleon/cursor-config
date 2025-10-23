@@ -1,0 +1,241 @@
+{
+  "boardId": "3946257560",
+  "boardName": "AO Planning 🖥️",
+  "description": "Board principal de gestion des AOs (Commerce Devis) - 828 items, 41 colonnes",
+  "mappings": {
+    "base": [
+      {
+        "mondayColumnId": "name",
+        "saxiumField": "intituleOperation",
+        "type": "text",
+        "required": true,
+        "description": "Nom du projet / intitulé opération"
+      },
+      {
+        "mondayColumnId": "text7",
+        "saxiumField": "client",
+        "type": "text",
+        "required": false,
+        "description": "Maître d'ouvrage (MOA) mappé vers client"
+      },
+      {
+        "mondayColumnId": "location",
+        "saxiumField": "location",
+        "type": "location",
+        "required": false,
+        "description": "Localisation (lat, lng, address, city, country)"
+      },
+      {
+        "mondayColumnId": "color1",
+        "saxiumField": "typeMarche",
+        "type": "status",
+        "required": false,
+        "description": "Type Marché (Privé, Public, Particulier, EG)",
+        "enumMapping": {
+          "Privé": "prive",
+          "Public": "public",
+          "Particulier": "prive",
+          "EG": "prive"
+        }
+      },
+      {
+        "mondayColumnId": "priority__1",
+        "saxiumField": "priority",
+        "type": "status",
+        "required": false,
+        "description": "Priorité du projet",
+        "enumMapping": {
+          "Critical ⚠️️": "critique",
+          "High": "elevee",
+          "Medium": "normale",
+          "Low": "faible",
+          "Plus Tard": "tres_faible",
+          "A confirmer": "normale"
+        }
+      },
+      {
+        "mondayColumnId": "lot",
+        "saxiumField": "menuiserieType",
+        "type": "status",
+        "required": true,
+        "description": "Type de lot / menuiserie",
+        "enumMapping": {
+          "Menu Ext": "fenetre",
+          "Menu int": "porte",
+          "Mext/Bardage": "mixte_bois_alu",
+          "Bardage": "autre",
+          "Parquet": "autre",
+          "Charpente / Ossature": "autre",
+          "TCE": "autre",
+          "Etanchéité / Couverture": "autre",
+          "Z Dépannage": "autre",
+          "Garde-Corps": "autre",
+          "Mext/Mint": "fenetre",
+          "CAPSO": "autre"
+        },
+        "defaultValue": "autre"
+      },
+      {
+        "mondayColumnId": "numeric",
+        "saxiumField": "montantEstime",
+        "type": "numbers",
+        "required": false,
+        "description": "CA HT (Chiffre d'affaires HT) mappé vers montant estimé"
+      },
+      {
+        "mondayColumnId": "date24",
+        "saxiumField": "dateLimiteRemise",
+        "type": "date",
+        "required": false,
+        "description": "Date rendu AO (limite de remise)"
+      },
+      {
+        "mondayColumnId": "date",
+        "saxiumField": "dateRenduAO",
+        "type": "date",
+        "required": false,
+        "description": "Date bouclage AO (date de rendu)"
+      },
+      {
+        "mondayColumnId": "text0",
+        "saxiumField": "reference",
+        "type": "text",
+        "required": false,
+        "description": "Code Devis utilisé comme référence unique"
+      },
+      {
+        "mondayColumnId": "texte0",
+        "saxiumField": "description",
+        "type": "text",
+        "required": false,
+        "description": "Code chantier ajouté à la description"
+      },
+      {
+        "mondayColumnId": "label",
+        "saxiumField": "tags",
+        "type": "status",
+        "required": false,
+        "description": "Année Prod (2024, 2025, 2026) ajouté aux tags",
+        "transform": "arrayWrap"
+      },
+      {
+        "mondayColumnId": "numeric3",
+        "saxiumField": "delaiContractuel",
+        "type": "numbers",
+        "required": false,
+        "description": "Nombre heures converti en jours (/ 8)"
+      }
+    ],
+    "contacts": [
+      {
+        "mondayColumnId": "multiple_person",
+        "saxiumField": "contacts",
+        "type": "people",
+        "required": false,
+        "description": "Personnes liées au projet (à extraire via ContactExtractor)"
+      },
+      {
+        "mondayColumnId": "text9",
+        "saxiumField": "maitreOeuvre",
+        "type": "text",
+        "required": false,
+        "description": "Maître d'œuvre (MOE) - à linker via MasterEntityExtractor"
+      }
+    ],
+    "lots": [
+      {
+        "mondayColumnId": "sous__l_ments",
+        "saxiumField": "lots",
+        "type": "subtasks",
+        "required": false,
+        "description": "Sous-éléments du board (à extraire via LotExtractor)"
+      }
+    ],
+    "metadata": [
+      {
+        "mondayColumnId": "statut_16",
+        "saxiumField": "operationalStatus",
+        "type": "status",
+        "required": false,
+        "description": "Statut Devis (En cours, Accepté, Refusé, Perdu, etc.)",
+        "enumMapping": {
+          "En cours": "en_cours",
+          "Accepté": "accepte",
+          "Refusé": "perdu",
+          "Perdu": "perdu",
+          "Abandonné": "archive",
+          "A Modifier": "brouillon",
+          "A Faire": "en_attente",
+          "Fait": "termine",
+          "rendu": "termine",
+          "A Boucler": "en_cours",
+          "Variante": "en_cours",
+          "Validé JL": "valide",
+          "En Attente": "en_attente"
+        }
+      },
+      {
+        "mondayColumnId": "color2",
+        "saxiumField": "isSelected",
+        "type": "status",
+        "required": false,
+        "description": "Passation (En cours, Faite, A Faire) → isSelected si Faite",
+        "transform": "booleanFromStatus",
+        "trueValues": ["Faite"]
+      },
+      {
+        "mondayColumnId": "numeric_mkq86zv3",
+        "saxiumField": "version",
+        "type": "numbers",
+        "required": false,
+        "description": "Numéro de version du devis (metadata)"
+      }
+    ]
+  },
+  "extractors": {
+    "aoBase": {
+      "enabled": true,
+      "priority": 1,
+      "defaultValues": {
+        "source": "other",
+        "menuiserieType": "autre",
+        "status": "etude"
+      }
+    },
+    "lots": {
+      "enabled": true,
+      "priority": 2,
+      "extractFromSubitems": true
+    },
+    "contacts": {
+      "enabled": true,
+      "priority": 3,
+      "extractFromPeople": true
+    },
+    "masters": {
+      "enabled": true,
+      "priority": 4,
+      "extractMaitreOuvrage": true,
+      "extractMaitreOeuvre": true
+    }
+  },
+  "transformations": {
+    "location": {
+      "extractCity": true,
+      "extractDepartement": true,
+      "fallbackToAddress": true
+    },
+    "dates": {
+      "timezone": "Europe/Paris",
+      "parseFormats": ["YYYY-MM-DD", "DD/MM/YYYY"]
+    },
+    "numbers": {
+      "decimalSeparator": ".",
+      "removeSpaces": true
+    }
+  },
+  "validation": {
+    "requiredFields": ["intituleOperation", "menuiserieType", "source"],
+    "markAsDraftIfMissing": ["client", "montantEstime", "dateLimiteRemise"]
+  }
+}

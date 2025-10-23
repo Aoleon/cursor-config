@@ -1,6 +1,11 @@
 import type { MondaySplitterConfig } from './types';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Configuration par défaut pour le board "Modèle MEXT"
 export const MODELE_MEXT_CONFIG: MondaySplitterConfig = {

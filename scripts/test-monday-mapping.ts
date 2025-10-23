@@ -4,14 +4,11 @@
  * Script de test pour valider les nouveaux mappings Monday → Saxium
  * 
  * Usage:
- *   npm run test:monday-mapping <mondayItemId>
+ *   tsx scripts/test-monday-mapping.ts <mondayItemId>
  * 
  * Exemple:
- *   npm run test:monday-mapping 7952357208
+ *   tsx scripts/test-monday-mapping.ts 7952357208
  */
-
-// Charger envConfig en premier pour initialiser les variables d'environnement
-import '../server/utils/envConfig';
 
 async function testMondayMapping(mondayItemId: string) {
   console.log('\n========================================');

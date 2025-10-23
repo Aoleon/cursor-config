@@ -1201,7 +1201,7 @@ export class EventBus extends EventEmitter {
     
     const event = createRealtimeEvent({
       type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
-      entity: params.entity,
+      entity: params.entity as any,
       entityId: params.entityId,
       severity: params.severity === 'critical' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
       title: `${severityIcon[params.severity]} Alerte Détectée`,
@@ -1244,7 +1244,7 @@ export class EventBus extends EventEmitter {
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED,
-      entity: params.entity,
+      entity: params.entity as any,
       entityId: params.entityId,
       severity: 'info',
       title: '✅ Alerte Accusée Réception',
@@ -1284,7 +1284,7 @@ export class EventBus extends EventEmitter {
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_RESOLVED,
-      entity: params.entity,
+      entity: params.entity as any,
       entityId: params.entityId,
       severity: 'success',
       title: '🎉 Alerte Résolue',
@@ -1322,7 +1322,7 @@ export class EventBus extends EventEmitter {
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.SYSTEM_MAINTENANCE, // Utiliser le type système existant pour escalade
-      entity: params.entity,
+      entity: params.entity as any,
       entityId: params.entityId,
       severity: 'error',
       title: '🚨 ESCALADE CRITIQUE',
@@ -2140,13 +2140,13 @@ export class EventBus extends EventEmitter {
       // 1. GÉNÉRATION PRÉDICTIONS CONTEXT BUSINESS
       const predictions = await this.predictiveEngine.predictNextEntityAccess();
       const businessPredictions = predictions
-        .filter(p => p.confidence >= 65)
+        .filter((p: any) => p.confidence >= 65)
         .slice(0, 8); // Top 8 prédictions business hours
 
       // 2. PRELOADING CONTEXTES PRÉDITS
-      const preloadPromises = businessPredictions.map(async (prediction) => {
+      const preloadPromises = businessPredictions.map(async (prediction: any) => {
         try {
-          const success = await this.contextCacheService.preloadContextByPrediction(
+          const success = await this.contextCacheService!.preloadContextByPrediction(
             prediction.entityType,
             prediction.entityId,
             undefined,
@@ -2228,12 +2228,12 @@ export class EventBus extends EventEmitter {
       
       // 2. PRELOADING ENTITÉS POPULAIRES POUR LUNDI
       const mondayEntities = heatMap.hotEntities
-        .filter(entity => entity.accessCount >= 10)
+        .filter((entity: any) => entity.accessCount >= 10)
         .slice(0, 12); // Top 12 pour préparation semaine
 
-      const warmingPromises = mondayEntities.map(async (entity) => {
+      const warmingPromises = mondayEntities.map(async (entity: any) => {
         try {
-          const success = await this.contextCacheService.preloadContextByPrediction(
+          const success = await this.contextCacheService!.preloadContextByPrediction(
             entity.entityType,
             entity.entityId,
             undefined,
@@ -2310,13 +2310,13 @@ export class EventBus extends EventEmitter {
       // 1. PRÉDICTIONS HAUTE FRÉQUENCE
       const predictions = await this.predictiveEngine.predictNextEntityAccess();
       const highConfidencePredictions = predictions
-        .filter(p => p.confidence >= 80)
+        .filter((p: any) => p.confidence >= 80)
         .slice(0, 5); // Focus sur prédictions très fiables
 
       // 2. PRELOADING PRIORITAIRE
       for (const prediction of highConfidencePredictions) {
         try {
-          await this.contextCacheService.preloadContextByPrediction(
+          await this.contextCacheService!.preloadContextByPrediction(
             prediction.entityType,
             prediction.entityId,
             undefined,
@@ -2446,7 +2446,7 @@ export class EventBus extends EventEmitter {
         // Planifier preloading avec délai
         setTimeout(async () => {
           try {
-            await this.contextCacheService.preloadContextByPrediction(
+            await this.contextCacheService!.preloadContextByPrediction(
               prediction.type,
               `PREDICTED_${event.entityId}_${prediction.type}`,
               undefined,
@@ -2508,7 +2508,7 @@ export class EventBus extends EventEmitter {
       for (const prediction of projectWorkflow) {
         setTimeout(async () => {
           try {
-            await this.contextCacheService.preloadContextByPrediction(
+            await this.contextCacheService!.preloadContextByPrediction(
               prediction.type,
               `PREDICTED_${event.entityId}_${prediction.type}`,
               undefined,
@@ -2568,7 +2568,7 @@ export class EventBus extends EventEmitter {
       for (const prediction of constructionWorkflow) {
         setTimeout(async () => {
           try {
-            await this.contextCacheService.preloadContextByPrediction(
+            await this.contextCacheService!.preloadContextByPrediction(
               prediction.type,
               `PREDICTED_${event.entityId}_${prediction.type}`,
               undefined,
@@ -2631,7 +2631,7 @@ export class EventBus extends EventEmitter {
       // Prédict équipe si tâche terminée (probable accès suivant)
       if (event.newStatus === 'termine') {
         setTimeout(async () => {
-          await this.contextCacheService.preloadContextByPrediction(
+          await this.contextCacheService!.preloadContextByPrediction(
             'team',
             `TEAM_${event.projectId}`,
             undefined,
@@ -2680,7 +2680,7 @@ export class EventBus extends EventEmitter {
       for (const context of dashboardContexts) {
         setTimeout(async () => {
           try {
-            await this.contextCacheService.preloadContextByPrediction(
+            await this.contextCacheService!.preloadContextByPrediction(
               context.type,
               'DASHBOARD_CONTEXT',
               undefined,
@@ -2836,7 +2836,7 @@ export class EventBus extends EventEmitter {
    */
   private cleanupPredictiveIntegration(): void {
     // Arrêter tous les intervals
-    for (const [name, interval] of this.preloadingIntervals.entries()) {
+    for (const [name, interval] of Array.from(this.preloadingIntervals.entries())) {
       clearInterval(interval);
       logger.info('Interval arrêté', {
         metadata: {

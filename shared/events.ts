@@ -6,6 +6,10 @@ import { createInsertSchema } from "drizzle-zod";
 // ========================================
 
 export enum EventType {
+  // AOs (Appels d'Offres)
+  AO_CREATED = 'ao.created',
+  AO_STATUS_CHANGED = 'ao.status_changed',
+  
   // Offres
   OFFER_STATUS_CHANGED = 'offer.status_changed',
   OFFER_SIGNED = 'offer.signed',
@@ -221,7 +225,7 @@ export type EventPayload =
 export const realtimeEventSchema = z.object({
   id: z.string().uuid(),
   type: z.nativeEnum(EventType),
-  entity: z.enum(['offer', 'project', 'task', 'validation', 'supplier', 'system', 'technical', 'date_intelligence', 'business_alert', 'alert_threshold', 'batigest']),
+  entity: z.enum(['ao', 'appel_offres', 'offer', 'project', 'task', 'validation', 'supplier', 'system', 'technical', 'date_intelligence', 'business_alert', 'alert_threshold', 'batigest', 'analytics']),
   entityId: z.string(),
   
   // Relations pour navigation et contexte
@@ -234,7 +238,7 @@ export const realtimeEventSchema = z.object({
   newStatus: z.string().optional(),
   
   // Métadonnées de notification
-  severity: z.enum(['info', 'warning', 'success', 'error']),
+  severity: z.enum(['info', 'warning', 'success', 'error', 'critical']),
   message: z.string(),
   title: z.string().optional(),
   
@@ -261,7 +265,7 @@ export const eventFilterSchema = z.object({
   entityIds: z.array(z.string()).optional(),
   projectIds: z.array(z.string()).optional(),
   offerIds: z.array(z.string()).optional(),
-  severities: z.array(z.enum(['info', 'warning', 'success', 'error'])).optional(),
+  severities: z.array(z.enum(['info', 'warning', 'success', 'error', 'critical'])).optional(),
   userId: z.string().optional(),
 });
 

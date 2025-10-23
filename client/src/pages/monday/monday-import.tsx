@@ -7,17 +7,29 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { 
-  Download, 
+  Search, 
   RefreshCw, 
   CheckCircle2, 
   AlertCircle,
-  ArrowRight,
   Database,
-  ExternalLink
+  FileCheck,
+  Users,
+  MapPin,
+  Building2,
+  Download,
+  ExternalLink,
+  CheckSquare,
+  Square,
+  Loader2,
+  FileText
 } from 'lucide-react';
+import { Link } from 'wouter';
 
 interface MondayBoard {
   id: string;
@@ -26,71 +38,68 @@ interface MondayBoard {
   itemsCount?: number;
 }
 
-interface MondayColumn {
-  id: string;
-  title: string;
-  type: string;
-}
-
-interface ColumnMapping {
-  mondayColumnId: string;
-  saxiumField: string;
-}
-
-interface ImportPreview {
+interface AnalysisResult {
   boardId: string;
   boardName: string;
-  columns: MondayColumn[];
-  suggestedMappings: ColumnMapping[];
-  itemsCount: number;
+  stats: {
+    totalItems: number;
+    totalLots: number;
+    totalContacts: number;
+    totalAddresses: number;
+    totalMaitresOuvrage: number;
+    totalMaitresOeuvre: number;
+  };
+  items: AnalysisItem[];
 }
 
-const ENTITY_TYPES = [
-  { value: 'project', label: 'Projets', icon: '🏗️' },
-  { value: 'ao', label: 'Appels d\'Offres', icon: '📋' },
-  { value: 'supplier', label: 'Fournisseurs', icon: '🏭' }
-];
+interface AnalysisItem {
+  itemId: string;
+  itemName: string;
+  opportunities: {
+    lots: { count: number; details: any[] };
+    contacts: { count: number; details: any[] };
+    addresses: { count: number; details: any[] };
+    masters: {
+      maitresOuvrage: { count: number; details: any[] };
+      maitresOeuvre: { count: number; details: any[] };
+    };
+  };
+  diagnostics: any[];
+}
 
-const FIELD_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  project: [
-    { value: 'name', label: 'Nom du projet' },
-    { value: 'description', label: 'Description' },
-    { value: 'clientName', label: 'Nom client' },
-    { value: 'status', label: 'Statut' },
-    { value: 'startDate', label: 'Date de début' },
-    { value: 'endDate', label: 'Date de fin' },
-    { value: 'budget', label: 'Budget' }
-  ],
-  ao: [
-    { value: 'numero', label: 'Numéro AO' },
-    { value: 'titre', label: 'Titre' },
-    { value: 'client', label: 'Client' },
-    { value: 'dateLimite', label: 'Date limite' },
-    { value: 'statut', label: 'Statut' },
-    { value: 'montantEstime', label: 'Montant estimé' }
-  ],
-  supplier: [
-    { value: 'nom', label: 'Nom fournisseur' },
-    { value: 'email', label: 'Email' },
-    { value: 'telephone', label: 'Téléphone' },
-    { value: 'adresse', label: 'Adresse' },
-    { value: 'specialites', label: 'Spécialités' }
-  ],
-  task: [
-    { value: 'title', label: 'Titre tâche' },
-    { value: 'description', label: 'Description' },
-    { value: 'status', label: 'Statut' },
-    { value: 'dueDate', label: 'Date d\'échéance' },
-    { value: 'assignee', label: 'Assigné à' }
-  ]
-};
+interface ImportResult {
+  aoId: string;
+  aoCreated: boolean;
+  lotsCreated: number;
+  contactsCreated: number;
+  mastersCreated: number;
+}
+
+interface ImportSummaryData {
+  itemId: string;
+  itemName: string;
+  result: ImportResult;
+  error?: string;
+}
 
 export default function MondayImportPage() {
   const { toast } = useToast();
+  
+  // Step 1: Board selection
   const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
-  const [targetEntity, setTargetEntity] = useState<string>('project');
-  const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  
+  // Step 2: Item selection
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  
+  // Step 3: Import progress
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [currentImportingItem, setCurrentImportingItem] = useState<string | null>(null);
+  
+  // Step 4: Import summary
+  const [importSummary, setImportSummary] = useState<ImportSummaryData[]>([]);
+  const [showSummary, setShowSummary] = useState(false);
 
   // Fetch Monday boards
   const { data: boardsData, isLoading: loadingBoards } = useQuery({
@@ -100,71 +109,122 @@ export default function MondayImportPage() {
 
   const boards = (boardsData as any)?.data || [];
 
-  // Fetch preview when board selected
-  const { data: previewData, isLoading: loadingPreview } = useQuery<any>({
-    queryKey: ['/api/monday/boards', selectedBoard, 'preview'],
-    queryFn: async () => {
-      if (!selectedBoard) return null;
-      const response = await fetch(
-        `/api/monday/boards/${selectedBoard}/preview?targetEntity=${targetEntity}`
-      );
-      const data = await response.json();
-      return data.data;
-    },
-    enabled: !!selectedBoard && showPreview
-  });
-
-  // Import mutation
-  const importMutation = useMutation({
-    mutationFn: async (mappingsToUse: ColumnMapping[]) => {
-      if (!selectedBoard) throw new Error('Aucun board sélectionné');
-      
-      const response = await fetch('/api/monday/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          boardId: selectedBoard,
-          targetEntity,
-          columnMappings: mappingsToUse
-        })
+  // Analyze board mutation
+  const analyzeMutation = useMutation({
+    mutationFn: async (boardId: string) => {
+      const response = await fetch(`/api/monday/boards/${boardId}/analyze?limit=0`, {
+        credentials: 'include'
       });
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Import failed');
+        throw new Error(error.error || 'Analyse failed');
       }
       
       return response.json();
     },
-    onSuccess: (data: any) => {
-      const result = data.data || data;
+    onSuccess: (data: AnalysisResult) => {
+      setAnalysisResult(data);
+      setSelectedItems(new Set());
+      setShowSummary(false);
       toast({
-        title: '✅ Import réussi',
-        description: `${result.importedCount} ${targetEntity}(s) importé(s) avec succès`,
+        title: '✅ Analyse terminée',
+        description: `${data.stats.totalItems} opportunités détectées dans le board`,
         variant: 'default'
       });
-      
-      // Invalidate relevant caches
-      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/aos'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/suppliers'] });
-      
-      // Reset
-      setSelectedBoard(null);
-      setShowPreview(false);
-      setColumnMappings([]);
     },
     onError: (error: any) => {
       toast({
-        title: '❌ Erreur d\'import',
-        description: error.message || 'L\'import a échoué',
+        title: '❌ Erreur d\'analyse',
+        description: error.message || 'L\'analyse a échoué',
         variant: 'destructive'
       });
     }
   });
 
-  const handlePreview = () => {
+  // Import single item
+  const importSingleItem = async (boardId: string, itemId: string): Promise<ImportResult> => {
+    const response = await apiRequest('/api/monday/import/split', {
+      method: 'POST',
+      body: JSON.stringify({
+        boardId,
+        mondayItemId: itemId
+      })
+    });
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Import failed');
+    }
+    
+    return response.data;
+  };
+
+  // Handle batch import
+  const handleBatchImport = async () => {
+    if (!analysisResult || selectedItems.size === 0) return;
+    
+    setIsImporting(true);
+    setImportProgress(0);
+    setImportSummary([]);
+    setShowSummary(false);
+    
+    const itemsToImport = analysisResult.items.filter(item => selectedItems.has(item.itemId));
+    const totalItems = itemsToImport.length;
+    const summary: ImportSummaryData[] = [];
+    
+    for (let i = 0; i < itemsToImport.length; i++) {
+      const item = itemsToImport[i];
+      setCurrentImportingItem(item.itemName);
+      
+      try {
+        const result = await importSingleItem(analysisResult.boardId, item.itemId);
+        summary.push({
+          itemId: item.itemId,
+          itemName: item.itemName,
+          result
+        });
+        
+        toast({
+          title: result.aoCreated ? '✅ AO créé' : '🔄 AO réutilisé',
+          description: `${item.itemName} - ${result.lotsCreated} lots, ${result.contactsCreated} contacts`,
+          variant: 'default'
+        });
+      } catch (error: any) {
+        summary.push({
+          itemId: item.itemId,
+          itemName: item.itemName,
+          result: { aoId: '', aoCreated: false, lotsCreated: 0, contactsCreated: 0, mastersCreated: 0 },
+          error: error.message
+        });
+        
+        toast({
+          title: '❌ Erreur d\'import',
+          description: `${item.itemName}: ${error.message}`,
+          variant: 'destructive'
+        });
+      }
+      
+      setImportProgress(Math.round(((i + 1) / totalItems) * 100));
+    }
+    
+    setImportSummary(summary);
+    setShowSummary(true);
+    setIsImporting(false);
+    setCurrentImportingItem(null);
+    
+    // Invalidate AO cache
+    queryClient.invalidateQueries({ queryKey: ['/api/aos'] });
+    
+    const successCount = summary.filter(s => !s.error).length;
+    toast({
+      title: '✅ Import terminé',
+      description: `${successCount}/${totalItems} items importés avec succès`,
+      variant: 'default'
+    });
+  };
+
+  // Handle analyze board
+  const handleAnalyze = () => {
     if (!selectedBoard) {
       toast({
         title: 'Board manquant',
@@ -173,111 +233,100 @@ export default function MondayImportPage() {
       });
       return;
     }
-    setShowPreview(true);
+    analyzeMutation.mutate(selectedBoard);
   };
 
-  const handleImport = () => {
-    // Use current mappings or suggested mappings if none manually set
-    const mappingsToUse = columnMappings.length > 0 
-      ? columnMappings 
-      : (previewData?.suggestedMappings || []);
+  // Toggle item selection
+  const toggleItemSelection = (itemId: string) => {
+    const newSelection = new Set(selectedItems);
+    if (newSelection.has(itemId)) {
+      newSelection.delete(itemId);
+    } else {
+      newSelection.add(itemId);
+    }
+    setSelectedItems(newSelection);
+  };
+
+  // Select all items
+  const toggleSelectAll = () => {
+    if (!analysisResult) return;
     
-    // Pass mappings directly to mutation instead of relying on state
-    importMutation.mutate(mappingsToUse);
-  };
-
-  const updateMapping = (mondayColumnId: string, saxiumField: string) => {
-    setColumnMappings(prev => {
-      const existing = prev.find(m => m.mondayColumnId === mondayColumnId);
-      if (existing) {
-        return prev.map(m => 
-          m.mondayColumnId === mondayColumnId 
-            ? { ...m, saxiumField } 
-            : m
-        );
-      }
-      return [...prev, { mondayColumnId, saxiumField }];
-    });
+    if (selectedItems.size === analysisResult.items.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(analysisResult.items.map(item => item.itemId)));
+    }
   };
 
   const selectedBoardData = boards.find((b: MondayBoard) => b.id === selectedBoard);
+  const allSelected = analysisResult && selectedItems.size === analysisResult.items.length;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-monday-title">Import Monday.com</h1>
+          <h1 className="text-3xl font-bold" data-testid="text-monday-title">
+            Import Monday.com
+          </h1>
           <p className="text-muted-foreground mt-2" data-testid="text-monday-description">
-            Importez vos boards Monday.com vers Saxium
+            Analysez et importez vos boards Monday.com vers Saxium avec le nouveau système de split
           </p>
         </div>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/monday/boards'] })}
+          onClick={() => {
+            queryClient.invalidateQueries({ queryKey: ['/api/monday/boards'] });
+            setAnalysisResult(null);
+            setSelectedItems(new Set());
+            setShowSummary(false);
+          }}
           data-testid="button-refresh-boards"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
-          Actualiser
+          Réinitialiser
         </Button>
       </div>
 
-      {/* Step 1: Select Board and Entity Type */}
+      {/* Step 1: Select Board and Analyze */}
       <Card data-testid="card-select-board">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="w-5 h-5" />
-            1. Sélection du Board
+            1. Sélection et Analyse du Board
           </CardTitle>
           <CardDescription>
-            Choisissez le board Monday.com et le type d'entité cible
+            Choisissez un board Monday.com et analysez les opportunités d'import
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="board-select">Board Monday.com</Label>
-              <Select
-                value={selectedBoard || ''}
-                onValueChange={setSelectedBoard}
-                disabled={loadingBoards}
-              >
-                <SelectTrigger id="board-select" data-testid="select-monday-board">
-                  <SelectValue placeholder="Sélectionner un board..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {boards.map((board: MondayBoard) => (
-                    <SelectItem key={board.id} value={board.id} data-testid={`select-option-board-${board.id}`}>
-                      {board.name}
-                      {board.itemsCount && (
-                        <span className="text-muted-foreground ml-2">
-                          ({board.itemsCount} items)
-                        </span>
-                      )}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="entity-select">Type d'entité Saxium</Label>
-              <Select
-                value={targetEntity}
-                onValueChange={setTargetEntity}
-              >
-                <SelectTrigger id="entity-select" data-testid="select-entity-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ENTITY_TYPES.map(type => (
-                    <SelectItem key={type.value} value={type.value} data-testid={`select-option-entity-${type.value}`}>
-                      {type.icon} {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="board-select">Board Monday.com</Label>
+            <Select
+              value={selectedBoard || ''}
+              onValueChange={setSelectedBoard}
+              disabled={loadingBoards || isImporting}
+            >
+              <SelectTrigger id="board-select" data-testid="select-monday-board">
+                <SelectValue placeholder="Sélectionner un board..." />
+              </SelectTrigger>
+              <SelectContent>
+                {boards.map((board: MondayBoard) => (
+                  <SelectItem 
+                    key={board.id} 
+                    value={board.id} 
+                    data-testid={`select-option-board-${board.id}`}
+                  >
+                    {board.name}
+                    {board.itemsCount && (
+                      <span className="text-muted-foreground ml-2">
+                        ({board.itemsCount} items)
+                      </span>
+                    )}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {selectedBoardData && (
@@ -293,133 +342,363 @@ export default function MondayImportPage() {
           )}
 
           <Button
-            onClick={handlePreview}
-            disabled={!selectedBoard || loadingPreview}
+            onClick={handleAnalyze}
+            disabled={!selectedBoard || analyzeMutation.isPending || isImporting}
             className="w-full"
-            data-testid="button-preview-import"
+            data-testid="button-analyze-board"
           >
-            {loadingPreview ? (
+            {analyzeMutation.isPending ? (
               <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Chargement du preview...
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Analyse en cours...
               </>
             ) : (
               <>
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Prévisualiser l'import
+                <Search className="w-4 h-4 mr-2" />
+                Analyser le Board
               </>
             )}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Step 2: Column Mapping Preview */}
-      {showPreview && previewData && (
-        <Card data-testid="preview-section">
+      {/* Analysis Loading Skeleton */}
+      {analyzeMutation.isPending && (
+        <Card data-testid="card-analysis-loading">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ArrowRight className="w-5 h-5" />
-              2. Mapping des Colonnes
-            </CardTitle>
-            <CardDescription>
-              Associez les colonnes Monday.com aux champs Saxium ({previewData.itemsCount} items à importer)
-            </CardDescription>
+            <Skeleton className="h-6 w-[250px]" />
+            <Skeleton className="h-4 w-[350px]" />
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {previewData.columns?.map((column: MondayColumn) => {
-                const suggested = previewData.suggestedMappings?.find(
-                  (m: ColumnMapping) => m.mondayColumnId === column.id
-                );
-                const currentMapping = columnMappings.find(m => m.mondayColumnId === column.id);
-                
-                return (
-                  <div 
-                    key={column.id} 
-                    className="flex items-center gap-4 p-3 border rounded-lg"
-                    data-testid={`mapping-row-${column.id}`}
-                  >
-                    <div className="flex-1">
-                      <div className="font-medium" data-testid={`text-monday-column-${column.id}`}>
-                        {column.title}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Type: {column.type}
-                      </div>
-                    </div>
-                    
-                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                    
-                    <Select
-                      value={currentMapping?.saxiumField || suggested?.saxiumField || ''}
-                      onValueChange={(value) => updateMapping(column.id, value)}
-                    >
-                      <SelectTrigger className="w-[250px]" data-testid={`select-mapping-${column.id}`}>
-                        <SelectValue placeholder="Choisir un champ..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FIELD_OPTIONS[targetEntity]?.map(field => (
-                          <SelectItem 
-                            key={field.value} 
-                            value={field.value}
-                            data-testid={`select-option-field-${field.value}`}
-                          >
-                            {field.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {suggested && (
-                      <Badge variant="secondary" data-testid={`badge-suggested-${column.id}`}>
-                        Suggéré
-                      </Badge>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {columnMappings.length === 0 && previewData.suggestedMappings?.length > 0 && (
-              <Alert className="mt-4" data-testid="alert-auto-mapping">
-                <CheckCircle2 className="h-4 w-4" />
-                <AlertDescription>
-                  Les mappings suggérés seront appliqués automatiquement lors de l'import
-                </AlertDescription>
-              </Alert>
-            )}
+          <CardContent className="space-y-3">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
           </CardContent>
         </Card>
       )}
 
-      {/* Step 3: Import Action */}
-      {showPreview && previewData && (
-        <Card data-testid="card-import-action">
+      {/* Step 2: Opportunities Table */}
+      {analysisResult && !showSummary && (
+        <Card data-testid="card-opportunities">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Download className="w-5 h-5" />
-              3. Lancer l'Import
+              <FileCheck className="w-5 h-5" />
+              2. Opportunités Détectées
             </CardTitle>
+            <CardDescription>
+              {analysisResult.stats.totalItems} items analysés - 
+              {' '}{analysisResult.stats.totalLots} lots, 
+              {' '}{analysisResult.stats.totalContacts} contacts, 
+              {' '}{analysisResult.stats.totalMaitresOuvrage + analysisResult.stats.totalMaitresOeuvre} maîtres
+            </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="rounded-md border" data-testid="table-opportunities">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={toggleSelectAll}
+                        data-testid="checkbox-select-all"
+                      />
+                    </TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <FileText className="w-4 h-4" />
+                        Lots
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Users className="w-4 h-4" />
+                        Contacts
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        Adresses
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Building2 className="w-4 h-4" />
+                        Maîtres
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {analysisResult.items.map((item) => {
+                    const isSelected = selectedItems.has(item.itemId);
+                    const totalMasters = 
+                      item.opportunities.masters.maitresOuvrage.count + 
+                      item.opportunities.masters.maitresOeuvre.count;
+                    
+                    return (
+                      <TableRow 
+                        key={item.itemId} 
+                        data-testid={`row-item-${item.itemId}`}
+                        className={isSelected ? 'bg-muted/50' : ''}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleItemSelection(item.itemId)}
+                            data-testid={`checkbox-item-${item.itemId}`}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <span data-testid={`text-item-name-${item.itemId}`}>
+                              {item.itemName}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              ID: {item.itemId}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant={item.opportunities.lots.count > 0 ? 'default' : 'outline'}
+                            data-testid={`badge-lots-${item.itemId}`}
+                          >
+                            {item.opportunities.lots.count}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant={item.opportunities.contacts.count > 0 ? 'default' : 'outline'}
+                            data-testid={`badge-contacts-${item.itemId}`}
+                          >
+                            {item.opportunities.contacts.count}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant={item.opportunities.addresses.count > 0 ? 'default' : 'outline'}
+                            data-testid={`badge-addresses-${item.itemId}`}
+                          >
+                            {item.opportunities.addresses.count}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant={totalMasters > 0 ? 'default' : 'outline'}
+                            data-testid={`badge-masters-${item.itemId}`}
+                          >
+                            {totalMasters}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground" data-testid="text-selection-count">
+                {selectedItems.size} item(s) sélectionné(s)
+              </div>
+              <Button
+                onClick={handleBatchImport}
+                disabled={selectedItems.size === 0 || isImporting}
+                size="lg"
+                data-testid="button-import-selected"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Importer la sélection ({selectedItems.size})
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 3: Import Progress */}
+      {isImporting && (
+        <Card data-testid="card-import-progress">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              3. Import en cours...
+            </CardTitle>
+            <CardDescription>
+              Importation des items sélectionnés vers Saxium
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span data-testid="text-current-item">
+                  Import en cours : <strong>{currentImportingItem}</strong>
+                </span>
+                <span data-testid="text-progress-percentage">
+                  {importProgress}%
+                </span>
+              </div>
+              <Progress value={importProgress} data-testid="progress-import" />
+            </div>
+
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Veuillez patienter pendant l'import. Ne fermez pas cette page.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 4: Import Summary */}
+      {showSummary && importSummary.length > 0 && (
+        <Card data-testid="card-import-summary">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              4. Résumé de l'Import
+            </CardTitle>
+            <CardDescription>
+              Résultats détaillés de l'importation
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 border rounded-lg" data-testid="stat-total-imported">
+                <div className="text-2xl font-bold">
+                  {importSummary.filter(s => !s.error).length}
+                </div>
+                <div className="text-sm text-muted-foreground">Items importés</div>
+              </div>
+              <div className="p-4 border rounded-lg" data-testid="stat-ao-created">
+                <div className="text-2xl font-bold">
+                  {importSummary.filter(s => s.result.aoCreated).length}
+                </div>
+                <div className="text-sm text-muted-foreground">AOs créés</div>
+              </div>
+              <div className="p-4 border rounded-lg" data-testid="stat-total-lots">
+                <div className="text-2xl font-bold">
+                  {importSummary.reduce((sum, s) => sum + s.result.lotsCreated, 0)}
+                </div>
+                <div className="text-sm text-muted-foreground">Lots créés</div>
+              </div>
+              <div className="p-4 border rounded-lg" data-testid="stat-total-contacts">
+                <div className="text-2xl font-bold">
+                  {importSummary.reduce((sum, s) => sum + s.result.contactsCreated, 0)}
+                </div>
+                <div className="text-sm text-muted-foreground">Contacts créés</div>
+              </div>
+            </div>
+
+            <div className="rounded-md border" data-testid="table-import-results">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>AO</TableHead>
+                    <TableHead className="text-center">Lots</TableHead>
+                    <TableHead className="text-center">Contacts</TableHead>
+                    <TableHead className="text-center">Maîtres</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {importSummary.map((summary) => (
+                    <TableRow 
+                      key={summary.itemId}
+                      data-testid={`summary-row-${summary.itemId}`}
+                    >
+                      <TableCell className="font-medium">
+                        {summary.itemName}
+                      </TableCell>
+                      <TableCell>
+                        {summary.error ? (
+                          <Badge variant="destructive" data-testid={`badge-error-${summary.itemId}`}>
+                            Erreur
+                          </Badge>
+                        ) : summary.result.aoCreated ? (
+                          <Badge variant="default" data-testid={`badge-created-${summary.itemId}`}>
+                            Créé
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" data-testid={`badge-reused-${summary.itemId}`}>
+                            Réutilisé
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {summary.error ? (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        ) : (
+                          <span className="text-sm font-mono">
+                            {summary.result.aoId.slice(0, 8)}...
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {summary.result.lotsCreated}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {summary.result.contactsCreated}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {summary.result.mastersCreated}
+                      </TableCell>
+                      <TableCell>
+                        {!summary.error && summary.result.aoId && (
+                          <Link href={`/ao/${summary.result.aoId}`}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              data-testid={`button-view-ao-${summary.itemId}`}
+                            >
+                              <ExternalLink className="w-4 h-4 mr-1" />
+                              Voir l'AO
+                            </Button>
+                          </Link>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {importSummary.some(s => s.error) && (
+              <Alert variant="destructive" data-testid="alert-import-errors">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Erreurs détectées :</strong>
+                  <ul className="mt-2 list-disc list-inside">
+                    {importSummary
+                      .filter(s => s.error)
+                      .map(s => (
+                        <li key={s.itemId}>
+                          {s.itemName}: {s.error}
+                        </li>
+                      ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Button
-              onClick={handleImport}
-              disabled={importMutation.isPending}
+              onClick={() => {
+                setShowSummary(false);
+                setAnalysisResult(null);
+                setSelectedItems(new Set());
+                setImportSummary([]);
+              }}
+              variant="outline"
               className="w-full"
-              size="lg"
-              data-testid="button-start-import"
+              data-testid="button-new-import"
             >
-              {importMutation.isPending ? (
-                <>
-                  <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                  Import en cours...
-                </>
-              ) : (
-                <>
-                  <Download className="w-5 h-5 mr-2" />
-                  Importer {previewData.itemsCount} items depuis Monday.com
-                </>
-              )}
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Nouvel Import
             </Button>
           </CardContent>
         </Card>

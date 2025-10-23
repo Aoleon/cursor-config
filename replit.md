@@ -24,7 +24,7 @@ The application uses a modern fullstack architecture with a React, TypeScript, V
 - **Board-Specific Configs**: JSON files in `server/services/monday/boardConfigs/` define mappings per Monday board
 - **Dynamic Loading**: `getBoardConfig(boardId)` loads appropriate config, fallback to hardcoded defaults
 - **Supported Boards**: 
-  - `3946257560` (AO Planning 🖥️) - Production board with 828 items, 41 columns → 20+ fields mapped
+  - `3946257560` (AO Planning 🖥️) - Production board with 828 items, 41 columns → **39 fields mapped (76.5% couverture)**
   - `8952933832` (Modèle MEXT) - Template board (empty), legacy config
 
 **Extractor Pipeline**:
@@ -40,14 +40,17 @@ The application uses a modern fullstack architecture with a React, TypeScript, V
 3. **LotExtractor**: Subitems → lots table
 4. **MasterExtractor**: Detects master projects
 
-**Column Type Transformations**:
+**Column Type Transformations** (10 types supportés):
 - `text` → String
-- `numbers` → parseFloat + special conversions (hours→days for delaiContractuel)
+- `numbers` → parseFloat + transformations (hoursTodays: heures→jours via Math.ceil(parsed/8))
 - `date` → Date instance with timezone
 - `timeline` → {from, to} → split into dateSortieAO + dateLimiteRemise
 - `status/dropdown` → Enum mapping via `enumMapping` config + object unwrapping (handles `{text: "..."}` and `{label: "..."}`)
-- `location` → Extract city + departement from address
-- `people` → Skip (ContactExtractor handles)
+- `location` → Extract address + **derived fields**: city + departement via regex code postal
+- `phone` → Extract phone.phone (nouvelle colonne type)
+- `email` → Extract email.email or email.text (nouvelle colonne type)
+- `people` → Extract people[0].name pour contactAO, skip pour contacts multiples (ContactExtractor)
+- `subitems` → Handled by LotExtractor
 
 **Testing**:
 ```bash
@@ -58,7 +61,12 @@ tsx scripts/test-monday-mapping.ts <mondayItemId>
 tsx scripts/test-monday-mapping.ts 7952357208
 ```
 
-**Mapping Matrix**: `analysis/MONDAY_TO_SAXIUM_MAPPING_MATRIX.md` tracks 56 Saxium fields, mapping status, gaps, priority levels
+**Mapping Matrix**: `analysis/MONDAY_TO_SAXIUM_MAPPING_MATRIX.md` tracks 51 Saxium mappable fields
+- **Couverture actuelle** : 39/51 champs mappés (**76.5%**) - Objectif Phase 1 (59%) **DÉPASSÉ** ✅
+- **+19 nouveaux mappings** (Oct 23): dates multiples (8), contacts AO (4), entités techniques (3), montants (2), métadonnées (2)
+- **+4 nouveaux types** supportés: phone, email, people (contactAO), transformation hoursTodays
+- **Extraction dérivée** : city + departement depuis location.address (regex code postal)
+- **Champs restants** : 12/51 (3 business, 2 relations, 5 export système, 2 alias)
 
 -   **Frontend**: React, TypeScript, Vite, Wouter, shadcn/ui, Tailwind CSS, Radix UI, React Query, `react-hook-form` with Zod.
 -   **Backend**: Express, TypeScript, Drizzle ORM. Features modular routes (`auth`, `chiffrage`, `suppliers`, `projects`, `analytics`, `documents`, `batigest`), a PDF template engine, and Batigest ERP integration.

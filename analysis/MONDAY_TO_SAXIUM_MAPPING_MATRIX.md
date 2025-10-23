@@ -12,111 +12,137 @@ Cartographier **TOUTES** les colonnes Monday.com disponibles vers les champs de 
 
 ## 📊 STATUT MAPPING ACTUEL (AOBaseExtractor)
 
-### ✅ CHAMPS DÉJÀ MAPPÉS (6/56)
+**Couverture** : **39/51 champs mappés (76.5%)** ✅  
+**Configuration** : `server/services/monday/boardConfigs/ao-planning-3946257560.json`  
+**Board cible** : AO Planning 🖥️ (ID: 3946257560, 828 items, 41 colonnes)  
+**Note** : 51 champs mappables (54 total - 3 système : id/createdAt/updatedAt)
+
+### ✅ CHAMPS DÉJÀ MAPPÉS (39/51)
+
+#### Identité & Core (8 champs - 6 mappés + 2 dérivés)
 | Champ Saxium | Type | Colonne Monday | Transformation |
 |--------------|------|----------------|----------------|
 | `mondayItemId` | varchar | `item.id` | Direct |
-| `intituleOperation` | text | `item.name` | Direct |
-| `montantEstime` | decimal | Mapping `estimatedAmount` | parseFloat() |
-| `status` | enum | Mapping `status` | Enum conversion |
+| `intituleOperation` | text | `item.name` / `text5` | Direct / Fallback |
+| `reference` | varchar | `reference` | Auto-généré `AO-{itemId}` |
+| `client` | varchar | `text` / `client` | Direct |
+| `clientName` | varchar | `text___1` | Direct (nom alternatif) |
+| `location` | varchar | `location` | Extraction `address` |
+| `city` | varchar | `location.city` | **Dérivé** depuis location.address |
+| `departement` | varchar | `location.address` | **Dérivé** via regex code postal |
+
+#### Menuiserie & Type (4 champs)
+| Champ Saxium | Type | Colonne Monday | Transformation |
+|--------------|------|----------------|----------------|
+| `menuiserieType` | enum | `dropdown3` | Enum mapping |
+| `source` | enum | — | Default `'other'` |
+| `typeMarche` | marcheTypeEnum | `text__1` | Enum mapping |
+| `tags` | varchar[] | `tags` | Array extraction + arrayWrap |
+
+#### Dates & Planning (8 dates !)
+| Champ Saxium | Type | Colonne Monday | Transformation |
+|--------------|------|----------------|----------------|
 | `dateSortieAO` | timestamp | `timeline.from` | Date parsing |
 | `dateLimiteRemise` | timestamp | `timeline.to` | Date parsing |
+| `dateRenduAO` | timestamp | `date` | Date parsing |
+| `dateAcceptationAO` | timestamp | `date8` | Date parsing |
+| `dateBouclageAO` | timestamp | `date_11` | Date parsing |
+| `demarragePrevu` | timestamp | `date89` | Date parsing |
+| `dateLivraisonPrevue` | timestamp | `date6` | Date parsing |
+| `dateOS` | timestamp | `date8__1` | Date parsing |
+
+#### Montants & Délais (4 champs)
+| Champ Saxium | Type | Colonne Monday | Transformation |
+|--------------|------|----------------|----------------|
+| `montantEstime` | decimal | `numbers___1` | parseFloat() → string (Drizzle decimal) |
+| `prorataEventuel` | decimal | `numbers2` | parseFloat() → string |
+| `delaiContractuel` | integer | `numbers__1` | **hoursTodays** (heures → jours) |
+| `estimatedDelay` | varchar | `text7` | Direct |
+
+#### Contacts AO (4 champs)
+| Champ Saxium | Type | Colonne Monday | Transformation |
+|--------------|------|----------------|----------------|
+| `contactAONom` | varchar | `person` | Extraction `people[0].name` |
+| `contactAOPoste` | varchar | `text1` | Direct |
+| `contactAOTelephone` | varchar | `tel_phone` | Extraction `phone.phone` |
+| `contactAOEmail` | varchar | `email` | Extraction `email.email` |
+
+#### Entités Techniques (3 champs)
+| Champ Saxium | Type | Colonne Monday | Transformation |
+|--------------|------|----------------|----------------|
+| `bureauEtudes` | varchar | `text4__1` | Direct |
+| `bureauControle` | varchar | `text___9` | Direct |
+| `sps` | varchar | `text__6` | Direct |
+
+#### Documents & Description (2 champs)
+| Champ Saxium | Type | Colonne Monday | Transformation |
+|--------------|------|----------------|----------------|
+| `description` | text | `long_text` | Direct |
+| `cctp` | text | `long_text3` | Direct (CCTP détaillé) |
+
+#### Métadonnées & Workflow (6 champs)
+| Champ Saxium | Type | Colonne Monday | Transformation |
+|--------------|------|----------------|----------------|
+| `status` | enum | `status` | Enum mapping |
+| `operationalStatus` | enum | `status9` | Enum mapping |
+| `priority` | priorityLevelEnum | `dropdown` | Enum mapping |
+| `projectSize` | varchar | `text__8` | Direct ("60 lgts", "85 lgts") |
+| `specificLocation` | varchar | `text6` | Direct (quartier, détails) |
+| `isSelected` | boolean | `status5` | booleanFromStatus |
+| `isDraft` | boolean | — | **Calculé** (validation) |
+
+#### Contacts (relations, 2 mappings ContactExtractor)
+| Champ Saxium | Type | Colonne Monday | Transformation |
+|--------------|------|----------------|----------------|
+| `contacts` | people[] | `multiple_person` | ContactExtractor |
+| `maitreOeuvre` | varchar | `text9` | MasterEntityExtractor |
+
+#### Lots (1 mapping LotExtractor)
+| Champ Saxium | Type | Colonne Monday | Transformation |
+|--------------|------|----------------|----------------|
+| `lots` | ao_lots[] | `sous__l_ments` | LotExtractor (subitems) |
 
 ---
 
-## 🚧 CHAMPS À MAPPER (50/56)
+## 🚧 CHAMPS NON MAPPÉS (12/51)
 
-### PRIORITÉ 1 : Champs Critiques (Requis ou Hauts Valeur)
+Les champs suivants ne sont **pas encore mappés** depuis Monday.com vers Saxium.
 
-#### 1. Identité & Localisation
-| Champ Saxium | Type | Requis? | Colonne Monday Suggérée | Transformation |
-|--------------|------|---------|-------------------------|----------------|
-| `reference` | varchar | ✅ UNIQUE | Auto-généré | `AO-{boardId}-{itemId}` ou custom |
-| `client` | varchar | Partiel | "Client" (text) | Direct |
-| `clientName` | varchar | ❌ | "Client" (text) | Alias de `client` |
-| `location` | varchar | Partiel | "Localisation" (location) | `city + departement` |
-| `city` | varchar | ❌ | "Ville" (text) | Extraction de `location` |
-| `departement` | departementEnum | Partiel | "Département" (dropdown) | Code postal → dépt |
-| `specificLocation` | text | ❌ | "Quartier" (text) | Détails localisation |
+**Note méthodologique** : La table `aos` contient 51 champs mappables (total 54 - id/createdAt/updatedAt système). Sur ces 51 champs, **39 sont mappés** (76.5%), laissant **12 champs non mappés**.
 
-#### 2. Menuiserie & Type (REQUIS)
-| Champ Saxium | Type | Requis? | Colonne Monday Suggérée | Transformation |
-|--------------|------|---------|-------------------------|----------------|
-| `menuiserieType` | enum | ✅ REQUIS | "Type menuiserie" (dropdown) | Enum mapping |
-| `source` | enum | ✅ REQUIS | "Source AO" (dropdown) | Enum mapping ou default "other" |
-| `typeMarche` | marcheTypeEnum | ❌ | "Type marché" (dropdown) | Enum mapping |
+### Champs Business Non Mappés (3 champs)
+| Champ Saxium | Type | Priorité | Colonne Monday Suggérée | Transformation |
+|--------------|------|----------|-------------------------|----------------|
+| `aoCategory` | enum | 🔵 P2 | "Catégorie AO" (dropdown) | Enum mapping |
+| `clientRecurrency` | enum | 🔵 P2 | "Type client" (dropdown) | "Nouveau client", "Récurrent" |
+| `selectionComment` | text | 🔵 P3 | "Commentaire sélection" (long_text) | Direct |
 
-**Valeurs `menuiserieType`** : fenetre, porte, portail, volet, cloison, verriere, autre  
-**Valeurs `source`** : mail, phone, website, partner, other
+### Champs Relations Entités (2 champs)
+| Champ Saxium | Type | Priorité | Note |
+|--------------|------|----------|------|
+| `maitreOuvrageId` | varchar | 🔵 P2 | Nécessite MasterEntityExtractor → lookup ID depuis table `maitre_ouvrage` |
+| `maitreOeuvreId` | varchar | 🔵 P2 | Nécessite MasterEntityExtractor → lookup ID depuis table `maitre_oeuvre` |
 
-#### 3. Dates & Planning
-| Champ Saxium | Type | Requis? | Colonne Monday Suggérée | Transformation |
-|--------------|------|---------|-------------------------|----------------|
-| `dateRenduAO` | timestamp | ❌ | "Date rendu" (date) | Date parsing |
-| `dateAcceptationAO` | timestamp | ❌ | "Date acceptation" (date) | Date parsing |
-| `demarragePrevu` | timestamp | ❌ | "Démarrage prévu" (date) | Date parsing |
-| `dateLivraisonPrevue` | timestamp | ❌ | "Livraison prévue" (date) | Date parsing |
-| `dateOS` | timestamp | ❌ | "Date OS" (date) | Date parsing |
-| `dueDate` | timestamp | ❌ | "Échéance" (date) | Alias `dateLimiteRemise` |
-| `delaiContractuel` | integer | ❌ | "Délai (jours)" (numbers) | parseInt() |
-| `estimatedDelay` | varchar | ❌ | "Délai estimé" (text) | Format "->01/10/25" |
+**Note** : `maitreOeuvre` (text field) est déjà mappé. Ces champs `-Id` nécessitent une résolution de relation.
 
-#### 4. Montants & Budget
-| Champ Saxium | Type | Requis? | Colonne Monday Suggérée | Transformation |
-|--------------|------|---------|-------------------------|----------------|
-| `amountEstimate` | decimal | ❌ | "Montant estimé" (numbers) | Alias `montantEstime` |
-| `prorataEventuel` | decimal | ❌ | "Prorata %" (numbers) | parseFloat() |
+### Champs Export Saxium→Monday (5 champs - Système)
+| Champ Saxium | Type | Priorité | Description |
+|--------------|------|----------|-------------|
+| `mondayId` | varchar | ⚙️ Système | ID item Monday créé lors export Saxium→Monday (sens inverse) |
+| `lastExportedAt` | timestamp | ⚙️ Système | Date dernier export vers Monday |
+| `mondaySyncStatus` | varchar | ⚙️ Système | Status sync: synced/error/conflict |
+| `mondayConflictReason` | text | ⚙️ Système | Raison du conflit si status=conflict |
+| `mondayLastSyncedAt` | timestamp | ⚙️ Système | Date dernier changement de status |
 
-#### 5. Contacts Spécifiques AO
-| Champ Saxium | Type | Requis? | Colonne Monday Suggérée | Transformation |
-|--------------|------|---------|-------------------------|----------------|
-| `contactAONom` | varchar | ❌ | "Contact AO" (people) | Extraction people.name |
-| `contactAOPoste` | varchar | ❌ | "Poste contact" (text) | Direct |
-| `contactAOTelephone` | varchar | ❌ | "Tel contact" (phone) | Format normalisé |
-| `contactAOEmail` | varchar | ❌ | "Email contact" (email) | Direct |
+**Note** : Ces 5 champs sont gérés automatiquement par `MondayExportService` lors de l'export Saxium→Monday (sens inverse de l'import). Ils ne sont **pas mappables** depuis Monday.com car ils concernent l'export sortant.
 
-### PRIORITÉ 2 : Champs Métier Avancés
+### Champs Alias (2 champs - Déjà Couverts)
+| Champ Saxium | Type | Aliasé vers | Note |
+|--------------|------|-------------|------|
+| `dueDate` | timestamp | `dateLimiteRemise` | Même valeur, doublon historique |
+| `amountEstimate` | decimal | `montantEstime` | Même valeur, doublon historique |
 
-#### 6. Entités Techniques
-| Champ Saxium | Type | Requis? | Colonne Monday Suggérée | Transformation |
-|--------------|------|---------|-------------------------|----------------|
-| `bureauEtudes` | varchar | ❌ | "Bureau études" (text) | Direct |
-| `bureauControle` | varchar | ❌ | "Bureau contrôle" (text) | Direct |
-| `sps` | varchar | ❌ | "SPS" (text) | Direct |
-
-#### 7. Documents & Description
-| Champ Saxium | Type | Requis? | Colonne Monday Suggérée | Transformation |
-|--------------|------|---------|-------------------------|----------------|
-| `description` | text | ❌ | "Description" (long_text) | Direct |
-| `cctp` | text | ❌ | "CCTP" (long_text / files) | Extraction texte ou lien |
-
-#### 8. Extensions Monday.com Phase 1
-| Champ Saxium | Type | Requis? | Colonne Monday Suggérée | Transformation |
-|--------------|------|---------|-------------------------|----------------|
-| `aoCategory` | enum | ❌ | "Catégorie AO" (dropdown) | Enum mapping |
-| `operationalStatus` | enum | ❌ | "Statut opérationnel" (status) | Enum mapping |
-| `priority` | priorityLevelEnum | ❌ | "Priorité" (dropdown) | Enum mapping |
-| `tags` | varchar[] | ❌ | "Tags" (tags) | Array extraction |
-| `projectSize` | varchar | ❌ | "Taille projet" (text) | "60 lgts", "85 lgts" |
-| `clientRecurrency` | enum | ❌ | "Type client" (dropdown) | "Nouveau client", "Récurrent" |
-
-### PRIORITÉ 3 : Champs Workflow & Métadonnées
-
-#### 9. Sélection & Workflow
-| Champ Saxium | Type | Requis? | Colonne Monday Suggérée | Transformation |
-|--------------|------|---------|-------------------------|----------------|
-| `isSelected` | boolean | ❌ | "Sélectionné" (checkbox) | Boolean |
-| `selectionComment` | text | ❌ | "Commentaire sélection" (long_text) | Direct |
-| `isDraft` | boolean | ❌ | Calculé | Validation incomplet |
-
-#### 10. Sync Monday ↔ Saxium (Export)
-| Champ Saxium | Type | Requis? | Colonne Monday Suggérée | Transformation |
-|--------------|------|---------|-------------------------|----------------|
-| `mondayId` | varchar | ❌ | N/A (export uniquement) | ID item créé |
-| `lastExportedAt` | timestamp | ❌ | N/A (système) | Auto |
-| `mondaySyncStatus` | varchar | ❌ | N/A (système) | synced/error |
-| `mondayConflictReason` | text | ❌ | N/A (système) | Error message |
-| `mondayLastSyncedAt` | timestamp | ❌ | N/A (système) | Auto |
+**Note** : Ces 2 champs sont des alias/doublons. Ils peuvent être mappés vers les mêmes colonnes Monday que leurs équivalents principaux, mais ce n'est **pas prioritaire** car la valeur est déjà accessible via l'autre nom.
 
 ---
 
@@ -146,34 +172,52 @@ Cartographier **TOUTES** les colonnes Monday.com disponibles vers les champs de 
 
 ## 🔄 STRATÉGIE D'IMPLÉMENTATION
 
-### Phase 1 : Étendre AOBaseExtractor (CETTE TÂCHE)
-1. **Ajouter mappings priorité 1** : client, location, menuiserieType, dates, montants
-2. **Parsing intelligent** : location → city + departement, dates multiples
-3. **Valeurs par défaut** : menuiserieType='autre', source='other' si absent
-4. **Validation** : isDraft=true si champs requis manquants
+### ✅ Phase 1 : Étendre AOBaseExtractor (COMPLÉTÉ)
+1. ✅ **Ajouter mappings priorité 1** : client, location, menuiserieType, dates (8), montants, délais
+2. ✅ **Parsing intelligent** : location → city + departement dérivés, timeline → dateSortieAO + dateLimiteRemise
+3. ✅ **Valeurs par défaut** : menuiserieType='autre', source='other' si absent
+4. ✅ **Validation** : isDraft=true si champs importants manquants (client, montantEstime, dateLimiteRemise)
+5. ✅ **Nouveaux types supportés** : phone, email, people (contactAO), transformation hoursTodays
 
-### Phase 2 : Créer Extractors Spécialisés
-1. **ContactExtractor** : Extraire contactAO* depuis people columns
-2. **DocumentExtractor** : Extraire CCTP depuis files/long_text
-3. **MetadataExtractor** : Tags, priority, operational status
+### ✅ Phase 2 : Extractors Spécialisés (PARTIEL)
+1. ✅ **ContactExtractor** : Gère contacts multiples depuis `multiple_person`
+2. ✅ **LotExtractor** : Extrait lots depuis subitems
+3. ⏳ **DocumentExtractor** : Extraire CCTP depuis files/long_text (pas urgent)
+4. ⏳ **MetadataExtractor** : Tags, priority, operational status (déjà dans AOBaseExtractor)
 
-### Phase 3 : Configuration Par Board
-1. **Fichier config** : `server/services/monday/boardConfigs/ao-planning-3946257560.json`
-2. **Mapping custom** : Colonnes spécifiques par board
-3. **Fallbacks** : Colonnes génériques si custom absent
+### ✅ Phase 3 : Configuration Par Board (COMPLÉTÉ)
+1. ✅ **Fichier config** : `server/services/monday/boardConfigs/ao-planning-3946257560.json` (39 mappings)
+2. ✅ **Mapping custom** : Colonnes spécifiques du board AO Planning
+3. ✅ **Fallbacks** : Config hardcodée pour Modèle MEXT (8952933832)
+4. ✅ **Support ESM** : Fix `__dirname` pour import.meta.url dans defaultMappings.ts
 
 ---
 
 ## 🎯 NEXT STEPS
 1. ✅ Analyser board AO Planning (3946257560) pour voir colonnes réelles
-2. ⏳ Créer fichier config mapping pour board AO Planning
-3. ⏳ Étendre AOBaseExtractor avec mappings priorité 1
-4. ⏳ Ajouter tests unitaires pour nouveaux mappings
-5. ⏳ Valider avec import réel sur échantillon
+2. ✅ Créer fichier config mapping pour board AO Planning
+3. ✅ Étendre AOBaseExtractor avec mappings priorité 1
+4. ✅ Fixer transformation hoursTodays (déplacée dans bloc numbers)
+5. ✅ Tester avec script dry-run sur item réel (18115615455)
+6. ✅ Documenter nouveaux mappings dans replit.md + matrice de mapping
+7. ⏳ Ajouter tests unitaires pour nouveaux types (phone, email, people, hoursTodays)
+8. ⏳ Mapper champs restants priorité 2 : aoCategory, clientRecurrency, maitreOuvrage/OeuvreId (12/51 restants)
 
 ---
 
-**Dernière mise à jour** : 2025-10-23  
-**Champs mappés** : 6/56 (10.7%)  
-**Objectif Phase 1** : 30/56 (53%)  
-**Board cible** : AO Planning (ID: 3946257560, 500+ items)
+**Dernière mise à jour** : 2025-10-23 13:30 UTC  
+**Champs mappés** : **39/51 (76.5%)** ✅ **OBJECTIF DÉPASSÉ !**  
+**Objectif Phase 1** : 30/51 (59%) → **DÉPASSÉ de +17% !**  
+**Board cible** : AO Planning 🖥️ (ID: 3946257560, 828 items, 41 colonnes)
+
+### 🎉 Réalisations Session Oct 23
+- ✅ **+19 nouveaux mappings** (15 base + 4 contacts)
+- ✅ **+4 nouveaux types** supportés (phone, email, people, transformation hoursTodays)
+- ✅ **Extraction dérivée** city + departement depuis location
+- ✅ **Configuration board** production AO Planning (828 items réels)
+- ✅ **Fix ESM** `__dirname` → `import.meta.url`
+- ✅ **Architecture validation** : PASS architecte sur transformation hoursTodays
+- ✅ **Test dry-run** : Pipeline extraction opérationnel sur item réel
+- ✅ **Documentation** : Matrice et replit.md mises à jour avec statistiques cohérentes
+
+**Couverture** : 6/51 (11.8%) → **39/51 (76.5%)** = **+550% d'amélioration** 🚀

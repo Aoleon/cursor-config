@@ -14,6 +14,8 @@ import { verifyMondaySignature } from '../../middleware/monday-webhook';
 import { z } from 'zod';
 import { lotExtractor, contactExtractor, masterEntityExtractor, addressExtractor } from '../../services/monday/extractors';
 import type { SplitterContext, MondaySplitterConfig } from '../../services/monday/types';
+import { MondayDataSplitter } from '../../services/MondayDataSplitter';
+import { storage } from '../../storage-poc';
 
 const router = Router();
 
@@ -284,6 +286,126 @@ router.get('/api/monday/boards/:boardId/analyze',
     });
     
     res.json(response);
+  })
+);
+
+/**
+ * Split Monday item vers entités Saxium (AO + lots + contacts + masters)
+ * POST /api/monday/import/split
+ * Body: { boardId: string, mondayItemId: string, config?: MondaySplitterConfig }
+ */
+router.post('/api/monday/import/split',
+  isAuthenticated,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { boardId, mondayItemId, config } = req.body;
+    
+    // Validation
+    if (!boardId || !mondayItemId) {
+      res.status(400).json({
+        success: false,
+        error: 'boardId et mondayItemId requis'
+      });
+      return;
+    }
+    
+    logger.info('Split Monday item demandé', {
+      service: 'MondayRoutes',
+      metadata: { boardId, mondayItemId }
+    });
+    
+    // Récupérer board data Monday
+    const boardData = await mondayService.getBoardData(boardId);
+    const mondayItem = boardData.items?.find((item: any) => item.id === mondayItemId);
+    
+    if (!mondayItem) {
+      res.status(404).json({
+        success: false,
+        error: `Item Monday ${mondayItemId} introuvable`
+      });
+      return;
+    }
+    
+    // Construire config si non fourni
+    let splitterConfig = config;
+    if (!splitterConfig) {
+      // Build minimal config depuis boardData.columns (comme dans /analyze)
+      const columnMappings = boardData.columns.map(col => ({
+        mondayColumnId: col.id,
+        saxiumField: col.title,
+        type: col.type as any,
+        required: false
+      }));
+      
+      const lotsMappings = columnMappings.filter(m => 
+        m.type === 'subitems' || 
+        m.saxiumField.toLowerCase().includes('lot') ||
+        m.saxiumField.toLowerCase().includes('cctp')
+      );
+      
+      const contactsMappings = columnMappings.filter(m => 
+        m.type === 'people' || 
+        m.saxiumField.toLowerCase().includes('contact')
+      );
+      
+      const mastersMappings = columnMappings.filter(m =>
+        m.saxiumField.toLowerCase().includes('moa') ||
+        m.saxiumField.toLowerCase().includes('moe') ||
+        m.saxiumField.toLowerCase().includes('ouvrage') ||
+        m.saxiumField.toLowerCase().includes('oeuvre')
+      );
+      
+      const addressMappings = columnMappings.filter(m =>
+        m.type === 'location' ||
+        m.saxiumField.toLowerCase().includes('adresse') ||
+        m.saxiumField.toLowerCase().includes('chantier') ||
+        m.saxiumField.toLowerCase().includes('siège') ||
+        m.saxiumField.toLowerCase().includes('siege')
+      );
+      
+      const baseMappings = columnMappings.filter(m => 
+        !lotsMappings.includes(m) &&
+        !contactsMappings.includes(m) &&
+        !mastersMappings.includes(m) &&
+        !addressMappings.includes(m)
+      );
+      
+      splitterConfig = {
+        boardId,
+        boardName: boardData.board.name,
+        targetEntity: 'ao',
+        mappings: {
+          base: baseMappings,
+          lots: lotsMappings,
+          contacts: contactsMappings,
+          masterEntities: mastersMappings,
+          address: addressMappings
+        }
+      };
+    }
+    
+    // Invoquer MondayDataSplitter.splitItem()
+    const splitter = new MondayDataSplitter();
+    const result = await splitter.splitItem(mondayItemId, boardId, storage, splitterConfig);
+    
+    logger.info('Split Monday item terminé', {
+      service: 'MondayRoutes',
+      metadata: {
+        boardId,
+        mondayItemId,
+        result: {
+          success: result.success,
+          aoId: result.aoId,
+          lotsCreated: result.lotsCreated,
+          contactsCreated: result.contactsCreated,
+          mastersCreated: result.mastersCreated
+        }
+      }
+    });
+    
+    res.json({
+      success: true,
+      data: result
+    });
   })
 );
 

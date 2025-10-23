@@ -12,6 +12,8 @@ import { logger } from '../../utils/logger';
 import { getCorrelationId } from '../../middleware/correlation';
 import { verifyMondaySignature } from '../../middleware/monday-webhook';
 import { z } from 'zod';
+import { lotExtractor, contactExtractor, masterEntityExtractor, addressExtractor } from '../../services/monday/extractors';
+import type { SplitterContext, MondaySplitterConfig } from '../../services/monday/types';
 
 const router = Router();
 
@@ -117,6 +119,171 @@ router.get('/api/monday/boards/:boardId/preview',
       success: true,
       data: preview
     });
+  })
+);
+
+/**
+ * Analyse opportunités éclatement pour un board Monday
+ * GET /api/monday/boards/:boardId/analyze
+ * Retourne mapping Monday→Saxium et statistiques détectées
+ */
+router.get('/api/monday/boards/:boardId/analyze',
+  isAuthenticated,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { boardId } = req.params;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    logger.info('Analyse board Monday demandée', {
+      service: 'MondayRoutes',
+      metadata: { boardId, limit }
+    });
+    
+    // Récupérer items du board
+    const boardData = await mondayService.getBoardData(boardId);
+    const items = boardData.items?.slice(0, limit) || [];
+    
+    // Construire mapping colonnes pour le config
+    const columnMappings = boardData.columns.map(col => ({
+      mondayColumnId: col.id,
+      saxiumField: col.title,
+      type: col.type as any,
+      required: false
+    }));
+    
+    // Construire config minimal pour analyse
+    const analysisConfig: MondaySplitterConfig = {
+      boardId,
+      boardName: boardData.board.name,
+      targetEntity: 'ao',
+      mappings: {
+        base: columnMappings.filter(m => 
+          !m.saxiumField.toLowerCase().includes('lot') &&
+          !m.saxiumField.toLowerCase().includes('contact') &&
+          !m.saxiumField.toLowerCase().includes('moa') &&
+          !m.saxiumField.toLowerCase().includes('moe') &&
+          !m.saxiumField.toLowerCase().includes('adresse') &&
+          !m.saxiumField.toLowerCase().includes('chantier') &&
+          !m.saxiumField.toLowerCase().includes('siège') &&
+          !m.saxiumField.toLowerCase().includes('siege') &&
+          m.type !== 'location'
+        ),
+        lots: columnMappings.filter(m => 
+          m.type === 'subitems' || 
+          m.saxiumField.toLowerCase().includes('lot') ||
+          m.saxiumField.toLowerCase().includes('cctp')
+        ),
+        contacts: columnMappings.filter(m => 
+          m.type === 'people' ||
+          m.saxiumField.toLowerCase().includes('contact')
+        ),
+        masterEntities: columnMappings.filter(m =>
+          m.saxiumField.toLowerCase().includes('moa') ||
+          m.saxiumField.toLowerCase().includes('moe') ||
+          m.saxiumField.toLowerCase().includes('ouvrage') ||
+          m.saxiumField.toLowerCase().includes('oeuvre')
+        ),
+        address: columnMappings.filter(m =>
+          m.type === 'location' ||
+          m.saxiumField.toLowerCase().includes('adresse') ||
+          m.saxiumField.toLowerCase().includes('chantier') ||
+          m.saxiumField.toLowerCase().includes('siège') ||
+          m.saxiumField.toLowerCase().includes('siege')
+        )
+      }
+    };
+    
+    // Analyser chaque item sans persister
+    const analysisResults = [];
+    
+    for (const item of items) {
+      const context: SplitterContext = {
+        mondayItem: item,
+        config: analysisConfig,
+        extractedData: {},
+        diagnostics: []
+      };
+      
+      // Extraire opportunités
+      const lots = await lotExtractor.extract(context);
+      const contacts = await contactExtractor.extract(context);
+      const masters = await masterEntityExtractor.extract(context);
+      const addressData = await addressExtractor.extract(context);
+      const addresses = addressData ? [addressData] : [];
+      
+      analysisResults.push({
+        itemId: item.id,
+        itemName: item.name,
+        opportunities: {
+          lots: {
+            count: lots.length,
+            details: lots.map(lot => ({
+              description: lot.description || lot.name || 'Sans description',
+              category: lot.category,
+              montantHT: lot.montantHT,
+              source: lot.source
+            }))
+          },
+          contacts: {
+            count: contacts.length,
+            details: contacts.map(c => ({
+              name: c.name,
+              email: c.email,
+              role: c.role
+            }))
+          },
+          addresses: {
+            count: addresses.length,
+            details: addresses.map(addr => ({
+              address: addr.fullAddress || addr.address || '',
+              city: addr.city || '',
+              postalCode: addr.departmentCode || '',
+              department: addr.department
+            }))
+          },
+          masters: {
+            maitresOuvrage: {
+              count: masters.maitresOuvrage.length,
+              details: masters.maitresOuvrage.map(m => ({
+                nom: m.raisonSociale,
+                siret: m.siret
+              }))
+            },
+            maitresOeuvre: {
+              count: masters.maitresOeuvre.length,
+              details: masters.maitresOeuvre.map(m => ({
+                nom: m.raisonSociale,
+                siret: m.siret
+              }))
+            }
+          }
+        },
+        diagnostics: context.diagnostics
+      });
+    }
+    
+    // Calculer statistiques globales
+    const stats = {
+      totalItems: items.length,
+      totalLots: analysisResults.reduce((sum, r) => sum + r.opportunities.lots.count, 0),
+      totalContacts: analysisResults.reduce((sum, r) => sum + r.opportunities.contacts.count, 0),
+      totalAddresses: analysisResults.reduce((sum, r) => sum + r.opportunities.addresses.count, 0),
+      totalMaitresOuvrage: analysisResults.reduce((sum, r) => sum + r.opportunities.masters.maitresOuvrage.count, 0),
+      totalMaitresOeuvre: analysisResults.reduce((sum, r) => sum + r.opportunities.masters.maitresOeuvre.count, 0)
+    };
+    
+    const response = {
+      boardId,
+      boardName: boardData.board.name,
+      stats,
+      items: analysisResults
+    };
+    
+    logger.info('Analyse board Monday terminée', {
+      service: 'MondayRoutes',
+      metadata: { boardId, stats }
+    });
+    
+    res.json(response);
   })
 );
 

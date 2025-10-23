@@ -1240,6 +1240,8 @@ export const aos = pgTable("aos", {
     // PERFORMANCE OPTIMIZATION - Single column indexes for frequent queries
     mondayIdIdx: index("aos_monday_id_idx").on(table.mondayId),
     createdAtIdx: index("aos_created_at_idx").on(table.createdAt),
+    // UNIQUE CONSTRAINT - Prevent duplicate Monday item imports
+    mondayItemIdUnique: uniqueIndex("aos_monday_item_id_unique").on(table.mondayItemId),
   };
 });
 

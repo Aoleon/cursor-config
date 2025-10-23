@@ -165,6 +165,7 @@ export class MondayDataSplitter {
 
     const result: SplitResult = {
       success: false,
+      aoCreated: false,
       lotsCreated: 0,
       contactsCreated: 0,
       mastersCreated: 0,
@@ -175,7 +176,7 @@ export class MondayDataSplitter {
       // WRAPPER TRANSACTION pour atomicité complète
       // Le rollback est automatique en cas d'erreur
       await storage.transaction(async (tx) => {
-        // ÉTAPE 1 : Extraire et créer l'AO de base
+        // ÉTAPE 1 : Extraire et créer/récupérer l'AO de base
         logger.info('Étape 1: Extraction AO de base', {
           service: 'MondayDataSplitter',
           metadata: { mondayItemId }
@@ -184,26 +185,60 @@ export class MondayDataSplitter {
         const aoData = await this.aoBaseExtractor.extract(context);
         context.extractedData.baseAO = aoData;
 
-        const aoDataWithDefaults = {
-          reference: aoData.reference || `AO-MONDAY-${mondayItemId}`,
-          menuiserieType: aoData.menuiserieType || 'autre' as const,
-          source: aoData.source || 'other' as const,
-          ...aoData,
-        };
+        // Vérifier si un AO avec ce mondayItemId existe déjà
+        const existingAO = await storage.getAOByMondayItemId(mondayItemId, tx);
+        
+        let currentAO: any;
+        
+        if (existingAO) {
+          // AO existe déjà, on le réutilise
+          currentAO = existingAO;
+          result.aoId = existingAO.id;
+          result.aoCreated = false;
+          
+          logger.info('AO existant réutilisé (import déjà effectué)', {
+            service: 'MondayDataSplitter',
+            metadata: { 
+              aoId: existingAO.id, 
+              mondayItemId,
+              reference: existingAO.reference
+            }
+          });
+          
+          context.diagnostics.push({
+            level: 'info',
+            extractor: 'AOBaseExtractor',
+            message: `AO déjà importé (mondayItemId=${mondayItemId}), réutilisation de l'AO existant`,
+            data: { aoId: existingAO.id, reference: existingAO.reference }
+          });
+        } else {
+          // Créer un nouvel AO
+          const aoDataWithDefaults = {
+            reference: aoData.reference || `AO-MONDAY-${mondayItemId}`,
+            menuiserieType: aoData.menuiserieType || 'autre' as const,
+            source: aoData.source || 'other' as const,
+            mondayItemId, // IMPORTANT: Ajouter mondayItemId pour traçabilité
+            ...aoData,
+          };
 
-        // Créer l'AO dans la DB (avec transaction)
-        const createdAO = await storage.createAo(aoDataWithDefaults, tx);
-        result.aoId = createdAO.id;
+          currentAO = await storage.createAo(aoDataWithDefaults, tx);
+          result.aoId = currentAO.id;
+          result.aoCreated = true;
 
-        logger.info('AO créé', {
-          service: 'MondayDataSplitter',
-          metadata: { aoId: createdAO.id, mondayItemId }
-        });
+          logger.info('AO créé', {
+            service: 'MondayDataSplitter',
+            metadata: { 
+              aoId: currentAO.id, 
+              mondayItemId,
+              reference: currentAO.reference
+            }
+          });
+        }
 
         // ÉTAPE 1.5: Extraire et PERSISTER maîtres ouvrage/œuvre avec findOrCreate
         logger.info('Étape 1.5: Extraction maîtres d\'ouvrage/œuvre', {
           service: 'MondayDataSplitter',
-          metadata: { aoId: createdAO.id }
+          metadata: { aoId: currentAO.id }
         });
 
         const masters = await this.masterEntityExtractor.extract(context);
@@ -219,7 +254,7 @@ export class MondayDataSplitter {
             logger.info('Maître d\'ouvrage traité', {
               service: 'MondayDataSplitter',
               metadata: {
-                aoId: createdAO.id,
+                aoId: currentAO.id,
                 nom: linkResult.contact.nom,
                 id: linkResult.contact.id,
                 created: linkResult.created,
@@ -250,7 +285,7 @@ export class MondayDataSplitter {
             logger.info('Maître d\'œuvre traité', {
               service: 'MondayDataSplitter',
               metadata: {
-                aoId: createdAO.id,
+                aoId: currentAO.id,
                 nom: linkResult.contact.nom,
                 id: linkResult.contact.id,
                 created: linkResult.created,
@@ -279,7 +314,7 @@ export class MondayDataSplitter {
         logger.info('Extraction contacts', {
           service: 'MondayDataSplitter',
           metadata: {
-            aoId: createdAO.id,
+            aoId: currentAO.id,
             contactsFound: contacts.length
           }
         });
@@ -295,7 +330,7 @@ export class MondayDataSplitter {
             // Linker à l'AO via aoContacts
             const linkType = contactData.linkType || 'contact_general';
             const link = await storage.linkAoContact({
-              aoId: createdAO.id,
+              aoId: currentAO.id,
               contactId: contactResult.contact.id,
               linkType
             }, tx);
@@ -303,7 +338,7 @@ export class MondayDataSplitter {
             logger.info('Contact traité', {
               service: 'MondayDataSplitter',
               metadata: {
-                aoId: createdAO.id,
+                aoId: currentAO.id,
                 contactId: contactResult.contact.id,
                 firstName: contactResult.contact.firstName,
                 lastName: contactResult.contact.lastName,
@@ -334,7 +369,7 @@ export class MondayDataSplitter {
         logger.info('Contacts traités', {
           service: 'MondayDataSplitter',
           metadata: {
-            aoId: createdAO.id,
+            aoId: currentAO.id,
             totalContacts: contacts.length,
             contactsCreated: result.contactsCreated
           }
@@ -343,7 +378,7 @@ export class MondayDataSplitter {
         // ÉTAPE 3: Extraction lots
         logger.info('Étape 3: Extraction lots', {
           service: 'MondayDataSplitter',
-          metadata: { aoId: createdAO.id }
+          metadata: { aoId: currentAO.id }
         });
 
         const lots = await this.lotExtractor.extract(context);
@@ -353,13 +388,13 @@ export class MondayDataSplitter {
           try {
             const lot = await storage.createAoLot({
               ...lotData,
-              aoId: createdAO.id
+              aoId: currentAO.id
             }, tx);
             result.lotsCreated++;
 
             logger.info('Lot créé', {
               service: 'MondayDataSplitter',
-              metadata: { lotId: lot.id, aoId: createdAO.id }
+              metadata: { lotId: lot.id, aoId: currentAO.id }
             });
           } catch (error: any) {
             context.diagnostics.push({
@@ -374,7 +409,7 @@ export class MondayDataSplitter {
         // ÉTAPE 4: Extraction adresse
         logger.info('Étape 4: Extraction adresse', {
           service: 'MondayDataSplitter',
-          metadata: { aoId: createdAO.id }
+          metadata: { aoId: currentAO.id }
         });
 
         const addressData = await this.addressExtractor.extract(context);
@@ -383,7 +418,7 @@ export class MondayDataSplitter {
         if (addressData) {
           logger.info('Adresse extraite (non persistée pour l\'instant)', {
             service: 'MondayDataSplitter',
-            metadata: { aoId: createdAO.id, addressData }
+            metadata: { aoId: currentAO.id, addressData }
           });
         }
       }, {

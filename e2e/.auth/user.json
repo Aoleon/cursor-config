@@ -2,10 +2,10 @@
   "cookies": [
     {
       "name": "connect.sid",
-      "value": "s%3A60rfJeQg1Cl-mn0il68-OqwfzQZjKP-A.2BCaUveuNEvUJF5CnxlPv63RrSrEz3mAwMVuNI3OGsI",
+      "value": "s%3A5ZmnlgGpe41eD3pVp2xNu5q3rCVWbDOb.00u8SeASWSt2%2Fd0pVzQnTTdBDmEy00mVHz6RFRRbJjA",
       "domain": "localhost",
       "path": "/",
-      "expires": 1761562509.90834,
+      "expires": 1761820798.325827,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
@@ -17,7 +17,7 @@
       "localStorage": [
         {
           "name": "saxium_console_logs",
-          "value": "{\"logs\":[{\"timestamp\":\"2025-10-20T10:55:09.786Z\",\"level\":\"log\",\"message\":\"WebSocket: Attempting to connect...\",\"args\":[\"WebSocket: Attempting to connect...\"]},{\"timestamp\":\"2025-10-20T10:55:09.865Z\",\"level\":\"log\",\"message\":\"Executive breadcrumbs sync: {\\n  \\\"currentPath\\\": \\\"/dashboard/executive\\\",\\n  \\\"tabValue\\\": null\\n}\",\"args\":[\"Executive breadcrumbs sync:\",{\"currentPath\":\"/dashboard/executive\",\"tabValue\":null}]}],\"expiry\":1761044110395}"
+          "value": "{\"logs\":[{\"timestamp\":\"2025-10-23T10:39:58.421Z\",\"level\":\"log\",\"message\":\"WebSocket: Attempting to connect...\",\"args\":[\"WebSocket: Attempting to connect...\"]},{\"timestamp\":\"2025-10-23T10:39:58.760Z\",\"level\":\"log\",\"message\":\"WebSocket: Connected successfully\",\"args\":[\"WebSocket: Connected successfully\"]},{\"timestamp\":\"2025-10-23T10:39:58.940Z\",\"level\":\"log\",\"message\":\"WebSocket: Unknown message type {\\n  \\\"type\\\": \\\"auth\\\"\\n}\",\"args\":[\"WebSocket: Unknown message type\",{\"type\":\"auth\"}]},{\"timestamp\":\"2025-10-23T10:39:58.986Z\",\"level\":\"log\",\"message\":\"WebSocket: Received pong\",\"args\":[\"WebSocket: Received pong\"]}],\"expiry\":1761302399017}"
         }
       ]
     }

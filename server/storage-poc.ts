@@ -143,6 +143,7 @@ export interface IStorage {
   getAos(): Promise<Ao[]>;
   getAOsPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ aos: Array<Ao>, total: number }>;
   getAo(id: string, tx?: DrizzleTransaction): Promise<Ao | undefined>;
+  getAOByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Ao | undefined>;
   createAo(ao: InsertAo, tx?: DrizzleTransaction): Promise<Ao>;
   updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao>;
   deleteAo(id: string, tx?: DrizzleTransaction): Promise<void>;
@@ -993,6 +994,15 @@ export class DatabaseStorage implements IStorage {
   async getAo(id: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
     const dbInstance = tx || db;
     const [ao] = await dbInstance.select().from(aos).where(eq(aos.id, id));
+    return ao;
+  }
+
+  async getAOByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
+    const dbInstance = tx || db;
+    const [ao] = await dbInstance
+      .select()
+      .from(aos)
+      .where(eq(aos.mondayItemId, mondayItemId));
     return ao;
   }
 
@@ -4635,6 +4645,10 @@ export class MemStorage implements IStorage {
   }
 
   async getAo(id: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
+    return undefined;
+  }
+
+  async getAOByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
     return undefined;
   }
 

@@ -49,6 +49,7 @@ export interface SplitResult {
   success: boolean;
   aoId?: string;
   projectId?: string;
+  aoCreated: boolean; // Indique si l'AO a été créé (true) ou réutilisé (false)
   lotsCreated: number;
   contactsCreated: number;
   mastersCreated: number;

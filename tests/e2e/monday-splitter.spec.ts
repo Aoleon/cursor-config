@@ -86,18 +86,20 @@ test.describe('MondayDataSplitter E2E', () => {
     // Vérifier réponse API
     expect(splitData.success).toBeTruthy();
     expect(splitData.data).toHaveProperty('aoId');
+    expect(splitData.data).toHaveProperty('aoCreated');
     expect(splitData.data).toHaveProperty('lotsCreated');
     expect(splitData.data).toHaveProperty('contactsCreated');
     expect(splitData.data).toHaveProperty('mastersCreated');
     
-    const { aoId } = splitData.data;
+    const { aoId, aoCreated } = splitData.data;
     
-    console.log(`✅ Split réussi: AO créé avec ID ${aoId}`);
+    console.log(`✅ Split réussi: AO ${aoCreated ? 'créé' : 'réutilisé'} avec ID ${aoId}`);
+    console.log(`   - AO créé: ${aoCreated}`);
     console.log(`   - Lots créés: ${splitData.data.lotsCreated}`);
     console.log(`   - Contacts créés: ${splitData.data.contactsCreated}`);
     console.log(`   - Maîtres créés: ${splitData.data.mastersCreated}`);
     
-    // ÉTAPE 3: Vérifier DB - AO créé
+    // ÉTAPE 3: Vérifier DB - AO créé ou réutilisé
     const createdAO = await db.select().from(aos).where(eq(aos.id, aoId)).limit(1);
     expect(createdAO.length).toBe(1);
     expect(createdAO[0].mondayItemId).toBe(testMondayItemId);
@@ -121,9 +123,14 @@ test.describe('MondayDataSplitter E2E', () => {
       .select({ count: sql<number>`cast(count(*) as int)` })
       .from(aos);
     
-    expect(aosCountAfter[0].count).toBe(aosCountBefore[0].count + 1); // Exactement +1 AO
-    
-    console.log(`✅ Cohérence DB vérifiée: ${aosCountBefore[0].count} → ${aosCountAfter[0].count} AOs (+1)`);
+    // Si aoCreated=true → +1 AO, sinon count inchangé
+    if (aoCreated) {
+      expect(aosCountAfter[0].count).toBe(aosCountBefore[0].count + 1);
+      console.log(`✅ Nouvel AO créé: ${aosCountBefore[0].count} → ${aosCountAfter[0].count} AOs (+1)`);
+    } else {
+      expect(aosCountAfter[0].count).toBe(aosCountBefore[0].count);
+      console.log(`✅ AO réutilisé (déduplication): ${aosCountBefore[0].count} AOs (inchangé)`);
+    }
   });
   
   test('should deduplicate on re-import of same Monday item', async ({ request }) => {

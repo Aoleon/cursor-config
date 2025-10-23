@@ -563,43 +563,104 @@ class MondayService {
   }
 
   extractColumnValue(columnValue: MondayColumnValue): any {
-    // Extract actual value based on column type
-    if (columnValue.text) {
-      return columnValue.text;
-    }
-
-    if (!columnValue.value) {
-      return null;
-    }
-
     try {
-      const parsed = JSON.parse(columnValue.value);
-      
-      // Handle different Monday.com column types
-      switch (columnValue.type) {
-        case 'date':
-          return parsed.date || null;
-        case 'status':
-          return parsed.label || parsed.index || null;
-        case 'dropdown':
-          return parsed.labels?.[0] || null;
-        case 'people':
-          return parsed.personsAndTeams?.map((p: any) => p.id) || [];
-        case 'email':
-          return parsed.email || parsed.text || null;
-        case 'phone':
-          return parsed.phone || parsed.text || null;
-        case 'link':
-          return parsed.url || parsed.text || null;
-        case 'numbers':
-          return parsed.number || null;
-        case 'rating':
-          return parsed.rating || null;
-        default:
-          return parsed;
+      // Si value existe, le parser
+      if (columnValue.value) {
+        const parsed = JSON.parse(columnValue.value);
+        
+        // SWITCH TYPE (comme avant)
+        switch (columnValue.type) {
+          case 'date':
+            return parsed.date || null;
+          
+          case 'status':
+            return parsed.label || parsed.index || null;
+          
+          case 'dropdown':
+            return parsed.labels?.[0] || null;
+          
+          case 'people':
+            return parsed.personsAndTeams?.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              email: p.email
+            })) || [];
+          
+          case 'email':
+            return {
+              email: parsed.email || parsed.text,
+              text: parsed.text
+            };
+          
+          case 'phone':
+            return {
+              phone: parsed.phone || parsed.text,
+              text: parsed.text
+            };
+          
+          case 'link':
+            return {
+              url: parsed.url || parsed.text,
+              text: parsed.text
+            };
+          
+          case 'location':
+            return {
+              address: parsed.address,
+              city: parsed.city,
+              country: parsed.country,
+              countryShort: parsed.countryShort,
+              lat: parsed.lat,
+              lng: parsed.lng,
+              placeId: parsed.placeId
+            };
+          
+          case 'board-relation':
+            return {
+              linkedItems: parsed.linkedPulseIds?.map((item: any) => ({
+                id: item.linkedPulseId || item,
+                boardId: item.boardId
+              })) || []
+            };
+          
+          case 'subtasks':
+          case 'subitems':
+            return {
+              subitemIds: parsed.linkedPulseIds?.map((item: any) => 
+                item.linkedPulseId || item
+              ) || [],
+              count: parsed.linkedPulseIds?.length || 0
+            };
+          
+          case 'long-text':
+          case 'text':
+            return parsed.text || null;
+          
+          case 'timeline':
+            return {
+              from: parsed.from,
+              to: parsed.to,
+              visualization_type: parsed.visualization_type
+            };
+          
+          case 'numbers':
+            return parsed.number || null;
+          
+          case 'rating':
+            return parsed.rating || null;
+          
+          default:
+            // Fallback pour types inconnus : retourner parsed ou text
+            return parsed;
+        }
       }
+      
+      // Si value est null/undefined, fallback sur columnValue.text
+      return columnValue.text || null;
+      
     } catch {
-      return columnValue.value;
+      // En cas d'erreur parsing JSON, fallback sur text
+      return columnValue.text || columnValue.value || null;
     }
   }
 }

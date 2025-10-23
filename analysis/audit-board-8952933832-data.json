@@ -1,0 +1,93 @@
+{
+  "boardId": "8952933832",
+  "boardName": "Modèle MEXT",
+  "stats": {
+    "totalItems": 3,
+    "itemsWithLots": 0,
+    "itemsWithContacts": 0,
+    "itemsWithAddresses": 0,
+    "itemsWithMasters": 0,
+    "itemsImportable": 0,
+    "totalLots": 0,
+    "totalContacts": 0,
+    "totalAddresses": 0,
+    "totalMaitresOuvrage": 0,
+    "totalMaitresOeuvre": 0
+  },
+  "itemsByPriority": {
+    "HAUTE": [],
+    "MOYENNE": [],
+    "BASSE": [],
+    "AUCUNE": [
+      {
+        "itemId": "8952934063",
+        "itemName": "Pose MEXT PVC"
+      },
+      {
+        "itemId": "8952934089",
+        "itemName": "Pose menuiserie"
+      },
+      {
+        "itemId": "8952934102",
+        "itemName": "Task 3"
+      }
+    ]
+  },
+  "representativeItems": [],
+  "allItems": [
+    {
+      "itemId": "8952934063",
+      "itemName": "Pose MEXT PVC",
+      "lotsCount": 0,
+      "contactsCount": 0,
+      "addressesCount": 0,
+      "maitresOuvrageCount": 0,
+      "maitresOeuvreCount": 0,
+      "totalOpportunities": 0,
+      "priority": "AUCUNE",
+      "details": {
+        "lots": [],
+        "contacts": [],
+        "addresses": [],
+        "maitresOuvrage": [],
+        "maitresOeuvre": []
+      }
+    },
+    {
+      "itemId": "8952934089",
+      "itemName": "Pose menuiserie",
+      "lotsCount": 0,
+      "contactsCount": 0,
+      "addressesCount": 0,
+      "maitresOuvrageCount": 0,
+      "maitresOeuvreCount": 0,
+      "totalOpportunities": 0,
+      "priority": "AUCUNE",
+      "details": {
+        "lots": [],
+        "contacts": [],
+        "addresses": [],
+        "maitresOuvrage": [],
+        "maitresOeuvre": []
+      }
+    },
+    {
+      "itemId": "8952934102",
+      "itemName": "Task 3",
+      "lotsCount": 0,
+      "contactsCount": 0,
+      "addressesCount": 0,
+      "maitresOuvrageCount": 0,
+      "maitresOeuvreCount": 0,
+      "totalOpportunities": 0,
+      "priority": "AUCUNE",
+      "details": {
+        "lots": [],
+        "contacts": [],
+        "addresses": [],
+        "maitresOuvrage": [],
+        "maitresOeuvre": []
+      }
+    }
+  ]
+}

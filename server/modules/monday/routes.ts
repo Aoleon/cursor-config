@@ -133,16 +133,19 @@ router.get('/api/monday/boards/:boardId/analyze',
   isAuthenticated,
   asyncHandler(async (req: Request, res: Response) => {
     const { boardId } = req.params;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const DEFAULT_LIMIT = 10;
+    const limitQuery = req.query.limit;
+    const limit = limitQuery === '0' ? undefined : 
+                  limitQuery ? parseInt(limitQuery as string, 10) : DEFAULT_LIMIT;
     
     logger.info('Analyse board Monday demandée', {
       service: 'MondayRoutes',
-      metadata: { boardId, limit }
+      metadata: { boardId, limit: limit || 'ALL' }
     });
     
     // Récupérer items du board
     const boardData = await mondayService.getBoardData(boardId);
-    const items = boardData.items?.slice(0, limit) || [];
+    const items = limit ? boardData.items?.slice(0, limit) || [] : boardData.items || [];
     
     // Construire mapping colonnes pour le config
     const columnMappings = boardData.columns.map(col => ({

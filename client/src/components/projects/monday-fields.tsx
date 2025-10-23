@@ -2204,8 +2204,9 @@ function EmployeeLabelsEditor({ employeeId }: EmployeeLabelsEditorProps) {
 // ========================================
 
 function ProjectSubElementsManager({ projectId }: ProjectSubElementsManagerProps) {
+  const subElementsData = useMondayFields(projectId).projectSubElements;
   const {
-    projectSubElements,
+    projectSubElements = [],
     isLoading,
     createSubElement,
     updateSubElement,
@@ -2215,7 +2216,7 @@ function ProjectSubElementsManager({ projectId }: ProjectSubElementsManagerProps
     isUpdating,
     isDeleting,
     isReordering,
-  } = useMondayFields(projectId).projectSubElements;
+  } = subElementsData;
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingElement, setEditingElement] = useState<ProjectSubElement | null>(null);

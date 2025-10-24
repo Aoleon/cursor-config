@@ -22,12 +22,12 @@ export async function setupVite(app: Express, server: Server) {
     const url = req.originalUrl;
     try {
       const clientPath = path.resolve(import.meta.dirname, "..", "client");
-      const template = fs.readFileSync(
-        path.resolve(clientPath, "index.html"),
-        "utf-8"
-      );
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+        const template = fs.readFileSync(
+          path.resolve(clientPath, "index.html"),
+          "utf-8"  // ✅ Le 2e argument manque
+        );
+        const html = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(html);  
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);

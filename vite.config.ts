@@ -27,6 +27,49 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          // Séparer React et ses dépendances principales
+          if (id.includes('node_modules/react') || 
+              id.includes('node_modules/react-dom') || 
+              id.includes('node_modules/wouter')) {
+            return 'vendor-react';
+          }
+
+          // Séparer les composants Radix UI (très volumineux)
+          if (id.includes('node_modules/@radix-ui')) {
+            return 'vendor-radix';
+          }
+
+          // Séparer Recharts (graphiques)
+          if (id.includes('node_modules/recharts')) {
+            return 'vendor-charts';
+          }
+
+          // Séparer React Query
+          if (id.includes('node_modules/@tanstack/react-query')) {
+            return 'vendor-query';
+          }
+
+          // Séparer Lucide Icons
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons';
+          }
+
+          // Séparer les autres dépendances lourdes
+          if (id.includes('node_modules/date-fns')) {
+            return 'vendor-date';
+          }
+
+          // Reste des node_modules
+          if (id.includes('node_modules')) {
+            return 'vendor-other';
+          }
+        }
+      }
+    },
+    chunkSizeWarningLimit: 600,
   },
   server: {
     fs: {

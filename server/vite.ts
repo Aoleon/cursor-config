@@ -18,7 +18,7 @@ export async function setupVite(app: Express, server: Server) {
   // Stocker l'instance Vite pour l'utiliser ailleurs
   setViteInstance(vite);
   app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
+  app.use(async (req, res, next) => {
     const url = req.originalUrl;
     try {
       const clientPath = path.resolve(import.meta.dirname, "..", "client");
@@ -43,7 +43,7 @@ export function serveStatic(app: Express) {
   }
   app.use(express.static(distPath));
   // Fallback to index.html for SPA routing
-  app.use("*", (_req, res) => {
+  app.use((_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

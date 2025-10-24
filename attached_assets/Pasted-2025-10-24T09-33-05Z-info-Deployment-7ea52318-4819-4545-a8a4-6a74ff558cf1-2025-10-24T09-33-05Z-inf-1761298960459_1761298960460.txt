@@ -1,0 +1,56 @@
+2025-10-24T09:33:05Z info: Deployment: 7ea52318-4819-4545-a8a4-6a74ff558cf1
+2025-10-24T09:33:05Z info: Connecting to builder
+2025-10-24T09:33:06Z info: Builder connected
+2025-10-24T09:33:07Z info: Installing packages
+2025-10-24T09:33:10Z info: Starting Build
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+
+vite v7.1.11 building for production...
+
+transforming...
+
+✓ 3778 modules transformed.
+
+rendering chunks...
+
+computing gzip size...
+
+../dist/public/index.html                                       1.23 kB │ gzip:  0.52 kB
+../dist/public/assets/index-DeTAYcHY.css                      143.10 kB │ gzip: 22.17 kB
+../dist/public/assets/api-helpers-Dj_CeEkp.js                   0.30 kB │ gzip:  0.18 kB
+
+../dist/public/assets/monday-migration-dashboard-DsDRX5I2.js   21.94 kB │ gzip:  5.19 kB
+
+../dist/public/assets/projects-ksC4u1Jv.js                     22.60 kB │ gzip:  5.80 kB
+
+../dist/public/assets/index-DUhhH90l.js                       115.84 kB │ gzip: 32.40 kB
+
+../dist/public/assets/vendor-radix-BZFJsNwU.js                116.28 kB │ gzip: 34.79 kB
+
+✓ built in 56.09s
+
+
+  dist/index.js  3.1mb ⚠️
+
+⚡ Done in 199ms
+
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.6.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.2
+npm notice To update run: npm install -g npm@11.6.2
+npm notice
+
+2025-10-24T09:34:13Z info: Pushing pid1 binary layer...
+2025-10-24T09:34:22Z info: Created pid1 binary layer
+2025-10-24T09:34:29Z info: Pushing hosting layer...
+2025-10-24T09:34:29Z info: Pushing Repl layer...
+2025-10-24T09:34:29Z info: Nix layers for this Repl are uncached.
+2025-10-24T09:34:29Z info: Pushing nix-0 layer...
+2025-10-24T09:34:30Z info: Created hosting layer
+2025-10-24T09:38:50Z info: Created Repl layer
+2025-10-24T09:38:50Z info: Pushing Repl (cache) layer...
+2025-10-24T09:38:53Z info: Created Repl (cache) layer
+Deployment timed out. Check the Logs tab for more details. - 2025-10-24T09:42:05.306Z

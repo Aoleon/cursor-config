@@ -33,7 +33,8 @@ export default defineConfig({
           // Séparer React et ses dépendances principales
           if (id.includes('node_modules/react') || 
               id.includes('node_modules/react-dom') || 
-              id.includes('node_modules/wouter')) {
+              id.includes('node_modules/wouter') ||
+              id.includes('node_modules/scheduler')) {
             return 'vendor-react';
           }
 
@@ -42,8 +43,10 @@ export default defineConfig({
             return 'vendor-radix';
           }
 
-          // Séparer Recharts (graphiques)
-          if (id.includes('node_modules/recharts')) {
+          // Séparer Recharts et D3 (graphiques)
+          if (id.includes('node_modules/recharts') ||
+              id.includes('node_modules/d3-') ||
+              id.includes('node_modules/victory')) {
             return 'vendor-charts';
           }
 
@@ -53,13 +56,37 @@ export default defineConfig({
           }
 
           // Séparer Lucide Icons
-          if (id.includes('node_modules/lucide-react')) {
+          if (id.includes('node_modules/lucide-react') ||
+              id.includes('node_modules/react-icons')) {
             return 'vendor-icons';
           }
 
-          // Séparer les autres dépendances lourdes
+          // Séparer les utilitaires de dates
           if (id.includes('node_modules/date-fns')) {
             return 'vendor-date';
+          }
+
+          // Séparer les bibliothèques de formulaires (volumineuses)
+          if (id.includes('node_modules/react-hook-form') ||
+              id.includes('node_modules/@hookform') ||
+              id.includes('node_modules/zod')) {
+            return 'vendor-forms';
+          }
+
+          // Séparer les bibliothèques UI/DnD
+          if (id.includes('node_modules/@hello-pangea/dnd') ||
+              id.includes('node_modules/react-dropzone') ||
+              id.includes('node_modules/embla-carousel')) {
+            return 'vendor-ui-utils';
+          }
+
+          // Séparer les bibliothèques PDF/Documents
+          if (id.includes('node_modules/jspdf') ||
+              id.includes('node_modules/pdf-parse') ||
+              id.includes('node_modules/tesseract') ||
+              id.includes('node_modules/xlsx') ||
+              id.includes('node_modules/exceljs')) {
+            return 'vendor-docs';
           }
 
           // Reste des node_modules

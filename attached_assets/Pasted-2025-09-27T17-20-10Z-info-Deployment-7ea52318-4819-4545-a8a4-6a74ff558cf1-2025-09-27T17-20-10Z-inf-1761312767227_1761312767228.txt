@@ -1,0 +1,276 @@
+2025-09-27T17:20:10Z info: Deployment: 7ea52318-4819-4545-a8a4-6a74ff558cf1
+2025-09-27T17:20:10Z info: Build: fca8a064-7171-4977-9acd-117bcd2a6243
+2025-09-27T17:20:10Z info: Connecting to builder
+2025-09-27T17:20:13Z info: Builder connected
+2025-09-27T17:20:15Z info: Installing packages
+2025-09-27T17:20:17Z info: Starting Build
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+
+vite v5.4.19 building for production...
+
+transforming...
+
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+✓ 3615 modules transformed.
+
+rendering chunks...
+
+computing gzip size...
+
+../dist/public/index.html                                        0.65 kB │ gzip:   0.40 kB
+
+../dist/public/assets/index-CJrRZNzQ.css                        94.30 kB │ gzip:  15.52 kB
+
+../dist/public/assets/info-ntLfk2q4.js                           0.37 kB │ gzip:   0.28 kB
+
+../dist/public/assets/use-project-timelines-B0-mtMJs.js          2.14 kB │ gzip:   1.02 kB
+
+../dist/public/assets/DateIntelligenceDashboard-ltCGCTFY.js     11.21 kB │ gzip:   3.63 kB
+
+../dist/public/assets/AlertsManagementPanel-4cGbtVNy.js         14.41 kB │ gzip:   4.15 kB
+
+../dist/public/assets/BusinessRulesManager-3Dc8yoeb.js          19.83 kB │ gzip:   5.53 kB
+
+../dist/public/assets/InteractiveGanttChart-Bgk3174e.js        120.83 kB │ gzip:  36.26 kB
+
+../dist/public/assets/index-BqNBgklj.js                      1,841.29 kB │ gzip: 467.36 kB
+
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+✓ built in 13.60s
+
+▲ [WARNING] Duplicate member "getProjectDelayHistory" in class body [duplicate-class-member]
+
+    server/storage-poc.ts:3346:8:
+      3346 │   async getProjectDelayHistory(params: { start_date: string; end...
+           ╵         ~~~~~~~~~~~~~~~~~~~~~~
+
+  The original member "getProjectDelayHistory" is here:
+
+    server/storage-poc.ts:2682:8:
+      2682 │   async getProjectDelayHistory(range: {
+           ╵         ~~~~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate member "getTeamLoadHistory" in class body [duplicate-class-member]
+
+    server/storage-poc.ts:3386:8:
+      3386 │   async getTeamLoadHistory(params: { start_date: string; end_dat...
+           ╵         ~~~~~~~~~~~~~~~~~~
+
+  The original member "getTeamLoadHistory" is here:
+
+    server/storage-poc.ts:2748:8:
+      2748 │   async getTeamLoadHistory(range: {
+           ╵         ~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate member "getOfferById" in class body [duplicate-class-member]
+
+    server/storage-poc.ts:4606:8:
+      4606 │   async getOfferById(id: string): Promise<Offer | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+  The original member "getOfferById" is here:
+
+    server/storage-poc.ts:3129:8:
+      3129 │   async getOfferById(id: string): Promise<Offer | undefined> {
+           ╵         ~~~~~~~~~~~~
+
+
+▲ [WARNING] Duplicate member "getProjectsByOffer" in class body [duplicate-class-member]
+
+    server/storage-poc.ts:4610:8:
+      4610 │   async getProjectsByOffer(offerId: string): Promise<Project[]> {
+           ╵         ~~~~~~~~~~~~~~~~~~
+
+  The original member "getProjectsByOffer" is here:
+
+    server/storage-poc.ts:3133:8:
+      3133 │   async getProjectsByOffer(offerId: string): Promise<Project[]> {
+           ╵         ~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate member "getScoringConfig" in class body [duplicate-class-member]
+
+    server/storage-poc.ts:4624:8:
+      4624 │   async getScoringConfig(): Promise<TechnicalScoringConfig> {
+           ╵         ~~~~~~~~~~~~~~~~
+
+  The original member "getScoringConfig" is here:
+
+    server/storage-poc.ts:3137:8:
+      3137 │   async getScoringConfig(): Promise<TechnicalScoringConfig> {
+           ╵         ~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate member "updateScoringConfig" in class body [duplicate-class-member]
+
+    server/storage-poc.ts:4644:8:
+      4644 │   async updateScoringConfig(config: TechnicalScoringConfig): Pro...
+           ╵         ~~~~~~~~~~~~~~~~~~~
+
+  The original member "updateScoringConfig" is here:
+
+    server/storage-poc.ts:3141:8:
+      3141 │   async updateScoringConfig(config: TechnicalScoringConfig): Pro...
+           ╵         ~~~~~~~~~~~~~~~~~~~
+
+6 of 49 warnings shown (disable the message limit with --log-limit=0)
+
+
+  dist/index.js  1.5mb ⚠️
+
+⚡ Done in 473ms
+
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.6.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.1
+npm notice To update run: npm install -g npm@11.6.1
+npm notice
+
+2025-09-27T17:20:37Z info: Pushing pid1 binary layer...
+2025-09-27T17:20:42Z info: Pushing Repl layer...
+2025-09-27T17:20:42Z info: Pushing hosting layer...
+2025-09-27T17:20:43Z info: Nix layers for this Repl are uncached.
+2025-09-27T17:20:43Z info: Pushing nix-0 layer...
+2025-09-27T17:20:44Z info: Created hosting layer
+2025-09-27T17:20:48Z info: Created pid1 binary layer
+2025-09-27T17:20:52Z info: Created nix-0 layer
+2025-09-27T17:20:52Z info: uploading image for cached layer
+2025-09-27T17:20:54Z info: pushed cache image manifest
+2025-09-27T17:20:56Z info: pushed cache soci index manifest
+2025-09-27T17:20:57Z info: uploading cached layer
+2025-09-27T17:20:57Z info: successfully uploaded cached layer
+2025-09-27T17:22:48Z info: Created Repl layer
+2025-09-27T17:22:48Z info: Pushing Repl (cache) layer...
+2025-09-27T17:22:49Z info: Created Repl (cache) layer
+2025-09-27T17:22:57Z info: Pushed image manifest
+2025-09-27T17:23:01Z info: Pushed soci index manifest
+2025-09-27T17:23:11Z info: Creating Autoscale service
+starting up user application
+forwarding local port 5000 to external port 80 (mapped as 1104)
+[PredictiveEngine] Service initialisé avec cache TTL: 30 minutes
+[BusinessContext] Base de connaissances menuiserie initialisée
+[PeriodicScheduler] Programmation vérification bi-quotidienne optimisations
+[PeriodicScheduler] Configuration triggers évaluation seuils business
+[System] Initialisation du service d'audit Saxium...
+[System] ✅ Service d'audit Saxium opérationnel (SINGLETON SÉCURISÉ)
+> NODE_ENV=production node dist/index.js
+5:23:33 PM [express] EventBus: New subscription ab535305-cb8e-454e-b2c7-d62ed7f84930 with filter: undefined
+> rest-express@1.0.0 start
+5:23:33 PM [express] EventBus: New subscription 44d1061a-0504-4c12-8994-9e3e7131fb3b with filter: undefined
+[PeriodicScheduler] Initialisation écoute événements temps réel
+[PeriodicScheduler] Programmation nettoyage hebdomadaire
+[System] ✅ Système de détection d'alertes opérationnel
+5:23:33 PM [express] EventBus: New subscription 58ffc8e4-1998-4929-9f99-436a2a97bc76 with filter: undefined
+5:23:33 PM [express] EventBus: New subscription e9b1b58d-42c0-4c94-bcd1-4c1d58161090 with filter: undefined
+5:23:33 PM [express] EventBus: New subscription 7f336e1f-68f9-4e5b-8d3a-910ca9240723 with filter: undefined
+[PeriodicScheduler] Configuration triggers évaluation seuils business
+5:23:33 PM [express] EventBus: New subscription 4092be2d-7678-4e70-98a1-53fb8b2a3d09 with filter: undefined
+[PeriodicScheduler] Programmation surveillance horaire
+[PeriodicScheduler] Programmation évaluation seuils business (30min)
+[DateIntelligenceSeeder] Règle initialisée: Étude Projet Neuf Standard (etude)
+[PeriodicScheduler] Initialisation écoute événements temps réel
+[DateIntelligenceSeeder] Règle initialisée: Passation Marché Privé (passation)
+5:23:33 PM [express] EventBus: New subscription c804c7ae-0c09-410a-b8c9-1d86ff9c6b82 with filter: undefined
+5:23:33 PM [express] EventBus: New subscription bce369b7-9f6b-4856-bc6a-f7b9797bb3b3 with filter: {"eventTypes":["technical.alert"],"entities":["technical"]}
+[DateIntelligenceSeeder] Règle initialisée: VISA Architecte Standard (visa_architecte)
+[DateIntelligenceSeeder] Règle initialisée: Étude Rénovation (etude)
+[Storage] Règle créée: rule_1758993813933_6a4vyrnvd - Approvisionnement Bois sur-mesure
+[Storage] Règle créée: rule_1758993813932_dtxwmw0q0 - Passation Marché Privé
+5:23:33 PM [express] EventBus: New subscription 4aff0d41-ff6c-4c04-8c4c-6942abcc3d08 with filter: undefined
+5:23:33 PM [express] EventBus: New subscription 7844af6d-0ac6-403d-8b0a-fc87f1052b03 with filter: undefined
+[Storage] Règle créée: rule_1758993813933_pd8ku5pvp - Maintenance Préventive
+[Storage] 0 règles totales récupérées
+[DateIntelligenceSeeder] Initialisation automatique des règles métier...
+[Storage] 19 règles totales récupérées
+[Storage] Règle créée: rule_1758993813933_3zs70dzh5 - Projet Bâtiment Historique
+[App] Initialisation des règles métier menuiserie...
+[DateIntelligenceSeeder] Règle initialisée: Approvisionnement Bois sur-mesure (approvisionnement)
+[DateIntelligenceSeeder] ✅ CONFIRMATION FINALE - Règles métier seedées: 19/19 (100.0% succès)
+[DateIntelligenceSeeder] ASSERTION - Nombre de règles métier pré-configurées: 19 règles disponibles
+[Storage] Règle créée: rule_1758993813933_00vjuf7zx - Période Congés BTP
+[BusinessContext] Base de connaissances menuiserie chargée: 5 matériaux, 7 processus, 7 normes
+5:23:33 PM [express] [EventBus] Abonnement aux alertes techniques configuré pour Julien LAMBOROT
+[DateIntelligenceSeeder] Règle initialisée: Projet Bâtiment Historique (toutes phases)
+[DateIntelligenceSeeder] Issues détectées dans les règles: [ '2 règles avec durée base invalide (≤ 0)' ]
+[Storage] Règle créée: rule_1758993813933_g3ock661a - Approvisionnement Aluminium
+[DateIntelligenceSeeder] Règle initialisée: Pose Chantier Accès Difficile (chantier)
+[Storage] Récupération de 0 timelines pour projet proj-001
+5:23:33 PM [express] Connected WebSocket clients: 0
+5:23:33 PM [express] serving on port 5000
+[DateIntelligenceSeeder] ✅ VALIDATION RÉUSSIE - 19 règles seedées (minimum 18+ requis satisfait)
+[Migration Routes] Routes migration Monday.com initialisées
+5:23:33 PM [express] EventBus: New subscription 501a7648-37d8-4d84-9616-89b256137231 with filter: undefined
+[Storage] Récupération de 0 timelines pour projet proj-001
+[System] Initialisation du système de détection d'alertes...
+[ImmediateDetection] Détection immédiate terminée: 0 alertes
+[DateIntelligenceSeeder] Règle initialisée: Planification Standard (planification)
+[DateIntelligenceSeeder] Règle initialisée: SAV Standard (sav)
+[DateIntelligenceSeeder] Règle initialisée: Étude Projet Complexe (etude)
+[DateIntelligenceSeeder] Règle initialisée: Pose PVC Complexe (chantier)
+[DateIntelligenceSeeder] 🎯 Règles métier menuiserie françaises prêtes pour utilisation
+[DateIntelligenceSeeder] Règle initialisée: Passation Marché Public (passation)
+[Storage] Règle créée: rule_1758993813933_ubuuocnc0 - Pose PVC Complexe
+[Storage] Règle créée: rule_1758993813933_vkft7b0u8 - Pose Chantier Accès Difficile
+[DelayDetection] Détecté 0 risques de retard
+[Storage] Règle créée: rule_1758993813933_n2oyfizwa - Étude Rénovation
+[Storage] Règle créée: rule_1758993813933_sx7t7ymth - SAV Standard
+[DateIntelligenceSeeder] Règle initialisée: Approvisionnement Aluminium (approvisionnement)
+[DateIntelligenceSeeder] Règle initialisée: Matériaux Composites Modernes (approvisionnement)
+[DateIntelligenceSeeder] Règle initialisée: Pose Chantier Été (chantier)
+[App] Règles métier initialisées avec succès
+  - Total: 19 règles (19 actives)
+[System] ✅ Routes administrateur montées sur /api/admin
+[Storage] Récupération de 0 timelines totales
+5:23:33 PM [express] WebSocket server ready at ws://localhost:5000/ws
+[DateIntelligenceSeeder] Règle initialisée: Maintenance Préventive (sav)
+[Storage] Règle créée: rule_1758993813933_92b8z4cd2 - Planification Standard
+[Storage] Règle créée: rule_1758993813933_4a2uhjgff - VISA Architecte Standard
+5:23:33 PM [express] EventBus: New subscription 1b234538-d103-40cc-85cc-7e198d3adf19 with filter: undefined
+[DateIntelligenceSeeder] Initialisation des règles métier menuiserie...
+[OptimizationDetection] Détecté 0 opportunités d'optimisation
+[System] Montage des routes administrateur...
+[DateIntelligenceSeeder] Validation terminée: ÉCHEC
+[PeriodicDetection] Terminé: 0 alertes générées en 788ms
+  - Système: 19, Personnalisées: 0
+[Storage] Récupération de 0 timelines pour projet proj-002
+[ConflictDetection] Détecté 0 conflits de planning
+[Storage] Récupération de 0 timelines pour projet proj-001
+[System] Services disponibles : AuditService ✅, EventBus ✅, Storage ✅
+[Storage] Règle créée: rule_1758993813933_h4buc44q5 - Approvisionnement PVC Standard
+[DateIntelligenceSeeder] Règle initialisée: Approvisionnement PVC Standard (approvisionnement)
+[Storage] Règle créée: rule_1758993813933_dt8v1gbcz - Matériaux Composites Modernes
+[Storage] Règle créée: rule_1758993813933_2xuruweki - Pose Chantier Hiver
+[DateIntelligenceSeeder] Seeding terminé: 19 règles initialisées, 0 erreurs
+[DateIntelligenceSeeder] Règle initialisée: Période Congés BTP (chantier)
+[PeriodicScheduler] Démarrage système de surveillance...
+[Storage] Règle créée: rule_1758993813933_rn5tdkb4t - Pose Chantier Été
+[DateIntelligenceSeeder] Validation de la cohérence des règles...
+[DateIntelligenceSeeder] Issues: 1, Warnings: 0
+[DateIntelligenceSeeder] Système de règles métier prêt
+[PredictiveEngine] Service initialisé avec cache TTL: 30 minutes
+[DeadlineDetection] Détecté 0 échéances critiques
+[PeriodicDetection] Démarrage détection globale...
+[Storage] Règle créée: rule_1758993813933_wv5phomt5 - Étude Projet Complexe
+[Storage] Récupération de 0 timelines pour projet proj-002
+[Storage] Règle créée: rule_1758993813933_njmvnmpvz - Étude Projet Neuf Standard
+[Storage] 19 règles totales récupérées
+[DateIntelligenceSeeder] Règle initialisée: Pose Chantier Hiver (chantier)
+5:23:33 PM [express] EventBus: New subscription 7de035bf-2508-41cb-83e7-cd71f92ed28e with filter: undefined
+[Storage] Récupération de 0 timelines pour projet proj-002
+[DateIntelligenceSeeder] Statistiques des règles métier:
+[PeriodicScheduler] Programmation vérification quotidienne échéances
+  - Par phase: {"passation":2,"all_phases":1,"etude":3,"chantier":5,"visa_architecte":1,"approvisionnement":4,"planification":1,"sav":2}
+[ImmediateDetection] Démarrage détection immédiate (startup)
+[PeriodicScheduler] Système de surveillance démarré avec succès
+[Storage] Règle créée: rule_1758993813932_y48wb7wnh - Passation Marché Public
+5:23:33 PM [express] EventBus: New subscription 7acbd32e-4721-43e7-aac2-c8b67728888f with filter: undefined
+2025-09-27T17:23:44Z info: Waiting for service to be re

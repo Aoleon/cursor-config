@@ -58,6 +58,33 @@ interface MondayData {
   personnelMeta?: { total: number; limit: number; offset: number; hasMore: boolean };
 }
 
+interface MappingCoverageStats {
+  totalFields: number;
+  mappedFields: number;
+  coveragePercent: number;
+  gaps: {
+    business: number;
+    relations: number;
+    system: number;
+    alias: number;
+  };
+  criticalGaps: Array<{
+    field: string;
+    saxiumType: string;
+    mondayColumn: string;
+    reason: string;
+    priority: 'high' | 'medium' | 'low';
+    suggestedSolution: string;
+  }>;
+  boardInfo: {
+    boardId: string;
+    boardName: string;
+    totalColumns: number;
+    totalItems: number;
+  };
+  lastUpdated: string;
+}
+
 interface ValidationReport {
   globalScore: number;
   totalRecords: number;
@@ -316,22 +343,27 @@ function MigrationOverviewCards({ stats, isLoading }: { stats?: MigrationStats; 
 
 // Composant de couverture du mapping Monday → Saxium
 function MappingCoverageSection() {
-  const mappingStats = {
-    totalFields: 51,
-    mappedFields: 39,
-    coveragePercent: 76.5,
-    gaps: {
-      business: 3, // aoCategory, clientRecurrency, selectionComment
-      relations: 2, // maitreOuvrageId, maitreOeuvreId
-      system: 5, // mondayId, lastExportedAt, etc.
-      alias: 2  // dueDate, amountEstimate
-    },
-    criticalGaps: [
-      { field: "aoCategory", reason: "Colonne Monday 'Catégorie AO' inexistante", priority: "high" },
-      { field: "clientRecurrency", reason: "Colonne Monday 'Type Client' inexistante", priority: "medium" },
-      { field: "selectionComment", reason: "Colonne Monday 'Commentaire' inexistante", priority: "medium" }
-    ]
-  };
+  // Fetch mapping coverage stats from backend
+  const { data: mappingResponse, isLoading } = useQuery<{ success: boolean; data: MappingCoverageStats }>({
+    queryKey: ['/api/monday/mapping-coverage'],
+    refetchInterval: 60000 // Refresh every 60s
+  });
+
+  const mappingStats = mappingResponse?.data;
+
+  if (isLoading || !mappingStats) {
+    return (
+      <Card data-testid="card-mapping-coverage">
+        <CardHeader className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3 mt-2"></div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-48 bg-gray-200 rounded"></div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card data-testid="card-mapping-coverage">
@@ -665,8 +697,10 @@ function AOsTable({ data }: { data: any[] }) {
             <TableHead>Client</TableHead>
             <TableHead>Ville</TableHead>
             <TableHead>Catégorie</TableHead>
+            <TableHead>Type Client</TableHead>
             <TableHead>Statut</TableHead>
             <TableHead>Taille Projet</TableHead>
+            <TableHead>Commentaire</TableHead>
             <TableHead>Statut Migration</TableHead>
           </TableRow>
         </TableHeader>
@@ -697,11 +731,49 @@ function AOsTable({ data }: { data: any[] }) {
                 )}
               </TableCell>
               <TableCell>
+                {ao.clientRecurrency ? (
+                  <Badge variant="outline">{ao.clientRecurrency}</Badge>
+                ) : (
+                  <TooltipProvider>
+                    <ShadcnTooltip>
+                      <TooltipTrigger>
+                        <Badge variant="secondary" className="text-gray-400 cursor-help">
+                          <Info className="h-3 w-3 mr-1" />
+                          Non mappé
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Colonne Monday "Type Client" inexistante</p>
+                      </TooltipContent>
+                    </ShadcnTooltip>
+                  </TooltipProvider>
+                )}
+              </TableCell>
+              <TableCell>
                 <Badge variant={getStatusVariant(ao.operationalStatus)}>
                   {ao.operationalStatus}
                 </Badge>
               </TableCell>
               <TableCell>{ao.projectSize || '-'}</TableCell>
+              <TableCell>
+                {ao.selectionComment ? (
+                  <span className="text-sm truncate max-w-xs block">{ao.selectionComment}</span>
+                ) : (
+                  <TooltipProvider>
+                    <ShadcnTooltip>
+                      <TooltipTrigger>
+                        <Badge variant="secondary" className="text-gray-400 cursor-help">
+                          <Info className="h-3 w-3 mr-1" />
+                          Non mappé
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Colonne Monday "Commentaire sélection" inexistante</p>
+                      </TooltipContent>
+                    </ShadcnTooltip>
+                  </TooltipProvider>
+                )}
+              </TableCell>
               <TableCell>
                 <Badge variant="default" className="bg-green-100 text-green-800">
                   {ao.migrationStatus}

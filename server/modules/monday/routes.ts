@@ -654,4 +654,70 @@ router.get('/api/monday/sync-status',
   })
 );
 
+// ========================================
+// MAPPING COVERAGE ENDPOINT - Get mapping statistics
+// ========================================
+
+// GET /api/monday/mapping-coverage - Récupérer statistiques de mapping Monday → Saxium
+router.get('/api/monday/mapping-coverage',
+  isAuthenticated,
+  asyncHandler(async (req: Request, res: Response) => {
+    logger.info('Récupération statistiques mapping Monday → Saxium', {
+      service: 'MondayRoutes',
+      metadata: { operation: 'getMappingCoverage' }
+    });
+
+    // Statistiques de mapping (basées sur analysis/MONDAY_TO_SAXIUM_MAPPING_MATRIX.md)
+    const mappingStats = {
+      totalFields: 51,
+      mappedFields: 39,
+      coveragePercent: 76.5,
+      gaps: {
+        business: 3, // aoCategory, clientRecurrency, selectionComment
+        relations: 2, // maitreOuvrageId, maitreOeuvreId
+        system: 5, // mondayId, lastExportedAt, etc.
+        alias: 2  // dueDate, amountEstimate
+      },
+      criticalGaps: [
+        {
+          field: 'aoCategory',
+          saxiumType: 'enum',
+          mondayColumn: 'Catégorie AO',
+          reason: 'Colonne Monday inexistante dans board AO Planning (3946257560)',
+          priority: 'high',
+          suggestedSolution: 'Créer colonne dropdown "Catégorie AO" dans Monday.com'
+        },
+        {
+          field: 'clientRecurrency',
+          saxiumType: 'enum',
+          mondayColumn: 'Type Client',
+          reason: 'Colonne Monday inexistante',
+          priority: 'medium',
+          suggestedSolution: 'Créer colonne dropdown "Type Client" (Nouveau/Récurrent)'
+        },
+        {
+          field: 'selectionComment',
+          saxiumType: 'text',
+          mondayColumn: 'Commentaire sélection',
+          reason: 'Colonne Monday inexistante',
+          priority: 'medium',
+          suggestedSolution: 'Créer colonne long_text "Commentaire sélection"'
+        }
+      ],
+      boardInfo: {
+        boardId: '3946257560',
+        boardName: 'AO Planning 🖥️',
+        totalColumns: 41,
+        totalItems: 828
+      },
+      lastUpdated: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      data: mappingStats
+    });
+  })
+);
+
 export default router;

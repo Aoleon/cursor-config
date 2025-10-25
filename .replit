@@ -4,10 +4,10 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["jq", "chromium", "nss", "glib", "gtk3", "atk", "cups", "dbus", "libdrm", "mesa", "xorg.libxcb", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "pango", "cairo", "alsa-lib"]
+packages = ["jq", "chromium", "nss", "glib", "gtk3", "atk", "cups", "dbus", "libdrm", "mesa", "xorg.libxcb", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "pango", "cairo", "alsa-lib", "graphviz-nox"]
 
 [deployment]
-deploymentTarget = "autoscale"
+deploymentTarget = "gce"
 build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
 

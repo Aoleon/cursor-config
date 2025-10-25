@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CalendarDays, Database, TrendingUp, Users, CheckCircle, AlertTriangle, XCircle, Search, Download, RefreshCw } from "lucide-react";
+import { Tooltip as ShadcnTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CalendarDays, Database, TrendingUp, Users, CheckCircle, AlertTriangle, XCircle, Search, Download, RefreshCw, Info } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -180,6 +181,7 @@ export default function MondayMigrationDashboard() {
 
         {/* Onglet Vue d'ensemble */}
         <TabsContent value="overview" className="space-y-6">
+          <MappingCoverageSection />
           <MigrationChartsSection stats={migrationStats} isLoading={statsLoading} />
         </TabsContent>
 
@@ -309,6 +311,115 @@ function MigrationOverviewCards({ stats, isLoading }: { stats?: MigrationStats; 
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Composant de couverture du mapping Monday → Saxium
+function MappingCoverageSection() {
+  const mappingStats = {
+    totalFields: 51,
+    mappedFields: 39,
+    coveragePercent: 76.5,
+    gaps: {
+      business: 3, // aoCategory, clientRecurrency, selectionComment
+      relations: 2, // maitreOuvrageId, maitreOeuvreId
+      system: 5, // mondayId, lastExportedAt, etc.
+      alias: 2  // dueDate, amountEstimate
+    },
+    criticalGaps: [
+      { field: "aoCategory", reason: "Colonne Monday 'Catégorie AO' inexistante", priority: "high" },
+      { field: "clientRecurrency", reason: "Colonne Monday 'Type Client' inexistante", priority: "medium" },
+      { field: "selectionComment", reason: "Colonne Monday 'Commentaire' inexistante", priority: "medium" }
+    ]
+  };
+
+  return (
+    <Card data-testid="card-mapping-coverage">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Couverture Mapping Monday → Saxium
+            </CardTitle>
+            <CardDescription>
+              État du mapping des champs depuis le board AO Planning (41 colonnes)
+            </CardDescription>
+          </div>
+          <Badge variant="default" className="text-lg px-4 py-2">
+            {mappingStats.coveragePercent}%
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Progress bar */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium">{mappingStats.mappedFields} / {mappingStats.totalFields} champs mappés</span>
+            <span className="text-muted-foreground">
+              {mappingStats.totalFields - mappingStats.mappedFields} champs non mappés
+            </span>
+          </div>
+          <Progress value={mappingStats.coveragePercent} className="h-3" />
+        </div>
+
+        {/* Breakdown par catégorie */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+          <div className="p-3 border rounded-lg">
+            <div className="text-2xl font-bold text-red-600">{mappingStats.gaps.business}</div>
+            <div className="text-xs text-muted-foreground">Business critiques</div>
+          </div>
+          <div className="p-3 border rounded-lg">
+            <div className="text-2xl font-bold text-orange-600">{mappingStats.gaps.relations}</div>
+            <div className="text-xs text-muted-foreground">Relations entités</div>
+          </div>
+          <div className="p-3 border rounded-lg">
+            <div className="text-2xl font-bold text-gray-400">{mappingStats.gaps.system}</div>
+            <div className="text-xs text-muted-foreground">Système (export)</div>
+          </div>
+          <div className="p-3 border rounded-lg">
+            <div className="text-2xl font-bold text-gray-400">{mappingStats.gaps.alias}</div>
+            <div className="text-xs text-muted-foreground">Alias (doublons)</div>
+          </div>
+        </div>
+
+        {/* Critical gaps */}
+        <div className="space-y-2 pt-2">
+          <h4 className="text-sm font-semibold flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            Champs Business Non Mappés
+          </h4>
+          <div className="space-y-1">
+            {mappingStats.criticalGaps.map((gap, idx) => (
+              <div 
+                key={idx} 
+                className="flex items-start gap-2 p-2 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded text-sm"
+              >
+                <Badge 
+                  variant={gap.priority === 'high' ? 'destructive' : 'secondary'}
+                  className="mt-0.5"
+                >
+                  {gap.priority === 'high' ? 'P1' : 'P2'}
+                </Badge>
+                <div className="flex-1">
+                  <div className="font-medium font-mono text-xs">{gap.field}</div>
+                  <div className="text-xs text-muted-foreground">{gap.reason}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Action */}
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            <strong>Solution</strong> : Créer les colonnes manquantes dans Monday.com ou utiliser des colonnes existantes.
+            Voir <code className="text-xs">analysis/MONDAY_MAPPING_GAPS_ANALYSIS.md</code> pour détails.
+          </AlertDescription>
+        </Alert>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -567,7 +678,23 @@ function AOsTable({ data }: { data: any[] }) {
               <TableCell>{ao.clientName}</TableCell>
               <TableCell>{ao.city}</TableCell>
               <TableCell>
-                <Badge variant="outline">{ao.aoCategory}</Badge>
+                {ao.aoCategory ? (
+                  <Badge variant="outline">{ao.aoCategory}</Badge>
+                ) : (
+                  <TooltipProvider>
+                    <ShadcnTooltip>
+                      <TooltipTrigger>
+                        <Badge variant="secondary" className="text-gray-400 cursor-help">
+                          <Info className="h-3 w-3 mr-1" />
+                          Non mappé
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Colonne Monday "Catégorie AO" inexistante</p>
+                      </TooltipContent>
+                    </ShadcnTooltip>
+                  </TooltipProvider>
+                )}
               </TableCell>
               <TableCell>
                 <Badge variant={getStatusVariant(ao.operationalStatus)}>

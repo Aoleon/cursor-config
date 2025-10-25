@@ -110,6 +110,28 @@ Les champs suivants ne sont **pas encore mappés** depuis Monday.com vers Saxium
 
 **Note méthodologique** : La table `aos` contient 51 champs mappables (total 54 - id/createdAt/updatedAt système). Sur ces 51 champs, **39 sont mappés** (76.5%), laissant **12 champs non mappés**.
 
+### 📱 AFFICHAGE FRONTEND DES CHAMPS NON MAPPÉS (Oct 25, 2025)
+
+Le dashboard frontend affiche désormais les champs non mappés avec **indicateurs visuels clairs** :
+
+**Dashboard Migration (`/monday-migration-dashboard`)** :
+- **Section "Couverture Mapping"** : Nouvelle carte dans l'onglet "Vue d'ensemble" affichant :
+  - Badge de couverture : **76.5%**
+  - Statistiques détaillées : **39/51 champs mappés**
+  - Breakdown par catégorie : Business (3 gaps), Relations (2), Système (5), Alias (2)
+  - Liste des champs business critiques non mappés avec priorités (P1/P2)
+  - Lien vers analyse détaillée (`MONDAY_MAPPING_GAPS_ANALYSIS.md`)
+
+**Table AOs Monday (`monday-import.tsx`)** :
+- **Colonne `aoCategory`** : Affichage conditionnel avec tooltip explicatif
+  - Si mappé : Badge avec valeur catégorie
+  - Si non mappé : Badge "Non mappé" + icône Info + tooltip "Colonne Monday 'Catégorie AO' inexistante"
+
+**Tooltips & UX** :
+- Import séparé : `TooltipUI` (shadcn/ui) vs `Tooltip` (Recharts) pour éviter conflits
+- Messages utilisateurs clairs en français
+- Pas de "null" ni valeurs brutes affichées
+
 ### Champs Business Non Mappés (3 champs)
 | Champ Saxium | Type | Priorité | Colonne Monday Suggérée | Transformation |
 |--------------|------|----------|-------------------------|----------------|

@@ -23,6 +23,15 @@ Saxium is a fullstack application for quoting and project management in the Fren
 - **Derived Fields**: city + departement extracted from location.address via postal code regex
 - **Testing**: Dry-run script `tsx scripts/test-monday-mapping.ts <itemId>` for validation
 
+### Monday.com Frontend Display Improvements (Oct 25, 2025)
+- **Coverage Dashboard Added**: New "Couverture Mapping" section in migration dashboard
+  - Displays 76.5% mapping coverage with visual progress bar
+  - Breakdown by category: 3 business gaps, 2 relations, 5 system, 2 alias
+  - Lists critical unmapped fields (aoCategory, clientRecurrency, selectionComment) with priority badges
+- **Unmapped Fields UX**: aoCategory column now shows conditional "Non mappé" badge with tooltip
+- **Documentation**: Created `MONDAY_MAPPING_GAPS_ANALYSIS.md` with 3 proposed solutions
+- **Import Resolution**: Fixed Tooltip conflict (Recharts vs shadcn/ui) with separate imports
+
 ## User Preferences
 - Always read `server/utils/README-UTILS.md` before modifying server code.
 - Use `asyncHandler` for all new routes.

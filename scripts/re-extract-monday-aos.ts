@@ -20,11 +20,22 @@ if (!MONDAY_API_KEY) {
 async function reExtractAOs() {
   console.log('🔄 Début de la ré-extraction des AOs Monday.com...\n');
   
+  // Mode test : limiter à 5 AOs pour validation
+  const TEST_MODE = process.argv.includes('--test');
+  const LIMIT = TEST_MODE ? 5 : undefined;
+  
   // Récupérer tous les AOs avec monday_item_id
-  const existingAOs = await db
+  let query = db
     .select({ id: aos.id, mondayItemId: aos.mondayItemId, client: aos.client })
     .from(aos)
     .where(isNotNull(aos.mondayItemId));
+  
+  if (LIMIT) {
+    query = query.limit(LIMIT) as any;
+    console.log(`⚠️ MODE TEST: Limitation à ${LIMIT} AOs\n`);
+  }
+  
+  const existingAOs = await query;
   
   console.log(`📊 ${existingAOs.length} AOs trouvés avec monday_item_id\n`);
   

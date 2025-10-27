@@ -727,4 +727,154 @@ router.get('/api/monday/mapping-coverage',
   })
 );
 
+// POST /api/monday/re-extract-aos - Ré-extraction massive des AOs Monday
+router.post('/api/monday/re-extract-aos',
+  isAuthenticated,
+  asyncHandler(async (req: Request, res: Response) => {
+    const testMode = req.body.testMode === true;
+    const limit = testMode ? 5 : undefined;
+    
+    logger.info('Début ré-extraction AOs Monday', {
+      service: 'MondayRoutes',
+      metadata: { operation: 'reExtractAOs', testMode, limit }
+    });
+    
+    // Récupérer tous les AOs avec monday_item_id
+    let query = storage.aos.where((ao) => ao.mondayItemId != null);
+    const existingAOs = await query;
+    
+    const aosToProcess = limit ? existingAOs.slice(0, limit) : existingAOs;
+    
+    logger.info(`${aosToProcess.length} AOs à ré-extraire`, {
+      service: 'MondayRoutes',
+      metadata: { total: aosToProcess.length, testMode }
+    });
+    
+    if (aosToProcess.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Aucun AO à ré-extraire',
+        stats: { success: 0, errors: 0, skipped: 0, total: 0 }
+      });
+    }
+    
+    const BATCH_SIZE = 50;
+    let successCount = 0;
+    let errorCount = 0;
+    let skippedCount = 0;
+    const errors: Array<{ itemId: string; error: string }> = [];
+    
+    // Traiter par lots
+    for (let i = 0; i < aosToProcess.length; i += BATCH_SIZE) {
+      const batch = aosToProcess.slice(i, i + BATCH_SIZE);
+      const itemIds = batch.map(ao => ao.mondayItemId!).filter(Boolean);
+      
+      if (itemIds.length === 0) {
+        skippedCount += batch.length;
+        continue;
+      }
+      
+      try {
+        // Récupérer les items Monday en masse
+        const mondayItems = await mondayService.getItems(itemIds);
+        
+        if (!mondayItems || mondayItems.length === 0) {
+          logger.warn(`Aucun item retourné par Monday.com pour le lot ${i / BATCH_SIZE + 1}`, {
+            service: 'MondayRoutes',
+            metadata: { itemIds }
+          });
+          skippedCount += itemIds.length;
+          continue;
+        }
+        
+        // Extraire et mettre à jour chaque AO
+        for (const mondayItem of mondayItems) {
+          try {
+            const boardId = mondayItem.board.id;
+            const itemId = mondayItem.id;
+            
+            // Extraire les données avec la config complète
+            const extractedData = await mondayImportService.extractAOFromMondayItem(mondayItem, boardId);
+            
+            if (!extractedData) {
+              logger.warn(`Extraction a retourné null pour item ${itemId}`, {
+                service: 'MondayRoutes'
+              });
+              skippedCount++;
+              continue;
+            }
+            
+            // Trouver l'AO correspondant
+            const existingAO = batch.find(ao => ao.mondayItemId === itemId);
+            
+            if (!existingAO) {
+              logger.warn(`AO non trouvé pour item ${itemId}`, {
+                service: 'MondayRoutes'
+              });
+              skippedCount++;
+              continue;
+            }
+            
+            // Mettre à jour l'AO avec les données extraites
+            await storage.aos.update(existingAO.id, {
+              ...extractedData,
+              mondayItemId: itemId,
+              mondayLastSyncedAt: new Date(),
+              updatedAt: new Date()
+            });
+            
+            successCount++;
+            
+          } catch (itemError: any) {
+            errorCount++;
+            const errorMsg = itemError.message || String(itemError);
+            errors.push({ itemId: mondayItem.id, error: errorMsg });
+            logger.error(`Erreur ré-extraction item ${mondayItem.id}`, {
+              service: 'MondayRoutes',
+              error: errorMsg
+            });
+          }
+        }
+        
+      } catch (batchError: any) {
+        errorCount += batch.length;
+        logger.error(`Erreur traitement lot ${i / BATCH_SIZE + 1}`, {
+          service: 'MondayRoutes',
+          error: batchError.message
+        });
+        batch.forEach(ao => {
+          if (ao.mondayItemId) {
+            errors.push({ itemId: ao.mondayItemId, error: batchError.message });
+          }
+        });
+      }
+      
+      // Pause entre les lots pour ne pas surcharger l'API
+      if (i + BATCH_SIZE < aosToProcess.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    const stats = {
+      success: successCount,
+      errors: errorCount,
+      skipped: skippedCount,
+      total: aosToProcess.length
+    };
+    
+    logger.info('Ré-extraction terminée', {
+      service: 'MondayRoutes',
+      metadata: stats
+    });
+    
+    res.json({
+      success: true,
+      message: `Ré-extraction terminée: ${successCount} succès, ${errorCount} erreurs, ${skippedCount} ignorés`,
+      stats,
+      errors: errors.length > 10 ? errors.slice(0, 10) : errors,
+      totalErrors: errors.length
+    });
+  })
+);
+
 export default router;

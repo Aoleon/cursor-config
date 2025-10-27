@@ -153,17 +153,53 @@ export async function apiRequestPublic(
   return res;
 }
 
+// ========================================
+// STRATÉGIE DE CACHE INTELLIGENTE
+// ========================================
+// Définition de staleTime adapté par type de données :
+// - Infinity : Données ne changeant jamais sans action utilisateur
+// - 10 min (600000ms) : Données statiques (référentiels, config)
+// - 5 min (300000ms) : Données peu fréquentes (listes d'entités)
+// - 2 min (120000ms) : Données dynamiques (projets, offres)
+// - 30 sec (30000ms) : Métriques temps réel (dashboards, analytics)
+
+const CACHE_STRATEGIES = {
+  // Données immutables ou quasi-immutables
+  STATIC: 10 * 60 * 1000,      // 10 minutes
+  // Listes d'entités (équipes, fournisseurs, clients)
+  ENTITIES: 5 * 60 * 1000,     // 5 minutes
+  // Données métier dynamiques (AOs, offres, projets)
+  DYNAMIC: 2 * 60 * 1000,      // 2 minutes
+  // Métriques et analytics temps réel
+  REALTIME: 30 * 1000,         // 30 secondes
+} as const;
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      // Refetch uniquement si données stale (selon staleTime) quand fenêtre refocused
+      refetchOnWindowFocus: true,
+      // Par défaut: 2 minutes (données dynamiques)
+      staleTime: CACHE_STRATEGIES.DYNAMIC,
+      // Garder les données en cache 5 minutes même si plus utilisées
+      gcTime: 5 * 60 * 1000,
       retry: false,
     },
     mutations: {
       retry: false,
     },
   },
+});
+
+// ========================================
+// HELPER: Créer une query avec cache stratégique
+// ========================================
+export const createQuery = <T = unknown>(
+  queryKey: readonly unknown[],
+  cacheStrategy: keyof typeof CACHE_STRATEGIES = 'DYNAMIC'
+) => ({
+  queryKey,
+  staleTime: CACHE_STRATEGIES[cacheStrategy],
 });

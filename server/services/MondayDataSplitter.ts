@@ -205,12 +205,25 @@ export class MondayDataSplitter {
         
         if (existingAO) {
           // AO existe déjà, on le met à jour avec les nouvelles données extraites
+          // IMPORTANT: Filtrer les valeurs enum invalides (nombres au lieu de strings)
+          const cleanedAoData = { ...aoData };
+          
+          // Supprimer operationalStatus si c'est un nombre (enum invalide)
+          if (typeof cleanedAoData.operationalStatus === 'number') {
+            delete cleanedAoData.operationalStatus;
+          }
+          
+          // Supprimer priority si c'est un nombre (enum invalide)
+          if (typeof cleanedAoData.priority === 'number') {
+            delete cleanedAoData.priority;
+          }
+          
           const aoDataWithDefaults = {
-            reference: aoData.reference || existingAO.reference || `AO-MONDAY-${mondayItemId}`,
-            menuiserieType: aoData.menuiserieType || existingAO.menuiserieType || 'autre' as const,
-            source: aoData.source || existingAO.source || 'other' as const,
+            reference: cleanedAoData.reference || existingAO.reference || `AO-MONDAY-${mondayItemId}`,
+            menuiserieType: cleanedAoData.menuiserieType || existingAO.menuiserieType || 'autre' as const,
+            source: cleanedAoData.source || existingAO.source || 'other' as const,
             mondayItemId, // IMPORTANT: Maintenir mondayItemId
-            ...aoData, // Écraser avec les nouvelles données Monday
+            ...cleanedAoData, // Écraser avec les nouvelles données Monday (nettoyées)
             updatedAt: new Date(),
             mondayLastSyncedAt: new Date()
           };

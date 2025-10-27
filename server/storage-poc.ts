@@ -145,7 +145,7 @@ export interface IStorage {
   getAo(id: string, tx?: DrizzleTransaction): Promise<Ao | undefined>;
   getAOByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Ao | undefined>;
   createAo(ao: InsertAo, tx?: DrizzleTransaction): Promise<Ao>;
-  updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao>;
+  updateAo(id: string, ao: Partial<InsertAo>, tx?: DrizzleTransaction): Promise<Ao>;
   deleteAo(id: string, tx?: DrizzleTransaction): Promise<void>;
   
   // Offer operations - Cœur du POC
@@ -1038,8 +1038,9 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao> {
-    const [updatedAo] = await db.update(aos)
+  async updateAo(id: string, ao: Partial<InsertAo>, tx?: DrizzleTransaction): Promise<Ao> {
+    const dbInstance = tx || db;
+    const [updatedAo] = await dbInstance.update(aos)
       .set({ ...ao, updatedAt: new Date() })
       .where(eq(aos.id, id))
       .returning();
@@ -4656,7 +4657,7 @@ export class MemStorage implements IStorage {
     throw new Error("MemStorage: createAo not implemented for POC");
   }
 
-  async updateAo(id: string, ao: Partial<InsertAo>): Promise<Ao> {
+  async updateAo(id: string, ao: Partial<InsertAo>, tx?: DrizzleTransaction): Promise<Ao> {
     throw new Error("MemStorage: updateAo not implemented for POC");
   }
 

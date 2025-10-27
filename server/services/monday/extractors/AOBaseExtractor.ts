@@ -162,12 +162,18 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
     // STATUS / DROPDOWN - Enum mapping
     if (type === 'status' || type === 'dropdown') {
       // Extraire la valeur string depuis un objet Monday si nécessaire
-      let textValue: string;
+      let textValue: string | null = null;
       if (typeof value === 'object' && value !== null) {
         // Objet Monday brut : {text: "...", value: "..."} ou parsed : {label: "..."}
-        textValue = value.text || value.label || value.index || String(value);
-      } else {
-        textValue = String(value);
+        // NE PAS utiliser value.index comme fallback car c'est un nombre qui causera des erreurs enum
+        textValue = value.text || value.label || null;
+      } else if (typeof value === 'string') {
+        textValue = value;
+      }
+      
+      // Si aucune valeur textuelle n'a été trouvée, ignorer ce champ
+      if (!textValue) {
+        return null;
       }
       
       // Enum mapping configuré
@@ -185,7 +191,12 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
         return [textValue];
       }
       
-      // Fallback: lowercase + underscores
+      // Fallback: Si enumMapping existe mais textValue n'est pas dedans, ignorer
+      if (mapping.enumMapping) {
+        return null; // Ignorer les valeurs non mappées au lieu de retourner un string invalide
+      }
+      
+      // Si pas d'enumMapping, accepter les valeurs textuelles (pour dropdown libre)
       return textValue.toLowerCase().replace(/\s+/g, '_');
     }
     

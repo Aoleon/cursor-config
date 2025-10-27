@@ -242,14 +242,18 @@ export class MondayDataSplitter {
           // IMPORTANT: Filtrer les valeurs enum invalides (nombres au lieu de strings)
           const cleanedAoData = { ...aoData };
           
-          // Supprimer operationalStatus si c'est un nombre (enum invalide)
+          // Supprimer tous les enums invalides (nombres au lieu de strings)
           if (typeof cleanedAoData.operationalStatus === 'number') {
             delete cleanedAoData.operationalStatus;
           }
-          
-          // Supprimer priority si c'est un nombre (enum invalide)
           if (typeof cleanedAoData.priority === 'number') {
             delete cleanedAoData.priority;
+          }
+          if (typeof cleanedAoData.typeMarche === 'number') {
+            delete cleanedAoData.typeMarche;
+          }
+          if (typeof cleanedAoData.aoCategory === 'number') {
+            delete cleanedAoData.aoCategory;
           }
           
           const aoDataWithDefaults = {
@@ -289,14 +293,18 @@ export class MondayDataSplitter {
           // IMPORTANT: Filtrer les valeurs enum invalides (nombres au lieu de strings)
           const cleanedAoData = { ...aoData };
           
-          // Supprimer operationalStatus si c'est un nombre (enum invalide)
+          // Supprimer tous les enums invalides (nombres au lieu de strings)
           if (typeof cleanedAoData.operationalStatus === 'number') {
             delete cleanedAoData.operationalStatus;
           }
-          
-          // Supprimer priority si c'est un nombre (enum invalide)
           if (typeof cleanedAoData.priority === 'number') {
             delete cleanedAoData.priority;
+          }
+          if (typeof cleanedAoData.typeMarche === 'number') {
+            delete cleanedAoData.typeMarche;
+          }
+          if (typeof cleanedAoData.aoCategory === 'number') {
+            delete cleanedAoData.aoCategory;
           }
           
           const aoDataWithDefaults = {

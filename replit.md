@@ -33,12 +33,14 @@ Saxium is a fullstack application designed for quoting and project management wi
    - `scripts/cleanup-incomplete-aos.ts` : Nettoyage avec modes dry-run/force (830 AOs supprimés)
    - `scripts/extract-all-aos-from-monday.ts` : Extraction complète avec progress bar et validation
 
-**Résultats** :
-- ✅ **830 AOs incomplets nettoyés**
-- ✅ **9 nouveaux AOs extraits** depuis Monday.com avec mapping corrigé
-- ✅ **15/15 AOs en base (100% complets)** - tous ont `intitule_operation`, `menuiserie_type`, `source`
+**Résultats Finaux** (Oct 27, 2025) :
+- ✅ **830 AOs incomplets nettoyés** lors du cleanup initial
+- ✅ **833/833 AOs extraits depuis Monday.com** (100% succès, 0 erreur)
+- ✅ **834 AOs en base (100% complets)** - tous ont `intitule_operation`, `menuiserie_type`, `source`
 - ✅ **Validation stricte active** : empêche l'insertion d'AOs incomplets
-- ✅ **Bug enum corrigé** : Les champs `operationalStatus` et `priority` avec valeurs numériques (au lieu de string) sont nettoyés avant INSERT/UPDATE
+- ✅ **Bug enum corrigé (root cause)** : AOBaseExtractor ne retourne plus `value.index` (nombre) pour les enums, les valeurs sans mapping valide sont ignorées (null) au lieu de causer des erreurs PostgreSQL
+- ✅ **Défense en profondeur** : Nettoyage manuel des enums numériques (`operationalStatus`, `priority`, `typeMarche`, `aoCategory`) avant INSERT/UPDATE
+- ✅ **Performance** : ~1.7 secondes par AO, extraction complète en ~23 minutes
 
 **Critères de complétude** (basés sur `ao-planning-3946257560.json`) :
 - `intitule_operation` (NOT NULL et non vide) - Champ `name` de Monday.com

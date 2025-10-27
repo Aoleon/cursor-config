@@ -110,6 +110,7 @@ export default function AoDetail() {
     departement: "",
     intituleOperation: "",
     dateLimiteRemise: "",
+    dateRenduAO: "",
     dateSortieAO: "",
     dateAcceptationAO: "",
     demarragePrevu: "",
@@ -130,6 +131,9 @@ export default function AoDetail() {
     prorataEventuel: "",
     delaiContractuel: "",
     priority: "",
+    operationalStatus: "",
+    tags: [] as string[],
+    isSelected: false,
     // Champs Monday.com Phase 1
     projectSize: "",
     specificLocation: "",
@@ -190,6 +194,7 @@ export default function AoDetail() {
         departement: ao.departement || "",
         intituleOperation: ao.intituleOperation || "",
         dateLimiteRemise: ao.dateLimiteRemise ? ao.dateLimiteRemise.split('T')[0] : "",
+        dateRenduAO: ao.dateRenduAO ? ao.dateRenduAO.split('T')[0] : "",
         dateSortieAO: ao.dateSortieAO ? ao.dateSortieAO.split('T')[0] : "",
         dateAcceptationAO: ao.dateAcceptationAO ? ao.dateAcceptationAO.split('T')[0] : "",
         demarragePrevu: ao.demarragePrevu ? ao.demarragePrevu.split('T')[0] : "",
@@ -210,6 +215,9 @@ export default function AoDetail() {
         prorataEventuel: ao.prorataEventuel ? ao.prorataEventuel.toString() : "",
         delaiContractuel: ao.delaiContractuel ? ao.delaiContractuel.toString() : "",
         priority: ao.priority || "",
+        operationalStatus: ao.operationalStatus || "",
+        tags: ao.tags || [],
+        isSelected: ao.isSelected || false,
         // Champs Monday.com Phase 1
         projectSize: ao.projectSize || "",
         specificLocation: ao.specificLocation || "",
@@ -323,7 +331,8 @@ export default function AoDetail() {
   const saveAO = async () => {
     setIsSaving(true);
     try {
-      const dateRenduAO = formData.dateLimiteRemise ? calculateDateRendu(formData.dateLimiteRemise) : undefined;
+      // Utiliser dateRenduAO de formData si présent, sinon calculer automatiquement
+      const dateRenduAO = formData.dateRenduAO || (formData.dateLimiteRemise ? calculateDateRendu(formData.dateLimiteRemise) : undefined);
       
       const aoData = {
         ...formData,
@@ -750,6 +759,17 @@ export default function AoDetail() {
                   </div>
 
                   <div>
+                    <Label htmlFor="dateRenduAO">Date rendu/bouclage AO</Label>
+                    <Input
+                      id="dateRenduAO"
+                      type="date"
+                      value={formData.dateRenduAO}
+                      onChange={(e) => handleFieldChange("dateRenduAO", e.target.value)}
+                      data-testid="input-date-rendu-ao"
+                    />
+                  </div>
+
+                  <div>
                     <Label htmlFor="dateSortie">Date sortie AO</Label>
                     <Input
                       id="dateSortie"
@@ -791,6 +811,13 @@ export default function AoDetail() {
                     </div>
                   )}
                   
+                  {formData.dateRenduAO && (
+                    <div>
+                      <Label className="text-sm text-on-surface-muted">Date rendu/bouclage AO</Label>
+                      <p className="font-medium">{new Date(formData.dateRenduAO).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  )}
+                  
                   {formData.dateSortieAO && (
                     <div>
                       <Label className="text-sm text-on-surface-muted">Date sortie AO</Label>
@@ -812,7 +839,7 @@ export default function AoDetail() {
                     </div>
                   )}
                   
-                  {!formData.dateLimiteRemise && !formData.dateSortieAO && !formData.dateAcceptationAO && !formData.demarragePrevu && (
+                  {!formData.dateLimiteRemise && !formData.dateRenduAO && !formData.dateSortieAO && !formData.dateAcceptationAO && !formData.demarragePrevu && (
                     <p className="text-muted-foreground text-sm">Aucune date définie</p>
                   )}
                 </div>
@@ -1112,7 +1139,7 @@ export default function AoDetail() {
           )}
 
           {/* Informations Monday.com Phase 1 */}
-          {(isEditing || formData.projectSize || formData.specificLocation || formData.estimatedDelay || formData.clientRecurrency) && (
+          {(isEditing || formData.projectSize || formData.specificLocation || formData.estimatedDelay || formData.clientRecurrency || formData.operationalStatus || formData.tags?.length > 0 || formData.isSelected) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -1123,6 +1150,44 @@ export default function AoDetail() {
               <CardContent>
                 {isEditing ? (
                   <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="operationalStatus">Statut opérationnel</Label>
+                      <Select 
+                        value={formData.operationalStatus} 
+                        onValueChange={(value) => handleFieldChange("operationalStatus", value)}
+                      >
+                        <SelectTrigger id="operationalStatus" data-testid="select-operational-status">
+                          <SelectValue placeholder="Sélectionner le statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="en_cours">En cours</SelectItem>
+                          <SelectItem value="accepte">Accepté</SelectItem>
+                          <SelectItem value="perdu">Perdu</SelectItem>
+                          <SelectItem value="archive">Archivé</SelectItem>
+                          <SelectItem value="brouillon">Brouillon</SelectItem>
+                          <SelectItem value="en_attente">En attente</SelectItem>
+                          <SelectItem value="termine">Terminé</SelectItem>
+                          <SelectItem value="valide">Validé</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <Label className="text-base">Passation effectuée</Label>
+                          <p className="text-sm text-on-surface-muted">
+                            Indique si l'AO a été transmis au client (isSelected)
+                          </p>
+                        </div>
+                        <Switch 
+                          checked={formData.isSelected}
+                          onCheckedChange={(value) => handleFieldChange("isSelected", value)}
+                          data-testid="switch-is-selected"
+                        />
+                      </div>
+                    </div>
+
                     <div>
                       <Label htmlFor="projectSize">Taille du projet</Label>
                       <Input
@@ -1158,6 +1223,17 @@ export default function AoDetail() {
                     </div>
 
                     <div className="md:col-span-2">
+                      <Label htmlFor="tags">Tags / Années production</Label>
+                      <Input
+                        id="tags"
+                        value={formData.tags?.join(', ') || ''}
+                        onChange={(e) => handleFieldChange("tags", e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
+                        placeholder="Ex: 2024, 2025, 2026 (séparés par des virgules)"
+                        data-testid="input-tags"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
                       <div className="flex items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
                           <Label className="text-base">Client récurrent</Label>
@@ -1175,6 +1251,36 @@ export default function AoDetail() {
                   </div>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
+                    {formData.operationalStatus && (
+                      <div>
+                        <Label className="text-sm text-on-surface-muted">Statut opérationnel</Label>
+                        <p className="font-medium">
+                          {formData.operationalStatus === "en_cours" && "En cours"}
+                          {formData.operationalStatus === "accepte" && "Accepté"}
+                          {formData.operationalStatus === "perdu" && "Perdu"}
+                          {formData.operationalStatus === "archive" && "Archivé"}
+                          {formData.operationalStatus === "brouillon" && "Brouillon"}
+                          {formData.operationalStatus === "en_attente" && "En attente"}
+                          {formData.operationalStatus === "termine" && "Terminé"}
+                          {formData.operationalStatus === "valide" && "Validé"}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {formData.isSelected !== undefined && (
+                      <div>
+                        <Label className="text-sm text-on-surface-muted">Passation effectuée</Label>
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-3 h-3 rounded-full ${
+                            formData.isSelected ? 'bg-success' : 'bg-surface-muted'
+                          }`}></div>
+                          <p className="font-medium">
+                            {formData.isSelected ? 'Oui - Transmis au client' : 'Non - En préparation'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
                     {formData.projectSize && (
                       <div>
                         <Label className="text-sm text-on-surface-muted">Taille du projet</Label>
@@ -1193,6 +1299,19 @@ export default function AoDetail() {
                       <div className="md:col-span-2">
                         <Label className="text-sm text-on-surface-muted">Localisation spécifique</Label>
                         <p className="font-medium">{formData.specificLocation}</p>
+                      </div>
+                    )}
+                    
+                    {formData.tags && formData.tags.length > 0 && (
+                      <div className="md:col-span-2">
+                        <Label className="text-sm text-on-surface-muted">Tags / Années production</Label>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {formData.tags.map((tag, index) => (
+                            <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                     

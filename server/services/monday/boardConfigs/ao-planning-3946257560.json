@@ -223,6 +223,27 @@
         "type": "text",
         "required": false,
         "description": "Nom alternatif du client (si différent)"
+      },
+      {
+        "mondayColumnId": "dropdown_mkx4j6dh",
+        "saxiumField": "aoCategory",
+        "type": "dropdown",
+        "required": false,
+        "description": "Catégorie de l'AO (Neuf, Rénovation, Extension, etc.)"
+      },
+      {
+        "mondayColumnId": "dropdown_mkx4b61f",
+        "saxiumField": "clientRecurrency",
+        "type": "dropdown",
+        "required": false,
+        "description": "Type de client (Nouveau, Récurrent, Fidèle, etc.)"
+      },
+      {
+        "mondayColumnId": "long_text_mkx4s0qw",
+        "saxiumField": "selectionComment",
+        "type": "text",
+        "required": false,
+        "description": "Commentaire sur la sélection du projet"
       }
     ],
     "contacts": [

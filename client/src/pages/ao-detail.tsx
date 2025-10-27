@@ -129,6 +129,7 @@ export default function AoDetail() {
     description: "",
     prorataEventuel: "",
     delaiContractuel: "",
+    priority: "",
     // Champs Monday.com Phase 1
     projectSize: "",
     specificLocation: "",
@@ -208,6 +209,7 @@ export default function AoDetail() {
         description: ao.description || "",
         prorataEventuel: ao.prorataEventuel ? ao.prorataEventuel.toString() : "",
         delaiContractuel: ao.delaiContractuel ? ao.delaiContractuel.toString() : "",
+        priority: ao.priority || "",
         // Champs Monday.com Phase 1
         projectSize: ao.projectSize || "",
         specificLocation: ao.specificLocation || "",
@@ -586,6 +588,25 @@ export default function AoDetail() {
                     </Select>
                   </div>
 
+                  <div>
+                    <Label htmlFor="priority">Priorité</Label>
+                    <Select 
+                      value={formData.priority} 
+                      onValueChange={(value) => handleFieldChange("priority", value)}
+                    >
+                      <SelectTrigger id="priority" data-testid="select-priority">
+                        <SelectValue placeholder="Sélectionner une priorité" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tres_faible">Très faible</SelectItem>
+                        <SelectItem value="faible">Faible</SelectItem>
+                        <SelectItem value="normale">Normale</SelectItem>
+                        <SelectItem value="elevee">Élevée</SelectItem>
+                        <SelectItem value="critique">Critique</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="md:col-span-2">
                     <Label htmlFor="description">Description</Label>
                     <Textarea
@@ -630,6 +651,19 @@ export default function AoDetail() {
                       {formData.menuiserieType === "autre" && "Autre"}
                     </p>
                   </div>
+                  
+                  {formData.priority && (
+                    <div>
+                      <Label className="text-sm text-on-surface-muted">Priorité</Label>
+                      <p className="font-medium" data-testid="text-priority">
+                        {formData.priority === "tres_faible" && "Très faible"}
+                        {formData.priority === "faible" && "Faible"}
+                        {formData.priority === "normale" && "Normale"}
+                        {formData.priority === "elevee" && "Élevée"}
+                        {formData.priority === "critique" && "Critique"}
+                      </p>
+                    </div>
+                  )}
                   
                   {formData.description && (
                     <div>

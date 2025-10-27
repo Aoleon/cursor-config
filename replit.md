@@ -47,6 +47,11 @@ Saxium is a fullstack application designed for quoting and project management wi
 - `menuiserie_type` (NOT NULL) - Champ `lot` de Monday.com
 - `source` (NOT NULL) - Source de l'AO
 
+**Recommandations Architect** (pour maintenance future) :
+1. Monitorer les diagnostics pour détecter les nouveaux enum mismatches (labels Monday.com non mappés)
+2. Explorer batching/parallélisme si la synchronisation devient routinière (respecter les rate limits Monday.com et DB)
+3. Auditer les autres extractors pour éliminer les numeric enum fallbacks legacy
+
 ### Synchronisation Bidirectionnelle Saxium ↔ Monday.com (Oct 27, 2025)
 **Feature: Alimenter les colonnes Monday.com depuis Saxium**
 

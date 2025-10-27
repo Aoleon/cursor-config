@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 /**
  * Hook de debouncing pour optimiser les recherches et filtres
@@ -41,18 +41,40 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
  * 
  * @param callback - Fonction à throttler
  * @param delay - Délai minimum entre les appels (défaut: 200ms)
+ * @returns Fonction throttlée stable (ne change pas entre renders)
+ * 
+ * @example
+ * const handleScroll = useThrottle(() => {
+ *   console.log('Scroll event');
+ * }, 200);
+ * 
+ * useEffect(() => {
+ *   window.addEventListener('scroll', handleScroll);
+ *   return () => window.removeEventListener('scroll', handleScroll);
+ * }, [handleScroll]); // handleScroll est stable, pas de re-registration
  */
 export function useThrottle<T extends (...args: any[]) => any>(
   callback: T,
   delay: number = 200
 ): T {
-  const [lastRun, setLastRun] = useState(Date.now());
+  // Utiliser useRef pour éviter les re-renders
+  const lastRunRef = useRef(Date.now());
+  const callbackRef = useRef(callback);
 
-  return ((...args: Parameters<T>) => {
-    const now = Date.now();
-    if (now - lastRun >= delay) {
-      setLastRun(now);
-      return callback(...args);
-    }
-  }) as T;
+  // Mettre à jour la ref du callback à chaque render
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  // Mémoiser la fonction throttlée pour qu'elle reste stable
+  return useCallback(
+    ((...args: Parameters<T>) => {
+      const now = Date.now();
+      if (now - lastRunRef.current >= delay) {
+        lastRunRef.current = now;
+        return callbackRef.current(...args);
+      }
+    }) as T,
+    [delay]
+  );
 }

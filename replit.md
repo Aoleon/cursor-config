@@ -1,80 +1,7 @@
 # Saxium - Application de Chiffrage BTP/Menuiserie
 
 ## Overview
-Saxium is a fullstack application for quoting and project management in the French construction and joinery sector (BTP/Menuiserie). It aims to improve operational efficiency through advanced automation and AI, featuring OCR analysis of supplier quotes, intelligent planning with DateIntelligence, and AI-driven decision-making.
-
-## Recent Changes
-
-### TypeScript Deployment Fix (Oct 23, 2025)
-**Problem**: Replit deployment blocked by 105 TypeScript LSP errors preventing production build
-**Solution**: Systematic TypeScript corrections in EventBus and related files
-- **EventBus.ts** (28 errors fixed):
-  - Added type casting for implicit `any` parameters in filter/map operations
-  - Added null checks (`!`) for contextCacheService in predictive preloading methods
-  - Converted MapIterator to Array.from() for TypeScript compatibility
-- **Build Status**: ✅ Production build now succeeds (`npm run build` passes)
-- **Deployment**: ✅ Replit deployment now unblocked
-- **Validation**: Architect review confirmed no regressions, healthy runtime behavior
-
-### Monday.com Mapping Enhancement (Oct 27, 2025)
-- **Coverage**: 42/51 fields mapped (82.4%) - **+3 colonnes créées** ✅
-- **Colonnes créées** (27 Oct 2025):
-  - `dropdown_mkx4j6dh` - Catégorie AO (Neuf, Rénovation, Extension, Réhabilitation, Surélévation, Maintenance, Autre)
-  - `dropdown_mkx4b61f` - Type Client (Nouveau, Récurrent, Fidèle, Occasionnel, Prospect)
-  - `long_text_mkx4s0qw` - Commentaire sélection
-- **Board updated**: AO Planning 🖥️ (41 → 47 colonnes)
-- **Gap business**: 0 (tous les champs business mappés) ✅
-- **New Mappings** (Oct 23): +19 fields including dates, contacts, technical entities, amounts
-- **New Column Types**: phone, email, people, hoursTodays transformation
-- **Derived Fields**: city + departement extracted from location.address via postal code regex
-- **Testing**: Dry-run script `tsx scripts/test-monday-mapping.ts <itemId>` for validation
-
-### Monday.com Frontend Display Improvements (Oct 27, 2025)
-- **Coverage Dashboard Added**: New "Couverture Mapping" section in migration dashboard
-  - Displays **82.4%** mapping coverage with visual progress bar (backend hook)
-  - Breakdown by category: **0 business gaps** ✅, 2 relations, 5 system, 2 alias
-  - Auto-refresh every 60s via React Query
-  - Lists previously unmapped fields (aoCategory, clientRecurrency, selectionComment) - **NOW COMPLETED** ✅
-- **Unmapped Fields UX**: 3 colonnes (aoCategory, clientRecurrency, selectionComment) avec pattern badge conditionnel + tooltip
-  - Si mappé : Badge avec valeur / Texte direct
-  - Si non mappé (colonnes vides) : Badge "Non mappé" + Info icon + tooltip explicatif
-- **Documentation**: Created `MONDAY_MAPPING_GAPS_ANALYSIS.md` with 3 proposed solutions (SOLUTION A IMPLEMENTED)
-- **Import Resolution**: Fixed Tooltip conflict (Recharts vs shadcn/ui) with separate imports
-
-### Monday.com Boards & Re-extraction (Oct 27, 2025)
-- **Workspace Investigation**: 81 boards discovered in Monday.com workspace (script: `tsx scripts/list-all-monday-boards.ts`)
-- **Production Board**: 3946257560 (AO Planning 🖥️) - **833 items**, 47 columns, full 82.4% mapping configuration
-- **Template Board**: 8952933832 (Modèle MEXT) - 3 items, 14 columns, limited hardcoded config (5 fields only)
-- **Data Issue Resolved**: 
-  - Deleted invalid AO template (board 8952934063 doesn't exist - it was an item ID, not a board ID)
-  - Created diagnostic script: `tsx scripts/find-monday-item-board.ts <itemId>` to identify parent board
-- **Re-extraction API**: New endpoint `POST /api/monday/re-extract-aos` for bulk re-import ✅
-  - **Test mode**: `{testMode: true}` limits to 5 AOs for validation
-  - **Full mode**: Processes all 836 AOs in batches of 50
-  - **Complete extraction**: Uses `MondayDataSplitter.splitItem()` to update AO + contacts + lots + maîtres
-  - **Performance optimized**: ~830 Monday API calls (vs 1,600+ before) - eliminated double-fetch by passing pre-fetched items
-  - **Rate limit protection**: 1s pause between 50-item batches to respect Monday.com complexity limits
-  - **Transaction safety**: All updates atomic (rollback on error)
-  - **Validation**: Architect review confirmed acceptable runtime and data integrity for 800+ items
-
-### New AO Fields Implementation (Oct 27, 2025)
-- **UI Complete**: 3 nouveaux champs ajoutés à ao-detail.tsx (edit + view modes)
-  - `dateLivraisonPrevue` (Date) - Date de livraison prévue du projet
-  - `dateOS` (Date) - Date d'ordre de service  
-  - `cctp` (Textarea) - Cahier des Clauses Techniques Particulières
-- **Backend Schema**: insertAoSchema corrigé dans shared/schema.ts
-  - Removed `dateRenduAO` from `.omit()` list
-  - Added proper Zod Date transforms for `dateLivraisonPrevue`, `dateOS`, `dateRenduAO`
-  - Added text field for `cctp`
-  - Validated with curl tests: PUT /api/aos/:id returns 200 OK
-- **Monday Mapping**: Configuration updated in `ao-planning-3946257560.json`
-  - **LIMITATION**: Original columns `date1`, `date6`, `long_text` do NOT exist in Monday board 3946257560
-  - **Temporary mapping**: Using existing but empty columns as substitutes
-    - `dateLivraisonPrevue` → `date_mkpcfgja` (Date Métrés) - ⚠️ Empty in Monday.com
-    - `dateOS` → `date__1` (Date Accord) - ⚠️ Empty in Monday.com  
-    - `cctp` → `long_text_mkx4zgjd` (Commentaire sélection) - ⚠️ Empty in Monday.com
-  - **Impact**: Re-extraction works but returns empty values (no source data in Monday)
-  - **Next steps**: Create proper Monday columns `date1`, `date6`, `long_text` OR populate existing mapped columns with data
+Saxium is a fullstack application designed for quoting and project management within the French construction and joinery (BTP/Menuiserie) sector. Its primary goal is to enhance operational efficiency through advanced automation and AI capabilities. Key features include OCR analysis of supplier quotes, intelligent planning facilitated by DateIntelligence, and AI-driven decision-making processes. The project aims to revolutionize traditional workflows in the construction and joinery industry by providing a comprehensive, intelligent, and integrated solution for managing projects from initial quoting to completion.
 
 ## User Preferences
 - Always read `server/utils/README-UTILS.md` before modifying server code.
@@ -89,85 +16,48 @@ Saxium is a fullstack application for quoting and project management in the Fren
 - Do NOT add `try-catch` in routes (`asyncHandler` handles it).
 
 ## System Architecture
-The application uses a modern fullstack architecture with a React, TypeScript, Vite frontend and an Express, TypeScript, Drizzle ORM backend.
+The application employs a modern fullstack architecture. The frontend is built with React, TypeScript, and Vite, utilizing Wouter for routing, shadcn/ui and Tailwind CSS for styling, Radix UI for components, React Query for data fetching, and `react-hook-form` with Zod for form management. The backend is developed with Express and TypeScript, leveraging Drizzle ORM for database interactions.
 
-### Monday.com Data Mapping Architecture (Oct 2025)
+**Key Architectural Decisions & Features:**
 
-**Configuration-Driven Extraction System**:
-- **Board-Specific Configs**: JSON files in `server/services/monday/boardConfigs/` define mappings per Monday board
-- **Dynamic Loading**: `getBoardConfig(boardId)` loads appropriate config, fallback to hardcoded defaults
-- **Supported Boards**: 
-  - `3946257560` (AO Planning 🖥️) - Production board with 828 items, 47 columns → **42 fields mapped (82.4% couverture)**
-  - `8952933832` (Modèle MEXT) - Template board (empty), legacy config
+*   **UI/UX Decisions**:
+    *   Utilizes shadcn/ui, Tailwind CSS, and Radix UI for a consistent and modern design system.
+    *   New "Couverture Mapping" dashboard section provides visual progress bars and detailed breakdowns for Monday.com mapping coverage, enhancing user understanding of data integration status.
+    *   Optimized List components (`OptimizedList`, `OptimizedListItem`) and associated hooks (`useOptimizedRenderItem`, `useOptimizedKeyExtractor`) prevent unnecessary re-renders in large lists, ensuring a smooth user experience.
+    *   Draft system allows saving incomplete forms with conditional validation.
 
-**Extractor Pipeline**:
-1. **AOBaseExtractor**: Core field mapping (client, location, dates, amounts, statuses)
-   - Iterates over `config.mappings.base + config.mappings.metadata`
-   - Handles 10+ column types: text, numbers, date, status, dropdown, timeline, location
-   - Enum mappings: Monday values → Saxium enums (priority, typeMarche, menuiserieType)
-   - Boolean transforms: status values → boolean flags (isSelected)
-   - Array wrapping: single values → tags array
-   - Default values: source=other, menuiserieType=autre, status=etude
-   - Draft detection: isDraft=true if client/montantEstime/dateLimiteRemise missing
-2. **ContactExtractor**: People columns → contacts table (MOA, architects)
-3. **LotExtractor**: Subitems → lots table
-4. **MasterExtractor**: Detects master projects
+*   **Technical Implementations**:
+    *   **Monday.com Data Mapping Architecture**: Configuration-driven extraction system using board-specific JSON files for dynamic mapping. Supports 10+ column types including derived fields like city and department from postal codes.
+    *   **Performance Optimizations**:
+        *   **Frontend**: Adaptive caching strategies (by data type), prefetching system (`usePrefetch*` hooks) for common user flows, debouncing and throttling for search/filter operations, and route-based lazy loading for all pages.
+        *   **Backend**: Database indexing, production-ready Redis caching (with in-memory fallback), optimized database queries (pagination, aggregations), and network compression (gzip/brotli).
+    *   **Error Handling**: Unified system with typed errors, `error-handler.ts`, `logger.ts`, and `errorHandler.ts` middleware.
+    *   **API Response Handling**: `normalizeApiResponse<T>()` helper for consistent, type-safe API responses.
+    *   **Retry System**: Exponential backoff for external API calls.
+    *   **Cache System**: `CacheService` with in-memory adapter (Redis-ready), proactive invalidation, and monitoring endpoint.
+    *   **Correlation IDs**: `AsyncLocalStorage`-based request tracing for observability.
+    *   **Zod v4 Migration**: Completed for robust data validation and transformations.
 
-**Column Type Transformations** (10 types supportés):
-- `text` → String
-- `numbers` → parseFloat + transformations (hoursTodays: heures→jours via Math.ceil(parsed/8))
-- `date` → Date instance with timezone
-- `timeline` → {from, to} → split into dateSortieAO + dateLimiteRemise
-- `status/dropdown` → Enum mapping via `enumMapping` config + object unwrapping (handles `{text: "..."}` and `{label: "..."}`)
-- `location` → Extract address + **derived fields**: city + departement via regex code postal
-- `phone` → Extract phone.phone (nouvelle colonne type)
-- `email` → Extract email.email or email.text (nouvelle colonne type)
-- `people` → Extract people[0].name pour contactAO, skip pour contacts multiples (ContactExtractor)
-- `subitems` → Handled by LotExtractor
+*   **Feature Specifications**:
+    *   Modular backend routes (`auth`, `chiffrage`, `suppliers`, `projects`, `analytics`, `documents`, `batigest`).
+    *   PDF template engine.
+    *   Batigest ERP integration.
+    *   AI services (`DateIntelligenceService`, `OCRService`, `AIService`).
+    *   EventBus for inter-component communication.
+    *   Differentiates between "AOs Monday" (read-only client requests) and "Offers Saxium" (active working documents) with hybrid ID resolution.
+    *   New AO fields implemented in UI and backend schema: `dateLivraisonPrevue`, `dateOS`, `cctp`.
 
-**Testing**:
-```bash
-# Test mapping on real Monday item (dry-run, no DB save)
-tsx scripts/test-monday-mapping.ts <mondayItemId>
-
-# Example with AO Planning item
-tsx scripts/test-monday-mapping.ts 7952357208
-```
-
-**Mapping Matrix**: `analysis/MONDAY_TO_SAXIUM_MAPPING_MATRIX.md` tracks 51 Saxium mappable fields
-- **Couverture actuelle** : 42/51 champs mappés (**82.4%**) - Objectif Phase 1 (59%) **LARGEMENT DÉPASSÉ** ✅
-- **+3 colonnes créées** (Oct 27): aoCategory (dropdown), clientRecurrency (dropdown), selectionComment (long_text)
-- **+19 nouveaux mappings** (Oct 23): dates multiples (8), contacts AO (4), entités techniques (3), montants (2), métadonnées (2)
-- **+4 nouveaux types** supportés: phone, email, people (contactAO), transformation hoursTodays
-- **Extraction dérivée** : city + departement depuis location.address (regex code postal)
-- **Champs restants** : 9/51 (0 business ✅, 2 relations, 5 export système, 2 alias)
-
--   **Frontend**: React, TypeScript, Vite, Wouter, shadcn/ui, Tailwind CSS, Radix UI, React Query, `react-hook-form` with Zod.
--   **Backend**: Express, TypeScript, Drizzle ORM. Features modular routes (`auth`, `chiffrage`, `suppliers`, `projects`, `analytics`, `documents`, `batigest`), a PDF template engine, and Batigest ERP integration.
--   **Database**: PostgreSQL (Neon) with Drizzle ORM.
--   **AI**: Integrates Anthropic Claude, OpenAI, and Tesseract.js for OCR.
--   **Folder Structure**: `client/`, `server/`, `shared/`, `attached_assets/`.
--   **Data Architecture**: Differentiates between "AOs Monday" (read-only client requests) and "Offers Saxium" (active working documents), supporting hybrid ID resolution.
--   **Error Handling**: Unified system with typed errors, `error-handler.ts`, `logger.ts`, and `errorHandler.ts` middleware.
--   **Business Services**: `DateIntelligenceService`, `OCRService`, `AIService`, and `EventBus`.
--   **API Response Handling**: `normalizeApiResponse<T>()` helper for consistent, type-safe API responses.
--   **Testing**: Vitest for unit tests, Playwright for E2E regression tests.
--   **Retry System**: Exponential backoff for external API calls.
--   **Cache System**: `CacheService` with in-memory adapter (Redis-ready), proactive invalidation, and monitoring endpoint.
--   **Correlation IDs**: `AsyncLocalStorage`-based request tracing for observability.
--   **Monday.com Integration**: `MondayExportService` (Saxium→Monday) and secure webhook system (Monday→Saxium) with UI sync indicators.
--   **Draft System**: Allows saving incomplete forms with conditional validation.
--   **Performance Optimizations**:
-    -   **Database Indexing**: 17 indexes added across 5 core tables for improved query performance.
-    -   **Redis Cache Integration**: Production-ready Redis caching layer with automatic adapter selection and graceful fallback to in-memory.
-    -   **Frontend Lazy Loading**: Route-based code splitting for all 52 pages using `React.lazy()`, significantly reducing initial bundle size and improving TTI.
-    -   **Database Query Optimization**: Implemented backend pagination (`LIMIT`/`OFFSET`, `LEFT JOIN`) and SQL aggregations for analytics, eliminating N+1 queries and bulk data loads.
-    -   **Network Compression**: Express compression middleware (gzip/brotli) activated for API responses, reducing transfer sizes.
--   **Zod v4 Migration**: Completed migration to Zod v4, restoring storage architecture, refactoring `DateAlertDetectionService`, optimizing build, and enhancing production stability with business validations and data transformations.
+*   **System Design Choices**:
+    *   Fullstack TypeScript for type safety across the application.
+    *   PostgreSQL (Neon) with Drizzle ORM for robust data management.
+    *   Dedicated `shared/` folder for common types and schemas.
+    *   Comprehensive testing with Vitest for unit tests and Playwright for E2E regression tests.
 
 ## External Dependencies
--   **Replit Services**: OIDC authentication, PostgreSQL, Object Storage.
--   **External APIs**:
-    -   **Anthropic Claude**: Quote analysis, content generation.
-    -   **OpenAI**: Embeddings, chat assistance.
-    -   **SendGrid**: Transactional emails.
+*   **Replit Services**: OIDC authentication, PostgreSQL, Object Storage.
+*   **External APIs**:
+    *   **Anthropic Claude**: For quote analysis and content generation.
+    *   **OpenAI**: For embeddings and chat assistance.
+    *   **SendGrid**: For transactional email services.
+    *   **Monday.com**: For project management and data synchronization (via `MondayExportService` and webhooks).
+*   **Libraries**: Tesseract.js for OCR capabilities.

@@ -5,6 +5,23 @@ Saxium is a fullstack application designed for quoting and project management wi
 
 ## Recent Changes
 
+### Nettoyage de la base de données - AOs incomplets (Oct 27, 2025)
+**Opération de maintenance : Suppression des AOs incomplets**
+
+**Contexte** : La base de données contenait 836 AOs dont 830 étaient incomplets (99.3%), principalement à cause du champ `intitule_operation` manquant lors de l'extraction Monday.com.
+
+**Critères de complétude** (basés sur `ao-planning-3946257560.json`) :
+- `intitule_operation` (NOT NULL et non vide) - Champ `name` de Monday.com
+- `menuiserie_type` (NOT NULL) - Champ `lot` de Monday.com
+- `source` (NOT NULL) - Source de l'AO
+
+**Résultats du nettoyage** :
+- ✅ **830 AOs incomplets supprimés** (dont 822 avec mondayId mais sans intitule_operation)
+- ✅ **6 AOs complets conservés** (100% de complétude)
+- Script créé : `scripts/cleanup-incomplete-aos.ts` avec modes dry-run et force
+
+**Impact** : La base de données ne contient maintenant que des AOs avec données complètes. Pour ré-extraire les AOs depuis Monday.com, utiliser le service d'extraction avec mapping corrigé.
+
 ### Synchronisation Bidirectionnelle Saxium ↔ Monday.com (Oct 27, 2025)
 **Feature: Alimenter les colonnes Monday.com depuis Saxium**
 

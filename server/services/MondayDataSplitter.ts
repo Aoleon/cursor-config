@@ -137,21 +137,32 @@ export class MondayDataSplitter {
    * Éclate un item Monday vers multiples entités Saxium
    * Séquence : AO base → maîtres ouvrage/œuvre → contacts → lots → adresses
    * Utilise storage.transaction() pour garantir l'atomicité
+   * @param mondayItemOrId - Monday item déjà fetché OU son ID (string)
+   * @param boardId - ID du board Monday
+   * @param storage - Storage pour persistence
+   * @param config - Config de mapping (optionnel)
    * @param dryRun - Si true, rollback la transaction à la fin (ne sauvegarde pas en base, pour tests)
    */
   async splitItem(
-    mondayItemId: string,
+    mondayItemOrId: string | any,
     boardId: string,
     storage: IStorage,
     config?: MondaySplitterConfig,
     dryRun: boolean = false
   ): Promise<SplitResult> {
+    // Si c'est une string, c'est un ID → fetch l'item
+    // Sinon c'est déjà un item Monday fetché → réutiliser
+    const isId = typeof mondayItemOrId === 'string';
+    const mondayItemId = isId ? mondayItemOrId : mondayItemOrId.id;
+    
     logger.info('Démarrage éclatement Monday item', {
       service: 'MondayDataSplitter',
-      metadata: { mondayItemId, boardId }
+      metadata: { mondayItemId, boardId, preFetched: !isId }
     });
 
-    const mondayItem = await mondayService.getItem(mondayItemId);
+    const mondayItem = isId 
+      ? await mondayService.getItem(mondayItemOrId) 
+      : mondayItemOrId;
 
     const itemConfig = config || getBoardConfig(boardId);
     if (!itemConfig) {
@@ -193,25 +204,38 @@ export class MondayDataSplitter {
         let currentAO: any;
         
         if (existingAO) {
-          // AO existe déjà, on le réutilise
-          currentAO = existingAO;
+          // AO existe déjà, on le met à jour avec les nouvelles données extraites
+          const aoDataWithDefaults = {
+            reference: aoData.reference || existingAO.reference || `AO-MONDAY-${mondayItemId}`,
+            menuiserieType: aoData.menuiserieType || existingAO.menuiserieType || 'autre' as const,
+            source: aoData.source || existingAO.source || 'other' as const,
+            mondayItemId, // IMPORTANT: Maintenir mondayItemId
+            ...aoData, // Écraser avec les nouvelles données Monday
+            updatedAt: new Date(),
+            mondayLastSyncedAt: new Date()
+          };
+          
+          currentAO = await storage.updateAo(existingAO.id, aoDataWithDefaults, tx);
           result.aoId = existingAO.id;
           result.aoCreated = false;
+          result.aoUpdated = true;
           
-          logger.info('AO existant réutilisé (import déjà effectué)', {
+          logger.info('AO existant mis à jour depuis Monday', {
             service: 'MondayDataSplitter',
             metadata: { 
               aoId: existingAO.id, 
               mondayItemId,
-              reference: existingAO.reference
+              reference: currentAO.reference,
+              client: aoDataWithDefaults.client,
+              montant: aoDataWithDefaults.montantEstime
             }
           });
           
           context.diagnostics.push({
             level: 'info',
             extractor: 'AOBaseExtractor',
-            message: `AO déjà importé (mondayItemId=${mondayItemId}), réutilisation de l'AO existant`,
-            data: { aoId: existingAO.id, reference: existingAO.reference }
+            message: `AO déjà importé (mondayItemId=${mondayItemId}), mise à jour avec données Monday`,
+            data: { aoId: existingAO.id, reference: currentAO.reference, updated: true }
           });
         } else {
           // Créer un nouvel AO

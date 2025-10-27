@@ -12,9 +12,10 @@ import { logger } from '../../utils/logger';
 import { getCorrelationId } from '../../middleware/correlation';
 import { verifyMondaySignature } from '../../middleware/monday-webhook';
 import { z } from 'zod';
-import { lotExtractor, contactExtractor, masterEntityExtractor, addressExtractor } from '../../services/monday/extractors';
+import { lotExtractor, contactExtractor, masterEntityExtractor, addressExtractor, AOBaseExtractor } from '../../services/monday/extractors';
 import type { SplitterContext, MondaySplitterConfig } from '../../services/monday/types';
 import { MondayDataSplitter } from '../../services/MondayDataSplitter';
+import { getBoardConfig } from '../../services/monday/defaultMappings';
 import { storage } from '../../storage-poc';
 
 const router = Router();
@@ -740,9 +741,8 @@ router.post('/api/monday/re-extract-aos',
     });
     
     // Récupérer tous les AOs avec monday_item_id
-    let query = storage.aos.where((ao) => ao.mondayItemId != null);
-    const existingAOs = await query;
-    
+    const allAOs = await storage.getAos();
+    const existingAOs = allAOs.filter((ao: any) => ao.mondayItemId != null);
     const aosToProcess = limit ? existingAOs.slice(0, limit) : existingAOs;
     
     logger.info(`${aosToProcess.length} AOs à ré-extraire`, {
@@ -767,7 +767,7 @@ router.post('/api/monday/re-extract-aos',
     // Traiter par lots
     for (let i = 0; i < aosToProcess.length; i += BATCH_SIZE) {
       const batch = aosToProcess.slice(i, i + BATCH_SIZE);
-      const itemIds = batch.map(ao => ao.mondayItemId!).filter(Boolean);
+      const itemIds = batch.map((ao: any) => ao.mondayItemId!).filter(Boolean);
       
       if (itemIds.length === 0) {
         skippedCount += batch.length;
@@ -775,11 +775,22 @@ router.post('/api/monday/re-extract-aos',
       }
       
       try {
-        // Récupérer les items Monday en masse
-        const mondayItems = await mondayService.getItems(itemIds);
+        // Récupérer les items Monday UN PAR UN
+        const mondayItems: any[] = [];
+        for (const itemId of itemIds) {
+          try {
+            const item = await mondayService.getItem(itemId);
+            if (item) mondayItems.push(item);
+          } catch (itemError: any) {
+            logger.warn(`Item ${itemId} non trouvé dans Monday`, {
+              service: 'MondayRoutes',
+              metadata: { itemId, error: itemError.message }
+            });
+          }
+        }
         
-        if (!mondayItems || mondayItems.length === 0) {
-          logger.warn(`Aucun item retourné par Monday.com pour le lot ${i / BATCH_SIZE + 1}`, {
+        if (mondayItems.length === 0) {
+          logger.warn(`Aucun item récupéré pour le lot ${Math.floor(i / BATCH_SIZE) + 1}`, {
             service: 'MondayRoutes',
             metadata: { itemIds }
           });
@@ -793,19 +804,8 @@ router.post('/api/monday/re-extract-aos',
             const boardId = mondayItem.board.id;
             const itemId = mondayItem.id;
             
-            // Extraire les données avec la config complète
-            const extractedData = await mondayImportService.extractAOFromMondayItem(mondayItem, boardId);
-            
-            if (!extractedData) {
-              logger.warn(`Extraction a retourné null pour item ${itemId}`, {
-                service: 'MondayRoutes'
-              });
-              skippedCount++;
-              continue;
-            }
-            
             // Trouver l'AO correspondant
-            const existingAO = batch.find(ao => ao.mondayItemId === itemId);
+            const existingAO = batch.find((ao: any) => ao.mondayItemId === itemId);
             
             if (!existingAO) {
               logger.warn(`AO non trouvé pour item ${itemId}`, {
@@ -815,15 +815,35 @@ router.post('/api/monday/re-extract-aos',
               continue;
             }
             
-            // Mettre à jour l'AO avec les données extraites
-            await storage.aos.update(existingAO.id, {
-              ...extractedData,
-              mondayItemId: itemId,
-              mondayLastSyncedAt: new Date(),
-              updatedAt: new Date()
-            });
+            // Utiliser MondayDataSplitter.splitItem pour extraction ET update complet
+            // splitItem va détecter que l'AO existe déjà (via mondayItemId) et le mettra à jour
+            // + créer/mettre à jour les contacts, lots, maîtres, etc.
+            // IMPORTANT: On passe mondayItem (déjà fetché) au lieu de itemId pour éviter double fetch
+            const splitter = new MondayDataSplitter();
+            const result = await splitter.splitItem(mondayItem, boardId, storage, undefined, false);
+            
+            if (!result.success) {
+              logger.warn(`Extraction a échoué pour item ${itemId}`, {
+                service: 'MondayRoutes',
+                metadata: { diagnostics: result.diagnostics }
+              });
+              skippedCount++;
+              continue;
+            }
             
             successCount++;
+            
+            logger.info(`AO mis à jour depuis Monday (complet: AO + contacts + lots)`, {
+              service: 'MondayRoutes',
+              metadata: {
+                aoId: result.aoId,
+                itemId,
+                aoCreated: result.aoCreated,
+                lotsCreated: result.lotsCreated,
+                contactsCreated: result.contactsCreated,
+                mastersCreated: result.mastersCreated
+              }
+            });
             
           } catch (itemError: any) {
             errorCount++;
@@ -831,18 +851,18 @@ router.post('/api/monday/re-extract-aos',
             errors.push({ itemId: mondayItem.id, error: errorMsg });
             logger.error(`Erreur ré-extraction item ${mondayItem.id}`, {
               service: 'MondayRoutes',
-              error: errorMsg
+              metadata: { error: errorMsg }
             });
           }
         }
         
       } catch (batchError: any) {
         errorCount += batch.length;
-        logger.error(`Erreur traitement lot ${i / BATCH_SIZE + 1}`, {
+        logger.error(`Erreur traitement lot ${Math.floor(i / BATCH_SIZE) + 1}`, {
           service: 'MondayRoutes',
-          error: batchError.message
+          metadata: { error: batchError.message }
         });
-        batch.forEach(ao => {
+        batch.forEach((ao: any) => {
           if (ao.mondayItemId) {
             errors.push({ itemId: ao.mondayItemId, error: batchError.message });
           }

@@ -41,6 +41,19 @@ Saxium is a fullstack application for quoting and project management in the Fren
 - **Documentation**: Created `MONDAY_MAPPING_GAPS_ANALYSIS.md` with 3 proposed solutions (SOLUTION A IMPLEMENTED)
 - **Import Resolution**: Fixed Tooltip conflict (Recharts vs shadcn/ui) with separate imports
 
+### Monday.com Boards & Re-extraction (Oct 27, 2025)
+- **Workspace Investigation**: 81 boards discovered in Monday.com workspace (script: `tsx scripts/list-all-monday-boards.ts`)
+- **Production Board**: 3946257560 (AO Planning 🖥️) - **833 items**, 47 columns, full 82.4% mapping configuration
+- **Template Board**: 8952933832 (Modèle MEXT) - 3 items, 14 columns, limited hardcoded config (5 fields only)
+- **Data Issue Resolved**: 
+  - Deleted invalid AO template (board 8952934063 doesn't exist - it was an item ID, not a board ID)
+  - Created diagnostic script: `tsx scripts/find-monday-item-board.ts <itemId>` to identify parent board
+- **Re-extraction API**: New endpoint `POST /api/monday/re-extract-aos` for bulk re-import
+  - Test mode: `{testMode: true}` limits to 5 AOs for validation
+  - Full mode: Processes all 836 AOs in batches of 50
+  - Uses complete 82.4% mapping configuration from `ao-planning-3946257560.json`
+  - Updates existing AOs with extracted data (client, montant, dates, city, departement, contacts, etc.)
+
 ## User Preferences
 - Always read `server/utils/README-UTILS.md` before modifying server code.
 - Use `asyncHandler` for all new routes.

@@ -16,20 +16,29 @@ Saxium is a fullstack application for quoting and project management in the Fren
 - **Deployment**: ✅ Replit deployment now unblocked
 - **Validation**: Architect review confirmed no regressions, healthy runtime behavior
 
-### Monday.com Mapping Enhancement (Oct 23, 2025)
-- **Coverage**: 39/51 fields mapped (76.5%) - Phase 1 goal exceeded ✅
-- **New Mappings**: +19 fields including dates, contacts, technical entities, amounts
+### Monday.com Mapping Enhancement (Oct 27, 2025)
+- **Coverage**: 42/51 fields mapped (82.4%) - **+3 colonnes créées** ✅
+- **Colonnes créées** (27 Oct 2025):
+  - `dropdown_mkx4j6dh` - Catégorie AO (Neuf, Rénovation, Extension, Réhabilitation, Surélévation, Maintenance, Autre)
+  - `dropdown_mkx4b61f` - Type Client (Nouveau, Récurrent, Fidèle, Occasionnel, Prospect)
+  - `long_text_mkx4s0qw` - Commentaire sélection
+- **Board updated**: AO Planning 🖥️ (41 → 47 colonnes)
+- **Gap business**: 0 (tous les champs business mappés) ✅
+- **New Mappings** (Oct 23): +19 fields including dates, contacts, technical entities, amounts
 - **New Column Types**: phone, email, people, hoursTodays transformation
 - **Derived Fields**: city + departement extracted from location.address via postal code regex
 - **Testing**: Dry-run script `tsx scripts/test-monday-mapping.ts <itemId>` for validation
 
-### Monday.com Frontend Display Improvements (Oct 25, 2025)
+### Monday.com Frontend Display Improvements (Oct 27, 2025)
 - **Coverage Dashboard Added**: New "Couverture Mapping" section in migration dashboard
-  - Displays 76.5% mapping coverage with visual progress bar
-  - Breakdown by category: 3 business gaps, 2 relations, 5 system, 2 alias
-  - Lists critical unmapped fields (aoCategory, clientRecurrency, selectionComment) with priority badges
-- **Unmapped Fields UX**: aoCategory column now shows conditional "Non mappé" badge with tooltip
-- **Documentation**: Created `MONDAY_MAPPING_GAPS_ANALYSIS.md` with 3 proposed solutions
+  - Displays **82.4%** mapping coverage with visual progress bar (backend hook)
+  - Breakdown by category: **0 business gaps** ✅, 2 relations, 5 system, 2 alias
+  - Auto-refresh every 60s via React Query
+  - Lists previously unmapped fields (aoCategory, clientRecurrency, selectionComment) - **NOW COMPLETED** ✅
+- **Unmapped Fields UX**: 3 colonnes (aoCategory, clientRecurrency, selectionComment) avec pattern badge conditionnel + tooltip
+  - Si mappé : Badge avec valeur / Texte direct
+  - Si non mappé (colonnes vides) : Badge "Non mappé" + Info icon + tooltip explicatif
+- **Documentation**: Created `MONDAY_MAPPING_GAPS_ANALYSIS.md` with 3 proposed solutions (SOLUTION A IMPLEMENTED)
 - **Import Resolution**: Fixed Tooltip conflict (Recharts vs shadcn/ui) with separate imports
 
 ## User Preferences

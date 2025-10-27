@@ -27,8 +27,19 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
     // Itérer sur tous les mappings de la configuration
     for (const mapping of allMappings) {
       try {
-        const value = this.getColumnValue(context, mapping.mondayColumnId);
+        let value: any;
         const fieldName = mapping.saxiumField as keyof InsertAo;
+        
+        // Cas spécial : 'name' est un champ direct de l'item, pas dans column_values
+        if (mapping.mondayColumnId === 'name') {
+          value = mondayItem.name;
+          this.addDiagnostic(context, 'info', 
+            `Extracted special field 'name' from item.name`, 
+            { value }
+          );
+        } else {
+          value = this.getColumnValue(context, mapping.mondayColumnId);
+        }
         
         // Appliquer transformation selon type de colonne
         const transformedValue = this.transformValue(value, mapping, context);

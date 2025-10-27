@@ -198,6 +198,40 @@ export class MondayDataSplitter {
         const aoData = await this.aoBaseExtractor.extract(context);
         context.extractedData.baseAO = aoData;
 
+        // VALIDATION STRICTE: Bloquer AOs incomplets
+        const requiredFields = {
+          intituleOperation: aoData.intituleOperation,
+          menuiserieType: aoData.menuiserieType,
+          source: aoData.source
+        };
+
+        const missingRequiredFields = Object.entries(requiredFields)
+          .filter(([_, value]) => !value || (typeof value === 'string' && value.trim() === ''))
+          .map(([field]) => field);
+
+        if (missingRequiredFields.length > 0) {
+          const errorMsg = `AO incomplet rejeté - champs requis manquants: ${missingRequiredFields.join(', ')}`;
+          logger.error(errorMsg, {
+            service: 'MondayDataSplitter',
+            metadata: {
+              mondayItemId,
+              missingFields: missingRequiredFields,
+              extractedData: aoData
+            }
+          });
+
+          context.diagnostics.push({
+            level: 'error',
+            extractor: 'AOBaseExtractor',
+            message: errorMsg,
+            data: { missingFields: missingRequiredFields }
+          });
+
+          result.success = false;
+          result.diagnostics = context.diagnostics;
+          throw new Error(errorMsg);
+        }
+
         // Vérifier si un AO avec ce mondayItemId existe déjà
         const existingAO = await storage.getAOByMondayItemId(mondayItemId, tx);
         

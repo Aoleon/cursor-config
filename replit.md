@@ -5,22 +5,44 @@ Saxium is a fullstack application designed for quoting and project management wi
 
 ## Recent Changes
 
-### Nettoyage de la base de données - AOs incomplets (Oct 27, 2025)
-**Opération de maintenance : Suppression des AOs incomplets**
+### Correction Extraction Monday.com + Validation Stricte (Oct 27, 2025)
+**Problème résolu** : 830/836 AOs (99.3%) étaient incomplets à cause du champ `intitule_operation` manquant
 
-**Contexte** : La base de données contenait 836 AOs dont 830 étaient incomplets (99.3%), principalement à cause du champ `intitule_operation` manquant lors de l'extraction Monday.com.
+**Root Cause** : Le champ `name` de Monday.com n'était pas extrait car cherché dans `column_values` alors qu'il s'agit d'une propriété directe de l'item.
+
+**Correctifs appliqués** :
+
+1. **AOBaseExtractor.ts** : Extraction corrigée du champ `name`
+   ```typescript
+   // Cas spécial : 'name' est un champ direct de l'item
+   if (mapping.mondayColumnId === 'name') {
+     value = mondayItem.name;  // Extraction directe
+   }
+   ```
+
+2. **MondayDataSplitter.ts** : Validation stricte AVANT création/mise à jour
+   ```typescript
+   // Validation des champs requis
+   const requiredFields = { intituleOperation, menuiserieType, source };
+   if (missingRequiredFields.length > 0) {
+     throw new Error(`AO incomplet rejeté - champs manquants: ${missing}`);
+   }
+   ```
+
+3. **Scripts créés** :
+   - `scripts/cleanup-incomplete-aos.ts` : Nettoyage avec modes dry-run/force (830 AOs supprimés)
+   - `scripts/extract-all-aos-from-monday.ts` : Extraction complète avec progress bar et validation
+
+**Résultats** :
+- ✅ **830 AOs incomplets nettoyés**
+- ✅ **9 nouveaux AOs extraits** depuis Monday.com avec mapping corrigé
+- ✅ **15/15 AOs en base (100% complets)** - tous ont `intitule_operation`, `menuiserie_type`, `source`
+- ✅ **Validation stricte active** : empêche l'insertion d'AOs incomplets
 
 **Critères de complétude** (basés sur `ao-planning-3946257560.json`) :
 - `intitule_operation` (NOT NULL et non vide) - Champ `name` de Monday.com
 - `menuiserie_type` (NOT NULL) - Champ `lot` de Monday.com
 - `source` (NOT NULL) - Source de l'AO
-
-**Résultats du nettoyage** :
-- ✅ **830 AOs incomplets supprimés** (dont 822 avec mondayId mais sans intitule_operation)
-- ✅ **6 AOs complets conservés** (100% de complétude)
-- Script créé : `scripts/cleanup-incomplete-aos.ts` avec modes dry-run et force
-
-**Impact** : La base de données ne contient maintenant que des AOs avec données complètes. Pour ré-extraire les AOs depuis Monday.com, utiliser le service d'extraction avec mapping corrigé.
 
 ### Synchronisation Bidirectionnelle Saxium ↔ Monday.com (Oct 27, 2025)
 **Feature: Alimenter les colonnes Monday.com depuis Saxium**

@@ -668,12 +668,13 @@ router.get('/api/monday/mapping-coverage',
     });
 
     // Statistiques de mapping (basées sur analysis/MONDAY_TO_SAXIUM_MAPPING_MATRIX.md)
+    // Mise à jour : Oct 27, 2025 - 3 colonnes créées (aoCategory, clientRecurrency, selectionComment)
     const mappingStats = {
       totalFields: 51,
-      mappedFields: 39,
-      coveragePercent: 76.5,
+      mappedFields: 42,
+      coveragePercent: 82.4,
       gaps: {
-        business: 3, // aoCategory, clientRecurrency, selectionComment
+        business: 0, // ✅ Tous les champs business sont mappés !
         relations: 2, // maitreOuvrageId, maitreOeuvreId
         system: 5, // mondayId, lastExportedAt, etc.
         alias: 2  // dueDate, amountEstimate
@@ -681,33 +682,39 @@ router.get('/api/monday/mapping-coverage',
       criticalGaps: [
         {
           field: 'aoCategory',
-          saxiumType: 'enum',
+          saxiumType: 'varchar',
           mondayColumn: 'Catégorie AO',
-          reason: 'Colonne Monday inexistante dans board AO Planning (3946257560)',
-          priority: 'high',
-          suggestedSolution: 'Créer colonne dropdown "Catégorie AO" dans Monday.com'
+          mondayColumnId: 'dropdown_mkx4j6dh',
+          reason: '✅ Colonne créée le 27 Oct 2025 - Mappée dans config',
+          priority: 'completed',
+          suggestedSolution: 'Remplir valeurs dans Monday (Neuf, Rénovation, Extension...)',
+          status: 'mapped'
         },
         {
           field: 'clientRecurrency',
-          saxiumType: 'enum',
+          saxiumType: 'varchar',
           mondayColumn: 'Type Client',
-          reason: 'Colonne Monday inexistante',
-          priority: 'medium',
-          suggestedSolution: 'Créer colonne dropdown "Type Client" (Nouveau/Récurrent)'
+          mondayColumnId: 'dropdown_mkx4b61f',
+          reason: '✅ Colonne créée le 27 Oct 2025 - Mappée dans config',
+          priority: 'completed',
+          suggestedSolution: 'Remplir valeurs dans Monday (Nouveau, Récurrent, Fidèle...)',
+          status: 'mapped'
         },
         {
           field: 'selectionComment',
           saxiumType: 'text',
           mondayColumn: 'Commentaire sélection',
-          reason: 'Colonne Monday inexistante',
-          priority: 'medium',
-          suggestedSolution: 'Créer colonne long_text "Commentaire sélection"'
+          mondayColumnId: 'long_text_mkx4s0qw',
+          reason: '✅ Colonne créée le 27 Oct 2025 - Mappée dans config',
+          priority: 'completed',
+          suggestedSolution: 'Remplir commentaires dans Monday si pertinent',
+          status: 'mapped'
         }
       ],
       boardInfo: {
         boardId: '3946257560',
         boardName: 'AO Planning 🖥️',
-        totalColumns: 41,
+        totalColumns: 47, // +3 colonnes créées (41 → 47)
         totalItems: 828
       },
       lastUpdated: new Date().toISOString()

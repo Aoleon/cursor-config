@@ -12,12 +12,13 @@ Cartographier **TOUTES** les colonnes Monday.com disponibles vers les champs de 
 
 ## 📊 STATUT MAPPING ACTUEL (AOBaseExtractor)
 
-**Couverture** : **39/51 champs mappés (76.5%)** ✅  
+**Couverture** : **42/51 champs mappés (82.4%)** ✅  
 **Configuration** : `server/services/monday/boardConfigs/ao-planning-3946257560.json`  
-**Board cible** : AO Planning 🖥️ (ID: 3946257560, 828 items, 41 colonnes)  
+**Board cible** : AO Planning 🖥️ (ID: 3946257560, 828 items, 47 colonnes)  
 **Note** : 51 champs mappables (54 total - 3 système : id/createdAt/updatedAt)
+**Dernière mise à jour** : Oct 27, 2025 - Ajout de 3 colonnes Monday (aoCategory, clientRecurrency, selectionComment)
 
-### ✅ CHAMPS DÉJÀ MAPPÉS (39/51)
+### ✅ CHAMPS DÉJÀ MAPPÉS (42/51)
 
 #### Identité & Core (8 champs - 6 mappés + 2 dérivés)
 | Champ Saxium | Type | Colonne Monday | Transformation |
@@ -80,7 +81,7 @@ Cartographier **TOUTES** les colonnes Monday.com disponibles vers les champs de 
 | `description` | text | `long_text` | Direct |
 | `cctp` | text | `long_text3` | Direct (CCTP détaillé) |
 
-#### Métadonnées & Workflow (6 champs)
+#### Métadonnées & Workflow (9 champs)
 | Champ Saxium | Type | Colonne Monday | Transformation |
 |--------------|------|----------------|----------------|
 | `status` | enum | `status` | Enum mapping |
@@ -90,6 +91,9 @@ Cartographier **TOUTES** les colonnes Monday.com disponibles vers les champs de 
 | `specificLocation` | varchar | `text6` | Direct (quartier, détails) |
 | `isSelected` | boolean | `status5` | booleanFromStatus |
 | `isDraft` | boolean | — | **Calculé** (validation) |
+| `aoCategory` | varchar | `dropdown_mkx4j6dh` | Direct (Neuf, Rénovation, Extension...) |
+| `clientRecurrency` | varchar | `dropdown_mkx4b61f` | Direct (Nouveau, Récurrent, Fidèle...) |
+| `selectionComment` | text | `long_text_mkx4s0qw` | Direct |
 
 #### Contacts (relations, 2 mappings ContactExtractor)
 | Champ Saxium | Type | Colonne Monday | Transformation |
@@ -104,40 +108,49 @@ Cartographier **TOUTES** les colonnes Monday.com disponibles vers les champs de 
 
 ---
 
-## 🚧 CHAMPS NON MAPPÉS (12/51)
+## 🚧 CHAMPS NON MAPPÉS (9/51)
 
 Les champs suivants ne sont **pas encore mappés** depuis Monday.com vers Saxium.
 
-**Note méthodologique** : La table `aos` contient 51 champs mappables (total 54 - id/createdAt/updatedAt système). Sur ces 51 champs, **39 sont mappés** (76.5%), laissant **12 champs non mappés**.
+**Note méthodologique** : La table `aos` contient 51 champs mappables (total 54 - id/createdAt/updatedAt système). Sur ces 51 champs, **42 sont mappés** (82.4%), laissant **9 champs non mappés**.
 
-### 📱 AFFICHAGE FRONTEND DES CHAMPS NON MAPPÉS (Oct 25, 2025)
+### 📱 AFFICHAGE FRONTEND DES CHAMPS NON MAPPÉS (Oct 27, 2025)
 
 Le dashboard frontend affiche désormais les champs non mappés avec **indicateurs visuels clairs** :
 
 **Dashboard Migration (`/monday-migration-dashboard`)** :
 - **Section "Couverture Mapping"** : Nouvelle carte dans l'onglet "Vue d'ensemble" affichant :
-  - Badge de couverture : **76.5%**
-  - Statistiques détaillées : **39/51 champs mappés**
-  - Breakdown par catégorie : Business (3 gaps), Relations (2), Système (5), Alias (2)
-  - Liste des champs business critiques non mappés avec priorités (P1/P2)
-  - Lien vers analyse détaillée (`MONDAY_MAPPING_GAPS_ANALYSIS.md`)
+  - Badge de couverture : **82.4%** ✅
+  - Statistiques détaillées : **42/51 champs mappés**
+  - Breakdown par catégorie : Business (0 gaps), Relations (2), Système (5), Alias (2)
+  - Auto-refresh toutes les 60s via React Query
+  - Source de données : Endpoint backend `/api/monday/mapping-coverage`
 
 **Table AOs Monday (`monday-import.tsx`)** :
-- **Colonne `aoCategory`** : Affichage conditionnel avec tooltip explicatif
-  - Si mappé : Badge avec valeur catégorie
-  - Si non mappé : Badge "Non mappé" + icône Info + tooltip "Colonne Monday 'Catégorie AO' inexistante"
+- **3 colonnes avec affichage conditionnel** : `aoCategory`, `clientRecurrency`, `selectionComment`
+  - Si mappé : Badge avec valeur / Texte direct
+  - Si non mappé : Badge "Non mappé" + icône Info + tooltip explicatif
+  - **Note** : Ces 3 champs sont maintenant mappés (colonnes créées le 27 Oct 2025), les badges devraient disparaître après remplissage des valeurs dans Monday
 
 **Tooltips & UX** :
 - Import séparé : `TooltipUI` (shadcn/ui) vs `Tooltip` (Recharts) pour éviter conflits
 - Messages utilisateurs clairs en français
 - Pas de "null" ni valeurs brutes affichées
 
-### Champs Business Non Mappés (3 champs)
-| Champ Saxium | Type | Priorité | Colonne Monday Suggérée | Transformation |
-|--------------|------|----------|-------------------------|----------------|
-| `aoCategory` | enum | 🔵 P2 | "Catégorie AO" (dropdown) | Enum mapping |
-| `clientRecurrency` | enum | 🔵 P2 | "Type client" (dropdown) | "Nouveau client", "Récurrent" |
-| `selectionComment` | text | 🔵 P3 | "Commentaire sélection" (long_text) | Direct |
+### Champs Business Non Mappés (0 champs) ✅
+
+**TOUS LES CHAMPS BUSINESS SONT DÉSORMAIS MAPPÉS !**
+
+Les 3 champs suivants ont été ajoutés le **27 Oct 2025** via création de colonnes Monday.com :
+| Champ Saxium | Type | Colonne Monday Créée | ID Monday | Status |
+|--------------|------|---------------------|-----------|--------|
+| `aoCategory` | varchar | "Catégorie AO" (dropdown) | `dropdown_mkx4j6dh` | ✅ Mappé |
+| `clientRecurrency` | varchar | "Type Client" (dropdown) | `dropdown_mkx4b61f` | ✅ Mappé |
+| `selectionComment` | text | "Commentaire sélection" (long_text) | `long_text_mkx4s0qw` | ✅ Mappé |
+
+**Labels dropdown configurés** :
+- **Catégorie AO** : Neuf, Rénovation, Extension, Réhabilitation, Surélévation, Maintenance, Autre
+- **Type Client** : Nouveau, Récurrent, Fidèle, Occasionnel, Prospect
 
 ### Champs Relations Entités (2 champs)
 | Champ Saxium | Type | Priorité | Note |

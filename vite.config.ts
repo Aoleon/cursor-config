@@ -99,6 +99,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
   },
   server: {
+    allowedHosts: ['.replit.dev'],  // 👈 Ajouter cette ligne
     fs: {
       strict: true,
       deny: ["**/.*"],

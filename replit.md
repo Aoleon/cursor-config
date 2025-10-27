@@ -48,11 +48,14 @@ Saxium is a fullstack application for quoting and project management in the Fren
 - **Data Issue Resolved**: 
   - Deleted invalid AO template (board 8952934063 doesn't exist - it was an item ID, not a board ID)
   - Created diagnostic script: `tsx scripts/find-monday-item-board.ts <itemId>` to identify parent board
-- **Re-extraction API**: New endpoint `POST /api/monday/re-extract-aos` for bulk re-import
-  - Test mode: `{testMode: true}` limits to 5 AOs for validation
-  - Full mode: Processes all 836 AOs in batches of 50
-  - Uses complete 82.4% mapping configuration from `ao-planning-3946257560.json`
-  - Updates existing AOs with extracted data (client, montant, dates, city, departement, contacts, etc.)
+- **Re-extraction API**: New endpoint `POST /api/monday/re-extract-aos` for bulk re-import ✅
+  - **Test mode**: `{testMode: true}` limits to 5 AOs for validation
+  - **Full mode**: Processes all 836 AOs in batches of 50
+  - **Complete extraction**: Uses `MondayDataSplitter.splitItem()` to update AO + contacts + lots + maîtres
+  - **Performance optimized**: ~830 Monday API calls (vs 1,600+ before) - eliminated double-fetch by passing pre-fetched items
+  - **Rate limit protection**: 1s pause between 50-item batches to respect Monday.com complexity limits
+  - **Transaction safety**: All updates atomic (rollback on error)
+  - **Validation**: Architect review confirmed acceptable runtime and data integrity for 800+ items
 
 ## User Preferences
 - Always read `server/utils/README-UTILS.md` before modifying server code.

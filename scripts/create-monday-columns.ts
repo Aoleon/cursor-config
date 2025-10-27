@@ -230,7 +230,7 @@ async function main() {
   console.log('  1. Mettre à jour ao-planning-3946257560.json avec les nouveaux IDs');
   console.log('  2. Tester l\'extraction avec: tsx scripts/test-monday-mapping.ts <itemId>');
   console.log('  3. Vérifier le dashboard frontend (badges "Non mappé" doivent disparaître)');
-  console.log('  4. Mettre à jour la matrice de mapping (76.5% → proche de 100%)');
+  console.log('  4. Mettre à jour la matrice de mapping (82.4% coverage achieved)');
 
   if (successCount === 3) {
     console.log('\n🎉 Toutes les colonnes ont été créées avec succès !');

@@ -897,4 +897,145 @@ router.post('/api/monday/re-extract-aos',
   })
 );
 
+// ========================================
+// SYNC NEW AO FIELDS - Saxium → Monday.com
+// ========================================
+
+/**
+ * POST /api/monday/sync-ao-fields - Synchroniser les nouveaux champs AO vers Monday.com
+ * Alimente les colonnes Monday.com vides:
+ * - dateLivraisonPrevue → date_mkpcfgja (Date Métrés)
+ * - dateOS → date__1 (Date Accord)
+ * - cctp → long_text_mkx4zgjd (Commentaire sélection)
+ * 
+ * Body:
+ * - aoId (optional): ID d'un AO spécifique à synchroniser
+ * - testMode (optional): Si true, ne traite que 5 AOs
+ */
+router.post('/api/monday/sync-ao-fields',
+  isAuthenticated,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { aoId, testMode } = req.body;
+    const limit = testMode === true ? 5 : undefined;
+    
+    logger.info('Début synchronisation nouveaux champs AO vers Monday', {
+      service: 'MondayRoutes',
+      metadata: { 
+        operation: 'syncAOFields', 
+        aoId: aoId || 'all', 
+        testMode, 
+        limit 
+      }
+    });
+    
+    // Cas 1: Synchroniser un seul AO
+    if (aoId) {
+      try {
+        const mondayId = await mondayExportService.syncAONewFields(aoId);
+        
+        if (!mondayId) {
+          return res.status(404).json({
+            success: false,
+            error: `AO ${aoId} non trouvé ou sans mondayId`
+          });
+        }
+        
+        logger.info('Champs AO synchronisés avec succès', {
+          service: 'MondayRoutes',
+          metadata: { aoId, mondayId }
+        });
+        
+        return res.json({
+          success: true,
+          data: { aoId, mondayId },
+          message: `Nouveaux champs synchronisés pour AO ${aoId}`
+        });
+      } catch (error: any) {
+        logger.error('Erreur synchronisation champs AO', {
+          service: 'MondayRoutes',
+          metadata: { aoId, error: error.message }
+        });
+        
+        return res.status(500).json({
+          success: false,
+          error: `Erreur synchronisation: ${error.message}`
+        });
+      }
+    }
+    
+    // Cas 2: Synchroniser tous les AOs (ou N premiers en testMode)
+    const allAOs = await storage.getAos();
+    const aosWithMondayId = allAOs.filter((ao: any) => ao.mondayId != null);
+    const aosToProcess = limit ? aosWithMondayId.slice(0, limit) : aosWithMondayId;
+    
+    logger.info(`${aosToProcess.length} AOs à synchroniser`, {
+      service: 'MondayRoutes',
+      metadata: { 
+        total: aosToProcess.length, 
+        testMode,
+        totalWithMondayId: aosWithMondayId.length,
+        totalAOs: allAOs.length
+      }
+    });
+    
+    if (aosToProcess.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Aucun AO à synchroniser (aucun AO avec mondayId)',
+        stats: { success: 0, errors: 0, skipped: 0, total: 0 }
+      });
+    }
+    
+    let successCount = 0;
+    let errorCount = 0;
+    let skippedCount = 0;
+    const errors: Array<{ aoId: string; error: string }> = [];
+    
+    // Traiter chaque AO
+    for (const ao of aosToProcess) {
+      try {
+        const mondayId = await mondayExportService.syncAONewFields(ao.id);
+        
+        if (mondayId) {
+          successCount++;
+        } else {
+          skippedCount++;
+        }
+        
+      } catch (error: any) {
+        errorCount++;
+        const errorMsg = error.message || String(error);
+        errors.push({ aoId: ao.id, error: errorMsg });
+        logger.error(`Erreur synchronisation AO ${ao.id}`, {
+          service: 'MondayRoutes',
+          metadata: { aoId: ao.id, error: errorMsg }
+        });
+      }
+      
+      // Petite pause pour éviter rate limiting (100ms entre chaque AO)
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    const stats = {
+      success: successCount,
+      errors: errorCount,
+      skipped: skippedCount,
+      total: aosToProcess.length
+    };
+    
+    logger.info('Synchronisation nouveaux champs terminée', {
+      service: 'MondayRoutes',
+      metadata: stats
+    });
+    
+    res.json({
+      success: true,
+      message: `Synchronisation terminée: ${successCount} succès, ${errorCount} erreurs, ${skippedCount} ignorés`,
+      stats,
+      errors: errors.length > 10 ? errors.slice(0, 10) : errors,
+      totalErrors: errors.length
+    });
+  })
+);
+
 export default router;

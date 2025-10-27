@@ -285,6 +285,225 @@ export class MondayExportService {
     
     return mondayItem.id;
   }
+
+  /**
+   * Met à jour les colonnes d'un item Monday.com existant
+   * Utile pour synchroniser les données Saxium → Monday.com
+   * 
+   * @param boardId - ID du board Monday.com
+   * @param itemId - ID de l'item Monday.com à mettre à jour
+   * @param columnValues - Colonnes à mettre à jour { columnId: value }
+   * @returns ID de l'item mis à jour
+   */
+  async updateItemColumns(
+    boardId: string,
+    itemId: string,
+    columnValues: Record<string, any>
+  ): Promise<string> {
+    const correlationId = getCorrelationId();
+    
+    logger.info('[MondayExportService] Début mise à jour colonnes item', {
+      service: 'MondayExportService',
+      metadata: {
+        operation: 'updateItemColumns',
+        boardId,
+        itemId,
+        columnsCount: Object.keys(columnValues).length,
+        correlationId
+      }
+    });
+
+    // Mutation GraphQL pour mettre à jour plusieurs colonnes
+    const mutation = `
+      mutation ChangeMultipleColumnValues($boardId: ID!, $itemId: ID!, $columnValues: JSON!) {
+        change_multiple_column_values(board_id: $boardId, item_id: $itemId, column_values: $columnValues) {
+          id
+        }
+      }
+    `;
+
+    // Exécuter la mutation avec retry automatique
+    const result = await withRetry(
+      async () => {
+        logger.debug('[MondayExportService] Exécution mutation change_multiple_column_values', {
+          service: 'MondayExportService',
+          metadata: {
+            operation: 'updateItemColumns.mutation',
+            boardId,
+            itemId,
+            columnValues,
+            correlationId
+          }
+        });
+
+        const response = await this.mondayService.executeQuery(mutation, {
+          boardId,
+          itemId,
+          columnValues: JSON.stringify(columnValues)
+        });
+        
+        return response.change_multiple_column_values;
+      },
+      { 
+        maxRetries: 3,
+        initialDelay: 1000,
+        backoffMultiplier: 2
+      }
+    );
+    
+    if (!result || !result.id) {
+      const error = new Error('Monday.com column update failed - no ID returned');
+      logger.error('[MondayExportService] Échec mise à jour colonnes', {
+        service: 'MondayExportService',
+        metadata: {
+          operation: 'updateItemColumns',
+          boardId,
+          itemId,
+          correlationId,
+          error: error.message
+        }
+      });
+      throw error;
+    }
+
+    logger.info('[MondayExportService] Colonnes mises à jour avec succès', {
+      service: 'MondayExportService',
+      metadata: {
+        operation: 'updateItemColumns',
+        boardId,
+        itemId,
+        mondayId: result.id,
+        columnsUpdated: Object.keys(columnValues),
+        correlationId
+      }
+    });
+    
+    return result.id;
+  }
+
+  /**
+   * Synchronise les 3 nouveaux champs AO depuis Saxium vers Monday.com
+   * - dateLivraisonPrevue → date_mkpcfgja (Date Métrés)
+   * - dateOS → date__1 (Date Accord)
+   * - cctp → long_text_mkx4zgjd (Commentaire sélection)
+   * 
+   * @param aoId - ID de l'AO Saxium
+   * @returns ID de l'item Monday.com mis à jour
+   */
+  async syncAONewFields(aoId: string): Promise<string | null> {
+    const correlationId = getCorrelationId();
+    const BOARD_ID = '3946257560'; // AO Planning 🖥️
+    
+    logger.info('[MondayExportService] Début sync nouveaux champs AO', {
+      service: 'MondayExportService',
+      metadata: {
+        operation: 'syncAONewFields',
+        aoId,
+        correlationId
+      }
+    });
+
+    // Récupérer l'AO
+    const ao = await this.storage.getAo(aoId);
+    
+    if (!ao) {
+      logger.warn('[MondayExportService] AO non trouvé', {
+        service: 'MondayExportService',
+        metadata: {
+          operation: 'syncAONewFields',
+          aoId,
+          correlationId
+        }
+      });
+      return null;
+    }
+
+    // Vérifier qu'on a bien un mondayId
+    if (!ao.mondayId) {
+      logger.warn('[MondayExportService] AO sans mondayId - impossible de synchroniser', {
+        service: 'MondayExportService',
+        metadata: {
+          operation: 'syncAONewFields',
+          aoId,
+          reference: ao.reference,
+          correlationId
+        }
+      });
+      return null;
+    }
+
+    // Préparer les valeurs des 3 nouvelles colonnes Monday.com
+    const columnValues: Record<string, any> = {};
+    
+    // dateLivraisonPrevue → date_mkpcfgja (Date Métrés)
+    if (ao.dateLivraisonPrevue) {
+      columnValues.date_mkpcfgja = ao.dateLivraisonPrevue.toISOString().split('T')[0];
+      logger.debug('[MondayExportService] Ajout dateLivraisonPrevue', {
+        service: 'MondayExportService',
+        metadata: {
+          operation: 'syncAONewFields',
+          aoId,
+          value: columnValues.date_mkpcfgja
+        }
+      });
+    }
+    
+    // dateOS → date__1 (Date Accord)
+    if (ao.dateOS) {
+      columnValues.date__1 = ao.dateOS.toISOString().split('T')[0];
+      logger.debug('[MondayExportService] Ajout dateOS', {
+        service: 'MondayExportService',
+        metadata: {
+          operation: 'syncAONewFields',
+          aoId,
+          value: columnValues.date__1
+        }
+      });
+    }
+    
+    // cctp → long_text_mkx4zgjd (Commentaire sélection)
+    if (ao.cctp) {
+      columnValues.long_text_mkx4zgjd = ao.cctp;
+      logger.debug('[MondayExportService] Ajout cctp', {
+        service: 'MondayExportService',
+        metadata: {
+          operation: 'syncAONewFields',
+          aoId,
+          length: ao.cctp.length
+        }
+      });
+    }
+
+    // Si aucun champ à synchroniser, skip
+    if (Object.keys(columnValues).length === 0) {
+      logger.info('[MondayExportService] Aucun nouveau champ à synchroniser', {
+        service: 'MondayExportService',
+        metadata: {
+          operation: 'syncAONewFields',
+          aoId,
+          mondayId: ao.mondayId,
+          correlationId
+        }
+      });
+      return ao.mondayId;
+    }
+
+    // Mettre à jour les colonnes Monday.com
+    await this.updateItemColumns(BOARD_ID, ao.mondayId, columnValues);
+    
+    logger.info('[MondayExportService] Nouveaux champs AO synchronisés avec succès', {
+      service: 'MondayExportService',
+      metadata: {
+        operation: 'syncAONewFields',
+        aoId,
+        mondayId: ao.mondayId,
+        syncedFields: Object.keys(columnValues),
+        correlationId
+      }
+    });
+    
+    return ao.mondayId;
+  }
 }
 
 // Export singleton instance

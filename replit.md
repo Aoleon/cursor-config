@@ -3,6 +3,39 @@
 ## Overview
 Saxium is a fullstack application designed for quoting and project management within the French construction and joinery (BTP/Menuiserie) sector. Its primary goal is to enhance operational efficiency through advanced automation and AI capabilities. Key features include OCR analysis of supplier quotes, intelligent planning facilitated by DateIntelligence, and AI-driven decision-making processes. The project aims to revolutionize traditional workflows in the construction and joinery industry by providing a comprehensive, intelligent, and integrated solution for managing projects from initial quoting to completion.
 
+## Recent Changes
+
+### Synchronisation Bidirectionnelle Saxium ↔ Monday.com (Oct 27, 2025)
+**Feature: Alimenter les colonnes Monday.com depuis Saxium**
+
+Implémentation de la synchronisation Saxium → Monday.com pour les 3 nouveaux champs AO:
+- `dateLivraisonPrevue` → `date_mkpcfgja` (Date Métrés)
+- `dateOS` → `date__1` (Date Accord)
+- `cctp` → `long_text_mkx4zgjd` (Commentaire sélection)
+
+**Components créés**:
+1. **`MondayExportService.updateItemColumns()`** - Méthode générique pour mettre à jour les colonnes Monday.com
+   - Mutation GraphQL `change_multiple_column_values`
+   - Retry automatique (3 tentatives) avec backoff exponentiel
+2. **`MondayExportService.syncAONewFields(aoId)`** - Synchronise les 3 nouveaux champs d'un AO vers Monday.com
+   - Mapping automatique des champs Saxium → colonnes Monday.com
+   - Skip intelligent (ne synchronise que les champs avec valeur)
+3. **`POST /api/monday/sync-ao-fields`** - Endpoint API pour synchronisation
+   - Mode single: `{ "aoId": "123" }` - Un seul AO
+   - Mode batch test: `{ "testMode": true }` - 5 AOs
+   - Mode production: `{}` - Tous les AOs avec mondayId
+   - Rate limiting: 100ms entre chaque AO
+4. **`scripts/sync-ao-fields-to-monday.ts`** - Script CLI pour synchronisation massive
+   - Usage: `tsx scripts/sync-ao-fields-to-monday.ts [--test] [--ao-id=ID]`
+   - Affichage visuel avec barres de progression et statistiques
+
+**Tests**: ✅ 5 AOs synchronisés avec succès (100% succès, 0 erreurs)
+
+**Cas d'usage**:
+- Migration initiale: Remplir les colonnes Monday.com vides avec données Saxium
+- Synchronisation ponctuelle après modification d'un AO
+- Auto-sync possible via webhooks (à implémenter)
+
 ## User Preferences
 - Always read `server/utils/README-UTILS.md` before modifying server code.
 - Use `asyncHandler` for all new routes.

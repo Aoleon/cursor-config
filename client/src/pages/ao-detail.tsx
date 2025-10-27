@@ -114,6 +114,8 @@ export default function AoDetail() {
     dateSortieAO: "",
     dateAcceptationAO: "",
     demarragePrevu: "",
+    dateLivraisonPrevue: "",
+    dateOS: "",
     maitreOuvrageId: "",
     maitreOeuvreId: "",
     contactAONom: "",
@@ -126,6 +128,7 @@ export default function AoDetail() {
     bureauEtudes: "",
     bureauControle: "",
     sps: "",
+    cctp: "",
     source: "website",
     description: "",
     prorataEventuel: "",
@@ -198,6 +201,8 @@ export default function AoDetail() {
         dateSortieAO: ao.dateSortieAO ? ao.dateSortieAO.split('T')[0] : "",
         dateAcceptationAO: ao.dateAcceptationAO ? ao.dateAcceptationAO.split('T')[0] : "",
         demarragePrevu: ao.demarragePrevu ? ao.demarragePrevu.split('T')[0] : "",
+        dateLivraisonPrevue: ao.dateLivraisonPrevue ? ao.dateLivraisonPrevue.split('T')[0] : "",
+        dateOS: ao.dateOS ? ao.dateOS.split('T')[0] : "",
         maitreOuvrageId: ao.maitreOuvrageId || "",
         maitreOeuvreId: ao.maitreOeuvreId || "",
         contactAONom: ao.contactAONom || "",
@@ -210,6 +215,7 @@ export default function AoDetail() {
         bureauEtudes: ao.bureauEtudes || "",
         bureauControle: ao.bureauControle || "",
         sps: ao.sps || "",
+        cctp: ao.cctp || "",
         source: ao.source || "website",
         description: ao.description || "",
         prorataEventuel: ao.prorataEventuel ? ao.prorataEventuel.toString() : "",
@@ -483,9 +489,12 @@ export default function AoDetail() {
                         departement: ao.departement || "",
                         intituleOperation: ao.intituleOperation || "",
                         dateLimiteRemise: ao.dateLimiteRemise ? ao.dateLimiteRemise.split('T')[0] : "",
+                        dateRenduAO: ao.dateRenduAO ? ao.dateRenduAO.split('T')[0] : "",
                         dateSortieAO: ao.dateSortieAO ? ao.dateSortieAO.split('T')[0] : "",
                         dateAcceptationAO: ao.dateAcceptationAO ? ao.dateAcceptationAO.split('T')[0] : "",
                         demarragePrevu: ao.demarragePrevu ? ao.demarragePrevu.split('T')[0] : "",
+                        dateLivraisonPrevue: ao.dateLivraisonPrevue ? ao.dateLivraisonPrevue.split('T')[0] : "",
+                        dateOS: ao.dateOS ? ao.dateOS.split('T')[0] : "",
                         maitreOuvrageId: ao.maitreOuvrageId || "",
                         maitreOeuvreId: ao.maitreOeuvreId || "",
                         contactAONom: ao.contactAONom || "",
@@ -498,10 +507,19 @@ export default function AoDetail() {
                         bureauEtudes: ao.bureauEtudes || "",
                         bureauControle: ao.bureauControle || "",
                         sps: ao.sps || "",
+                        cctp: ao.cctp || "",
                         source: ao.source || "website",
                         description: ao.description || "",
                         prorataEventuel: ao.prorataEventuel ? ao.prorataEventuel.toString() : "",
                         delaiContractuel: ao.delaiContractuel ? ao.delaiContractuel.toString() : "",
+                        priority: ao.priority || "",
+                        operationalStatus: ao.operationalStatus || "",
+                        tags: ao.tags || [],
+                        isSelected: ao.isSelected || false,
+                        projectSize: ao.projectSize || "",
+                        specificLocation: ao.specificLocation || "",
+                        estimatedDelay: ao.estimatedDelay || "",
+                        clientRecurrency: ao.clientRecurrency || false,
                       });
                     }
                   }}
@@ -801,6 +819,28 @@ export default function AoDetail() {
                       data-testid="input-demarrage"
                     />
                   </div>
+
+                  <div>
+                    <Label htmlFor="dateLivraison">Date livraison prévue</Label>
+                    <Input
+                      id="dateLivraison"
+                      type="date"
+                      value={formData.dateLivraisonPrevue}
+                      onChange={(e) => handleFieldChange("dateLivraisonPrevue", e.target.value)}
+                      data-testid="input-date-livraison"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="dateOS">Date d'ordre de service</Label>
+                    <Input
+                      id="dateOS"
+                      type="date"
+                      value={formData.dateOS}
+                      onChange={(e) => handleFieldChange("dateOS", e.target.value)}
+                      data-testid="input-date-os"
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
@@ -839,7 +879,21 @@ export default function AoDetail() {
                     </div>
                   )}
                   
-                  {!formData.dateLimiteRemise && !formData.dateRenduAO && !formData.dateSortieAO && !formData.dateAcceptationAO && !formData.demarragePrevu && (
+                  {formData.dateLivraisonPrevue && (
+                    <div>
+                      <Label className="text-sm text-on-surface-muted">Date livraison prévue</Label>
+                      <p className="font-medium">{new Date(formData.dateLivraisonPrevue).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  )}
+                  
+                  {formData.dateOS && (
+                    <div>
+                      <Label className="text-sm text-on-surface-muted">Date d'ordre de service</Label>
+                      <p className="font-medium">{new Date(formData.dateOS).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  )}
+                  
+                  {!formData.dateLimiteRemise && !formData.dateRenduAO && !formData.dateSortieAO && !formData.dateAcceptationAO && !formData.demarragePrevu && !formData.dateLivraisonPrevue && !formData.dateOS && (
                     <p className="text-muted-foreground text-sm">Aucune date définie</p>
                   )}
                 </div>
@@ -981,7 +1035,7 @@ export default function AoDetail() {
           </Card>
 
           {/* Informations techniques et financières */}
-          {(isEditing || formData.montantEstime || formData.bureauEtudes || formData.bureauControle || formData.sps || formData.typeMarche) && (
+          {(isEditing || formData.montantEstime || formData.bureauEtudes || formData.bureauControle || formData.sps || formData.typeMarche || formData.cctp) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -1075,6 +1129,18 @@ export default function AoDetail() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    <div className="md:col-span-2">
+                      <Label htmlFor="cctp">CCTP (Cahier des Clauses Techniques Particulières)</Label>
+                      <Textarea
+                        id="cctp"
+                        value={formData.cctp}
+                        onChange={(e) => handleFieldChange("cctp", e.target.value)}
+                        placeholder="Détails techniques et spécifications..."
+                        className="min-h-[100px]"
+                        data-testid="input-cctp"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
@@ -1130,6 +1196,13 @@ export default function AoDetail() {
                           {formData.source === "partner" && "Partenaire"}
                           {formData.source === "other" && "Autre"}
                         </p>
+                      </div>
+                    )}
+                    
+                    {formData.cctp && (
+                      <div className="md:col-span-2">
+                        <Label className="text-sm text-on-surface-muted">CCTP (Cahier des Clauses Techniques Particulières)</Label>
+                        <p className="font-medium whitespace-pre-wrap">{formData.cctp}</p>
                       </div>
                     )}
                   </div>
@@ -2343,7 +2416,7 @@ export default function AoDetail() {
               {ao && (
                 <EnhancedBeValidation
                   offerId={ao.id}
-                  validationType="fin_etudes"
+                  validationType="conformite_technique_marche"
                   onValidationComplete={(result) => {
                     console.log('Validation completed:', result);
                     toast({

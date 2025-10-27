@@ -129,9 +129,9 @@ async function extractAllAOs() {
       });
     }
 
-    // Rate limiting: pause entre chaque requête (100ms)
+    // Rate limiting: pause entre chaque requête (50ms)
     if (i < itemsToProcess.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
   }
 

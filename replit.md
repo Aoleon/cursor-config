@@ -38,6 +38,7 @@ Saxium is a fullstack application designed for quoting and project management wi
 - ✅ **9 nouveaux AOs extraits** depuis Monday.com avec mapping corrigé
 - ✅ **15/15 AOs en base (100% complets)** - tous ont `intitule_operation`, `menuiserie_type`, `source`
 - ✅ **Validation stricte active** : empêche l'insertion d'AOs incomplets
+- ✅ **Bug enum corrigé** : Les champs `operationalStatus` et `priority` avec valeurs numériques (au lieu de string) sont nettoyés avant INSERT/UPDATE
 
 **Critères de complétude** (basés sur `ao-planning-3946257560.json`) :
 - `intitule_operation` (NOT NULL et non vide) - Champ `name` de Monday.com

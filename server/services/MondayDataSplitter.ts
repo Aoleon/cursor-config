@@ -286,12 +286,25 @@ export class MondayDataSplitter {
           });
         } else {
           // Créer un nouvel AO
+          // IMPORTANT: Filtrer les valeurs enum invalides (nombres au lieu de strings)
+          const cleanedAoData = { ...aoData };
+          
+          // Supprimer operationalStatus si c'est un nombre (enum invalide)
+          if (typeof cleanedAoData.operationalStatus === 'number') {
+            delete cleanedAoData.operationalStatus;
+          }
+          
+          // Supprimer priority si c'est un nombre (enum invalide)
+          if (typeof cleanedAoData.priority === 'number') {
+            delete cleanedAoData.priority;
+          }
+          
           const aoDataWithDefaults = {
-            reference: aoData.reference || `AO-MONDAY-${mondayItemId}`,
-            menuiserieType: aoData.menuiserieType || 'autre' as const,
-            source: aoData.source || 'other' as const,
+            reference: cleanedAoData.reference || `AO-MONDAY-${mondayItemId}`,
+            menuiserieType: cleanedAoData.menuiserieType || 'autre' as const,
+            source: cleanedAoData.source || 'other' as const,
             mondayItemId, // IMPORTANT: Ajouter mondayItemId pour traçabilité
-            ...aoData,
+            ...cleanedAoData,
           };
 
           currentAO = await storage.createAo(aoDataWithDefaults, tx);

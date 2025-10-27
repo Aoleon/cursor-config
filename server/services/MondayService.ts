@@ -41,7 +41,7 @@ export interface MondayColumnValue {
   // Champs additionnels pour status/dropdown (fragments GraphQL)
   label?: string;
   index?: number;
-  values?: Array<{ name: string; id: string }>;
+  values?: Array<{ text: string; id: string }>;
 }
 
 export interface MondayBoardData {
@@ -536,12 +536,6 @@ class MondayService {
               label
               index
             }
-            ... on DropdownValue {
-              values {
-                name
-                id
-              }
-            }
           }
           group {
             id
@@ -582,11 +576,33 @@ class MondayService {
       // avant de parser le JSON value (plus fiable)
       switch (columnValue.type) {
         case 'status':
+          // DEBUG: Log ce que Monday retourne
+          logger.debug('extractColumnValue status column', {
+            service: 'MondayService',
+            metadata: {
+              columnId: columnValue.id,
+              type: columnValue.type,
+              hasDirectLabel: !!columnValue.label,
+              directLabel: columnValue.label,
+              text: columnValue.text,
+              value: columnValue.value,
+              index: columnValue.index
+            }
+          });
+          
           // Utiliser label direct du fragment StatusValue si disponible
           if (columnValue.label) return columnValue.label;
           // Fallback: parser le JSON value
           if (columnValue.value) {
             const parsed = JSON.parse(columnValue.value);
+            logger.debug('extractColumnValue status parsed', {
+              service: 'MondayService',
+              metadata: {
+                parsed,
+                label: parsed.label,
+                index: parsed.index
+              }
+            });
             return parsed.label || parsed.index || null;
           }
           return null;
@@ -594,7 +610,7 @@ class MondayService {
         case 'dropdown':
           // Utiliser values direct du fragment DropdownValue si disponible
           if (columnValue.values && columnValue.values.length > 0) {
-            return columnValue.values[0].name;
+            return columnValue.values[0].text;
           }
           // Fallback: parser le JSON value
           if (columnValue.value) {

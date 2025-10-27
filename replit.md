@@ -57,6 +57,25 @@ Saxium is a fullstack application for quoting and project management in the Fren
   - **Transaction safety**: All updates atomic (rollback on error)
   - **Validation**: Architect review confirmed acceptable runtime and data integrity for 800+ items
 
+### New AO Fields Implementation (Oct 27, 2025)
+- **UI Complete**: 3 nouveaux champs ajoutés à ao-detail.tsx (edit + view modes)
+  - `dateLivraisonPrevue` (Date) - Date de livraison prévue du projet
+  - `dateOS` (Date) - Date d'ordre de service  
+  - `cctp` (Textarea) - Cahier des Clauses Techniques Particulières
+- **Backend Schema**: insertAoSchema corrigé dans shared/schema.ts
+  - Removed `dateRenduAO` from `.omit()` list
+  - Added proper Zod Date transforms for `dateLivraisonPrevue`, `dateOS`, `dateRenduAO`
+  - Added text field for `cctp`
+  - Validated with curl tests: PUT /api/aos/:id returns 200 OK
+- **Monday Mapping**: Configuration updated in `ao-planning-3946257560.json`
+  - **LIMITATION**: Original columns `date1`, `date6`, `long_text` do NOT exist in Monday board 3946257560
+  - **Temporary mapping**: Using existing but empty columns as substitutes
+    - `dateLivraisonPrevue` → `date_mkpcfgja` (Date Métrés) - ⚠️ Empty in Monday.com
+    - `dateOS` → `date__1` (Date Accord) - ⚠️ Empty in Monday.com  
+    - `cctp` → `long_text_mkx4zgjd` (Commentaire sélection) - ⚠️ Empty in Monday.com
+  - **Impact**: Re-extraction works but returns empty values (no source data in Monday)
+  - **Next steps**: Create proper Monday columns `date1`, `date6`, `long_text` OR populate existing mapped columns with data
+
 ## User Preferences
 - Always read `server/utils/README-UTILS.md` before modifying server code.
 - Use `asyncHandler` for all new routes.

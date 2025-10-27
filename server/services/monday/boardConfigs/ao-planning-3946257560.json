@@ -148,18 +148,18 @@
         "description": "Date de démarrage prévue du projet"
       },
       {
-        "mondayColumnId": "date1",
+        "mondayColumnId": "date_mkpcfgja",
         "saxiumField": "dateLivraisonPrevue",
         "type": "date",
         "required": false,
-        "description": "Date de livraison prévue"
+        "description": "Date de livraison prévue (PROVISOIRE: utilise 'Date Métrés' car colonne date1 n'existe pas)"
       },
       {
-        "mondayColumnId": "date6",
+        "mondayColumnId": "date__1",
         "saxiumField": "dateOS",
         "type": "date",
         "required": false,
-        "description": "Date d'ordre de service"
+        "description": "Date d'ordre de service (PROVISOIRE: utilise 'Date Accord' car colonne date6 n'existe pas)"
       },
       {
         "mondayColumnId": "text__1",
@@ -211,11 +211,11 @@
         "description": "Délai estimé (format Monday: ->01/10/25)"
       },
       {
-        "mondayColumnId": "long_text",
+        "mondayColumnId": "long_text_mkx4zgjd",
         "saxiumField": "cctp",
-        "type": "text",
+        "type": "long_text",
         "required": false,
-        "description": "Cahier des Clauses Techniques Particulières (CCTP)"
+        "description": "Cahier des Clauses Techniques Particulières CCTP (PROVISOIRE: utilise long_text_mkx4zgjd car colonne long_text n'existe pas)"
       },
       {
         "mondayColumnId": "dup__of_client",

@@ -38,6 +38,10 @@ export interface MondayColumnValue {
   type: string;
   text?: string;
   value?: string;
+  // Champs additionnels pour status/dropdown (fragments GraphQL)
+  label?: string;
+  index?: number;
+  values?: Array<{ name: string; id: string }>;
 }
 
 export interface MondayBoardData {
@@ -528,6 +532,16 @@ class MondayService {
             type
             text
             value
+            ... on StatusValue {
+              label
+              index
+            }
+            ... on DropdownValue {
+              values {
+                name
+                id
+              }
+            }
           }
           group {
             id
@@ -564,20 +578,39 @@ class MondayService {
 
   extractColumnValue(columnValue: MondayColumnValue): any {
     try {
-      // Si value existe, le parser
+      // PRIORITÉ : Utiliser les champs directs des fragments GraphQL (label, values)
+      // avant de parser le JSON value (plus fiable)
+      switch (columnValue.type) {
+        case 'status':
+          // Utiliser label direct du fragment StatusValue si disponible
+          if (columnValue.label) return columnValue.label;
+          // Fallback: parser le JSON value
+          if (columnValue.value) {
+            const parsed = JSON.parse(columnValue.value);
+            return parsed.label || parsed.index || null;
+          }
+          return null;
+        
+        case 'dropdown':
+          // Utiliser values direct du fragment DropdownValue si disponible
+          if (columnValue.values && columnValue.values.length > 0) {
+            return columnValue.values[0].name;
+          }
+          // Fallback: parser le JSON value
+          if (columnValue.value) {
+            const parsed = JSON.parse(columnValue.value);
+            return parsed.labels?.[0] || null;
+          }
+          return null;
+      }
+      
+      // Pour les autres types, parser value si existe
       if (columnValue.value) {
         const parsed = JSON.parse(columnValue.value);
         
-        // SWITCH TYPE (comme avant)
         switch (columnValue.type) {
           case 'date':
             return parsed.date || null;
-          
-          case 'status':
-            return parsed.label || parsed.index || null;
-          
-          case 'dropdown':
-            return parsed.labels?.[0] || null;
           
           case 'people':
             return parsed.personsAndTeams?.map((p: any) => ({

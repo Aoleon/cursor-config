@@ -161,9 +161,19 @@ export function useTablePreferences({
   }, []);
 
   const resetPreferences = useCallback(() => {
-    setPreferences(initializePreferences());
+    // Supprimer d'abord le localStorage, puis réinitialiser avec les valeurs par défaut
     localStorage.removeItem(storageKey);
-  }, [initializePreferences, storageKey]);
+    const defaultPrefs: TablePreferences = {
+      columns: defaultColumns.map((col, idx) => ({
+        ...col,
+        visible: true,
+        order: idx
+      })),
+      filters: {},
+      viewMode: defaultViewMode
+    };
+    setPreferences(defaultPrefs);
+  }, [storageKey, defaultColumns, defaultViewMode]);
 
   const visibleColumns = preferences.columns
     .filter(c => c.visible)

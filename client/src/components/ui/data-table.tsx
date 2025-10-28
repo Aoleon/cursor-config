@@ -72,6 +72,15 @@ export function DataTable<T extends Record<string, any>>({
 }: DataTableProps<T>) {
   const [showColumnSettings, setShowColumnSettings] = useState(false);
 
+  // Mémoriser les colonnes par défaut pour éviter de réinitialiser les préférences à chaque rendu
+  const defaultColumns = useMemo(() => columns.map(col => ({
+    id: col.id,
+    label: col.label,
+    sortable: col.sortable ?? true,
+    filterable: col.filterable ?? true,
+    width: col.width
+  })), [columns]);
+
   const {
     preferences,
     visibleColumns,
@@ -84,13 +93,7 @@ export function DataTable<T extends Record<string, any>>({
     resetPreferences
   } = useTablePreferences({
     tableId,
-    defaultColumns: columns.map(col => ({
-      id: col.id,
-      label: col.label,
-      sortable: col.sortable ?? true,
-      filterable: col.filterable ?? true,
-      width: col.width
-    })),
+    defaultColumns,
     defaultViewMode
   });
 

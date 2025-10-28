@@ -43,17 +43,25 @@ export default function OffersTableView({
   };
 
   // Récupérer les Offres
-  const { data: offersData, isLoading } = useQuery({
+  const { data: offersResponse, isLoading } = useQuery({
     queryKey: [endpoint],
     queryFn: async () => {
       const response = await fetch(endpoint);
       if (!response.ok) throw new Error(`Erreur ${response.status}`);
       const data = await response.json();
-      return Array.isArray(data) ? data : data.data || [];
+      // Gérer le format API avec total
+      if (data && typeof data === 'object' && 'data' in data) {
+        return data;
+      } else if (Array.isArray(data)) {
+        return { data, total: data.length };
+      }
+      return { data: [], total: 0 };
     },
   });
 
-  const offers = offersData || [];
+  const offers = offersResponse?.data || [];
+  // Support multiple API response formats: root.total, meta.total, pagination.total, or fallback to array length
+  const total = offersResponse?.total ?? offersResponse?.meta?.total ?? offersResponse?.pagination?.total ?? offers.length;
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { color: string; label: string }> = {
@@ -310,7 +318,7 @@ export default function OffersTableView({
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              <span data-testid="offers-count">{title} ({offers.length})</span>
+              <span data-testid="offers-count">{title} ({total})</span>
             </div>
 
           <div className="flex items-center gap-2">

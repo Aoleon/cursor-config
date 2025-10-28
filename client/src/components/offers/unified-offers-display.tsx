@@ -70,8 +70,11 @@ export default function UnifiedOffersDisplay({
 
   // Extraire les données et pagination
   const offers = offersResponse?.data || [];
-  const pagination = offersResponse?.pagination || { page: 1, limit: 20, total: 0 };
-  const totalPages = Math.ceil(pagination.total / pagination.limit) || 1;
+  // L'API peut retourner plusieurs formats: { total, meta } ou { pagination } (legacy)
+  const total = offersResponse?.total ?? offersResponse?.meta?.total ?? offersResponse?.pagination?.total ?? offers.length;
+  const currentPage = offersResponse?.meta?.page ?? offersResponse?.pagination?.page ?? page;
+  const currentLimit = offersResponse?.meta?.limit ?? offersResponse?.pagination?.limit ?? limit;
+  const totalPages = Math.ceil(total / currentLimit) || 1;
 
   // Extraire les IDs des offres visibles sur la page actuelle (optimisation)
   const visibleOfferIds = (Array.isArray(offers) ? offers : []).map((item: any) => item.id);
@@ -257,7 +260,7 @@ export default function UnifiedOffersDisplay({
         <CardTitle className="flex items-center justify-between" data-testid="offers-header">
           <div className="flex items-center space-x-2">
             <FileText className="h-5 w-5" />
-            <span data-testid="offers-count">{title} ({offers.length})</span>
+            <span data-testid="offers-count">{title} ({total})</span>
           </div>
           {showCreateButton && (
             <TooltipProvider>
@@ -529,10 +532,10 @@ export default function UnifiedOffersDisplay({
           </div>
 
           {/* Contrôles de pagination */}
-          {pagination.total > limit && (
+          {total > currentLimit && (
             <div className="flex items-center justify-between mt-6 pt-6 border-t">
               <div className="text-sm text-muted-foreground" data-testid="text-page-info">
-                Page {page} sur {totalPages} • Affichage {((page - 1) * limit) + 1}-{Math.min(page * limit, pagination.total)} sur {pagination.total} offres
+                Page {currentPage} sur {totalPages} • Affichage {((currentPage - 1) * currentLimit) + 1}-{Math.min(currentPage * currentLimit, total)} sur {total} résultats
               </div>
               <div className="flex items-center gap-2">
                 <Button

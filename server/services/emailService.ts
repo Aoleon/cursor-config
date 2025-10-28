@@ -13,6 +13,7 @@
 import Handlebars from 'handlebars';
 import type { SupplierQuoteSession, Supplier } from "@shared/schema";
 import { logger } from '../utils/logger';
+import { executeSendGrid } from './resilience.js';
 
 // ========================================
 // TYPES ET INTERFACES EMAIL
@@ -1053,17 +1054,35 @@ export class SendGridEmailService implements IEmailService {
         throw new Error('SendGrid API key non configurée. Utilisez MockEmailService pour le développement.');
       }
 
-      // TODO: Implémentation SendGrid réelle
-      // Quand prêt pour la production :
-      // 1. Initialiser le client SendGrid
-      // 2. Remplacer les variables dans le template
-      // 3. Envoyer l'email via l'API SendGrid
-      // 4. Retourner le résultat réel
-      
       // Rendre les templates avec Handlebars
       const subject = templateService.renderTemplate(template.subject, emailData.dynamicData, `${emailData.templateId}_subject`);
       const htmlContent = templateService.renderTemplate(template.htmlContent, emailData.dynamicData, `${emailData.templateId}_html`);
       const textContent = templateService.renderTemplate(template.textContent, emailData.dynamicData, `${emailData.templateId}_text`);
+
+      // TODO: Implémentation SendGrid réelle avec resilience wrapper
+      // Quand prêt pour la production, remplacer la simulation ci-dessous par :
+      // 
+      // const result = await executeSendGrid(
+      //   async () => {
+      //     const sgMail = require('@sendgrid/mail');
+      //     sgMail.setApiKey(this.apiKey!);
+      //     return sgMail.send({
+      //       to: emailData.to[0].email,
+      //       from: { email: this.fromEmail, name: emailData.fromName || this.fromName },
+      //       subject: subject,
+      //       html: htmlContent,
+      //       text: textContent,
+      //       replyTo: emailData.replyTo
+      //     });
+      //   },
+      //   'Send Email'
+      // );
+      // 
+      // return {
+      //   success: true,
+      //   messageId: result[0].messageId,
+      //   deliveryStatus: 'pending'
+      // };
 
       logger.info('SIMULATION Email SendGrid', {
       metadata: {

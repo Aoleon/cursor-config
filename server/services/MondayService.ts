@@ -1,8 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
 import { logger } from '../utils/logger';
-import { withRetry, isRetryableError } from '../utils/retry-helper';
 import { getCacheService, TTL_CONFIG } from './CacheService';
 import { getCorrelationId } from '../middleware/correlation';
+import { executeMonday } from './resilience.js';
 
 export interface MondayBoard {
   id: string;
@@ -94,7 +94,7 @@ class MondayService {
     // Récupérer correlation ID pour propagation
     const correlationId = getCorrelationId();
     
-    return withRetry(
+    return executeMonday(
       async () => {
         try {
           logger.info('Exécution requête Monday.com GraphQL', {
@@ -140,17 +140,7 @@ class MondayService {
           throw error;
         }
       },
-      {
-        maxRetries: 3,
-        initialDelay: 1000,
-        retryCondition: (error: any) => {
-          // Retry on network errors, rate limits, and temporary server errors
-          if (error?.code === 'ECONNRESET' || error?.code === 'ETIMEDOUT') return true;
-          if (error?.response?.status === 429) return true; // Rate limit
-          if (error?.response?.status >= 500 && error?.response?.status < 600) return true;
-          return false;
-        }
-      }
+      'GraphQL Query'
     );
   }
 

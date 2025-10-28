@@ -12,6 +12,7 @@ import { withRetry, isRetryableError } from '../utils/retry-helper';
 import { CircuitBreaker, CircuitBreakerManager } from '../utils/circuit-breaker';
 import { API_LIMITS, getModelConfig } from '../config/api-limits';
 import { getCorrelationId } from '../middleware/correlation';
+import { executeOpenAI } from './resilience.js';
 
 // Référence blueprints: javascript_anthropic et javascript_openai intégrés
 /*
@@ -1148,15 +1149,19 @@ export class AIService {
     const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql", undefined, request.complexity);
     const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole, undefined, request.complexity);
 
-    // Appel simple sans timeout (géré par withRetry) avec correlation header
-    const response = await this.anthropic.messages.create({
-      model: DEFAULT_CLAUDE_MODEL,
-      max_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
-      messages: [{ role: 'user', content: userPrompt }],
-      system: systemPrompt,
-    }, {
-      headers: correlationId ? { 'X-Correlation-ID': correlationId } : undefined
-    });
+    // Appel avec resilience wrapper pour retry + circuit breaker
+    const response = await executeOpenAI(
+      async () => this.anthropic.messages.create({
+        model: DEFAULT_CLAUDE_MODEL,
+        max_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
+        messages: [{ role: 'user', content: userPrompt }],
+        system: systemPrompt,
+      }, {
+        headers: correlationId ? { 'X-Correlation-ID': correlationId } : undefined
+      }),
+      'Claude Text Generation',
+      DEFAULT_CLAUDE_MODEL
+    );
 
     const responseTime = Date.now() - startTime;
     const responseText = response.content[0]?.type === 'text' ? response.content[0].text : "";
@@ -1197,18 +1202,22 @@ export class AIService {
     const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql", undefined, request.complexity);
     const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole, undefined, request.complexity);
 
-    // Appel simple sans timeout (géré par withRetry) avec correlation header
-    const response = await this.openai.chat.completions.create({
-      model: DEFAULT_GPT_MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      response_format: { type: "json_object" },
-      max_completion_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
-    }, {
-      headers: correlationId ? { 'X-Correlation-ID': correlationId } : undefined
-    });
+    // Appel avec resilience wrapper pour retry + circuit breaker
+    const response = await executeOpenAI(
+      async () => this.openai!.chat.completions.create({
+        model: DEFAULT_GPT_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
+      }, {
+        headers: correlationId ? { 'X-Correlation-ID': correlationId } : undefined
+      }),
+      'GPT Text Generation',
+      DEFAULT_GPT_MODEL
+    );
 
     const responseTime = Date.now() - startTime;
     const tokensUsed = response.usage?.total_tokens || this.estimateTokens(userPrompt, response.choices[0].message.content || "");

@@ -1103,8 +1103,8 @@ app.get("/api/offers",
     const actualLimit = Number(limit) || 20;
     const actualOffset = Number(offset) || 0;
     
-    // Utiliser la version paginée optimisée avec LEFT JOINs
-    const { offers, total } = await storage.getOffersPaginated(
+    // Utiliser la version combinée qui fusionne AOs (Monday.com) et Offers (Saxium)
+    const { items, total } = await storage.getCombinedOffersPaginated(
       search as string, 
       status as string,
       actualLimit,
@@ -1114,7 +1114,7 @@ app.get("/api/offers",
     // Calculer le numéro de page à partir de l'offset
     const page = Math.floor(actualOffset / actualLimit) + 1;
     
-    sendPaginatedSuccess(res, offers, {
+    sendPaginatedSuccess(res, items, {
       total,
       limit: actualLimit,
       page

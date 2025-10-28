@@ -369,5 +369,13 @@ export function sendPaginatedSuccess<T>(
   pagination: { page: number; limit: number; total: number },
   statusCode: number = 200
 ): void {
-  sendSuccess(res, data, statusCode, pagination);
+  const response = {
+    success: true,
+    data,
+    timestamp: new Date().toISOString(),
+    total: pagination.total,
+    meta: pagination
+  };
+  
+  res.status(statusCode).json(response);
 }

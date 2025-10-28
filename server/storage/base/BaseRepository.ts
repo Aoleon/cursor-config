@@ -566,6 +566,16 @@ export abstract class BaseRepository<
     this.validateId(id, 'restore');
     const normalizedId = this.normalizeId(id);
     
+    // Vérifier que la table supporte le soft delete
+    const hasDeletedAt = 'deletedAt' in this.table;
+    if (!hasDeletedAt) {
+      throw new DatabaseError(
+        `Table ${this.tableName} does not support soft delete (missing deletedAt field)`,
+        'UNSUPPORTED_OPERATION',
+        { tableName: this.tableName, operation: 'restore' }
+      );
+    }
+    
     this.logger.debug('Restoring soft deleted entity', {
       metadata: {
         module: this.repositoryName,
@@ -758,9 +768,12 @@ export abstract class BaseRepository<
     let query = dbInstance.select({ count: sql<number>`count(*)` }).from(this.table);
     
     if (filters && Object.keys(filters).length > 0) {
-      const whereConditions = Object.entries(filters).map(([key, value]) => {
-        return eq(this.table[key], value);
-      });
+      // Sanitize filters: exclure undefined/null pour éviter SQL invalide
+      const whereConditions = Object.entries(filters)
+        .filter(([_, value]) => value !== undefined && value !== null)
+        .map(([key, value]) => {
+          return eq(this.table[key], value);
+        });
       
       if (whereConditions.length > 0) {
         query = query.where(and(...whereConditions));

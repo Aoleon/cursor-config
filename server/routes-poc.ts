@@ -2086,8 +2086,8 @@ app.get("/api/search/global",
         reference: aos.reference,
         intituleOperation: aos.intituleOperation,
         client: aos.client,
-        localisation: aos.localisation,
-        ville: aos.ville,
+        location: aos.location,
+        city: aos.city,
         status: aos.status,
         createdAt: aos.createdAt
       })
@@ -2097,8 +2097,8 @@ app.get("/api/search/global",
           ilike(sql`COALESCE(${aos.reference}, '')`, searchPattern),
           ilike(sql`COALESCE(${aos.intituleOperation}, '')`, searchPattern),
           ilike(sql`COALESCE(${aos.client}, '')`, searchPattern),
-          ilike(sql`COALESCE(${aos.localisation}, '')`, searchPattern),
-          ilike(sql`COALESCE(${aos.ville}, '')`, searchPattern)
+          ilike(sql`COALESCE(${aos.location}, '')`, searchPattern),
+          ilike(sql`COALESCE(${aos.city}, '')`, searchPattern)
         )
       )
       .limit(limitNum)
@@ -2108,7 +2108,7 @@ app.get("/api/search/global",
         reference: ao.reference,
         title: ao.intituleOperation || ao.reference,
         subtitle: ao.client,
-        location: ao.localisation || ao.ville,
+        location: ao.location || ao.city,
         status: ao.status,
         createdAt: ao.createdAt
       })));

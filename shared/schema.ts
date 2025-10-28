@@ -1230,7 +1230,6 @@ export const aos = pgTable("aos", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
   return {
-    referenceIdx: index("aos_reference_idx").on(table.reference),
     // Index composites stratégiques pour performance optimisée (ContextBuilder)
     entityStatusIdx: index("aos_entity_status_idx").on(table.id, table.status),
     statusOperationalIdx: index("aos_status_operational_idx").on(table.status, table.operationalStatus),
@@ -1240,8 +1239,14 @@ export const aos = pgTable("aos", {
     // PERFORMANCE OPTIMIZATION - Single column indexes for frequent queries
     mondayIdIdx: index("aos_monday_id_idx").on(table.mondayId),
     createdAtIdx: index("aos_created_at_idx").on(table.createdAt),
+    // B-tree index for exact reference lookups
+    referenceIdx: index("aos_reference_idx").on(table.reference),
     // UNIQUE CONSTRAINT - Prevent duplicate Monday item imports
     mondayItemIdUnique: uniqueIndex("aos_monday_item_id_unique").on(table.mondayItemId),
+    // NOTE: GIN trigram indexes for ILIKE '%term%' search are created manually via SQL:
+    // - aos_reference_trgm_idx, aos_intitule_operation_trgm_idx, aos_client_trgm_idx,
+    // - aos_location_trgm_idx, aos_city_trgm_idx
+    // Drizzle ORM doesn't support gin_trgm_ops operator class natively.
   };
 });
 
@@ -1516,7 +1521,6 @@ export const offers = pgTable("offers", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
   return {
-    referenceIdx: index("offers_reference_idx").on(table.reference),
     statusIdx: index("offers_status_idx").on(table.status),
     // Index composites stratégiques pour performance optimisée (ContextBuilder)
     aoStatusCreatedIdx: index("offers_ao_status_created_idx").on(table.aoId, table.status, table.createdAt),
@@ -1525,6 +1529,12 @@ export const offers = pgTable("offers", {
     priorityStatusIdx: index("offers_priority_status_idx").on(table.isPriority, table.status),
     // PERFORMANCE OPTIMIZATION - Single column index for ORDER BY queries
     createdAtIdx: index("offers_created_at_idx").on(table.createdAt),
+    // B-tree index for exact reference lookups
+    referenceIdx: index("offers_reference_idx").on(table.reference),
+    // NOTE: GIN trigram indexes for ILIKE '%term%' search are created manually via SQL:
+    // - offers_reference_trgm_idx, offers_intitule_operation_trgm_idx,
+    // - offers_client_trgm_idx, offers_location_trgm_idx
+    // Drizzle ORM doesn't support gin_trgm_ops operator class natively.
   };
 });
 
@@ -1682,6 +1692,10 @@ export const projects = pgTable("projects", {
     // PERFORMANCE OPTIMIZATION - Single column indexes for frequent WHERE queries
     statusIdx: index("projects_status_idx").on(table.status),
     mondayIdIdx: index("projects_monday_id_idx").on(table.mondayId),
+    // NOTE: GIN trigram indexes for ILIKE '%term%' search are created manually via SQL:
+    // - projects_name_trgm_idx, projects_client_trgm_idx,
+    // - projects_location_trgm_idx, projects_description_trgm_idx
+    // Drizzle ORM doesn't support gin_trgm_ops operator class natively.
   };
 });
 

@@ -132,11 +132,14 @@ export default function OffersTableView({
       label: 'Intitulé',
       accessor: 'intituleOperation',
       width: '250px',
-      render: (value) => (
-        <div className="max-w-[250px] truncate" title={value}>
-          {value || '-'}
-        </div>
-      )
+      render: (value, row) => {
+        const displayValue = value || row.reference;
+        return (
+          <div className="max-w-[250px] truncate" title={displayValue}>
+            {displayValue || '-'}
+          </div>
+        );
+      }
     },
     {
       id: 'client',

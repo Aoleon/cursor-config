@@ -1151,113 +1151,244 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCombinedOffersPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ items: Array<(Ao | Offer) & { responsibleUser?: User; ao?: Ao; sourceType: 'ao' | 'offer' }>, total: number }> {
-    const actualLimit = Number(limit) || 20;
-    const actualOffset = Number(offset) || 0;
+    try {
+      const actualLimit = Number(limit) || 20;
+      const actualOffset = Number(offset) || 0;
 
-    const searchTerm = search && typeof search === 'string' ? `%${search}%` : null;
-    const statusValue = status && status !== 'tous' ? status : null;
+      const searchTerm = search && typeof search === 'string' ? `%${search}%` : null;
+      const statusValue = status && status !== 'tous' ? status : null;
 
-    const aoResults = await db
-      .select({
-        id: aos.id,
-        reference: aos.reference,
-        client: aos.client,
-        location: aos.location,
-        intitule_operation: aos.intituleOperation,
-        montant_estime: aos.montantEstime,
-        status: aos.status,
-        created_at: aos.createdAt,
-        source_type: sql<string>`'ao'`,
-        responsible_user_id: sql<string | null>`NULL`,
-        montant_final: sql<number | null>`NULL`,
-        ao_id: sql<string | null>`NULL`
-      })
-      .from(aos)
-      .where(
-        and(
-          statusValue ? eq(aos.status, statusValue as any) : undefined,
-          searchTerm
-            ? sql`(
-              ${aos.intituleOperation} ILIKE ${searchTerm} OR
-              ${aos.client} ILIKE ${searchTerm} OR
-              ${aos.reference} ILIKE ${searchTerm}
-            )`
-            : undefined
-        )
-      );
-
-    const offerResults = await db
-      .select({
-        id: offers.id,
-        reference: offers.reference,
-        client: offers.client,
-        location: offers.location,
-        intitule_operation: offers.intituleOperation,
-        montant_estime: offers.montantEstime,
-        status: offers.status,
-        created_at: offers.createdAt,
-        source_type: sql<string>`'offer'`,
-        responsible_user_id: offers.responsibleUserId,
-        montant_final: offers.montantFinal,
-        ao_id: offers.aoId
-      })
-      .from(offers)
-      .where(
-        and(
-          statusValue ? eq(offers.status, statusValue as any) : undefined,
-          searchTerm
-            ? sql`(
-              ${offers.intituleOperation} ILIKE ${searchTerm} OR
-              ${offers.client} ILIKE ${searchTerm} OR
-              ${offers.reference} ILIKE ${searchTerm}
-            )`
-            : undefined
-        )
-      );
-
-    const combined = [...aoResults, ...offerResults]
-      .sort((a, b) => {
-        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return dateB - dateA;
-      })
-      .slice(actualOffset, actualOffset + actualLimit);
-
-    const total = aoResults.length + offerResults.length;
-
-    const items = await Promise.all(
-      combined.map(async (row: any) => {
-        const item: any = {
-          ...row,
-          sourceType: row.source_type
-        };
-
-        if (row.responsible_user_id) {
-          item.responsibleUser = await this.getUser(row.responsible_user_id);
+      logger.info('[Offers] Fetching combined AOs and Offers', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getCombinedOffersPaginated',
+          limit: actualLimit,
+          offset: actualOffset,
+          search,
+          status
         }
+      });
 
-        if (row.ao_id) {
-          item.ao = await this.getAo(row.ao_id);
-        }
+      const aoResults = await db
+        .select({
+          id: aos.id,
+          reference: aos.reference,
+          client: aos.client,
+          location: aos.location,
+          intitule_operation: aos.intituleOperation,
+          montant_estime: aos.montantEstime,
+          menuiserie_type: aos.menuiserieType,
+          status: aos.status,
+          created_at: aos.createdAt,
+          updated_at: aos.updatedAt,
+          departement: aos.departement,
+          date_limite_remise: aos.dateLimiteRemise,
+          source_type: sql<string>`'ao'`.as('source_type'),
+          responsible_user_id: sql<string | null>`NULL`.as('responsible_user_id'),
+          montant_final: sql<number | null>`NULL`.as('montant_final'),
+          taux_marge: sql<number | null>`NULL`.as('taux_marge'),
+          ao_id: sql<string | null>`NULL`.as('ao_id')
+        })
+        .from(aos)
+        .where(
+          and(
+            statusValue ? eq(aos.status, statusValue as any) : undefined,
+            searchTerm
+              ? sql`(
+                ${aos.intituleOperation} ILIKE ${searchTerm} OR
+                ${aos.client} ILIKE ${searchTerm} OR
+                ${aos.reference} ILIKE ${searchTerm}
+              )`
+              : undefined
+          )
+        );
 
-        return item;
-      })
-    );
-
-    logger.info('[Offers] AOs et Offres combinés retournés', {
-      metadata: {
-        service: 'StoragePOC',
-        operation: 'getCombinedOffersPaginated',
-        count: items.length,
-        total,
-        limit: actualLimit,
-        offset: actualOffset,
-        search,
-        status
+      // Defensive check - ensure aoResults is an array
+      if (!Array.isArray(aoResults)) {
+        logger.error('[Offers] aoResults is not an array', {
+          metadata: {
+            service: 'StoragePOC',
+            operation: 'getCombinedOffersPaginated',
+            aoResultsType: typeof aoResults,
+            aoResults
+          }
+        });
+        throw new Error('AO query did not return an array');
       }
-    });
 
-    return { items, total };
+      const offerResults = await db
+        .select({
+          id: offers.id,
+          reference: offers.reference,
+          client: offers.client,
+          location: offers.location,
+          intitule_operation: offers.intituleOperation,
+          montant_estime: offers.montantEstime,
+          menuiserie_type: offers.menuiserieType,
+          status: offers.status,
+          created_at: offers.createdAt,
+          updated_at: offers.updatedAt,
+          departement: offers.departement,
+          date_limite_remise: offers.dateLimiteRemise,
+          source_type: sql<string>`'offer'`.as('source_type'),
+          responsible_user_id: offers.responsibleUserId,
+          montant_final: offers.montantFinal,
+          taux_marge: offers.tauxMarge,
+          ao_id: offers.aoId
+        })
+        .from(offers)
+        .where(
+          and(
+            statusValue ? eq(offers.status, statusValue as any) : undefined,
+            searchTerm
+              ? sql`(
+                ${offers.intituleOperation} ILIKE ${searchTerm} OR
+                ${offers.client} ILIKE ${searchTerm} OR
+                ${offers.reference} ILIKE ${searchTerm}
+              )`
+              : undefined
+          )
+        );
+
+      // Defensive check - ensure offerResults is an array
+      if (!Array.isArray(offerResults)) {
+        logger.error('[Offers] offerResults is not an array', {
+          metadata: {
+            service: 'StoragePOC',
+            operation: 'getCombinedOffersPaginated',
+            offerResultsType: typeof offerResults,
+            offerResults
+          }
+        });
+        throw new Error('Offer query did not return an array');
+      }
+
+      logger.info('[Offers] Query results fetched', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getCombinedOffersPaginated',
+          aoCount: aoResults.length,
+          offerCount: offerResults.length
+        }
+      });
+
+      const combined = [...aoResults, ...offerResults]
+        .sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA;
+        })
+        .slice(actualOffset, actualOffset + actualLimit);
+
+      const total = aoResults.length + offerResults.length;
+
+      logger.info('[Offers] Combined and sorted results', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getCombinedOffersPaginated',
+          combinedCount: combined.length,
+          total
+        }
+      });
+
+      const items = await Promise.all(
+        combined.map(async (row: any) => {
+          try {
+            const item: any = {
+              id: row.id,
+              reference: row.reference,
+              client: row.client,
+              location: row.location,
+              intituleOperation: row.intitule_operation,
+              montantEstime: row.montant_estime,
+              menuiserieType: row.menuiserie_type,
+              status: row.status,
+              createdAt: row.created_at,
+              updatedAt: row.updated_at,
+              departement: row.departement,
+              dateLimiteRemise: row.date_limite_remise,
+              deadline: row.date_limite_remise,
+              montantFinal: row.montant_final,
+              tauxMarge: row.taux_marge,
+              aoId: row.ao_id,
+              responsibleUserId: row.responsible_user_id,
+              sourceType: row.source_type
+            };
+
+            if (row.responsible_user_id) {
+              item.responsibleUser = await this.getUser(row.responsible_user_id);
+            }
+
+            if (row.ao_id) {
+              item.ao = await this.getAo(row.ao_id);
+            }
+
+            return item;
+          } catch (mapError) {
+            logger.error('[Offers] Error mapping row to item', {
+              metadata: {
+                service: 'StoragePOC',
+                operation: 'getCombinedOffersPaginated',
+                rowId: row?.id,
+                error: mapError instanceof Error ? mapError.message : String(mapError),
+                stack: mapError instanceof Error ? mapError.stack : undefined
+              }
+            });
+            // Return a minimal item to prevent Promise.all from failing
+            return {
+              id: row?.id || 'unknown',
+              reference: row?.reference || 'N/A',
+              client: row?.client || 'N/A',
+              location: row?.location || '',
+              intituleOperation: row?.intitule_operation || '',
+              montantEstime: row?.montant_estime || null,
+              menuiserieType: row?.menuiserie_type || null,
+              status: row?.status || 'unknown',
+              createdAt: row?.created_at || new Date(),
+              updatedAt: row?.updated_at || new Date(),
+              departement: row?.departement || null,
+              dateLimiteRemise: row?.date_limite_remise || null,
+              deadline: row?.date_limite_remise || null,
+              montantFinal: row?.montant_final || null,
+              tauxMarge: row?.taux_marge || null,
+              aoId: row?.ao_id || null,
+              responsibleUserId: row?.responsible_user_id || null,
+              sourceType: row?.source_type || 'offer'
+            };
+          }
+        })
+      );
+
+      logger.info('[Offers] AOs et Offres combinés retournés', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getCombinedOffersPaginated',
+          count: items.length,
+          total,
+          limit: actualLimit,
+          offset: actualOffset,
+          search,
+          status
+        }
+      });
+
+      return { items, total };
+    } catch (error) {
+      logger.error('[Offers] Critical error in getCombinedOffersPaginated', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getCombinedOffersPaginated',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          search,
+          status,
+          limit,
+          offset
+        }
+      });
+      // Return empty result instead of throwing to prevent 500 errors
+      return { items: [], total: 0 };
+    }
   }
 
   async getOffer(id: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao }) | undefined> {

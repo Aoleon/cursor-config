@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import Header from "@/components/layout/header";
-import UnifiedOffersDisplay from "@/components/offers/unified-offers-display";
+import OffersTableView from "@/components/offers/offers-table-view";
 import { Plus } from "lucide-react";
 
 export default function Offers() {
@@ -9,26 +9,26 @@ export default function Offers() {
   return (
     <>
       <Header 
-        title="Appels d'Offres"
+        title="Offres"
         breadcrumbs={[
           { label: "Accueil", href: "/" },
-          { label: "Appels d'Offres" }
+          { label: "Offres" }
         ]}
         actions={[
           {
-            label: "Nouvel AO",
+            label: "Nouvelle Offre",
             variant: "default",
             icon: "plus",
-            onClick: () => setLocation("/create-ao")
+            onClick: () => setLocation("/create-offer")
           }
         ]}
       />
       
       <div className="px-6 py-6">
-        <UnifiedOffersDisplay 
+        <OffersTableView 
           showCreateButton={true} 
-          title="Appels d'Offres"
-          endpoint="/api/aos"
+          title="Offres"
+          endpoint="/api/offers"
         />
       </div>
     </>

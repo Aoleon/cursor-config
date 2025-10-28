@@ -68,7 +68,7 @@ import { registerTeamsRoutes } from "./routes-teams";
 import { createAdminRoutes } from "./routes-admin";
 import { migrationRoutes } from "./routes-migration";
 import { db } from "./db";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, or, ilike } from "drizzle-orm";
 import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto, parsePeriod, getDefaultPeriod, getLastMonths, type DateRange } from "./dateUtils";
 import type { EventBus } from "./eventBus";
 import { ScoringService } from "./services/scoringService";
@@ -2070,22 +2070,39 @@ app.get("/api/search/global",
   })),
   asyncHandler(async (req, res) => {
     const { query, limit } = req.query;
-    const searchTerm = String(query).toLowerCase();
+    const searchTerm = String(query);
+    const searchPattern = `%${searchTerm}%`;
+    
+    // S'assurer que limit est un nombre valide (coercion depuis string query param)
+    let limitNum = Number(limit ?? 20);
+    if (!Number.isFinite(limitNum) || limitNum <= 0 || limitNum > 100) {
+      limitNum = 20;
+    }
 
-    // Rechercher dans les AOs
-    const allAos = await storage.getAos();
-    const matchingAos = allAos
-      .filter(ao => {
-        return (
-          ao.reference?.toLowerCase().includes(searchTerm) ||
-          ao.intituleOperation?.toLowerCase().includes(searchTerm) ||
-          ao.client?.toLowerCase().includes(searchTerm) ||
-          ao.localisation?.toLowerCase().includes(searchTerm) ||
-          ao.ville?.toLowerCase().includes(searchTerm)
-        );
+    // Rechercher dans les AOs avec SQL ILIKE (optimisé)
+    const matchingAos = await db
+      .select({
+        id: aos.id,
+        reference: aos.reference,
+        intituleOperation: aos.intituleOperation,
+        client: aos.client,
+        localisation: aos.localisation,
+        ville: aos.ville,
+        status: aos.status,
+        createdAt: aos.createdAt
       })
-      .slice(0, limit)
-      .map(ao => ({
+      .from(aos)
+      .where(
+        or(
+          ilike(sql`COALESCE(${aos.reference}, '')`, searchPattern),
+          ilike(sql`COALESCE(${aos.intituleOperation}, '')`, searchPattern),
+          ilike(sql`COALESCE(${aos.client}, '')`, searchPattern),
+          ilike(sql`COALESCE(${aos.localisation}, '')`, searchPattern),
+          ilike(sql`COALESCE(${aos.ville}, '')`, searchPattern)
+        )
+      )
+      .limit(limitNum)
+      .then(rows => rows.map(ao => ({
         id: ao.id,
         type: 'ao' as const,
         reference: ao.reference,
@@ -2094,21 +2111,30 @@ app.get("/api/search/global",
         location: ao.localisation || ao.ville,
         status: ao.status,
         createdAt: ao.createdAt
-      }));
+      })));
 
-    // Rechercher dans les Offres
-    const allOffers = await storage.getOffers();
-    const matchingOffers = allOffers
-      .filter(offer => {
-        return (
-          offer.reference?.toLowerCase().includes(searchTerm) ||
-          offer.client?.toLowerCase().includes(searchTerm) ||
-          offer.location?.toLowerCase().includes(searchTerm) ||
-          offer.intituleOperation?.toLowerCase().includes(searchTerm)
-        );
+    // Rechercher dans les Offres avec SQL ILIKE (optimisé)
+    const matchingOffers = await db
+      .select({
+        id: offers.id,
+        reference: offers.reference,
+        intituleOperation: offers.intituleOperation,
+        client: offers.client,
+        location: offers.location,
+        status: offers.status,
+        createdAt: offers.createdAt
       })
-      .slice(0, limit)
-      .map(offer => ({
+      .from(offers)
+      .where(
+        or(
+          ilike(sql`COALESCE(${offers.reference}, '')`, searchPattern),
+          ilike(sql`COALESCE(${offers.intituleOperation}, '')`, searchPattern),
+          ilike(sql`COALESCE(${offers.client}, '')`, searchPattern),
+          ilike(sql`COALESCE(${offers.location}, '')`, searchPattern)
+        )
+      )
+      .limit(limitNum)
+      .then(rows => rows.map(offer => ({
         id: offer.id,
         type: 'offer' as const,
         reference: offer.reference,
@@ -2117,21 +2143,30 @@ app.get("/api/search/global",
         location: offer.location,
         status: offer.status,
         createdAt: offer.createdAt
-      }));
+      })));
 
-    // Rechercher dans les Projets
-    const allProjects = await storage.getProjects();
-    const matchingProjects = allProjects
-      .filter(project => {
-        return (
-          project.name?.toLowerCase().includes(searchTerm) ||
-          project.client?.toLowerCase().includes(searchTerm) ||
-          project.location?.toLowerCase().includes(searchTerm) ||
-          project.description?.toLowerCase().includes(searchTerm)
-        );
+    // Rechercher dans les Projets avec SQL ILIKE (optimisé)
+    const matchingProjects = await db
+      .select({
+        id: projects.id,
+        name: projects.name,
+        client: projects.client,
+        location: projects.location,
+        description: projects.description,
+        status: projects.status,
+        createdAt: projects.createdAt
       })
-      .slice(0, limit)
-      .map(project => ({
+      .from(projects)
+      .where(
+        or(
+          ilike(sql`COALESCE(${projects.name}, '')`, searchPattern),
+          ilike(sql`COALESCE(${projects.client}, '')`, searchPattern),
+          ilike(sql`COALESCE(${projects.location}, '')`, searchPattern),
+          ilike(sql`COALESCE(${projects.description}, '')`, searchPattern)
+        )
+      )
+      .limit(limitNum)
+      .then(rows => rows.map(project => ({
         id: project.id,
         type: 'project' as const,
         reference: project.name,
@@ -2140,16 +2175,16 @@ app.get("/api/search/global",
         location: project.location,
         status: project.status,
         createdAt: project.createdAt
-      }));
+      })));
 
     // Combiner et limiter les résultats
     const allResults = [
       ...matchingAos,
       ...matchingOffers,
       ...matchingProjects
-    ].slice(0, limit);
+    ].slice(0, limitNum);
 
-    logger.info('[GlobalSearch] Recherche globale effectuée', { 
+    logger.info('[GlobalSearch] Recherche globale effectuée (SQL optimisé)', { 
       metadata: { 
         query: searchTerm,
         resultsCount: allResults.length,

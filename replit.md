@@ -97,20 +97,26 @@ server/storage/
 3. **Unit of Work** : Gère transactions complexes cross-entités
 4. **Dependency Injection** : Injecte db, eventBus pour testabilité
 
-### Statut Actuel
+### Statut Actuel (Mis à jour: 28 Oct 2025)
 
 ✅ **Complété** :
 - Infrastructure de base (types, interfaces, BaseRepository, UnitOfWork)
 - StorageFacade avec délégation complète à `storage-poc.ts`
-- Tests contractuels (20 tests) pour détecter les drifts
+- Tests contractuels (20 tests) + 100+ tests unitaires BaseRepository.normalizeId()
 - Corrections architecturales (deadlock UnitOfWork, CRUD helpers, DI)
+- **BaseRepository.normalizeId()** avec validation UUID stricte (trim, lowercase, regex canonique)
+- **Extraction domaine Commercial** : OfferRepository (CRUD + filters + pagination) + AoRepository (CRUD + findByMondayId + filters)
+- **Intégration StorageFacade** : 15 méthodes déléguées (8 Offers + 7 AOs) avec pattern try-catch + fallback legacy
+- **Correction bug double-query** : Méthodes lecture Offers retournent maintenant résultat repository au lieu de legacy
 
 🔄 **En Cours** :
-- Extraction domaine Commercial (OfferRepository + AoRepository)
+- Tests d'intégration pour vérifier compatibilité StorageFacade vs storage-poc.ts
+- Migration routes `/api/offers` et `/api/aos` pour utiliser StorageFacade
 
 ⏳ **À Faire** :
+- Tests E2E pour valider migration
+- Enrichissement repositories avec relations (joins pour responsibleUser, ao)
 - Migration progressive : Production → Suppliers → Analytics
-- Tests d'intégration par domaine
 - Dépréciation progressive de `storage-poc.ts`
 
 ### Migration Strategy

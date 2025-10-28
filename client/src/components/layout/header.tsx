@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { WebSocketStatus } from "@/components/ui/websocket-status";
+import { GlobalSearch } from "@/components/layout/global-search";
 import { 
   Breadcrumb, 
   BreadcrumbItem, 
@@ -47,8 +48,8 @@ export default function Header({ title, breadcrumbs = [], actions = [] }: Header
 
   return (
     <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-shrink-0">
           <h1 className="text-xl sm:text-2xl font-bold text-on-surface" data-testid="header-title">{title}</h1>
           {breadcrumbs.length > 0 && (
             <Breadcrumb className="mt-1" data-testid="header-breadcrumbs">
@@ -70,6 +71,11 @@ export default function Header({ title, breadcrumbs = [], actions = [] }: Header
               </BreadcrumbList>
             </Breadcrumb>
           )}
+        </div>
+
+        {/* Recherche globale au centre */}
+        <div className="flex-1 max-w-md mx-auto hidden md:block">
+          <GlobalSearch />
         </div>
         
         <div className="flex items-center gap-3">

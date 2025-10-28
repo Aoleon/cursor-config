@@ -2059,6 +2059,120 @@ app.get("/api/tasks/all",
 );
 
 // ========================================
+// RECHERCHE GLOBALE
+// ========================================
+
+app.get("/api/search/global",
+  isAuthenticated,
+  validateQuery(z.object({
+    query: z.string().min(1, 'Query is required'),
+    limit: z.coerce.number().int().positive().max(100).optional().default(20)
+  })),
+  asyncHandler(async (req, res) => {
+    const { query, limit } = req.query;
+    const searchTerm = String(query).toLowerCase();
+
+    // Rechercher dans les AOs
+    const allAos = await storage.getAos();
+    const matchingAos = allAos
+      .filter(ao => {
+        return (
+          ao.reference?.toLowerCase().includes(searchTerm) ||
+          ao.intituleOperation?.toLowerCase().includes(searchTerm) ||
+          ao.client?.toLowerCase().includes(searchTerm) ||
+          ao.localisation?.toLowerCase().includes(searchTerm) ||
+          ao.ville?.toLowerCase().includes(searchTerm)
+        );
+      })
+      .slice(0, limit)
+      .map(ao => ({
+        id: ao.id,
+        type: 'ao' as const,
+        reference: ao.reference,
+        title: ao.intituleOperation || ao.reference,
+        subtitle: ao.client,
+        location: ao.localisation || ao.ville,
+        status: ao.status,
+        createdAt: ao.createdAt
+      }));
+
+    // Rechercher dans les Offres
+    const allOffers = await storage.getOffers();
+    const matchingOffers = allOffers
+      .filter(offer => {
+        return (
+          offer.reference?.toLowerCase().includes(searchTerm) ||
+          offer.client?.toLowerCase().includes(searchTerm) ||
+          offer.location?.toLowerCase().includes(searchTerm) ||
+          offer.intituleOperation?.toLowerCase().includes(searchTerm)
+        );
+      })
+      .slice(0, limit)
+      .map(offer => ({
+        id: offer.id,
+        type: 'offer' as const,
+        reference: offer.reference,
+        title: offer.intituleOperation || offer.reference,
+        subtitle: offer.client,
+        location: offer.location,
+        status: offer.status,
+        createdAt: offer.createdAt
+      }));
+
+    // Rechercher dans les Projets
+    const allProjects = await storage.getProjects();
+    const matchingProjects = allProjects
+      .filter(project => {
+        return (
+          project.name?.toLowerCase().includes(searchTerm) ||
+          project.client?.toLowerCase().includes(searchTerm) ||
+          project.location?.toLowerCase().includes(searchTerm) ||
+          project.description?.toLowerCase().includes(searchTerm)
+        );
+      })
+      .slice(0, limit)
+      .map(project => ({
+        id: project.id,
+        type: 'project' as const,
+        reference: project.name,
+        title: project.name,
+        subtitle: project.client,
+        location: project.location,
+        status: project.status,
+        createdAt: project.createdAt
+      }));
+
+    // Combiner et limiter les résultats
+    const allResults = [
+      ...matchingAos,
+      ...matchingOffers,
+      ...matchingProjects
+    ].slice(0, limit);
+
+    logger.info('[GlobalSearch] Recherche globale effectuée', { 
+      metadata: { 
+        query: searchTerm,
+        resultsCount: allResults.length,
+        aos: matchingAos.length,
+        offers: matchingOffers.length,
+        projects: matchingProjects.length
+      } 
+    });
+
+    res.json({
+      query: searchTerm,
+      total: allResults.length,
+      results: allResults,
+      breakdown: {
+        aos: matchingAos.length,
+        offers: matchingOffers.length,
+        projects: matchingProjects.length
+      }
+    });
+  })
+);
+
+// ========================================
 // ROUTES DE TEST E2E (acceptent IDs déterministes)
 // ========================================
 

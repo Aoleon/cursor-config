@@ -20,3 +20,6 @@ if (!process.env.DATABASE_URL) {
 // DÉMOCK la base de données qui a été mockée par tests/backend/setup.ts
 // Ceci permet d'utiliser la vraie implémentation de Drizzle pour les tests d'intégration
 vi.doUnmock('../../db');
+
+// DÉMOCK storage-poc pour utiliser la vraie implémentation DatabaseStorage
+vi.doUnmock('../../storage-poc');

@@ -18,7 +18,7 @@ import type {
 } from '../types';
 import { createPaginatedResult } from '../types';
 import type { IRepository } from './IRepository';
-import { eq } from 'drizzle-orm';
+import { eq, inArray, sql, and } from 'drizzle-orm';
 
 /**
  * Classe abstraite de base pour tous les repositories
@@ -488,6 +488,411 @@ export abstract class BaseRepository<
   }
 
   /**
+   * IMPLÉMENTATION CONCRÈTE : Soft delete - marque un enregistrement comme supprimé sans le détruire
+   * 
+   * @param id - ID de l'enregistrement à soft delete
+   * @param tx - Transaction optionnelle
+   * @returns L'enregistrement mis à jour
+   * 
+   * IMPORTANT: Cette méthode nécessite que la table ait un champ `deletedAt: timestamp`
+   * Si la table n'a pas ce champ, cette méthode throw une erreur
+   * 
+   * @example
+   * ```typescript
+   * const offer = await offerRepository.softDelete('123');
+   * ```
+   */
+  async softDelete(id: string, tx?: DrizzleTransaction): Promise<T> {
+    this.validateId(id, 'softDelete');
+    const normalizedId = this.normalizeId(id);
+    
+    const hasDeletedAt = 'deletedAt' in this.table;
+    if (!hasDeletedAt) {
+      throw new DatabaseError(
+        `Table ${this.tableName} does not support soft delete (missing deletedAt field)`
+      );
+    }
+    
+    this.logger.debug('Soft deleting entity', {
+      metadata: {
+        module: this.repositoryName,
+        operation: 'softDelete',
+        entityId: id
+      }
+    });
+
+    const dbInstance = this.getDb(tx);
+    
+    const result = await safeUpdate<T[]>(
+      this.tableName,
+      () => dbInstance
+        .update(this.table)
+        .set({ deletedAt: new Date() } as any)
+        .where(eq(this.primaryKey, normalizedId))
+        .returning(),
+      1,
+      {
+        service: this.repositoryName,
+        operation: 'softDelete'
+      }
+    );
+    
+    if (!result || result.length === 0) {
+      throw new DatabaseError(
+        `${this.tableName} not found for soft delete`,
+        'NOT_FOUND',
+        { id: normalizedId }
+      );
+    }
+    
+    this.emitEvent(`${this.tableName}:soft_deleted`, result[0]);
+    
+    return result[0];
+  }
+
+  /**
+   * IMPLÉMENTATION CONCRÈTE : Restore - restaure un enregistrement soft deleted
+   * 
+   * @param id - ID de l'enregistrement à restaurer
+   * @param tx - Transaction optionnelle
+   * @returns L'enregistrement restauré
+   * 
+   * @example
+   * ```typescript
+   * const offer = await offerRepository.restore('123');
+   * ```
+   */
+  async restore(id: string, tx?: DrizzleTransaction): Promise<T> {
+    this.validateId(id, 'restore');
+    const normalizedId = this.normalizeId(id);
+    
+    this.logger.debug('Restoring soft deleted entity', {
+      metadata: {
+        module: this.repositoryName,
+        operation: 'restore',
+        entityId: id
+      }
+    });
+
+    const dbInstance = this.getDb(tx);
+    
+    const result = await safeUpdate<T[]>(
+      this.tableName,
+      () => dbInstance
+        .update(this.table)
+        .set({ deletedAt: null } as any)
+        .where(eq(this.primaryKey, normalizedId))
+        .returning(),
+      1,
+      {
+        service: this.repositoryName,
+        operation: 'restore'
+      }
+    );
+    
+    if (!result || result.length === 0) {
+      throw new DatabaseError(
+        `${this.tableName} not found for restore`,
+        'NOT_FOUND',
+        { id: normalizedId }
+      );
+    }
+    
+    this.emitEvent(`${this.tableName}:restored`, result[0]);
+    
+    return result[0];
+  }
+
+  /**
+   * IMPLÉMENTATION CONCRÈTE : Update many - met à jour plusieurs enregistrements avec les mêmes données
+   * 
+   * @param ids - Tableau d'IDs à mettre à jour
+   * @param data - Données de mise à jour
+   * @param tx - Transaction optionnelle
+   * @returns Les enregistrements mis à jour
+   * 
+   * NOTE: Tous les enregistrements seront mis à jour avec les mêmes données
+   * PERFORMANCE: Utilise une seule query UPDATE au lieu de N queries
+   * 
+   * @example
+   * ```typescript
+   * const offers = await offerRepository.updateMany(
+   *   ['id1', 'id2', 'id3'],
+   *   { status: 'archived' }
+   * );
+   * ```
+   */
+  async updateMany(ids: string[], data: TUpdate, tx?: DrizzleTransaction): Promise<T[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    
+    const normalizedIds = ids.map(id => this.normalizeId(id));
+    
+    this.logger.debug('Updating multiple entities', {
+      metadata: {
+        module: this.repositoryName,
+        operation: 'updateMany',
+        count: ids.length
+      }
+    });
+
+    const dbInstance = this.getDb(tx);
+    
+    const result = await safeUpdate<T[]>(
+      this.tableName,
+      () => dbInstance
+        .update(this.table)
+        .set(data)
+        .where(inArray(this.primaryKey, normalizedIds))
+        .returning(),
+      ids.length,
+      {
+        service: this.repositoryName,
+        operation: 'updateMany'
+      }
+    );
+    
+    result.forEach(record => this.emitEvent(`${this.tableName}:updated`, record));
+    
+    this.logger.info(`Updated ${result.length} records`, {
+      metadata: {
+        module: this.repositoryName,
+        operation: 'updateMany',
+        count: result.length
+      }
+    });
+    
+    return result;
+  }
+
+  /**
+   * IMPLÉMENTATION CONCRÈTE : Upsert - créer ou mettre à jour un enregistrement
+   * 
+   * @param data - Données à insérer
+   * @param conflictTarget - Champ unique pour détecter le conflit (ex: 'email', 'reference')
+   * @param tx - Transaction optionnelle
+   * @returns L'enregistrement créé ou mis à jour
+   * 
+   * COMPORTEMENT:
+   * - Si le record existe (conflit sur conflictTarget), il est mis à jour
+   * - Sinon, il est créé
+   * 
+   * @example
+   * ```typescript
+   * const offer = await offerRepository.upsert(
+   *   { reference: 'REF-001', title: 'Test' },
+   *   'reference'
+   * );
+   * ```
+   */
+  async upsert(
+    data: TInsert,
+    conflictTarget: keyof TInsert,
+    tx?: DrizzleTransaction
+  ): Promise<T> {
+    this.logger.debug('Upserting entity', {
+      metadata: {
+        module: this.repositoryName,
+        operation: 'upsert',
+        conflictTarget: conflictTarget as string
+      }
+    });
+
+    const dbInstance = this.getDb(tx);
+    
+    const result = await this.executeQuery(
+      () => dbInstance
+        .insert(this.table)
+        .values(data)
+        .onConflictDoUpdate({
+          target: this.table[conflictTarget as string],
+          set: data
+        })
+        .returning(),
+      'upsert',
+      { conflictTarget: conflictTarget as string }
+    );
+    
+    if (!result || result.length === 0) {
+      throw new DatabaseError(
+        `${this.tableName} upsert failed`,
+        'UPSERT_FAILED',
+        { data, conflictTarget: conflictTarget as string }
+      );
+    }
+    
+    this.emitEvent(`${this.tableName}:upserted`, result[0]);
+    
+    return result[0];
+  }
+
+  /**
+   * IMPLÉMENTATION CONCRÈTE : Count - compte les enregistrements avec filtres optionnels
+   * 
+   * @param filters - Filtres optionnels (WHERE clauses)
+   * @param tx - Transaction optionnelle
+   * @returns Le nombre d'enregistrements
+   * 
+   * USAGE:
+   * - count() : compte tous les enregistrements
+   * - count({ status: 'active' }) : compte avec filtres
+   * 
+   * @example
+   * ```typescript
+   * const total = await offerRepository.count();
+   * const activeCount = await offerRepository.count({ status: 'active' });
+   * ```
+   */
+  async count(filters?: Record<string, any>, tx?: DrizzleTransaction): Promise<number> {
+    this.logger.debug('Counting entities', {
+      metadata: {
+        module: this.repositoryName,
+        operation: 'count',
+        hasFilters: !!filters
+      }
+    });
+
+    const dbInstance = this.getDb(tx);
+    
+    let query = dbInstance.select({ count: sql<number>`count(*)` }).from(this.table);
+    
+    if (filters && Object.keys(filters).length > 0) {
+      const whereConditions = Object.entries(filters).map(([key, value]) => {
+        return eq(this.table[key], value);
+      });
+      
+      if (whereConditions.length > 0) {
+        query = query.where(and(...whereConditions));
+      }
+    }
+    
+    const result = await this.executeQuery(
+      () => query,
+      'count',
+      { filters }
+    );
+    
+    return result[0]?.count || 0;
+  }
+
+  /**
+   * IMPLÉMENTATION CONCRÈTE : Archive - archive un enregistrement
+   * 
+   * @param id - ID de l'enregistrement à archiver
+   * @param tx - Transaction optionnelle
+   * @returns L'enregistrement archivé
+   * 
+   * IMPORTANT: Cette méthode nécessite que la table ait un champ `isArchived: boolean`
+   * Si la table n'a pas ce champ, cette méthode throw une erreur
+   * 
+   * @example
+   * ```typescript
+   * const offer = await offerRepository.archive('123');
+   * ```
+   */
+  async archive(id: string, tx?: DrizzleTransaction): Promise<T> {
+    this.validateId(id, 'archive');
+    const normalizedId = this.normalizeId(id);
+    
+    const hasIsArchived = 'isArchived' in this.table;
+    if (!hasIsArchived) {
+      throw new DatabaseError(
+        `Table ${this.tableName} does not support archiving (missing isArchived field)`
+      );
+    }
+    
+    this.logger.debug('Archiving entity', {
+      metadata: {
+        module: this.repositoryName,
+        operation: 'archive',
+        entityId: id
+      }
+    });
+
+    const dbInstance = this.getDb(tx);
+    
+    const result = await safeUpdate<T[]>(
+      this.tableName,
+      () => dbInstance
+        .update(this.table)
+        .set({ isArchived: true } as any)
+        .where(eq(this.primaryKey, normalizedId))
+        .returning(),
+      1,
+      {
+        service: this.repositoryName,
+        operation: 'archive'
+      }
+    );
+    
+    if (!result || result.length === 0) {
+      throw new DatabaseError(
+        `${this.tableName} not found for archiving`,
+        'NOT_FOUND',
+        { id: normalizedId }
+      );
+    }
+    
+    this.emitEvent(`${this.tableName}:archived`, result[0]);
+    
+    return result[0];
+  }
+
+  /**
+   * IMPLÉMENTATION CONCRÈTE : Unarchive - désarchive un enregistrement
+   * 
+   * @param id - ID de l'enregistrement à désarchiver
+   * @param tx - Transaction optionnelle
+   * @returns L'enregistrement désarchivé
+   * 
+   * @example
+   * ```typescript
+   * const offer = await offerRepository.unarchive('123');
+   * ```
+   */
+  async unarchive(id: string, tx?: DrizzleTransaction): Promise<T> {
+    this.validateId(id, 'unarchive');
+    const normalizedId = this.normalizeId(id);
+    
+    this.logger.debug('Unarchiving entity', {
+      metadata: {
+        module: this.repositoryName,
+        operation: 'unarchive',
+        entityId: id
+      }
+    });
+
+    const dbInstance = this.getDb(tx);
+    
+    const result = await safeUpdate<T[]>(
+      this.tableName,
+      () => dbInstance
+        .update(this.table)
+        .set({ isArchived: false } as any)
+        .where(eq(this.primaryKey, normalizedId))
+        .returning(),
+      1,
+      {
+        service: this.repositoryName,
+        operation: 'unarchive'
+      }
+    );
+    
+    if (!result || result.length === 0) {
+      throw new DatabaseError(
+        `${this.tableName} not found for unarchiving`,
+        'NOT_FOUND',
+        { id: normalizedId }
+      );
+    }
+    
+    this.emitEvent(`${this.tableName}:unarchived`, result[0]);
+    
+    return result[0];
+  }
+
+  /**
    * Méthodes abstraites à implémenter par les classes dérivées
    * 
    * Ces méthodes sont spécifiques à chaque domaine et ne peuvent pas
@@ -502,6 +907,5 @@ export abstract class BaseRepository<
     tx?: DrizzleTransaction
   ): Promise<PaginatedResult<T>>;
   abstract deleteMany(filters: TFilters, tx?: DrizzleTransaction): Promise<number>;
-  abstract count(filters?: TFilters, tx?: DrizzleTransaction): Promise<number>;
   abstract exists(id: string, tx?: DrizzleTransaction): Promise<boolean>;
 }

@@ -8,11 +8,14 @@
  * vers les nouveaux repositories modulaires tout en maintenant la compatibilité.
  */
 
-import type { IStorage, DatabaseStorage as DatabaseStorageType } from '../../storage-poc';
+import type { IStorage, DatabaseStorage as DatabaseStorageType, DrizzleTransaction } from '../../storage-poc';
 import { DatabaseStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
 import { logger } from '../../utils/logger';
 import { db } from '../../db';
+import { OfferRepository, type OfferFilters } from '../commercial/OfferRepository';
+import { AoRepository, type AoFilters } from '../commercial/AoRepository';
+import type { Offer, InsertOffer, Ao, InsertAo, User } from '@shared/schema';
 
 /**
  * Facade de storage qui unifie l'accès aux données
@@ -63,15 +66,10 @@ export class StorageFacade {
   private readonly facadeLogger = logger.child('StorageFacade');
 
   /**
-   * Nouveaux repositories modulaires (seront ajoutés progressivement)
-   * 
-   * @example
-   * ```typescript
-   * private offerRepository?: OfferRepository;
-   * private aoRepository?: AoRepository;
-   * ```
+   * Nouveaux repositories modulaires
    */
-  // TODO: Ajouter les repositories au fur et à mesure de leur implémentation
+  private readonly offerRepository: OfferRepository;
+  private readonly aoRepository: AoRepository;
 
   /**
    * Constructeur
@@ -84,19 +82,20 @@ export class StorageFacade {
     this.eventBus = eventBus;
     this.legacyStorage = new DatabaseStorage(eventBus);
     
-    this.facadeLogger.info('StorageFacade initialisée', {
+    // Instancier les nouveaux repositories
+    this.offerRepository = new OfferRepository(this.db, this.eventBus);
+    this.aoRepository = new AoRepository(this.db, this.eventBus);
+    
+    this.facadeLogger.info('StorageFacade initialisée avec repositories modulaires', {
       metadata: {
         module: 'StorageFacade',
         operation: 'constructor',
-        status: 'delegating_to_legacy',
+        status: 'hybrid_mode',
         hasDb: !!this.db,
-        hasEventBus: !!this.eventBus
+        hasEventBus: !!this.eventBus,
+        repositories: ['OfferRepository', 'AoRepository']
       }
     });
-
-    // TODO: Initialiser les nouveaux repositories ici au fur et à mesure
-    // this.offerRepository = new OfferRepository(this.db, this.eventBus);
-    // this.aoRepository = new AoRepository(this.db, this.eventBus);
   }
 
   /**
@@ -136,24 +135,353 @@ export class StorageFacade {
   get getUser() { return this.legacyStorage.getUser.bind(this.legacyStorage); }
   get upsertUser() { return this.legacyStorage.upsertUser.bind(this.legacyStorage); }
 
-  // AO operations
-  get getAos() { return this.legacyStorage.getAos.bind(this.legacyStorage); }
-  get getAOsPaginated() { return this.legacyStorage.getAOsPaginated.bind(this.legacyStorage); }
-  get getAo() { return this.legacyStorage.getAo.bind(this.legacyStorage); }
-  get getAOByMondayItemId() { return this.legacyStorage.getAOByMondayItemId.bind(this.legacyStorage); }
-  get createAo() { return this.legacyStorage.createAo.bind(this.legacyStorage); }
-  get updateAo() { return this.legacyStorage.updateAo.bind(this.legacyStorage); }
-  get deleteAo() { return this.legacyStorage.deleteAo.bind(this.legacyStorage); }
+  // ========================================
+  // AO OPERATIONS - Déléguées vers AoRepository
+  // ========================================
 
-  // Offer operations  
-  get getOffers() { return this.legacyStorage.getOffers.bind(this.legacyStorage); }
-  get getOffersPaginated() { return this.legacyStorage.getOffersPaginated.bind(this.legacyStorage); }
-  get getCombinedOffersPaginated() { return this.legacyStorage.getCombinedOffersPaginated.bind(this.legacyStorage); }
-  get getOffer() { return this.legacyStorage.getOffer.bind(this.legacyStorage); }
-  get getOfferById() { return this.legacyStorage.getOfferById.bind(this.legacyStorage); }
-  get createOffer() { return this.legacyStorage.createOffer.bind(this.legacyStorage); }
-  get updateOffer() { return this.legacyStorage.updateOffer.bind(this.legacyStorage); }
-  get deleteOffer() { return this.legacyStorage.deleteOffer.bind(this.legacyStorage); }
+  /**
+   * Récupère tous les AOs
+   * Utilise AoRepository avec fallback sur legacy
+   */
+  async getAos(): Promise<Ao[]> {
+    try {
+      const aos = await this.aoRepository.findAll();
+      this.facadeLogger.info('AOs récupérés via AoRepository', {
+        metadata: { count: aos.length, module: 'StorageFacade', operation: 'getAos' }
+      });
+      return aos;
+    } catch (error) {
+      this.facadeLogger.warn('AoRepository.findAll failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'getAos' }
+      });
+      return await this.legacyStorage.getAos();
+    }
+  }
+
+  /**
+   * Récupère les AOs paginés avec recherche et filtre de statut
+   * Utilise AoRepository avec fallback sur legacy
+   */
+  async getAOsPaginated(
+    search?: string, 
+    status?: string, 
+    limit: number = 20, 
+    offset: number = 0
+  ): Promise<{ aos: Array<Ao>, total: number }> {
+    try {
+      const filters: AoFilters = {};
+      if (search) filters.search = search;
+      if (status) filters.status = status;
+
+      const result = await this.aoRepository.findPaginated(
+        filters,
+        { limit, offset }
+      );
+
+      return {
+        aos: result.items,
+        total: result.total
+      };
+    } catch (error) {
+      this.facadeLogger.warn('AoRepository.findPaginated failed, falling back to legacy', {
+        metadata: { error, search, status, limit, offset, module: 'StorageFacade', operation: 'getAOsPaginated' }
+      });
+      return await this.legacyStorage.getAOsPaginated(search, status, limit, offset);
+    }
+  }
+
+  /**
+   * Récupère un AO par ID
+   * Utilise AoRepository avec fallback sur legacy
+   */
+  async getAo(id: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
+    try {
+      const ao = await this.aoRepository.findById(id, tx);
+      if (ao) {
+        this.facadeLogger.info('AO récupéré via AoRepository', {
+          metadata: { aoId: id, module: 'StorageFacade', operation: 'getAo' }
+        });
+      }
+      return ao;
+    } catch (error) {
+      this.facadeLogger.warn('AoRepository.findById failed, falling back to legacy', {
+        metadata: { error, aoId: id, module: 'StorageFacade', operation: 'getAo' }
+      });
+      return await this.legacyStorage.getAo(id, tx);
+    }
+  }
+
+  /**
+   * Récupère un AO par Monday Item ID
+   * Utilise AoRepository avec fallback sur legacy
+   */
+  async getAOByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
+    try {
+      const ao = await this.aoRepository.findByMondayId(mondayItemId, tx);
+      if (ao) {
+        this.facadeLogger.info('AO récupéré par Monday ID via AoRepository', {
+          metadata: { mondayItemId, aoId: ao.id, module: 'StorageFacade', operation: 'getAOByMondayItemId' }
+        });
+      }
+      return ao;
+    } catch (error) {
+      this.facadeLogger.warn('AoRepository.findByMondayId failed, falling back to legacy', {
+        metadata: { error, mondayItemId, module: 'StorageFacade', operation: 'getAOByMondayItemId' }
+      });
+      return await this.legacyStorage.getAOByMondayItemId(mondayItemId, tx);
+    }
+  }
+
+  /**
+   * Crée un nouvel AO
+   * Utilise AoRepository avec fallback sur legacy
+   */
+  async createAo(ao: InsertAo, tx?: DrizzleTransaction): Promise<Ao> {
+    try {
+      const created = await this.aoRepository.create(ao, tx);
+      this.facadeLogger.info('AO créé via AoRepository', {
+        metadata: { aoId: created.id, module: 'StorageFacade', operation: 'createAo' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('AoRepository.create failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createAo' }
+      });
+      return await this.legacyStorage.createAo(ao, tx);
+    }
+  }
+
+  /**
+   * Met à jour un AO
+   * Utilise AoRepository avec fallback sur legacy
+   */
+  async updateAo(id: string, ao: Partial<InsertAo>, tx?: DrizzleTransaction): Promise<Ao> {
+    try {
+      const updated = await this.aoRepository.update(id, ao, tx);
+      this.facadeLogger.info('AO mis à jour via AoRepository', {
+        metadata: { aoId: id, module: 'StorageFacade', operation: 'updateAo' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('AoRepository.update failed, falling back to legacy', {
+        metadata: { error, aoId: id, module: 'StorageFacade', operation: 'updateAo' }
+      });
+      return await this.legacyStorage.updateAo(id, ao, tx);
+    }
+  }
+
+  /**
+   * Supprime un AO
+   * Utilise AoRepository avec fallback sur legacy
+   */
+  async deleteAo(id: string, tx?: DrizzleTransaction): Promise<void> {
+    try {
+      await this.aoRepository.delete(id, tx);
+      this.facadeLogger.info('AO supprimé via AoRepository', {
+        metadata: { aoId: id, module: 'StorageFacade', operation: 'deleteAo' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('AoRepository.delete failed, falling back to legacy', {
+        metadata: { error, aoId: id, module: 'StorageFacade', operation: 'deleteAo' }
+      });
+      await this.legacyStorage.deleteAo(id, tx);
+    }
+  }
+
+  // ========================================
+  // OFFER OPERATIONS - Déléguées vers OfferRepository
+  // ========================================
+
+  /**
+   * Récupère les offres avec recherche et filtre de statut
+   * Utilise OfferRepository avec fallback sur legacy
+   */
+  async getOffers(search?: string, status?: string): Promise<Offer[]> {
+    try {
+      const filters: OfferFilters = {};
+      if (search) filters.search = search;
+      if (status) filters.status = status;
+
+      const offers = await this.offerRepository.findAll(filters);
+      
+      this.facadeLogger.info('[StorageFacade] getOffers - Using OfferRepository', {
+        metadata: {
+          module: 'StorageFacade',
+          operation: 'getOffers',
+          count: offers.length,
+          filters
+        }
+      });
+      
+      return offers;
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] getOffers - Fallback to legacy', {
+        metadata: {
+          module: 'StorageFacade',
+          operation: 'getOffers',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          search,
+          status
+        }
+      });
+      return await this.legacyStorage.getOffers(search, status);
+    }
+  }
+
+  /**
+   * Récupère les offres paginées
+   * Utilise OfferRepository avec fallback sur legacy
+   */
+  async getOffersPaginated(
+    search?: string, 
+    status?: string, 
+    limit: number = 20, 
+    offset: number = 0
+  ): Promise<{ offers: Offer[], total: number, limit: number, offset: number }> {
+    try {
+      const filters: OfferFilters = {};
+      if (search) filters.search = search;
+      if (status) filters.status = status;
+
+      const result = await this.offerRepository.findPaginated(
+        filters,
+        { limit, offset }
+      );
+
+      this.facadeLogger.info('[StorageFacade] getOffersPaginated - Using OfferRepository', {
+        metadata: {
+          module: 'StorageFacade',
+          operation: 'getOffersPaginated',
+          count: result.data.length,
+          total: result.total,
+          filters
+        }
+      });
+
+      return {
+        offers: result.data,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset
+      };
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] getOffersPaginated - Fallback to legacy', {
+        metadata: {
+          module: 'StorageFacade',
+          operation: 'getOffersPaginated',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          search,
+          status,
+          limit,
+          offset
+        }
+      });
+      return await this.legacyStorage.getOffersPaginated(search, status, limit, offset);
+    }
+  }
+
+  /**
+   * Récupère les offres et AOs combinés paginés
+   * Fallback direct sur legacy car nécessite une logique complexe
+   */
+  get getCombinedOffersPaginated() { 
+    return this.legacyStorage.getCombinedOffersPaginated.bind(this.legacyStorage); 
+  }
+
+  /**
+   * Récupère une offre par ID
+   * Utilise OfferRepository avec fallback sur legacy
+   */
+  async getOffer(id: string): Promise<Offer | undefined> {
+    try {
+      const offer = await this.offerRepository.findById(id);
+      
+      this.facadeLogger.info('[StorageFacade] getOffer - Using OfferRepository', {
+        metadata: {
+          module: 'StorageFacade',
+          operation: 'getOffer',
+          id,
+          found: !!offer
+        }
+      });
+      
+      return offer;
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] getOffer - Fallback to legacy', {
+        metadata: {
+          module: 'StorageFacade',
+          operation: 'getOffer',
+          id,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      });
+      return await this.legacyStorage.getOffer(id);
+    }
+  }
+
+  /**
+   * Alias pour getOffer
+   * Délègue simplement à getOffer
+   */
+  async getOfferById(id: string): Promise<Offer | undefined> {
+    return this.getOffer(id);
+  }
+
+  /**
+   * Crée une nouvelle offre
+   * Utilise OfferRepository avec fallback sur legacy
+   */
+  async createOffer(offer: InsertOffer): Promise<Offer> {
+    try {
+      const created = await this.offerRepository.create(offer);
+      this.facadeLogger.info('Offre créée via OfferRepository', {
+        metadata: { offerId: created.id, module: 'StorageFacade', operation: 'createOffer' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('OfferRepository.create failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createOffer' }
+      });
+      return await this.legacyStorage.createOffer(offer);
+    }
+  }
+
+  /**
+   * Met à jour une offre
+   * Utilise OfferRepository avec fallback sur legacy
+   */
+  async updateOffer(id: string, offer: Partial<InsertOffer>): Promise<Offer> {
+    try {
+      const updated = await this.offerRepository.update(id, offer);
+      this.facadeLogger.info('Offre mise à jour via OfferRepository', {
+        metadata: { offerId: id, module: 'StorageFacade', operation: 'updateOffer' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('OfferRepository.update failed, falling back to legacy', {
+        metadata: { error, offerId: id, module: 'StorageFacade', operation: 'updateOffer' }
+      });
+      return await this.legacyStorage.updateOffer(id, offer);
+    }
+  }
+
+  /**
+   * Supprime une offre
+   * Utilise OfferRepository avec fallback sur legacy
+   */
+  async deleteOffer(id: string): Promise<void> {
+    try {
+      await this.offerRepository.delete(id);
+      this.facadeLogger.info('Offre supprimée via OfferRepository', {
+        metadata: { offerId: id, module: 'StorageFacade', operation: 'deleteOffer' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('OfferRepository.delete failed, falling back to legacy', {
+        metadata: { error, offerId: id, module: 'StorageFacade', operation: 'deleteOffer' }
+      });
+      await this.legacyStorage.deleteOffer(id);
+    }
+  }
 
   // Project operations
   get getProjects() { return this.legacyStorage.getProjects.bind(this.legacyStorage); }

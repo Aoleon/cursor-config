@@ -5,6 +5,62 @@ Saxium is a fullstack application designed for quoting and project management wi
 
 ## Recent Changes
 
+### Système de Tableau Personnalisable avec Recherche Globale (Oct 28, 2025)
+**Feature: Vues Tableau Avancées pour AOs avec Colonnes Personnalisables**
+
+Transformation de l'affichage liste en tableau professionnel avec fonctionnalités avancées de gestion de colonnes et recherche globale.
+
+**Composants créés** :
+
+1. **`client/src/hooks/useTablePreferences.ts`** - Hook React pour gestion des préférences utilisateur
+   - Sauvegarde persistante dans localStorage (colonnes visibles, ordre, filtres, mode d'affichage)
+   - Fusionnement intelligent avec nouvelles colonnes lors des mises à jour du schéma
+   - Méthodes pour tri, filtres, réorganisation de colonnes
+   - Support multi-tables avec clés uniques par tableId
+
+2. **`client/src/components/ui/data-table.tsx`** - Composant DataTable générique réutilisable
+   - Tri interactif sur toutes les colonnes (clic sur en-tête avec indicateurs ↑↓)
+   - Filtres par colonne (texte/select selon le type)
+   - Configuration colonnes visibles/masquées avec Popover
+   - Réorganisation colonnes avec boutons ↑/↓
+   - Statistiques et compteurs en temps réel
+   - Personnalisation complète du rendu cellules via prop `renderCell`
+   - Support données vides avec messages personnalisés
+
+3. **`client/src/components/layout/global-search.tsx`** - Recherche globale dans Header
+   - Recherche universelle dans AOs, Offres, Projets
+   - Raccourci clavier ⌘K (Mac) / Ctrl+K (Windows/Linux)
+   - Résultats groupés par type d'entité
+   - Navigation directe vers résultats avec détection automatique routes
+   - UI moderne avec CommandDialog (cmdk)
+
+4. **`client/src/components/offers/aos-table-view.tsx`** - Vue tableau dédiée AOs
+   - 9 colonnes configurables : référence, intitulé, client, type menuiserie, statut, localisation, dates (dépôt/OS/livraison), actions
+   - Toggle tableau ↔ cartes avec préservation préférences
+   - Réutilise UnifiedOffersDisplay pour mode cartes (compatibilité backward)
+   - Gestion séparée viewMode pour éviter conflits localStorage
+
+5. **Backend** :
+   - `server/routes-poc.ts` - Endpoint `GET /api/search/global?q=:query&limit=:limit`
+   - Recherche dans 3 entités (AOs, Offres, Projets) avec correspondance partielle
+   - Résultats groupés par type avec compteurs
+   - Limite configurable (default: 10 résultats par type)
+
+**Architecture & Décisions** :
+- Séparation claire entre préférences colonnes (`useTablePreferences` dans DataTable) et viewMode (state local dans AOsTableView) pour éviter conflits localStorage
+- Pattern TypeScript `isTableMode` calculé avant blocs conditionnels pour éviter TS2367 (comparaisons narrowed)
+- DataTable 100% générique et réutilisable pour toutes les entités (AOs, Offres, Projets, etc.)
+
+**Tests** : ✅ Validation Architect (persistence, TypeScript, fonctionnalités)
+
+**Limitations connues** :
+- Endpoint `/api/search/global` charge toutes les données en mémoire (OK pour MVP, à optimiser avec pagination/DB-backed search pour production)
+
+**Prochaines étapes recommandées** :
+1. Adapter page Offres (`/offers`) au même système DataTable
+2. Optimiser recherche globale avec pagination serveur ou recherche DB-backed
+3. Ajouter tests E2E Playwright pour validation UX
+
 ### Correction Extraction Monday.com + Validation Stricte (Oct 27, 2025)
 **Problème résolu** : 830/836 AOs (99.3%) étaient incomplets à cause du champ `intitule_operation` manquant
 

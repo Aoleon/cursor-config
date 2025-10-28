@@ -26,9 +26,13 @@ interface UnifiedOffersDisplayProps {
 
 export default function UnifiedOffersDisplay({ 
   showCreateButton = false, 
-  title = "Liste des Appels d'Offres",
+  title = "Liste des éléments",
   endpoint = "/api/aos" 
 }: UnifiedOffersDisplayProps) {
+  // Déterminer le type d'entité basé sur l'endpoint
+  const isOffersEndpoint = endpoint.includes('/offers');
+  const createButtonLabel = isOffersEndpoint ? "Nouvelle Offre" : "Nouvel AO";
+  const createRoute = isOffersEndpoint ? "/create-offer" : "/create-ao";
   const [_, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("tous");
@@ -259,13 +263,13 @@ export default function UnifiedOffersDisplay({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={() => setLocation("/create-ao")} data-testid="button-create-ao-unified">
+                  <Button onClick={() => setLocation(createRoute)} data-testid={`button-create-${isOffersEndpoint ? 'offer' : 'ao'}-unified`}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Nouvel AO
+                    {createButtonLabel}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Créer un nouvel appel d'offres</p>
+                  <p>{isOffersEndpoint ? "Créer une nouvelle offre" : "Créer un nouvel appel d'offres"}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -318,11 +322,11 @@ export default function UnifiedOffersDisplay({
             </p>
             {showCreateButton && (
               <Button 
-                onClick={() => setLocation("/create-ao")}
+                onClick={() => setLocation(createRoute)}
                 data-testid="button-create-first-unified"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Créer une offre
+                {createButtonLabel}
               </Button>
             )}
           </div>

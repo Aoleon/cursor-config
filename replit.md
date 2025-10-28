@@ -97,7 +97,7 @@ server/storage/
 3. **Unit of Work** : Gère transactions complexes cross-entités
 4. **Dependency Injection** : Injecte db, eventBus pour testabilité
 
-### Statut Actuel (Mis à jour: 28 Oct 2025 - Session 2)
+### Statut Actuel (Mis à jour: 28 Oct 2025 - Session 3)
 
 ✅ **Complété** :
 - Infrastructure de base (types, interfaces, BaseRepository, UnitOfWork)
@@ -111,6 +111,13 @@ server/storage/
 - **Suite de tests d'intégration complète** : 75 tests (26 OfferRepository + 25 AoRepository + 24 StorageFacade) pour protection anti-régression
 - **BaseRepository enrichi** : 7 méthodes avancées (softDelete, restore, updateMany, upsert, count avec filtres, archive, unarchive)
 - **Corrections critiques** : Guards deletedAt/isArchived + sanitization filtres count() validés par architecte
+
+🚀 **Quick Wins - Robustesse Production (28 Oct 2025)** :
+- **Bug critique corrigé** : `/api/chatbot/history` retourne 200 au lieu de 500 (mauvais nombre d'arguments `sendPaginatedSuccess`)
+- **TypeScript fixes** : 5 erreurs LSP corrigées dans `server/db.ts` (typage explicite event handlers pool)
+- **Logging optimisé** : Pool events (connect/remove) passés de `info` à `debug` pour réduire verbosité logs (10x moins de bruit)
+- **Health endpoint** : `/api/health` consolidé avec monitoring DB, cache, APIs externes, métriques (uptime, memory, poolStats)
+- **Validation architecte** : PASS - aucune régression, stabilisation validée en production
 
 📋 **Architecture de Tests d'Intégration** :
 - `server/storage/__tests__/integration-setup.ts` - Setup spécifique tests DB
@@ -128,6 +135,14 @@ server/storage/
 - Enrichissement repositories avec relations (joins pour responsibleUser, ao)
 - Migration progressive : Production → Suppliers → Analytics
 - Dépréciation progressive de `storage-poc.ts`
+
+📈 **Prochaines Étapes Recommandées (Roadmap Robustesse)** :
+1. **Validation Zod renforcée** : Ajouter validation sur routes analytics pour éliminer erreurs 400 récurrentes
+2. **Health checks étendus** : Intégrer vérifications Monday.com, OpenAI, SendGrid dans `/api/health`
+3. **Performance analytics** : Investiguer latence 2s+ sur queries analytics (indexes, caching)
+4. **Retry logic** : Implémenter exponential backoff pour services externes (Monday.com, etc.)
+5. **Circuit breaker** : Prévenir cascading failures quand services externes down
+6. **Tests infrastructure** : Setup DB de test avec sandboxing transactionnel pour CI/CD
 
 ### Migration Strategy
 

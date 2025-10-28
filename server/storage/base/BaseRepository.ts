@@ -207,21 +207,56 @@ export abstract class BaseRepository<
   }
 
   /**
-   * Normalise un ID pour l'utiliser dans les requêtes
+   * Normalise un ID pour l'utiliser dans les requêtes avec validation UUID stricte
    * 
-   * Pour l'instant, cette méthode retourne l'ID tel quel et laisse Drizzle
-   * gérer automatiquement la conversion vers le type approprié (UUID, integer, etc.)
+   * VALIDATION STRICTE UUID :
+   * - Accepte uniquement les strings (number sera supporté plus tard pour serial IDs)
+   * - Trim et lowercase automatique
+   * - Validation format UUID canonique (8-4-4-4-12 caractères hexadécimaux)
+   * - Throw DatabaseError en cas d'échec de validation
    * 
-   * Dans le futur, cette méthode pourra être surchargée par les repositories
-   * qui ont besoin d'une logique de normalisation spécifique.
+   * @param id - ID à normaliser (doit être un string UUID)
+   * @returns L'ID normalisé (lowercase, trimmed, validé)
+   * @throws DatabaseError si le type n'est pas string ou si le format UUID est invalide
    * 
-   * @param id - ID à normaliser (string ou number)
-   * @returns L'ID normalisé
+   * @example
+   * ```typescript
+   * // Valide
+   * normalizeId('550e8400-e29b-41d4-a716-446655440000') // => '550e8400-e29b-41d4-a716-446655440000'
+   * normalizeId('550E8400-E29B-41D4-A716-446655440000') // => '550e8400-e29b-41d4-a716-446655440000'
+   * normalizeId('  550e8400-e29b-41d4-a716-446655440000  ') // => '550e8400-e29b-41d4-a716-446655440000'
+   * 
+   * // Invalide - throw DatabaseError
+   * normalizeId(123) // Type invalide
+   * normalizeId('not-a-uuid') // Format invalide
+   * normalizeId('550e8400-e29b-41d4-a716') // Format incomplet
+   * ```
    */
-  protected normalizeId(id: string | number): string | number {
-    // Pour l'instant, retourner tel quel
-    // Drizzle gère automatiquement la conversion
-    return id;
+  protected normalizeId(id: string | number): string {
+    // Étape 1 : Validation du type (accepter uniquement string)
+    if (typeof id !== 'string') {
+      throw new DatabaseError(
+        `Invalid ID type for ${this.repositoryName}: expected string (UUID), received ${typeof id}. ` +
+        `Operation: normalizeId`
+      );
+    }
+    
+    // Étape 2 : Trim et lowercase
+    const normalized = id.trim().toLowerCase();
+    
+    // Étape 3 : Validation format UUID (regex canonique RFC 4122)
+    // Format : 8-4-4-4-12 caractères hexadécimaux
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    
+    if (!uuidRegex.test(normalized)) {
+      throw new DatabaseError(
+        `Invalid UUID format for ${this.repositoryName}: "${normalized}". ` +
+        `Expected format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (lowercase hex). ` +
+        `Operation: normalizeId`
+      );
+    }
+    
+    return normalized;
   }
 
   /**

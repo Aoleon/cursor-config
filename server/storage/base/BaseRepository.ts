@@ -207,6 +207,24 @@ export abstract class BaseRepository<
   }
 
   /**
+   * Normalise un ID pour l'utiliser dans les requêtes
+   * 
+   * Pour l'instant, cette méthode retourne l'ID tel quel et laisse Drizzle
+   * gérer automatiquement la conversion vers le type approprié (UUID, integer, etc.)
+   * 
+   * Dans le futur, cette méthode pourra être surchargée par les repositories
+   * qui ont besoin d'une logique de normalisation spécifique.
+   * 
+   * @param id - ID à normaliser (string ou number)
+   * @returns L'ID normalisé
+   */
+  protected normalizeId(id: string | number): string | number {
+    // Pour l'instant, retourner tel quel
+    // Drizzle gère automatiquement la conversion
+    return id;
+  }
+
+  /**
    * Helper pour gérer les entités non trouvées
    */
   protected handleNotFound(id: string, operation: string): never {
@@ -349,6 +367,9 @@ export abstract class BaseRepository<
   async update(id: string, data: TUpdate, tx?: DrizzleTransaction): Promise<T> {
     this.validateId(id, 'update');
 
+    // Normaliser l'ID avant de l'utiliser dans la requête
+    const normalizedId = this.normalizeId(id);
+
     this.logger.debug('Updating entity', {
       metadata: {
         module: this.repositoryName,
@@ -364,7 +385,7 @@ export abstract class BaseRepository<
       () => dbInstance
         .update(this.table)
         .set(data)
-        .where(eq(this.primaryKey, id))
+        .where(eq(this.primaryKey, normalizedId))
         .returning(),
       1, // Expected count
       {
@@ -398,6 +419,9 @@ export abstract class BaseRepository<
   async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
     this.validateId(id, 'delete');
 
+    // Normaliser l'ID avant de l'utiliser dans la requête
+    const normalizedId = this.normalizeId(id);
+
     this.logger.debug('Deleting entity', {
       metadata: {
         module: this.repositoryName,
@@ -412,7 +436,7 @@ export abstract class BaseRepository<
       this.tableName,
       () => dbInstance
         .delete(this.table)
-        .where(eq(this.primaryKey, id))
+        .where(eq(this.primaryKey, normalizedId))
         .returning(),
       1, // Expected count
       {

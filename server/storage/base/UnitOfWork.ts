@@ -82,9 +82,9 @@ export class UnitOfWork {
     });
 
     try {
-      // Utilisation correcte de withTransaction : le callback contient tout le travail
+      // Utilisation de withTransaction avec this.db pour utiliser l'instance correcte
       // Le commit est automatique si pas d'erreur, rollback automatique si erreur
-      const result = await withTransaction(async (tx) => {
+      const result = await withTransaction(this.db, async (tx) => {
         return await fn(tx);
       }, this.options);
 

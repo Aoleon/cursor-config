@@ -52,8 +52,9 @@ The application features a modern fullstack architecture. The frontend uses Reac
     *   PostgreSQL (Neon) with Drizzle ORM.
     *   `shared/` folder for common types and schemas.
     *   Vitest for unit tests and Playwright for E2E regression tests.
+    *   **Modular Storage Architecture** (Oct 2025): Migration progressive de `storage-poc.ts` (9129 lignes) vers une architecture modulaire par domaine (Commercial, Production, Suppliers, Analytics) utilisant Repository Pattern, UnitOfWork pour transactions, et StorageFacade pour compatibilité backward.
+    *   **Modular Storage Architecture** (Oct 2025): Progressive refactoring from monolithic `storage-poc.ts` (9129 lines) to domain-based repositories with StorageFacade pattern for backward compatibility.
 
-## External Dependencies
 *   **Replit Services**: OIDC authentication, PostgreSQL, Object Storage.
 *   **External APIs**:
     *   **Anthropic Claude**: Quote analysis and content generation.
@@ -61,3 +62,63 @@ The application features a modern fullstack architecture. The frontend uses Reac
     *   **SendGrid**: Transactional email services.
     *   **Monday.com**: Project management and data synchronization.
 *   **Libraries**: Tesseract.js for OCR capabilities.
+
+## Storage Architecture Refactoring (Oct 2025)
+
+**Problème** : `server/storage-poc.ts` est devenu un monolithe de 9129 lignes avec 401 méthodes, rendant la maintenance difficile et les tests impossibles.
+
+**Solution** : Architecture modulaire par domaine avec migration progressive sans breaking changes.
+
+### Architecture Modulaire
+
+```
+server/storage/
+  ├── types.ts                      # Types communs (PaginationOptions, SearchFilters, etc.)
+  ├── base/
+  │   ├── IRepository.ts            # Interface générique CRUD
+  │   ├── BaseRepository.ts         # Implémentation CRUD de base + gestion d'erreurs
+  │   └── UnitOfWork.ts             # Pattern pour transactions cross-entités
+  ├── facade/
+  │   └── StorageFacade.ts          # Facade unifié déléguant à legacy + nouveaux repos
+  ├── commercial/                   # Domain: AOs et Offers (à implémenter)
+  │   ├── OfferRepository.ts
+  │   └── AoRepository.ts
+  ├── production/                   # Domain: Projects et Tasks (à implémenter)
+  ├── suppliers/                    # Domain: Suppliers et Requests (à implémenter)
+  ├── analytics/                    # Domain: Metrics et KPIs (à implémenter)
+  └── __tests__/
+      └── storage-facade.contract.test.ts  # Tests de non-régression
+```
+
+### Patterns Implémentés
+
+1. **Repository Pattern** : Encapsule l'accès aux données par entité
+2. **Facade Pattern** : Expose interface unifiée pour compatibilité backward
+3. **Unit of Work** : Gère transactions complexes cross-entités
+4. **Dependency Injection** : Injecte db, eventBus pour testabilité
+
+### Statut Actuel
+
+✅ **Complété** :
+- Infrastructure de base (types, interfaces, BaseRepository, UnitOfWork)
+- StorageFacade avec délégation complète à `storage-poc.ts`
+- Tests contractuels (20 tests) pour détecter les drifts
+- Corrections architecturales (deadlock UnitOfWork, CRUD helpers, DI)
+
+🔄 **En Cours** :
+- Extraction domaine Commercial (OfferRepository + AoRepository)
+
+⏳ **À Faire** :
+- Migration progressive : Production → Suppliers → Analytics
+- Tests d'intégration par domaine
+- Dépréciation progressive de `storage-poc.ts`
+
+### Migration Strategy
+
+1. **Créer nouveau repository** par entité
+2. **Intégrer dans StorageFacade** avec délégation
+3. **Migrer routes progressivement** pour utiliser facade
+4. **Tests E2E** garantissent non-régression
+5. **Retirer ancien code** une fois migration validée
+
+**Note Importante** : `storage-poc.ts` reste intact pendant la migration pour garantir zéro downtime.

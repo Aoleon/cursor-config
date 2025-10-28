@@ -146,21 +146,44 @@ const isolationLevelMap = {
 /**
  * Execute a database transaction with automatic retry and rollback
  * 
- * @param callback - The transaction logic to execute
- * @param options - Configuration options for the transaction
+ * Supporte deux signatures :
+ * 1. withTransaction(callback, options) - utilise le db global
+ * 2. withTransaction(dbInstance, callback, options) - utilise l'instance db fournie
+ * 
+ * @param dbOrCallback - Instance DB ou callback de transaction
+ * @param callbackOrOptions - Callback ou options de transaction
+ * @param options - Options de transaction (si db est fourni)
  * @returns The result of the transaction
  * @throws DatabaseError if the transaction fails after all retries
  */
 export async function withTransaction<T>(
-  callback: TransactionCallback<T>,
-  options: TransactionOptions = {}
+  dbOrCallback: any | TransactionCallback<T>,
+  callbackOrOptions?: TransactionCallback<T> | TransactionOptions,
+  options?: TransactionOptions
 ): Promise<T> {
+  // Déterminer si db est fourni ou non
+  let dbInstance: any;
+  let callback: TransactionCallback<T>;
+  let opts: TransactionOptions;
+  
+  if (typeof dbOrCallback === 'function') {
+    // Ancien format : withTransaction(callback, options)
+    dbInstance = db;
+    callback = dbOrCallback;
+    opts = (callbackOrOptions as TransactionOptions) || {};
+  } else {
+    // Nouveau format : withTransaction(db, callback, options)
+    dbInstance = dbOrCallback;
+    callback = callbackOrOptions as TransactionCallback<T>;
+    opts = options || {};
+  }
+  
   const {
     retries = 3,
     timeout = 30000, // 30 seconds default
     retryDelay = 100,
     isolationLevel = 'read committed'
-  } = options;
+  } = opts;
   
   let lastError: Error | undefined;
   const startTime = Date.now();
@@ -175,12 +198,13 @@ export async function withTransaction<T>(
           attempt: attempt + 1,
           maxRetries: retries,
           timeout,
-          isolationLevel
+          isolationLevel,
+          usingCustomDb: dbInstance !== db
         }
       });
       
       // Execute transaction with timeout and isolation level
-      const result = await db.transaction(async (tx) => {
+      const result = await dbInstance.transaction(async (tx) => {
         // Set transaction isolation level - Convert to uppercase for SQL
         const sqlIsolationLevel = isolationLevel.toUpperCase().replace(/ /g, ' ');
         await tx.execute(sql.raw(`SET TRANSACTION ISOLATION LEVEL ${sqlIsolationLevel}`));

@@ -47,6 +47,17 @@ export class StorageFacade {
   private readonly legacyStorage: IStorage;
 
   /**
+   * Instance de la base de données
+   * Utilisée pour instancier les nouveaux repositories modulaires
+   */
+  private readonly db: any;
+
+  /**
+   * Event bus pour les notifications
+   */
+  private readonly eventBus: EventBus;
+
+  /**
    * Logger contextualisé pour la facade
    */
   private readonly facadeLogger = logger.child('StorageFacade');
@@ -65,22 +76,27 @@ export class StorageFacade {
   /**
    * Constructeur
    * 
+   * @param dbInstance - Instance de la base de données (par défaut : db global)
    * @param eventBus - Event bus pour les notifications
    */
-  constructor(eventBus: EventBus) {
+  constructor(eventBus: EventBus, dbInstance: any = db) {
+    this.db = dbInstance;
+    this.eventBus = eventBus;
     this.legacyStorage = new DatabaseStorage(eventBus);
     
     this.facadeLogger.info('StorageFacade initialisée', {
       metadata: {
         module: 'StorageFacade',
         operation: 'constructor',
-        status: 'delegating_to_legacy'
+        status: 'delegating_to_legacy',
+        hasDb: !!this.db,
+        hasEventBus: !!this.eventBus
       }
     });
 
     // TODO: Initialiser les nouveaux repositories ici au fur et à mesure
-    // this.offerRepository = new OfferRepository(db, eventBus);
-    // this.aoRepository = new AoRepository(db, eventBus);
+    // this.offerRepository = new OfferRepository(this.db, this.eventBus);
+    // this.aoRepository = new AoRepository(this.db, this.eventBus);
   }
 
   /**

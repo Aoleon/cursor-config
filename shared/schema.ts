@@ -1780,6 +1780,8 @@ export const projectTasks = pgTable("project_tasks", {
     positionIdx: index("project_tasks_position_idx").on(table.position),
     startDateIdx: index("project_tasks_start_date_idx").on(table.startDate),
     statusIdx: index("project_tasks_status_idx").on(table.status),
+    // PERFORMANCE AUDIT FIX - Index for delay detection queries
+    endDateIdx: index("project_tasks_end_date_idx").on(table.endDate),
   };
 });
 
@@ -1820,6 +1822,12 @@ export const chiffrageElements = pgTable("chiffrage_elements", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    // PERFORMANCE AUDIT FIX - Indexes for margin calculation queries
+    offerIdIdx: index("chiffrage_elements_offer_id_idx").on(table.offerId),
+    lotIdIdx: index("chiffrage_elements_lot_id_idx").on(table.lotId),
+  };
 });
 
 // DPGF (Document Provisoire de Gestion Financière) généré

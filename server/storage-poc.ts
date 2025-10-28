@@ -7301,29 +7301,6 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async getBenchmarks(entityType: string, entityId?: string): Promise<PerformanceBenchmark[]> {
-    try {
-      let query = db.select().from(performanceBenchmarks).where(eq(performanceBenchmarks.entityType, entityType));
-      
-      if (entityId) {
-        query = query.where(eq(performanceBenchmarks.entityId, entityId));
-      }
-      
-      const benchmarks = await query.orderBy(desc(performanceBenchmarks.createdAt));
-      return benchmarks;
-    } catch (error) {
-      logger.error('Erreur getBenchmarks', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getBenchmarks',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
-      throw error;
-    }
-  }
-
   async getTopPerformers(metricType: string, limit?: number): Promise<PerformanceBenchmark[]> {
     try {
       let query = db.select()

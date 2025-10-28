@@ -1,4 +1,4 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
+import { Pool, neonConfig, PoolClient } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
@@ -54,7 +54,7 @@ export const pool = new Pool({
  * Gestion des erreurs critiques du pool
  * Log et notifications pour monitoring
  */
-pool.on('error', (err, client) => {
+pool.on('error', (err: Error, client: PoolClient) => {
   logger.error('Erreur inattendue sur client pool inactif', {
     metadata: {
       module: 'DatabaseConfig',
@@ -65,8 +65,8 @@ pool.on('error', (err, client) => {
   });
 });
 
-pool.on('connect', (client) => {
-  logger.info('Nouvelle connexion pool établie', {
+pool.on('connect', (client: PoolClient) => {
+  logger.debug('Nouvelle connexion pool établie', {
     metadata: {
       module: 'DatabaseConfig',
       operation: 'handlePoolConnect'
@@ -74,13 +74,13 @@ pool.on('connect', (client) => {
   });
 });
 
-pool.on('acquire', (client) => {
+pool.on('acquire', (client: PoolClient) => {
   // Log optionnel pour debug - peut être commenté en production
   // console.log('[DB Pool] Connexion acquise depuis le pool');
 });
 
-pool.on('remove', (client) => {
-  logger.info('Connexion retirée du pool', {
+pool.on('remove', (client: PoolClient) => {
+  logger.debug('Connexion retirée du pool', {
     metadata: {
       module: 'DatabaseConfig',
       operation: 'handlePoolRemove'

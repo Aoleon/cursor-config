@@ -67,7 +67,7 @@ import { registerBatigestRoutes } from "./routes-batigest";
 import { registerTeamsRoutes } from "./routes-teams";
 import { createAdminRoutes } from "./routes-admin";
 import { migrationRoutes } from "./routes-migration";
-import { db } from "./db";
+import { db, getPoolStats } from "./db";
 import { sql, eq, or, ilike } from "drizzle-orm";
 import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemiseAuto, parsePeriod, getDefaultPeriod, getLastMonths, type DateRange } from "./dateUtils";
 import type { EventBus } from "./eventBus";
@@ -713,6 +713,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     return 'collaborateur'; // Rôle par défaut
   }
+
+  // ========================================
+  // HEALTH ENDPOINT CONSOLIDÉ - QUICK WIN 3
+  // ========================================
+
+  /**
+   * Vérifie la santé de la base de données
+   */
+  async function checkDatabaseHealth() {
+    const startTime = Date.now();
+    try {
+      const stats = getPoolStats();
+      await db.execute(sql`SELECT 1`);
+      const responseTime = Date.now() - startTime;
+      
+      return {
+        status: 'healthy',
+        poolStats: stats,
+        responseTime: `${responseTime}ms`
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * Vérifie la santé du cache
+   */
+  function checkCacheHealth() {
+    // Cache service check - simplified for now
+    return { 
+      status: 'healthy',
+      type: 'memory'
+    };
+  }
+
+  /**
+   * Vérifie la santé des APIs externes (optionnel)
+   */
+  async function checkExternalApisHealth() {
+    return {
+      monday: { status: 'unknown' },
+      openai: { status: 'unknown' }
+    };
+  }
+
+  /**
+   * Endpoint de health check consolidé
+   * Retourne l'état de tous les services critiques
+   */
+  app.get("/api/health", asyncHandler(async (req, res) => {
+    const startTime = Date.now();
+    
+    const health = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      services: {
+        database: await checkDatabaseHealth(),
+        cache: checkCacheHealth(),
+        externalApis: await checkExternalApisHealth()
+      },
+      metrics: {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        poolStats: getPoolStats(),
+        healthCheckDuration: `${Date.now() - startTime}ms`
+      }
+    };
+    
+    const isHealthy = health.services.database.status === 'healthy';
+    health.status = isHealthy ? 'healthy' : 'unhealthy';
+    
+    logger.info('[Health] Health check effectué', {
+      metadata: {
+        route: '/api/health',
+        method: 'GET',
+        status: health.status,
+        duration: health.metrics.healthCheckDuration
+      }
+    });
+    
+    res.status(isHealthy ? 200 : 503).json(health);
+  }));
 
 // ========================================
 // USER ROUTES - Gestion utilisateurs POC

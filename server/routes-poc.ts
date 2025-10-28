@@ -7390,9 +7390,10 @@ app.get("/api/chatbot/history",
     const result = await chatbotOrchestrationService.getChatbotHistory(historyRequest);
 
     if (result.success) {
-      sendPaginatedSuccess(res, {
-        data: result.conversations,
-        pagination: result.pagination
+      sendPaginatedSuccess(res, result.conversations, {
+        page: Math.floor((result.pagination?.offset || 0) / (result.pagination?.limit || 20)),
+        limit: result.pagination?.limit || 20,
+        total: result.pagination?.total || 0
       });
     } else {
       res.status(500).json({

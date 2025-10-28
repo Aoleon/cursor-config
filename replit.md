@@ -97,7 +97,7 @@ server/storage/
 3. **Unit of Work** : Gère transactions complexes cross-entités
 4. **Dependency Injection** : Injecte db, eventBus pour testabilité
 
-### Statut Actuel (Mis à jour: 28 Oct 2025)
+### Statut Actuel (Mis à jour: 28 Oct 2025 - Session 2)
 
 ✅ **Complété** :
 - Infrastructure de base (types, interfaces, BaseRepository, UnitOfWork)
@@ -108,13 +108,23 @@ server/storage/
 - **Extraction domaine Commercial** : OfferRepository (CRUD + filters + pagination) + AoRepository (CRUD + findByMondayId + filters)
 - **Intégration StorageFacade** : 15 méthodes déléguées (8 Offers + 7 AOs) avec pattern try-catch + fallback legacy
 - **Correction bug double-query** : Méthodes lecture Offers retournent maintenant résultat repository au lieu de legacy
+- **Suite de tests d'intégration complète** : 75 tests (26 OfferRepository + 25 AoRepository + 24 StorageFacade) pour protection anti-régression
+- **BaseRepository enrichi** : 7 méthodes avancées (softDelete, restore, updateMany, upsert, count avec filtres, archive, unarchive)
+- **Corrections critiques** : Guards deletedAt/isArchived + sanitization filtres count() validés par architecte
+
+📋 **Architecture de Tests d'Intégration** :
+- `server/storage/__tests__/integration-setup.ts` - Setup spécifique tests DB
+- `server/storage/__tests__/offer-repository.test.ts` - 26 tests (CRUD, filtres, pagination, EventBus, transactions, edge cases)
+- `server/storage/__tests__/ao-repository.test.ts` - 25 tests (CRUD, Monday.com integration, filtres, pagination, EventBus, transactions)
+- `server/storage/__tests__/storage-facade-delegation.test.ts` - 24 tests (délégation Offers/AOs, fallback mechanism, backward compatibility)
+- **⚠️ Limitation** : Tests nécessitent infrastructure DB de test (pas de container Docker, pas de sandbox transactionnel) pour exécution en CI
 
 🔄 **En Cours** :
-- Tests d'intégration pour vérifier compatibilité StorageFacade vs storage-poc.ts
 - Migration routes `/api/offers` et `/api/aos` pour utiliser StorageFacade
 
 ⏳ **À Faire** :
-- Tests E2E pour valider migration
+- **Infrastructure tests** : Provisioner DB de test avec migrations + sandboxing transactionnel pour permettre exécution en CI
+- Tests E2E pour valider migration end-to-end
 - Enrichissement repositories avec relations (joins pour responsibleUser, ao)
 - Migration progressive : Production → Suppliers → Analytics
 - Dépréciation progressive de `storage-poc.ts`

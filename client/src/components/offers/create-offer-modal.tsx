@@ -100,7 +100,7 @@ export default function CreateOfferModal({ isOpen, onClose }: CreateOfferModalPr
     createOfferMutation.mutate({
       ...formData,
       reference,
-      status: 'nouveau',
+      status: 'brouillon',
       estimatedAmount: formData.estimatedAmount ? parseFloat(formData.estimatedAmount) : 0,
       aoId: formData.aoId === 'none' ? null : formData.aoId,
     });

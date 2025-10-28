@@ -59,14 +59,10 @@ export default function AOsTableView({
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { color: string; label: string }> = {
-      nouveau: { color: "bg-primary/10 text-primary", label: "Nouveau" },
       brouillon: { color: "bg-surface-muted text-on-surface", label: "Brouillon" },
-      en_cours: { color: "bg-warning/10 text-warning", label: "En cours" },
+      etude: { color: "bg-primary/10 text-primary", label: "Étude" },
       en_cours_chiffrage: { color: "bg-warning/10 text-warning", label: "En cours chiffrage" },
-      en_attente_validation: { color: "bg-warning/20 text-warning", label: "En attente validation" },
-      fini: { color: "bg-success/10 text-success", label: "Terminé" },
-      valide: { color: "bg-success/10 text-success", label: "Validé" },
-      perdu: { color: "bg-error/10 text-error", label: "Perdu" },
+      finalise: { color: "bg-success/10 text-success", label: "Finalisé" },
       archive: { color: "bg-surface-muted text-on-surface", label: "Archivé" },
     };
 
@@ -144,14 +140,10 @@ export default function AOsTableView({
       accessor: 'status',
       filterType: 'select',
       filterOptions: [
-        { label: 'Nouveau', value: 'nouveau' },
         { label: 'Brouillon', value: 'brouillon' },
-        { label: 'En cours', value: 'en_cours' },
+        { label: 'Étude', value: 'etude' },
         { label: 'En cours chiffrage', value: 'en_cours_chiffrage' },
-        { label: 'En attente validation', value: 'en_attente_validation' },
-        { label: 'Validé', value: 'valide' },
-        { label: 'Terminé', value: 'fini' },
-        { label: 'Perdu', value: 'perdu' },
+        { label: 'Finalisé', value: 'finalise' },
         { label: 'Archivé', value: 'archive' },
       ],
       width: '150px',

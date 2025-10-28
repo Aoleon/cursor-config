@@ -162,14 +162,10 @@ export default function UnifiedOffersDisplay({
 
     // Sinon afficher le statut normal
     const statusConfig = {
-      nouveau: { color: "bg-primary/10 text-primary", label: "Nouveau" },
       brouillon: { color: "bg-surface-muted text-on-surface", label: "Brouillon" },
-      en_cours: { color: "bg-warning/10 text-warning", label: "En cours" },
+      etude: { color: "bg-primary/10 text-primary", label: "Étude" },
       en_cours_chiffrage: { color: "bg-warning/10 text-warning", label: "En cours chiffrage" },
-      en_attente_validation: { color: "bg-warning/20 text-warning", label: "En attente validation" },
-      fini: { color: "bg-success/10 text-success", label: "Terminé" },
-      valide: { color: "bg-success/10 text-success", label: "Validé" },
-      perdu: { color: "bg-error/10 text-error", label: "Perdu" },
+      finalise: { color: "bg-success/10 text-success", label: "Finalisé" },
       archive: { color: "bg-surface-muted text-on-surface", label: "Archivé" },
     };
 
@@ -297,14 +293,10 @@ export default function UnifiedOffersDisplay({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="tous">Tous les statuts</SelectItem>
-              <SelectItem value="nouveau">Nouveau</SelectItem>
               <SelectItem value="brouillon">Brouillon</SelectItem>
-              <SelectItem value="en_cours">En cours</SelectItem>
+              <SelectItem value="etude">Étude</SelectItem>
               <SelectItem value="en_cours_chiffrage">En cours chiffrage</SelectItem>
-              <SelectItem value="en_attente_validation">En attente validation</SelectItem>
-              <SelectItem value="valide">Validé</SelectItem>
-              <SelectItem value="fini">Terminé</SelectItem>
-              <SelectItem value="perdu">Perdu</SelectItem>
+              <SelectItem value="finalise">Finalisé</SelectItem>
               <SelectItem value="archive">Archivé</SelectItem>
             </SelectContent>
           </Select>

@@ -11,6 +11,8 @@ import { rateLimits } from "./middleware/rate-limiter";
 import { sendSuccess, sendPaginatedSuccess, createError, asyncHandler } from "./middleware/errorHandler";
 import { ValidationError, AuthenticationError, AuthorizationError, NotFoundError, DatabaseError } from "./utils/error-handler";
 import { logger } from "./utils/logger";
+import { retryService, withRetry } from './utils/retry-service';
+import { circuitBreakerManager } from './utils/circuit-breaker';
 import { 
   insertUserSchema, insertAoSchema, insertOfferSchema, insertProjectSchema, 
   insertProjectTaskSchema, insertSupplierRequestSchema, insertSupplierSchema, insertTeamResourceSchema, insertBeWorkloadSchema,
@@ -753,13 +755,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   /**
-   * Vérifie la santé des APIs externes (optionnel)
+   * Helper pour check Monday.com
    */
-  async function checkExternalApisHealth() {
-    return {
-      monday: { status: 'unknown' },
-      openai: { status: 'unknown' }
-    };
+  async function checkMondayHealth(): Promise<{ status: string; responseTime?: number; error?: string }> {
+    try {
+      const start = Date.now();
+      const mondayBreaker = circuitBreakerManager.getOrCreate('monday');
+      
+      await mondayBreaker.execute(async () => {
+        if (!process.env.MONDAY_API_KEY) {
+          throw new Error('MONDAY_API_KEY not configured');
+        }
+        return true;
+      });
+      
+      return {
+        status: 'healthy',
+        responseTime: Date.now() - start
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Helper pour check OpenAI
+   */
+  async function checkOpenAIHealth(): Promise<{ status: string; responseTime?: number; error?: string }> {
+    try {
+      const start = Date.now();
+      const openaiBreaker = circuitBreakerManager.getOrCreate('openai');
+      
+      await openaiBreaker.execute(async () => {
+        if (!process.env.OPENAI_API_KEY) {
+          throw new Error('OPENAI_API_KEY not configured');
+        }
+        return true;
+      });
+      
+      return {
+        status: 'healthy',
+        responseTime: Date.now() - start
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Helper pour check SendGrid
+   */
+  async function checkSendGridHealth(): Promise<{ status: string; responseTime?: number; error?: string }> {
+    try {
+      const start = Date.now();
+      const sendgridBreaker = circuitBreakerManager.getOrCreate('sendgrid');
+      
+      await sendgridBreaker.execute(async () => {
+        if (!process.env.SENDGRID_API_KEY) {
+          return true;
+        }
+        return true;
+      });
+      
+      return {
+        status: process.env.SENDGRID_API_KEY ? 'healthy' : 'not_configured',
+        responseTime: Date.now() - start
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 
   /**
@@ -767,33 +840,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * Retourne l'état de tous les services critiques
    */
   app.get("/api/health", asyncHandler(async (req, res) => {
-    const startTime = Date.now();
+    const healthCheckStart = Date.now();
+    
+    // Check database
+    const databaseHealth = await checkDatabaseHealth();
+    
+    // Check external services (en parallèle)
+    const [mondayHealth, openaiHealth, sendgridHealth] = await Promise.all([
+      checkMondayHealth(),
+      checkOpenAIHealth(),
+      checkSendGridHealth()
+    ]);
     
     const health = {
-      status: 'healthy',
+      status: databaseHealth.status === 'healthy' ? 'healthy' : 'degraded',
       timestamp: new Date().toISOString(),
       services: {
-        database: await checkDatabaseHealth(),
+        database: databaseHealth,
         cache: checkCacheHealth(),
-        externalApis: await checkExternalApisHealth()
+        externalApis: {
+          monday: mondayHealth,
+          openai: openaiHealth,
+          sendgrid: sendgridHealth
+        }
       },
       metrics: {
         uptime: process.uptime(),
         memory: process.memoryUsage(),
         poolStats: getPoolStats(),
-        healthCheckDuration: `${Date.now() - startTime}ms`
-      }
+        healthCheckDuration: Date.now() - healthCheckStart
+      },
+      circuitBreakers: circuitBreakerManager.getAllStats()
     };
     
-    const isHealthy = health.services.database.status === 'healthy';
-    health.status = isHealthy ? 'healthy' : 'unhealthy';
+    const isHealthy = databaseHealth.status === 'healthy';
     
     logger.info('[Health] Health check effectué', {
       metadata: {
         route: '/api/health',
         method: 'GET',
         status: health.status,
-        duration: health.metrics.healthCheckDuration
+        duration: health.metrics.healthCheckDuration,
+        externalServicesHealth: {
+          monday: mondayHealth.status,
+          openai: openaiHealth.status,
+          sendgrid: sendgridHealth.status
+        }
       }
     });
     

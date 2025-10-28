@@ -4988,16 +4988,17 @@ export const snapshotRequestSchema = z.object({
 export const metricQuerySchema = z.object({
   metricType: z.enum(['conversion', 'delay', 'revenue', 'team_load', 'margin']).optional(),
   groupBy: z.enum(['user', 'department', 'project_type', 'month', 'phase']).optional(),
+  period: z.string().optional(),
   limit: z.string().regex(/^\d+$/).default('20').transform(Number).refine(val => val >= 1 && val <= 100, { message: "Must be between 1 and 100" }).or(z.number().min(1).max(100).default(20)),
   offset: z.string().regex(/^\d+$/).default('0').transform(Number).refine(val => val >= 0, { message: "Must be >= 0" }).or(z.number().min(0).default(0))
-});
+}).passthrough();
 
 export const benchmarkQuerySchema = z.object({
   entityType: z.enum(['user', 'team', 'department']).optional().default('user'),
   entityId: z.string().optional(),
   metricTypes: z.string().optional().transform((val) => val ? val.split(',') : undefined),
   period: z.string().optional()
-});
+}).passthrough();
 
 // ========================================
 // SCHEMAS ZOD POUR MOTEUR PRÉDICTIF - PHASE 3.1.6.1

@@ -24,6 +24,15 @@ export interface CircuitBreakerOptions {
 export type CircuitState = 'closed' | 'open' | 'half-open';
 
 /**
+ * Enum CircuitState pour compatibilité
+ */
+export enum CircuitStateEnum {
+  CLOSED = 'closed',
+  OPEN = 'open',
+  HALF_OPEN = 'half-open'
+}
+
+/**
  * Statistiques du circuit breaker pour monitoring
  */
 export interface CircuitBreakerStats {
@@ -442,12 +451,19 @@ export class CircuitBreakerManager {
   }
   
   /**
+   * Alias pour getBreaker (compatibilité)
+   */
+  getOrCreate(name: string, options?: CircuitBreakerOptions): CircuitBreaker {
+    return this.getBreaker(name, options);
+  }
+  
+  /**
    * Obtient les statistiques de tous les circuit breakers
    */
   getAllStats(): Record<string, CircuitBreakerStats> {
     const stats: Record<string, CircuitBreakerStats> = {};
     
-    for (const [name, breaker] of this.breakers) {
+    for (const [name, breaker] of Array.from(this.breakers)) {
       stats[name] = breaker.getStats();
     }
     
@@ -458,7 +474,7 @@ export class CircuitBreakerManager {
    * Réinitialise tous les circuit breakers
    */
   resetAll(): void {
-    for (const breaker of this.breakers.values()) {
+    for (const breaker of Array.from(this.breakers.values())) {
       breaker.reset();
     }
     
@@ -478,3 +494,6 @@ export class CircuitBreakerManager {
     this.breakers.delete(name);
   }
 }
+
+// Export instance globale pour compatibilité avec nouveau code
+export const circuitBreakerManager = CircuitBreakerManager.getInstance();

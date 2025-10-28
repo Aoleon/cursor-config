@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import Header from "@/components/layout/header";
-import UnifiedOffersDisplay from "@/components/offers/unified-offers-display";
+import AOsTableView from "@/components/offers/aos-table-view";
 import { Plus } from "lucide-react";
 
 export default function AOsPage() {
@@ -25,7 +25,7 @@ export default function AOsPage() {
         />
         
         <div className="px-6 py-6">
-          <UnifiedOffersDisplay 
+          <AOsTableView 
             showCreateButton={true} 
             title="Appels d'Offres"
             endpoint="/api/aos"

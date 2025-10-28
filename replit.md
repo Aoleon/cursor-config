@@ -112,12 +112,22 @@ server/storage/
 - **BaseRepository enrichi** : 7 méthodes avancées (softDelete, restore, updateMany, upsert, count avec filtres, archive, unarchive)
 - **Corrections critiques** : Guards deletedAt/isArchived + sanitization filtres count() validés par architecte
 
-🚀 **Quick Wins - Robustesse Production (28 Oct 2025)** :
+🚀 **Quick Wins - Robustesse Production (28 Oct 2025 - Phase 1)** :
 - **Bug critique corrigé** : `/api/chatbot/history` retourne 200 au lieu de 500 (mauvais nombre d'arguments `sendPaginatedSuccess`)
 - **TypeScript fixes** : 5 erreurs LSP corrigées dans `server/db.ts` (typage explicite event handlers pool)
 - **Logging optimisé** : Pool events (connect/remove) passés de `info` à `debug` pour réduire verbosité logs (10x moins de bruit)
 - **Health endpoint** : `/api/health` consolidé avec monitoring DB, cache, APIs externes, métriques (uptime, memory, poolStats)
 - **Validation architecte** : PASS - aucune régression, stabilisation validée en production
+
+🛡️ **Resilience Infrastructure - Production Ready (28 Oct 2025 - Phase 2)** :
+- **RetryService** : Exponential backoff avec jitter (3 attempts, 1s-30s delays) pour toutes les API externes
+- **CircuitBreakerManager** : 5 breakers actifs (monday, openai, gpt, claude, sendgrid) avec états monitorés
+- **Module resilience.ts** : Configuration centralisée par provider (Monday: 5 retries/500ms, OpenAI: 3 retries/1s, SendGrid: 2 retries/1s)
+- **Intégration services** : MondayService, AIService, emailService protégés avec retry + circuit breakers
+- **Model normalization OpenAI** : Prévention création breakers dupliqués (gpt-4o-mini → 'gpt', claude-3 → 'claude')
+- **Health endpoint étendu** : Circuit breaker states, retry stats, checks externes (Monday.com, OpenAI, SendGrid)
+- **Validation Zod analytics** : `/api/analytics/metrics` opérationnel avec .coerce.number() pour limit/offset
+- **Validation architecte** : PASS - All external service calls protected, no regressions, runtime validated
 
 📋 **Architecture de Tests d'Intégration** :
 - `server/storage/__tests__/integration-setup.ts` - Setup spécifique tests DB
@@ -137,12 +147,18 @@ server/storage/
 - Dépréciation progressive de `storage-poc.ts`
 
 📈 **Prochaines Étapes Recommandées (Roadmap Robustesse)** :
-1. **Validation Zod renforcée** : Ajouter validation sur routes analytics pour éliminer erreurs 400 récurrentes
-2. **Health checks étendus** : Intégrer vérifications Monday.com, OpenAI, SendGrid dans `/api/health`
+1. ✅ ~~Validation Zod renforcée~~ - COMPLÉTÉ Phase 2
+2. ✅ ~~Health checks étendus~~ - COMPLÉTÉ Phase 2
 3. **Performance analytics** : Investiguer latence 2s+ sur queries analytics (indexes, caching)
-4. **Retry logic** : Implémenter exponential backoff pour services externes (Monday.com, etc.)
-5. **Circuit breaker** : Prévenir cascading failures quand services externes down
+4. ✅ ~~Retry logic~~ - COMPLÉTÉ Phase 2
+5. ✅ ~~Circuit breaker~~ - COMPLÉTÉ Phase 2
 6. **Tests infrastructure** : Setup DB de test avec sandboxing transactionnel pour CI/CD
+7. **Monitoring dashboards** : Wire resilience stats (circuit breaker/retry) dans dashboards existants
+8. **Cleanup legacy imports** : Retirer imports retry/circuit legacy dans AIService après migration
+9. **SendGrid implementation** : Remplacer simulation par implémentation réelle avec executeSendGrid()
+
+🐛 **Known Issues** :
+- `/api/analytics/benchmarks` timeout : Duplicate `getBenchmarks()` methods dans storage-poc.ts (lignes 3760 & 7304)
 
 ### Migration Strategy
 

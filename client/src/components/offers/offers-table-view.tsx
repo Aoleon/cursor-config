@@ -123,8 +123,8 @@ export default function OffersTableView({
       label: 'Référence',
       accessor: 'reference',
       width: '150px',
-      render: (value, row) => (
-        <div className="font-medium">{value || row.id}</div>
+      render: (value) => (
+        <div className="font-medium font-mono text-sm">{value || '-'}</div>
       )
     },
     {
@@ -132,20 +132,18 @@ export default function OffersTableView({
       label: 'Intitulé',
       accessor: 'intituleOperation',
       width: '250px',
-      render: (value, row) => {
-        const displayValue = value || row.reference;
-        return (
-          <div className="max-w-[250px] truncate" title={displayValue}>
-            {displayValue || '-'}
-          </div>
-        );
-      }
+      render: (value) => (
+        <div className="max-w-[250px] truncate" title={value || '-'}>
+          {value || '-'}
+        </div>
+      )
     },
     {
       id: 'client',
       label: 'Client',
       accessor: 'client',
-      width: '180px'
+      width: '180px',
+      render: (value) => value || '-'
     },
     {
       id: 'menuiserieType',

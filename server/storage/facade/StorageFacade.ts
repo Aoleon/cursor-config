@@ -352,17 +352,17 @@ export class StorageFacade {
         metadata: {
           module: 'StorageFacade',
           operation: 'getOffersPaginated',
-          count: result.data.length,
+          count: result.items.length,
           total: result.total,
           filters
         }
       });
 
       return {
-        offers: result.data,
+        offers: result.items,
         total: result.total,
-        limit: result.limit,
-        offset: result.offset
+        limit,
+        offset
       };
     } catch (error) {
       this.facadeLogger.warn('[StorageFacade] getOffersPaginated - Fallback to legacy', {
@@ -659,7 +659,8 @@ export class StorageFacade {
   get getBusinessAlertById() { return this.legacyStorage.getBusinessAlertById.bind(this.legacyStorage); }
   get listBusinessAlerts() { return this.legacyStorage.listBusinessAlerts.bind(this.legacyStorage); }
   get updateBusinessAlertStatus() { return this.legacyStorage.updateBusinessAlertStatus.bind(this.legacyStorage); }
-  get dismissBusinessAlert() { return this.legacyStorage.dismissBusinessAlert.bind(this.legacyStorage); }
+  // dismissBusinessAlert n'existe pas dans IStorage - commenté pour éviter erreur LSP
+  // get dismissBusinessAlert() { return this.legacyStorage.dismissBusinessAlert.bind(this.legacyStorage); }
 
   // Alert Thresholds operations (méthodes correctes de IStorage)
   get getActiveThresholds() { return this.legacyStorage.getActiveThresholds.bind(this.legacyStorage); }
@@ -779,7 +780,8 @@ export class StorageFacade {
   get getClientQuote() { return this.legacyStorage.getClientQuote.bind(this.legacyStorage); }
   get createClientQuote() { return this.legacyStorage.createClientQuote.bind(this.legacyStorage); }
   get updateClientQuote() { return this.legacyStorage.updateClientQuote.bind(this.legacyStorage); }
-  get listBatigestExports() { return this.legacyStorage.listBatigestExports.bind(this.legacyStorage); }
+  // listBatigestExports n'existe pas dans IStorage - commenté pour éviter erreur LSP
+  // get listBatigestExports() { return this.legacyStorage.listBatigestExports.bind(this.legacyStorage); }
   get createBatigestExport() { return this.legacyStorage.createBatigestExport.bind(this.legacyStorage); }
   get updateBatigestExport() { return this.legacyStorage.updateBatigestExport.bind(this.legacyStorage); }
 }

@@ -18,6 +18,28 @@ Saxium is a fullstack application designed for quoting and project management in
 ## System Architecture
 The application employs a modern fullstack architecture. The frontend leverages React, TypeScript, Vite, Wouter for routing, shadcn/ui and Tailwind CSS for styling, Radix UI for components, React Query for data fetching, and `react-hook-form` with Zod for form management. The backend is built with Express and TypeScript, utilizing Drizzle ORM for database interactions.
 
+### Architecture Migration Strategy (Oct 2025)
+**Current State:**
+- `storage-poc.ts` (8,758 LOC) - Monolithic storage layer being decomposed
+- `routes-poc.ts` (11,998 LOC) - Monolithic routes being migrated to modules
+- 35+ services with some duplication (Monday*, Analytics*)
+
+**Target Architecture:**
+- **Storage Layer**: Repository Pattern via `StorageFacade` (server/storage/facade/StorageFacade.ts)
+  - ✅ Commercial: AoRepository, OfferRepository
+  - ✅ Analytics: KpiRepository
+  - ⏳ Production, Suppliers, Projects (planned)
+- **Routes Layer**: Modular routes in `server/modules/`
+  - ✅ Chiffrage, Analytics, Documents, Projects, Suppliers
+  - ⏳ Commercial (AOs/Offers migration planned)
+- **Services**: Domain-based grouping
+  - Integration (Monday), Intelligence (AI/Context), Monitoring (Analytics/Metrics)
+
+**Migration Pattern:**
+1. Create repository with tests → 2. Update StorageFacade → 3. Routes use facade → 4. Verify parity → 5. Remove legacy code
+
+See `/docs/ARCHITECTURE_OPTIMIZATION_ROADMAP.md` for detailed migration plan and metrics.
+
 *   **UI/UX Decisions**:
     *   Consistent and modern design using shadcn/ui, Tailwind CSS, and Radix UI.
     *   "Couverture Mapping" dashboard for visual progress of Monday.com data integration.

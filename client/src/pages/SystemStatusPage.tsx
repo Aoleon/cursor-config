@@ -7,29 +7,48 @@ import { CheckCircle2, XCircle, AlertCircle, Activity, Database, Zap, TrendingUp
 interface HealthResponse {
   status: string;
   timestamp: string;
-  uptime: number;
-  version: string;
-  environment: string;
-  database: {
-    status: string;
-    poolSize: number;
-    activeConnections: number;
-    idleConnections: number;
+  services: {
+    database: {
+      status: string;
+      poolStats: {
+        totalConnections: number;
+        idleConnections: number;
+        waitingRequests: number;
+      };
+      responseTime: string;
+    };
+    cache: {
+      status: string;
+      type: string;
+    };
+    externalApis: {
+      monday: { status: string; responseTime: number };
+      openai: { status: string; responseTime: number };
+      sendgrid: { status: string; responseTime: number };
+    };
   };
-  externalServices: {
-    monday: string;
-    openai: string;
-    sendgrid: string;
+  metrics: {
+    uptime: number;
+    memory: {
+      rss: number;
+      heapTotal: number;
+      heapUsed: number;
+      external: number;
+      arrayBuffers: number;
+    };
+    poolStats: {
+      totalConnections: number;
+      idleConnections: number;
+      waitingRequests: number;
+    };
+    healthCheckDuration: number;
   };
   circuitBreakers: {
-    monday: { state: string; failures: number };
-    openai: { state: string; failures: number };
-    sendgrid: { state: string; failures: number };
-  };
-  cache: {
-    type: string;
-    size: number;
-    hitRate?: number;
+    monday: { state: string; failures: number; successes: number };
+    openai: { state: string; failures: number; successes: number };
+    sendgrid: { state: string; failures: number; successes: number };
+    gpt?: { state: string; failures: number; successes: number };
+    claude?: { state: string; failures: number; successes: number };
   };
   analytics: {
     kpiQueryPerformance: {
@@ -189,16 +208,16 @@ export default function SystemStatusPage() {
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Uptime</p>
               <p className="text-lg font-semibold" data-testid="text-uptime">
-                {health && formatUptime(health.uptime)}
+                {health && formatUptime(health.metrics.uptime)}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Version</p>
-              <p className="text-lg font-semibold" data-testid="text-version">{health?.version}</p>
+              <p className="text-sm text-muted-foreground">Health Check</p>
+              <p className="text-lg font-semibold" data-testid="text-health-duration">{health?.metrics.healthCheckDuration}ms</p>
             </div>
             <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Environnement</p>
-              <Badge variant="outline" data-testid="badge-environment">{health?.environment}</Badge>
+              <p className="text-sm text-muted-foreground">Mémoire Utilisée</p>
+              <p className="text-lg font-semibold" data-testid="text-memory">{health && (health.metrics.memory.heapUsed / 1024 / 1024).toFixed(0)}MB</p>
             </div>
           </div>
         </CardContent>
@@ -218,20 +237,20 @@ export default function SystemStatusPage() {
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">État</p>
               <div data-testid="status-database">
-                <StatusBadge status={health?.database.status || "unhealthy"} />
+                <StatusBadge status={health?.services.database.status || "unhealthy"} />
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Pool Size</p>
-              <p className="text-lg font-semibold" data-testid="text-pool-size">{health?.database.poolSize}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Connexions Actives</p>
-              <p className="text-lg font-semibold" data-testid="text-active-connections">{health?.database.activeConnections}</p>
+              <p className="text-sm text-muted-foreground">Total Connexions</p>
+              <p className="text-lg font-semibold" data-testid="text-pool-size">{health?.services.database.poolStats.totalConnections}</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Connexions Idle</p>
-              <p className="text-lg font-semibold" data-testid="text-idle-connections">{health?.database.idleConnections}</p>
+              <p className="text-lg font-semibold" data-testid="text-idle-connections">{health?.services.database.poolStats.idleConnections}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Temps de Réponse</p>
+              <p className="text-lg font-semibold" data-testid="text-response-time">{health?.services.database.responseTime}</p>
             </div>
           </div>
         </CardContent>
@@ -250,7 +269,7 @@ export default function SystemStatusPage() {
             <div className="space-y-2">
               <p className="text-sm font-medium">Monday.com</p>
               <div data-testid="status-monday">
-                <StatusBadge status={health?.externalServices.monday || "unhealthy"} />
+                <StatusBadge status={health?.services.externalApis.monday.status || "unhealthy"} />
               </div>
               {health?.circuitBreakers.monday && (
                 <div className="text-xs text-muted-foreground">
@@ -264,7 +283,7 @@ export default function SystemStatusPage() {
             <div className="space-y-2">
               <p className="text-sm font-medium">OpenAI</p>
               <div data-testid="status-openai">
-                <StatusBadge status={health?.externalServices.openai || "unhealthy"} />
+                <StatusBadge status={health?.services.externalApis.openai.status || "unhealthy"} />
               </div>
               {health?.circuitBreakers.openai && (
                 <div className="text-xs text-muted-foreground">
@@ -278,7 +297,7 @@ export default function SystemStatusPage() {
             <div className="space-y-2">
               <p className="text-sm font-medium">SendGrid</p>
               <div data-testid="status-sendgrid">
-                <StatusBadge status={health?.externalServices.sendgrid || "unhealthy"} />
+                <StatusBadge status={health?.services.externalApis.sendgrid.status || "unhealthy"} />
               </div>
               {health?.circuitBreakers.sendgrid && (
                 <div className="text-xs text-muted-foreground">
@@ -302,21 +321,17 @@ export default function SystemStatusPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Type</p>
-              <p className="text-lg font-semibold" data-testid="text-cache-type">{health?.cache.type}</p>
+              <p className="text-lg font-semibold" data-testid="text-cache-type">{health?.services.cache.type}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Taille</p>
-              <p className="text-lg font-semibold" data-testid="text-cache-size">{health?.cache.size} entrées</p>
-            </div>
-            {health?.cache.hitRate !== undefined && (
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Taux de succès</p>
-                <p className="text-lg font-semibold" data-testid="text-cache-hit-rate">{(health.cache.hitRate * 100).toFixed(1)}%</p>
+              <p className="text-sm text-muted-foreground">État</p>
+              <div data-testid="status-cache">
+                <StatusBadge status={health?.services.cache.status || "unhealthy"} />
               </div>
-            )}
+            </div>
           </div>
         </CardContent>
       </Card>

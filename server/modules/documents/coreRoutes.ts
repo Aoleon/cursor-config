@@ -1,0 +1,229 @@
+/**
+ * Core Documents Routes
+ * 
+ * This module contains only the actively used document routes.
+ * Cleaned up version removing all non-functional routes that had missing implementations.
+ * 
+ * Active routes:
+ * - POST /api/ocr/process-pdf - Process PDF with OCR
+ * - POST /api/ocr/create-ao-from-pdf - Create AO from PDF with OCR
+ * - POST /api/documents/analyze - Analyze document from URL
+ * 
+ * For historical context on removed routes, see README.md
+ */
+
+import { Router } from 'express';
+import type { Request, Response } from 'express';
+import { isAuthenticated } from '../../replitAuth';
+import { asyncHandler } from '../../middleware/errorHandler';
+import { validateBody } from '../../middleware/validation';
+import { rateLimits } from '../../middleware/security';
+import { sendSuccess, createError } from '../../middleware/errorHandler';
+import { logger } from '../../utils/logger';
+import type { IStorage } from '../../storage-poc';
+import type { EventBus } from '../../eventBus';
+import { z } from 'zod';
+import { processPdfSchema } from '../../validation-schemas';
+import multer from 'multer';
+import { OCRService } from '../../ocrService';
+import { documentProcessor, type ExtractedAOData } from '../../documentProcessor';
+
+// Initialize OCR service
+const ocrService = new OCRService();
+
+// Multer configuration for file uploads
+const uploadMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/tiff',
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Format de fichier non supporté'));
+    }
+  },
+});
+
+export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Router {
+  const router = Router();
+
+  // ========================================
+  // OCR PROCESSING ROUTES
+  // ========================================
+
+  /**
+   * POST /api/ocr/process-pdf
+   * Process PDF with OCR and extract text
+   */
+  router.post('/api/ocr/process-pdf',
+    isAuthenticated,
+    rateLimits.processing,
+    uploadMiddleware.single('pdf'),
+    validateBody(processPdfSchema),
+    asyncHandler(async (req: any, res: Response) => {
+      if (!req.file) {
+        throw createError.badRequest('Aucun fichier PDF fourni');
+      }
+
+      logger.info('[OCR] Traitement PDF', {
+        metadata: {
+          route: '/api/ocr/process-pdf',
+          method: 'POST',
+          filename: req.file.originalname,
+          size: req.file.size,
+          userId: req.user?.id
+        }
+      });
+
+      // Initialize OCR service
+      await ocrService.initialize();
+
+      // Process PDF
+      const result = await ocrService.processPDF(req.file.buffer);
+
+      eventBus.emit('document:ocr:processed', {
+        filename: req.file.originalname,
+        confidence: result.confidence,
+        userId: req.user?.id
+      });
+
+      sendSuccess(res, {
+        filename: req.file.originalname,
+        ...result
+      });
+    })
+  );
+
+  /**
+   * POST /api/ocr/create-ao-from-pdf
+   * Create AO from PDF with OCR extraction
+   */
+  router.post('/api/ocr/create-ao-from-pdf',
+    isAuthenticated,
+    rateLimits.processing,
+    uploadMiddleware.single('pdf'),
+    asyncHandler(async (req: any, res: Response) => {
+      if (!req.file) {
+        throw createError.badRequest('Aucun fichier PDF fourni');
+      }
+
+      logger.info('[OCR] Création AO depuis PDF', {
+        metadata: {
+          route: '/api/ocr/create-ao-from-pdf',
+          method: 'POST',
+          filename: req.file.originalname,
+          userId: req.user?.id
+        }
+      });
+
+      // Initialize OCR service
+      await ocrService.initialize();
+
+      // Process PDF
+      const ocrResult = await ocrService.processPDF(req.file.buffer);
+
+      // Extract AO data (fixed to match actual ExtractedAOData interface)
+      const extractedData: ExtractedAOData = {
+        reference: ocrResult.processedFields?.reference,
+        description: ocrResult.extractedText.substring(0, 500),
+        client: ocrResult.processedFields?.client,
+        deadlineDate: ocrResult.processedFields?.deadline,
+      };
+
+      // Create AO with required fields (reference, menuiserieType, source)
+      const ao = await storage.createAo({
+        reference: extractedData.reference || `AO-${Date.now()}`,
+        description: extractedData.description,
+        menuiserieType: 'fenetre', // Default value - could be enhanced with OCR detection
+        source: 'website', // Source = website for OCR uploads
+        status: 'brouillon',
+        isDraft: true, // Mark as draft since OCR extraction may be incomplete
+        client: extractedData.client,
+      });
+
+      eventBus.emit('ao:created:from:ocr', {
+        aoId: ao.id,
+        reference: ao.reference,
+        confidence: ocrResult.confidence,
+        userId: req.user?.id
+      });
+
+      sendSuccess(res, {
+        ao,
+        ocrResult: {
+          confidence: ocrResult.confidence,
+          extractedFields: ocrResult.processedFields
+        }
+      }, 201);
+    })
+  );
+
+  // ========================================
+  // DOCUMENT ANALYSIS ROUTES
+  // ========================================
+
+  /**
+   * POST /api/documents/analyze
+   * Analyze document from URL and extract structured information
+   * 
+   * Request body:
+   * - fileUrl: string (URL of the uploaded document)
+   * - filename: string (original filename)
+   * - entityType?: 'ao' | 'offer' | 'project' | 'supplier'
+   * - entityId?: string (UUID)
+   * 
+   * TODO: Implement file fetching from fileUrl and processing
+   * Currently returns 501 Not Implemented as processDocument doesn't exist
+   */
+  router.post('/api/documents/analyze',
+    isAuthenticated,
+    rateLimits.processing,
+    validateBody(z.object({
+      fileUrl: z.string().url(),
+      filename: z.string(),
+      entityType: z.enum(['ao', 'offer', 'project', 'supplier']).optional(),
+      entityId: z.string().uuid().optional(),
+    })),
+    asyncHandler(async (req: any, res: Response) => {
+      const { fileUrl, filename, entityType, entityId } = req.body;
+      
+      logger.info('[Documents] Analyse document', {
+        metadata: {
+          route: '/api/documents/analyze',
+          method: 'POST',
+          filename,
+          fileUrl,
+          entityType,
+          entityId,
+          userId: req.user?.id
+        }
+      });
+
+      // TODO: Implement this workflow:
+      // 1. Fetch file from fileUrl (using objectStorage or fetch)
+      // 2. Detect file type (PDF, image, etc.)
+      // 3. Extract text using appropriate method:
+      //    - For PDFs: use ocrService.processPDF
+      //    - For images: use ocrService (image processing)
+      // 4. Use documentProcessor.extractAOInformation to get structured data
+      // 5. Return structured data + confidence score
+      
+      // For now, return 501 Not Implemented
+      res.status(501).json({
+        success: false,
+        error: 'Not Implemented',
+        message: 'Document analysis from URL not yet implemented. ' +
+                 'Use /api/ocr/process-pdf or /api/ocr/create-ao-from-pdf for direct file upload.',
+        code: 'NOT_IMPLEMENTED'
+      });
+    })
+  );
+
+  return router;
+}

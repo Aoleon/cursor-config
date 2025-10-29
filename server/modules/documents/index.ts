@@ -1,13 +1,14 @@
 /**
  * Documents Module
  * 
- * This module handles all document-related functionality including:
+ * This module handles core document-related functionality including:
  * - OCR processing for PDFs and images
- * - PDF generation from templates
- * - Document analysis and classification
- * - Object storage management
- * - Template management and rendering
+ * - Creation of AOs from PDF documents
+ * - Document analysis (planned)
+ * 
+ * Note: This module was cleaned up to remove non-functional routes.
+ * See README.md for details on removed features and migration notes.
  */
 
-export { createDocumentsRouter, default as documentsRouter } from './routes';
+export { createDocumentsRouter } from './coreRoutes';
 export * from './types';

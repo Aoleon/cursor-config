@@ -182,19 +182,15 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
       // Extract AO data
       const extractedData: ExtractedAOData = {
         reference: ocrResult.processedFields?.reference || `AO-${Date.now()}`,
-        title: ocrResult.processedFields?.title || 'AO créé par OCR',
         description: ocrResult.extractedText.substring(0, 500),
         client: ocrResult.processedFields?.client,
-        amount: ocrResult.processedFields?.amount,
-        deadline: ocrResult.processedFields?.deadline,
-        extractedText: ocrResult.extractedText,
-        confidence: ocrResult.confidence
+        estimatedAmount: ocrResult.processedFields?.estimatedAmount,
+        deadlineDate: ocrResult.processedFields?.deadlineDate,
       };
 
       // Create AO
       const ao = await storage.createAo({
         reference: extractedData.reference,
-        title: extractedData.title,
         description: extractedData.description,
         status: 'brouillon',
         ocrData: extractedData,
@@ -212,7 +208,6 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
         ao,
         ocrResult: {
           confidence: ocrResult.confidence,
-          confidenceLevel: ocrResult.confidenceLevel,
           extractedFields: ocrResult.processedFields
         }
       }, 201);

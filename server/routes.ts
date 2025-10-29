@@ -10,7 +10,7 @@ import { createAuthRouter } from "./modules/auth/routes";
 import { createSuppliersRouter } from "./modules/suppliers/routes";
 import { createProjectsRouter } from "./modules/projects/routes";
 import { createAnalyticsRouter } from "./modules/analytics/routes";
-import { createDocumentsRouter } from "./modules/documents/routes";
+import { createDocumentsRouter } from "./modules/documents"; // Updated to use index.ts export
 import { setupMondayModule } from "./modules/monday";
 
 // Import cache service

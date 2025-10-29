@@ -94,8 +94,8 @@ export default function AOsTableView({
       label: 'Référence',
       accessor: 'reference',
       width: '150px',
-      render: (value, row) => (
-        <div className="font-medium">{value || row.id}</div>
+      render: (value) => (
+        <div className="font-medium font-mono text-sm">{value || '-'}</div>
       )
     },
     {
@@ -104,7 +104,7 @@ export default function AOsTableView({
       accessor: 'intituleOperation',
       width: '250px',
       render: (value) => (
-        <div className="max-w-[250px] truncate" title={value}>
+        <div className="max-w-[250px] truncate" title={value || '-'}>
           {value || '-'}
         </div>
       )
@@ -113,7 +113,8 @@ export default function AOsTableView({
       id: 'client',
       label: 'Client',
       accessor: 'client',
-      width: '180px'
+      width: '180px',
+      render: (value) => value || '-'
     },
     {
       id: 'menuiserieType',

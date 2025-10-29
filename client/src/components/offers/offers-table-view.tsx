@@ -234,7 +234,10 @@ export default function OffersTableView({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLocation(`/offers/${row.id}`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setLocation(`/offers/${row.id}`);
+            }}
             data-testid={`view-offer-${row.id}`}
           >
             <Eye className="h-4 w-4" />
@@ -242,7 +245,10 @@ export default function OffersTableView({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLocation(`/offers/${row.id}/edit`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setLocation(`/offers/${row.id}/edit`);
+            }}
             data-testid={`edit-offer-${row.id}`}
           >
             <Edit className="h-4 w-4" />
@@ -359,6 +365,7 @@ export default function OffersTableView({
             tableId="offers-list"
             columns={columns}
             data={offers}
+            onRowClick={(row) => setLocation(`/offers/${row.id}`)}
             emptyMessage="Aucune offre trouvée"
           />
         </CardContent>

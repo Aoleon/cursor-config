@@ -45,16 +45,13 @@ export class KpiRepository {
         -- Generate time series periods
         date_series AS (
           SELECT 
-            date_trunc('${truncGranularity}', generate_series(
-              '${fromDate.toISOString()}'::timestamp,
-              '${toDate.toISOString()}'::timestamp,
-              INTERVAL ${intervalValue}
-            )) AS period_start,
-            date_trunc('${truncGranularity}', generate_series(
-              '${fromDate.toISOString()}'::timestamp,
-              '${toDate.toISOString()}'::timestamp,
-              INTERVAL ${intervalValue}
-            )) + INTERVAL ${intervalValue} AS period_end
+            gs AS period_start,
+            gs + INTERVAL ${intervalValue} AS period_end
+          FROM generate_series(
+            '${fromDate.toISOString()}'::timestamp,
+            '${toDate.toISOString()}'::timestamp,
+            INTERVAL ${intervalValue}
+          ) AS gs
         ),
         
         -- Fixed metrics (non-loop aggregations)
@@ -207,9 +204,10 @@ export class KpiRepository {
               END
             ), 0) AS team_load_hours
           FROM date_series ds
-          CROSS JOIN offers o
-          WHERE o.created_at >= '${fromDate.toISOString()}'::timestamp
+          LEFT JOIN offers o ON (
+            o.created_at >= '${fromDate.toISOString()}'::timestamp
             AND o.created_at <= '${toDate.toISOString()}'::timestamp
+          )
           GROUP BY ds.period_start
           ORDER BY ds.period_start
         )

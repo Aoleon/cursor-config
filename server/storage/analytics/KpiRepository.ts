@@ -31,32 +31,30 @@ export class KpiRepository {
     const weeksBetween = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24 * 7));
     const individualCapacity = 35 * weeksBetween;
     const granularity = params.granularity;
-    const intervalStr = granularity === 'week' ? '1 week' : '1 day';
 
-    logger.info('[KPI] Fetching consolidated KPIs with optimized single query', { 
-      fromDate: params.from, 
-      toDate: params.to, 
-      granularity,
-      weeksBetween
-    });
+    logger.info(`[KPI] Fetching consolidated KPIs: ${params.from} to ${params.to}, granularity=${granularity}, weeks=${weeksBetween}`);
 
     try {
       // Single optimized query with CTEs
-      const result = await db.execute(sql`
+      // Note: Using literal SQL for INTERVAL to avoid type inference issues
+      const intervalValue = granularity === 'week' ? "'1 week'" : "'1 day'";
+      const truncGranularity = granularity;
+      
+      const result = await db.execute(sql.raw(`
         WITH 
         -- Generate time series periods
         date_series AS (
           SELECT 
-            date_trunc(${granularity}, generate_series(
-              ${fromDate}::timestamp,
-              ${toDate}::timestamp,
-              INTERVAL ${sql.raw(`'${intervalStr}'`)}
+            date_trunc('${truncGranularity}', generate_series(
+              '${fromDate.toISOString()}'::timestamp,
+              '${toDate.toISOString()}'::timestamp,
+              INTERVAL ${intervalValue}
             )) AS period_start,
-            date_trunc(${granularity}, generate_series(
-              ${fromDate}::timestamp,
-              ${toDate}::timestamp,
-              INTERVAL ${sql.raw(`'${intervalStr}'`)}
-            )) + INTERVAL ${sql.raw(`'${intervalStr}'`)} AS period_end
+            date_trunc('${truncGranularity}', generate_series(
+              '${fromDate.toISOString()}'::timestamp,
+              '${toDate.toISOString()}'::timestamp,
+              INTERVAL ${intervalValue}
+            )) + INTERVAL ${intervalValue} AS period_end
         ),
         
         -- Fixed metrics (non-loop aggregations)
@@ -65,8 +63,8 @@ export class KpiRepository {
             COUNT(*)::int AS total_count,
             COUNT(*) FILTER (WHERE status IN ('signe', 'transforme_en_projet', 'termine'))::int AS won_count
           FROM offers
-          WHERE created_at >= ${fromDate}
-            AND created_at <= ${toDate}
+          WHERE created_at >= '${fromDate.toISOString()}'::timestamp
+            AND created_at <= '${toDate.toISOString()}'::timestamp
         ),
         
         forecast_metric AS (
@@ -84,8 +82,8 @@ export class KpiRepository {
               END
             ), 0) AS total_forecast_revenue
           FROM offers
-          WHERE created_at >= ${fromDate}
-            AND created_at <= ${toDate}
+          WHERE created_at >= '${fromDate.toISOString()}'::timestamp
+            AND created_at <= '${toDate.toISOString()}'::timestamp
             AND status IN ('en_attente_fournisseurs', 'en_cours_chiffrage', 'en_attente_validation', 
                            'fin_etudes_validee', 'valide', 'signe')
         ),
@@ -96,8 +94,8 @@ export class KpiRepository {
             COALESCE(SUM(o.be_hours_estimated), 0) AS total_planned_hours
           FROM users u
           LEFT JOIN offers o ON u.id = o.responsible_user_id
-            AND o.created_at >= ${fromDate}
-            AND o.created_at <= ${toDate}
+            AND o.created_at >= '${fromDate.toISOString()}'::timestamp
+            AND o.created_at <= '${toDate.toISOString()}'::timestamp
             AND o.be_hours_estimated IS NOT NULL
         ),
         
@@ -108,8 +106,8 @@ export class KpiRepository {
           FROM project_tasks pt
           INNER JOIN projects p ON pt.project_id = p.id
           INNER JOIN offers o ON p.offer_id = o.id
-          WHERE o.created_at >= ${fromDate}
-            AND o.created_at <= ${toDate}
+          WHERE o.created_at >= '${fromDate.toISOString()}'::timestamp
+            AND o.created_at <= '${toDate.toISOString()}'::timestamp
             AND pt.end_date IS NOT NULL
             AND pt.end_date < NOW()
             AND pt.status != 'termine'
@@ -122,8 +120,8 @@ export class KpiRepository {
             COALESCE(AVG(o.taux_marge), 20) AS fallback_margin
           FROM chiffrage_elements ce
           INNER JOIN offers o ON ce.offer_id = o.id
-          WHERE o.created_at >= ${fromDate}
-            AND o.created_at <= ${toDate}
+          WHERE o.created_at >= '${fromDate.toISOString()}'::timestamp
+            AND o.created_at <= '${toDate.toISOString()}'::timestamp
         ),
         
         -- Breakdown aggregations
@@ -135,8 +133,8 @@ export class KpiRepository {
             COUNT(*) FILTER (WHERE o.status IN ('signe', 'transforme_en_projet', 'termine'))::int AS won_offers
           FROM offers o
           LEFT JOIN users u ON o.responsible_user_id = u.id
-          WHERE o.created_at >= ${fromDate}
-            AND o.created_at <= ${toDate}
+          WHERE o.created_at >= '${fromDate.toISOString()}'::timestamp
+            AND o.created_at <= '${toDate.toISOString()}'::timestamp
             AND o.responsible_user_id IS NOT NULL
           GROUP BY o.responsible_user_id, u.first_name, u.last_name
         ),
@@ -148,8 +146,8 @@ export class KpiRepository {
             COALESCE(SUM(o.be_hours_estimated), 0) AS total_hours
           FROM users u
           LEFT JOIN offers o ON u.id = o.responsible_user_id
-            AND o.created_at >= ${fromDate}
-            AND o.created_at <= ${toDate}
+            AND o.created_at >= '${fromDate.toISOString()}'::timestamp
+            AND o.created_at <= '${toDate.toISOString()}'::timestamp
           WHERE u.is_active = true
             AND (u.role LIKE '%be%' OR u.role LIKE '%technicien%')
           GROUP BY u.id, u.first_name, u.last_name
@@ -166,8 +164,8 @@ export class KpiRepository {
               END
             ), 20) AS avg_margin
           FROM offers
-          WHERE created_at >= ${fromDate}
-            AND created_at <= ${toDate}
+          WHERE created_at >= '${fromDate.toISOString()}'::timestamp
+            AND created_at <= '${toDate.toISOString()}'::timestamp
             AND menuiserie_type IS NOT NULL
           GROUP BY menuiserie_type
         ),
@@ -210,8 +208,8 @@ export class KpiRepository {
             ), 0) AS team_load_hours
           FROM date_series ds
           CROSS JOIN offers o
-          WHERE o.created_at >= ${fromDate}
-            AND o.created_at <= ${toDate}
+          WHERE o.created_at >= '${fromDate.toISOString()}'::timestamp
+            AND o.created_at <= '${toDate.toISOString()}'::timestamp
           GROUP BY ds.period_start
           ORDER BY ds.period_start
         )
@@ -280,7 +278,7 @@ export class KpiRepository {
           team_metrics tm,
           delay_metrics dm,
           margin_metrics mm
-      `);
+      `));
 
       // Parse JSON result
       const row = result.rows[0] as any;
@@ -296,7 +294,7 @@ export class KpiRepository {
       };
 
     } catch (error) {
-      logger.error('[KPI] Error fetching consolidated KPIs', { errorMessage: error instanceof Error ? error.message : String(error) });
+      logger.error(`[KPI] Error fetching consolidated KPIs: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }

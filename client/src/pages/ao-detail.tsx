@@ -69,12 +69,9 @@ export default function AoDetail() {
   const { id } = useParams();
   const queryClient = useQueryClient();
   
-  // Récupérer le paramètre mode depuis l'URL
-  const searchParams = new URLSearchParams(window.location.search);
-  const mode = searchParams.get('mode');
-  const isTechnicalMode = mode === 'technical';
-  
-  const [isEditing, setIsEditing] = useState(isTechnicalMode);
+  // AOs are read-only (Monday.com imports) - always disabled editing
+  // Ignore mode parameter to prevent edit mode bypass
+  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lots, setLots] = useState<Lot[]>([]);
   const [activeTab, setActiveTab] = useState("informations");
@@ -539,17 +536,7 @@ export default function AoDetail() {
             </div>
           )}
           
-          {!isEditing && (
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setIsEditing(true)}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Modifier l'AO
-              </Button>
-            </div>
-          )}
+          {/* AOs are read-only (imported from Monday.com) - no edit button */}
           {/* Informations de base */}
           <Card>
             <CardHeader>

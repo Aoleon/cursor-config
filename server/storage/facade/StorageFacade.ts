@@ -376,7 +376,13 @@ export class StorageFacade {
           offset
         }
       });
-      return await this.legacyStorage.getOffersPaginated(search, status, limit, offset);
+      const legacyResult = await this.legacyStorage.getOffersPaginated(search, status, limit, offset);
+      // Ensure legacy result has limit and offset for type consistency
+      return {
+        ...legacyResult,
+        limit,
+        offset
+      };
     }
   }
 

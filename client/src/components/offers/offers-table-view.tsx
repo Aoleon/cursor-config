@@ -236,23 +236,27 @@ export default function OffersTableView({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              setLocation(`/offers/${row.id}`);
+              const sourceType = (row as any).sourceType || (row as any).source_type;
+              const path = sourceType === 'ao' ? `/aos/${row.id}` : `/offers/${row.id}`;
+              setLocation(path);
             }}
             data-testid={`view-offer-${row.id}`}
           >
             <Eye className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              setLocation(`/offers/${row.id}/edit`);
-            }}
-            data-testid={`edit-offer-${row.id}`}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
+          {((row as any).sourceType !== 'ao' && (row as any).source_type !== 'ao') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocation(`/offers/${row.id}/edit`);
+              }}
+              data-testid={`edit-offer-${row.id}`}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       )
     },
@@ -365,7 +369,11 @@ export default function OffersTableView({
             tableId="offers-list"
             columns={columns}
             data={offers}
-            onRowClick={(row) => setLocation(`/offers/${row.id}`)}
+            onRowClick={(row) => {
+            const sourceType = (row as any).sourceType || (row as any).source_type;
+            const path = sourceType === 'ao' ? `/aos/${row.id}` : `/offers/${row.id}`;
+            setLocation(path);
+          }}
             emptyMessage="Aucune offre trouvée"
           />
         </CardContent>

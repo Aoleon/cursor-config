@@ -2094,6 +2094,14 @@ export class DatabaseStorage implements IStorage {
     return await this.kpiRepository.getConsolidatedKpis(params);
   }
 
+  /**
+   * Get KPI query performance statistics for monitoring
+   * Exposes metrics for health endpoint integration
+   */
+  getKpiPerformanceStats() {
+    return this.kpiRepository.getPerformanceStats();
+  }
+
   // Chiffrage Elements operations - Module de chiffrage POC
   async getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]> {
     return await db.select().from(chiffrageElements)

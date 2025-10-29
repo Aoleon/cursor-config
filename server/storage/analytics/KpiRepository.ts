@@ -4,13 +4,133 @@ import type { ConsolidatedKpis } from '../../storage-poc';
 import { logger } from '../../utils/logger';
 
 /**
+ * Performance baseline constants for KPI query optimization
+ * Used to track and validate the 90%+ improvement from optimization
+ */
+const PERFORMANCE_BASELINE = {
+  LEGACY_AVG_MS: 2000,         // Old 132-query approach (baseline)
+  OPTIMIZED_TARGET_MS: 200,    // Target with real production data
+  EMPTY_DB_BASELINE_MS: 1350,  // Measured with empty database
+  WARNING_THRESHOLD_MS: 500,   // Log warning if exceeded
+  CRITICAL_THRESHOLD_MS: 1000  // Log error if exceeded
+} as const;
+
+/**
+ * Performance metric data point
+ */
+interface PerformanceMetric {
+  timestamp: Date;
+  executionTimeMs: number;
+  periodCount: number;
+  granularity: 'day' | 'week';
+  dateRangeDays: number;
+  improvement: number; // Percentage vs baseline
+}
+
+/**
+ * Aggregated performance statistics
+ */
+export interface KpiPerformanceStats {
+  queryCount: number;
+  avgLatencyMs: number;
+  p50LatencyMs: number;
+  p95LatencyMs: number;
+  p99LatencyMs: number;
+  minLatencyMs: number;
+  maxLatencyMs: number;
+  avgImprovement: number; // % vs baseline
+  lastQueryMs: number | null;
+  lastQueryAt: Date | null;
+  baselineComparisonMs: number; // LEGACY_AVG_MS for reference
+}
+
+/**
  * KpiRepository - Optimized analytics queries with single-query approach
  * 
  * Eliminates N+1 query pattern using CTEs and window functions
  * Performance: 132 queries → 1 query (90%+ improvement)
+ * 
+ * Production Monitoring: Tracks query execution time, logs performance,
+ * and exposes metrics for health monitoring
  */
 export class KpiRepository {
+  // Rolling window of recent performance metrics (last 100 queries)
+  private performanceMetrics: PerformanceMetric[] = [];
+  private readonly MAX_METRICS = 100;
   
+  /**
+   * Calculate percentage improvement vs baseline
+   */
+  private calculateImprovement(executionTimeMs: number): number {
+    return ((PERFORMANCE_BASELINE.LEGACY_AVG_MS - executionTimeMs) / PERFORMANCE_BASELINE.LEGACY_AVG_MS) * 100;
+  }
+
+  /**
+   * Calculate percentile from sorted array
+   */
+  private calculatePercentile(sortedValues: number[], percentile: number): number {
+    if (sortedValues.length === 0) return 0;
+    const index = Math.ceil((percentile / 100) * sortedValues.length) - 1;
+    return sortedValues[Math.max(0, index)];
+  }
+
+  /**
+   * Record a performance metric
+   */
+  private recordMetric(metric: PerformanceMetric): void {
+    this.performanceMetrics.push(metric);
+    
+    // Maintain rolling window
+    if (this.performanceMetrics.length > this.MAX_METRICS) {
+      this.performanceMetrics.shift();
+    }
+  }
+
+  /**
+   * Get aggregated performance statistics
+   * Exposed for health endpoint monitoring
+   */
+  getPerformanceStats(): KpiPerformanceStats {
+    if (this.performanceMetrics.length === 0) {
+      return {
+        queryCount: 0,
+        avgLatencyMs: 0,
+        p50LatencyMs: 0,
+        p95LatencyMs: 0,
+        p99LatencyMs: 0,
+        minLatencyMs: 0,
+        maxLatencyMs: 0,
+        avgImprovement: 0,
+        lastQueryMs: null,
+        lastQueryAt: null,
+        baselineComparisonMs: PERFORMANCE_BASELINE.LEGACY_AVG_MS
+      };
+    }
+
+    const latencies = this.performanceMetrics
+      .map(m => m.executionTimeMs)
+      .sort((a, b) => a - b);
+    
+    const improvements = this.performanceMetrics.map(m => m.improvement);
+    const avgImprovement = improvements.reduce((sum, val) => sum + val, 0) / improvements.length;
+    
+    const lastMetric = this.performanceMetrics[this.performanceMetrics.length - 1];
+
+    return {
+      queryCount: this.performanceMetrics.length,
+      avgLatencyMs: Math.round(latencies.reduce((sum, val) => sum + val, 0) / latencies.length),
+      p50LatencyMs: Math.round(this.calculatePercentile(latencies, 50)),
+      p95LatencyMs: Math.round(this.calculatePercentile(latencies, 95)),
+      p99LatencyMs: Math.round(this.calculatePercentile(latencies, 99)),
+      minLatencyMs: Math.round(latencies[0]),
+      maxLatencyMs: Math.round(latencies[latencies.length - 1]),
+      avgImprovement: Math.round(avgImprovement * 10) / 10, // 1 decimal
+      lastQueryMs: lastMetric.executionTimeMs,
+      lastQueryAt: lastMetric.timestamp,
+      baselineComparisonMs: PERFORMANCE_BASELINE.LEGACY_AVG_MS
+    };
+  }
+
   /**
    * Get consolidated KPIs with optimized single-query approach
    * 
@@ -18,6 +138,8 @@ export class KpiRepository {
    * AFTER: 1 query with CTEs
    * 
    * Example: 30 days → 132 queries (2000ms+) → 1 query (150-250ms)
+   * 
+   * Performance Monitoring: Tracks execution time and logs metrics
    */
   async getConsolidatedKpis(params: {
     from: string;
@@ -25,14 +147,24 @@ export class KpiRepository {
     granularity: 'day' | 'week';
     segment?: string;
   }): Promise<ConsolidatedKpis> {
+    const startTime = performance.now();
     const fromDate = new Date(params.from);
     const toDate = new Date(params.to);
     
     const weeksBetween = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24 * 7));
+    const daysBetween = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
     const individualCapacity = 35 * weeksBetween;
     const granularity = params.granularity;
 
-    logger.info(`[KPI] Fetching consolidated KPIs: ${params.from} to ${params.to}, granularity=${granularity}, weeks=${weeksBetween}`);
+    logger.info('[KPI] Fetching consolidated KPIs', {
+      metadata: {
+        from: params.from,
+        to: params.to,
+        granularity,
+        weeksBetween,
+        daysBetween
+      }
+    });
 
     try {
       // Single optimized query with CTEs
@@ -280,8 +412,7 @@ export class KpiRepository {
 
       // Parse JSON result
       const row = result.rows[0] as any;
-      
-      return {
+      const kpiResult: ConsolidatedKpis = {
         periodSummary: row.period_summary,
         breakdowns: {
           conversionByUser: row.conversion_by_user || {},
@@ -291,8 +422,59 @@ export class KpiRepository {
         timeSeries: row.time_series || []
       };
 
+      // Calculate performance metrics
+      const executionTimeMs = Math.round(performance.now() - startTime);
+      const improvement = this.calculateImprovement(executionTimeMs);
+      const periodCount = kpiResult.timeSeries.length;
+
+      // Record metric for statistics
+      this.recordMetric({
+        timestamp: new Date(),
+        executionTimeMs,
+        periodCount,
+        granularity,
+        dateRangeDays: daysBetween,
+        improvement
+      });
+
+      // Structured performance logging
+      const logLevel = executionTimeMs > PERFORMANCE_BASELINE.CRITICAL_THRESHOLD_MS ? 'error' :
+                       executionTimeMs > PERFORMANCE_BASELINE.WARNING_THRESHOLD_MS ? 'warn' : 'info';
+      
+      logger[logLevel]('[KPI Performance]', {
+        metadata: {
+          operation: 'getConsolidatedKpis',
+          executionTimeMs,
+          periodCount,
+          granularity,
+          dateRange: {
+            from: params.from,
+            to: params.to,
+            days: daysBetween
+          },
+          improvement: `${improvement.toFixed(1)}%`,
+          baseline: {
+            legacyMs: PERFORMANCE_BASELINE.LEGACY_AVG_MS,
+            targetMs: PERFORMANCE_BASELINE.OPTIMIZED_TARGET_MS,
+            status: executionTimeMs <= PERFORMANCE_BASELINE.OPTIMIZED_TARGET_MS ? 'on_target' : 
+                    executionTimeMs <= PERFORMANCE_BASELINE.WARNING_THRESHOLD_MS ? 'acceptable' : 'degraded'
+          }
+        }
+      });
+
+      return kpiResult;
+
     } catch (error) {
-      logger.error(`[KPI] Error fetching consolidated KPIs: ${error instanceof Error ? error.message : String(error)}`);
+      const executionTimeMs = Math.round(performance.now() - startTime);
+      logger.error('[KPI] Error fetching consolidated KPIs', {
+        metadata: {
+          operation: 'getConsolidatedKpis',
+          executionTimeMs,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          dateRange: { from: params.from, to: params.to }
+        }
+      });
       throw error;
     }
   }

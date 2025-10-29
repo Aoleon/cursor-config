@@ -38,11 +38,11 @@ GROUP BY period_start
 
 | Date Range | Granularity | Expected Periods | Rationale |
 |------------|-------------|------------------|-----------|
-| 7 days (Jan 1-7) | day | 8 | Inclusive: Jan 1,2,3,4,5,6,7,8 |
-| 30 days (Jan 1-30) | day | 31 | 30 days + 1 (inclusive) |
-| 90 days (Jan 1-Mar 31) | day | 91 | 90 days + 1 (inclusive) |
-| 4 weeks (Jan 1-28) | week | 5 | 4 weeks + 1 (inclusive) |
-| 8 weeks (Jan 1-Feb 25) | week | 9 | 8 weeks + 1 (inclusive) |
+| 7 days (Jan 1-7) | day | 7 | Inclusive: Jan 1,2,3,4,5,6,7 |
+| 30 days (Jan 1-30) | day | 30 | Inclusive: 30 periods from Jan 1-30 |
+| 90 days (Jan 1-Mar 31) | day | 90 | Inclusive: 90 periods from Jan 1-Mar 31 |
+| 4 weeks (Jan 1-28) | week | 4 | Inclusive: 4 weekly periods |
+| 8 weeks (Jan 1-Feb 25) | week | 8 | Inclusive: 8 weekly periods |
 
 ## Running the Tests
 

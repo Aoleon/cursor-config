@@ -852,6 +852,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       checkSendGridHealth()
     ]);
     
+    // Get KPI analytics performance stats
+    const kpiPerformanceStats = storage.getKpiPerformanceStats();
+    
     const health = {
       status: databaseHealth.status === 'healthy' ? 'healthy' : 'degraded',
       timestamp: new Date().toISOString(),
@@ -869,6 +872,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         memory: process.memoryUsage(),
         poolStats: getPoolStats(),
         healthCheckDuration: Date.now() - healthCheckStart
+      },
+      analytics: {
+        kpiQueryPerformance: {
+          ...kpiPerformanceStats,
+          status: kpiPerformanceStats.queryCount === 0 ? 'no_data' :
+                  kpiPerformanceStats.avgLatencyMs <= 200 ? 'excellent' :
+                  kpiPerformanceStats.avgLatencyMs <= 500 ? 'good' :
+                  kpiPerformanceStats.avgLatencyMs <= 1000 ? 'acceptable' : 'degraded',
+          improvement: kpiPerformanceStats.avgImprovement >= 90 ? 'target_met' :
+                      kpiPerformanceStats.avgImprovement >= 70 ? 'approaching_target' : 'below_target'
+        }
       },
       circuitBreakers: circuitBreakerManager.getAllStats()
     };

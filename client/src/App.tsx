@@ -76,6 +76,7 @@ const MondayImport = lazy(() => import("@/pages/monday/monday-import"));
 const Administration = lazy(() => import("@/pages/administration"));
 const SettingsScoring = lazy(() => import("@/pages/settings-scoring"));
 const TechnicalAlerts = lazy(() => import("@/pages/technical-alerts"));
+const SystemStatus = lazy(() => import("@/pages/SystemStatusPage"));
 
 // Chatbot
 const ChatbotPage = lazy(() => import("@/pages/chatbot"));
@@ -201,6 +202,7 @@ function Router() {
       
       {/* ============= ADMINISTRATION ============= */}
       <Route path="/administration" component={() => <ProtectedRoute component={Administration} />} />
+      <Route path="/system-status" component={() => <ProtectedRoute component={SystemStatus} />} />
       <Route path="/batigest" component={() => <ProtectedRoute component={BatigestPage} />} />
       <Route path="/batigest/dashboard" component={() => <ProtectedRoute component={BatigestDashboard} />} />
       <Route path="/batigest/purchase-order-generator" component={() => <ProtectedRoute component={PurchaseOrderGenerator} />} />

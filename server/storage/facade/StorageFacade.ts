@@ -21,7 +21,10 @@ import { ChiffrageRepository } from '../chiffrage/ChiffrageRepository';
 import { DateIntelligenceRepository } from '../date-intelligence/DateIntelligenceRepository';
 import { DocumentsRepository } from '../documents/DocumentsRepository';
 import { UserRepository } from '../users/UserRepository';
-import type { Offer, InsertOffer, Ao, InsertAo, User, UpsertUser, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert, SupplierDocument, InsertSupplierDocument, SupplierQuoteSession, InsertSupplierQuoteSession, SupplierQuoteAnalysis, InsertSupplierQuoteAnalysis, PurchaseOrder, InsertPurchaseOrder, ClientQuote, InsertClientQuote, TeamResource, InsertTeamResource, BeWorkload, InsertBeWorkload, EmployeeLabel, EmployeeLabelInsert, EmployeeLabelAssignment, EmployeeLabelAssignmentInsert } from '@shared/schema';
+import { ConfigurationRepository } from '../configuration/ConfigurationRepository';
+import { ContactsRepository } from '../contacts/ContactsRepository';
+import { SavRepository } from '../sav/SavRepository';
+import type { Offer, InsertOffer, Ao, InsertAo, User, UpsertUser, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert, SupplierDocument, InsertSupplierDocument, SupplierQuoteSession, InsertSupplierQuoteSession, SupplierQuoteAnalysis, InsertSupplierQuoteAnalysis, PurchaseOrder, InsertPurchaseOrder, ClientQuote, InsertClientQuote, TeamResource, InsertTeamResource, BeWorkload, InsertBeWorkload, EmployeeLabel, EmployeeLabelInsert, EmployeeLabelAssignment, EmployeeLabelAssignmentInsert, EquipmentBattery, EquipmentBatteryInsert, MarginTarget, MarginTargetInsert, AoContacts, InsertAoContacts, ProjectContacts, InsertProjectContacts, SavIntervention, InsertSavIntervention } from '@shared/schema';
 
 /**
  * Facade de storage qui unifie l'accès aux données
@@ -82,6 +85,9 @@ export class StorageFacade {
   private readonly dateIntelligenceRepository: DateIntelligenceRepository;
   private readonly documentsRepository: DocumentsRepository;
   private readonly userRepository: UserRepository;
+  private readonly configurationRepository: ConfigurationRepository;
+  private readonly contactsRepository: ContactsRepository;
+  private readonly savRepository: SavRepository;
 
   /**
    * Constructeur
@@ -106,6 +112,9 @@ export class StorageFacade {
     this.dateIntelligenceRepository = new DateIntelligenceRepository(this.db, this.eventBus);
     this.documentsRepository = new DocumentsRepository(this.db, this.eventBus);
     this.userRepository = new UserRepository(this.db, this.eventBus);
+    this.configurationRepository = new ConfigurationRepository(this.db, this.eventBus);
+    this.contactsRepository = new ContactsRepository(this.db, this.eventBus);
+    this.savRepository = new SavRepository(this.db, this.eventBus);
     
     this.facadeLogger.info('StorageFacade initialisée avec repositories modulaires', {
       metadata: {
@@ -114,7 +123,7 @@ export class StorageFacade {
         status: 'hybrid_mode',
         hasDb: !!this.db,
         hasEventBus: !!this.eventBus,
-        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository', 'DateIntelligenceRepository', 'DocumentsRepository', 'UserRepository']
+        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository', 'DateIntelligenceRepository', 'DocumentsRepository', 'UserRepository', 'ConfigurationRepository', 'ContactsRepository', 'SavRepository']
       }
     });
   }
@@ -433,6 +442,428 @@ export class StorageFacade {
 
   // Legacy user operations
   get upsertUser() { return this.legacyStorage.upsertUser.bind(this.legacyStorage); }
+
+  // ========================================
+  // CONFIGURATION OPERATIONS - Déléguées vers ConfigurationRepository
+  // ========================================
+
+  // EQUIPMENT BATTERIES - 5 MÉTHODES
+
+  /**
+   * Récupère les batteries d'équipement avec filtre optionnel par projet
+   * Utilise ConfigurationRepository avec fallback sur legacy
+   */
+  async getEquipmentBatteries(projectId?: string): Promise<EquipmentBattery[]> {
+    try {
+      const batteries = await this.configurationRepository.getEquipmentBatteries(projectId);
+      this.facadeLogger.info('Batteries d\'équipement récupérées via ConfigurationRepository', {
+        metadata: { count: batteries.length, projectId, module: 'StorageFacade', operation: 'getEquipmentBatteries' }
+      });
+      return batteries;
+    } catch (error) {
+      this.facadeLogger.warn('ConfigurationRepository.getEquipmentBatteries failed, falling back to legacy', {
+        metadata: { error, projectId, module: 'StorageFacade', operation: 'getEquipmentBatteries' }
+      });
+      return await this.legacyStorage.getEquipmentBatteries?.(projectId) || [];
+    }
+  }
+
+  /**
+   * Récupère une batterie d'équipement par son ID
+   * Utilise ConfigurationRepository avec fallback sur legacy
+   */
+  async getEquipmentBattery(id: string): Promise<EquipmentBattery | undefined> {
+    try {
+      const battery = await this.configurationRepository.getEquipmentBattery(id);
+      if (battery) {
+        this.facadeLogger.info('Batterie d\'équipement récupérée via ConfigurationRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getEquipmentBattery' }
+        });
+      }
+      return battery;
+    } catch (error) {
+      this.facadeLogger.warn('ConfigurationRepository.getEquipmentBattery failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getEquipmentBattery' }
+      });
+      return await this.legacyStorage.getEquipmentBattery?.(id);
+    }
+  }
+
+  /**
+   * Crée une nouvelle batterie d'équipement
+   * Utilise ConfigurationRepository avec fallback sur legacy
+   */
+  async createEquipmentBattery(battery: EquipmentBatteryInsert): Promise<EquipmentBattery> {
+    try {
+      const created = await this.configurationRepository.createEquipmentBattery(battery);
+      this.facadeLogger.info('Batterie d\'équipement créée via ConfigurationRepository', {
+        metadata: { id: created.id, projectId: created.assignedToProjectId, module: 'StorageFacade', operation: 'createEquipmentBattery' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('ConfigurationRepository.createEquipmentBattery failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createEquipmentBattery' }
+      });
+      return await this.legacyStorage.createEquipmentBattery?.(battery) as EquipmentBattery;
+    }
+  }
+
+  /**
+   * Met à jour une batterie d'équipement
+   * Utilise ConfigurationRepository avec fallback sur legacy
+   */
+  async updateEquipmentBattery(id: string, battery: Partial<EquipmentBatteryInsert>): Promise<EquipmentBattery> {
+    try {
+      const updated = await this.configurationRepository.updateEquipmentBattery(id, battery);
+      this.facadeLogger.info('Batterie d\'équipement mise à jour via ConfigurationRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateEquipmentBattery' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('ConfigurationRepository.updateEquipmentBattery failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateEquipmentBattery' }
+      });
+      return await this.legacyStorage.updateEquipmentBattery?.(id, battery) as EquipmentBattery;
+    }
+  }
+
+  /**
+   * Supprime une batterie d'équipement
+   * Utilise ConfigurationRepository avec fallback sur legacy
+   */
+  async deleteEquipmentBattery(id: string): Promise<void> {
+    try {
+      await this.configurationRepository.deleteEquipmentBattery(id);
+      this.facadeLogger.info('Batterie d\'équipement supprimée via ConfigurationRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteEquipmentBattery' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('ConfigurationRepository.deleteEquipmentBattery failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteEquipmentBattery' }
+      });
+      await this.legacyStorage.deleteEquipmentBattery?.(id);
+    }
+  }
+
+  // MARGIN TARGETS - 5 MÉTHODES
+
+  /**
+   * Récupère les objectifs de marge avec filtre optionnel par projet
+   * Utilise ConfigurationRepository avec fallback sur legacy
+   */
+  async getMarginTargets(projectId?: string): Promise<MarginTarget[]> {
+    try {
+      const targets = await this.configurationRepository.getMarginTargets(projectId);
+      this.facadeLogger.info('Objectifs de marge récupérés via ConfigurationRepository', {
+        metadata: { count: targets.length, projectId, module: 'StorageFacade', operation: 'getMarginTargets' }
+      });
+      return targets;
+    } catch (error) {
+      this.facadeLogger.warn('ConfigurationRepository.getMarginTargets failed, falling back to legacy', {
+        metadata: { error, projectId, module: 'StorageFacade', operation: 'getMarginTargets' }
+      });
+      return await this.legacyStorage.getMarginTargets?.(projectId) || [];
+    }
+  }
+
+  /**
+   * Récupère un objectif de marge par son ID
+   * Utilise ConfigurationRepository avec fallback sur legacy
+   */
+  async getMarginTarget(id: string): Promise<MarginTarget | undefined> {
+    try {
+      const target = await this.configurationRepository.getMarginTarget(id);
+      if (target) {
+        this.facadeLogger.info('Objectif de marge récupéré via ConfigurationRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getMarginTarget' }
+        });
+      }
+      return target;
+    } catch (error) {
+      this.facadeLogger.warn('ConfigurationRepository.getMarginTarget failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getMarginTarget' }
+      });
+      return await this.legacyStorage.getMarginTarget?.(id);
+    }
+  }
+
+  /**
+   * Crée un nouvel objectif de marge
+   * Utilise ConfigurationRepository avec fallback sur legacy
+   */
+  async createMarginTarget(target: MarginTargetInsert): Promise<MarginTarget> {
+    try {
+      const created = await this.configurationRepository.createMarginTarget(target);
+      this.facadeLogger.info('Objectif de marge créé via ConfigurationRepository', {
+        metadata: { id: created.id, projectId: created.projectId, module: 'StorageFacade', operation: 'createMarginTarget' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('ConfigurationRepository.createMarginTarget failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createMarginTarget' }
+      });
+      return await this.legacyStorage.createMarginTarget?.(target) as MarginTarget;
+    }
+  }
+
+  /**
+   * Met à jour un objectif de marge
+   * Utilise ConfigurationRepository avec fallback sur legacy
+   */
+  async updateMarginTarget(id: string, target: Partial<MarginTargetInsert>): Promise<MarginTarget> {
+    try {
+      const updated = await this.configurationRepository.updateMarginTarget(id, target);
+      this.facadeLogger.info('Objectif de marge mis à jour via ConfigurationRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateMarginTarget' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('ConfigurationRepository.updateMarginTarget failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateMarginTarget' }
+      });
+      return await this.legacyStorage.updateMarginTarget?.(id, target) as MarginTarget;
+    }
+  }
+
+  /**
+   * Supprime un objectif de marge
+   * Utilise ConfigurationRepository avec fallback sur legacy
+   */
+  async deleteMarginTarget(id: string): Promise<void> {
+    try {
+      await this.configurationRepository.deleteMarginTarget(id);
+      this.facadeLogger.info('Objectif de marge supprimé via ConfigurationRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteMarginTarget' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('ConfigurationRepository.deleteMarginTarget failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteMarginTarget' }
+      });
+      await this.legacyStorage.deleteMarginTarget?.(id);
+    }
+  }
+
+  // ========================================
+  // CONTACTS OPERATIONS - Déléguées vers ContactsRepository
+  // ========================================
+
+  // AO CONTACTS - 3 MÉTHODES
+
+  /**
+   * Récupère les contacts d'un AO
+   * Utilise ContactsRepository avec fallback sur legacy
+   */
+  async getAoContacts(aoId: string, tx?: DrizzleTransaction): Promise<AoContacts[]> {
+    try {
+      const contacts = await this.contactsRepository.getAoContacts(aoId, tx);
+      this.facadeLogger.info('Contacts AO récupérés via ContactsRepository', {
+        metadata: { count: contacts.length, aoId, module: 'StorageFacade', operation: 'getAoContacts' }
+      });
+      return contacts;
+    } catch (error) {
+      this.facadeLogger.warn('ContactsRepository.getAoContacts failed, falling back to legacy', {
+        metadata: { error, aoId, module: 'StorageFacade', operation: 'getAoContacts' }
+      });
+      return await this.legacyStorage.getAoContacts?.(aoId, tx) || [];
+    }
+  }
+
+  /**
+   * Crée un contact AO
+   * Utilise ContactsRepository avec fallback sur legacy
+   */
+  async createAoContact(contact: InsertAoContacts, tx?: DrizzleTransaction): Promise<AoContacts> {
+    try {
+      const created = await this.contactsRepository.createAoContact(contact, tx);
+      this.facadeLogger.info('Contact AO créé via ContactsRepository', {
+        metadata: { id: created.id, aoId: created.ao_id, module: 'StorageFacade', operation: 'createAoContact' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('ContactsRepository.createAoContact failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createAoContact' }
+      });
+      return await this.legacyStorage.createAoContact?.(contact, tx) as AoContacts;
+    }
+  }
+
+  /**
+   * Supprime un contact AO
+   * Utilise ContactsRepository avec fallback sur legacy
+   */
+  async deleteAoContact(id: string): Promise<void> {
+    try {
+      await this.contactsRepository.deleteAoContact(id);
+      this.facadeLogger.info('Contact AO supprimé via ContactsRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteAoContact' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('ContactsRepository.deleteAoContact failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteAoContact' }
+      });
+      await this.legacyStorage.deleteAoContact?.(id);
+    }
+  }
+
+  // PROJECT CONTACTS - 3 MÉTHODES
+
+  /**
+   * Récupère les contacts d'un projet
+   * Utilise ContactsRepository avec fallback sur legacy
+   */
+  async getProjectContacts(projectId: string): Promise<ProjectContacts[]> {
+    try {
+      const contacts = await this.contactsRepository.getProjectContacts(projectId);
+      this.facadeLogger.info('Contacts projet récupérés via ContactsRepository', {
+        metadata: { count: contacts.length, projectId, module: 'StorageFacade', operation: 'getProjectContacts' }
+      });
+      return contacts;
+    } catch (error) {
+      this.facadeLogger.warn('ContactsRepository.getProjectContacts failed, falling back to legacy', {
+        metadata: { error, projectId, module: 'StorageFacade', operation: 'getProjectContacts' }
+      });
+      return await this.legacyStorage.getProjectContacts?.(projectId) || [];
+    }
+  }
+
+  /**
+   * Crée un contact projet
+   * Utilise ContactsRepository avec fallback sur legacy
+   */
+  async createProjectContact(contact: InsertProjectContacts): Promise<ProjectContacts> {
+    try {
+      const created = await this.contactsRepository.createProjectContact(contact);
+      this.facadeLogger.info('Contact projet créé via ContactsRepository', {
+        metadata: { id: created.id, projectId: created.project_id, module: 'StorageFacade', operation: 'createProjectContact' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('ContactsRepository.createProjectContact failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createProjectContact' }
+      });
+      return await this.legacyStorage.createProjectContact?.(contact) as ProjectContacts;
+    }
+  }
+
+  /**
+   * Supprime un contact projet
+   * Utilise ContactsRepository avec fallback sur legacy
+   */
+  async deleteProjectContact(id: string): Promise<void> {
+    try {
+      await this.contactsRepository.deleteProjectContact(id);
+      this.facadeLogger.info('Contact projet supprimé via ContactsRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteProjectContact' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('ContactsRepository.deleteProjectContact failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteProjectContact' }
+      });
+      await this.legacyStorage.deleteProjectContact?.(id);
+    }
+  }
+
+  // ========================================
+  // SAV OPERATIONS - Déléguées vers SavRepository
+  // ========================================
+
+  // SAV INTERVENTIONS - 5 MÉTHODES
+
+  /**
+   * Récupère les interventions SAV d'un projet
+   * Utilise SavRepository avec fallback sur legacy
+   */
+  async getSavInterventions(projectId: string): Promise<SavIntervention[]> {
+    try {
+      const interventions = await this.savRepository.getSavInterventions(projectId);
+      this.facadeLogger.info('Interventions SAV récupérées via SavRepository', {
+        metadata: { count: interventions.length, projectId, module: 'StorageFacade', operation: 'getSavInterventions' }
+      });
+      return interventions;
+    } catch (error) {
+      this.facadeLogger.warn('SavRepository.getSavInterventions failed, falling back to legacy', {
+        metadata: { error, projectId, module: 'StorageFacade', operation: 'getSavInterventions' }
+      });
+      return await this.legacyStorage.getSavInterventions?.(projectId) || [];
+    }
+  }
+
+  /**
+   * Récupère une intervention SAV par son ID
+   * Utilise SavRepository avec fallback sur legacy
+   */
+  async getSavIntervention(id: string): Promise<SavIntervention | undefined> {
+    try {
+      const intervention = await this.savRepository.getSavIntervention(id);
+      if (intervention) {
+        this.facadeLogger.info('Intervention SAV récupérée via SavRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getSavIntervention' }
+        });
+      }
+      return intervention;
+    } catch (error) {
+      this.facadeLogger.warn('SavRepository.getSavIntervention failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getSavIntervention' }
+      });
+      return await this.legacyStorage.getSavIntervention?.(id);
+    }
+  }
+
+  /**
+   * Crée une intervention SAV
+   * Utilise SavRepository avec fallback sur legacy
+   */
+  async createSavIntervention(intervention: InsertSavIntervention): Promise<SavIntervention> {
+    try {
+      const created = await this.savRepository.createSavIntervention(intervention);
+      this.facadeLogger.info('Intervention SAV créée via SavRepository', {
+        metadata: { id: created.id, projectId: created.projectId, module: 'StorageFacade', operation: 'createSavIntervention' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('SavRepository.createSavIntervention failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createSavIntervention' }
+      });
+      return await this.legacyStorage.createSavIntervention?.(intervention) as SavIntervention;
+    }
+  }
+
+  /**
+   * Met à jour une intervention SAV
+   * Utilise SavRepository avec fallback sur legacy
+   */
+  async updateSavIntervention(id: string, intervention: Partial<InsertSavIntervention>): Promise<SavIntervention> {
+    try {
+      const updated = await this.savRepository.updateSavIntervention(id, intervention);
+      this.facadeLogger.info('Intervention SAV mise à jour via SavRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateSavIntervention' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('SavRepository.updateSavIntervention failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateSavIntervention' }
+      });
+      return await this.legacyStorage.updateSavIntervention?.(id, intervention) as SavIntervention;
+    }
+  }
+
+  /**
+   * Supprime une intervention SAV
+   * Utilise SavRepository avec fallback sur legacy
+   */
+  async deleteSavIntervention(id: string): Promise<void> {
+    try {
+      await this.savRepository.deleteSavIntervention(id);
+      this.facadeLogger.info('Intervention SAV supprimée via SavRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteSavIntervention' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('SavRepository.deleteSavIntervention failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteSavIntervention' }
+      });
+      await this.legacyStorage.deleteSavIntervention?.(id);
+    }
+  }
 
   // ========================================
   // AO OPERATIONS - Déléguées vers AoRepository

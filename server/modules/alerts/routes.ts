@@ -15,6 +15,7 @@ import { rateLimits } from '../../middleware/rate-limiter';
 import { logger } from '../../utils/logger';
 import type { IStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
+import { EventType } from '../../../shared/events';
 import { z } from 'zod';
 import {
   technicalAlertsFilterSchema,
@@ -111,8 +112,9 @@ const calculateAlertsTrends = (alerts: BusinessAlert[]) => {
   const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const prev7Days = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   
-  const recentAlerts = alerts.filter(a => new Date(a.triggeredAt) >= last7Days);
+  const recentAlerts = alerts.filter(a => a.triggeredAt && new Date(a.triggeredAt) >= last7Days);
   const previousAlerts = alerts.filter(a => {
+    if (!a.triggeredAt) return false;
     const triggerDate = new Date(a.triggeredAt);
     return triggerDate >= prev7Days && triggerDate < last7Days;
   });
@@ -491,7 +493,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         
         // Vérifier le statut actuel
         if (existingAlert.status === 'resolved') {
-          throw createError.validation(400, "Impossible d'acquitter une alerte déjà résolue", {
+          throw createError.validation("Impossible d'acquitter une alerte déjà résolue", {
             currentStatus: existingAlert.status,
             alertId: id
           });
@@ -613,8 +615,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         }, {} as Record<string, number>);
         
         // Projets à risque élevé
-        const highRiskProjects = projectRiskProfiles.filter(p => p.riskScore >= 70);
-        const deterioratingProjects = projectRiskProfiles.filter(p => p.trendDirection === 'deteriorating');
+        const highRiskProjects = projectRiskProfiles.filter((p: any) => p.riskScore >= 70);
+        const deterioratingProjects = projectRiskProfiles.filter((p: any) => p.trendDirection === 'deteriorating');
         
         // Alertes récentes (24h)
         const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -639,7 +641,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
             totalProjects: projectRiskProfiles.length,
             highRiskProjects: highRiskProjects.length,
             deterioratingProjects: deterioratingProjects.length,
-            averageRiskScore: projectRiskProfiles.reduce((sum, p) => sum + p.riskScore, 0) / (projectRiskProfiles.length || 1)
+            averageRiskScore: projectRiskProfiles.reduce((sum: number, p: any) => sum + p.riskScore, 0) / (projectRiskProfiles.length || 1)
           },
           recentAlerts: recentAlerts.slice(0, 10),
           criticalAlerts: criticalAlerts.slice(0, 5),
@@ -820,7 +822,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         
         // Vérifier que l'alerte peut être escaladée
         if (existingAlert.status === 'resolved') {
-          throw createError.validation(400, "Impossible d'escalader une alerte résolue", {
+          throw createError.validation("Impossible d'escalader une alerte résolue", {
             currentStatus: existingAlert.status,
             alertId: id
           });
@@ -834,16 +836,20 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         });
         
         // Déclencher la notification d'escalade via EventBus
-        await eventBus.publishSystemAlert({
+        eventBus.publish({
           id: `escalation-manual-${id}-${Date.now()}`,
-          entity: 'system',
-          entityId: 'manual-escalation',
+          type: EventType.DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED,
+          entity: 'date_intelligence',
+          entityId: id,
+          title: `🚨 ESCALADE MANUELLE - ${existingAlert.title}`,
           message: `🚨 ESCALADE MANUELLE - ${existingAlert.title}`,
           severity: 'critical',
+          timestamp: new Date().toISOString(),
+          affectedQueryKeys: [['/api/date-alerts'], ['/api/date-alerts', id]],
+          userId,
           metadata: {
             originalAlert: id,
             escalationLevel,
-            escalatedBy: userId,
             reason,
             urgency,
             immediateAction: urgency === 'immediate'
@@ -851,24 +857,25 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         });
         
         // Notifier selon le niveau d'escalade
-        const escalationTargets = {
+        const escalationTargets: Record<string, string[]> = {
           manager: ['manager-group'],
           director: ['manager-group', 'director-group'],
           critical: ['manager-group', 'director-group', 'emergency-group']
         };
         
-        const targets = escalationTargets[escalationLevel] || ['manager-group'];
+        const targets = escalationTargets[escalationLevel as string] || ['manager-group'];
         
         // Notification spécialisée escalade
         eventBus.publish({
           id: `escalation-notification-${id}-${Date.now()}`,
-          type: 'date_intelligence.alert_escalated',
+          type: EventType.DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED,
           entity: 'date_intelligence',
           entityId: id,
           title: `⬆️ Alerte Escaladée - Niveau ${escalationLevel.toUpperCase()}`,
           message: `Escalade alerte "${existingAlert.title}" - ${reason}`,
           severity: urgency === 'immediate' ? 'error' : 'warning',
           timestamp: new Date().toISOString(),
+          affectedQueryKeys: [['/api/date-alerts'], ['/api/date-alerts', id]],
           userId,
           metadata: {
             originalAlert: existingAlert,
@@ -897,7 +904,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           metadata: { alertId: id, escalationLevel }
         });
         
-        sendSuccess(res, response, `Alerte escaladée au niveau ${escalationLevel}`, 201);
+        sendSuccess(res, response, `Alerte escaladée au niveau ${escalationLevel}`);
         
       } catch (error: any) {
         logger.error('Erreur escalade alerte', {
@@ -975,7 +982,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
               key = alert.severity;
               break;
             case 'status':
-              key = alert.status;
+              key = alert.status || '';
               break;
             case 'entity':
               key = alert.entityType;
@@ -1038,6 +1045,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         // Tendances (comparaison avec période précédente)
         const previousPeriodStart = new Date(startDate.getTime() - (Date.now() - startDate.getTime()));
         const previousPeriodAlerts = allAlerts.filter(alert => {
+          if (!alert.createdAt) return false;
           const alertDate = new Date(alert.createdAt);
           return alertDate >= previousPeriodStart && alertDate < startDate;
         });
@@ -1357,8 +1365,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       }
       
       // VÉRIFICATION STATUT (doit être ack ou in_progress)
-      if (!['acknowledged', 'in_progress'].includes(alert.status)) {
-        throw new ValidationError(`Impossible résoudre alerte avec statut ${alert.status}`);
+      if (!['acknowledged', 'in_progress'].includes(alert.status || '')) {
+        throw new ValidationError(`Impossible résoudre alerte avec statut ${alert.status || 'unknown'}`);
       }
       
       // RÉSOLUTION
@@ -1410,7 +1418,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       // ASSIGNATION VIA STORAGE
       const success = await storage.updateBusinessAlertStatus(
         alertId,
-        { assignedTo },
+        { status: 'acknowledged', assignedTo },
         assignedBy
       );
       

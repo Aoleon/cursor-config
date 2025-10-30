@@ -1873,6 +1873,23 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     })
   );
 
+  // Log initialization
+  logger.info('[CommercialModule] Routes initialisées', {
+    metadata: {
+      module: 'CommercialModule',
+      routes: [
+        '/api/aos',
+        '/api/offers',
+        '/api/ao-contacts',
+        '/api/ao-lots',
+        '/api/offers/:id/start-chiffrage',
+        '/api/offers/:id/validate-studies',
+        '/api/offers/:id/transform-to-project',
+        '/api/offers/:offerId/supplier-requests'
+      ]
+    }
+  });
+
   return router;
 }
 

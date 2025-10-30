@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { contactService, type ExtractedContactData, type ContactLinkResult } from './contactService';
+import { logger } from './utils/logger';
 
 /*
 <important_code_snippet_instructions>
@@ -198,7 +199,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       });
 
       const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
-      console.log(`[DocumentProcessor] Raw response for ${filename}:`, responseText);
+      logger.debug('DocumentProcessor - Raw response', { metadata: { filename, responseLength: responseText.length } });
 
       // Parser la réponse JSON en gérant les blocs markdown
       let jsonText = responseText.trim();
@@ -233,11 +234,11 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         maitreOeuvreDetails: extractedData.maitreOeuvreDetails || null,
       };
 
-      console.log(`[DocumentProcessor] Extracted data for ${filename}:`, cleanedData);
+      logger.info('DocumentProcessor - Extracted AO data', { metadata: { filename, hasReference: !!cleanedData.reference, hasLots: !!cleanedData.lots } });
       return cleanedData;
 
     } catch (error) {
-      console.error(`[DocumentProcessor] Error processing ${filename}:`, error);
+      logger.error('DocumentProcessor - Error processing document', error as Error, { metadata: { filename } });
       
       // En cas d'erreur, retourner un objet avec au moins le nom du fichier comme référence
       return {
@@ -254,7 +255,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
    */
   async processExtractedContactsWithLinking(extractedData: ExtractedAOData): Promise<ExtractedAOData> {
     try {
-      console.log('[DocumentProcessor] Traitement des contacts extraits...');
+      logger.info('DocumentProcessor - Processing extracted contacts');
       
       const contactsToProcess: ExtractedContactData[] = [];
       const linkedContacts: { maitreOuvrage?: ContactLinkResult; maitreOeuvre?: ContactLinkResult } = {};
@@ -281,7 +282,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       
       // Traiter tous les contacts extraits
       if (contactsToProcess.length > 0) {
-        console.log(`[DocumentProcessor] Traitement de ${contactsToProcess.length} contact(s)...`);
+        logger.info('DocumentProcessor - Processing contacts', { metadata: { count: contactsToProcess.length } });
         
         const results = await contactService.processExtractedContacts(contactsToProcess);
         
@@ -292,10 +293,10 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
           
           if (contactData.role === 'maitre_ouvrage') {
             linkedContacts.maitreOuvrage = result;
-            console.log(`[DocumentProcessor] Maître d'ouvrage ${result.found ? 'trouvé' : 'créé'}: ${result.contact.nom} (confiance: ${Math.round(result.confidence * 100)}%)`);
+            logger.info('DocumentProcessor - Maître d\'ouvrage processed', { metadata: { found: result.found, nom: result.contact.nom, confidence: Math.round(result.confidence * 100) } });
           } else if (contactData.role === 'maitre_oeuvre') {
             linkedContacts.maitreOeuvre = result;
-            console.log(`[DocumentProcessor] Maître d'œuvre ${result.found ? 'trouvé' : 'créé'}: ${result.contact.nom} (confiance: ${Math.round(result.confidence * 100)}%)`);
+            logger.info('DocumentProcessor - Maître d\'œuvre processed', { metadata: { found: result.found, nom: result.contact.nom, confidence: Math.round(result.confidence * 100) } });
           }
         }
       }
@@ -307,7 +308,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       };
       
     } catch (error) {
-      console.error('[DocumentProcessor] Erreur lors du traitement des contacts:', error);
+      logger.error('DocumentProcessor - Error processing contacts', error as Error);
       // En cas d'erreur, retourner les données originales sans liaison
       return extractedData;
     }
@@ -335,7 +336,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       try {
         const response = await fetch(fileUrl);
         if (!response.ok) {
-          console.warn(`[DocumentProcessor] Cannot fetch file ${filename}: ${response.statusText}`);
+          logger.warn('DocumentProcessor - Cannot fetch file', { metadata: { filename, statusText: response.statusText } });
           // Utiliser un contenu de démonstration basé sur le nom du fichier
           return this.generateDemoContent(filename);
         }
@@ -359,12 +360,12 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
             }
         }
       } catch (fetchError) {
-        console.warn(`[DocumentProcessor] Fetch error for ${filename}:`, fetchError);
+        logger.warn('DocumentProcessor - Fetch error', { metadata: { filename, error: String(fetchError) } });
         return this.generateDemoContent(filename);
       }
 
     } catch (error) {
-      console.error(`[DocumentProcessor] Error extracting text from ${filename}:`, error);
+      logger.error('DocumentProcessor - Error extracting text', error as Error, { metadata: { filename } });
       return this.generateDemoContent(filename);
     }
   }
@@ -444,7 +445,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       });
 
       const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
-      console.log(`[DocumentProcessor] Detailed lots extraction for ${filename}:`, responseText);
+      logger.debug('DocumentProcessor - Detailed lots extraction response', { metadata: { filename, responseLength: responseText.length } });
 
       // Parser la réponse JSON
       let jsonText = responseText.trim();
@@ -457,7 +458,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       const extractedData = JSON.parse(jsonText);
       
       if (!extractedData.lots || !Array.isArray(extractedData.lots)) {
-        console.warn(`[DocumentProcessor] No lots found in ${filename}`);
+        logger.warn('DocumentProcessor - No lots found in document', { metadata: { filename } });
         return [];
       }
 
@@ -483,11 +484,11 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         technicalDetails: lot.technicalDetails || null,
       }));
 
-      console.log(`[DocumentProcessor] Extracted ${cleanedLots.length} lots from ${filename}`);
+      logger.info('DocumentProcessor - Extracted lots', { metadata: { filename, lotsCount: cleanedLots.length } });
       return cleanedLots;
 
     } catch (error) {
-      console.error(`[DocumentProcessor] Error extracting detailed lots from ${filename}:`, error);
+      logger.error('DocumentProcessor - Error extracting detailed lots', error as Error, { metadata: { filename } });
       return [];
     }
   }

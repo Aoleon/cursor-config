@@ -4,6 +4,7 @@
  */
 
 import { subWeeks, subMonths, subYears } from 'date-fns';
+import { logger } from './utils/logger';
 
 /**
  * Calcule automatiquement la date de remise à J-15 de la date limite
@@ -17,7 +18,7 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
     const dateLimite = typeof dateLimiteRemise === 'string' ? new Date(dateLimiteRemise) : dateLimiteRemise;
     
     if (isNaN(dateLimite.getTime())) {
-      console.warn('[DateUtils] Date limite invalide:', dateLimiteRemise);
+      logger.warn('DateUtils - Date limite invalide', { metadata: { dateLimiteRemise } });
       return undefined;
     }
 
@@ -25,11 +26,16 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
     const dateRemise = new Date(dateLimite);
     dateRemise.setDate(dateRemise.getDate() - 15);
 
-    console.log(`[DateUtils] Date limite: ${dateLimite.toLocaleDateString('fr-FR')}, Date remise calculée (J-15): ${dateRemise.toLocaleDateString('fr-FR')}`);
+    logger.debug('DateUtils - Date remise calculée', { 
+      metadata: { 
+        dateLimite: dateLimite.toLocaleDateString('fr-FR'), 
+        dateRemise: dateRemise.toLocaleDateString('fr-FR') 
+      } 
+    });
     
     return dateRemise;
   } catch (error) {
-    console.error('[DateUtils] Erreur lors du calcul de la date de remise:', error);
+    logger.error('DateUtils - Erreur calcul date de remise', error as Error);
     return undefined;
   }
 }
@@ -45,7 +51,7 @@ export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null,
     const dateSortie = typeof dateSortieAO === 'string' ? new Date(dateSortieAO) : dateSortieAO;
     
     if (isNaN(dateSortie.getTime())) {
-      console.warn('[DateUtils] Date de sortie AO invalide:', dateSortieAO);
+      logger.warn('DateUtils - Date de sortie AO invalide', { metadata: { dateSortieAO } });
       return undefined;
     }
 
@@ -53,11 +59,17 @@ export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null,
     const dateLimite = new Date(dateSortie);
     dateLimite.setDate(dateLimite.getDate() + delaiJours);
 
-    console.log(`[DateUtils] Date sortie AO: ${dateSortie.toLocaleDateString('fr-FR')}, Date limite calculée (+${delaiJours}j): ${dateLimite.toLocaleDateString('fr-FR')}`);
+    logger.debug('DateUtils - Date limite calculée', { 
+      metadata: { 
+        dateSortie: dateSortie.toLocaleDateString('fr-FR'), 
+        dateLimite: dateLimite.toLocaleDateString('fr-FR'),
+        delaiJours 
+      } 
+    });
     
     return dateLimite;
   } catch (error) {
-    console.error('[DateUtils] Erreur lors du calcul de la date limite de remise:', error);
+    logger.error('DateUtils - Erreur calcul date limite de remise', error as Error);
     return undefined;
   }
 }
@@ -96,7 +108,7 @@ export function calculerDatesImportantes(
       // Calculer automatiquement la date de remise (J-15)
       dates.dateRemiseCalculee = calculerDateRemiseJ15(dates.dateLimiteRemise);
     } catch (error) {
-      console.warn('[DateUtils] Erreur parsing date limite:', error);
+      logger.warn('DateUtils - Erreur parsing date limite', { metadata: { error: String(error) } });
     }
   }
 
@@ -105,7 +117,7 @@ export function calculerDatesImportantes(
     try {
       dates.demarragePrevu = typeof demarragePrevu === 'string' ? new Date(demarragePrevu) : demarragePrevu;
     } catch (error) {
-      console.warn('[DateUtils] Erreur parsing date démarrage:', error);
+      logger.warn('DateUtils - Erreur parsing date démarrage', { metadata: { error: String(error) } });
     }
   }
 
@@ -114,7 +126,7 @@ export function calculerDatesImportantes(
     try {
       dates.dateLivraisonPrevue = typeof dateLivraisonPrevue === 'string' ? new Date(dateLivraisonPrevue) : dateLivraisonPrevue;
     } catch (error) {
-      console.warn('[DateUtils] Erreur parsing date livraison:', error);
+      logger.warn('DateUtils - Erreur parsing date livraison', { metadata: { error: String(error) } });
     }
   }
 
@@ -144,7 +156,7 @@ export function formaterDateFR(date?: Date | string | null, options: Intl.DateTi
 
     return dateObj.toLocaleDateString('fr-FR', defaultOptions);
   } catch (error) {
-    console.warn('[DateUtils] Erreur formatage date:', error);
+    logger.warn('DateUtils - Erreur formatage date', { metadata: { error: String(error) } });
     return '';
   }
 }
@@ -169,7 +181,7 @@ export function calculerNombreJours(dateDebut?: Date | string | null, dateFin?: 
 
     return diffDays;
   } catch (error) {
-    console.warn('[DateUtils] Erreur calcul nombre de jours:', error);
+    logger.warn('DateUtils - Erreur calcul nombre de jours', { metadata: { error: String(error) } });
     return null;
   }
 }

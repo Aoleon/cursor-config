@@ -1,6 +1,7 @@
 import { IStorage } from "../storage-poc";
 import { eventBus } from "../eventBus";
 import { logger } from "../utils/logger";
+import { NotFoundError, DatabaseError } from "../utils/error-handler";
 import type { 
   ProjectTimeline, InsertProjectTimeline,
   DateIntelligenceRule, InsertDateIntelligenceRule,
@@ -507,7 +508,7 @@ export class DateIntelligenceService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error(`Impossible de calculer la durée pour la phase ${phase}: ${error.message}`);
+      throw new DatabaseError(`Impossible de calculer la durée pour la phase ${phase}`, error as Error);
     }
   }
 
@@ -523,7 +524,7 @@ export class DateIntelligenceService {
       // Récupérer le projet
       const project = await this.storage.getProject(projectId);
       if (!project) {
-        throw new Error(`Projet ${projectId} non trouvé`);
+        throw new NotFoundError(`Projet ${projectId}`);
       }
 
       // Construire le contexte du projet
@@ -593,7 +594,7 @@ export class DateIntelligenceService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error(`Impossible de générer la timeline du projet ${projectId}: ${error.message}`);
+      throw new DatabaseError(`Impossible de générer la timeline du projet ${projectId}`, error as Error);
     }
   }
 
@@ -693,7 +694,7 @@ export class DateIntelligenceService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error(`Impossible de recalculer depuis la phase ${fromPhase}: ${error.message}`);
+      throw new DatabaseError(`Impossible de recalculer depuis la phase ${fromPhase}`, error as Error);
     }
   }
 
@@ -753,7 +754,7 @@ export class DateIntelligenceService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error(`Impossible d'appliquer les règles d'intelligence: ${error.message}`);
+      throw new DatabaseError(`Impossible d'appliquer les règles d'intelligence`, error as Error);
     }
   }
 
@@ -877,7 +878,7 @@ export class DateIntelligenceService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error(`Impossible de détecter les problèmes de planification: ${error.message}`);
+      throw new DatabaseError(`Impossible de détecter les problèmes de planification`, error as Error);
     }
   }
 

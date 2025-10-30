@@ -1,5 +1,7 @@
 // Simple ACL management for Replit Object Storage
 
+import { logger } from './utils/logger';
+
 const ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
 
 // The type of the access group.
@@ -112,7 +114,7 @@ export async function setObjectAclPolicy(
 ): Promise<void> {
   // For POC, we'll store ACL info in our database rather than object metadata
   // This could be expanded to use Replit's metadata system later
-  console.log(`Setting ACL policy for ${objectPath}:`, aclPolicy);
+  logger.debug('ObjectAcl - Setting ACL policy', { metadata: { objectPath, aclPolicy } });
 }
 
 // Gets the ACL policy from the object metadata (simplified for POC).

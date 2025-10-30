@@ -17,6 +17,7 @@ import type { IStorage } from "../storage-poc";
 import { eq, and, or, desc, asc, gt, gte, lte, inArray, sql, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { logger } from "../utils/logger";
+import { DatabaseError } from '../utils/error-handler';
 
 export class RBACService {
   constructor(private storage: IStorage) {}
@@ -112,7 +113,7 @@ export class RBACService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Erreur lors de la récupération des permissions utilisateur');
+      throw new DatabaseError('Erreur lors de la récupération des permissions utilisateur', error as Error);
     }
   }
 
@@ -256,7 +257,7 @@ export class RBACService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Erreur lors de la création du contexte');
+      throw new DatabaseError('Erreur lors de la création du contexte', error as Error);
     }
   }
 
@@ -299,7 +300,7 @@ export class RBACService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Erreur lors de l\'assignation du contexte');
+      throw new DatabaseError('Erreur lors de l\'assignation du contexte', error as Error);
     }
   }
 
@@ -356,7 +357,7 @@ export class RBACService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Erreur lors de la récupération de l\'audit');
+      throw new DatabaseError('Erreur lors de la récupération de l\'audit', error as Error);
     }
   }
 

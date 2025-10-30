@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { logger } from './utils/logger';
 
 // Configuration de connexion Sage Batigest
 const batigestConfig = {
@@ -250,7 +251,7 @@ export class BatigestService {
       if (SIMULATION_MODE) {
         await simulateLatency(50, 150);
         this.isConnected = true;
-        console.log('Mode simulation Batigest activé');
+        logger.info('BatigestService - Simulation mode enabled');
         return;
       }
 
@@ -260,10 +261,10 @@ export class BatigestService {
         this.pool = new sql.ConnectionPool(batigestConfig);
         await this.pool.connect();
         this.isConnected = true;
-        console.log('Connexion Sage Batigest établie');
+        logger.info('BatigestService - Connection established');
       }
     } catch (error) {
-      console.error('Erreur connexion Batigest:', error);
+      logger.error('BatigestService - Connection error', error as Error);
       throw new Error('Impossible de se connecter à Sage Batigest');
     }
   }
@@ -275,7 +276,7 @@ export class BatigestService {
     if (this.pool && this.isConnected) {
       await this.pool.close();
       this.isConnected = false;
-      console.log('Connexion Sage Batigest fermée');
+      logger.info('BatigestService - Connection closed');
     }
   }
 
@@ -514,7 +515,7 @@ export class BatigestService {
       };
       
     } catch (error) {
-      console.error('Erreur synchronisation Batigest:', error);
+      logger.error('BatigestService - Synchronization error', error as Error);
       return {
         synchronized: false,
         message: 'Erreur lors de la synchronisation avec Batigest'
@@ -737,7 +738,7 @@ export class BatigestService {
         const year = new Date().getFullYear();
         const generatedCode = `CHT-${year}-${hash}`;
         
-        console.log(`[BATIGEST] 🏗️ Code chantier généré automatiquement: ${generatedCode} pour projet ${projectId}`);
+        logger.info('BatigestService - Code chantier generated', { metadata: { generatedCode, projectId } });
         
         // Simuler le cas où un code existe déjà (idempotence)
         if (Math.random() > 0.8) {
@@ -819,7 +820,7 @@ export class BatigestService {
       
       await insertRequest.query(insertQuery);
       
-      console.log(`[BATIGEST] ✅ Nouveau code chantier créé dans Batigest: ${generatedCode}`);
+      logger.info('BatigestService - New code chantier created', { metadata: { generatedCode } });
       
       return {
         success: true,
@@ -829,7 +830,7 @@ export class BatigestService {
       };
       
     } catch (error) {
-      console.error('[BATIGEST] ❌ Erreur génération code chantier:', error);
+      logger.error('BatigestService - Error generating code chantier', error as Error);
       return {
         success: false,
         message: `Erreur lors de la génération automatique du code chantier: ${error instanceof Error ? error.message : 'Erreur inconnue'}`

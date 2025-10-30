@@ -13,6 +13,7 @@
 
 import { z } from 'zod';
 import type { MondayAoData, MondayProjectData } from './mondayDataGenerator';
+import { logger } from './logger';
 
 // ========================================
 // UTILITAIRES DATES MONDAY.COM
@@ -194,7 +195,7 @@ function fallbackClientName(name: string): string {
   }
   
   if (!isValidForProduction(normalized)) {
-    console.warn(`[FALLBACK] Client name normalized: "${name}" → "CLIENT_EXCEL_NORMALISE"`);
+    logger.warn('MondayValidator - Client name normalized', { metadata: { original: name, fallback: 'CLIENT_EXCEL_NORMALISE' } });
     return 'CLIENT_EXCEL_NORMALISE';
   }
   
@@ -213,7 +214,7 @@ function fallbackGeographicName(name: string): string {
   }
   
   if (!isValidForProduction(normalized)) {
-    console.warn(`[FALLBACK] Geographic name normalized: "${name}" → "ZONE_EXCEL_NORMALISEE"`);
+    logger.warn('MondayValidator - Geographic name normalized', { metadata: { original: name, fallback: 'ZONE_EXCEL_NORMALISEE' } });
     return 'ZONE_EXCEL_NORMALISEE';
   }
   
@@ -226,10 +227,16 @@ function fallbackGeographicName(name: string): string {
  */
 function debugValidationValue(fieldName: string, value: string): void {
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[DEBUG] Validation ${fieldName}: "${value}" (type: ${typeof value})`);
-    console.log(`[DEBUG] Caractères: ${JSON.stringify([...value])}`);
-    console.log(`[DEBUG] Codes char: ${[...value].map(c => c.charCodeAt(0)).join(', ')}`);
-    console.log(`[DEBUG] Valid for production: ${isValidForProduction(value)}`);
+    logger.debug('MondayValidator - Validation debug', { 
+      metadata: { 
+        fieldName, 
+        value, 
+        type: typeof value, 
+        chars: JSON.stringify([...value]), 
+        charCodes: [...value].map(c => c.charCodeAt(0)).join(', '),
+        isValid: isValidForProduction(value)
+      } 
+    });
   }
 }
 

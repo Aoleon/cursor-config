@@ -3,6 +3,7 @@ import { eq, and, or, desc, asc, gte, lte, sql, count, avg, max, min, isNull, in
 import type { EventBus } from "../eventBus";
 import type { IStorage } from "../storage-poc";
 import { logger } from '../utils/logger';
+import { DatabaseError } from '../utils/error-handler';
 import { 
   auditLogs, 
   securityAlerts, 
@@ -18,7 +19,6 @@ import {
   type SecurityAlertsQuery
 } from "@shared/schema";
 import crypto from "crypto";
-import { logger } from '../utils/logger';
 
 // ========================================
 // TYPES ET INTERFACES POUR LE SERVICE D'AUDIT
@@ -200,7 +200,7 @@ export class AuditService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Échec du logging d\'audit');
+      throw new DatabaseError('Échec du logging d\'audit', error as Error);
     }
   }
 
@@ -303,7 +303,7 @@ export class AuditService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Échec de création d\'alerte de sécurité');
+      throw new DatabaseError('Échec de création d\'alerte de sécurité', error as Error);
     }
   }
 
@@ -599,7 +599,7 @@ export class AuditService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Échec de récupération des logs d\'audit');
+      throw new DatabaseError('Échec de récupération des logs d\'audit', error as Error);
     }
   }
 
@@ -682,7 +682,7 @@ export class AuditService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Échec de récupération des alertes de sécurité');
+      throw new DatabaseError('Échec de récupération des alertes de sécurité', error as Error);
     }
   }
 
@@ -755,7 +755,7 @@ export class AuditService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Échec de calcul des métriques de sécurité');
+      throw new DatabaseError('Échec de calcul des métriques de sécurité', error as Error);
     }
   }
 
@@ -849,7 +849,7 @@ export class AuditService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Échec de calcul des analytics chatbot');
+      throw new DatabaseError('Échec de calcul des analytics chatbot', error as Error);
     }
   }
 
@@ -924,7 +924,7 @@ export class AuditService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Échec de génération du rapport d\'activité utilisateur');
+      throw new DatabaseError('Échec de génération du rapport d\'activité utilisateur', error as Error);
     }
   }
 
@@ -1100,7 +1100,7 @@ export class AuditService {
           stack: error instanceof Error ? error.stack : undefined
         }
       });
-      throw new Error('Échec d\'export CSV des logs d\'audit');
+      throw new DatabaseError('Échec d\'export CSV des logs d\'audit', error as Error);
     }
   }
 

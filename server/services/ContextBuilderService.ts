@@ -2,6 +2,7 @@ import { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { eq, and, desc, sql, or, inArray, isNotNull, gte, lte } from "drizzle-orm";
 import { logger } from '../utils/logger';
+import { NotFoundError } from '../utils/error-handler';
 import type { 
   AIContextualData,
   TechnicalContext,
@@ -574,7 +575,7 @@ export class ContextBuilderService {
       
       const aoData = aoResults[0];
       if (!aoData) {
-        throw new Error(`AO ${config.entityId} non trouvé`);
+        throw new NotFoundError(`AO ${config.entityId}`);
       }
 
       const lots = lotsResults;
@@ -771,7 +772,7 @@ export class ContextBuilderService {
       
       const offerData = offerResults[0];
       if (!offerData) {
-        throw new Error(`Offre ${config.entityId} non trouvée`);
+        throw new NotFoundError(`Offre ${config.entityId}`);
       }
       
       const chiffrageItems = chiffrageResults;
@@ -876,7 +877,7 @@ export class ContextBuilderService {
         .limit(1);
       
       if (!projectData) {
-        throw new Error(`Projet ${config.entityId} non trouvé`);
+        throw new NotFoundError(`Projet ${config.entityId}`);
       }
 
       this.addToMetrics('projects');
@@ -1021,7 +1022,7 @@ export class ContextBuilderService {
         .limit(1);
       
       if (!supplierData) {
-        throw new Error(`Fournisseur ${config.entityId} non trouvé`);
+        throw new NotFoundError(`Fournisseur ${config.entityId}`);
       }
 
       this.addToMetrics('suppliers');
@@ -1137,7 +1138,7 @@ export class ContextBuilderService {
         .limit(1);
       
       if (!teamData) {
-        throw new Error(`Équipe ${config.entityId} non trouvée`);
+        throw new NotFoundError(`Équipe ${config.entityId}`);
       }
 
       this.addToMetrics('teams');

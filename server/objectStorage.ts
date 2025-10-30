@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { randomUUID } from "crypto";
 import path from "path";
+import { logger } from './utils/logger';
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
@@ -128,7 +129,7 @@ export class ObjectStorageService {
   // Downloads an object from storage via Replit sidecar
   async downloadObject(objectPath: string, res: Response) {
     try {
-      console.log(`[ObjectStorage] Downloading object: ${objectPath}`);
+      logger.debug('ObjectStorage - Downloading object', { metadata: { objectPath } });
       // Use Replit's sidecar to get the file
       const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/get-object`, {
         method: "POST",
@@ -138,9 +139,9 @@ export class ObjectStorageService {
         body: JSON.stringify({ object_path: objectPath }),
       });
 
-      console.log(`[ObjectStorage] Download response status: ${response.status}`);
+      logger.debug('ObjectStorage - Download response', { metadata: { objectPath, status: response.status } });
       if (!response.ok) {
-        console.log(`[ObjectStorage] Download failed with status ${response.status}`);
+        logger.warn('ObjectStorage - Download failed', { metadata: { objectPath, status: response.status } });
         return res.status(404).json({ error: "File not found" });
       }
 
@@ -165,7 +166,7 @@ export class ObjectStorageService {
       
       res.end();
     } catch (error) {
-      console.error("Error downloading file:", error);
+      logger.error('ObjectStorage - Error downloading file', error as Error);
       if (!res.headersSent) {
         res.status(500).json({ error: "Error downloading file" });
       }
@@ -199,7 +200,7 @@ export class ObjectStorageService {
   // Checks if an object exists in storage
   async objectExists(objectPath: string): Promise<boolean> {
     try {
-      console.log(`[ObjectStorage] Checking if object exists: ${objectPath}`);
+      logger.debug('ObjectStorage - Checking if object exists', { metadata: { objectPath } });
       const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/object-exists`, {
         method: "POST",
         headers: {
@@ -208,16 +209,16 @@ export class ObjectStorageService {
         body: JSON.stringify({ object_path: objectPath }),
       });
       
-      console.log(`[ObjectStorage] Object exists response status: ${response.status}`);
+      logger.debug('ObjectStorage - Object exists response', { metadata: { objectPath, status: response.status } });
       if (!response.ok) {
-        console.log(`[ObjectStorage] Object exists failed with status ${response.status}`);
+        logger.warn('ObjectStorage - Object exists check failed', { metadata: { objectPath, status: response.status } });
         return false;
       }
       const data = await response.json();
-      console.log(`[ObjectStorage] Object exists data:`, data);
+      logger.debug('ObjectStorage - Object exists result', { metadata: { objectPath, exists: data.exists } });
       return data.exists === true;
     } catch (error) {
-      console.error("Error checking object existence:", error);
+      logger.error('ObjectStorage - Error checking object existence', error as Error, { metadata: { objectPath } });
       return false;
     }
   }
@@ -277,7 +278,7 @@ export class ObjectStorageService {
           }
         });
       } catch (error) {
-        console.error(`Error creating folder ${folder}:`, error);
+        logger.error('ObjectStorage - Error creating folder', error as Error, { metadata: { folder } });
       }
     }
     
@@ -303,7 +304,7 @@ export class ObjectStorageService {
     const filePath = `${privateObjectDir}/offers/${offerId}/${validatedFolder}/${sanitizedFileName}`;
     
     // Log security-related upload attempts for monitoring
-    console.log(`[ObjectStorage] Secure upload URL generated: offer=${offerId}, folder=${validatedFolder}, file=${sanitizedFileName}`);
+    logger.info('ObjectStorage - Secure upload URL generated', { metadata: { offerId, folder: validatedFolder, file: sanitizedFileName } });
     
     const { bucketName, objectName } = parseObjectPath(filePath);
 
@@ -337,7 +338,7 @@ export class ObjectStorageService {
     const timestamp = Date.now();
     const filePath = `${privateObjectDir}/supplier-quotes/${sessionId}/${timestamp}_${sanitizedFileName}`;
     
-    console.log(`[ObjectStorage] Uploading supplier document: session=${sessionId}, file=${sanitizedFileName}, size=${fileBuffer.length} bytes`);
+    logger.info('ObjectStorage - Uploading supplier document', { metadata: { sessionId, file: sanitizedFileName, size: fileBuffer.length } });
     
     const { bucketName, objectName } = parseObjectPath(filePath);
 
@@ -372,7 +373,7 @@ export class ObjectStorageService {
       throw new Error(`Failed to upload file: ${uploadResponse.status} ${uploadResponse.statusText}`);
     }
 
-    console.log(`[ObjectStorage] ✅ Supplier document uploaded successfully: ${filePath}`);
+    logger.info('ObjectStorage - Supplier document uploaded successfully', { metadata: { filePath } });
 
     return {
       filePath,

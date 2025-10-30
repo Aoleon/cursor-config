@@ -1,5 +1,6 @@
 import Decimal from "decimal.js-light";
 import type { ChiffrageElement, Offer, Ao, AoLot } from "@shared/schema";
+import { ValidationError } from "../utils/error-handler";
 
 // Configuration pour les calculs financiers précis
 Decimal.config({
@@ -103,7 +104,7 @@ export class DpgfComputeService {
     );
 
     if (filteredElements.length === 0) {
-      throw new Error("Aucun élément de chiffrage disponible pour le calcul DPGF");
+      throw new ValidationError("Aucun élément de chiffrage disponible pour le calcul DPGF");
     }
 
     // Transformer en lignes avec calculs

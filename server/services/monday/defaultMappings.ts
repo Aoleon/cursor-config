@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { logger } from '../../utils/logger';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -45,7 +46,7 @@ export function getBoardConfig(boardId: string): MondaySplitterConfig | null {
       return config;
     }
   } catch (error: any) {
-    console.warn(`Failed to load board config from file for ${boardId}:`, error.message);
+    logger.warn('Failed to load board config from file', { metadata: { boardId, errorMessage: error.message } });
   }
   
   // 2. Fallback vers config hardcodée

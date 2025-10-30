@@ -26,14 +26,22 @@ The application employs a modern fullstack architecture. The frontend leverages 
 
 **Target Architecture:**
 - **Storage Layer**: Repository Pattern via `StorageFacade` (server/storage/facade/StorageFacade.ts)
-  - ✅ Commercial: AoRepository, OfferRepository
-  - ✅ Analytics: KpiRepository
-  - ⏳ Production, Suppliers, Projects (planned)
+  - ✅ Commercial: AoRepository (982 LOC), OfferRepository (1,232 LOC)
+  - ✅ Production: ProductionRepository (982 LOC, 33 methods)
+  - ✅ Suppliers: SuppliersRepository (1,232 LOC, 35 methods)
+  - ✅ Analytics: KpiRepository (optimized from 132 queries to 1 CTE)
 - **Routes Layer**: Modular routes in `server/modules/`
-  - ✅ Chiffrage, Analytics, Documents, Projects, Suppliers
-  - ⏳ Commercial (AOs/Offers migration planned)
+  - ✅ Commercial (1,879 LOC, 35 routes) - AOs, Offers, Contacts, Lots, Supplier Requests
+  - ✅ Projects (933 LOC, 29 routes) - Production, SAV, Tasks, Contacts
+  - ✅ Chiffrage, Analytics, Documents, Suppliers
 - **Services**: Domain-based grouping
   - Integration (Monday), Intelligence (AI/Context), Monitoring (Analytics/Metrics)
+
+**Migration Progress:**
+- 68 methods extracted across 4 repositories (3,332 LOC modular vs 8,758 LOC monolithic = 38% reduction)
+- Commercial routes migrated and operational with startup logging
+- Double cast pattern `as unknown as IStorage` enables progressive migration
+- All modules active and validated by architect review
 
 **Migration Pattern:**
 1. Create repository with tests → 2. Update StorageFacade → 3. Routes use facade → 4. Verify parity → 5. Remove legacy code

@@ -1,0 +1,1712 @@
+/**
+ * MONDAY DATA SERVICE - Consolidated Data Transformation Pipeline
+ * 
+ * Consolidates 3 services into unified data transformation API:
+ * - MondayImportService (Import Monday → Saxium)
+ * - MondayExportService (Export Saxium → Monday)
+ * - MondayDataSplitter (Split Monday items into multiple entities)
+ * 
+ * Dependencies:
+ * - MondayIntegrationService: GraphQL execution
+ * - Storage: Database operations
+ * - EventBus: Event publishing
+ * - Validators: Data validation
+ * - Extractors: Entity extraction from Monday items
+ * 
+ * Target LOC: ~1,800 (from 1,794)
+ */
+
+import { mondayIntegrationService } from './MondayIntegrationService';
+import type { 
+  MondayItem, 
+  ImportMapping, 
+  ImportResult 
+} from './MondayIntegrationService';
+import { IStorage, storage } from '../../storage-poc';
+import { logger } from '../../utils/logger';
+import { eventBus } from '../../eventBus';
+import { EventType } from '../../../shared/events';
+import { getCorrelationId } from '../../middleware/correlation';
+import { withRetry } from '../../utils/retry-helper';
+import { 
+  InsertProject, 
+  InsertAo, 
+  InsertSupplier, 
+  InsertProjectTask 
+} from '../../../shared/schema';
+import { 
+  AOBaseExtractor, 
+  LotExtractor, 
+  ContactExtractor, 
+  AddressExtractor,
+  MasterEntityExtractor
+} from '../monday/extractors';
+import type { 
+  SplitterContext, 
+  SplitResult, 
+  MondaySplitterConfig 
+} from '../monday/types';
+import { getBoardConfig } from '../monday/defaultMappings';
+import type { ExtractedContactData, IndividualContactData } from '../../contactService';
+import { 
+  validateMondayDateFormat, 
+  parseMondayDate, 
+  validateAndParseMondayDate 
+} from '../../utils/mondayValidator';
+
+// ========================================
+// TYPE DEFINITIONS
+// ========================================
+
+export interface TransformOptions {
+  validateDates?: boolean;
+  validateEnums?: boolean;
+  applyDefaults?: boolean;
+  skipInvalidFields?: boolean;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface SplitOptions {
+  dryRun?: boolean;
+  config?: MondaySplitterConfig;
+  validateBeforeSplit?: boolean;
+}
+
+export interface ExportOptions {
+  boardId?: string;
+  updateIfExists?: boolean;
+  syncNewFields?: boolean;
+}
+
+export interface PreviewResult {
+  boardName: string;
+  itemCount: number;
+  columns: any[];
+  suggestedMappings: any[];
+}
+
+// ========================================
+// MONDAY DATA SERVICE
+// ========================================
+
+export class MondayDataService {
+  private storage: IStorage;
+  private aoBaseExtractor: AOBaseExtractor;
+  private lotExtractor: LotExtractor;
+  private contactExtractor: ContactExtractor;
+  private addressExtractor: AddressExtractor;
+  private masterEntityExtractor: MasterEntityExtractor;
+
+  constructor(storage: IStorage) {
+    this.storage = storage;
+    this.aoBaseExtractor = new AOBaseExtractor();
+    this.lotExtractor = new LotExtractor();
+    this.contactExtractor = new ContactExtractor();
+    this.addressExtractor = new AddressExtractor();
+    this.masterEntityExtractor = new MasterEntityExtractor();
+
+    logger.info('MondayDataService initialized', {
+      service: 'MondayDataService',
+      metadata: { operation: 'constructor' }
+    });
+  }
+
+  // ========================================
+  // IMPORT METHODS (from MondayImportService)
+  // ========================================
+
+  /**
+   * Import Monday board items as Projects
+   * Preserves exact behavior from MondayImportService.importBoardAsProjects
+   */
+  async importFromMonday(
+    boardId: string, 
+    mapping: ImportMapping,
+    targetEntity: 'project' | 'ao' | 'supplier' = 'project'
+  ): Promise<ImportResult> {
+    const correlationId = getCorrelationId();
+    const result: ImportResult = {
+      success: true,
+      importedCount: 0,
+      errors: [],
+      createdIds: []
+    };
+
+    try {
+      logger.info(`Démarrage import Monday board vers ${targetEntity}s`, {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'importFromMonday',
+          boardId,
+          targetEntity,
+          mappingCount: mapping.columnMappings.length,
+          correlationId
+        }
+      });
+
+      const boardData = await mondayIntegrationService.getBoardData(boardId);
+      const items = boardData.items;
+
+      for (const item of items) {
+        try {
+          let createdId: string;
+          
+          switch (targetEntity) {
+            case 'project':
+              createdId = await this.importItemAsProject(item, mapping);
+              break;
+            case 'ao':
+              createdId = await this.importItemAsAO(item, mapping, boardId);
+              break;
+            case 'supplier':
+              createdId = await this.importItemAsSupplier(item, mapping);
+              break;
+            default:
+              throw new Error(`Unsupported target entity: ${targetEntity}`);
+          }
+
+          result.importedCount++;
+          result.createdIds.push(createdId);
+
+        } catch (error: any) {
+          result.errors.push(`Item ${item.id}: ${error.message}`);
+          result.success = false;
+        }
+      }
+
+      logger.info('Import Monday terminé', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'importFromMonday',
+          targetEntity,
+          importedCount: result.importedCount,
+          errorCount: result.errors.length,
+          correlationId
+        }
+      });
+
+      return result;
+    } catch (error: any) {
+      logger.error('Erreur import Monday', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'importFromMonday',
+          targetEntity,
+          error: error.message,
+          correlationId
+        }
+      });
+
+      result.success = false;
+      result.errors.push(error.message);
+      return result;
+    }
+  }
+
+  /**
+   * Import single Monday item as Project
+   */
+  private async importItemAsProject(item: MondayItem, mapping: ImportMapping): Promise<string> {
+    const projectData = this.mapItemToProject(item, mapping);
+    
+    if (!projectData.name) {
+      throw new Error('nom manquant');
+    }
+
+    const project = await this.storage.createProject(projectData);
+
+    eventBus.publish({
+      id: crypto.randomUUID(),
+      type: EventType.PROJECT_CREATED,
+      entity: 'project',
+      entityId: project.id,
+      message: `Projet "${project.name}" importé depuis Monday.com`,
+      severity: 'success',
+      affectedQueryKeys: [['/api/projects']],
+      userId: 'monday-import',
+      timestamp: new Date().toISOString(),
+      metadata: {
+        source: 'monday.com',
+        mondayItemId: item.id,
+        boardId: mapping.mondayBoardId
+      }
+    });
+
+    logger.info('Projet créé depuis Monday', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'importItemAsProject',
+        projectId: project.id,
+        mondayItemId: item.id
+      }
+    });
+
+    return project.id;
+  }
+
+  /**
+   * Import single Monday item as AO
+   */
+  private async importItemAsAO(item: MondayItem, mapping: ImportMapping, boardId: string): Promise<string> {
+    const aoData = this.mapItemToAO(item, mapping);
+    
+    if (!aoData.reference) {
+      throw new Error('référence manquante');
+    }
+
+    const ao = await this.storage.createAo(aoData);
+
+    eventBus.publish({
+      id: crypto.randomUUID(),
+      type: EventType.OFFER_CREATED,
+      entity: 'offer',
+      entityId: ao.id,
+      message: `AO "${ao.reference}" importé depuis Monday.com`,
+      severity: 'success',
+      affectedQueryKeys: [['/api/aos']],
+      userId: 'monday-import',
+      timestamp: new Date().toISOString(),
+      metadata: {
+        source: 'monday.com',
+        mondayItemId: item.id,
+        boardId
+      }
+    });
+
+    logger.info('AO créé depuis Monday', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'importItemAsAO',
+        aoId: ao.id,
+        mondayItemId: item.id
+      }
+    });
+
+    return ao.id;
+  }
+
+  /**
+   * Import single Monday item as Supplier
+   */
+  private async importItemAsSupplier(item: MondayItem, mapping: ImportMapping): Promise<string> {
+    const supplierData = this.mapItemToSupplier(item, mapping);
+    
+    if (!supplierData.name) {
+      throw new Error('nom fournisseur manquant');
+    }
+
+    const supplier = await this.storage.createSupplier(supplierData);
+
+    logger.info('Fournisseur créé depuis Monday', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'importItemAsSupplier',
+        supplierId: supplier.id,
+        mondayItemId: item.id
+      }
+    });
+
+    return supplier.id;
+  }
+
+  /**
+   * Synchronize changes from Monday.com webhook
+   * Supports create, update, delete operations
+   */
+  async syncFromMonday(params: {
+    boardId: string;
+    itemId: string;
+    changeType: 'create' | 'update' | 'delete';
+    data?: any;
+    mondayUpdatedAt?: Date;
+  }): Promise<void> {
+    const { boardId, itemId, changeType, data, mondayUpdatedAt } = params;
+    const correlationId = getCorrelationId();
+    
+    logger.info('[MondayDataService] Sync depuis Monday', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'syncFromMonday',
+        boardId,
+        itemId,
+        changeType,
+        correlationId
+      }
+    });
+    
+    try {
+      const item = await mondayIntegrationService.getItem(itemId);
+      const entityType = this.determineEntityType(item, boardId);
+      
+      if (changeType === 'delete') {
+        logger.info('[MondayDataService] Suppression détectée', {
+          service: 'MondayDataService',
+          metadata: {
+            operation: 'syncFromMonday',
+            itemId,
+            entityType,
+            changeType: 'delete'
+          }
+        });
+        return;
+      }
+      
+      let saxiumEntity: any;
+      let createdId: string | undefined;
+      
+      if (entityType === 'project') {
+        const mapping: ImportMapping = {
+          mondayBoardId: boardId,
+          targetEntity: 'project',
+          columnMappings: []
+        };
+        
+        const projectData = this.mapItemToProject(item, mapping);
+        
+        if (changeType === 'create') {
+          const created = await this.storage.createProject(projectData);
+          createdId = created.id;
+          saxiumEntity = created;
+        } else if (changeType === 'update') {
+          const { projects } = await this.storage.getProjectsPaginated(undefined, undefined, 100, 0);
+          const existingProject = projects.find(p => 
+            p.mondayId === itemId || p.name === item.name
+          );
+          
+          if (existingProject) {
+            this.handleConflict(existingProject, mondayUpdatedAt, 'project', itemId);
+            saxiumEntity = await this.storage.updateProject(existingProject.id, projectData);
+            createdId = existingProject.id;
+          } else {
+            const created = await this.storage.createProject(projectData);
+            createdId = created.id;
+            saxiumEntity = created;
+          }
+        }
+      } else if (entityType === 'ao') {
+        const mapping: ImportMapping = {
+          mondayBoardId: boardId,
+          targetEntity: 'ao',
+          columnMappings: []
+        };
+        
+        const aoData = this.mapItemToAO(item, mapping);
+        
+        if (changeType === 'create') {
+          const created = await this.storage.createAo(aoData);
+          createdId = created.id;
+          saxiumEntity = created;
+        } else if (changeType === 'update') {
+          const aos = await this.storage.getAos();
+          const existingAo = aos.find(a => 
+            a.mondayId === itemId || a.reference === item.name
+          );
+          
+          if (existingAo) {
+            this.handleConflict(existingAo, mondayUpdatedAt, 'ao', itemId);
+            saxiumEntity = await this.storage.updateAo(existingAo.id, aoData);
+            createdId = existingAo.id;
+          } else {
+            const created = await this.storage.createAo(aoData);
+            createdId = created.id;
+            saxiumEntity = created;
+          }
+        }
+      }
+      
+      if (createdId) {
+        const eventEntity = entityType === 'ao' ? 'offer' : entityType;
+        
+        eventBus.publish({
+          id: crypto.randomUUID(),
+          type: 'monday:sync:success' as any,
+          entity: eventEntity as 'project' | 'offer' | 'supplier',
+          entityId: createdId,
+          message: `${entityType} synchronisé depuis Monday.com`,
+          severity: 'success',
+          affectedQueryKeys: [
+            [`/api/${entityType}s`],
+            [`/api/${entityType}s`, createdId]
+          ],
+          userId: 'monday-sync',
+          timestamp: new Date().toISOString(),
+          metadata: {
+            mondayId: itemId,
+            boardId,
+            changeType
+          }
+        });
+      }
+      
+      logger.info('[MondayDataService] Sync terminée avec succès', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'syncFromMonday',
+          entityType,
+          entityId: createdId,
+          mondayId: itemId,
+          changeType,
+          correlationId
+        }
+      });
+    } catch (error) {
+      logger.error('[MondayDataService] Erreur sync depuis Monday', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'syncFromMonday',
+          boardId,
+          itemId,
+          changeType,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
+      throw error;
+    }
+  }
+
+  // ========================================
+  // EXPORT METHODS (from MondayExportService)
+  // ========================================
+
+  /**
+   * Export Saxium entity to Monday.com
+   * Supports Project and AO entities
+   */
+  async exportToMonday(
+    entityType: 'project' | 'ao',
+    entityId: string,
+    options: ExportOptions = {}
+  ): Promise<string> {
+    const correlationId = getCorrelationId();
+    
+    logger.info('[MondayDataService] Début export vers Monday', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'exportToMonday',
+        entityType,
+        entityId,
+        correlationId
+      }
+    });
+
+    if (entityType === 'project') {
+      return this.exportProject(entityId, options);
+    } else if (entityType === 'ao') {
+      return this.exportAO(entityId, options);
+    } else {
+      throw new Error(`Unsupported entity type for export: ${entityType}`);
+    }
+  }
+
+  /**
+   * Export Project to Monday.com
+   * Idempotent: returns existing Monday ID if already exported
+   */
+  private async exportProject(projectId: string, options: ExportOptions): Promise<string> {
+    const correlationId = getCorrelationId();
+    
+    const project = await this.storage.getProject(projectId);
+    
+    if (!project) {
+      const error = new Error(`Project ${projectId} not found`);
+      logger.error('[MondayDataService] Projet non trouvé', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'exportProject',
+          projectId,
+          correlationId
+        }
+      });
+      throw error;
+    }
+
+    if (project.mondayId && !options.updateIfExists) {
+      logger.info('[MondayDataService] Projet déjà exporté', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'exportProject',
+          projectId,
+          mondayId: project.mondayId,
+          correlationId
+        }
+      });
+      return project.mondayId;
+    }
+    
+    const mutation = `
+      mutation CreateItem($boardId: ID!, $itemName: String!, $columnValues: JSON) {
+        create_item(board_id: $boardId, item_name: $itemName, column_values: $columnValues) {
+          id
+        }
+      }
+    `;
+    
+    const columnValues: Record<string, any> = {};
+    
+    if (project.status) {
+      columnValues.status = { label: project.status };
+    }
+    
+    if (project.startDate) {
+      columnValues.date = project.startDate.toISOString().split('T')[0];
+    }
+    
+    if (project.location) {
+      columnValues.location = project.location;
+    }
+    
+    if (project.client) {
+      columnValues.client = project.client;
+    }
+    
+    if (project.budget) {
+      columnValues.budget = Number(project.budget);
+    }
+
+    const mondayItem = await withRetry(
+      async () => {
+        logger.info('[MondayDataService] Création item Monday', {
+          service: 'MondayDataService',
+          metadata: {
+            operation: 'exportProject.createItem',
+            projectId,
+            projectName: project.name,
+            correlationId
+          }
+        });
+
+        const result = await mondayIntegrationService.executeGraphQL(mutation, {
+          boardId: options.boardId || process.env.MONDAY_PROJECTS_BOARD_ID || '123456',
+          itemName: project.name,
+          columnValues: JSON.stringify(columnValues)
+        });
+        
+        return result.create_item;
+      },
+      { 
+        maxRetries: 3,
+        initialDelay: 1000,
+        backoffMultiplier: 2
+      }
+    );
+    
+    if (!mondayItem || !mondayItem.id) {
+      const error = new Error('Monday.com item creation failed - no ID returned');
+      logger.error('[MondayDataService] Échec création item', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'exportProject',
+          projectId,
+          correlationId,
+          error: error.message
+        }
+      });
+      throw error;
+    }
+
+    await this.storage.updateProjectMondayId(projectId, mondayItem.id);
+    
+    logger.info('[MondayDataService] Projet exporté avec succès', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'exportProject',
+        projectId,
+        mondayId: mondayItem.id,
+        correlationId
+      }
+    });
+    
+    return mondayItem.id;
+  }
+
+  /**
+   * Export AO to Monday.com
+   * Idempotent: returns existing Monday ID if already exported
+   */
+  private async exportAO(aoId: string, options: ExportOptions): Promise<string> {
+    const correlationId = getCorrelationId();
+    
+    const ao = await this.storage.getAo(aoId);
+    
+    if (!ao) {
+      const error = new Error(`AO ${aoId} not found`);
+      logger.error('[MondayDataService] AO non trouvé', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'exportAO',
+          aoId,
+          correlationId
+        }
+      });
+      throw error;
+    }
+
+    if (ao.mondayId && !options.updateIfExists) {
+      logger.info('[MondayDataService] AO déjà exporté', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'exportAO',
+          aoId,
+          mondayId: ao.mondayId,
+          correlationId
+        }
+      });
+      
+      if (options.syncNewFields) {
+        await this.syncAONewFields(aoId);
+      }
+      
+      return ao.mondayId;
+    }
+    
+    const mutation = `
+      mutation CreateItem($boardId: ID!, $itemName: String!, $columnValues: JSON) {
+        create_item(board_id: $boardId, item_name: $itemName, column_values: $columnValues) {
+          id
+        }
+      }
+    `;
+    
+    const columnValues: Record<string, any> = {};
+    
+    if (ao.status) {
+      columnValues.status = { label: ao.status };
+    }
+    
+    if (ao.dateLimiteRemise) {
+      columnValues.due_date = ao.dateLimiteRemise.toISOString().split('T')[0];
+    }
+    
+    if (ao.location) {
+      columnValues.location = ao.location;
+    }
+    
+    if (ao.client) {
+      columnValues.client = ao.client;
+    }
+    
+    if (ao.montantEstime) {
+      columnValues.amount = Number(ao.montantEstime);
+    }
+    
+    if (ao.menuiserieType) {
+      columnValues.type = ao.menuiserieType;
+    }
+
+    const mondayItem = await withRetry(
+      async () => {
+        logger.info('[MondayDataService] Création item Monday pour AO', {
+          service: 'MondayDataService',
+          metadata: {
+            operation: 'exportAO.createItem',
+            aoId,
+            aoReference: ao.reference,
+            correlationId
+          }
+        });
+
+        const result = await mondayIntegrationService.executeGraphQL(mutation, {
+          boardId: options.boardId || process.env.MONDAY_AOS_BOARD_ID || '789012',
+          itemName: `${ao.reference} - ${ao.client || 'Client'}`,
+          columnValues: JSON.stringify(columnValues)
+        });
+        
+        return result.create_item;
+      },
+      { 
+        maxRetries: 3,
+        initialDelay: 1000,
+        backoffMultiplier: 2
+      }
+    );
+    
+    if (!mondayItem || !mondayItem.id) {
+      const error = new Error('Monday.com item creation failed - no ID returned');
+      logger.error('[MondayDataService] Échec création item AO', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'exportAO',
+          aoId,
+          correlationId,
+          error: error.message
+        }
+      });
+      throw error;
+    }
+
+    await this.storage.updateAOMondayId(aoId, mondayItem.id);
+    
+    logger.info('[MondayDataService] AO exporté avec succès', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'exportAO',
+        aoId,
+        mondayId: mondayItem.id,
+        correlationId
+      }
+    });
+    
+    return mondayItem.id;
+  }
+
+  /**
+   * Update Monday.com item columns
+   * Used for synchronizing Saxium changes back to Monday
+   */
+  async updateItemColumns(
+    boardId: string,
+    itemId: string,
+    columnValues: Record<string, any>
+  ): Promise<string> {
+    const correlationId = getCorrelationId();
+    
+    logger.info('[MondayDataService] Début mise à jour colonnes item', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'updateItemColumns',
+        boardId,
+        itemId,
+        columnsCount: Object.keys(columnValues).length,
+        correlationId
+      }
+    });
+
+    const mutation = `
+      mutation ChangeMultipleColumnValues($boardId: ID!, $itemId: ID!, $columnValues: JSON!) {
+        change_multiple_column_values(board_id: $boardId, item_id: $itemId, column_values: $columnValues) {
+          id
+        }
+      }
+    `;
+
+    const result = await withRetry(
+      async () => {
+        const response = await mondayIntegrationService.executeGraphQL(mutation, {
+          boardId,
+          itemId,
+          columnValues: JSON.stringify(columnValues)
+        });
+        
+        return response.change_multiple_column_values;
+      },
+      { 
+        maxRetries: 3,
+        initialDelay: 1000,
+        backoffMultiplier: 2
+      }
+    );
+    
+    if (!result || !result.id) {
+      const error = new Error('Monday.com column update failed - no ID returned');
+      logger.error('[MondayDataService] Échec mise à jour colonnes', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'updateItemColumns',
+          boardId,
+          itemId,
+          correlationId,
+          error: error.message
+        }
+      });
+      throw error;
+    }
+
+    logger.info('[MondayDataService] Colonnes mises à jour avec succès', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'updateItemColumns',
+        boardId,
+        itemId,
+        mondayId: result.id,
+        columnsUpdated: Object.keys(columnValues),
+        correlationId
+      }
+    });
+    
+    return result.id;
+  }
+
+  /**
+   * Sync AO new fields to Monday.com
+   * - dateLivraisonPrevue → date_mkpcfgja (Date Métrés)
+   * - dateOS → date__1 (Date Accord)
+   * - cctp → long_text_mkx4zgjd (Commentaire sélection)
+   */
+  async syncAONewFields(aoId: string): Promise<string | null> {
+    const correlationId = getCorrelationId();
+    const BOARD_ID = '3946257560';
+    
+    logger.info('[MondayDataService] Début sync nouveaux champs AO', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'syncAONewFields',
+        aoId,
+        correlationId
+      }
+    });
+
+    const ao = await this.storage.getAo(aoId);
+    
+    if (!ao) {
+      logger.warn('[MondayDataService] AO non trouvé', {
+        service: 'MondayDataService',
+        metadata: { operation: 'syncAONewFields', aoId, correlationId }
+      });
+      return null;
+    }
+
+    if (!ao.mondayId) {
+      logger.warn('[MondayDataService] AO sans mondayId - impossible de synchroniser', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'syncAONewFields',
+          aoId,
+          reference: ao.reference,
+          correlationId
+        }
+      });
+      return null;
+    }
+
+    const columnValues: Record<string, any> = {};
+    
+    if (ao.dateLivraisonPrevue) {
+      columnValues.date_mkpcfgja = ao.dateLivraisonPrevue.toISOString().split('T')[0];
+    }
+    
+    if (ao.dateOS) {
+      columnValues.date__1 = ao.dateOS.toISOString().split('T')[0];
+    }
+    
+    if (ao.cctp) {
+      columnValues.long_text_mkx4zgjd = ao.cctp;
+    }
+
+    if (Object.keys(columnValues).length === 0) {
+      logger.info('[MondayDataService] Aucun nouveau champ à synchroniser', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'syncAONewFields',
+          aoId,
+          mondayId: ao.mondayId,
+          correlationId
+        }
+      });
+      return ao.mondayId;
+    }
+
+    await this.updateItemColumns(BOARD_ID, ao.mondayId, columnValues);
+    
+    logger.info('[MondayDataService] Nouveaux champs AO synchronisés avec succès', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'syncAONewFields',
+        aoId,
+        mondayId: ao.mondayId,
+        syncedFields: Object.keys(columnValues),
+        correlationId
+      }
+    });
+    
+    return ao.mondayId;
+  }
+
+  // ========================================
+  // DATA SPLITTING METHODS (from MondayDataSplitter)
+  // ========================================
+
+  /**
+   * Analyze Monday item for splitting opportunities
+   * Returns counts of lots, contacts, addresses, master entities
+   */
+  async analyzeItem(
+    mondayItemId: string,
+    boardId: string,
+    config?: MondaySplitterConfig
+  ): Promise<{
+    opportunites: {
+      lots: number;
+      contacts: number;
+      addresses: boolean;
+      maitresOuvrage: number;
+      maitresOeuvre: number;
+    };
+    diagnostics: any[];
+  }> {
+    logger.info('Analyse Monday item pour opportunités éclatement', {
+      service: 'MondayDataService',
+      metadata: { operation: 'analyzeItem', mondayItemId, boardId }
+    });
+
+    const mondayItem = await mondayIntegrationService.getItem(mondayItemId);
+
+    const itemConfig = config || getBoardConfig(boardId);
+    if (!itemConfig) {
+      throw new Error(`No configuration found for board ${boardId}`);
+    }
+
+    const context: SplitterContext = {
+      mondayItem,
+      config: itemConfig,
+      extractedData: {},
+      diagnostics: []
+    };
+
+    const lots = await this.lotExtractor.extract(context);
+    const contacts = await this.contactExtractor.extract(context);
+    const address = await this.addressExtractor.extract(context);
+    const masters = await this.masterEntityExtractor.extract(context);
+
+    return {
+      opportunites: {
+        lots: lots.length,
+        contacts: contacts.length,
+        addresses: address !== null,
+        maitresOuvrage: masters.maitresOuvrage.length,
+        maitresOeuvre: masters.maitresOeuvre.length
+      },
+      diagnostics: context.diagnostics
+    };
+  }
+
+  /**
+   * Split Monday item into multiple Saxium entities
+   * Sequence: AO base → master entities → contacts → lots → addresses
+   * Uses transaction for atomicity
+   */
+  async splitData(
+    mondayItemOrId: string | any,
+    boardId: string,
+    options: SplitOptions = {}
+  ): Promise<SplitResult> {
+    const { dryRun = false, config, validateBeforeSplit = true } = options;
+    
+    const isId = typeof mondayItemOrId === 'string';
+    const mondayItemId = isId ? mondayItemOrId : mondayItemOrId.id;
+    
+    logger.info('Démarrage éclatement Monday item', {
+      service: 'MondayDataService',
+      metadata: { 
+        operation: 'splitData',
+        mondayItemId, 
+        boardId, 
+        preFetched: !isId,
+        dryRun
+      }
+    });
+
+    const mondayItem = isId 
+      ? await mondayIntegrationService.getItem(mondayItemOrId) 
+      : mondayItemOrId;
+
+    const itemConfig = config || getBoardConfig(boardId);
+    if (!itemConfig) {
+      throw new Error(`No configuration found for board ${boardId}`);
+    }
+
+    const context: SplitterContext = {
+      mondayItem,
+      config: itemConfig,
+      extractedData: {},
+      diagnostics: []
+    };
+
+    const result: SplitResult = {
+      success: false,
+      aoCreated: false,
+      lotsCreated: 0,
+      contactsCreated: 0,
+      mastersCreated: 0,
+      diagnostics: []
+    };
+
+    try {
+      await this.storage.transaction(async (tx) => {
+        logger.info('Étape 1: Extraction AO de base', {
+          service: 'MondayDataService',
+          metadata: { operation: 'splitData.step1', mondayItemId }
+        });
+
+        const aoData = await this.aoBaseExtractor.extract(context);
+        context.extractedData.baseAO = aoData;
+
+        const requiredFields = {
+          intituleOperation: aoData.intituleOperation,
+          menuiserieType: aoData.menuiserieType,
+          source: aoData.source
+        };
+
+        const missingRequiredFields = Object.entries(requiredFields)
+          .filter(([_, value]) => !value || (typeof value === 'string' && value.trim() === ''))
+          .map(([field]) => field);
+
+        if (missingRequiredFields.length > 0 && validateBeforeSplit) {
+          const errorMsg = `AO incomplet rejeté - champs requis manquants: ${missingRequiredFields.join(', ')}`;
+          logger.error(errorMsg, {
+            service: 'MondayDataService',
+            metadata: {
+              operation: 'splitData',
+              mondayItemId,
+              missingFields: missingRequiredFields,
+              extractedData: aoData
+            }
+          });
+
+          context.diagnostics.push({
+            level: 'error',
+            extractor: 'AOBaseExtractor',
+            message: errorMsg,
+            data: { missingFields: missingRequiredFields }
+          });
+
+          result.success = false;
+          result.diagnostics = context.diagnostics;
+          throw new Error(errorMsg);
+        }
+
+        const existingAO = await this.storage.getAOByMondayItemId(mondayItemId, tx);
+        
+        let currentAO: any;
+        
+        if (existingAO) {
+          const cleanedAoData = this.cleanEnumFields(aoData);
+          
+          const aoDataWithDefaults = {
+            reference: cleanedAoData.reference || existingAO.reference || `AO-MONDAY-${mondayItemId}`,
+            menuiserieType: cleanedAoData.menuiserieType || existingAO.menuiserieType || 'autre' as const,
+            source: cleanedAoData.source || existingAO.source || 'other' as const,
+            mondayItemId,
+            ...cleanedAoData,
+            updatedAt: new Date(),
+            mondayLastSyncedAt: new Date()
+          };
+          
+          currentAO = await this.storage.updateAo(existingAO.id, aoDataWithDefaults, tx);
+          result.aoId = existingAO.id;
+          result.aoCreated = false;
+          result.aoUpdated = true;
+          
+          logger.info('AO existant mis à jour depuis Monday', {
+            service: 'MondayDataService',
+            metadata: { 
+              operation: 'splitData',
+              aoId: existingAO.id, 
+              mondayItemId,
+              reference: currentAO.reference
+            }
+          });
+          
+          context.diagnostics.push({
+            level: 'info',
+            extractor: 'AOBaseExtractor',
+            message: `AO déjà importé (mondayItemId=${mondayItemId}), mise à jour avec données Monday`,
+            data: { aoId: existingAO.id, reference: currentAO.reference, updated: true }
+          });
+        } else {
+          const cleanedAoData = this.cleanEnumFields(aoData);
+          
+          const aoDataWithDefaults = {
+            reference: cleanedAoData.reference || `AO-MONDAY-${mondayItemId}`,
+            menuiserieType: cleanedAoData.menuiserieType || 'autre' as const,
+            source: cleanedAoData.source || 'other' as const,
+            mondayItemId,
+            ...cleanedAoData,
+          };
+
+          currentAO = await this.storage.createAo(aoDataWithDefaults, tx);
+          result.aoId = currentAO.id;
+          result.aoCreated = true;
+
+          logger.info('AO créé', {
+            service: 'MondayDataService',
+            metadata: { 
+              operation: 'splitData',
+              aoId: currentAO.id, 
+              mondayItemId,
+              reference: currentAO.reference
+            }
+          });
+        }
+
+        logger.info('Étape 1.5: Extraction maîtres d\'ouvrage/œuvre', {
+          service: 'MondayDataService',
+          metadata: { operation: 'splitData.step1.5', aoId: currentAO.id }
+        });
+
+        const masters = await this.masterEntityExtractor.extract(context);
+        context.extractedData.maitresOuvrage = masters.maitresOuvrage;
+        context.extractedData.maitresOeuvre = masters.maitresOeuvre;
+
+        for (const moaData of masters.maitresOuvrage) {
+          try {
+            const moaContactData = this.mapMasterToContactData(moaData, 'maitre_ouvrage');
+            const linkResult = await this.storage.findOrCreateMaitreOuvrage(moaContactData, tx);
+            
+            if (linkResult.created) {
+              result.mastersCreated++;
+            }
+          } catch (error: any) {
+            context.diagnostics.push({
+              level: 'error',
+              extractor: 'MasterEntityExtractor',
+              message: `Échec persistance maître d'ouvrage: ${error.message}`,
+              data: { moaData, error: error.stack }
+            });
+          }
+        }
+
+        for (const moeData of masters.maitresOeuvre) {
+          try {
+            const moeContactData = this.mapMasterToContactData(moeData, 'maitre_oeuvre');
+            const linkResult = await this.storage.findOrCreateMaitreOeuvre(moeContactData, tx);
+            
+            if (linkResult.created) {
+              result.mastersCreated++;
+            }
+          } catch (error: any) {
+            context.diagnostics.push({
+              level: 'error',
+              extractor: 'MasterEntityExtractor',
+              message: `Échec persistance maître d'œuvre: ${error.message}`,
+              data: { moeData, error: error.stack }
+            });
+          }
+        }
+
+        logger.info('Étape 2: Extraction contacts', {
+          service: 'MondayDataService',
+          metadata: { operation: 'splitData.step2', aoId: currentAO.id }
+        });
+
+        const contacts = await this.contactExtractor.extract(context);
+        context.extractedData.contacts = contacts;
+
+        for (const contactData of contacts) {
+          try {
+            const individualData = this.mapContactToIndividualData(contactData);
+            const contactResult = await this.storage.findOrCreateContact(individualData, tx);
+            
+            const linkType = contactData.linkType || 'contact_general';
+            await this.storage.linkAoContact({
+              aoId: currentAO.id,
+              contactId: contactResult.contact.id,
+              linkType
+            }, tx);
+            
+            if (contactResult.created) {
+              result.contactsCreated++;
+            }
+          } catch (error: any) {
+            context.diagnostics.push({
+              level: 'error',
+              extractor: 'ContactExtractor',
+              message: `Échec persistance contact: ${error.message}`,
+              data: { contactData, error: error.stack }
+            });
+          }
+        }
+
+        logger.info('Étape 3: Extraction lots', {
+          service: 'MondayDataService',
+          metadata: { operation: 'splitData.step3', aoId: currentAO.id }
+        });
+
+        const lots = await this.lotExtractor.extract(context);
+        context.extractedData.lots = lots;
+
+        for (const lotData of lots) {
+          try {
+            const lot = await this.storage.createAoLot({
+              ...lotData,
+              aoId: currentAO.id
+            }, tx);
+            result.lotsCreated++;
+
+            logger.info('Lot créé', {
+              service: 'MondayDataService',
+              metadata: { operation: 'splitData', lotId: lot.id, aoId: currentAO.id }
+            });
+          } catch (error: any) {
+            context.diagnostics.push({
+              level: 'warning',
+              extractor: 'LotExtractor',
+              message: `Failed to create lot: ${error.message}`,
+              data: { lotData }
+            });
+          }
+        }
+
+        logger.info('Étape 4: Extraction adresse', {
+          service: 'MondayDataService',
+          metadata: { operation: 'splitData.step4', aoId: currentAO.id }
+        });
+
+        const addressData = await this.addressExtractor.extract(context);
+        context.extractedData.addresses = addressData ? [addressData] : [];
+
+        if (dryRun) {
+          result.extractedData = {
+            ao: context.extractedData.baseAO,
+            lots: context.extractedData.lots,
+            contacts: context.extractedData.contacts,
+            maitresOuvrage: masters.maitresOuvrage,
+            maitresOeuvre: masters.maitresOeuvre,
+            addresses: context.extractedData.addresses
+          };
+          result.diagnostics = context.diagnostics;
+          result.success = true;
+          
+          logger.info('Mode DRY RUN activé - Rollback transaction', {
+            service: 'MondayDataService',
+            metadata: {
+              operation: 'splitData.dryRun',
+              aoExtracted: !!context.extractedData.baseAO,
+              lotsExtracted: context.extractedData.lots?.length || 0,
+              contactsExtracted: context.extractedData.contacts?.length || 0
+            }
+          });
+          
+          throw new Error('DRY_RUN_ROLLBACK');
+        }
+      }, {
+        retries: 3,
+        timeout: 30000,
+        isolationLevel: 'read committed'
+      });
+
+      result.success = true;
+      result.diagnostics = context.diagnostics;
+
+      logger.info('Éclatement Monday terminé avec succès', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'splitData',
+          aoId: result.aoId,
+          lotsCreated: result.lotsCreated,
+          contactsCreated: result.contactsCreated,
+          mastersCreated: result.mastersCreated
+        }
+      });
+
+      return result;
+
+    } catch (error: any) {
+      if (error.message === 'DRY_RUN_ROLLBACK') {
+        logger.info('Dry-run terminé avec succès - Transaction rollbackée', {
+          service: 'MondayDataService',
+          metadata: { operation: 'splitData.dryRun', mondayItemId, boardId }
+        });
+        
+        return result;
+      }
+      
+      logger.error('Erreur lors de l\'éclatement Monday', {
+        service: 'MondayDataService',
+        metadata: { 
+          operation: 'splitData',
+          mondayItemId, 
+          boardId, 
+          error: error.message 
+        }
+      });
+
+      result.success = false;
+      result.diagnostics = context.diagnostics;
+      result.diagnostics.push({
+        level: 'error',
+        extractor: 'MondayDataService',
+        message: `Échec éclatement: ${error.message}`,
+        data: { error: error.stack }
+      });
+
+      throw error;
+    }
+  }
+
+  // ========================================
+  // VALIDATION & TRANSFORMATION METHODS
+  // ========================================
+
+  /**
+   * Validate mapping configuration
+   */
+  validateMapping(mapping: ImportMapping): ValidationResult {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (!mapping.mondayBoardId) {
+      errors.push('mondayBoardId is required');
+    }
+
+    if (!mapping.targetEntity) {
+      errors.push('targetEntity is required');
+    } else if (!['project', 'ao', 'supplier', 'task'].includes(mapping.targetEntity)) {
+      errors.push(`Invalid targetEntity: ${mapping.targetEntity}. Must be one of: project, ao, supplier, task`);
+    }
+
+    if (!mapping.columnMappings || !Array.isArray(mapping.columnMappings)) {
+      errors.push('columnMappings must be an array');
+    } else {
+      mapping.columnMappings.forEach((cm, index) => {
+        if (!cm.mondayColumnId) {
+          errors.push(`columnMappings[${index}]: mondayColumnId is required`);
+        }
+        if (!cm.saxiumField) {
+          errors.push(`columnMappings[${index}]: saxiumField is required`);
+        }
+      });
+
+      if (mapping.columnMappings.length === 0) {
+        warnings.push('No column mappings defined - using item name only');
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings
+    };
+  }
+
+  /**
+   * Transform single Monday item using mapping configuration
+   */
+  transformItem(
+    item: MondayItem,
+    mapping: ImportMapping,
+    options: TransformOptions = {}
+  ): any {
+    const transformed: any = {
+      name: item.name
+    };
+
+    for (const columnMapping of mapping.columnMappings) {
+      const columnValue = item.column_values.find(cv => cv.id === columnMapping.mondayColumnId);
+      if (columnValue) {
+        const value = this.extractColumnValue(columnValue);
+        
+        if (options.validateDates && columnMapping.saxiumField.toLowerCase().includes('date')) {
+          const dateResult = validateAndParseMondayDate(value as string);
+          if (dateResult.warning && !options.skipInvalidFields) {
+            logger.warn('[MondayDataService] Date validation warning', {
+              service: 'MondayDataService',
+              metadata: {
+                operation: 'transformItem',
+                field: columnMapping.saxiumField,
+                warning: dateResult.warning
+              }
+            });
+          }
+          transformed[columnMapping.saxiumField] = dateResult.parsed;
+        } else {
+          transformed[columnMapping.saxiumField] = value;
+        }
+      }
+    }
+
+    return transformed;
+  }
+
+  /**
+   * Preview import with suggested mappings
+   */
+  async previewImport(boardId: string, targetEntity: string): Promise<PreviewResult> {
+    const boardData = await mondayIntegrationService.getBoardData(boardId);
+    
+    const suggestedMappings = this.suggestColumnMappings(
+      boardData.columns,
+      targetEntity as 'project' | 'ao' | 'supplier' | 'task'
+    );
+
+    logger.info('Preview import généré', {
+      service: 'MondayDataService',
+      metadata: {
+        operation: 'previewImport',
+        boardId,
+        boardName: boardData.board.name,
+        itemCount: boardData.items.length,
+        columnCount: boardData.columns.length
+      }
+    });
+
+    return {
+      boardName: boardData.board.name,
+      itemCount: boardData.items.length,
+      columns: boardData.columns,
+      suggestedMappings
+    };
+  }
+
+  // ========================================
+  // PRIVATE HELPER METHODS
+  // ========================================
+
+  private mapItemToProject(item: MondayItem, mapping: ImportMapping): InsertProject {
+    const mappedData: any = {
+      name: item.name
+    };
+
+    for (const columnMapping of mapping.columnMappings) {
+      const columnValue = item.column_values.find(cv => cv.id === columnMapping.mondayColumnId);
+      if (columnValue) {
+        const value = this.extractColumnValue(columnValue);
+        mappedData[columnMapping.saxiumField] = value;
+      }
+    }
+
+    return {
+      name: mappedData.name || item.name,
+      client: mappedData.client || 'Client importé Monday',
+      location: mappedData.location || 'À définir',
+      status: mappedData.status || 'passation',
+      offerId: mappedData.offerId || null,
+      description: mappedData.description || null,
+      startDate: mappedData.startDate || null,
+      endDate: mappedData.endDate || null,
+      budget: mappedData.budget || null
+    };
+  }
+
+  private mapItemToAO(item: MondayItem, mapping: ImportMapping): InsertAo {
+    const mappedData: any = {
+      reference: item.name
+    };
+
+    for (const columnMapping of mapping.columnMappings) {
+      const columnValue = item.column_values.find(cv => cv.id === columnMapping.mondayColumnId);
+      if (columnValue) {
+        const value = this.extractColumnValue(columnValue);
+        mappedData[columnMapping.saxiumField] = value;
+      }
+    }
+
+    return {
+      reference: mappedData.reference || item.name,
+      menuiserieType: mappedData.menuiserieType || 'fenetre',
+      source: mappedData.source || 'other',
+      client: mappedData.client || null,
+      location: mappedData.location || null,
+      departement: mappedData.departement || null,
+      dateLimiteRemise: mappedData.dateLimiteRemise || null,
+      typeMarche: mappedData.typeMarche || null,
+      description: mappedData.description || null,
+      montantEstime: mappedData.montantEstime || null,
+      isDraft: false
+    };
+  }
+
+  private mapItemToSupplier(item: MondayItem, mapping: ImportMapping): InsertSupplier {
+    const mappedData: any = {
+      name: item.name
+    };
+
+    for (const columnMapping of mapping.columnMappings) {
+      const columnValue = item.column_values.find(cv => cv.id === columnMapping.mondayColumnId);
+      if (columnValue) {
+        const value = this.extractColumnValue(columnValue);
+        mappedData[columnMapping.saxiumField] = value;
+      }
+    }
+
+    return {
+      name: mappedData.name || item.name,
+      email: mappedData.email || null,
+      phone: mappedData.phone || null,
+      address: mappedData.address || null,
+      siret: mappedData.siret || null,
+      specialties: mappedData.specialties || [],
+      rating: mappedData.rating || null,
+      notes: mappedData.notes || null
+    };
+  }
+
+  private suggestColumnMappings(
+    columns: any[],
+    targetEntity: 'project' | 'ao' | 'supplier' | 'task'
+  ): any[] {
+    const mappings: any[] = [];
+
+    const mappingRules: Record<string, Record<string, string[]>> = {
+      project: {
+        name: ['nom', 'name', 'projet', 'project', 'titre', 'title'],
+        description: ['description', 'desc', 'détails', 'details'],
+        status: ['statut', 'status', 'état', 'state'],
+        location: ['lieu', 'location', 'adresse', 'address', 'localisation'],
+        startDate: ['début', 'start', 'date début', 'date_debut'],
+        endDate: ['fin', 'end', 'date fin', 'date_fin'],
+        budget: ['budget', 'montant', 'amount']
+      },
+      ao: {
+        reference: ['référence', 'reference', 'ref', 'numero', 'number'],
+        client: ['client', 'maître d\'ouvrage', 'mo'],
+        location: ['lieu', 'location', 'adresse', 'address'],
+        departement: ['département', 'departement', 'dept'],
+        description: ['description', 'objet', 'desc'],
+        montantEstime: ['montant', 'budget', 'amount', 'estimé']
+      },
+      supplier: {
+        name: ['nom', 'name', 'fournisseur', 'supplier', 'raison sociale'],
+        email: ['email', 'mail', 'e-mail'],
+        phone: ['téléphone', 'telephone', 'phone', 'tel'],
+        address: ['adresse', 'address'],
+        siret: ['siret', 'siren']
+      },
+      task: {
+        name: ['nom', 'name', 'tâche', 'task', 'titre'],
+        description: ['description', 'desc', 'détails'],
+        status: ['statut', 'status', 'état'],
+        assignedUserId: ['assigné', 'assigned', 'responsable']
+      }
+    };
+
+    const rules = mappingRules[targetEntity] || {};
+
+    for (const column of columns) {
+      const columnTitleLower = column.title.toLowerCase();
+
+      for (const [saxiumField, keywords] of Object.entries(rules)) {
+        if (keywords.some(keyword => columnTitleLower.includes(keyword))) {
+          mappings.push({
+            mondayColumnId: column.id,
+            mondayColumnTitle: column.title,
+            saxiumField,
+            confidence: 'high'
+          });
+          break;
+        }
+      }
+    }
+
+    return mappings;
+  }
+
+  private extractColumnValue(columnValue: any): any {
+    if (columnValue.type === 'text') {
+      return columnValue.text || columnValue.value;
+    } else if (columnValue.type === 'numbers') {
+      return columnValue.text ? parseFloat(columnValue.text) : null;
+    } else if (columnValue.type === 'status' || columnValue.type === 'dropdown') {
+      return columnValue.label || columnValue.text;
+    } else if (columnValue.type === 'date') {
+      return columnValue.text || columnValue.value;
+    } else if (columnValue.type === 'people') {
+      return columnValue.values?.map(v => v.id) || [];
+    } else {
+      return columnValue.text || columnValue.value;
+    }
+  }
+
+  private determineEntityType(item: MondayItem, boardId: string): 'project' | 'ao' | 'supplier' {
+    const hasReferenceField = item.column_values.some(cv => 
+      cv.id.toLowerCase().includes('ref') || 
+      cv.id.toLowerCase().includes('reference')
+    );
+    
+    const hasDateLimiteField = item.column_values.some(cv => 
+      cv.id.toLowerCase().includes('date_limite') ||
+      cv.id.toLowerCase().includes('deadline')
+    );
+    
+    if (hasReferenceField && hasDateLimiteField) {
+      return 'ao';
+    }
+    
+    return 'project';
+  }
+
+  private handleConflict(entity: any, mondayUpdatedAt: Date | undefined, entityType: string, itemId: string): void {
+    const saxiumUpdatedAt = entity.updatedAt;
+    const mondayTime = mondayUpdatedAt || new Date();
+    
+    if (saxiumUpdatedAt && saxiumUpdatedAt > mondayTime) {
+      logger.warn('[Conflict] Saxium plus récent que Monday', {
+        service: 'MondayDataService',
+        metadata: {
+          operation: 'handleConflict',
+          entityType,
+          entityId: entity.id,
+          mondayId: itemId,
+          saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
+          mondayUpdatedAt: mondayTime.toISOString(),
+          strategy: 'Monday-priority (override)'
+        }
+      });
+      
+      eventBus.emit('monday:sync:conflict', {
+        entityType,
+        entityId: entity.id,
+        mondayId: itemId,
+        saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
+        mondayUpdatedAt: mondayTime.toISOString(),
+        resolution: 'monday_wins'
+      });
+    }
+  }
+
+  private mapMasterToContactData(
+    masterData: any,
+    role: 'maitre_ouvrage' | 'maitre_oeuvre'
+  ): ExtractedContactData {
+    return {
+      nom: masterData.raisonSociale || masterData.nom,
+      typeOrganisation: masterData.typeOrganisation || undefined,
+      adresse: masterData.adresse || undefined,
+      codePostal: masterData.codePostal || undefined,
+      ville: masterData.ville || undefined,
+      departement: masterData.departement || undefined,
+      telephone: masterData.telephone || undefined,
+      email: masterData.email || undefined,
+      siteWeb: masterData.siteWeb || undefined,
+      siret: masterData.siret || undefined,
+      role,
+      source: 'ocr_extraction'
+    };
+  }
+
+  private mapContactToIndividualData(contactData: any): IndividualContactData {
+    const fullName = contactData.name || '';
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    return {
+      firstName,
+      lastName,
+      email: contactData.email || undefined,
+      phone: contactData.telephone || contactData.phone || undefined,
+      company: contactData.company || contactData.entreprise || undefined,
+      poste: contactData.poste || undefined,
+      address: contactData.address || contactData.adresse || undefined,
+      notes: contactData.notes || undefined,
+      source: 'monday_import'
+    };
+  }
+
+  private cleanEnumFields(data: any): any {
+    const cleaned = { ...data };
+    
+    if (typeof cleaned.operationalStatus === 'number') {
+      delete cleaned.operationalStatus;
+    }
+    if (typeof cleaned.priority === 'number') {
+      delete cleaned.priority;
+    }
+    if (typeof cleaned.typeMarche === 'number') {
+      delete cleaned.typeMarche;
+    }
+    if (typeof cleaned.aoCategory === 'number') {
+      delete cleaned.aoCategory;
+    }
+    
+    return cleaned;
+  }
+}
+
+// Export singleton instance
+export const mondayDataService = new MondayDataService(storage);

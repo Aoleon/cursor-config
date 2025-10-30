@@ -15,6 +15,13 @@ Saxium is a fullstack application designed for quoting and project management in
 - Do NOT create manual SQL migrations (use `db:push`).
 - Do NOT add `try-catch` in routes (`asyncHandler` handles it).
 
+## Code Quality Standards (Implemented Oct 2025)
+✅ **ESLint Configuration**: `.eslintrc.json` enforces no-console rule (errors on console.log/error in production code)
+✅ **AsyncHandler Coverage**: 100% of route handlers wrapped with asyncHandler (152 handlers across 8 route modules)
+✅ **Typed Errors**: Generic errors replaced with typed classes (ValidationError, NotFoundError, DatabaseError, UnauthorizedError, ExternalAPIError)
+✅ **Structured Logging**: All production code uses contextual logger with correlation IDs
+✅ **Error Middleware**: Centralized error handling with HTTP status mapping in `server/middleware/error-handler.ts`
+
 ## System Architecture
 The application employs a modern fullstack architecture. The frontend leverages React, TypeScript, Vite, Wouter for routing, shadcn/ui and Tailwind CSS for styling, Radix UI for components, React Query for data fetching, and `react-hook-form` with Zod for form management. The backend is built with Express and TypeScript, utilizing Drizzle ORM for database interactions.
 
@@ -58,7 +65,7 @@ See `/docs/ARCHITECTURE_OPTIMIZATION_ROADMAP.md` for detailed migration plan and
 *   **Technical Implementations**:
     *   **Monday.com Data Mapping**: Configuration-driven extraction system using JSON for dynamic mapping.
     *   **Performance Optimizations**: Adaptive caching, prefetching, debouncing/throttling, route-based lazy loading (frontend); database indexing, Redis caching, optimized queries, network compression (backend).
-    *   **Error Handling**: Unified system with typed errors, dedicated error middleware, and logging.
+    *   **Error Handling**: Unified system with typed errors (ValidationError, NotFoundError, DatabaseError, UnauthorizedError, ExternalAPIError), dedicated error middleware, and structured logging with correlation IDs.
     *   **API Response Handling**: `normalizeApiResponse<T>()` for consistent, type-safe API responses.
     *   **Retry System**: Exponential backoff for external API calls.
     *   **Cache System**: `CacheService` with in-memory adapter (Redis-ready), proactive invalidation, and monitoring.
@@ -68,6 +75,7 @@ See `/docs/ARCHITECTURE_OPTIMIZATION_ROADMAP.md` for detailed migration plan and
     *   **Data Extraction**: Robust AO extraction from Monday.com with validation.
     *   **Resilience Infrastructure**: RetryService with exponential backoff and CircuitBreakerManager for external APIs.
     *   **N+1 Query Optimization**: `KpiRepository` with a single CTE query replaces 132 individual queries for analytics.
+    *   **AsyncHandler Pattern**: 100% route coverage (152 handlers) with centralized error handling, eliminating try-catch boilerplate.
 
 *   **Feature Specifications**:
     *   Modular backend routes (`auth`, `chiffrage`, `suppliers`, `projects`, `analytics`, `documents`, `batigest`).

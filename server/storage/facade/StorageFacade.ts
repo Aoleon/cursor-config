@@ -18,7 +18,8 @@ import { AoRepository, type AoFilters } from '../commercial/AoRepository';
 import { ProductionRepository } from '../production/ProductionRepository';
 import { SuppliersRepository } from '../suppliers/SuppliersRepository';
 import { ChiffrageRepository } from '../chiffrage/ChiffrageRepository';
-import type { Offer, InsertOffer, Ao, InsertAo, User, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone } from '@shared/schema';
+import { DateIntelligenceRepository } from '../date-intelligence/DateIntelligenceRepository';
+import type { Offer, InsertOffer, Ao, InsertAo, User, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert } from '@shared/schema';
 
 /**
  * Facade de storage qui unifie l'accès aux données
@@ -76,6 +77,7 @@ export class StorageFacade {
   private readonly productionRepository: ProductionRepository;
   private readonly suppliersRepository: SuppliersRepository;
   private readonly chiffrageRepository: ChiffrageRepository;
+  private readonly dateIntelligenceRepository: DateIntelligenceRepository;
 
   /**
    * Constructeur
@@ -97,6 +99,7 @@ export class StorageFacade {
     this.productionRepository = new ProductionRepository(this.db, this.eventBus);
     this.suppliersRepository = new SuppliersRepository(this.db, this.eventBus);
     this.chiffrageRepository = new ChiffrageRepository(this.db, this.eventBus);
+    this.dateIntelligenceRepository = new DateIntelligenceRepository(this.db, this.eventBus);
     
     this.facadeLogger.info('StorageFacade initialisée avec repositories modulaires', {
       metadata: {
@@ -105,7 +108,7 @@ export class StorageFacade {
         status: 'hybrid_mode',
         hasDb: !!this.db,
         hasEventBus: !!this.eventBus,
-        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository']
+        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository', 'DateIntelligenceRepository']
       }
     });
   }
@@ -1087,20 +1090,258 @@ export class StorageFacade {
   get updateProjectTimeline() { return this.legacyStorage.updateProjectTimeline.bind(this.legacyStorage); }
   get deleteProjectTimeline() { return this.legacyStorage.deleteProjectTimeline.bind(this.legacyStorage); }
 
-  // Date Intelligence operations
-  get getActiveRules() { return this.legacyStorage.getActiveRules.bind(this.legacyStorage); }
-  get getAllRules() { return this.legacyStorage.getAllRules.bind(this.legacyStorage); }
-  get getRule() { return this.legacyStorage.getRule.bind(this.legacyStorage); }
-  get createRule() { return this.legacyStorage.createRule.bind(this.legacyStorage); }
-  get updateRule() { return this.legacyStorage.updateRule.bind(this.legacyStorage); }
-  get deleteRule() { return this.legacyStorage.deleteRule.bind(this.legacyStorage); }
+  // ========================================
+  // DATE INTELLIGENCE OPERATIONS - Déléguées vers DateIntelligenceRepository
+  // ========================================
 
-  // Date Alerts operations
-  get getDateAlerts() { return this.legacyStorage.getDateAlerts.bind(this.legacyStorage); }
-  get getDateAlert() { return this.legacyStorage.getDateAlert.bind(this.legacyStorage); }
-  get createDateAlert() { return this.legacyStorage.createDateAlert.bind(this.legacyStorage); }
-  get updateDateAlert() { return this.legacyStorage.updateDateAlert.bind(this.legacyStorage); }
-  get deleteDateAlert() { return this.legacyStorage.deleteDateAlert.bind(this.legacyStorage); }
+  /**
+   * Récupère les règles actives avec filtres optionnels
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async getActiveRules(filters?: { phase?: string, projectType?: string }): Promise<DateIntelligenceRule[]> {
+    try {
+      const rules = await this.dateIntelligenceRepository.getActiveRules(filters);
+      this.facadeLogger.info('Rules actives récupérées via DateIntelligenceRepository', {
+        metadata: { count: rules.length, filters, module: 'StorageFacade', operation: 'getActiveRules' }
+      });
+      return rules;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.getActiveRules failed, falling back to legacy', {
+        metadata: { error, filters, module: 'StorageFacade', operation: 'getActiveRules' }
+      });
+      return await this.legacyStorage.getActiveRules(filters);
+    }
+  }
+
+  /**
+   * Récupère toutes les règles d'intelligence de dates
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async getAllRules(): Promise<DateIntelligenceRule[]> {
+    try {
+      const rules = await this.dateIntelligenceRepository.getAllRules();
+      this.facadeLogger.info('Toutes les règles récupérées via DateIntelligenceRepository', {
+        metadata: { count: rules.length, module: 'StorageFacade', operation: 'getAllRules' }
+      });
+      return rules;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.getAllRules failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'getAllRules' }
+      });
+      return await this.legacyStorage.getAllRules();
+    }
+  }
+
+  /**
+   * Récupère une règle par son ID
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async getRule(id: string): Promise<DateIntelligenceRule | undefined> {
+    try {
+      const rule = await this.dateIntelligenceRepository.getRule(id);
+      if (rule) {
+        this.facadeLogger.info('Règle récupérée via DateIntelligenceRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getRule' }
+        });
+      }
+      return rule;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.getRule failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getRule' }
+      });
+      return await this.legacyStorage.getRule(id);
+    }
+  }
+
+  /**
+   * Crée une nouvelle règle d'intelligence de dates
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async createRule(data: InsertDateIntelligenceRule): Promise<DateIntelligenceRule> {
+    try {
+      const created = await this.dateIntelligenceRepository.createRule(data);
+      this.facadeLogger.info('Règle créée via DateIntelligenceRepository', {
+        metadata: { id: created.id, name: created.name, module: 'StorageFacade', operation: 'createRule' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.createRule failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createRule' }
+      });
+      return await this.legacyStorage.createRule(data);
+    }
+  }
+
+  /**
+   * Met à jour une règle d'intelligence de dates
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async updateRule(id: string, data: Partial<InsertDateIntelligenceRule>): Promise<DateIntelligenceRule> {
+    try {
+      const updated = await this.dateIntelligenceRepository.updateRule(id, data);
+      this.facadeLogger.info('Règle mise à jour via DateIntelligenceRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateRule' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.updateRule failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateRule' }
+      });
+      return await this.legacyStorage.updateRule(id, data);
+    }
+  }
+
+  /**
+   * Supprime une règle d'intelligence de dates
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async deleteRule(id: string): Promise<void> {
+    try {
+      await this.dateIntelligenceRepository.deleteRule(id);
+      this.facadeLogger.info('Règle supprimée via DateIntelligenceRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteRule' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.deleteRule failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteRule' }
+      });
+      await this.legacyStorage.deleteRule(id);
+    }
+  }
+
+  /**
+   * Récupère les alertes de dates avec filtres optionnels
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async getDateAlerts(filters?: { entityType?: string, entityId?: string, status?: string }): Promise<DateAlert[]> {
+    try {
+      const alerts = await this.dateIntelligenceRepository.getDateAlerts(filters);
+      this.facadeLogger.info('Alertes de dates récupérées via DateIntelligenceRepository', {
+        metadata: { count: alerts.length, filters, module: 'StorageFacade', operation: 'getDateAlerts' }
+      });
+      return alerts;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.getDateAlerts failed, falling back to legacy', {
+        metadata: { error, filters, module: 'StorageFacade', operation: 'getDateAlerts' }
+      });
+      return await this.legacyStorage.getDateAlerts(filters);
+    }
+  }
+
+  /**
+   * Récupère une alerte de date par son ID
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async getDateAlert(id: string): Promise<DateAlert | undefined> {
+    try {
+      const alert = await this.dateIntelligenceRepository.getDateAlert(id);
+      if (alert) {
+        this.facadeLogger.info('Alerte de date récupérée via DateIntelligenceRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getDateAlert' }
+        });
+      }
+      return alert;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.getDateAlert failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getDateAlert' }
+      });
+      return await this.legacyStorage.getDateAlert(id);
+    }
+  }
+
+  /**
+   * Crée une nouvelle alerte de date
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async createDateAlert(data: InsertDateAlert): Promise<DateAlert> {
+    try {
+      const created = await this.dateIntelligenceRepository.createDateAlert(data);
+      this.facadeLogger.info('Alerte de date créée via DateIntelligenceRepository', {
+        metadata: { id: created.id, title: created.title, module: 'StorageFacade', operation: 'createDateAlert' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.createDateAlert failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createDateAlert' }
+      });
+      return await this.legacyStorage.createDateAlert(data);
+    }
+  }
+
+  /**
+   * Met à jour une alerte de date
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert> {
+    try {
+      const updated = await this.dateIntelligenceRepository.updateDateAlert(id, data);
+      this.facadeLogger.info('Alerte de date mise à jour via DateIntelligenceRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateDateAlert' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.updateDateAlert failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateDateAlert' }
+      });
+      return await this.legacyStorage.updateDateAlert(id, data);
+    }
+  }
+
+  /**
+   * Supprime une alerte de date
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async deleteDateAlert(id: string): Promise<void> {
+    try {
+      await this.dateIntelligenceRepository.deleteDateAlert(id);
+      this.facadeLogger.info('Alerte de date supprimée via DateIntelligenceRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteDateAlert' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.deleteDateAlert failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteDateAlert' }
+      });
+      await this.legacyStorage.deleteDateAlert(id);
+    }
+  }
+
+  /**
+   * Acquitte une alerte de date
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async acknowledgeAlert(id: string, userId: string): Promise<boolean> {
+    try {
+      const result = await this.dateIntelligenceRepository.acknowledgeAlert(id, userId);
+      this.facadeLogger.info('Alerte acquittée via DateIntelligenceRepository', {
+        metadata: { id, userId, module: 'StorageFacade', operation: 'acknowledgeAlert' }
+      });
+      return result;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.acknowledgeAlert failed, falling back to legacy', {
+        metadata: { error, id, userId, module: 'StorageFacade', operation: 'acknowledgeAlert' }
+      });
+      return await this.legacyStorage.acknowledgeAlert(id, userId);
+    }
+  }
+
+  /**
+   * Résout une alerte de date
+   * Utilise DateIntelligenceRepository avec fallback sur legacy
+   */
+  async resolveAlert(id: string, userId: string, actionTaken?: string): Promise<boolean> {
+    try {
+      const result = await this.dateIntelligenceRepository.resolveAlert(id, userId, actionTaken);
+      this.facadeLogger.info('Alerte résolue via DateIntelligenceRepository', {
+        metadata: { id, userId, actionTaken, module: 'StorageFacade', operation: 'resolveAlert' }
+      });
+      return result;
+    } catch (error) {
+      this.facadeLogger.warn('DateIntelligenceRepository.resolveAlert failed, falling back to legacy', {
+        metadata: { error, id, userId, actionTaken, module: 'StorageFacade', operation: 'resolveAlert' }
+      });
+      return await this.legacyStorage.resolveAlert(id, userId, actionTaken);
+    }
+  }
 
   // Analytics operations
   get createKPISnapshot() { return this.legacyStorage.createKPISnapshot.bind(this.legacyStorage); }

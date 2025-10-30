@@ -13,6 +13,7 @@ import { createAnalyticsRouter } from "./modules/analytics/routes";
 import { createDocumentsRouter } from "./modules/documents"; // Updated to use index.ts export
 import { createCommercialRouter } from "./modules/commercial/routes";
 import { createChatbotRouter } from "./modules/chatbot";
+import { createAlertsRouter } from "./modules/alerts";
 import { setupMondayModule } from "./modules/monday";
 
 // Import cache service
@@ -42,6 +43,7 @@ export async function registerRoutes(app: Express) {
   const documentsRouter = createDocumentsRouter(storageInterface, eventBus);
   const commercialRouter = createCommercialRouter(storageInterface, eventBus);
   const chatbotRouter = createChatbotRouter(storageInterface, eventBus);
+  const alertsRouter = createAlertsRouter(storageInterface, eventBus);
   
   app.use(chiffrageRouter);
   app.use(batigestRouter);
@@ -52,6 +54,7 @@ export async function registerRoutes(app: Express) {
   app.use(documentsRouter);
   app.use(commercialRouter);
   app.use(chatbotRouter);
+  app.use(alertsRouter);
   
   // Mount Monday.com integration module
   setupMondayModule(app);

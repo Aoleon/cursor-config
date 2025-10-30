@@ -32,5 +32,5 @@ export interface ChatbotErrorResponse {
     type: string;
     message: string;
   };
-  debugInfo?: any;
+  debug_info?: any;
 }

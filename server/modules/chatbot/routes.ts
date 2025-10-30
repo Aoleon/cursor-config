@@ -152,10 +152,11 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           });
           
           // Enrichir la réponse avec le debug_info si demandé
+          const shouldIncludeDebug = requestBody.options?.includeDebugInfo === true;
           const errorResponse: any = {
             success: false,
             error: result.error,
-            debug_info: requestBody.options?.includeDebugInfo ? result.debug_info : result.debug_info
+            ...(shouldIncludeDebug ? { debug_info: result.debug_info } : {})
           };
           
           res.setHeader('Content-Type', 'application/json');

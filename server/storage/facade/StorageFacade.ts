@@ -15,6 +15,8 @@ import { logger } from '../../utils/logger';
 import { db } from '../../db';
 import { OfferRepository, type OfferFilters } from '../commercial/OfferRepository';
 import { AoRepository, type AoFilters } from '../commercial/AoRepository';
+import { ProductionRepository } from '../production/ProductionRepository';
+import { SuppliersRepository } from '../suppliers/SuppliersRepository';
 import type { Offer, InsertOffer, Ao, InsertAo, User } from '@shared/schema';
 
 /**
@@ -70,6 +72,8 @@ export class StorageFacade {
    */
   private readonly offerRepository: OfferRepository;
   private readonly aoRepository: AoRepository;
+  private readonly productionRepository: ProductionRepository;
+  private readonly suppliersRepository: SuppliersRepository;
 
   /**
    * Constructeur
@@ -85,6 +89,8 @@ export class StorageFacade {
     // Instancier les nouveaux repositories
     this.offerRepository = new OfferRepository(this.db, this.eventBus);
     this.aoRepository = new AoRepository(this.db, this.eventBus);
+    this.productionRepository = new ProductionRepository(this.db, this.eventBus);
+    this.suppliersRepository = new SuppliersRepository(this.db, this.eventBus);
     
     this.facadeLogger.info('StorageFacade initialisée avec repositories modulaires', {
       metadata: {
@@ -93,7 +99,7 @@ export class StorageFacade {
         status: 'hybrid_mode',
         hasDb: !!this.db,
         hasEventBus: !!this.eventBus,
-        repositories: ['OfferRepository', 'AoRepository']
+        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository']
       }
     });
   }
@@ -489,13 +495,129 @@ export class StorageFacade {
     }
   }
 
-  // Project operations
-  get getProjects() { return this.legacyStorage.getProjects.bind(this.legacyStorage); }
-  get getProjectsPaginated() { return this.legacyStorage.getProjectsPaginated.bind(this.legacyStorage); }
-  get getProject() { return this.legacyStorage.getProject.bind(this.legacyStorage); }
+  // ========================================
+  // PROJECT OPERATIONS - Déléguées vers ProductionRepository
+  // ========================================
+
+  /**
+   * Récupère tous les projets avec recherche et filtre de statut
+   * Utilise ProductionRepository avec fallback sur legacy
+   */
+  async getProjects(search?: string, status?: string) {
+    try {
+      const filters: any = {};
+      if (search) filters.search = search;
+      if (status) filters.status = status;
+      
+      const projects = await this.productionRepository.findAll(filters);
+      
+      this.facadeLogger.info('[StorageFacade] getProjects - Using ProductionRepository', {
+        metadata: { module: 'StorageFacade', operation: 'getProjects', count: projects.length }
+      });
+      
+      return projects;
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] getProjects - Fallback to legacy', {
+        metadata: { module: 'StorageFacade', operation: 'getProjects', error: error instanceof Error ? error.message : 'Unknown' }
+      });
+      return await this.legacyStorage.getProjects(search, status);
+    }
+  }
+
+  /**
+   * Récupère les projets paginés
+   * Utilise ProductionRepository avec fallback sur legacy
+   */
+  async getProjectsPaginated(search?: string, status?: string, limit: number = 20, offset: number = 0) {
+    try {
+      const filters: any = {};
+      if (search) filters.search = search;
+      if (status) filters.status = status;
+      
+      const result = await this.productionRepository.findPaginated(filters, { limit, offset });
+      
+      this.facadeLogger.info('[StorageFacade] getProjectsPaginated - Using ProductionRepository', {
+        metadata: { module: 'StorageFacade', operation: 'getProjectsPaginated', count: result.items.length, total: result.total }
+      });
+      
+      return {
+        projects: result.items,
+        total: result.total,
+        limit,
+        offset
+      };
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] getProjectsPaginated - Fallback to legacy', {
+        metadata: { module: 'StorageFacade', operation: 'getProjectsPaginated', error: error instanceof Error ? error.message : 'Unknown' }
+      });
+      return await this.legacyStorage.getProjectsPaginated(search, status, limit, offset);
+    }
+  }
+
+  /**
+   * Récupère un projet par ID
+   * Utilise ProductionRepository avec fallback sur legacy
+   */
+  async getProject(id: string) {
+    try {
+      const project = await this.productionRepository.findById(id);
+      
+      this.facadeLogger.info('[StorageFacade] getProject - Using ProductionRepository', {
+        metadata: { module: 'StorageFacade', operation: 'getProject', id, found: !!project }
+      });
+      
+      return project;
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] getProject - Fallback to legacy', {
+        metadata: { module: 'StorageFacade', operation: 'getProject', id, error: error instanceof Error ? error.message : 'Unknown' }
+      });
+      return await this.legacyStorage.getProject(id);
+    }
+  }
+
   get getProjectsByOffer() { return this.legacyStorage.getProjectsByOffer.bind(this.legacyStorage); }
-  get createProject() { return this.legacyStorage.createProject.bind(this.legacyStorage); }
-  get updateProject() { return this.legacyStorage.updateProject.bind(this.legacyStorage); }
+
+  /**
+   * Crée un nouveau projet
+   * Utilise ProductionRepository avec fallback sur legacy
+   */
+  async createProject(project: any) {
+    try {
+      const created = await this.productionRepository.create(project);
+      
+      this.facadeLogger.info('[StorageFacade] createProject - Using ProductionRepository', {
+        metadata: { module: 'StorageFacade', operation: 'createProject', id: created.id }
+      });
+      
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] createProject - Fallback to legacy', {
+        metadata: { module: 'StorageFacade', operation: 'createProject', error: error instanceof Error ? error.message : 'Unknown' }
+      });
+      return await this.legacyStorage.createProject(project);
+    }
+  }
+
+  /**
+   * Met à jour un projet
+   * Utilise ProductionRepository avec fallback sur legacy
+   */
+  async updateProject(id: string, project: any) {
+    try {
+      const updated = await this.productionRepository.update(id, project);
+      
+      this.facadeLogger.info('[StorageFacade] updateProject - Using ProductionRepository', {
+        metadata: { module: 'StorageFacade', operation: 'updateProject', id }
+      });
+      
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] updateProject - Fallback to legacy', {
+        metadata: { module: 'StorageFacade', operation: 'updateProject', id, error: error instanceof Error ? error.message : 'Unknown' }
+      });
+      return await this.legacyStorage.updateProject(id, project);
+    }
+  }
   get updateProjectMondayId() { return this.legacyStorage.updateProjectMondayId.bind(this.legacyStorage); }
   get updateAOMondayId() { return this.legacyStorage.updateAOMondayId.bind(this.legacyStorage); }
   get getProjectsToExport() { return this.legacyStorage.getProjectsToExport.bind(this.legacyStorage); }
@@ -507,12 +629,116 @@ export class StorageFacade {
   get createProjectTask() { return this.legacyStorage.createProjectTask.bind(this.legacyStorage); }
   get updateProjectTask() { return this.legacyStorage.updateProjectTask.bind(this.legacyStorage); }
 
-  // Supplier operations
-  get getSuppliers() { return this.legacyStorage.getSuppliers.bind(this.legacyStorage); }
-  get getSupplier() { return this.legacyStorage.getSupplier.bind(this.legacyStorage); }
-  get createSupplier() { return this.legacyStorage.createSupplier.bind(this.legacyStorage); }
-  get updateSupplier() { return this.legacyStorage.updateSupplier.bind(this.legacyStorage); }
-  get deleteSupplier() { return this.legacyStorage.deleteSupplier.bind(this.legacyStorage); }
+  // ========================================
+  // SUPPLIER OPERATIONS - Déléguées vers SuppliersRepository
+  // ========================================
+
+  /**
+   * Récupère tous les fournisseurs avec recherche et filtre de statut
+   * Utilise SuppliersRepository avec fallback sur legacy
+   */
+  async getSuppliers(search?: string, status?: string) {
+    try {
+      const filters: any = {};
+      if (search) filters.search = search;
+      if (status) filters.status = status;
+      
+      const suppliers = await this.suppliersRepository.findAll(filters);
+      
+      this.facadeLogger.info('[StorageFacade] getSuppliers - Using SuppliersRepository', {
+        metadata: { module: 'StorageFacade', operation: 'getSuppliers', count: suppliers.length }
+      });
+      
+      return suppliers;
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] getSuppliers - Fallback to legacy', {
+        metadata: { module: 'StorageFacade', operation: 'getSuppliers', error: error instanceof Error ? error.message : 'Unknown' }
+      });
+      return await this.legacyStorage.getSuppliers(search, status);
+    }
+  }
+
+  /**
+   * Récupère un fournisseur par ID
+   * Utilise SuppliersRepository avec fallback sur legacy
+   */
+  async getSupplier(id: string) {
+    try {
+      const supplier = await this.suppliersRepository.findById(id);
+      
+      this.facadeLogger.info('[StorageFacade] getSupplier - Using SuppliersRepository', {
+        metadata: { module: 'StorageFacade', operation: 'getSupplier', id, found: !!supplier }
+      });
+      
+      return supplier;
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] getSupplier - Fallback to legacy', {
+        metadata: { module: 'StorageFacade', operation: 'getSupplier', id, error: error instanceof Error ? error.message : 'Unknown' }
+      });
+      return await this.legacyStorage.getSupplier(id);
+    }
+  }
+
+  /**
+   * Crée un nouveau fournisseur
+   * Utilise SuppliersRepository avec fallback sur legacy
+   */
+  async createSupplier(supplier: any) {
+    try {
+      const created = await this.suppliersRepository.create(supplier);
+      
+      this.facadeLogger.info('[StorageFacade] createSupplier - Using SuppliersRepository', {
+        metadata: { module: 'StorageFacade', operation: 'createSupplier', id: created.id }
+      });
+      
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] createSupplier - Fallback to legacy', {
+        metadata: { module: 'StorageFacade', operation: 'createSupplier', error: error instanceof Error ? error.message : 'Unknown' }
+      });
+      return await this.legacyStorage.createSupplier(supplier);
+    }
+  }
+
+  /**
+   * Met à jour un fournisseur
+   * Utilise SuppliersRepository avec fallback sur legacy
+   */
+  async updateSupplier(id: string, supplier: any) {
+    try {
+      const updated = await this.suppliersRepository.update(id, supplier);
+      
+      this.facadeLogger.info('[StorageFacade] updateSupplier - Using SuppliersRepository', {
+        metadata: { module: 'StorageFacade', operation: 'updateSupplier', id }
+      });
+      
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] updateSupplier - Fallback to legacy', {
+        metadata: { module: 'StorageFacade', operation: 'updateSupplier', id, error: error instanceof Error ? error.message : 'Unknown' }
+      });
+      return await this.legacyStorage.updateSupplier(id, supplier);
+    }
+  }
+
+  /**
+   * Supprime un fournisseur
+   * Utilise SuppliersRepository avec fallback sur legacy
+   */
+  async deleteSupplier(id: string) {
+    try {
+      await this.suppliersRepository.delete(id);
+      
+      this.facadeLogger.info('[StorageFacade] deleteSupplier - Using SuppliersRepository', {
+        metadata: { module: 'StorageFacade', operation: 'deleteSupplier', id }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('[StorageFacade] deleteSupplier - Fallback to legacy', {
+        metadata: { module: 'StorageFacade', operation: 'deleteSupplier', id, error: error instanceof Error ? error.message : 'Unknown' }
+      });
+      await this.legacyStorage.deleteSupplier(id);
+    }
+  }
 
   // Supplier request operations
   get getSupplierRequests() { return this.legacyStorage.getSupplierRequests.bind(this.legacyStorage); }

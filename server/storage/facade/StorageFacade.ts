@@ -19,7 +19,8 @@ import { ProductionRepository } from '../production/ProductionRepository';
 import { SuppliersRepository } from '../suppliers/SuppliersRepository';
 import { ChiffrageRepository } from '../chiffrage/ChiffrageRepository';
 import { DateIntelligenceRepository } from '../date-intelligence/DateIntelligenceRepository';
-import type { Offer, InsertOffer, Ao, InsertAo, User, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert } from '@shared/schema';
+import { DocumentsRepository } from '../documents/DocumentsRepository';
+import type { Offer, InsertOffer, Ao, InsertAo, User, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert, SupplierDocument, InsertSupplierDocument, SupplierQuoteSession, InsertSupplierQuoteSession, SupplierQuoteAnalysis, InsertSupplierQuoteAnalysis, PurchaseOrder, InsertPurchaseOrder, ClientQuote, InsertClientQuote } from '@shared/schema';
 
 /**
  * Facade de storage qui unifie l'accès aux données
@@ -78,6 +79,7 @@ export class StorageFacade {
   private readonly suppliersRepository: SuppliersRepository;
   private readonly chiffrageRepository: ChiffrageRepository;
   private readonly dateIntelligenceRepository: DateIntelligenceRepository;
+  private readonly documentsRepository: DocumentsRepository;
 
   /**
    * Constructeur
@@ -100,6 +102,7 @@ export class StorageFacade {
     this.suppliersRepository = new SuppliersRepository(this.db, this.eventBus);
     this.chiffrageRepository = new ChiffrageRepository(this.db, this.eventBus);
     this.dateIntelligenceRepository = new DateIntelligenceRepository(this.db, this.eventBus);
+    this.documentsRepository = new DocumentsRepository(this.db, this.eventBus);
     
     this.facadeLogger.info('StorageFacade initialisée avec repositories modulaires', {
       metadata: {
@@ -108,7 +111,7 @@ export class StorageFacade {
         status: 'hybrid_mode',
         hasDb: !!this.db,
         hasEventBus: !!this.eventBus,
-        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository', 'DateIntelligenceRepository']
+        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository', 'DateIntelligenceRepository', 'DocumentsRepository']
       }
     });
   }
@@ -1343,6 +1346,427 @@ export class StorageFacade {
     }
   }
 
+  // ========================================
+  // DOCUMENTS OPERATIONS - Déléguées vers DocumentsRepository
+  // ========================================
+
+  // SUPPLIER DOCUMENTS - 5 MÉTHODES
+
+  /**
+   * Récupère les documents fournisseurs avec filtres optionnels
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async getSupplierDocuments(sessionId?: string, supplierId?: string): Promise<SupplierDocument[]> {
+    try {
+      const documents = await this.documentsRepository.getSupplierDocuments(sessionId, supplierId);
+      this.facadeLogger.info('Documents fournisseurs récupérés via DocumentsRepository', {
+        metadata: { count: documents.length, sessionId, supplierId, module: 'StorageFacade', operation: 'getSupplierDocuments' }
+      });
+      return documents;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.getSupplierDocuments failed, falling back to legacy', {
+        metadata: { error, sessionId, supplierId, module: 'StorageFacade', operation: 'getSupplierDocuments' }
+      });
+      return await this.legacyStorage.getSupplierDocuments(sessionId, supplierId);
+    }
+  }
+
+  /**
+   * Récupère un document fournisseur par son ID
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async getSupplierDocument(id: string): Promise<SupplierDocument | undefined> {
+    try {
+      const document = await this.documentsRepository.getSupplierDocument(id);
+      if (document) {
+        this.facadeLogger.info('Document fournisseur récupéré via DocumentsRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getSupplierDocument' }
+        });
+      }
+      return document;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.getSupplierDocument failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getSupplierDocument' }
+      });
+      return await this.legacyStorage.getSupplierDocument?.(id);
+    }
+  }
+
+  /**
+   * Crée un nouveau document fournisseur
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async createSupplierDocument(document: InsertSupplierDocument): Promise<SupplierDocument> {
+    try {
+      const created = await this.documentsRepository.createSupplierDocument(document);
+      this.facadeLogger.info('Document fournisseur créé via DocumentsRepository', {
+        metadata: { id: created.id, sessionId: created.sessionId, module: 'StorageFacade', operation: 'createSupplierDocument' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.createSupplierDocument failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createSupplierDocument' }
+      });
+      return await this.legacyStorage.createSupplierDocument(document);
+    }
+  }
+
+  /**
+   * Met à jour un document fournisseur
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async updateSupplierDocument(id: string, document: Partial<InsertSupplierDocument>): Promise<SupplierDocument> {
+    try {
+      const updated = await this.documentsRepository.updateSupplierDocument(id, document);
+      this.facadeLogger.info('Document fournisseur mis à jour via DocumentsRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateSupplierDocument' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.updateSupplierDocument failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateSupplierDocument' }
+      });
+      return await this.legacyStorage.updateSupplierDocument(id, document);
+    }
+  }
+
+  /**
+   * Supprime un document fournisseur
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async deleteSupplierDocument(id: string): Promise<void> {
+    try {
+      await this.documentsRepository.deleteSupplierDocument(id);
+      this.facadeLogger.info('Document fournisseur supprimé via DocumentsRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteSupplierDocument' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.deleteSupplierDocument failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteSupplierDocument' }
+      });
+      await this.legacyStorage.deleteSupplierDocument?.(id);
+    }
+  }
+
+  // SUPPLIER QUOTE SESSIONS - 5 MÉTHODES
+
+  /**
+   * Récupère les sessions de devis fournisseurs avec filtres optionnels
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async getSupplierQuoteSessions(aoId?: string, aoLotId?: string): Promise<SupplierQuoteSession[]> {
+    try {
+      const sessions = await this.documentsRepository.getSupplierQuoteSessions(aoId, aoLotId);
+      this.facadeLogger.info('Sessions de devis fournisseurs récupérées via DocumentsRepository', {
+        metadata: { count: sessions.length, aoId, aoLotId, module: 'StorageFacade', operation: 'getSupplierQuoteSessions' }
+      });
+      return sessions;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.getSupplierQuoteSessions failed, falling back to legacy', {
+        metadata: { error, aoId, aoLotId, module: 'StorageFacade', operation: 'getSupplierQuoteSessions' }
+      });
+      return await this.legacyStorage.getSupplierQuoteSessions(aoId, aoLotId);
+    }
+  }
+
+  /**
+   * Récupère une session de devis fournisseur par son ID
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async getSupplierQuoteSession(id: string): Promise<SupplierQuoteSession | undefined> {
+    try {
+      const session = await this.documentsRepository.getSupplierQuoteSession(id);
+      if (session) {
+        this.facadeLogger.info('Session de devis fournisseur récupérée via DocumentsRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getSupplierQuoteSession' }
+        });
+      }
+      return session;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.getSupplierQuoteSession failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getSupplierQuoteSession' }
+      });
+      return await this.legacyStorage.getSupplierQuoteSession(id);
+    }
+  }
+
+  /**
+   * Crée une nouvelle session de devis fournisseur
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async createSupplierQuoteSession(session: InsertSupplierQuoteSession): Promise<SupplierQuoteSession> {
+    try {
+      const created = await this.documentsRepository.createSupplierQuoteSession(session);
+      this.facadeLogger.info('Session de devis fournisseur créée via DocumentsRepository', {
+        metadata: { id: created.id, aoId: created.aoId, module: 'StorageFacade', operation: 'createSupplierQuoteSession' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.createSupplierQuoteSession failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createSupplierQuoteSession' }
+      });
+      return await this.legacyStorage.createSupplierQuoteSession(session);
+    }
+  }
+
+  /**
+   * Met à jour une session de devis fournisseur
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async updateSupplierQuoteSession(id: string, session: Partial<InsertSupplierQuoteSession>): Promise<SupplierQuoteSession> {
+    try {
+      const updated = await this.documentsRepository.updateSupplierQuoteSession(id, session);
+      this.facadeLogger.info('Session de devis fournisseur mise à jour via DocumentsRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateSupplierQuoteSession' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.updateSupplierQuoteSession failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateSupplierQuoteSession' }
+      });
+      return await this.legacyStorage.updateSupplierQuoteSession(id, session);
+    }
+  }
+
+  /**
+   * Supprime une session de devis fournisseur
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async deleteSupplierQuoteSession(id: string): Promise<void> {
+    try {
+      await this.documentsRepository.deleteSupplierQuoteSession(id);
+      this.facadeLogger.info('Session de devis fournisseur supprimée via DocumentsRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteSupplierQuoteSession' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.deleteSupplierQuoteSession failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteSupplierQuoteSession' }
+      });
+      await this.legacyStorage.deleteSupplierQuoteSession?.(id);
+    }
+  }
+
+  // SUPPLIER QUOTE ANALYSIS - 3 MÉTHODES
+
+  /**
+   * Récupère une analyse OCR de devis fournisseur par son ID
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async getSupplierQuoteAnalysis(id: string): Promise<SupplierQuoteAnalysis | undefined> {
+    try {
+      const analysis = await this.documentsRepository.getSupplierQuoteAnalysis(id);
+      if (analysis) {
+        this.facadeLogger.info('Analyse OCR de devis fournisseur récupérée via DocumentsRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getSupplierQuoteAnalysis' }
+        });
+      }
+      return analysis;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.getSupplierQuoteAnalysis failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getSupplierQuoteAnalysis' }
+      });
+      return await this.legacyStorage.getSupplierQuoteAnalysis?.(id);
+    }
+  }
+
+  /**
+   * Crée une nouvelle analyse OCR de devis fournisseur
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async createSupplierQuoteAnalysis(analysis: InsertSupplierQuoteAnalysis): Promise<SupplierQuoteAnalysis> {
+    try {
+      const created = await this.documentsRepository.createSupplierQuoteAnalysis(analysis);
+      this.facadeLogger.info('Analyse OCR de devis fournisseur créée via DocumentsRepository', {
+        metadata: { id: created.id, documentId: created.documentId, module: 'StorageFacade', operation: 'createSupplierQuoteAnalysis' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.createSupplierQuoteAnalysis failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createSupplierQuoteAnalysis' }
+      });
+      return await this.legacyStorage.createSupplierQuoteAnalysis(analysis);
+    }
+  }
+
+  /**
+   * Met à jour une analyse OCR de devis fournisseur
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async updateSupplierQuoteAnalysis(id: string, analysis: Partial<InsertSupplierQuoteAnalysis>): Promise<SupplierQuoteAnalysis> {
+    try {
+      const updated = await this.documentsRepository.updateSupplierQuoteAnalysis(id, analysis);
+      this.facadeLogger.info('Analyse OCR de devis fournisseur mise à jour via DocumentsRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateSupplierQuoteAnalysis' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.updateSupplierQuoteAnalysis failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateSupplierQuoteAnalysis' }
+      });
+      return await this.legacyStorage.updateSupplierQuoteAnalysis(id, analysis);
+    }
+  }
+
+  // PURCHASE ORDERS - 4 MÉTHODES
+
+  /**
+   * Récupère les bons de commande avec filtres optionnels
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async getPurchaseOrders(filters?: { supplierId?: string; status?: string }): Promise<PurchaseOrder[]> {
+    try {
+      const orders = await this.documentsRepository.getPurchaseOrders(filters);
+      this.facadeLogger.info('Bons de commande récupérés via DocumentsRepository', {
+        metadata: { count: orders.length, filters, module: 'StorageFacade', operation: 'getPurchaseOrders' }
+      });
+      return orders;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.getPurchaseOrders failed, falling back to legacy', {
+        metadata: { error, filters, module: 'StorageFacade', operation: 'getPurchaseOrders' }
+      });
+      return await this.legacyStorage.getPurchaseOrders(filters);
+    }
+  }
+
+  /**
+   * Récupère un bon de commande par son ID
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined> {
+    try {
+      const order = await this.documentsRepository.getPurchaseOrder(id);
+      if (order) {
+        this.facadeLogger.info('Bon de commande récupéré via DocumentsRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getPurchaseOrder' }
+        });
+      }
+      return order;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.getPurchaseOrder failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getPurchaseOrder' }
+      });
+      return await this.legacyStorage.getPurchaseOrder(id);
+    }
+  }
+
+  /**
+   * Crée un nouveau bon de commande
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder> {
+    try {
+      const created = await this.documentsRepository.createPurchaseOrder(order);
+      this.facadeLogger.info('Bon de commande créé via DocumentsRepository', {
+        metadata: { id: created.id, reference: created.reference, module: 'StorageFacade', operation: 'createPurchaseOrder' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.createPurchaseOrder failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createPurchaseOrder' }
+      });
+      return await this.legacyStorage.createPurchaseOrder(order);
+    }
+  }
+
+  /**
+   * Met à jour un bon de commande
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async updatePurchaseOrder(id: string, order: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
+    try {
+      const updated = await this.documentsRepository.updatePurchaseOrder(id, order);
+      this.facadeLogger.info('Bon de commande mis à jour via DocumentsRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updatePurchaseOrder' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.updatePurchaseOrder failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updatePurchaseOrder' }
+      });
+      return await this.legacyStorage.updatePurchaseOrder(id, order);
+    }
+  }
+
+  // CLIENT QUOTES - 4 MÉTHODES
+
+  /**
+   * Récupère les devis clients avec filtres optionnels
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async getClientQuotes(filters?: { clientName?: string; status?: string }): Promise<ClientQuote[]> {
+    try {
+      const quotes = await this.documentsRepository.getClientQuotes(filters);
+      this.facadeLogger.info('Devis clients récupérés via DocumentsRepository', {
+        metadata: { count: quotes.length, filters, module: 'StorageFacade', operation: 'getClientQuotes' }
+      });
+      return quotes;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.getClientQuotes failed, falling back to legacy', {
+        metadata: { error, filters, module: 'StorageFacade', operation: 'getClientQuotes' }
+      });
+      return await this.legacyStorage.getClientQuotes(filters);
+    }
+  }
+
+  /**
+   * Récupère un devis client par son ID
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async getClientQuote(id: string): Promise<ClientQuote | undefined> {
+    try {
+      const quote = await this.documentsRepository.getClientQuote(id);
+      if (quote) {
+        this.facadeLogger.info('Devis client récupéré via DocumentsRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getClientQuote' }
+        });
+      }
+      return quote;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.getClientQuote failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getClientQuote' }
+      });
+      return await this.legacyStorage.getClientQuote(id);
+    }
+  }
+
+  /**
+   * Crée un nouveau devis client
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async createClientQuote(quote: InsertClientQuote): Promise<ClientQuote> {
+    try {
+      const created = await this.documentsRepository.createClientQuote(quote);
+      this.facadeLogger.info('Devis client créé via DocumentsRepository', {
+        metadata: { id: created.id, reference: created.reference, module: 'StorageFacade', operation: 'createClientQuote' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.createClientQuote failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createClientQuote' }
+      });
+      return await this.legacyStorage.createClientQuote(quote);
+    }
+  }
+
+  /**
+   * Met à jour un devis client
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async updateClientQuote(id: string, quote: Partial<InsertClientQuote>): Promise<ClientQuote> {
+    try {
+      const updated = await this.documentsRepository.updateClientQuote(id, quote);
+      this.facadeLogger.info('Devis client mis à jour via DocumentsRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateClientQuote' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.updateClientQuote failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateClientQuote' }
+      });
+      return await this.legacyStorage.updateClientQuote(id, quote);
+    }
+  }
+
   // Analytics operations
   get createKPISnapshot() { return this.legacyStorage.createKPISnapshot.bind(this.legacyStorage); }
   get getKPISnapshots() { return this.legacyStorage.getKPISnapshots.bind(this.legacyStorage); }
@@ -1409,11 +1833,7 @@ export class StorageFacade {
   get updateSupplierSpecialization() { return this.legacyStorage.updateSupplierSpecialization.bind(this.legacyStorage); }
   get deleteSupplierSpecialization() { return this.legacyStorage.deleteSupplierSpecialization.bind(this.legacyStorage); }
 
-  // Supplier quote sessions
-  get getSupplierQuoteSessions() { return this.legacyStorage.getSupplierQuoteSessions.bind(this.legacyStorage); }
-  get getSupplierQuoteSession() { return this.legacyStorage.getSupplierQuoteSession.bind(this.legacyStorage); }
-  get createSupplierQuoteSession() { return this.legacyStorage.createSupplierQuoteSession.bind(this.legacyStorage); }
-  get updateSupplierQuoteSession() { return this.legacyStorage.updateSupplierQuoteSession.bind(this.legacyStorage); }
+  // Supplier quote sessions - Déléguées vers DocumentsRepository (voir lignes 1454-1550)
 
   // AO Lot Suppliers
   get getAoLotSuppliers() { return this.legacyStorage.getAoLotSuppliers.bind(this.legacyStorage); }
@@ -1421,15 +1841,11 @@ export class StorageFacade {
   get updateAoLotSupplier() { return this.legacyStorage.updateAoLotSupplier.bind(this.legacyStorage); }
   get deleteAoLotSupplier() { return this.legacyStorage.deleteAoLotSupplier.bind(this.legacyStorage); }
 
-  // Supplier Documents
-  get getSupplierDocuments() { return this.legacyStorage.getSupplierDocuments.bind(this.legacyStorage); }
-  get createSupplierDocument() { return this.legacyStorage.createSupplierDocument.bind(this.legacyStorage); }
-  get updateSupplierDocument() { return this.legacyStorage.updateSupplierDocument.bind(this.legacyStorage); }
+  // Supplier Documents - Déléguées vers DocumentsRepository (voir lignes 1356-1452)
 
-  // Supplier Quote Analysis
+  // Supplier Quote Analysis - Partiellement déléguées vers DocumentsRepository (voir lignes 1552-1594)
+  // Note: getSupplierQuoteAnalyses (plural) reste en legacy car repository n'implémente que getSupplierQuoteAnalysis (singular)
   get getSupplierQuoteAnalyses() { return this.legacyStorage.getSupplierQuoteAnalyses.bind(this.legacyStorage); }
-  get createSupplierQuoteAnalysis() { return this.legacyStorage.createSupplierQuoteAnalysis.bind(this.legacyStorage); }
-  get updateSupplierQuoteAnalysis() { return this.legacyStorage.updateSupplierQuoteAnalysis.bind(this.legacyStorage); }
 
   // Equipment Batteries
   get getEquipmentBatteries() { return this.legacyStorage.getEquipmentBatteries.bind(this.legacyStorage); }
@@ -1479,15 +1895,7 @@ export class StorageFacade {
   // Bug Reports (si implémenté dans IStorage)
   get createBugReport() { return this.legacyStorage.createBugReport.bind(this.legacyStorage); }
 
-  // Batigest operations (si implémenté dans IStorage)
-  get getPurchaseOrders() { return this.legacyStorage.getPurchaseOrders.bind(this.legacyStorage); }
-  get getPurchaseOrder() { return this.legacyStorage.getPurchaseOrder.bind(this.legacyStorage); }
-  get createPurchaseOrder() { return this.legacyStorage.createPurchaseOrder.bind(this.legacyStorage); }
-  get updatePurchaseOrder() { return this.legacyStorage.updatePurchaseOrder.bind(this.legacyStorage); }
-  get getClientQuotes() { return this.legacyStorage.getClientQuotes.bind(this.legacyStorage); }
-  get getClientQuote() { return this.legacyStorage.getClientQuote.bind(this.legacyStorage); }
-  get createClientQuote() { return this.legacyStorage.createClientQuote.bind(this.legacyStorage); }
-  get updateClientQuote() { return this.legacyStorage.updateClientQuote.bind(this.legacyStorage); }
+  // Batigest operations - PurchaseOrders et ClientQuotes déléguées vers DocumentsRepository (voir lignes 1596-1704)
   // listBatigestExports n'existe pas dans IStorage - commenté pour éviter erreur LSP
   // get listBatigestExports() { return this.legacyStorage.listBatigestExports.bind(this.legacyStorage); }
   get createBatigestExport() { return this.legacyStorage.createBatigestExport.bind(this.legacyStorage); }

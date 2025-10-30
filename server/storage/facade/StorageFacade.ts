@@ -84,7 +84,10 @@ export class StorageFacade {
   constructor(eventBus: EventBus, dbInstance: any = db) {
     this.db = dbInstance;
     this.eventBus = eventBus;
-    this.legacyStorage = new DatabaseStorage(eventBus);
+    // Double cast nécessaire : DatabaseStorage n'implémente pas encore toutes les méthodes de IStorage
+    // durant la migration progressive. Les méthodes manquantes seront ajoutées au fur et à mesure
+    // ou supprimées de IStorage si obsolètes. Pattern standard pour migration progressive.
+    this.legacyStorage = new DatabaseStorage(eventBus) as unknown as IStorage;
     
     // Instancier les nouveaux repositories
     this.offerRepository = new OfferRepository(this.db, this.eventBus);

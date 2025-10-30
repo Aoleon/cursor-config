@@ -18,8 +18,13 @@ import type { EventBus } from '../../eventBus';
 import { z } from 'zod';
 import {
   technicalAlertsFilterSchema,
-  bypassTechnicalAlertSchema
+  bypassTechnicalAlertSchema,
+  insertAlertThresholdSchema,
+  updateAlertThresholdSchema,
+  alertsQuerySchema,
+  type BusinessAlert
 } from '@shared/schema';
+import { AuthorizationError, NotFoundError, ValidationError, DatabaseError } from '../../utils/error-handler';
 
 // Local schemas for date-alerts
 const alertsFilterSchema = z.object({
@@ -34,6 +39,94 @@ const alertsFilterSchema = z.object({
 const acknowledgeAlertSchema = z.object({
   note: z.string().optional()
 });
+
+// Schema for thresholds query parameters
+const thresholdsQuerySchema = z.object({
+  is_active: z.coerce.boolean().optional(),
+  threshold_key: z.enum([
+    'profitability_margin', 'team_utilization_rate', 'deadline_days_remaining',
+    'predictive_risk_score', 'revenue_forecast_confidence', 'project_delay_days',
+    'budget_overrun_percentage'
+  ]).optional(),
+  scope_type: z.enum(['global', 'project', 'team', 'period']).optional(),
+  created_by: z.string().optional(),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  offset: z.coerce.number().min(0).default(0)
+});
+
+// Helper functions for statistics calculations
+const calculateAvgResolutionTime = (alerts: BusinessAlert[]) => {
+  const resolvedAlerts = alerts.filter(a => a.status === 'resolved' && a.resolvedAt && a.triggeredAt);
+  if (resolvedAlerts.length === 0) return {};
+  
+  const severityGroups = resolvedAlerts.reduce((acc, alert) => {
+    if (!alert.resolvedAt || !alert.triggeredAt) return acc;
+    if (!acc[alert.severity]) acc[alert.severity] = [];
+    const resolutionTime = (new Date(alert.resolvedAt).getTime() - new Date(alert.triggeredAt).getTime()) / (1000 * 60); // en minutes
+    acc[alert.severity].push(resolutionTime);
+    return acc;
+  }, {} as Record<string, number[]>);
+  
+  return Object.entries(severityGroups).reduce((acc, [severity, times]) => {
+    acc[severity] = Math.round(times.reduce((sum, t) => sum + t, 0) / times.length);
+    return acc;
+  }, {} as Record<string, number>);
+};
+
+const getTopTriggeredThresholds = (alerts: BusinessAlert[]) => {
+  const thresholdCounts = alerts.reduce((acc, alert) => {
+    if (alert.thresholdId) {
+      acc[alert.thresholdId] = (acc[alert.thresholdId] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+  
+  return Object.entries(thresholdCounts)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 5)
+    .map(([thresholdId, count]) => ({ thresholdId, count }));
+};
+
+const calculateTeamPerformance = (alerts: BusinessAlert[]) => {
+  const resolvedAlerts = alerts.filter(a => a.status === 'resolved' && a.resolvedBy);
+  const userStats = resolvedAlerts.reduce((acc, alert) => {
+    const userId = alert.resolvedBy!;
+    if (!acc[userId]) acc[userId] = { resolved: 0, avgTime: 0 };
+    acc[userId].resolved++;
+    
+    if (alert.resolvedAt && alert.triggeredAt) {
+      const resolutionTime = (new Date(alert.resolvedAt).getTime() - new Date(alert.triggeredAt).getTime()) / (1000 * 60);
+      acc[userId].avgTime = (acc[userId].avgTime + resolutionTime) / 2;
+    }
+    return acc;
+  }, {} as Record<string, { resolved: number; avgTime: number }>);
+  
+  return Object.entries(userStats)
+    .sort(([,a], [,b]) => b.resolved - a.resolved)
+    .slice(0, 10);
+};
+
+const calculateAlertsTrends = (alerts: BusinessAlert[]) => {
+  const now = new Date();
+  const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const prev7Days = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  
+  const recentAlerts = alerts.filter(a => new Date(a.triggeredAt) >= last7Days);
+  const previousAlerts = alerts.filter(a => {
+    const triggerDate = new Date(a.triggeredAt);
+    return triggerDate >= prev7Days && triggerDate < last7Days;
+  });
+  
+  return {
+    recent_count: recentAlerts.length,
+    previous_count: previousAlerts.length,
+    change_percentage: previousAlerts.length > 0 
+      ? Math.round(((recentAlerts.length - previousAlerts.length) / previousAlerts.length) * 100)
+      : 0,
+    recent_critical: recentAlerts.filter(a => a.severity === 'critical').length,
+    previous_critical: previousAlerts.filter(a => a.severity === 'critical').length
+  };
+};
 
 // Middleware pour vérifier les rôles autorisés pour validation technique
 const requireTechnicalValidationRole = (req: any, res: any, next: any) => {
@@ -1014,6 +1107,452 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           errorType: 'ALERTS_SUMMARY_FAILED'
         });
       }
+    })
+  );
+
+  // ========================================
+  // GENERIC BUSINESS ALERTS ROUTES
+  // ========================================
+
+  // ========================================
+  // A. THRESHOLD MANAGEMENT ENDPOINTS
+  // ========================================
+
+  // 1. GET /api/alerts/thresholds - List thresholds
+  router.get('/api/alerts/thresholds', 
+    isAuthenticated, 
+    validateQuery(thresholdsQuerySchema),
+    asyncHandler(async (req: any, res) => {
+      const params = req.query;
+      
+      // RÉCUPÉRATION SEUILS
+      // @ts-ignore - Phase 6+ feature not yet implemented
+      const result = await storage.listThresholds(params);
+      
+      logger.info('[Alerts] Seuils récupérés', { metadata: { total: result.total, limit: params.limit } });
+      
+      // RESPONSE PAGINÉE
+      res.json({
+        success: true,
+        data: result.thresholds,
+        pagination: {
+          total: result.total,
+          limit: params.limit,
+          offset: params.offset,
+          has_more: (params.offset + params.limit) < result.total
+        },
+        timestamp: new Date().toISOString()
+      });
+    })
+  );
+
+  // 2. POST /api/alerts/thresholds - Create threshold
+  router.post('/api/alerts/thresholds', 
+    isAuthenticated, 
+    validateBody(insertAlertThresholdSchema),
+    asyncHandler(async (req: any, res) => {
+      // RBAC - Vérification rôle
+      if (!['admin', 'executive'].includes(req.user?.role)) {
+        throw new AuthorizationError('Accès refusé - Rôle admin ou executive requis');
+      }
+      
+      const thresholdData = {
+        ...req.body,
+        createdBy: req.user.id
+      };
+      
+      // CRÉATION SEUIL
+      // @ts-ignore - Phase 6+ feature not yet implemented
+      const thresholdId = await storage.createThreshold(thresholdData);
+      
+      logger.info('[Alerts] Seuil créé', { metadata: { thresholdId, createdBy: req.user.id } });
+      
+      // RESPONSE SUCCESS
+      res.status(201).json({
+        success: true,
+        data: {
+          threshold_id: thresholdId,
+          created_at: new Date().toISOString()
+        },
+        message: 'Seuil créé avec succès',
+        timestamp: new Date().toISOString()
+      });
+    })
+  );
+
+  // 3. PATCH /api/alerts/thresholds/:id - Update threshold
+  router.patch('/api/alerts/thresholds/:id', 
+    isAuthenticated, 
+    validateParams(commonParamSchemas.id),
+    validateBody(updateAlertThresholdSchema),
+    asyncHandler(async (req: any, res) => {
+      // RBAC
+      if (!['admin', 'executive'].includes(req.user?.role)) {
+        throw new AuthorizationError('Accès refusé - Rôle admin ou executive requis');
+      }
+      
+      const thresholdId = req.params.id;
+      
+      // VÉRIFICATION EXISTENCE
+      // @ts-ignore - Phase 6+ feature not yet implemented
+      const existingThreshold = await storage.getThresholdById(thresholdId);
+      if (!existingThreshold) {
+        throw new NotFoundError('Seuil non trouvé');
+      }
+      
+      // MISE À JOUR
+      // @ts-ignore - Phase 6+ feature not yet implemented
+      const success = await storage.updateThreshold(thresholdId, req.body);
+      
+      if (!success) {
+        throw new DatabaseError('Échec mise à jour seuil');
+      }
+      
+      logger.info('[Alerts] Seuil mis à jour', { metadata: { thresholdId } });
+      
+      res.json({
+        success: true,
+        data: {
+          threshold_id: thresholdId,
+          updated_at: new Date().toISOString()
+        },
+        message: 'Seuil mis à jour avec succès',
+        timestamp: new Date().toISOString()
+      });
+    })
+  );
+
+  // 4. DELETE /api/alerts/thresholds/:id - Deactivate threshold
+  router.delete('/api/alerts/thresholds/:id', 
+    isAuthenticated, 
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res) => {
+      // RBAC
+      if (!['admin', 'executive'].includes(req.user?.role)) {
+        throw new AuthorizationError('Accès refusé - Rôle admin ou executive requis');
+      }
+      
+      // DÉSACTIVATION (soft delete)
+      // @ts-ignore - Phase 6+ feature not yet implemented
+      const success = await storage.deactivateThreshold(req.params.id);
+      
+      if (!success) {
+        throw new NotFoundError('Seuil non trouvé');
+      }
+      
+      logger.info('[Alerts] Seuil désactivé', { metadata: { thresholdId: req.params.id } });
+      
+      res.json({
+        success: true,
+        data: {
+          threshold_id: req.params.id,
+          deactivated_at: new Date().toISOString()
+        },
+        message: 'Seuil désactivé avec succès',
+        timestamp: new Date().toISOString()
+      });
+    })
+  );
+
+  // ========================================
+  // B. BUSINESS ALERTS MANAGEMENT ENDPOINTS
+  // ========================================
+
+  // 5. GET /api/alerts - List business alerts
+  router.get('/api/alerts', 
+    isAuthenticated, 
+    validateQuery(alertsQuerySchema),
+    asyncHandler(async (req: any, res) => {
+      const query = { ...req.query };
+      
+      // FILTRAGE PAR RÔLE USER (RBAC)
+      if (req.user?.role === 'user') {
+        // Utilisateurs normaux voient seulement alertes assignées ou scope project
+        query.assignedTo = req.user.id;
+      }
+      
+      // RÉCUPÉRATION ALERTES  
+      const result = await storage.listBusinessAlerts(query);
+      
+      logger.info('[BusinessAlerts] Alertes récupérées', { metadata: { total: result.total, userRole: req.user?.role, limit: query.limit } });
+      
+      // RESPONSE ENRICHIE
+      res.json({
+        success: true,
+        data: result.alerts,
+        summary: result.summary,
+        pagination: {
+          total: result.total,
+          limit: query.limit,
+          offset: query.offset,
+          has_more: (query.offset + query.limit) < result.total
+        },
+        filters_applied: query,
+        timestamp: new Date().toISOString()
+      });
+    })
+  );
+
+  // 6. POST /api/alerts/:id/acknowledge - Acknowledge alert
+  router.post('/api/alerts/:id/acknowledge', 
+    isAuthenticated, 
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      notes: z.string().max(500).optional()
+    })),
+    asyncHandler(async (req: any, res) => {
+      const alertId = req.params.id;
+      const userId = req.user.id;
+      
+      // VÉRIFICATION ALERTE EXISTE
+      const alert = await storage.getBusinessAlertById(alertId);
+      if (!alert) {
+        throw new NotFoundError('Alerte non trouvée');
+      }
+      
+      // VÉRIFICATION STATUT
+      if (alert.status !== 'open') {
+        throw new ValidationError(`Alerte déjà ${alert.status}`);
+      }
+      
+      // ACKNOWLEDGMENT
+      const success = await storage.acknowledgeAlert(alertId, userId, req.body.notes);
+      
+      if (!success) {
+        throw new DatabaseError('Échec accusé réception');
+      }
+      
+      logger.info('[BusinessAlerts] Alerte accusée réception', { metadata: { alertId, userId } });
+      
+      res.json({
+        success: true,
+        data: {
+          alert_id: alertId,
+          acknowledged_by: userId,
+          acknowledged_at: new Date().toISOString(),
+          previous_status: 'open',
+          new_status: 'acknowledged'
+        },
+        message: 'Alerte accusée réception',
+        timestamp: new Date().toISOString()
+      });
+    })
+  );
+
+  // 7. POST /api/alerts/:id/resolve - Resolve alert
+  router.post('/api/alerts/:id/resolve', 
+    isAuthenticated, 
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      resolution_notes: z.string().min(10).max(1000)
+    })),
+    asyncHandler(async (req: any, res) => {
+      const alertId = req.params.id;
+      const userId = req.user.id;
+      
+      // VÉRIFICATION ALERTE
+      const alert = await storage.getBusinessAlertById(alertId);
+      if (!alert) {
+        throw new NotFoundError('Alerte non trouvée');
+      }
+      
+      // VÉRIFICATION STATUT (doit être ack ou in_progress)
+      if (!['acknowledged', 'in_progress'].includes(alert.status)) {
+        throw new ValidationError(`Impossible résoudre alerte avec statut ${alert.status}`);
+      }
+      
+      // RÉSOLUTION
+      const success = await storage.resolveAlert(
+        alertId, 
+        userId, 
+        req.body.resolution_notes
+      );
+      
+      if (!success) {
+        throw new DatabaseError('Échec résolution alerte');
+      }
+      
+      logger.info('[BusinessAlerts] Alerte résolue', { metadata: { alertId, userId, previousStatus: alert.status } });
+      
+      res.json({
+        success: true,
+        data: {
+          alert_id: alertId,
+          resolved_by: userId,
+          resolved_at: new Date().toISOString(),
+          resolution_notes: req.body.resolution_notes,
+          previous_status: alert.status,
+          new_status: 'resolved'
+        },
+        message: 'Alerte résolue avec succès',
+        timestamp: new Date().toISOString()
+      });
+    })
+  );
+
+  // 8. PATCH /api/alerts/:id/assign - Assign alert
+  router.patch('/api/alerts/:id/assign', 
+    isAuthenticated, 
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      assigned_to: z.string().min(1)
+    })),
+    asyncHandler(async (req: any, res) => {
+      // RBAC - Assignation par admin/executive/manager
+      if (!['admin', 'executive', 'manager'].includes(req.user?.role)) {
+        throw new AuthorizationError('Accès refusé - Rôle manager minimum requis');
+      }
+      
+      const alertId = req.params.id;
+      const assignedTo = req.body.assigned_to;
+      const assignedBy = req.user.id;
+      
+      // ASSIGNATION VIA STORAGE
+      const success = await storage.updateBusinessAlertStatus(
+        alertId,
+        { assignedTo },
+        assignedBy
+      );
+      
+      if (!success) {
+        throw new NotFoundError('Alerte non trouvée');
+      }
+      
+      logger.info('[BusinessAlerts] Alerte assignée', { metadata: { alertId, assignedTo, assignedBy } });
+      
+      res.json({
+        success: true,
+        data: {
+          alert_id: alertId,
+          assigned_to: assignedTo,
+          assigned_by: assignedBy,
+          assigned_at: new Date().toISOString()
+        },
+        message: 'Alerte assignée avec succès',
+        timestamp: new Date().toISOString()
+      });
+    })
+  );
+
+  // ========================================
+  // C. DASHBOARD ENDPOINTS
+  // ========================================
+
+  // 9. GET /api/alerts/dashboard - Dashboard summary
+  router.get('/api/alerts/dashboard', 
+    isAuthenticated, 
+    asyncHandler(async (req: any, res) => {
+      const userId = req.user.id;
+      
+      // STATS GLOBALES ALERTES
+      const openAlerts = await storage.listBusinessAlerts({
+        status: 'open',
+        limit: 100,
+        offset: 0
+      });
+      
+      const criticalAlerts = await storage.listBusinessAlerts({
+        severity: 'critical',
+        status: 'open',
+        limit: 10,
+        offset: 0
+      });
+      
+      const myAlerts = await storage.listBusinessAlerts({
+        assignedTo: userId,
+        status: 'open',
+        limit: 20,
+        offset: 0
+      });
+      
+      // MÉTRIQUES RÉSOLUTION (7 derniers jours)
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const resolvedThisWeek = await storage.listBusinessAlerts({
+        status: 'resolved',
+        limit: 100,
+        offset: 0
+      });
+      
+      logger.info('[BusinessAlerts] Dashboard consulté', { 
+        metadata: { userId, openCount: openAlerts.total, criticalCount: criticalAlerts.total } 
+      });
+      
+      res.json({
+        success: true,
+        data: {
+          summary: {
+            total_open: openAlerts.total,
+            critical_open: criticalAlerts.total,
+            assigned_to_me: myAlerts.total,
+            resolved_this_week: resolvedThisWeek.alerts.filter(a => 
+              new Date(a.resolvedAt || '') >= weekAgo
+            ).length
+          },
+          critical_alerts: criticalAlerts.alerts.slice(0, 5), // Top 5 critiques
+          my_alerts: myAlerts.alerts.slice(0, 10), // Mes 10 alertes
+          alerts_by_type: openAlerts.summary.by_type,
+          alerts_by_severity: openAlerts.summary.by_severity,
+          recent_activity: resolvedThisWeek.alerts
+            .slice(0, 5)
+            .map(alert => ({
+              id: alert.id,
+              title: alert.title,
+              resolved_by: alert.resolvedBy,
+              resolved_at: alert.resolvedAt,
+              type: alert.alertType
+            }))
+        },
+        timestamp: new Date().toISOString()
+      });
+    })
+  );
+
+  // 10. GET /api/alerts/stats - Alert statistics
+  router.get('/api/alerts/stats', 
+    isAuthenticated, 
+    asyncHandler(async (req: any, res) => {
+      // RBAC - Stats détaillées pour admin/executive
+      if (!['admin', 'executive'].includes(req.user?.role)) {
+        throw new AuthorizationError('Accès refusé - Statistiques admin/executive uniquement');
+      }
+      
+      const userId = req.user.id;
+      const userRole = req.user.role;
+      
+      // CALCULS STATISTIQUES
+      const allAlerts = await storage.listBusinessAlerts({
+        limit: 1000,
+        offset: 0
+      });
+      
+      // MÉTRIQUES AVANCÉES
+      const stats = {
+        total_alerts: allAlerts.total,
+        distribution: allAlerts.summary,
+        
+        // Temps résolution moyen par sévérité
+        avg_resolution_time: calculateAvgResolutionTime(allAlerts.alerts),
+        
+        // Top seuils déclencheurs
+        top_triggered_thresholds: getTopTriggeredThresholds(allAlerts.alerts),
+        
+        // Performance équipes
+        team_performance: calculateTeamPerformance(allAlerts.alerts),
+        
+        // Tendances (7 derniers jours vs 7 précédents)
+        trends: calculateAlertsTrends(allAlerts.alerts)
+      };
+      
+      logger.info('[BusinessAlerts] Stats consultées', { 
+        metadata: { userId, userRole, totalAlerts: allAlerts.total } 
+      });
+      
+      res.json({
+        success: true,
+        data: stats,
+        generated_at: new Date().toISOString(),
+        timestamp: new Date().toISOString()
+      });
     })
   );
 

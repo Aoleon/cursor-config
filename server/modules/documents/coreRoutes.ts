@@ -164,6 +164,47 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
     })
   );
 
+  /**
+   * POST /api/ocr/add-pattern
+   * Add custom regex pattern for OCR extraction
+   */
+  router.post('/api/ocr/add-pattern',
+    isAuthenticated,
+    rateLimits.general,
+    validateBody(z.object({
+      field: z.string().min(1, 'Le champ est requis'),
+      pattern: z.string().min(1, 'Le pattern est requis')
+    })),
+    asyncHandler(async (req: any, res: Response) => {
+      const { field, pattern } = req.body;
+      
+      logger.info('[OCR] Ajout pattern personnalisé', {
+        metadata: {
+          route: '/api/ocr/add-pattern',
+          method: 'POST',
+          field,
+          userId: req.user?.id
+        }
+      });
+      
+      try {
+        const regex = new RegExp(pattern, 'i');
+        ocrService.addCustomPattern(field, regex);
+        
+        eventBus.emit('ocr:pattern:added', {
+          field,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, {
+          message: `Pattern ajouté pour le champ "${field}"`
+        });
+      } catch (regexError) {
+        throw createError.badRequest('Pattern regex invalide', { pattern });
+      }
+    })
+  );
+
   // ========================================
   // DOCUMENT ANALYSIS ROUTES
   // ========================================

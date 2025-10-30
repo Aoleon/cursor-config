@@ -91,7 +91,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   // ========================================
 
   // POST /api/chatbot/query - Endpoint principal du chatbot avec pipeline complet
-  router.post('/chatbot/query',
+  router.post('/api/chatbot/query',
     isAuthenticated,
     rateLimits.chatbot, // Rate limiting strict pour le chatbot (10 req/min)
     validateBody(chatbotQueryRequestSchema),
@@ -187,7 +187,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   );
 
   // GET /api/chatbot/suggestions - Suggestions intelligentes contextuelles
-  router.get('/chatbot/suggestions',
+  router.get('/api/chatbot/suggestions',
     isAuthenticated,
     rateLimits.general,
     validateQuery(chatbotSuggestionsRequestSchema),
@@ -230,7 +230,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   );
 
   // POST /api/chatbot/validate - Validation de requête sans exécution
-  router.post('/chatbot/validate',
+  router.post('/api/chatbot/validate',
     isAuthenticated,
     rateLimits.general,
     validateBody(chatbotValidateRequestSchema),
@@ -262,7 +262,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   );
 
   // GET /api/chatbot/history - Historique des conversations utilisateur
-  router.get('/chatbot/history',
+  router.get('/api/chatbot/history',
     isAuthenticated,
     rateLimits.general,
     validateQuery(chatbotHistoryRequestSchema),
@@ -306,7 +306,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   );
 
   // POST /api/chatbot/feedback - Feedback utilisateur pour apprentissage
-  router.post('/chatbot/feedback',
+  router.post('/api/chatbot/feedback',
     isAuthenticated,
     rateLimits.general,
     validateBody(chatbotFeedbackRequestSchema),
@@ -336,7 +336,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   );
 
   // GET /api/chatbot/stats - Statistiques d'usage (admin uniquement)
-  router.get('/chatbot/stats',
+  router.get('/api/chatbot/stats',
     isAuthenticated,
     rateLimits.general,
     validateQuery(chatbotStatsRequestSchema),
@@ -395,7 +395,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   // ========================================
 
   // GET /api/chatbot/health - Health check du pipeline chatbot complet
-  router.get('/chatbot/health',
+  router.get('/api/chatbot/health',
     isAuthenticated,
     rateLimits.general,
     asyncHandler(async (req: any, res: Response) => {
@@ -458,7 +458,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   // ========================================
 
   // POST /api/chatbot/propose-action - Propose une action basée sur l'intention détectée
-  router.post('/chatbot/propose-action',
+  router.post('/api/chatbot/propose-action',
     isAuthenticated,
     rateLimits.processing, // Rate limiting strict pour les actions
     validateBody(proposeActionSchema),
@@ -493,7 +493,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   );
 
   // POST /api/chatbot/execute-action - Exécute une action après confirmation utilisateur
-  router.post('/chatbot/execute-action',
+  router.post('/api/chatbot/execute-action',
     isAuthenticated,
     rateLimits.processing, // Rate limiting strict pour les actions critiques
     validateBody(executeActionSchema),
@@ -528,7 +528,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   );
 
   // GET /api/chatbot/action-history - Historique des actions utilisateur
-  router.get('/chatbot/action-history',
+  router.get('/api/chatbot/action-history',
     isAuthenticated,
     rateLimits.general,
     validateQuery(actionHistoryRequestSchema),
@@ -559,7 +559,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   );
 
   // PUT /api/chatbot/action-confirmation/:confirmationId - Met à jour une confirmation d'action
-  router.put('/chatbot/action-confirmation/:confirmationId',
+  router.put('/api/chatbot/action-confirmation/:confirmationId',
     isAuthenticated,
     rateLimits.general,
     validateParams(z.object({ confirmationId: z.string().uuid() })),
@@ -588,6 +588,245 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         res.status(200).json(result);
       } else {
         res.status(500).json(result);
+      }
+    })
+  );
+
+  // ========================================
+  // BUSINESS CONTEXT ROUTES
+  // ========================================
+
+  // POST /api/business-context/generate - Génération contexte métier complet
+  router.post('/api/business-context/generate',
+    isAuthenticated,
+    rateLimits.processing,
+    validateBody(z.object({
+      query: z.string().min(1),
+      user_role: z.string(),
+      conversation_id: z.string().optional(),
+      requested_domains: z.array(z.string()).optional(),
+      complexity_level: z.enum(['basic', 'intermediate', 'advanced']).optional()
+    })),
+    asyncHandler(async (req: any, res: Response) => {
+      const requestBody = req.body;
+      
+      // Construction de la requête avec métadonnées utilisateur
+      const contextRequest = {
+        ...requestBody,
+        userId: req.session.user?.id || req.user?.id,
+        sessionId: req.sessionID
+      };
+
+      logger.info('Génération contexte pour utilisateur', {
+        metadata: { userId: contextRequest.userId, userRole: contextRequest.user_role }
+      });
+
+      // Génération du contexte via BusinessContextService
+      const result = await businessContextService.generateBusinessContext(contextRequest);
+
+      if (result.success && result.context) {
+        sendSuccess(res, {
+          context: result.context,
+          performance_metrics: result.performance_metrics,
+          cache_hit: result.performance_metrics.cache_hit,
+          generation_time_ms: result.performance_metrics.generation_time_ms,
+          schemas_loaded: result.performance_metrics.schemas_loaded,
+          examples_included: result.performance_metrics.examples_included
+        });
+      } else {
+        const statusCode = result.error?.type === 'rbac' ? 403 : 
+                          result.error?.type === 'validation' ? 400 : 500;
+        
+        res.status(statusCode).json({
+          success: false,
+          error: result.error?.message || 'Erreur lors de la génération du contexte métier',
+          type: result.error?.type || 'internal',
+          performance_metrics: result.performance_metrics
+        });
+      }
+    })
+  );
+
+  // POST /api/business-context/enrich - Enrichissement contexte existant
+  router.post('/api/business-context/enrich',
+    isAuthenticated,
+    rateLimits.general,
+    validateBody(z.object({
+      base_context: z.string().min(1),
+      query: z.string().min(1),
+      user_role: z.string(),
+      refinement_hints: z.array(z.string()).optional()
+    })),
+    asyncHandler(async (req: any, res: Response) => {
+      const requestBody = req.body;
+      
+      // Construction de la requête d'enrichissement
+      const enrichmentRequest = {
+        ...requestBody,
+        userId: req.session.user?.id || req.user?.id
+      };
+
+      logger.info('Enrichissement contexte pour utilisateur', {
+        metadata: { userId: enrichmentRequest.userId }
+      });
+
+      // Enrichissement via BusinessContextService
+      const result = await businessContextService.enrichContext(enrichmentRequest);
+
+      if (result.success) {
+        sendSuccess(res, {
+          enriched_context: result.enriched_context,
+          suggested_refinements: result.suggested_refinements,
+          confidence_score: result.confidence_score,
+          performance_metrics: result.performance_metrics
+        });
+      } else {
+        const statusCode = result.error?.type === 'validation' ? 400 : 500;
+        
+        res.status(statusCode).json({
+          success: false,
+          error: result.error?.message || 'Erreur lors de l\'enrichissement du contexte',
+          type: result.error?.type || 'internal',
+          performance_metrics: result.performance_metrics
+        });
+      }
+    })
+  );
+
+  // POST /api/business-context/learning/update - Mise à jour apprentissage adaptatif
+  router.post('/api/business-context/learning/update',
+    isAuthenticated,
+    rateLimits.general,
+    validateBody(z.object({
+      query: z.string().min(1),
+      user_role: z.string(),
+      feedback_type: z.enum(['positive', 'negative', 'neutral']),
+      context_quality_score: z.number().min(0).max(1).optional(),
+      improvement_suggestions: z.array(z.string()).optional()
+    })),
+    asyncHandler(async (req: any, res: Response) => {
+      const requestBody = req.body;
+      
+      // Construction de la mise à jour d'apprentissage
+      const learningUpdate = {
+        ...requestBody,
+        userId: req.session.user?.id || req.user?.id,
+        timestamp: new Date()
+      };
+
+      logger.info('Mise à jour apprentissage pour utilisateur', {
+        metadata: { userId: learningUpdate.userId, userRole: learningUpdate.user_role }
+      });
+
+      // Mise à jour via BusinessContextService
+      const result = await businessContextService.updateAdaptiveLearning(learningUpdate);
+
+      if (result.success) {
+        sendSuccess(res, {
+          learning_applied: result.learning_applied,
+          updated_patterns: result.updated_patterns,
+          optimization_suggestions: result.optimization_suggestions
+        });
+      } else {
+        const statusCode = result.error?.type === 'validation' ? 400 : 500;
+        
+        res.status(statusCode).json({
+          success: false,
+          error: result.error?.message || 'Erreur lors de la mise à jour de l\'apprentissage',
+          type: result.error?.type || 'internal'
+        });
+      }
+    })
+  );
+
+  // GET /api/business-context/metrics - Métriques du service
+  router.get('/api/business-context/metrics',
+    isAuthenticated,
+    rateLimits.general,
+    asyncHandler(async (req: any, res: Response) => {
+      // Vérification permission admin/manager pour métriques
+      const userRole = req.session.user?.role || req.user?.role || 'user';
+      if (!['admin', 'chef_projet'].includes(userRole)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Accès aux métriques réservé aux administrateurs et chefs de projet'
+        });
+      }
+
+      logger.info('Récupération métriques demandée', {
+        metadata: { userRole }
+      });
+
+      try {
+        // Récupération des métriques via BusinessContextService
+        const metrics = await businessContextService.getServiceMetrics();
+
+        sendSuccess(res, {
+          metrics,
+          generated_at: new Date().toISOString(),
+          user_role: userRole
+        });
+
+      } catch (error) {
+        logger.error('Erreur récupération métriques', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
+        res.status(500).json({
+          success: false,
+          error: 'Erreur lors de la récupération des métriques'
+        });
+      }
+    })
+  );
+
+  // GET /api/business-context/knowledge/materials - Recherche matériaux menuiserie
+  router.get('/api/business-context/knowledge/materials',
+    isAuthenticated,
+    rateLimits.general,
+    validateQuery(z.object({
+      search: z.string().optional(),
+      type: z.enum(['PVC', 'Aluminium', 'Bois', 'Composites', 'Acier']).optional(),
+      category: z.enum(['economique', 'standard', 'premium']).optional()
+    })),
+    asyncHandler(async (req: any, res: Response) => {
+      const { search, type, category } = req.query;
+      
+      try {
+        // Import de la base de connaissances
+        const { MENUISERIE_KNOWLEDGE_BASE, findMaterialByName } = await import('../../services/MenuiserieKnowledgeBase');
+        
+        let materials = MENUISERIE_KNOWLEDGE_BASE.materials;
+        
+        // Filtrage par recherche
+        if (search) {
+          const material = findMaterialByName(search);
+          materials = material ? [material] : [];
+        }
+        
+        // Filtrage par type
+        if (type) {
+          materials = materials.filter(m => m.name === type);
+        }
+        
+        // Filtrage par catégorie
+        if (category) {
+          materials = materials.filter(m => m.properties.cost_category === category);
+        }
+        
+        sendSuccess(res, {
+          materials: materials.slice(0, 20),
+          total: materials.length,
+          filters_applied: { search, type, category }
+        });
+        
+      } catch (error) {
+        logger.error('Erreur recherche matériaux', {
+          metadata: { error: error instanceof Error ? error.message : String(error) }
+        });
+        res.status(500).json({
+          success: false,
+          error: 'Erreur lors de la recherche de matériaux'
+        });
       }
     })
   );

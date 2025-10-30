@@ -16,6 +16,7 @@ import { createChatbotRouter } from "./modules/chatbot";
 import { createAlertsRouter } from "./modules/alerts";
 import { createStakeholdersRouter } from "./modules/stakeholders";
 import { createAdminRouter } from "./modules/admin";
+import { createOpsRouter } from "./modules/ops";
 import { setupMondayModule } from "./modules/monday";
 
 // Import cache service
@@ -48,6 +49,7 @@ export async function registerRoutes(app: Express) {
   const alertsRouter = createAlertsRouter(storageInterface, eventBus);
   const stakeholdersRouter = createStakeholdersRouter(storageInterface, eventBus);
   const adminRouter = createAdminRouter(storageInterface, eventBus);
+  const opsRouter = createOpsRouter(storageInterface, eventBus);
   
   app.use(chiffrageRouter);
   app.use(batigestRouter);
@@ -61,10 +63,18 @@ export async function registerRoutes(app: Express) {
   app.use(alertsRouter);
   app.use(stakeholdersRouter);
   app.use(adminRouter);
+  app.use(opsRouter);
   
   logger.info('✅ Admin routes registered', {
     metadata: {
       module: 'Admin',
+      operation: 'registerRoutes'
+    }
+  });
+  
+  logger.info('✅ Ops routes registered (dev/maintenance)', {
+    metadata: {
+      module: 'Ops',
       operation: 'registerRoutes'
     }
   });

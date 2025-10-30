@@ -18,7 +18,7 @@ import type {
   ContextTierDetectionResult
 } from "@shared/schema";
 import { ContextTierService } from "./ContextTierService";
-import { TechnicalMetricsService } from "./consolidated/TechnicalMetricsService";
+import { getTechnicalMetricsService, TechnicalMetricsService } from "./consolidated/TechnicalMetricsService";
 
 import { 
   aos, offers, projects, suppliers, projectSuppliers, teams, teamMembers,
@@ -2622,10 +2622,12 @@ export function getContextBuilderService(
   performanceMetricsService?: TechnicalMetricsService
 ): ContextBuilderService {
   if (!globalContextBuilderService) {
-    globalContextBuilderService = new ContextBuilderService(storage, performanceMetricsService);
+    // Use singleton pattern for TechnicalMetricsService if not provided
+    const metricsService = performanceMetricsService || getTechnicalMetricsService(storage);
+    globalContextBuilderService = new ContextBuilderService(storage, metricsService);
     
     // PHASE 3 : Initialisation monitoring système tiéré
-    if (performanceMetricsService) {
+    if (metricsService) {
       logger.info('Service initialisé avec métriques de performance', {
         metadata: {
           service: 'ContextBuilderService',
@@ -2634,27 +2636,37 @@ export function getContextBuilderService(
         }
       });
       
-      // Enregistrement segments personnalisés pour système tiéré
-      performanceMetricsService.registerCustomSegment('context_tier_detection', {
-        name: 'Détection Tier Contexte',
-        description: 'Classification intelligente du tier de contexte requis',
-        category: 'context_generation',
-        targetTimeMs: 200
-      });
-      
-      performanceMetricsService.registerCustomSegment('context_build_selective', {
-        name: 'Construction Contexte Sélective', 
-        description: 'Génération contexte selon profil tier détecté',
-        category: 'context_generation',
-        targetTimeMs: 2000
-      });
+      // Enregistrement segments personnalisés pour système tiéré (si méthode disponible)
+      if (typeof (metricsService as any).registerCustomSegment === 'function') {
+        (metricsService as any).registerCustomSegment('context_tier_detection', {
+          name: 'Détection Tier Contexte',
+          description: 'Classification intelligente du tier de contexte requis',
+          category: 'context_generation',
+          targetTimeMs: 200
+        });
+        
+        (metricsService as any).registerCustomSegment('context_build_selective', {
+          name: 'Construction Contexte Sélective', 
+          description: 'Génération contexte selon profil tier détecté',
+          category: 'context_generation',
+          targetTimeMs: 2000
+        });
 
-      performanceMetricsService.registerCustomSegment('context_compression_intelligent', {
-        name: 'Compression Intelligente Contexte',
-        description: 'Compression contexte selon priorités métier BTP',
-        category: 'context_generation', 
-        targetTimeMs: 300
-      });
+        (metricsService as any).registerCustomSegment('context_compression_intelligent', {
+          name: 'Compression Intelligente Contexte',
+          description: 'Compression contexte selon priorités métier BTP',
+          category: 'context_generation', 
+          targetTimeMs: 300
+        });
+      } else {
+        logger.debug('registerCustomSegment non disponible sur TechnicalMetricsService', {
+          metadata: {
+            service: 'ContextBuilderService',
+            operation: 'initialize',
+            note: 'Segments personnalisés skipped - méthode legacy'
+          }
+        });
+      }
     }
   }
   return globalContextBuilderService;

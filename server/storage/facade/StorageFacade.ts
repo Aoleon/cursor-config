@@ -17,7 +17,8 @@ import { OfferRepository, type OfferFilters } from '../commercial/OfferRepositor
 import { AoRepository, type AoFilters } from '../commercial/AoRepository';
 import { ProductionRepository } from '../production/ProductionRepository';
 import { SuppliersRepository } from '../suppliers/SuppliersRepository';
-import type { Offer, InsertOffer, Ao, InsertAo, User } from '@shared/schema';
+import { ChiffrageRepository } from '../chiffrage/ChiffrageRepository';
+import type { Offer, InsertOffer, Ao, InsertAo, User, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone } from '@shared/schema';
 
 /**
  * Facade de storage qui unifie l'accès aux données
@@ -74,6 +75,7 @@ export class StorageFacade {
   private readonly aoRepository: AoRepository;
   private readonly productionRepository: ProductionRepository;
   private readonly suppliersRepository: SuppliersRepository;
+  private readonly chiffrageRepository: ChiffrageRepository;
 
   /**
    * Constructeur
@@ -94,6 +96,7 @@ export class StorageFacade {
     this.aoRepository = new AoRepository(this.db, this.eventBus);
     this.productionRepository = new ProductionRepository(this.db, this.eventBus);
     this.suppliersRepository = new SuppliersRepository(this.db, this.eventBus);
+    this.chiffrageRepository = new ChiffrageRepository(this.db, this.eventBus);
     
     this.facadeLogger.info('StorageFacade initialisée avec repositories modulaires', {
       metadata: {
@@ -102,7 +105,7 @@ export class StorageFacade {
         status: 'hybrid_mode',
         hasDb: !!this.db,
         hasEventBus: !!this.eventBus,
-        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository']
+        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository']
       }
     });
   }
@@ -761,18 +764,178 @@ export class StorageFacade {
   get getDashboardStats() { return this.legacyStorage.getDashboardStats.bind(this.legacyStorage); }
   get getConsolidatedKpis() { return this.legacyStorage.getConsolidatedKpis.bind(this.legacyStorage); }
 
-  // Chiffrage Elements operations
-  get getChiffrageElementsByOffer() { return this.legacyStorage.getChiffrageElementsByOffer.bind(this.legacyStorage); }
-  get getChiffrageElementsByLot() { return this.legacyStorage.getChiffrageElementsByLot.bind(this.legacyStorage); }
-  get createChiffrageElement() { return this.legacyStorage.createChiffrageElement.bind(this.legacyStorage); }
-  get updateChiffrageElement() { return this.legacyStorage.updateChiffrageElement.bind(this.legacyStorage); }
-  get deleteChiffrageElement() { return this.legacyStorage.deleteChiffrageElement.bind(this.legacyStorage); }
+  // ========================================
+  // CHIFFRAGE OPERATIONS - Déléguées vers ChiffrageRepository
+  // ========================================
 
-  // DPGF Documents operations
-  get getDpgfDocumentByOffer() { return this.legacyStorage.getDpgfDocumentByOffer.bind(this.legacyStorage); }
-  get createDpgfDocument() { return this.legacyStorage.createDpgfDocument.bind(this.legacyStorage); }
-  get updateDpgfDocument() { return this.legacyStorage.updateDpgfDocument.bind(this.legacyStorage); }
-  get deleteDpgfDocument() { return this.legacyStorage.deleteDpgfDocument.bind(this.legacyStorage); }
+  /**
+   * Récupère les éléments de chiffrage pour une offre
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]> {
+    try {
+      const elements = await this.chiffrageRepository.getChiffrageElementsByOffer(offerId);
+      this.facadeLogger.info('Chiffrage elements récupérés via ChiffrageRepository', {
+        metadata: { offerId, count: elements.length, module: 'StorageFacade', operation: 'getChiffrageElementsByOffer' }
+      });
+      return elements;
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.getChiffrageElementsByOffer failed, falling back to legacy', {
+        metadata: { error, offerId, module: 'StorageFacade', operation: 'getChiffrageElementsByOffer' }
+      });
+      return await this.legacyStorage.getChiffrageElementsByOffer(offerId);
+    }
+  }
+
+  /**
+   * Récupère les éléments de chiffrage pour un lot
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async getChiffrageElementsByLot(lotId: string): Promise<ChiffrageElement[]> {
+    try {
+      const elements = await this.chiffrageRepository.getChiffrageElementsByLot(lotId);
+      this.facadeLogger.info('Chiffrage elements récupérés via ChiffrageRepository', {
+        metadata: { lotId, count: elements.length, module: 'StorageFacade', operation: 'getChiffrageElementsByLot' }
+      });
+      return elements;
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.getChiffrageElementsByLot failed, falling back to legacy', {
+        metadata: { error, lotId, module: 'StorageFacade', operation: 'getChiffrageElementsByLot' }
+      });
+      return await this.legacyStorage.getChiffrageElementsByLot(lotId);
+    }
+  }
+
+  /**
+   * Crée un nouvel élément de chiffrage
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async createChiffrageElement(element: InsertChiffrageElement): Promise<ChiffrageElement> {
+    try {
+      const created = await this.chiffrageRepository.createChiffrageElement(element);
+      this.facadeLogger.info('Chiffrage element créé via ChiffrageRepository', {
+        metadata: { id: created.id, offerId: created.offerId, module: 'StorageFacade', operation: 'createChiffrageElement' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.createChiffrageElement failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createChiffrageElement' }
+      });
+      return await this.legacyStorage.createChiffrageElement(element);
+    }
+  }
+
+  /**
+   * Met à jour un élément de chiffrage
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async updateChiffrageElement(id: string, element: Partial<InsertChiffrageElement>): Promise<ChiffrageElement> {
+    try {
+      const updated = await this.chiffrageRepository.updateChiffrageElement(id, element);
+      this.facadeLogger.info('Chiffrage element mis à jour via ChiffrageRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateChiffrageElement' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.updateChiffrageElement failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateChiffrageElement' }
+      });
+      return await this.legacyStorage.updateChiffrageElement(id, element);
+    }
+  }
+
+  /**
+   * Supprime un élément de chiffrage
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async deleteChiffrageElement(id: string): Promise<void> {
+    try {
+      await this.chiffrageRepository.deleteChiffrageElement(id);
+      this.facadeLogger.info('Chiffrage element supprimé via ChiffrageRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteChiffrageElement' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.deleteChiffrageElement failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteChiffrageElement' }
+      });
+      await this.legacyStorage.deleteChiffrageElement(id);
+    }
+  }
+
+  /**
+   * Récupère le document DPGF pour une offre
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async getDpgfDocumentByOffer(offerId: string): Promise<DpgfDocument | null> {
+    try {
+      const dpgf = await this.chiffrageRepository.getDpgfDocumentByOffer(offerId);
+      this.facadeLogger.info('DPGF document récupéré via ChiffrageRepository', {
+        metadata: { offerId, found: !!dpgf, module: 'StorageFacade', operation: 'getDpgfDocumentByOffer' }
+      });
+      return dpgf;
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.getDpgfDocumentByOffer failed, falling back to legacy', {
+        metadata: { error, offerId, module: 'StorageFacade', operation: 'getDpgfDocumentByOffer' }
+      });
+      return await this.legacyStorage.getDpgfDocumentByOffer(offerId);
+    }
+  }
+
+  /**
+   * Crée un nouveau document DPGF
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async createDpgfDocument(dpgf: InsertDpgfDocument): Promise<DpgfDocument> {
+    try {
+      const created = await this.chiffrageRepository.createDpgfDocument(dpgf);
+      this.facadeLogger.info('DPGF document créé via ChiffrageRepository', {
+        metadata: { id: created.id, offerId: created.offerId, module: 'StorageFacade', operation: 'createDpgfDocument' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.createDpgfDocument failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createDpgfDocument' }
+      });
+      return await this.legacyStorage.createDpgfDocument(dpgf);
+    }
+  }
+
+  /**
+   * Met à jour un document DPGF
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async updateDpgfDocument(id: string, dpgf: Partial<InsertDpgfDocument>): Promise<DpgfDocument> {
+    try {
+      const updated = await this.chiffrageRepository.updateDpgfDocument(id, dpgf);
+      this.facadeLogger.info('DPGF document mis à jour via ChiffrageRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateDpgfDocument' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.updateDpgfDocument failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateDpgfDocument' }
+      });
+      return await this.legacyStorage.updateDpgfDocument(id, dpgf);
+    }
+  }
+
+  /**
+   * Supprime un document DPGF
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async deleteDpgfDocument(id: string): Promise<void> {
+    try {
+      await this.chiffrageRepository.deleteDpgfDocument(id);
+      this.facadeLogger.info('DPGF document supprimé via ChiffrageRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteDpgfDocument' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.deleteDpgfDocument failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteDpgfDocument' }
+      });
+      await this.legacyStorage.deleteDpgfDocument(id);
+    }
+  }
 
   // AO Lots operations
   get getAoLots() { return this.legacyStorage.getAoLots.bind(this.legacyStorage); }
@@ -816,11 +979,80 @@ export class StorageFacade {
   get createProjectContact() { return this.legacyStorage.createProjectContact.bind(this.legacyStorage); }
   get deleteProjectContact() { return this.legacyStorage.deleteProjectContact.bind(this.legacyStorage); }
 
-  // Validation Milestones operations
-  get getValidationMilestones() { return this.legacyStorage.getValidationMilestones.bind(this.legacyStorage); }
-  get createValidationMilestone() { return this.legacyStorage.createValidationMilestone.bind(this.legacyStorage); }
-  get updateValidationMilestone() { return this.legacyStorage.updateValidationMilestone.bind(this.legacyStorage); }
-  get deleteValidationMilestone() { return this.legacyStorage.deleteValidationMilestone.bind(this.legacyStorage); }
+  /**
+   * Récupère les jalons de validation pour une offre
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async getValidationMilestones(offerId: string): Promise<ValidationMilestone[]> {
+    try {
+      const milestones = await this.chiffrageRepository.getValidationMilestones(offerId);
+      this.facadeLogger.info('Validation milestones récupérés via ChiffrageRepository', {
+        metadata: { offerId, count: milestones.length, module: 'StorageFacade', operation: 'getValidationMilestones' }
+      });
+      return milestones;
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.getValidationMilestones failed, falling back to legacy', {
+        metadata: { error, offerId, module: 'StorageFacade', operation: 'getValidationMilestones' }
+      });
+      return await this.legacyStorage.getValidationMilestones(offerId);
+    }
+  }
+
+  /**
+   * Crée un nouveau jalon de validation
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async createValidationMilestone(milestone: InsertValidationMilestone): Promise<ValidationMilestone> {
+    try {
+      const created = await this.chiffrageRepository.createValidationMilestone(milestone);
+      this.facadeLogger.info('Validation milestone créé via ChiffrageRepository', {
+        metadata: { id: created.id, offerId: created.offerId, module: 'StorageFacade', operation: 'createValidationMilestone' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.createValidationMilestone failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createValidationMilestone' }
+      });
+      return await this.legacyStorage.createValidationMilestone(milestone);
+    }
+  }
+
+  /**
+   * Met à jour un jalon de validation
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async updateValidationMilestone(id: string, milestone: Partial<InsertValidationMilestone>): Promise<ValidationMilestone> {
+    try {
+      const updated = await this.chiffrageRepository.updateValidationMilestone(id, milestone);
+      this.facadeLogger.info('Validation milestone mis à jour via ChiffrageRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateValidationMilestone' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.updateValidationMilestone failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateValidationMilestone' }
+      });
+      return await this.legacyStorage.updateValidationMilestone(id, milestone);
+    }
+  }
+
+  /**
+   * Supprime un jalon de validation
+   * Utilise ChiffrageRepository avec fallback sur legacy
+   */
+  async deleteValidationMilestone(id: string): Promise<void> {
+    try {
+      await this.chiffrageRepository.deleteValidationMilestone(id);
+      this.facadeLogger.info('Validation milestone supprimé via ChiffrageRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteValidationMilestone' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('ChiffrageRepository.deleteValidationMilestone failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteValidationMilestone' }
+      });
+      await this.legacyStorage.deleteValidationMilestone(id);
+    }
+  }
 
   // Visa Architecte operations
   get getVisaArchitecte() { return this.legacyStorage.getVisaArchitecte.bind(this.legacyStorage); }

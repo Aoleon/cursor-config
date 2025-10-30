@@ -20,7 +20,8 @@ import { SuppliersRepository } from '../suppliers/SuppliersRepository';
 import { ChiffrageRepository } from '../chiffrage/ChiffrageRepository';
 import { DateIntelligenceRepository } from '../date-intelligence/DateIntelligenceRepository';
 import { DocumentsRepository } from '../documents/DocumentsRepository';
-import type { Offer, InsertOffer, Ao, InsertAo, User, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert, SupplierDocument, InsertSupplierDocument, SupplierQuoteSession, InsertSupplierQuoteSession, SupplierQuoteAnalysis, InsertSupplierQuoteAnalysis, PurchaseOrder, InsertPurchaseOrder, ClientQuote, InsertClientQuote } from '@shared/schema';
+import { UserRepository } from '../users/UserRepository';
+import type { Offer, InsertOffer, Ao, InsertAo, User, UpsertUser, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert, SupplierDocument, InsertSupplierDocument, SupplierQuoteSession, InsertSupplierQuoteSession, SupplierQuoteAnalysis, InsertSupplierQuoteAnalysis, PurchaseOrder, InsertPurchaseOrder, ClientQuote, InsertClientQuote, TeamResource, InsertTeamResource, BeWorkload, InsertBeWorkload, EmployeeLabel, EmployeeLabelInsert, EmployeeLabelAssignment, EmployeeLabelAssignmentInsert } from '@shared/schema';
 
 /**
  * Facade de storage qui unifie l'accès aux données
@@ -80,6 +81,7 @@ export class StorageFacade {
   private readonly chiffrageRepository: ChiffrageRepository;
   private readonly dateIntelligenceRepository: DateIntelligenceRepository;
   private readonly documentsRepository: DocumentsRepository;
+  private readonly userRepository: UserRepository;
 
   /**
    * Constructeur
@@ -103,6 +105,7 @@ export class StorageFacade {
     this.chiffrageRepository = new ChiffrageRepository(this.db, this.eventBus);
     this.dateIntelligenceRepository = new DateIntelligenceRepository(this.db, this.eventBus);
     this.documentsRepository = new DocumentsRepository(this.db, this.eventBus);
+    this.userRepository = new UserRepository(this.db, this.eventBus);
     
     this.facadeLogger.info('StorageFacade initialisée avec repositories modulaires', {
       metadata: {
@@ -111,7 +114,7 @@ export class StorageFacade {
         status: 'hybrid_mode',
         hasDb: !!this.db,
         hasEventBus: !!this.eventBus,
-        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository', 'DateIntelligenceRepository', 'DocumentsRepository']
+        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository', 'DateIntelligenceRepository', 'DocumentsRepository', 'UserRepository']
       }
     });
   }
@@ -148,9 +151,287 @@ export class StorageFacade {
   // }
   // ```
   
-  // User operations
-  get getUsers() { return this.legacyStorage.getUsers.bind(this.legacyStorage); }
-  get getUser() { return this.legacyStorage.getUser.bind(this.legacyStorage); }
+  // ========================================
+  // USER OPERATIONS - Déléguées vers UserRepository
+  // ========================================
+
+  // USERS - 2 MÉTHODES
+
+  /**
+   * Récupère tous les utilisateurs
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async getUsers(): Promise<User[]> {
+    try {
+      const users = await this.userRepository.getUsers();
+      this.facadeLogger.info('Utilisateurs récupérés via UserRepository', {
+        metadata: { count: users.length, module: 'StorageFacade', operation: 'getUsers' }
+      });
+      return users;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.getUsers failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'getUsers' }
+      });
+      return await this.legacyStorage.getUsers();
+    }
+  }
+
+  /**
+   * Récupère un utilisateur par son ID
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async getUser(id: string): Promise<User | undefined> {
+    try {
+      const user = await this.userRepository.getUser(id);
+      if (user) {
+        this.facadeLogger.info('Utilisateur récupéré via UserRepository', {
+          metadata: { id, module: 'StorageFacade', operation: 'getUser' }
+        });
+      }
+      return user;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.getUser failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'getUser' }
+      });
+      return await this.legacyStorage.getUser(id);
+    }
+  }
+
+  // TEAM RESOURCES - 3 MÉTHODES
+
+  /**
+   * Récupère les ressources d'équipe avec filtres optionnels
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async getTeamResources(projectId?: string): Promise<TeamResource[]> {
+    try {
+      const resources = await this.userRepository.getTeamResources(projectId);
+      this.facadeLogger.info('Ressources d\'équipe récupérées via UserRepository', {
+        metadata: { count: resources.length, projectId, module: 'StorageFacade', operation: 'getTeamResources' }
+      });
+      return resources;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.getTeamResources failed, falling back to legacy', {
+        metadata: { error, projectId, module: 'StorageFacade', operation: 'getTeamResources' }
+      });
+      return await this.legacyStorage.getTeamResources?.(projectId) || [];
+    }
+  }
+
+  /**
+   * Crée une nouvelle ressource d'équipe
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async createTeamResource(resource: InsertTeamResource): Promise<TeamResource> {
+    try {
+      const created = await this.userRepository.createTeamResource(resource);
+      this.facadeLogger.info('Ressource d\'équipe créée via UserRepository', {
+        metadata: { id: created.id, projectId: created.projectId, module: 'StorageFacade', operation: 'createTeamResource' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.createTeamResource failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createTeamResource' }
+      });
+      return await this.legacyStorage.createTeamResource?.(resource) as TeamResource;
+    }
+  }
+
+  /**
+   * Met à jour une ressource d'équipe
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async updateTeamResource(id: string, resource: Partial<InsertTeamResource>): Promise<TeamResource> {
+    try {
+      const updated = await this.userRepository.updateTeamResource(id, resource);
+      this.facadeLogger.info('Ressource d\'équipe mise à jour via UserRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateTeamResource' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.updateTeamResource failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateTeamResource' }
+      });
+      return await this.legacyStorage.updateTeamResource?.(id, resource) as TeamResource;
+    }
+  }
+
+  // BE WORKLOAD - 2 MÉTHODES
+
+  /**
+   * Récupère la charge BE avec filtres optionnels
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async getBeWorkload(weekNumber?: number, year?: number): Promise<BeWorkload[]> {
+    try {
+      const workload = await this.userRepository.getBeWorkload(weekNumber, year);
+      this.facadeLogger.info('Charge BE récupérée via UserRepository', {
+        metadata: { count: workload.length, weekNumber, year, module: 'StorageFacade', operation: 'getBeWorkload' }
+      });
+      return workload;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.getBeWorkload failed, falling back to legacy', {
+        metadata: { error, weekNumber, year, module: 'StorageFacade', operation: 'getBeWorkload' }
+      });
+      return await this.legacyStorage.getBeWorkload?.(weekNumber, year) || [];
+    }
+  }
+
+  /**
+   * Crée ou met à jour une charge BE
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async createOrUpdateBeWorkload(workload: InsertBeWorkload): Promise<BeWorkload> {
+    try {
+      const result = await this.userRepository.createOrUpdateBeWorkload(workload);
+      this.facadeLogger.info('Charge BE créée/mise à jour via UserRepository', {
+        metadata: { id: result.id, userId: result.userId, weekNumber: result.weekNumber, year: result.year, module: 'StorageFacade', operation: 'createOrUpdateBeWorkload' }
+      });
+      return result;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.createOrUpdateBeWorkload failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createOrUpdateBeWorkload' }
+      });
+      return await this.legacyStorage.createOrUpdateBeWorkload?.(workload) as BeWorkload;
+    }
+  }
+
+  // EMPLOYEE LABELS - 4 MÉTHODES
+
+  /**
+   * Récupère les labels employés avec filtre optionnel par catégorie
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async getEmployeeLabels(category?: string): Promise<EmployeeLabel[]> {
+    try {
+      const labels = await this.userRepository.getEmployeeLabels(category);
+      this.facadeLogger.info('Labels employés récupérés via UserRepository', {
+        metadata: { count: labels.length, category, module: 'StorageFacade', operation: 'getEmployeeLabels' }
+      });
+      return labels;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.getEmployeeLabels failed, falling back to legacy', {
+        metadata: { error, category, module: 'StorageFacade', operation: 'getEmployeeLabels' }
+      });
+      return await this.legacyStorage.getEmployeeLabels?.(category) || [];
+    }
+  }
+
+  /**
+   * Crée un nouveau label employé
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async createEmployeeLabel(label: EmployeeLabelInsert): Promise<EmployeeLabel> {
+    try {
+      const created = await this.userRepository.createEmployeeLabel(label);
+      this.facadeLogger.info('Label employé créé via UserRepository', {
+        metadata: { id: created.id, name: created.name, category: created.category, module: 'StorageFacade', operation: 'createEmployeeLabel' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.createEmployeeLabel failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createEmployeeLabel' }
+      });
+      return await this.legacyStorage.createEmployeeLabel?.(label) as EmployeeLabel;
+    }
+  }
+
+  /**
+   * Met à jour un label employé
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async updateEmployeeLabel(id: string, label: Partial<EmployeeLabelInsert>): Promise<EmployeeLabel> {
+    try {
+      const updated = await this.userRepository.updateEmployeeLabel(id, label);
+      this.facadeLogger.info('Label employé mis à jour via UserRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'updateEmployeeLabel' }
+      });
+      return updated;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.updateEmployeeLabel failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'updateEmployeeLabel' }
+      });
+      return await this.legacyStorage.updateEmployeeLabel?.(id, label) as EmployeeLabel;
+    }
+  }
+
+  /**
+   * Supprime un label employé
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async deleteEmployeeLabel(id: string): Promise<void> {
+    try {
+      await this.userRepository.deleteEmployeeLabel(id);
+      this.facadeLogger.info('Label employé supprimé via UserRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteEmployeeLabel' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.deleteEmployeeLabel failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteEmployeeLabel' }
+      });
+      await this.legacyStorage.deleteEmployeeLabel?.(id);
+    }
+  }
+
+  // EMPLOYEE LABEL ASSIGNMENTS - 3 MÉTHODES
+
+  /**
+   * Récupère les assignations de labels employés avec filtre optionnel par utilisateur
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async getEmployeeLabelAssignments(userId?: string): Promise<EmployeeLabelAssignment[]> {
+    try {
+      const assignments = await this.userRepository.getEmployeeLabelAssignments(userId);
+      this.facadeLogger.info('Assignations de labels employés récupérées via UserRepository', {
+        metadata: { count: assignments.length, userId, module: 'StorageFacade', operation: 'getEmployeeLabelAssignments' }
+      });
+      return assignments;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.getEmployeeLabelAssignments failed, falling back to legacy', {
+        metadata: { error, userId, module: 'StorageFacade', operation: 'getEmployeeLabelAssignments' }
+      });
+      return await this.legacyStorage.getEmployeeLabelAssignments?.(userId) || [];
+    }
+  }
+
+  /**
+   * Crée une nouvelle assignation de label employé
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async createEmployeeLabelAssignment(assignment: EmployeeLabelAssignmentInsert): Promise<EmployeeLabelAssignment> {
+    try {
+      const created = await this.userRepository.createEmployeeLabelAssignment(assignment);
+      this.facadeLogger.info('Assignation de label employé créée via UserRepository', {
+        metadata: { id: created.id, userId: created.userId, labelId: created.labelId, module: 'StorageFacade', operation: 'createEmployeeLabelAssignment' }
+      });
+      return created;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.createEmployeeLabelAssignment failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createEmployeeLabelAssignment' }
+      });
+      return await this.legacyStorage.createEmployeeLabelAssignment?.(assignment) as EmployeeLabelAssignment;
+    }
+  }
+
+  /**
+   * Supprime une assignation de label employé
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async deleteEmployeeLabelAssignment(id: string): Promise<void> {
+    try {
+      await this.userRepository.deleteEmployeeLabelAssignment(id);
+      this.facadeLogger.info('Assignation de label employé supprimée via UserRepository', {
+        metadata: { id, module: 'StorageFacade', operation: 'deleteEmployeeLabelAssignment' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.deleteEmployeeLabelAssignment failed, falling back to legacy', {
+        metadata: { error, id, module: 'StorageFacade', operation: 'deleteEmployeeLabelAssignment' }
+      });
+      await this.legacyStorage.deleteEmployeeLabelAssignment?.(id);
+    }
+  }
+
+  // Legacy user operations
   get upsertUser() { return this.legacyStorage.upsertUser.bind(this.legacyStorage); }
 
   // ========================================

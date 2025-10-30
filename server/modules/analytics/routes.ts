@@ -30,9 +30,9 @@ import {
   updateAlertThresholdSchema,
   alertsQuerySchema
 } from '@shared/schema';
-import { AnalyticsService } from '../../services/AnalyticsService';
+import { getBusinessAnalyticsService } from '../../services/consolidated/BusinessAnalyticsService';
 import { PredictiveEngineService } from '../../services/PredictiveEngineService';
-import { getPerformanceMetricsService } from '../../services/PerformanceMetricsService';
+import { getTechnicalMetricsService } from '../../services/consolidated/TechnicalMetricsService';
 import { getCacheService, TTL_CONFIG } from '../../services/CacheService';
 import type {
   AnalyticsFiltersRequest,
@@ -79,9 +79,9 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   const router = Router();
   
   // Initialize services
-  const analyticsService = new AnalyticsService(storage, eventBus);
+  const analyticsService = getBusinessAnalyticsService(storage, eventBus);
   const predictiveService = new PredictiveEngineService(storage);
-  const performanceService = getPerformanceMetricsService();
+  const performanceService = getTechnicalMetricsService(storage);
 
   // ========================================
   // KPI ROUTES

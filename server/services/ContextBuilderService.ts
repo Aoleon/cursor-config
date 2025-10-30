@@ -18,7 +18,7 @@ import type {
   ContextTierDetectionResult
 } from "@shared/schema";
 import { ContextTierService } from "./ContextTierService";
-import { PerformanceMetricsService } from "./PerformanceMetricsService";
+import { TechnicalMetricsService } from "./consolidated/TechnicalMetricsService";
 
 import { 
   aos, offers, projects, suppliers, projectSuppliers, teams, teamMembers,
@@ -60,7 +60,7 @@ export class ContextBuilderService {
   private storage: IStorage;
   private queryMetrics: QueryExecutionMetrics;
   private contextTierService: ContextTierService;
-  private performanceMetricsService?: PerformanceMetricsService;
+  private performanceMetricsService?: TechnicalMetricsService;
 
   // Configuration optimisation
   private readonly MAX_RELATED_ENTITIES = 50;
@@ -118,7 +118,7 @@ export class ContextBuilderService {
     'approval': 'visa'
   };
 
-  constructor(storage: IStorage, performanceMetricsService?: PerformanceMetricsService) {
+  constructor(storage: IStorage, performanceMetricsService?: TechnicalMetricsService) {
     this.storage = storage;
     this.queryMetrics = this.initializeMetrics();
     this.contextTierService = new ContextTierService(storage);
@@ -2619,7 +2619,7 @@ let globalContextBuilderService: ContextBuilderService | null = null;
 
 export function getContextBuilderService(
   storage: IStorage, 
-  performanceMetricsService?: PerformanceMetricsService
+  performanceMetricsService?: TechnicalMetricsService
 ): ContextBuilderService {
   if (!globalContextBuilderService) {
     globalContextBuilderService = new ContextBuilderService(storage, performanceMetricsService);

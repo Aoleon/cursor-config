@@ -2,7 +2,7 @@ import { IStorage } from "../storage-poc";
 import { EventBus } from "../eventBus";
 import { DateIntelligenceService } from "./DateIntelligenceService";
 import { logger } from '../utils/logger';
-import { AnalyticsService } from "./AnalyticsService";
+import { getBusinessAnalyticsService, BusinessAnalyticsService } from "./consolidated/BusinessAnalyticsService";
 import { PredictiveEngineService } from "./PredictiveEngineService";
 import type { 
   ProjectTimeline, DateAlert, InsertDateAlert, 
@@ -179,7 +179,7 @@ export class DateAlertDetectionService {
     private eventBus: EventBus,
     private dateIntelligenceService: DateIntelligenceService,
     private menuiserieRules: MenuiserieDetectionRules,
-    private analyticsService: AnalyticsService,          // NOUVELLE DÉPENDANCE
+    private analyticsService: BusinessAnalyticsService,          // MIGRATED TO CONSOLIDATED
     private predictiveEngineService: PredictiveEngineService // NOUVELLE DÉPENDANCE
   ) {
   }

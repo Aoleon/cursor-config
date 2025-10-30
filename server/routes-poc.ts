@@ -75,11 +75,11 @@ import { calculerDatesImportantes, calculerDateRemiseJ15, calculerDateLimiteRemi
 import type { EventBus } from "./eventBus";
 import { ScoringService } from "./services/scoringService";
 import { DateIntelligenceService } from "./services/DateIntelligenceService";
-import { AnalyticsService } from "./services/AnalyticsService";
+import { getBusinessAnalyticsService } from "./services/consolidated/BusinessAnalyticsService";
 import { PredictiveEngineService } from "./services/PredictiveEngineService";
 import { MondayProductionFinalService } from "./services/MondayProductionFinalService";
 import { initializeDefaultRules, DateIntelligenceRulesSeeder } from "./seeders/dateIntelligenceRulesSeeder";
-import { getPerformanceMetricsService } from "./services/PerformanceMetricsService";
+import { getTechnicalMetricsService } from "./services/consolidated/TechnicalMetricsService";
 
 // Import du service email générique
 import { emailService, inviteSupplierForQuote, type IEmailService } from "./services/emailService";
@@ -169,11 +169,11 @@ import { eventBus } from "./eventBus";
 const menuiserieRules = new MenuiserieDetectionRules(storage as IStorage);
 
 // ========================================
-// ANALYTICS SERVICE - PHASE 3.1.4
+// ANALYTICS SERVICE - PHASE 3.1.4 (MIGRATED TO CONSOLIDATED)
 // ========================================
 
 // Instance du service Analytics pour Dashboard Décisionnel
-const analyticsService = new AnalyticsService(storage as IStorage, eventBus);
+const analyticsService = getBusinessAnalyticsService(storage as IStorage, eventBus);
 
 // ========================================
 // PREDICTIVE ENGINE SERVICE - PHASE 3.1.6.4
@@ -5718,7 +5718,7 @@ app.get("/api/admin/intelligence/test-integration",
         });
         
         // Récupérer les métriques du service de performance
-        const performanceService = getPerformanceMetricsService(storage as IStorage);
+        const performanceService = getTechnicalMetricsService(storage as IStorage);
         const metrics = await performanceService.getPipelineMetrics({
           timeRange,
           complexity,
@@ -5763,7 +5763,7 @@ app.get("/api/admin/intelligence/test-integration",
           metadata: { breakdown }
         });
         
-        const performanceService = getPerformanceMetricsService(storage as IStorage);
+        const performanceService = getTechnicalMetricsService(storage as IStorage);
         const cacheAnalytics = await performanceService.getCacheAnalytics({
           timeRange,
           breakdown
@@ -5806,7 +5806,7 @@ app.get("/api/admin/intelligence/test-integration",
         
         logger.info('SLO compliance check');
         
-        const performanceService = getPerformanceMetricsService(storage as IStorage);
+        const performanceService = getTechnicalMetricsService(storage as IStorage);
         const sloMetrics = await performanceService.getSLOCompliance({
           timeRange,
           includeTrends,
@@ -5852,7 +5852,7 @@ app.get("/api/admin/intelligence/test-integration",
           metadata: { threshold }
         });
         
-        const performanceService = getPerformanceMetricsService(storage as IStorage);
+        const performanceService = getTechnicalMetricsService(storage as IStorage);
         const bottlenecks = await performanceService.identifyBottlenecks({
           timeRange,
           thresholdSeconds: threshold
@@ -5879,7 +5879,7 @@ app.get("/api/admin/intelligence/test-integration",
       try {
         logger.info('Stats temps réel');
         
-        const performanceService = getPerformanceMetricsService(storage as IStorage);
+        const performanceService = getTechnicalMetricsService(storage as IStorage);
         const realtimeStats = await performanceService.getRealTimeStats();
         
         sendSuccess(res, realtimeStats, {

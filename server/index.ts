@@ -128,7 +128,7 @@ app.use((req, res, next) => {
   const { DateAlertDetectionService } = await import('./services/DateAlertDetectionService');
   const { DateIntelligenceService } = await import('./services/DateIntelligenceService');
   const { MenuiserieDetectionRules } = await import('./services/DateAlertDetectionService');
-  const { AnalyticsService } = await import('./services/AnalyticsService');
+  const { getBusinessAnalyticsService } = await import('./services/consolidated/BusinessAnalyticsService');
   const { PredictiveEngineService } = await import('./services/PredictiveEngineService');
   
   // Créer les instances des services
@@ -205,7 +205,7 @@ app.use((req, res, next) => {
   });
   const dateIntelligenceService = new DateIntelligenceService(storageInterface);
   const menuiserieRules = new MenuiserieDetectionRules(storageInterface);
-  const analyticsService = new AnalyticsService(storageInterface, eventBus);
+  const analyticsService = getBusinessAnalyticsService(storageInterface, eventBus);
   const predictiveEngineService = new PredictiveEngineService(storageInterface);
   
   // ========================================

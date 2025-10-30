@@ -6,7 +6,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { getContextBuilderService } from "./ContextBuilderService";
 import { getContextCacheService } from "./ContextCacheService";
-import { getPerformanceMetricsService } from "./PerformanceMetricsService";
+import { getTechnicalMetricsService } from "./consolidated/TechnicalMetricsService";
 import { logger } from '../utils/logger';
 import { withRetry, isRetryableError } from '../utils/retry-helper';
 import { CircuitBreaker, CircuitBreakerManager } from '../utils/circuit-breaker';
@@ -116,7 +116,7 @@ export class AIService {
     // Initialisation des services de contexte enrichi
     this.contextBuilder = getContextBuilderService(storage);
     this.contextCache = getContextCacheService(storage);
-    this.performanceMetrics = getPerformanceMetricsService();
+    this.performanceMetrics = getTechnicalMetricsService(storage);
     
     // Initialisation des circuit breakers
     this.circuitBreakerManager = CircuitBreakerManager.getInstance();

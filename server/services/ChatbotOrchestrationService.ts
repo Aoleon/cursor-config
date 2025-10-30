@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 import { BusinessContextService } from "./BusinessContextService";
 import { ActionExecutionService } from "./ActionExecutionService";
 import { EventBus } from "../eventBus";
-import { getPerformanceMetricsService } from "./PerformanceMetricsService";
+import { getTechnicalMetricsService } from "./consolidated/TechnicalMetricsService";
 import { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { sql, eq, and, desc, gte, lte, asc } from "drizzle-orm";
@@ -117,7 +117,7 @@ export class ChatbotOrchestrationService {
     this.actionExecutionService = actionExecutionService;
     this.eventBus = eventBus;
     this.storage = storage;
-    this.performanceMetrics = getPerformanceMetricsService();
+    this.performanceMetrics = getTechnicalMetricsService(storage);
   }
 
   // ========================================

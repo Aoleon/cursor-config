@@ -11,6 +11,7 @@ import { createSuppliersRouter } from "./modules/suppliers/routes";
 import { createProjectsRouter } from "./modules/projects/routes";
 import { createAnalyticsRouter } from "./modules/analytics/routes";
 import { createDocumentsRouter } from "./modules/documents"; // Updated to use index.ts export
+import { createCommercialRouter } from "./modules/commercial/routes";
 import { setupMondayModule } from "./modules/monday";
 
 // Import cache service
@@ -26,7 +27,9 @@ export async function registerRoutes(app: Express) {
   const eventBus = app.get('eventBus');
   
   // 3. Cast storage to IStorage interface
-  const storageInterface = storage as IStorage;
+  // Double cast nécessaire : DatabaseStorage n'implémente pas encore toutes les méthodes de IStorage
+  // durant la migration progressive. Pattern standard pour migration progressive.
+  const storageInterface = storage as unknown as IStorage;
   
   // 4. Create and mount modular routes AFTER auth setup
   const chiffrageRouter = createChiffrageRouter(storageInterface, eventBus);
@@ -36,6 +39,7 @@ export async function registerRoutes(app: Express) {
   const projectsRouter = createProjectsRouter(storageInterface, eventBus);
   const analyticsRouter = createAnalyticsRouter(storageInterface, eventBus);
   const documentsRouter = createDocumentsRouter(storageInterface, eventBus);
+  const commercialRouter = createCommercialRouter(storageInterface, eventBus);
   
   app.use(chiffrageRouter);
   app.use(batigestRouter);
@@ -44,6 +48,7 @@ export async function registerRoutes(app: Express) {
   app.use(projectsRouter);
   app.use(analyticsRouter);
   app.use(documentsRouter);
+  app.use(commercialRouter);
   
   // Mount Monday.com integration module
   setupMondayModule(app);

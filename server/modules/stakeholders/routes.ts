@@ -198,5 +198,35 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     })
   );
 
+  // PUT /api/contacts-maitre-oeuvre/:contactId - Mettre à jour un contact
+  router.put("/api/contacts-maitre-oeuvre/:contactId", 
+    isAuthenticated, 
+    validateParams(z.object({
+      contactId: z.string().uuid()
+    })),
+    asyncHandler(async (req, res) => {
+      const contact = await storage.updateContactMaitreOeuvre(req.params.contactId, req.body);
+      
+      logger.info('[Contacts MO] Contact mis à jour', { metadata: { contactId: req.params.contactId } });
+      
+      res.json(contact);
+    })
+  );
+
+  // DELETE /api/contacts-maitre-oeuvre/:contactId - Supprimer un contact (soft delete)
+  router.delete("/api/contacts-maitre-oeuvre/:contactId", 
+    isAuthenticated, 
+    validateParams(z.object({
+      contactId: z.string().uuid()
+    })),
+    asyncHandler(async (req, res) => {
+      await storage.deleteContactMaitreOeuvre(req.params.contactId);
+      
+      logger.info('[Contacts MO] Contact supprimé (soft delete)', { metadata: { contactId: req.params.contactId } });
+      
+      res.status(204).send();
+    })
+  );
+
   return router;
 }

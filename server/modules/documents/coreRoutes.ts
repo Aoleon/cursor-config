@@ -27,6 +27,7 @@ import { processPdfSchema } from '../../validation-schemas';
 import multer from 'multer';
 import { OCRService } from '../../ocrService';
 import { documentProcessor, type ExtractedAOData } from '../../documentProcessor';
+import { calculerDatesImportantes } from '../../dateUtils';
 
 // Initialize OCR service
 const ocrService = new OCRService();
@@ -216,52 +217,71 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
    * Request body:
    * - fileUrl: string (URL of the uploaded document)
    * - filename: string (original filename)
-   * - entityType?: 'ao' | 'offer' | 'project' | 'supplier'
-   * - entityId?: string (UUID)
    * 
-   * TODO: Implement file fetching from fileUrl and processing
-   * Currently returns 501 Not Implemented as processDocument doesn't exist
+   * Workflow:
+   * 1. Extract text content from file URL
+   * 2. Analyze with AI to extract structured AO data
+   * 3. Process and link contacts with database
+   * 4. Calculate important dates automatically
    */
   router.post('/api/documents/analyze',
     isAuthenticated,
     rateLimits.processing,
     validateBody(z.object({
       fileUrl: z.string().url(),
-      filename: z.string(),
-      entityType: z.enum(['ao', 'offer', 'project', 'supplier']).optional(),
-      entityId: z.string().uuid().optional(),
+      filename: z.string().min(1)
     })),
     asyncHandler(async (req: any, res: Response) => {
-      const { fileUrl, filename, entityType, entityId } = req.body;
-      
-      logger.info('[Documents] Analyse document', {
-        metadata: {
-          route: '/api/documents/analyze',
-          method: 'POST',
-          filename,
-          fileUrl,
-          entityType,
-          entityId,
-          userId: req.user?.id
-        }
-      });
+      const { fileUrl, filename } = req.body;
 
-      // TODO: Implement this workflow:
-      // 1. Fetch file from fileUrl (using objectStorage or fetch)
-      // 2. Detect file type (PDF, image, etc.)
-      // 3. Extract text using appropriate method:
-      //    - For PDFs: use ocrService.processPDF
-      //    - For images: use ocrService (image processing)
-      // 4. Use documentProcessor.extractAOInformation to get structured data
-      // 5. Return structured data + confidence score
+      logger.info('[DocumentAnalysis] Démarrage analyse', { metadata: { userId: req.user?.id, filename } });
       
-      // For now, return 501 Not Implemented
-      res.status(501).json({
-        success: false,
-        error: 'Not Implemented',
-        message: 'Document analysis from URL not yet implemented. ' +
-                 'Use /api/ocr/process-pdf or /api/ocr/create-ao-from-pdf for direct file upload.',
-        code: 'NOT_IMPLEMENTED'
+      // 1. Extraire le contenu textuel du fichier
+      const textContent = await documentProcessor.extractTextFromFile(fileUrl, filename);
+      logger.info('[DocumentAnalysis] Extraction texte', { metadata: { filename, textLength: textContent.length } });
+      
+      // 2. Analyser le contenu avec l'IA pour extraire les données structurées
+      const extractedData = await documentProcessor.extractAOInformation(textContent, filename);
+      
+      // 2.5. Traiter les contacts extraits et les lier automatiquement avec la base de données
+      const enrichedData = await documentProcessor.processExtractedContactsWithLinking(extractedData);
+      
+      // 3. Calculer automatiquement les dates importantes
+      const datesImportantes = calculerDatesImportantes(
+        enrichedData.deadlineDate,
+        enrichedData.startDate,
+        extractedData.deliveryDate
+      );
+      
+      logger.info('[DocumentAnalysis] Analyse complétée', { metadata: { filename, hasContacts: !!enrichedData.linkedContacts } });
+
+      res.json({
+        success: true,
+        filename,
+        extractedData: {
+          ...enrichedData,
+          datesImportantes
+        },
+        contactLinking: {
+          maitreOuvrage: enrichedData.linkedContacts?.maitreOuvrage ? {
+            found: enrichedData.linkedContacts.maitreOuvrage.found,
+            created: enrichedData.linkedContacts.maitreOuvrage.created,
+            contactId: enrichedData.linkedContacts.maitreOuvrage.contact.id,
+            contactName: enrichedData.linkedContacts.maitreOuvrage.contact.nom,
+            confidence: enrichedData.linkedContacts.maitreOuvrage.confidence,
+            reason: enrichedData.linkedContacts.maitreOuvrage.reason
+          } : null,
+          maitreOeuvre: enrichedData.linkedContacts?.maitreOeuvre ? {
+            found: enrichedData.linkedContacts.maitreOeuvre.found,
+            created: enrichedData.linkedContacts.maitreOeuvre.created,
+            contactId: enrichedData.linkedContacts.maitreOeuvre.contact.id,
+            contactName: enrichedData.linkedContacts.maitreOeuvre.contact.nom,
+            confidence: enrichedData.linkedContacts.maitreOeuvre.confidence,
+            reason: enrichedData.linkedContacts.maitreOeuvre.reason
+          } : null
+        },
+        textLength: textContent.length,
+        message: "Document analysé avec succès"
       });
     })
   );

@@ -12,12 +12,13 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler, sendSuccess, createError } from '../../middleware/errorHandler';
-import { validateBody } from '../../middleware/validation';
+import { validateBody, validateQuery } from '../../middleware/validation';
 import { rateLimits } from '../../middleware/rate-limiter';
 import { logger } from '../../utils/logger';
 import type { IStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
 import { z } from 'zod';
+import { insertDateIntelligenceRuleSchema, projectStatusEnum } from '@shared/schema';
 import { DateIntelligenceRulesSeeder } from '../../seeders/dateIntelligenceRulesSeeder';
 
 // ========================================
@@ -30,6 +31,14 @@ const resetConfirmationSchema = z.object({
   (data) => data.confirmation === "RESET_ALL_RULES",
   { message: "Confirmation requise: 'RESET_ALL_RULES'" }
 );
+
+// Schéma pour les filtres de règles
+const rulesFilterSchema = z.object({
+  phase: z.string().optional(),
+  projectType: z.string().optional(),
+  isActive: z.boolean().optional(),
+  priority: z.number().optional()
+});
 
 // ========================================
 // ADMIN ROUTER FACTORY
@@ -456,6 +465,126 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
           }
         });
         throw createError.database("Erreur lors du test d'intégration");
+      }
+    })
+  );
+
+  // ========================================
+  // INTELLIGENCE RULES ROUTES
+  // ========================================
+
+  /**
+   * GET /api/intelligence-rules
+   * 
+   * Récupération des règles d'intelligence temporelle avec filtres
+   * - Filtre par phase de projet
+   * - Filtre par type de projet
+   * - Filtre par statut actif/inactif
+   * - Filtre par priorité minimale
+   * 
+   * @query phase?: string - Phase du projet
+   * @query projectType?: string - Type de projet
+   * @query isActive?: boolean - Statut actif/inactif
+   * @query priority?: number - Priorité minimale
+   * @access authenticated
+   */
+  router.get("/api/intelligence-rules",
+    isAuthenticated,
+    validateQuery(rulesFilterSchema),
+    asyncHandler(async (req, res) => {
+      try {
+        const { phase, projectType, isActive, priority } = req.query;
+        
+        logger.info('Récupération règles avec filtres', {
+          metadata: { filters: req.query }
+        });
+        
+        // Construire les filtres pour le storage
+        const filters: any = {};
+        if (phase) filters.phase = phase as typeof projectStatusEnum.enumValues[number];
+        if (projectType) filters.projectType = projectType;
+        
+        // Récupérer les règles depuis le storage
+        let rules = await storage.getActiveRules(filters);
+        
+        // Appliquer les filtres additionnels
+        if (typeof isActive === 'boolean') {
+          rules = rules.filter(rule => rule.isActive === isActive);
+        }
+        
+        if (priority !== undefined) {
+          const numPriority = Number(priority);
+          rules = rules.filter(rule => (rule.priority || 0) >= numPriority);
+        }
+        
+        const result = {
+          rules,
+          metadata: {
+            totalRules: rules.length,
+            activeRules: rules.filter(r => r.isActive).length,
+            filtersApplied: Object.keys(req.query).length,
+            retrievedAt: new Date()
+          }
+        };
+        
+        sendSuccess(res, result);
+      } catch (error: any) {
+        logger.error('Erreur récupération règles', {
+          metadata: { error: error.message, stack: error.stack }
+        });
+        throw createError.database("Erreur lors de la récupération des règles");
+      }
+    })
+  );
+
+  /**
+   * POST /api/intelligence-rules
+   * 
+   * Création d'une nouvelle règle d'intelligence temporelle personnalisée
+   * - Définit les paramètres de calcul de dates
+   * - Configure les dépendances entre phases
+   * - Établit les priorités et conditions
+   * 
+   * @body DateIntelligenceRule - Données de la nouvelle règle
+   * @access authenticated
+   */
+  router.post("/api/intelligence-rules",
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(insertDateIntelligenceRuleSchema),
+    asyncHandler(async (req: any, res) => {
+      try {
+        logger.info('Création nouvelle règle', {
+          metadata: { name: req.body.name }
+        });
+        
+        // Ajouter l'utilisateur créateur
+        const ruleData = {
+          ...req.body,
+          createdBy: req.user?.id || 'system'
+        };
+        
+        // Créer la règle dans le storage
+        const newRule = await storage.createRule(ruleData);
+        
+        logger.info('Règle créée avec succès', {
+          metadata: { ruleId: newRule.id }
+        });
+        
+        sendSuccess(res, newRule, 201);
+      } catch (error: any) {
+        logger.error('Erreur création règle', {
+          metadata: { error: error.message, stack: error.stack }
+        });
+        
+        // Gestion d'erreurs spécialisées
+        if (error.message?.includes('nom déjà utilisé')) {
+          throw createError.conflict("Une règle avec ce nom existe déjà", {
+            errorType: 'DUPLICATE_RULE_NAME'
+          });
+        }
+        
+        throw createError.database("Erreur lors de la création de la règle");
       }
     })
   );

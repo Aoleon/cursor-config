@@ -19,6 +19,7 @@ import { sendSuccess, sendPaginatedSuccess, createError } from '../../middleware
 import { ValidationError, NotFoundError } from '../../utils/error-handler';
 import { logger } from '../../utils/logger';
 import type { IStorage } from '../../storage-poc';
+// storageFacade import removed - using injected storage parameter
 import type { EventBus } from '../../eventBus';
 import { z } from 'zod';
 import {

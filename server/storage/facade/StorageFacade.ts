@@ -11,6 +11,7 @@
 import type { IStorage, DatabaseStorage as DatabaseStorageType, DrizzleTransaction } from '../../storage-poc';
 import { DatabaseStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
+import { eventBus } from '../../eventBus';
 import { logger } from '../../utils/logger';
 import { db } from '../../db';
 import { OfferRepository, type OfferFilters } from '../commercial/OfferRepository';
@@ -2622,3 +2623,20 @@ export function getStorageFacade(): StorageFacade {
   }
   return storageFacadeInstance;
 }
+
+/**
+ * Instance singleton de StorageFacade - Export direct compatible avec `storage`
+ * Utilise eventBus global et est prêt à l'emploi
+ * 
+ * @example
+ * ```typescript
+ * // AVANT
+ * import { storage } from './storage-poc';
+ * const offer = await storage.getOffer(id);
+ * 
+ * // APRÈS
+ * import { storageFacade } from './storage/facade/StorageFacade';
+ * const offer = await storageFacade.getOffer(id);
+ * ```
+ */
+export const storageFacade = new StorageFacade(eventBus);

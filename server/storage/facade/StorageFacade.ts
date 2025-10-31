@@ -1469,14 +1469,8 @@ export class StorageFacade {
   get createSupplierRequest() { return this.legacyStorage.createSupplierRequest.bind(this.legacyStorage); }
   get updateSupplierRequest() { return this.legacyStorage.updateSupplierRequest.bind(this.legacyStorage); }
 
-  // Team resource operations
-  get getTeamResources() { return this.legacyStorage.getTeamResources.bind(this.legacyStorage); }
-  get createTeamResource() { return this.legacyStorage.createTeamResource.bind(this.legacyStorage); }
-  get updateTeamResource() { return this.legacyStorage.updateTeamResource.bind(this.legacyStorage); }
-
-  // BE Workload operations
-  get getBeWorkload() { return this.legacyStorage.getBeWorkload.bind(this.legacyStorage); }
-  get createOrUpdateBeWorkload() { return this.legacyStorage.createOrUpdateBeWorkload.bind(this.legacyStorage); }
+  // Team resource operations - Déléguées vers UserRepository (voir lignes 215-266)
+  // BE Workload operations - Déléguées vers UserRepository (voir lignes 274-305)
 
   // Dashboard statistics
   get getDashboardStats() { return this.legacyStorage.getDashboardStats.bind(this.legacyStorage); }
@@ -1687,15 +1681,8 @@ export class StorageFacade {
   get updateContactMaitreOeuvre() { return this.legacyStorage.updateContactMaitreOeuvre.bind(this.legacyStorage); }
   get deleteContactMaitreOeuvre() { return this.legacyStorage.deleteContactMaitreOeuvre.bind(this.legacyStorage); }
 
-  // AO-Contacts liaison operations
-  get getAoContacts() { return this.legacyStorage.getAoContacts.bind(this.legacyStorage); }
-  get createAoContact() { return this.legacyStorage.createAoContact.bind(this.legacyStorage); }
-  get deleteAoContact() { return this.legacyStorage.deleteAoContact.bind(this.legacyStorage); }
-
-  // Project-Contacts liaison operations
-  get getProjectContacts() { return this.legacyStorage.getProjectContacts.bind(this.legacyStorage); }
-  get createProjectContact() { return this.legacyStorage.createProjectContact.bind(this.legacyStorage); }
-  get deleteProjectContact() { return this.legacyStorage.deleteProjectContact.bind(this.legacyStorage); }
+  // AO-Contacts liaison operations - Déléguées vers ContactsRepository (voir lignes 656-712)
+  // Project-Contacts liaison operations - Déléguées vers ContactsRepository (voir lignes 714-770)
 
   /**
    * Récupère les jalons de validation pour une offre
@@ -1813,7 +1800,7 @@ export class StorageFacade {
    * Récupère les règles actives avec filtres optionnels
    * Utilise DateIntelligenceRepository avec fallback sur legacy
    */
-  async getActiveRules(filters?: { phase?: string, projectType?: string }): Promise<DateIntelligenceRule[]> {
+  async getActiveRules(filters?: { phase?: "passation" | "etude" | "visa_architecte" | "planification" | "approvisionnement" | "chantier" | "sav", projectType?: string }): Promise<DateIntelligenceRule[]> {
     try {
       const rules = await this.dateIntelligenceRepository.getActiveRules(filters);
       this.facadeLogger.info('Rules actives récupérées via DateIntelligenceRepository', {
@@ -2518,9 +2505,7 @@ export class StorageFacade {
   get getProjectReserves() { return this.legacyStorage.getProjectReserves.bind(this.legacyStorage); }
   get createProjectReserve() { return this.legacyStorage.createProjectReserve.bind(this.legacyStorage); }
   get updateProjectReserve() { return this.legacyStorage.updateProjectReserve.bind(this.legacyStorage); }
-  get getSavInterventions() { return this.legacyStorage.getSavInterventions.bind(this.legacyStorage); }
-  get createSavIntervention() { return this.legacyStorage.createSavIntervention.bind(this.legacyStorage); }
-  get updateSavIntervention() { return this.legacyStorage.updateSavIntervention.bind(this.legacyStorage); }
+  // SAV Interventions operations - Déléguées vers SavRepository (voir lignes 776-853)
   get getSavWarrantyClaims() { return this.legacyStorage.getSavWarrantyClaims.bind(this.legacyStorage); }
   get createSavWarrantyClaim() { return this.legacyStorage.createSavWarrantyClaim.bind(this.legacyStorage); }
   get updateSavWarrantyClaim() { return this.legacyStorage.updateSavWarrantyClaim.bind(this.legacyStorage); }
@@ -2559,19 +2544,8 @@ export class StorageFacade {
   // Note: getSupplierQuoteAnalyses (plural) reste en legacy car repository n'implémente que getSupplierQuoteAnalysis (singular)
   get getSupplierQuoteAnalyses() { return this.legacyStorage.getSupplierQuoteAnalyses.bind(this.legacyStorage); }
 
-  // Equipment Batteries
-  get getEquipmentBatteries() { return this.legacyStorage.getEquipmentBatteries.bind(this.legacyStorage); }
-  get getEquipmentBattery() { return this.legacyStorage.getEquipmentBattery.bind(this.legacyStorage); }
-  get createEquipmentBattery() { return this.legacyStorage.createEquipmentBattery.bind(this.legacyStorage); }
-  get updateEquipmentBattery() { return this.legacyStorage.updateEquipmentBattery.bind(this.legacyStorage); }
-  get deleteEquipmentBattery() { return this.legacyStorage.deleteEquipmentBattery.bind(this.legacyStorage); }
-
-  // Margin Targets
-  get getMarginTargets() { return this.legacyStorage.getMarginTargets.bind(this.legacyStorage); }
-  get getMarginTarget() { return this.legacyStorage.getMarginTarget.bind(this.legacyStorage); }
-  get createMarginTarget() { return this.legacyStorage.createMarginTarget.bind(this.legacyStorage); }
-  get updateMarginTarget() { return this.legacyStorage.updateMarginTarget.bind(this.legacyStorage); }
-  get deleteMarginTarget() { return this.legacyStorage.deleteMarginTarget.bind(this.legacyStorage); }
+  // Equipment Batteries - Déléguées vers ConfigurationRepository (voir lignes 456-541)
+  // Margin Targets - Déléguées vers ConfigurationRepository (voir lignes 554-650)
 
   // Project Sub-Elements
   get getProjectSubElements() { return this.legacyStorage.getProjectSubElements.bind(this.legacyStorage); }
@@ -2592,17 +2566,11 @@ export class StorageFacade {
   get createEntityTag() { return this.legacyStorage.createEntityTag.bind(this.legacyStorage); }
   get deleteEntityTag() { return this.legacyStorage.deleteEntityTag.bind(this.legacyStorage); }
 
-  // Employee Labels
-  get getEmployeeLabels() { return this.legacyStorage.getEmployeeLabels.bind(this.legacyStorage); }
+  // Employee Labels - Déléguées vers UserRepository (voir lignes 314-383)
+  // Note: getEmployeeLabel (singular) non dupliqué, reste en legacy
   get getEmployeeLabel() { return this.legacyStorage.getEmployeeLabel.bind(this.legacyStorage); }
-  get createEmployeeLabel() { return this.legacyStorage.createEmployeeLabel.bind(this.legacyStorage); }
-  get updateEmployeeLabel() { return this.legacyStorage.updateEmployeeLabel.bind(this.legacyStorage); }
-  get deleteEmployeeLabel() { return this.legacyStorage.deleteEmployeeLabel.bind(this.legacyStorage); }
 
-  // Employee Label Assignments
-  get getEmployeeLabelAssignments() { return this.legacyStorage.getEmployeeLabelAssignments.bind(this.legacyStorage); }
-  get createEmployeeLabelAssignment() { return this.legacyStorage.createEmployeeLabelAssignment.bind(this.legacyStorage); }
-  get deleteEmployeeLabelAssignment() { return this.legacyStorage.deleteEmployeeLabelAssignment.bind(this.legacyStorage); }
+  // Employee Label Assignments - Déléguées vers UserRepository (voir lignes 391-440)
 
   // Bug Reports (si implémenté dans IStorage)
   get createBugReport() { return this.legacyStorage.createBugReport.bind(this.legacyStorage); }

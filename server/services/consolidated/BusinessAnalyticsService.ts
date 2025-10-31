@@ -22,7 +22,8 @@ import { EventBus } from "../../eventBus";
 import type { 
   KpiSnapshot, InsertKpiSnapshot,
   BusinessMetric, InsertBusinessMetric,
-  PerformanceBenchmark, InsertPerformanceBenchmark
+  PerformanceBenchmark, InsertPerformanceBenchmark,
+  Ao
 } from "@shared/schema";
 import { projectStatusEnum } from "@shared/schema";
 
@@ -513,21 +514,21 @@ export class BusinessAnalyticsService {
       const offerToProject = await this.conversionCalculator.calculateOfferToProjectConversion(period, filters);
 
       // Get counts from storage for revenue and pipeline
-      const aos = await this.storage.getAOs();
+      const aos = await this.storage.getAos();
       const offers = await this.storage.getOffers();
       const projects = await this.storage.getProjects();
 
       // Calculate revenue totals (basic implementation)
       const totalRevenue = projects
-        .filter(p => p.budget)
-        .reduce((sum, p) => sum + (parseFloat(p.budget) || 0), 0);
+        .filter(p => p.budget != null)
+        .reduce((sum, p) => sum + (parseFloat(p.budget!) || 0), 0);
 
-      // Calculate average project duration
-      const completedProjects = projects.filter(p => p.status === 'completed' && p.completedAt && p.createdAt);
+      // Calculate average project duration (only for projects that have both start and end dates)
+      const completedProjects = projects.filter(p => p.startDate && p.endDate);
       const avgDuration = completedProjects.length > 0
         ? completedProjects.reduce((sum, p) => {
-            const start = new Date(p.createdAt!).getTime();
-            const end = new Date(p.completedAt!).getTime();
+            const start = new Date(p.startDate!).getTime();
+            const end = new Date(p.endDate!).getTime();
             return sum + (end - start) / (1000 * 60 * 60 * 24); // days
           }, 0) / completedProjects.length
         : 0;
@@ -560,7 +561,7 @@ export class BusinessAnalyticsService {
           offerCount: offers.length,
           projectCount: projects.length,
           totalValue: totalRevenue,
-          expectedRevenue: offers.reduce((sum, o) => sum + (parseFloat(o.montantTotal || '0') || 0), 0)
+          expectedRevenue: offers.reduce((sum, o) => sum + (parseFloat(o.montantFinal || '0') || 0), 0)
         }
       };
     } catch (error) {
@@ -587,19 +588,19 @@ export class BusinessAnalyticsService {
   async getDashboardStats(): Promise<any> {
     try {
       // Get real counts from storage
-      const aos = await this.storage.getAOs();
+      const aos = await this.storage.getAos();
       const offers = await this.storage.getOffers();
       const projects = await this.storage.getProjects();
 
-      // Calculate active projects
+      // Calculate active projects (exclude SAV which is the final phase)
       const activeProjects = projects.filter(p => 
-        p.status !== 'completed' && p.status !== 'cancelled'
+        p.status !== 'sav'
       ).length;
 
       // Calculate total revenue from projects with budgets
       const totalRevenue = projects
-        .filter(p => p.budget)
-        .reduce((sum, p) => sum + (parseFloat(p.budget) || 0), 0);
+        .filter(p => p.budget != null)
+        .reduce((sum, p) => sum + (parseFloat(p.budget!) || 0), 0);
 
       // Calculate conversion rate
       const conversionRate = aos.length > 0 
@@ -607,9 +608,9 @@ export class BusinessAnalyticsService {
         : 0;
 
       // Calculate average project value
-      const projectsWithBudget = projects.filter(p => p.budget);
+      const projectsWithBudget = projects.filter(p => p.budget != null);
       const averageProjectValue = projectsWithBudget.length > 0
-        ? projectsWithBudget.reduce((sum, p) => sum + (parseFloat(p.budget) || 0), 0) / projectsWithBudget.length
+        ? projectsWithBudget.reduce((sum, p) => sum + (parseFloat(p.budget!) || 0), 0) / projectsWithBudget.length
         : 0;
 
       // Calculate team utilization (basic implementation)
@@ -654,13 +655,13 @@ export class BusinessAnalyticsService {
   async getPipelineAnalytics(filters?: any): Promise<any> {
     try {
       // Get data from storage
-      let aos = await this.storage.getAOs();
+      let aos = await this.storage.getAos();
       let offers = await this.storage.getOffers();
       let projects = await this.storage.getProjects();
 
       // Apply filters if provided
       if (filters?.userId) {
-        aos = aos.filter(ao => ao.responsibleUserId === filters.userId);
+        // Note: AOs don't have responsibleUserId field, so we don't filter them
         offers = offers.filter(o => o.responsibleUserId === filters.userId);
         projects = projects.filter(p => p.responsibleUserId === filters.userId);
       }
@@ -672,7 +673,7 @@ export class BusinessAnalyticsService {
       // Calculate stage distribution
       const stages = [
         { name: 'AO Created', count: aos.length, value: 0 },
-        { name: 'Offer Sent', count: offers.length, value: offers.reduce((sum, o) => sum + (parseFloat(o.montantTotal || '0') || 0), 0) },
+        { name: 'Offer Sent', count: offers.length, value: offers.reduce((sum, o) => sum + (parseFloat(o.montantFinal || '0') || 0), 0) },
         { name: 'Project Won', count: projects.length, value: projects.reduce((sum, p) => sum + (parseFloat(p.budget || '0') || 0), 0) }
       ];
 
@@ -742,16 +743,11 @@ export class BusinessAnalyticsService {
 
     // Placeholder implementation - return basic benchmark
     const benchmark: InsertPerformanceBenchmark = {
+      benchmarkType: 'user_comparison',
       entityType: entity.type,
       entityId: entity.id,
-      metricName: 'conversion_rate',
-      metricValue: '0',
-      benchmark: '0',
-      variance: '0',
-      percentile: '0',
-      calculationDate: new Date(),
-      periodFrom: period.from,
-      periodTo: period.to
+      periodStart: period.from,
+      periodEnd: period.to
     };
 
     return this.storage.createPerformanceBenchmark(benchmark);

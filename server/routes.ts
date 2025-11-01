@@ -18,6 +18,7 @@ import { createStakeholdersRouter } from "./modules/stakeholders";
 import { createAdminRouter } from "./modules/admin";
 import { createOpsRouter } from "./modules/ops";
 import { createTeamRouter } from "./modules/team";
+import { createSystemRoutes } from "./modules/system";
 import { setupMondayModule } from "./modules/monday";
 
 // Import cache service
@@ -52,6 +53,7 @@ export async function registerRoutes(app: Express) {
   const adminRouter = createAdminRouter(storageInterface, eventBus);
   const opsRouter = createOpsRouter(storageInterface, eventBus);
   const teamRouter = createTeamRouter(storageInterface, eventBus);
+  const systemRouter = createSystemRoutes(storageInterface);
   
   app.use(chiffrageRouter);
   app.use(batigestRouter);
@@ -67,6 +69,7 @@ export async function registerRoutes(app: Express) {
   app.use(adminRouter);
   app.use(opsRouter);
   app.use(teamRouter);
+  app.use(systemRouter);
   
   logger.info('✅ Admin routes registered', {
     metadata: {

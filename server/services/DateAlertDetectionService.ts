@@ -1,4 +1,4 @@
-import { IStorage } from "../storage-poc";
+import type { IStorage } from "../storage-poc";
 import { EventBus } from "../eventBus";
 import { DateIntelligenceService } from "./DateIntelligenceService";
 import { logger } from '../utils/logger';

@@ -17,7 +17,7 @@
  * Target LOC: ~1,800-2,000 (from 2,226, removing disabled methods)
  */
 
-import { IStorage } from "../../storage-poc";
+import type { IStorage } from "../../storage-poc";
 import { db } from "../../db";
 import { sql, eq, and, desc, gte, lte } from "drizzle-orm";
 import crypto from "crypto";

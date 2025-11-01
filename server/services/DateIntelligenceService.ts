@@ -1,4 +1,4 @@
-import { IStorage } from "../storage-poc";
+import type { IStorage } from "../storage-poc";
 import { eventBus } from "../eventBus";
 import { logger } from "../utils/logger";
 import { NotFoundError, DatabaseError } from "../utils/error-handler";

@@ -17,7 +17,7 @@
  * Target LOC: ~1,800-2,000 (from 1,827)
  */
 
-import { IStorage, DateRange, MetricFilters } from "../../storage-poc";
+import type { IStorage, DateRange, MetricFilters } from "../../storage-poc";
 import { EventBus } from "../../eventBus";
 import type { 
   KpiSnapshot, InsertKpiSnapshot,

@@ -13,7 +13,7 @@
  * @date 2025-09-24
  */
 
-import { IStorage } from '../storage-poc';
+import type { IStorage } from '../storage-poc';
 import { insertAoSchema, insertProjectSchema, type InsertAo, type InsertProject } from '@shared/schema';
 import { generateRealisticJLMData, type MondayAoData, type MondayProjectData } from '../utils/mondayDataGenerator';
 import { validateMondayAoData, validateMondayProjectData, validateAndParseMondayDate } from '../utils/mondayValidator';

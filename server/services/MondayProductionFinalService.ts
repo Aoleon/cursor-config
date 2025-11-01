@@ -19,7 +19,7 @@
 import XLSX from 'xlsx';
 import * as path from 'path';
 import * as fs from 'fs';
-import { IStorage } from '../storage-poc';
+import type { IStorage } from '../storage-poc';
 import { type InsertAo, type InsertProject } from '@shared/schema';
 import { type MondayAoData, type MondayProjectData } from '../utils/mondayDataGenerator';
 import { validateMondayAoData, validateMondayProjectData, validateAndParseMondayDate } from '../utils/mondayValidator';

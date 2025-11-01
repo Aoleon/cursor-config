@@ -106,6 +106,11 @@ The application employs a modern fullstack architecture. The frontend leverages 
   - PeriodicDetectionScheduler, DateAlertDetectionService
   - Type-only imports eliminate runtime dependencies on storage-poc
   - Dependency injection pattern preserved in all constructors
+- **Services Migration (Wave 3) ✅**: 7 AI/Context services migrated to `import type`
+  - AIService, BusinessContextService, ChatbotOrchestrationService
+  - ContextBuilderService, ContextCacheService, ContextTierService, PredictiveEngineService
+  - All services operational with constructor-based DI pattern preserved
+  - Architect-validated runtime stability
 - Double cast pattern `as unknown as IStorage` enables progressive migration
 - All modules active and validated by architect review
 - Application running without regressions, all repositories architect-validated

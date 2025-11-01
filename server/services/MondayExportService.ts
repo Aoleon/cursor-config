@@ -1,5 +1,6 @@
 import { MondayService, mondayService } from './MondayService';
-import { IStorage, storage } from '../storage';
+import type { IStorage } from '../storage';
+import { storage } from '../storage';
 import { logger } from '../utils/logger';
 import { getCorrelationId } from '../middleware/correlation';
 import { withRetry } from '../utils/retry-helper';

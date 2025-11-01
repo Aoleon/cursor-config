@@ -18,7 +18,7 @@
  * @date Oct 30, 2025
  */
 
-import { IStorage } from '../../storage-poc';
+import type { IStorage } from '../../storage-poc';
 import { IMigrationStorage } from '../../storage-migration';
 import { 
   insertAoSchema, 

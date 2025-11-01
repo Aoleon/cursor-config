@@ -22,7 +22,8 @@ import type {
   ImportMapping, 
   ImportResult 
 } from './MondayIntegrationService';
-import { IStorage, storage } from '../../storage-poc';
+import type { IStorage } from '../../storage-poc';
+import { storage } from '../../storage-poc';
 import { logger } from '../../utils/logger';
 import { eventBus } from '../../eventBus';
 import { EventType } from '../../../shared/events';

@@ -23,6 +23,7 @@ import { createConfigurationRoutes } from "./modules/configuration";
 import { setupMondayModule } from "./modules/monday";
 import { createHrRouter } from "./modules/hr";
 import { createTestingRouter } from "./modules/testing";
+import { createAfterSalesRoutes } from "./modules/aftersales";
 
 // Import cache service
 import { getCacheService } from "./services/CacheService";
@@ -60,6 +61,7 @@ export async function registerRoutes(app: Express) {
   const configurationRouter = createConfigurationRoutes(storageInterface, eventBus);
   const hrRouter = createHrRouter(storageInterface, eventBus);
   const testingRouter = createTestingRouter(storageInterface, eventBus);
+  const afterSalesRouter = createAfterSalesRoutes(storageInterface, eventBus);
   
   app.use(chiffrageRouter);
   app.use(batigestRouter);
@@ -79,6 +81,7 @@ export async function registerRoutes(app: Express) {
   app.use(configurationRouter);
   app.use(hrRouter);
   app.use(testingRouter);
+  app.use(afterSalesRouter);
   
   logger.info('✅ Admin routes registered', {
     metadata: {
@@ -114,6 +117,14 @@ export async function registerRoutes(app: Express) {
       module: 'Testing',
       operation: 'registerRoutes',
       routes: ['test-data', 'bug-reports']
+    }
+  });
+  
+  logger.info('✅ AfterSales routes registered', {
+    metadata: {
+      module: 'AfterSales',
+      operation: 'registerRoutes',
+      routes: ['reserves', 'sav-interventions', 'warranty-claims']
     }
   });
   

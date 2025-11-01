@@ -10,12 +10,14 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
-import { asyncHandler } from '../../middleware/errorHandler';
-import { validateParams, commonParamSchemas } from '../../middleware/validation';
+import { asyncHandler, sendSuccess, createError } from '../../middleware/errorHandler';
+import { validateParams, validateBody, commonParamSchemas } from '../../middleware/validation';
+import { rateLimits } from '../../middleware/rate-limiter';
 import { logger } from '../../utils/logger';
 import { NotFoundError } from '../../utils/error-handler';
 import type { IStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
+import { insertAoContactsSchema, insertProjectContactsSchema } from '@shared/schema';
 import { z } from 'zod';
 
 export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus): Router {
@@ -225,6 +227,176 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       logger.info('[Contacts MO] Contact supprimé (soft delete)', { metadata: { contactId: req.params.contactId } });
       
       res.status(204).send();
+    })
+  );
+
+  // ========================================
+  // AO CONTACTS ROUTES - Table de liaison AO ↔ Contacts
+  // ========================================
+
+  // GET /api/ao-contacts/:aoId - Lister contacts liés à un AO
+  router.get("/api/ao-contacts/:aoId",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(z.object({ aoId: z.string().uuid("ID AO invalide") })),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { aoId } = req.params;
+        const contacts = await storage.getAoContacts(aoId);
+        sendSuccess(res, contacts);
+      } catch (error) {
+        logger.error('Erreur getAoContacts', {
+          metadata: { 
+            route: '/api/ao-contacts/:aoId',
+            method: 'GET',
+            aoId: req.params.aoId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la récupération des contacts AO");
+      }
+    })
+  );
+
+  // POST /api/ao-contacts - Créer liaison AO-Contact
+  router.post("/api/ao-contacts",
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(insertAoContactsSchema),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const contactData = req.body;
+        const newContact = await storage.createAoContact(contactData);
+        logger.info('Liaison AO-Contact créée avec succès', { metadata: { aoId: req.body.aoId, contactId: req.body.contactId } });
+        sendSuccess(res, newContact, 201);
+      } catch (error) {
+        logger.error('Erreur createAoContact', {
+          metadata: { 
+            route: '/api/ao-contacts',
+            method: 'POST',
+            aoId: req.body.aoId,
+            contactId: req.body.contactId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la création de la liaison AO-Contact");
+      }
+    })
+  );
+
+  // DELETE /api/ao-contacts/:id - Supprimer liaison AO-Contact
+  router.delete("/api/ao-contacts/:id",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteAoContact(id);
+        logger.info('Liaison AO-Contact supprimée avec succès', { metadata: { id: req.params.id } });
+        sendSuccess(res, null);
+      } catch (error) {
+        logger.error('Erreur deleteAoContact', {
+          metadata: { 
+            route: '/api/ao-contacts/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la suppression de la liaison AO-Contact");
+      }
+    })
+  );
+
+  // ========================================
+  // PROJECT CONTACTS ROUTES - Table de liaison Projects ↔ Contacts
+  // ========================================
+
+  // GET /api/project-contacts/:projectId - Lister contacts liés à un projet
+  router.get("/api/project-contacts/:projectId",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(z.object({ projectId: z.string().uuid("ID Projet invalide") })),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { projectId } = req.params;
+        const contacts = await storage.getProjectContacts(projectId);
+        sendSuccess(res, contacts);
+      } catch (error) {
+        logger.error('Erreur getProjectContacts', {
+          metadata: { 
+            route: '/api/project-contacts/:projectId',
+            method: 'GET',
+            projectId: req.params.projectId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la récupération des contacts projet");
+      }
+    })
+  );
+
+  // POST /api/project-contacts - Créer liaison Project-Contact
+  router.post("/api/project-contacts",
+    isAuthenticated,
+    rateLimits.creation,
+    validateBody(insertProjectContactsSchema),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const contactData = req.body;
+        const newContact = await storage.createProjectContact(contactData);
+        logger.info('Liaison Project-Contact créée avec succès', { metadata: { projectId: req.body.projectId, contactId: req.body.contactId } });
+        sendSuccess(res, newContact, 201);
+      } catch (error) {
+        logger.error('Erreur createProjectContact', {
+          metadata: { 
+            route: '/api/project-contacts',
+            method: 'POST',
+            projectId: req.body.projectId,
+            contactId: req.body.contactId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la création de la liaison Project-Contact");
+      }
+    })
+  );
+
+  // DELETE /api/project-contacts/:id - Supprimer liaison Project-Contact
+  router.delete("/api/project-contacts/:id",
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        await storage.deleteProjectContact(id);
+        logger.info('Liaison Project-Contact supprimée avec succès', { metadata: { id: req.params.id } });
+        sendSuccess(res, null);
+      } catch (error) {
+        logger.error('Erreur deleteProjectContact', {
+          metadata: { 
+            route: '/api/project-contacts/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la suppression de la liaison Project-Contact");
+      }
     })
   );
 

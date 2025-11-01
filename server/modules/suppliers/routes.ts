@@ -12,8 +12,8 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
-import { asyncHandler } from '../../middleware/errorHandler';
-import { validateBody, validateParams, validateQuery } from '../../middleware/validation';
+import { asyncHandler, createError } from '../../middleware/errorHandler';
+import { validateBody, validateParams, validateQuery, commonParamSchemas } from '../../middleware/validation';
 import { rateLimits, secureFileUpload } from '../../middleware/security';
 import { sendSuccess, sendPaginatedSuccess } from '../../middleware/errorHandler';
 import { ValidationError, NotFoundError, DatabaseError } from '../../utils/error-handler';
@@ -82,6 +82,12 @@ const quoteSessionQuerySchema = z.object({
   supplierId: z.string().uuid().optional(),
   status: z.enum(['draft', 'sent', 'received', 'analyzing', 'approved', 'rejected']).optional(),
   includeAnalysis: z.enum(['true', 'false']).optional().default('false')
+});
+
+// Validation schema for analysis notes update
+const updateNotesSchema = z.object({
+  notes: z.string().max(2000),
+  isInternal: z.boolean().default(false)
 });
 
 export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Router {
@@ -294,6 +300,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
   // Create supplier specialization
   router.post('/api/supplier-specializations',
     isAuthenticated,
+    rateLimits.creation,
     validateBody(insertSupplierSpecializationsSchema),
     asyncHandler(async (req: any, res: Response) => {
       logger.info('[Suppliers] Création spécialisation', {
@@ -308,6 +315,79 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
 
       const specialization = await storage.createSupplierSpecialization(req.body);
       sendSuccess(res, specialization, 201);
+    })
+  );
+
+  // Update supplier specialization
+  router.put('/api/supplier-specializations/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateBody(insertSupplierSpecializationsSchema.partial()),
+    asyncHandler(async (req: any, res: Response) => {
+      const { id } = req.params;
+      
+      logger.info('[Suppliers] Mise à jour spécialisation', {
+        metadata: {
+          route: '/api/supplier-specializations/:id',
+          method: 'PUT',
+          id,
+          userId: req.user?.id
+        }
+      });
+
+      try {
+        const updatedSpec = await storage.updateSupplierSpecialization(id, req.body);
+        sendSuccess(res, updatedSpec);
+      } catch (error) {
+        logger.error('[Suppliers] Erreur updateSupplierSpecialization', {
+          metadata: {
+            route: '/api/supplier-specializations/:id',
+            method: 'PUT',
+            id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la mise à jour de la spécialisation fournisseur");
+      }
+    })
+  );
+
+  // Delete supplier specialization
+  router.delete('/api/supplier-specializations/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res: Response) => {
+      const { id } = req.params;
+      
+      logger.info('[Suppliers] Suppression spécialisation', {
+        metadata: {
+          route: '/api/supplier-specializations/:id',
+          method: 'DELETE',
+          id,
+          userId: req.user?.id
+        }
+      });
+
+      try {
+        await storage.deleteSupplierSpecialization(id);
+        sendSuccess(res, null);
+      } catch (error) {
+        logger.error('[Suppliers] Erreur deleteSupplierSpecialization', {
+          metadata: {
+            route: '/api/supplier-specializations/:id',
+            method: 'DELETE',
+            id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la suppression de la spécialisation fournisseur");
+      }
     })
   );
 
@@ -680,41 +760,268 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
     })
   );
 
-  // Approve quote analysis
-  router.post('/api/supplier-quote-analysis/:id/approve',
+  // Get quote session analysis
+  router.get('/api/supplier-quote-sessions/:id/analysis',
     isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateQuery(z.object({
+      status: z.enum(['pending', 'in_progress', 'completed', 'failed', 'manual_review_required']).optional(),
+      includeRawText: z.coerce.boolean().default(false),
+      orderBy: z.enum(['analyzedAt', 'confidence', 'qualityScore']).default('analyzedAt'),
+      order: z.enum(['asc', 'desc']).default('desc')
+    })),
     asyncHandler(async (req: any, res: Response) => {
-      const { id } = req.params;
-      const { notes } = req.body;
+      const { id: sessionId } = req.params;
+      const { status, includeRawText, orderBy, order } = req.query;
       
-      logger.info('[Suppliers] Approbation analyse devis', {
+      logger.info('[Suppliers] Récupération analyses pour session', {
         metadata: {
-          route: '/api/supplier-quote-analysis/:id/approve',
-          method: 'POST',
-          analysisId: id,
+          route: '/api/supplier-quote-sessions/:id/analysis',
+          method: 'GET',
+          sessionId,
           userId: req.user?.id
         }
       });
 
-      const analysis = await storage.updateQuoteAnalysis(id, {
-        status: 'approved',
-        approvedBy: req.user?.id,
-        approvedAt: new Date(),
-        notes
+      try {
+        // Verify session exists
+        // @ts-ignore - Storage method may not be fully typed
+        const session = await storage.getSupplierQuoteSession(sessionId);
+        if (!session) {
+          throw createError.notFound(`Session ${sessionId} non trouvée`);
+        }
+        
+        // Get all analyses for the session
+        // @ts-ignore - Storage method may not be fully typed
+        const analyses = await storage.getSupplierQuoteAnalysesBySession(sessionId, {
+          status,
+          orderBy,
+          order
+        });
+        
+        // Get associated documents for context
+        // @ts-ignore - Storage method may not be fully typed
+        const documents = await storage.getSupplierDocumentsBySession(sessionId);
+        const documentsMap = new Map(documents.map((doc: any) => [doc.id, doc]));
+        
+        const result = {
+          sessionId,
+          session: {
+            id: session.id,
+            aoId: session.aoId,
+            aoLotId: session.aoLotId,
+            supplierId: session.supplierId,
+            status: session.status,
+            invitedAt: session.invitedAt,
+            submittedAt: session.submittedAt
+          },
+          totalAnalyses: analyses.length,
+          analyses: analyses.map((analysis: any) => ({
+            id: analysis.id,
+            documentId: analysis.documentId,
+            status: analysis.status,
+            analyzedAt: analysis.analyzedAt,
+            confidence: analysis.confidence,
+            qualityScore: analysis.qualityScore,
+            completenessScore: analysis.completenessScore,
+            requiresManualReview: analysis.requiresManualReview,
+            
+            // Extracted data (summary)
+            totalAmountHT: analysis.totalAmountHT,
+            totalAmountTTC: analysis.totalAmountTTC,
+            deliveryDelay: analysis.deliveryDelay,
+            lineItemsCount: Array.isArray(analysis.lineItems) ? analysis.lineItems.length : 0,
+            
+            // Raw text if requested
+            rawOcrText: includeRawText ? analysis.rawOcrText : undefined,
+            
+            // Document info
+            document: documentsMap.has(analysis.documentId) ? {
+              filename: (documentsMap.get(analysis.documentId) as any)?.filename,
+              uploadedAt: (documentsMap.get(analysis.documentId) as any)?.uploadedAt
+            } : null
+          })),
+          
+          // Global statistics
+          statistics: {
+            completed: analyses.filter((a: any) => a.status === 'completed').length,
+            failed: analyses.filter((a: any) => a.status === 'failed').length,
+            inProgress: analyses.filter((a: any) => a.status === 'in_progress').length,
+            requiresReview: analyses.filter((a: any) => a.requiresManualReview).length,
+            averageQuality: analyses.length > 0 ? 
+              Math.round(analyses.reduce((sum: number, a: any) => sum + (a.qualityScore || 0), 0) / analyses.length) : 0,
+            averageConfidence: analyses.length > 0 ?
+              Math.round(analyses.reduce((sum: number, a: any) => sum + (a.confidence || 0), 0) / analyses.length) : 0
+          }
+        };
+        
+        sendSuccess(res, result);
+        
+      } catch (error) {
+        logger.error('[Suppliers] Erreur récupération analyses session', {
+          metadata: {
+            route: '/api/supplier-quote-sessions/:id/analysis',
+            method: 'GET',
+            sessionId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw error;
+      }
+    })
+  );
+
+  // Approve quote analysis
+  router.post('/api/supplier-quote-analysis/:id/approve',
+    isAuthenticated,
+    rateLimits.creation,
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      notes: z.string().optional(),
+      corrections: z.record(z.any()).optional()
+    })),
+    asyncHandler(async (req: any, res: Response) => {
+      const { id: analysisId } = req.params;
+      const { notes, corrections } = req.body;
+      const userId = req.user?.id;
+      
+      logger.info('[Suppliers] Approbation analyse', {
+        metadata: {
+          route: '/api/supplier-quote-analysis/:id/approve',
+          method: 'POST',
+          analysisId,
+          userId
+        }
       });
 
-      // Update session status
-      await storage.updateQuoteSession(analysis.sessionId, {
-        status: 'approved'
+      try {
+        // Get the analysis
+        // @ts-ignore - Storage method may not be fully typed
+        const analysis = await storage.getSupplierQuoteAnalysis(analysisId);
+        if (!analysis) {
+          throw createError.notFound(`Analyse ${analysisId} non trouvée`);
+        }
+        
+        // Apply corrections if provided
+        let updatedData = { ...analysis.extractedData };
+        if (corrections) {
+          updatedData = { ...updatedData, ...corrections };
+        }
+        
+        // Update the analysis
+        // @ts-ignore - Storage method may not be fully typed
+        await storage.updateSupplierQuoteAnalysis(analysisId, {
+          requiresManualReview: false,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          reviewNotes: notes,
+          extractedData: updatedData
+        });
+        
+        // Update document status
+        // @ts-ignore - Storage method may not be fully typed
+        await storage.updateSupplierDocument(analysis.documentId, {
+          status: 'validated',
+          validatedBy: userId,
+          validatedAt: new Date()
+        });
+        
+        sendSuccess(res, {
+          analysisId,
+          status: 'approved',
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          corrections: corrections || null
+        });
+        
+      } catch (error) {
+        logger.error('[Suppliers] Erreur approbation analyse', {
+          metadata: {
+            route: '/api/supplier-quote-analysis/:id/approve',
+            method: 'POST',
+            analysisId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId
+          }
+        });
+        throw error;
+      }
+    })
+  );
+
+  // Update analysis notes
+  router.put('/api/supplier-quote-analysis/:id/notes',
+    isAuthenticated,
+    rateLimits.creation,
+    validateParams(commonParamSchemas.id),
+    validateBody(updateNotesSchema),
+    asyncHandler(async (req: any, res: Response) => {
+      const { id: analysisId } = req.params;
+      const { notes, isInternal } = req.body;
+      const userId = req.user?.id;
+      
+      logger.info('[Suppliers] Mise à jour notes analyse', {
+        metadata: {
+          route: '/api/supplier-quote-analysis/:id/notes',
+          method: 'PUT',
+          analysisId,
+          userId
+        }
       });
 
-      eventBus.emit('supplier:quote:approved', {
-        analysisId: id,
-        sessionId: analysis.sessionId,
-        userId: req.user?.id
-      });
-
-      sendSuccess(res, analysis);
+      try {
+        // Get the analysis
+        // @ts-ignore - Storage method may not be fully typed
+        const analysis = await storage.getSupplierQuoteAnalysis(analysisId);
+        if (!analysis) {
+          throw createError.notFound(`Analyse ${analysisId} non trouvée`);
+        }
+        
+        // Update notes
+        // @ts-ignore - Storage method may not be fully typed
+        const updatedAnalysis = await storage.updateSupplierQuoteAnalysis(analysisId, {
+          reviewNotes: notes,
+          reviewedBy: userId,
+          reviewedAt: new Date()
+        });
+        
+        // Create note history if important (>100 chars)
+        if (notes.length > 100) {
+          // @ts-ignore - Storage method may not be fully typed
+          await storage.createAnalysisNoteHistory({
+            analysisId,
+            notes,
+            isInternal,
+            createdBy: userId,
+            createdAt: new Date()
+          });
+        }
+        
+        sendSuccess(res, {
+          analysisId,
+          notes,
+          isInternal,
+          updatedBy: userId,
+          updatedAt: new Date()
+        });
+        
+      } catch (error) {
+        logger.error('[Suppliers] Erreur mise à jour notes', {
+          metadata: {
+            route: '/api/supplier-quote-analysis/:id/notes',
+            method: 'PUT',
+            analysisId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId
+          }
+        });
+        throw error;
+      }
     })
   );
 

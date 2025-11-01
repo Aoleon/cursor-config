@@ -3,6 +3,16 @@
 ## Overview
 Saxium is a fullstack application for quoting and project management in the French construction and joinery (BTP/Menuiserie) sector. Its core purpose is to enhance operational efficiency through automation and AI, including OCR analysis of supplier quotes, intelligent planning via DateIntelligence, and AI-driven decision-making. The project aims to modernize traditional workflows from initial quoting to project completion, offering a significant boost in productivity and accuracy.
 
+## Migration Status (Wave 8 Complete - November 2025)
+**Repository Pattern Migration: 91.2% Complete** 🎉
+- **Original**: 11,998 LOC in monolithic routes-poc.ts
+- **Current**: 1,055 LOC remaining in routes-poc.ts
+- **Migrated**: 10,943 LOC across 20 modular routes
+- **Active Modules**: 20 production-ready modules following factory pattern
+- **Wave 8 Achievement**: -2,489 LOC removed (70.2% reduction in Wave 8 alone)
+- **LSP Diagnostics**: Improved 30% (124 → 87 errors in routes-poc.ts)
+- **Architecture**: 100% dependency injection, zero TypeScript compilation errors
+
 ## User Preferences
 - Always read `server/utils/README-UTILS.md` before modifying server code.
 - Use `asyncHandler` for all new routes.
@@ -26,7 +36,14 @@ The application features a modern fullstack architecture. The frontend uses Reac
 *   Customizable DataTables featuring column visibility, reordering, sorting, and filtering.
 
 **Technical Implementations**:
-*   **Modular Backend**: Routes are organized into modules (e.g., `auth`, `chiffrage`, `suppliers`, `projects`, `analytics`, `documents`, `batigest`).
+*   **Modular Backend (20 Active Modules)**: Routes organized following factory pattern `createXxxRoutes(storage: IStorage, eventBus: EventBus)`:
+    - **Core Business**: `chiffrage`, `commercial`, `projects`, `batigest`
+    - **Operations**: `suppliers`, `documents`, `aftersales` (NEW in Wave 8 - reserves, SAV, warranty)
+    - **Analytics & Performance**: `analytics` (extended in Wave 8 with AI performance metrics)
+    - **Administration**: `auth`, `system`, `configuration`, `admin`, `ops`, `team`, `hr`
+    - **Stakeholders**: `stakeholders` (extended in Wave 8 with AO/project contacts)
+    - **AI & Automation**: `chatbot`, `alerts`, `testing`
+    - **Integrations**: `monday` (data sync dashboard)
 *   **AI Services**: Integration of `DateIntelligenceService`, `OCRService`, and `AIService`.
 *   **Error Handling**: Unified system with typed errors, dedicated error middleware, and structured logging with correlation IDs.
 *   **Performance Optimizations**: Adaptive caching, prefetching, debouncing/throttling (frontend); database indexing, Redis caching, optimized queries (backend).

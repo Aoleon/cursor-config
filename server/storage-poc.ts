@@ -665,6 +665,25 @@ export interface IStorage {
   deleteSupplierQuoteAnalysis(id: string): Promise<void>;
   getAnalysisByDocument(documentId: string): Promise<SupplierQuoteAnalysis | undefined>; // Analyse d'un document spécifique
 
+  // Wave 8 - Additional supplier quote analysis methods with filters
+  getSupplierQuoteAnalysesBySession(
+    sessionId: string, 
+    filters: { 
+      status?: string; 
+      includeRawText?: boolean; 
+      orderBy?: string; 
+      order?: 'asc' | 'desc' 
+    }
+  ): Promise<any[]>;
+  getSupplierDocumentsBySession(sessionId: string): Promise<any[]>;
+  createAnalysisNoteHistory(data: { 
+    analysisId: string; 
+    notes: string; 
+    timestamp: Date;
+    isInternal?: boolean;
+    createdBy?: string;
+  }): Promise<any>;
+
   // Workflow helpers - Méthodes utilitaires pour le workflow fournisseurs
   getSupplierWorkflowStatus(aoId: string): Promise<{
     totalLots: number;
@@ -4353,6 +4372,110 @@ export class DatabaseStorage implements IStorage {
       });
       throw error;
     }
+  }
+
+  // ========================================
+  // WAVE 8 - ADDITIONAL SUPPLIER QUOTE ANALYSIS METHODS
+  // ========================================
+
+  /**
+   * Get supplier quote analyses by session with advanced filters
+   * TODO: Phase 6+ implementation - enhance with proper filtering and ordering
+   */
+  async getSupplierQuoteAnalysesBySession(
+    sessionId: string,
+    filters: {
+      status?: string;
+      includeRawText?: boolean;
+      orderBy?: string;
+      order?: 'asc' | 'desc';
+    }
+  ): Promise<any[]> {
+    logger.warn('[Storage] getSupplierQuoteAnalysesBySession not yet fully implemented', {
+      metadata: { sessionId, filters }
+    });
+    
+    try {
+      // Basic implementation - get analyses by session
+      const analyses = await db.select()
+        .from(supplierQuoteAnalysis)
+        .where(eq(supplierQuoteAnalysis.sessionId, sessionId));
+      
+      // TODO: Phase 6+ - Add proper filtering by status
+      // TODO: Phase 6+ - Add raw text inclusion control
+      // TODO: Phase 6+ - Add proper ordering support
+      
+      return analyses || [];
+    } catch (error) {
+      logger.error('Erreur getSupplierQuoteAnalysesBySession', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierQuoteAnalysesBySession',
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
+      return []; // Safe default - empty array
+    }
+  }
+
+  /**
+   * Get all documents for a specific quote session
+   * TODO: Phase 6+ implementation - enhance with document metadata and relationships
+   */
+  async getSupplierDocumentsBySession(sessionId: string): Promise<any[]> {
+    logger.warn('[Storage] getSupplierDocumentsBySession stub called - using getDocumentsBySession', {
+      metadata: { sessionId }
+    });
+    
+    try {
+      // Delegate to existing method
+      return await this.getDocumentsBySession(sessionId);
+    } catch (error) {
+      logger.error('Erreur getSupplierDocumentsBySession', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSupplierDocumentsBySession',
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
+      return []; // Safe default - empty array
+    }
+  }
+
+  /**
+   * Create analysis note history entry
+   * TODO: Phase 6+ implementation - add proper note history table and tracking
+   */
+  async createAnalysisNoteHistory(data: {
+    analysisId: string;
+    notes: string;
+    timestamp: Date;
+    isInternal?: boolean;
+    createdBy?: string;
+  }): Promise<any> {
+    logger.warn('[Storage] createAnalysisNoteHistory not yet implemented - returning stub', {
+      metadata: { analysisId: data.analysisId, notesLength: data.notes.length }
+    });
+    
+    // TODO: Phase 6+ - Create proper analysis_note_history table
+    // TODO: Phase 6+ - Store note history with proper relationships
+    
+    // Return safe stub - simulate created record
+    const stubRecord = {
+      id: `note-stub-${Date.now()}`,
+      ...data,
+      createdAt: new Date()
+    };
+    
+    logger.info('[Storage] Analysis note history stub created', {
+      metadata: { stubId: stubRecord.id, analysisId: data.analysisId }
+    });
+    
+    return stubRecord;
   }
 
   // ========================================

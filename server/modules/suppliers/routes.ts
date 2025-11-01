@@ -786,14 +786,12 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
 
       try {
         // Verify session exists
-        // @ts-ignore - Storage method may not be fully typed
         const session = await storage.getSupplierQuoteSession(sessionId);
         if (!session) {
           throw createError.notFound(`Session ${sessionId} non trouvée`);
         }
         
         // Get all analyses for the session
-        // @ts-ignore - Storage method may not be fully typed
         const analyses = await storage.getSupplierQuoteAnalysesBySession(sessionId, {
           status,
           orderBy,
@@ -801,7 +799,6 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         });
         
         // Get associated documents for context
-        // @ts-ignore - Storage method may not be fully typed
         const documents = await storage.getSupplierDocumentsBySession(sessionId);
         const documentsMap = new Map(documents.map((doc: any) => [doc.id, doc]));
         
@@ -899,7 +896,6 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
 
       try {
         // Get the analysis
-        // @ts-ignore - Storage method may not be fully typed
         const analysis = await storage.getSupplierQuoteAnalysis(analysisId);
         if (!analysis) {
           throw createError.notFound(`Analyse ${analysisId} non trouvée`);
@@ -912,7 +908,6 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         }
         
         // Update the analysis
-        // @ts-ignore - Storage method may not be fully typed
         await storage.updateSupplierQuoteAnalysis(analysisId, {
           requiresManualReview: false,
           reviewedBy: userId,
@@ -922,7 +917,6 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         });
         
         // Update document status
-        // @ts-ignore - Storage method may not be fully typed
         await storage.updateSupplierDocument(analysis.documentId, {
           status: 'validated',
           validatedBy: userId,
@@ -975,14 +969,12 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
 
       try {
         // Get the analysis
-        // @ts-ignore - Storage method may not be fully typed
         const analysis = await storage.getSupplierQuoteAnalysis(analysisId);
         if (!analysis) {
           throw createError.notFound(`Analyse ${analysisId} non trouvée`);
         }
         
         // Update notes
-        // @ts-ignore - Storage method may not be fully typed
         const updatedAnalysis = await storage.updateSupplierQuoteAnalysis(analysisId, {
           reviewNotes: notes,
           reviewedBy: userId,
@@ -991,7 +983,6 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         
         // Create note history if important (>100 chars)
         if (notes.length > 100) {
-          // @ts-ignore - Storage method may not be fully typed
           await storage.createAnalysisNoteHistory({
             analysisId,
             notes,

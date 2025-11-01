@@ -67,7 +67,6 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       });
 
       try {
-        // @ts-ignore - Phase 6+ feature not yet implemented
         const reserves = await storage.getProjectReserves(projectId);
         
         logger.info('[AfterSales] Réserves projet récupérées', {
@@ -115,7 +114,6 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       });
 
       try {
-        // @ts-ignore - Phase 6+ feature not yet implemented
         const newReserve = await storage.createProjectReserve(reserveData);
         
         logger.info('[AfterSales] Réserve projet créée', {
@@ -167,7 +165,6 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       });
 
       try {
-        // @ts-ignore - Phase 6+ feature not yet implemented
         const interventions = await storage.getSavInterventions(projectId);
         
         logger.info('[AfterSales] Interventions SAV récupérées', {
@@ -215,7 +212,6 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       });
 
       try {
-        // @ts-ignore - Phase 6+ feature not yet implemented
         const newIntervention = await storage.createSavIntervention(interventionData);
         
         logger.info('[AfterSales] Intervention SAV créée', {
@@ -267,7 +263,6 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       });
 
       try {
-        // @ts-ignore - Phase 6+ feature not yet implemented
         const claims = await storage.getSavWarrantyClaims(interventionId);
         
         logger.info('[AfterSales] Réclamations garantie récupérées', {

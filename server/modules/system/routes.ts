@@ -148,7 +148,7 @@ async function checkSendGridHealth() {
 // FACTORY FUNCTION - Dependency Injection Pattern
 // ========================================
 
-export function createSystemRoutes(storage: IStorage) {
+export function createSystemRoutes(storage: IStorage, eventBus: any) {
   const router = Router();
 
   // ========================================
@@ -168,9 +168,6 @@ export function createSystemRoutes(storage: IStorage) {
       checkSendGridHealth()
     ]);
     
-    // Get KPI analytics performance stats
-    const kpiPerformanceStats = storage.getKpiPerformanceStats();
-    
     const health = {
       status: databaseHealth.status === 'healthy' ? 'healthy' : 'degraded',
       timestamp: new Date().toISOString(),
@@ -188,17 +185,6 @@ export function createSystemRoutes(storage: IStorage) {
         memory: process.memoryUsage(),
         poolStats: getPoolStats(),
         healthCheckDuration: Date.now() - healthCheckStart
-      },
-      analytics: {
-        kpiQueryPerformance: {
-          ...kpiPerformanceStats,
-          status: kpiPerformanceStats.queryCount === 0 ? 'no_data' :
-                  kpiPerformanceStats.avgLatencyMs <= 200 ? 'excellent' :
-                  kpiPerformanceStats.avgLatencyMs <= 500 ? 'good' :
-                  kpiPerformanceStats.avgLatencyMs <= 1000 ? 'acceptable' : 'degraded',
-          improvement: kpiPerformanceStats.avgImprovement >= 90 ? 'target_met' :
-                      kpiPerformanceStats.avgImprovement >= 70 ? 'approaching_target' : 'below_target'
-        }
       },
       circuitBreakers: circuitBreakerManager.getAllStats()
     };
@@ -298,10 +284,9 @@ export function createSystemRoutes(storage: IStorage) {
         .select({
           id: offers.id,
           reference: offers.reference,
-          intitule: offers.intitule,
+          intituleOperation: offers.intituleOperation,
           client: offers.client,
           location: offers.location,
-          city: offers.city,
           status: offers.status,
           createdAt: offers.createdAt
         })
@@ -309,10 +294,9 @@ export function createSystemRoutes(storage: IStorage) {
         .where(
           or(
             ilike(sql`COALESCE(${offers.reference}, '')`, searchPattern),
-            ilike(sql`COALESCE(${offers.intitule}, '')`, searchPattern),
+            ilike(sql`COALESCE(${offers.intituleOperation}, '')`, searchPattern),
             ilike(sql`COALESCE(${offers.client}, '')`, searchPattern),
-            ilike(sql`COALESCE(${offers.location}, '')`, searchPattern),
-            ilike(sql`COALESCE(${offers.city}, '')`, searchPattern)
+            ilike(sql`COALESCE(${offers.location}, '')`, searchPattern)
           )
         )
         .limit(limitNum);
@@ -322,10 +306,9 @@ export function createSystemRoutes(storage: IStorage) {
         .select({
           id: projects.id,
           reference: projects.reference,
-          intitule: projects.intitule,
+          name: projects.name,
           client: projects.client,
           location: projects.location,
-          city: projects.city,
           status: projects.status,
           createdAt: projects.createdAt
         })
@@ -333,10 +316,9 @@ export function createSystemRoutes(storage: IStorage) {
         .where(
           or(
             ilike(sql`COALESCE(${projects.reference}, '')`, searchPattern),
-            ilike(sql`COALESCE(${projects.intitule}, '')`, searchPattern),
+            ilike(sql`COALESCE(${projects.name}, '')`, searchPattern),
             ilike(sql`COALESCE(${projects.client}, '')`, searchPattern),
-            ilike(sql`COALESCE(${projects.location}, '')`, searchPattern),
-            ilike(sql`COALESCE(${projects.city}, '')`, searchPattern)
+            ilike(sql`COALESCE(${projects.location}, '')`, searchPattern)
           )
         )
         .limit(limitNum);

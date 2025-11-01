@@ -54,8 +54,8 @@ export async function registerRoutes(app: Express) {
   const adminRouter = createAdminRouter(storageInterface, eventBus);
   const opsRouter = createOpsRouter(storageInterface, eventBus);
   const teamRouter = createTeamRouter(storageInterface, eventBus);
-  const systemRouter = createSystemRoutes(storageInterface);
-  const configurationRouter = createConfigurationRoutes(storageInterface);
+  const systemRouter = createSystemRoutes(storageInterface, eventBus);
+  const configurationRouter = createConfigurationRoutes(storageInterface, eventBus);
   
   app.use(chiffrageRouter);
   app.use(batigestRouter);

@@ -78,7 +78,7 @@ const scorePreviewSchema = z.object({
 /**
  * Factory function to create Configuration routes with dependency injection
  */
-export function createConfigurationRoutes(storage: IStorage) {
+export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
   const router = Router();
 
   // ========================================

@@ -13,9 +13,9 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler } from '../../middleware/errorHandler';
-import { validateBody, validateParams, validateQuery } from '../../middleware/validation';
+import { validateBody, validateParams, validateQuery, commonParamSchemas } from '../../middleware/validation';
 import { rateLimits } from '../../middleware/security';
-import { sendSuccess, sendPaginatedSuccess } from '../../middleware/errorHandler';
+import { sendSuccess, sendPaginatedSuccess, createError } from '../../middleware/errorHandler';
 import { ValidationError, NotFoundError } from '../../utils/error-handler';
 import { logger } from '../../utils/logger';
 import type { IStorage } from '../../storage-poc';
@@ -29,7 +29,8 @@ import {
   benchmarkQuerySchema,
   insertAlertThresholdSchema,
   updateAlertThresholdSchema,
-  alertsQuerySchema
+  alertsQuerySchema,
+  insertMetricsBusinessSchema
 } from '@shared/schema';
 import { getBusinessAnalyticsService } from '../../services/consolidated/BusinessAnalyticsService';
 import { PredictiveEngineService } from '../../services/PredictiveEngineService';
@@ -636,6 +637,441 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
     })
   );
 
+  // ========================================
+  // AI PERFORMANCE ROUTES
+  // ========================================
+
+  // GET /api/ai-performance/pipeline-metrics - Métriques détaillées pipeline IA
+  router.get('/api/ai-performance/pipeline-metrics',
+    isAuthenticated,
+    validateQuery(z.object({
+      timeRange: z.object({
+        startDate: z.string().datetime(),
+        endDate: z.string().datetime()
+      }).optional(),
+      complexity: z.enum(['simple', 'complex', 'expert']).optional(),
+      userId: z.string().optional(),
+      includeP95P99: z.string().default('true').transform(val => val === 'true' || val === '1')
+    }).optional()),
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        const query = req.query || {};
+        const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
+        const complexity = query.complexity as 'simple' | 'complex' | 'expert' | undefined;
+        const userId = query.userId as string | undefined;
+        const includeP95P99 = query.includeP95P99 === 'true' || query.includeP95P99 === true;
+        
+        logger.info('Récupération métriques pipeline avec filtres', {
+          metadata: { 
+            route: '/api/ai-performance/pipeline-metrics',
+            method: 'GET',
+            filters: req.query,
+            userId: req.user?.id
+          }
+        });
+        
+        const metrics = await performanceService.getPipelineMetrics({
+          timeRange,
+          complexity,
+          userId,
+          includePercentiles: includeP95P99
+        });
+        
+        sendSuccess(res, {
+          ...metrics,
+          metadata: {
+            calculatedAt: new Date(),
+            filtersApplied: Object.keys(req.query || {}).length
+          }
+        });
+        
+      } catch (error) {
+        logger.error('Erreur pipeline metrics', {
+          metadata: { 
+            route: '/api/ai-performance/pipeline-metrics',
+            error: error instanceof Error ? error.message : String(error),
+            userId: req.user?.id
+          }
+        });
+        throw createError.database('Erreur lors de la récupération des métriques pipeline');
+      }
+    })
+  );
+
+  // GET /api/ai-performance/cache-analytics - Analytics cache hit/miss par complexité
+  router.get('/api/ai-performance/cache-analytics', 
+    isAuthenticated,
+    validateQuery(z.object({
+      timeRange: z.object({
+        startDate: z.string().datetime(),
+        endDate: z.string().datetime()
+      }).optional(),
+      breakdown: z.enum(['complexity', 'user', 'time']).default('complexity')
+    }).optional()),
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        const query = req.query || {};
+        const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
+        const breakdown = (query.breakdown as 'complexity' | 'user' | 'time') || 'complexity';
+        
+        logger.info('Analytics cache avec breakdown', {
+          metadata: { 
+            route: '/api/ai-performance/cache-analytics',
+            method: 'GET',
+            breakdown,
+            userId: req.user?.id
+          }
+        });
+        
+        const cacheAnalytics = await performanceService.getCacheAnalytics({
+          timeRange,
+          breakdown
+        });
+        
+        sendSuccess(res, {
+          ...cacheAnalytics,
+          metadata: {
+            breakdown,
+            calculatedAt: new Date()
+          }
+        });
+        
+      } catch (error) {
+        logger.error('Erreur cache analytics', {
+          metadata: { 
+            route: '/api/ai-performance/cache-analytics',
+            error: error instanceof Error ? error.message : String(error),
+            userId: req.user?.id
+          }
+        });
+        throw createError.database('Erreur lors de l\'analyse des métriques cache');
+      }
+    })
+  );
+
+  // GET /api/ai-performance/slo-compliance - Conformité SLO et alertes
+  router.get('/api/ai-performance/slo-compliance',
+    isAuthenticated,
+    validateQuery(z.object({
+      timeRange: z.object({
+        startDate: z.string().datetime(),
+        endDate: z.string().datetime()
+      }).optional(),
+      includeTrends: z.string().default('true').transform(val => val === 'true' || val === '1'),
+      includeAlerts: z.string().default('true').transform(val => val === 'true' || val === '1')
+    }).optional()),
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        const query = req.query || {};
+        const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
+        const includeTrends = query.includeTrends === 'true' || query.includeTrends === true;
+        const includeAlerts = query.includeAlerts === 'true' || query.includeAlerts === true;
+        
+        logger.info('SLO compliance check', {
+          metadata: {
+            route: '/api/ai-performance/slo-compliance',
+            method: 'GET',
+            userId: req.user?.id
+          }
+        });
+        
+        const sloMetrics = await performanceService.getSLOCompliance({
+          timeRange,
+          includeTrends,
+          includeAlerts
+        });
+        
+        sendSuccess(res, {
+          ...sloMetrics,
+          sloTargets: {
+            simple: '5s',
+            complex: '10s',
+            expert: '15s'
+          },
+          calculatedAt: new Date()
+        });
+        
+      } catch (error) {
+        logger.error('Erreur SLO compliance', {
+          metadata: { 
+            route: '/api/ai-performance/slo-compliance',
+            error: error instanceof Error ? error.message : String(error),
+            userId: req.user?.id
+          }
+        });
+        throw createError.database('Erreur lors de la vérification de conformité SLO');
+      }
+    })
+  );
+
+  // GET /api/ai-performance/bottlenecks - Identification goulots d'étranglement
+  router.get('/api/ai-performance/bottlenecks',
+    isAuthenticated,
+    validateQuery(z.object({
+      timeRange: z.object({
+        startDate: z.string().datetime(),
+        endDate: z.string().datetime()
+      }).optional(),
+      threshold: z.coerce.number().min(0.1).max(10).default(2.0)
+    }).optional()),
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        const query = req.query || {};
+        const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
+        const threshold = typeof query.threshold === 'string' ? parseFloat(query.threshold) : (query.threshold as number) || 2.0;
+        
+        logger.info('Analyse goulots avec seuil', {
+          metadata: { 
+            route: '/api/ai-performance/bottlenecks',
+            method: 'GET',
+            threshold,
+            userId: req.user?.id
+          }
+        });
+        
+        const bottlenecks = await performanceService.identifyBottlenecks({
+          timeRange,
+          thresholdSeconds: threshold
+        });
+        
+        sendSuccess(res, {
+          ...bottlenecks,
+          thresholdUsed: threshold,
+          analysisDate: new Date()
+        });
+        
+      } catch (error) {
+        logger.error('Erreur bottlenecks analysis', {
+          metadata: { 
+            route: '/api/ai-performance/bottlenecks',
+            error: error instanceof Error ? error.message : String(error),
+            userId: req.user?.id
+          }
+        });
+        throw createError.database('Erreur lors de l\'identification des goulots d\'étranglement');
+      }
+    })
+  );
+
+  // GET /api/ai-performance/real-time-stats - Statistiques temps réel
+  router.get('/api/ai-performance/real-time-stats',
+    isAuthenticated,
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        logger.info('Stats temps réel', {
+          metadata: {
+            route: '/api/ai-performance/real-time-stats',
+            method: 'GET',
+            userId: req.user?.id
+          }
+        });
+        
+        const realtimeStats = await performanceService.getRealTimeStats();
+        
+        sendSuccess(res, {
+          ...realtimeStats,
+          timestamp: new Date(),
+          refreshInterval: 30
+        });
+        
+      } catch (error) {
+        logger.error('Erreur real-time stats', {
+          metadata: { 
+            route: '/api/ai-performance/real-time-stats',
+            error: error instanceof Error ? error.message : String(error),
+            userId: req.user?.id
+          }
+        });
+        throw createError.database('Erreur lors de la récupération des statistiques temps réel');
+      }
+    })
+  );
+
+  // ========================================
+  // BUSINESS METRICS ROUTES
+  // ========================================
+
+  // GET /api/metrics-business - Liste des métriques business avec filtres
+  router.get('/api/metrics-business',
+    isAuthenticated,
+    rateLimits.general,
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        const { entity_type, entity_id } = req.query;
+        
+        logger.info('Récupération métriques business', {
+          metadata: {
+            route: '/api/metrics-business',
+            method: 'GET',
+            entity_type,
+            entity_id,
+            userId: req.user?.id
+          }
+        });
+        
+        const metrics = await storage.getMetricsBusiness(entity_type, entity_id);
+        sendSuccess(res, metrics);
+      } catch (error) {
+        logger.error('Erreur getMetricsBusiness', {
+          metadata: { 
+            route: '/api/metrics-business',
+            method: 'GET',
+            error: error instanceof Error ? error.message : String(error),
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la récupération des métriques business");
+      }
+    })
+  );
+
+  // POST /api/metrics-business - Créer nouvelle métrique business
+  router.post('/api/metrics-business',
+    isAuthenticated,
+    rateLimits.general,
+    validateBody(insertMetricsBusinessSchema),
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        const metricData = req.body;
+        
+        logger.info('Création métrique business', {
+          metadata: {
+            route: '/api/metrics-business',
+            method: 'POST',
+            metric_type: metricData.metric_type,
+            userId: req.user?.id
+          }
+        });
+        
+        const newMetric = await storage.createMetricsBusiness(metricData);
+        sendSuccess(res, newMetric, 201);
+      } catch (error) {
+        logger.error('Erreur createMetricsBusiness', {
+          metadata: { 
+            route: '/api/metrics-business',
+            method: 'POST',
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la création de la métrique business");
+      }
+    })
+  );
+
+  // GET /api/metrics-business/:id - Récupérer métrique business par ID
+  router.get('/api/metrics-business/:id',
+    isAuthenticated,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        const { id } = req.params;
+        
+        logger.info('Récupération métrique business par ID', {
+          metadata: {
+            route: '/api/metrics-business/:id',
+            method: 'GET',
+            id,
+            userId: req.user?.id
+          }
+        });
+        
+        const metric = await storage.getMetricsBusinessById(id);
+        if (!metric) {
+          throw createError.notFound("Métrique business non trouvée");
+        }
+        sendSuccess(res, metric);
+      } catch (error) {
+        logger.error('Erreur getMetricsBusinessById', {
+          metadata: { 
+            route: '/api/metrics-business/:id',
+            method: 'GET',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw error;
+      }
+    })
+  );
+
+  // PUT /api/metrics-business/:id - Mettre à jour métrique business
+  router.put('/api/metrics-business/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    validateBody(insertMetricsBusinessSchema.partial()),
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        const { id } = req.params;
+        const updateData = req.body;
+        
+        logger.info('Mise à jour métrique business', {
+          metadata: {
+            route: '/api/metrics-business/:id',
+            method: 'PUT',
+            id,
+            userId: req.user?.id
+          }
+        });
+        
+        const updatedMetric = await storage.updateMetricsBusiness(id, updateData);
+        sendSuccess(res, updatedMetric);
+      } catch (error) {
+        logger.error('Erreur updateMetricsBusiness', {
+          metadata: { 
+            route: '/api/metrics-business/:id',
+            method: 'PUT',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la mise à jour de la métrique business");
+      }
+    })
+  );
+
+  // DELETE /api/metrics-business/:id - Supprimer métrique business
+  router.delete('/api/metrics-business/:id',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        const { id } = req.params;
+        
+        logger.info('Suppression métrique business', {
+          metadata: {
+            route: '/api/metrics-business/:id',
+            method: 'DELETE',
+            id,
+            userId: req.user?.id
+          }
+        });
+        
+        await storage.deleteMetricsBusiness(id);
+        sendSuccess(res, null);
+      } catch (error) {
+        logger.error('Erreur deleteMetricsBusiness', {
+          metadata: { 
+            route: '/api/metrics-business/:id',
+            method: 'DELETE',
+            id: req.params.id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la suppression de la métrique business");
+      }
+    })
+  );
+
   logger.info('[AnalyticsModule] Routes initialisées', {
     metadata: {
       module: 'AnalyticsModule',
@@ -652,7 +1088,17 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         '/api/predictive/risks',
         '/api/predictive/recommendations',
         '/api/dashboard/stats',
-        '/api/dashboard/kpis'
+        '/api/dashboard/kpis',
+        '/api/ai-performance/pipeline-metrics',
+        '/api/ai-performance/cache-analytics',
+        '/api/ai-performance/slo-compliance',
+        '/api/ai-performance/bottlenecks',
+        '/api/ai-performance/real-time-stats',
+        '/api/metrics-business',
+        'POST /api/metrics-business',
+        '/api/metrics-business/:id',
+        'PUT /api/metrics-business/:id',
+        'DELETE /api/metrics-business/:id'
       ]
     }
   });

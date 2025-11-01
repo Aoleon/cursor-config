@@ -21,6 +21,8 @@ import { createTeamRouter } from "./modules/team";
 import { createSystemRoutes } from "./modules/system";
 import { createConfigurationRoutes } from "./modules/configuration";
 import { setupMondayModule } from "./modules/monday";
+import { createHrRouter } from "./modules/hr";
+import { createTestingRouter } from "./modules/testing";
 
 // Import cache service
 import { getCacheService } from "./services/CacheService";
@@ -56,6 +58,8 @@ export async function registerRoutes(app: Express) {
   const teamRouter = createTeamRouter(storageInterface, eventBus);
   const systemRouter = createSystemRoutes(storageInterface, eventBus);
   const configurationRouter = createConfigurationRoutes(storageInterface, eventBus);
+  const hrRouter = createHrRouter(storageInterface, eventBus);
+  const testingRouter = createTestingRouter(storageInterface, eventBus);
   
   app.use(chiffrageRouter);
   app.use(batigestRouter);
@@ -73,6 +77,8 @@ export async function registerRoutes(app: Express) {
   app.use(teamRouter);
   app.use(systemRouter);
   app.use(configurationRouter);
+  app.use(hrRouter);
+  app.use(testingRouter);
   
   logger.info('✅ Admin routes registered', {
     metadata: {
@@ -92,6 +98,22 @@ export async function registerRoutes(app: Express) {
     metadata: {
       module: 'Team',
       operation: 'registerRoutes'
+    }
+  });
+  
+  logger.info('✅ HR routes registered', {
+    metadata: {
+      module: 'HR',
+      operation: 'registerRoutes',
+      routes: ['employee-labels']
+    }
+  });
+  
+  logger.info('✅ Testing routes registered', {
+    metadata: {
+      module: 'Testing',
+      operation: 'registerRoutes',
+      routes: ['test-data', 'bug-reports']
     }
   });
   

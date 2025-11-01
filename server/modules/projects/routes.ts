@@ -14,8 +14,8 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler } from '../../middleware/errorHandler';
-import { validateBody, validateParams, validateQuery } from '../../middleware/validation';
-import { rateLimits } from '../../middleware/security';
+import { validateBody, validateParams, validateQuery, commonParamSchemas } from '../../middleware/validation';
+import { rateLimits } from '../../middleware/rate-limiter';
 import { sendSuccess, sendPaginatedSuccess } from '../../middleware/errorHandler';
 import { ValidationError, NotFoundError } from '../../utils/error-handler';
 import { logger } from '../../utils/logger';
@@ -838,80 +838,152 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
     })
   );
 
+
   // ========================================
-  // GANTT CHART ROUTES
+  // PROJECT SUB-ELEMENTS ROUTES (Monday.com Integration)
   // ========================================
 
-  // Get project sub-elements for Gantt
+  /**
+   * GET /api/projects/:id/sub-elements
+   * Get all sub-elements for a project
+   */
   router.get('/api/projects/:id/sub-elements',
     isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
     asyncHandler(async (req: any, res: Response) => {
-      const { id } = req.params;
+      const { id: projectId } = req.params;
       
-      logger.info('[Projects] Récupération sous-éléments Gantt', {
+      logger.info('[Projects] Récupération sous-éléments projet', {
         metadata: {
           route: '/api/projects/:id/sub-elements',
           method: 'GET',
-          projectId: id,
+          projectId,
           userId: req.user?.id
         }
       });
 
-      const tasks = await storage.getProjectTasks(id);
-      
-      // Transform to Gantt format
-      const ganttTasks: GanttTask[] = tasks.map(task => ({
-        id: task.id,
-        name: task.name,
-        start: task.startDate,
-        end: task.endDate,
-        progress: task.progress || 0,
-        dependencies: task.dependencies,
-        resources: task.assignedTo ? [task.assignedTo] : [],
-        children: task.subtasks?.map(st => ({
-          id: st.id,
-          name: st.name,
-          start: st.startDate,
-          end: st.endDate,
-          progress: st.progress || 0,
-          dependencies: st.dependencies,
-          resources: st.assignedTo ? [st.assignedTo] : []
-        }))
-      }));
-
-      sendSuccess(res, ganttTasks);
+      try {
+        const subElements = await storage.getProjectSubElements(projectId);
+        sendSuccess(res, subElements);
+      } catch (error) {
+        logger.error('[Projects] Erreur récupération sous-éléments', {
+          metadata: { 
+            route: '/api/projects/:id/sub-elements',
+            method: 'GET',
+            projectId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw new NotFoundError('Sous-éléments du projet', projectId);
+      }
     })
   );
 
-  // Create project sub-element for Gantt
-  router.post('/api/projects/:id/sub-elements',
+  /**
+   * GET /api/project-sub-elements/:id
+   * Get single project sub-element by ID
+   */
+  router.get('/api/project-sub-elements/:id',
     isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
     asyncHandler(async (req: any, res: Response) => {
       const { id } = req.params;
-      const { name, startDate, endDate, parentId, dependencies } = req.body;
       
-      logger.info('[Projects] Création sous-élément Gantt', {
+      logger.info('[Projects] Récupération sous-élément projet', {
         metadata: {
-          route: '/api/projects/:id/sub-elements',
-          method: 'POST',
-          projectId: id,
-          name,
+          route: '/api/project-sub-elements/:id',
+          method: 'GET',
+          subElementId: id,
           userId: req.user?.id
         }
       });
 
-      const task = await storage.createProjectTask({
-        projectId: id,
-        name,
-        startDate,
-        endDate,
-        parentTaskId: parentId,
-        dependencies,
-        status: 'pending',
-        priority: 'medium'
+      try {
+        const subElement = await storage.getProjectSubElement(id);
+        if (!subElement) {
+          throw new NotFoundError('Sous-élément de projet', id);
+        }
+        sendSuccess(res, subElement);
+      } catch (error) {
+        logger.error('[Projects] Erreur récupération sous-élément', {
+          metadata: { 
+            route: '/api/project-sub-elements/:id',
+            method: 'GET',
+            id,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw error;
+      }
+    })
+  );
+
+  /**
+   * POST /api/projects/:id/sub-elements
+   * Create new project sub-element
+   */
+  router.post('/api/projects/:id/sub-elements',
+    isAuthenticated,
+    rateLimits.creation,
+    validateParams(commonParamSchemas.id),
+    validateBody(z.object({
+      name: z.string().min(1),
+      category: z.string().min(1),
+      parentElementId: z.string().uuid().optional(),
+      description: z.string().optional(),
+      status: z.enum(['planned', 'in_progress', 'completed', 'cancelled']).default('planned'),
+      priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+      estimatedDuration: z.number().positive().optional(),
+      estimatedCost: z.number().positive().optional()
+    })),
+    asyncHandler(async (req: any, res: Response) => {
+      const { id: projectId } = req.params;
+      
+      logger.info('[Projects] Création sous-élément projet', {
+        metadata: {
+          route: '/api/projects/:id/sub-elements',
+          method: 'POST',
+          projectId,
+          name: req.body.name,
+          category: req.body.category,
+          userId: req.user?.id
+        }
       });
 
-      sendSuccess(res, task, 201);
+      try {
+        const subElement = await storage.createProjectSubElement({
+          ...req.body,
+          projectId
+        });
+        
+        eventBus.emit('project:sub-element:created', {
+          projectId,
+          subElementId: subElement.id,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, subElement, 'Sous-élément de projet créé avec succès');
+      } catch (error) {
+        logger.error('[Projects] Erreur création sous-élément', {
+          metadata: { 
+            route: '/api/projects/:id/sub-elements',
+            method: 'POST',
+            projectId,
+            name: req.body.name,
+            category: req.body.category,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId: req.user?.id
+          }
+        });
+        throw new ValidationError('Erreur lors de la création du sous-élément de projet');
+      }
     })
   );
 
@@ -926,7 +998,9 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         '/api/projects/:id/reserves',
         '/api/sav/interventions',
         '/api/sav/warranty-claims',
-        '/api/projects/:id/contacts'
+        '/api/projects/:id/contacts',
+        '/api/projects/:id/sub-elements',
+        '/api/project-sub-elements/:id'
       ]
     }
   });

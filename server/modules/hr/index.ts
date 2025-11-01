@@ -1,0 +1,1 @@
+export { createHrRouter } from './routes';

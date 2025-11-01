@@ -121,11 +121,17 @@ The application employs a modern fullstack architecture. The frontend leverages 
   - Type-only imports eliminate runtime dependencies on storage-poc
   - Dependency injection pattern preserved in all constructors
   - Architect-validated runtime stability
-- **Migration Summary (Waves 1-5):**
-  - 4 route modules (dependency injection pattern)
+- **Routes Migration (Wave 6) ✅**: System module created with 6 core routes
+  - Module System: /api/health, /api/users, /api/search/global, /api/objects/* (upload, download)
+  - Factory pattern createSystemRoutes(storage) with dependency injection
+  - Integrated in server/routes.ts with 15 total modules active
+  - Architect-validated runtime stability, zero regressions
+- **Migration Summary (Waves 1-6):**
+  - 5 route modules migrated (dependency injection pattern)
   - 21 services (type-only imports with constructor DI)
   - ZERO runtime `import { IStorage }` in codebase (grep verified)
   - Production-ready architecture with clean separation of concerns
+  - routes-poc.ts: 11,998 LOC → 5,245 LOC (56% reduction)
 - Double cast pattern `as unknown as IStorage` enables progressive migration
 - All modules active and validated by architect review
 - Application running without regressions, all repositories architect-validated

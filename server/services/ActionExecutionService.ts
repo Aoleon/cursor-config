@@ -2,7 +2,7 @@ import { AIService } from "./AIService";
 import { RBACService } from "./RBACService";
 import { AuditService } from "./AuditService";
 import { EventBus } from "../eventBus";
-import { IStorage } from "../storage-poc";
+import type { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { sql, eq, and, desc, gte, lte, asc, or } from "drizzle-orm";
 import crypto from "crypto";

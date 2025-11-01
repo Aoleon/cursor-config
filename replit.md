@@ -111,6 +111,11 @@ The application employs a modern fullstack architecture. The frontend leverages 
   - ContextBuilderService, ContextCacheService, ContextTierService, PredictiveEngineService
   - All services operational with constructor-based DI pattern preserved
   - Architect-validated runtime stability
+- **Services Migration (Wave 4) ✅**: 6 Monday.com services migrated to `import type`
+  - MondayDataService, MondayMigrationService (consolidated & legacy)
+  - MondayExportService, MondayProductionMigrationService, MondayProductionFinalService
+  - Monday.com integration fully operational (50 boards, export/webhook/sync)
+  - Architect-validated runtime stability
 - Double cast pattern `as unknown as IStorage` enables progressive migration
 - All modules active and validated by architect review
 - Application running without regressions, all repositories architect-validated

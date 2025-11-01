@@ -159,7 +159,7 @@ export function createConfigurationRoutes(storage: IStorage) {
       
       logger.info('Résultat aperçu scoring calculé', {
         metadata: { result }
-      });
+        });
       
       res.json({
         success: true,
@@ -248,7 +248,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     })),
     asyncHandler(async (req, res) => {
       const { projectId } = req.query;
-      const batteries = await storage.getEquipmentBatteries(projectId);
+      const batteries = await storage.getEquipmentBatteries(projectId as string | undefined);
       sendSuccess(res, batteries);
     })
   );
@@ -284,7 +284,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     })),
     asyncHandler(async (req, res) => {
       const battery = await storage.createEquipmentBattery(req.body);
-      sendSuccess(res, battery, 'Batterie créée avec succès');
+      sendSuccess(res, battery);
     })
   );
 
@@ -306,7 +306,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     asyncHandler(async (req, res) => {
       const { id } = req.params;
       const battery = await storage.updateEquipmentBattery(id, req.body);
-      sendSuccess(res, battery, 'Batterie mise à jour avec succès');
+      sendSuccess(res, battery);
     })
   );
 
@@ -317,7 +317,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     asyncHandler(async (req, res) => {
       const { id } = req.params;
       await storage.deleteEquipmentBattery(id);
-      sendSuccess(res, null, 'Batterie supprimée avec succès');
+      sendSuccess(res, null);
     })
   );
 
@@ -337,7 +337,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     })),
     asyncHandler(async (req, res) => {
       const { projectId } = req.query;
-      const targets = await storage.getMarginTargets(projectId);
+      const targets = await storage.getMarginTargets(projectId as string | undefined);
       sendSuccess(res, targets);
     })
   );
@@ -377,7 +377,7 @@ export function createConfigurationRoutes(storage: IStorage) {
         targetPeriodStart: new Date(req.body.targetPeriodStart),
         targetPeriodEnd: new Date(req.body.targetPeriodEnd)
       });
-      sendSuccess(res, target, 'Objectif de marge créé avec succès');
+      sendSuccess(res, target);
     })
   );
 
@@ -401,7 +401,7 @@ export function createConfigurationRoutes(storage: IStorage) {
       if (req.body.targetPeriodEnd) updateData.targetPeriodEnd = new Date(req.body.targetPeriodEnd);
       
       const target = await storage.updateMarginTarget(id, updateData);
-      sendSuccess(res, target, 'Objectif de marge mis à jour avec succès');
+      sendSuccess(res, target);
     })
   );
 
@@ -412,7 +412,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     asyncHandler(async (req, res) => {
       const { id } = req.params;
       await storage.deleteMarginTarget(id);
-      sendSuccess(res, null, 'Objectif de marge supprimé avec succès');
+      sendSuccess(res, null);
     })
   );
 
@@ -430,7 +430,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     })),
     asyncHandler(async (req, res) => {
       const { category } = req.query;
-      const tags = await storage.getClassificationTags(category);
+      const tags = await storage.getClassificationTags(category as string | undefined);
       sendSuccess(res, tags);
     })
   );
@@ -461,7 +461,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     })),
     asyncHandler(async (req, res) => {
       const tag = await storage.createClassificationTag(req.body);
-      sendSuccess(res, tag, 'Tag de classification créé avec succès');
+      sendSuccess(res, tag);
     })
   );
 
@@ -479,7 +479,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     asyncHandler(async (req, res) => {
       const { id } = req.params;
       const tag = await storage.updateClassificationTag(id, req.body);
-      sendSuccess(res, tag, 'Tag de classification mis à jour avec succès');
+      sendSuccess(res, tag);
     })
   );
 
@@ -490,7 +490,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     asyncHandler(async (req, res) => {
       const { id } = req.params;
       await storage.deleteClassificationTag(id);
-      sendSuccess(res, null, 'Tag de classification supprimé avec succès');
+      sendSuccess(res, null);
     })
   );
 
@@ -509,7 +509,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     })),
     asyncHandler(async (req, res) => {
       const { entityType, entityId } = req.query;
-      const entityTags = await storage.getEntityTags(entityType, entityId);
+      const entityTags = await storage.getEntityTags(entityType as string | undefined, entityId as string | undefined);
       sendSuccess(res, entityTags);
     })
   );
@@ -525,7 +525,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     })),
     asyncHandler(async (req, res) => {
       const entityTag = await storage.createEntityTag(req.body);
-      sendSuccess(res, entityTag, 'Liaison de tag créée avec succès');
+      sendSuccess(res, entityTag);
     })
   );
 
@@ -536,7 +536,7 @@ export function createConfigurationRoutes(storage: IStorage) {
     asyncHandler(async (req, res) => {
       const { id } = req.params;
       await storage.deleteEntityTag(id);
-      sendSuccess(res, null, 'Liaison de tag supprimée avec succès');
+      sendSuccess(res, null);
     })
   );
 

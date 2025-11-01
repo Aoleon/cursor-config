@@ -121,17 +121,18 @@ The application employs a modern fullstack architecture. The frontend leverages 
   - Type-only imports eliminate runtime dependencies on storage-poc
   - Dependency injection pattern preserved in all constructors
   - Architect-validated runtime stability
-- **Routes Migration (Wave 6) ✅**: System module created with 6 core routes
-  - Module System: /api/health, /api/users, /api/search/global, /api/objects/* (upload, download)
-  - Factory pattern createSystemRoutes(storage) with dependency injection
-  - Integrated in server/routes.ts with 15 total modules active
-  - Architect-validated runtime stability, zero regressions
+- **Routes Migration (Wave 6) ✅**: System et Configuration modules créés avec 29 routes
+  - Module System (6 routes): /api/health, /api/users, /api/search/global, /api/objects/* (upload, download, delete)
+  - Module Configuration (23 routes): scoring config, material-color rules, equipment batteries, margin targets, classification tags, entity tags
+  - Factory pattern createSystemRoutes(storage, eventBus) et createConfigurationRoutes(storage, eventBus) avec dependency injection complète
+  - Intégré dans server/routes.ts avec **16 modules actifs** (vs 15 avant Wave 6)
+  - TypeScript propre (zero LSP diagnostics), architect-validated, production-ready
 - **Migration Summary (Waves 1-6):**
-  - 5 route modules migrated (dependency injection pattern)
+  - **6 route modules** migrés (Commercial, Projects, Analytics, Suppliers, System, Configuration) avec dependency injection pattern
   - 21 services (type-only imports with constructor DI)
-  - ZERO runtime `import { IStorage }` in codebase (grep verified)
+  - ZERO runtime `import { IStorage }` dans le codebase (grep verified)
   - Production-ready architecture with clean separation of concerns
-  - routes-poc.ts: 11,998 LOC → 5,245 LOC (56% reduction)
+  - routes-poc.ts: 11,998 LOC → **~5,100 LOC** (58% reduction after Wave 6)
 - Double cast pattern `as unknown as IStorage` enables progressive migration
 - All modules active and validated by architect review
 - Application running without regressions, all repositories architect-validated

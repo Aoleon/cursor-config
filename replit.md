@@ -1,7 +1,7 @@
 # Saxium - Application de Chiffrage BTP/Menuiserie
 
 ## Overview
-Saxium is a fullstack application designed for quoting and project management in the French construction and joinery (BTP/Menuiserie) sector. Its primary goal is to boost operational efficiency through automation and AI, incorporating features like OCR analysis for supplier quotes, intelligent planning via DateIntelligence, and AI-driven decision-making. The project aims to modernize traditional workflows from initial quoting to project completion.
+Saxium is a fullstack application for quoting and project management in the French construction and joinery (BTP/Menuiserie) sector. Its core purpose is to enhance operational efficiency through automation and AI, including OCR analysis of supplier quotes, intelligent planning via DateIntelligence, and AI-driven decision-making. The project aims to modernize traditional workflows from initial quoting to project completion, offering a significant boost in productivity and accuracy.
 
 ## User Preferences
 - Always read `server/utils/README-UTILS.md` before modifying server code.
@@ -15,169 +15,41 @@ Saxium is a fullstack application designed for quoting and project management in
 - Do NOT create manual SQL migrations (use `db:push`).
 - Do NOT add `try-catch` in routes (`asyncHandler` handles it).
 
-## Code Quality Standards (Implemented Oct 2025)
-✅ **ESLint Configuration**: `.eslintrc.json` enforces no-console rule (errors on console.log/error in production code)
-✅ **AsyncHandler Coverage**: 100% of route handlers wrapped with asyncHandler (152 handlers across 8 route modules)
-✅ **Typed Errors**: Generic errors replaced with typed classes (ValidationError, NotFoundError, DatabaseError, UnauthorizedError, ExternalAPIError)
-✅ **Structured Logging**: All production code uses contextual logger with correlation IDs
-✅ **Error Middleware**: Centralized error handling with HTTP status mapping in `server/middleware/error-handler.ts`
-
-## Service Consolidation Progress (Oct 2025)
-
-**Monday.com Services (Phases 1-2) ✅ COMPLETE**
-- Before: 10 services (scattered logic, duplication)
-- After: 3 consolidated services (4,526 LOC)
-  - MondayIntegrationService (1,197 LOC) - Core API integration
-  - MondayDataService (2,036 LOC) - Data mapping & extraction
-  - MondayMigrationService (1,293 LOC) - Migration strategies
-- Result: 62% reduction, Strategy Pattern, zero breaking changes
-
-**Analytics Services (Phase 3) ✅ COMPLETE**
-- Before: 3 services (5,004 LOC total)
-  - AnalyticsService (1,827 LOC)
-  - PerformanceMetricsService (2,226 LOC)
-  - DateIntelligenceService (951 LOC)
-- After: 3 consolidated services (3,071 LOC total = 2,681 core + 390 adapters)
-  - BusinessAnalyticsService (700 LOC) - Business KPIs, conversion metrics, revenue forecasting
-  - TechnicalMetricsService (1,030 LOC) - Pipeline tracing, SLO monitoring, performance metrics
-  - DateIntelligenceService (951 LOC) - Temporal intelligence (unchanged, already well-architected)
-- Result: 39% LOC reduction, domain-based architecture, backward compatibility via adapters
-
-**Import Migration & Cleanup (Phase 4) ✅ COMPLETE**
-- Migrated all imports to consolidated services (12+ files)
-  - AnalyticsService → getBusinessAnalyticsService singleton
-  - PerformanceMetricsService → getTechnicalMetricsService singleton
-  - Files migrated: routes-poc, analytics/routes, DateAlertDetectionService, PredictiveEngineService, ContextBuilderService, ChatbotOrchestrationService, AIService
-- Deleted legacy services: AnalyticsService.ts (60KB), PerformanceMetricsService.ts (76KB)
-- Removed obsolete adapters and test files
-- Result: Zero breaking changes, application running, TechnicalMetricsService operational with real-time metrics
-- Total Analytics consolidation impact: 5,004 LOC → 2,681 LOC (46% reduction after adapter removal)
-
-**Phase 5 Storage Repositories (Oct 2025) ✅ COMPLETE**
-- Created 7 new repositories extracting 82 methods from storage-poc.ts monolith
-  - ChiffrageRepository (13 methods) - ChiffrageElements, DpgfDocument, ValidationMilestones
-  - DateIntelligenceRepository (13 methods) - Rules, Alerts with acknowledge/resolve workflows
-  - DocumentsRepository (21 methods) - SupplierDocuments, QuoteSessions, QuoteAnalysis, PurchaseOrders, ClientQuotes
-  - UserRepository (14 methods) - Users, TeamResources, BeWorkload, EmployeeLabels with leftJoin optimizations
-  - ConfigurationRepository (10 methods) - EquipmentBatteries, MarginTargets
-  - ContactsRepository (6 methods) - AoContacts, ProjectContacts with transactional support
-  - SavRepository (5 methods) - SAV Interventions with full CRUD
-- All repositories follow BaseRepository pattern with executeQuery, safeInsert/Update/Delete, transaction support, event emission
-- Integrated in StorageFacade with try/catch + legacy fallback pattern for zero-regression migration
-- Result: 82 methods migrated, application running without regressions, all repositories architect-validated
-
 ## System Architecture
-The application employs a modern fullstack architecture. The frontend leverages React, TypeScript, Vite, Wouter for routing, shadcn/ui and Tailwind CSS for styling, Radix UI for components, React Query for data fetching, and `react-hook-form` with Zod for form management. The backend is built with Express and TypeScript, utilizing Drizzle ORM for database interactions.
+The application features a modern fullstack architecture. The frontend uses React, TypeScript, Vite, Wouter, shadcn/ui, Tailwind CSS, Radix UI, React Query, and `react-hook-form` with Zod. The backend is built with Express and TypeScript, leveraging Drizzle ORM for PostgreSQL.
 
-### Architecture Migration Strategy (Oct 2025)
-**Current State:**
-- `storage-poc.ts` (8,758 LOC) - Monolithic storage layer being decomposed (60%+ strategic coverage achieved)
-- `routes-poc.ts` (11,998 LOC) - Monolithic routes being migrated to modules
-- 35+ services with some duplication (Monday*, Analytics*)
+**UI/UX Decisions**:
+*   Consistent and modern design using shadcn/ui, Tailwind CSS, and Radix UI.
+*   "Couverture Mapping" dashboard for visual progress of Monday.com data integration.
+*   Optimized List components prevent re-renders in large lists.
+*   Draft system allows saving incomplete forms with conditional validation.
+*   Customizable DataTables featuring column visibility, reordering, sorting, and filtering.
 
-**Target Architecture:**
-- **Storage Layer**: Repository Pattern via `StorageFacade` (server/storage/facade/StorageFacade.ts)
-  - ✅ Commercial: AoRepository (982 LOC), OfferRepository (1,232 LOC)
-  - ✅ Production: ProductionRepository (982 LOC, 33 methods)
-  - ✅ Suppliers: SuppliersRepository (1,232 LOC, 35 methods)
-  - ✅ Analytics: KpiRepository (optimized from 132 queries to 1 CTE)
-  - ✅ Chiffrage: ChiffrageRepository (13 methods)
-  - ✅ DateIntelligence: DateIntelligenceRepository (13 methods)
-  - ✅ Documents: DocumentsRepository (21 methods)
-  - ✅ Users: UserRepository (14 methods, leftJoin optimizations)
-  - ✅ Configuration: ConfigurationRepository (10 methods)
-  - ✅ Contacts: ContactsRepository (6 methods)
-  - ✅ SAV: SavRepository (5 methods)
-- **Routes Layer**: Modular routes in `server/modules/`
-  - ✅ Commercial (1,879 LOC, 35 routes) - AOs, Offers, Contacts, Lots, Supplier Requests
-  - ✅ Projects (933 LOC, 29 routes) - Production, SAV, Tasks, Contacts
-  - ✅ Chiffrage, Analytics, Documents, Suppliers
-- **Services**: Domain-based grouping
-  - Integration (Monday), Intelligence (AI/Context), Monitoring (Analytics/Metrics)
+**Technical Implementations**:
+*   **Modular Backend**: Routes are organized into modules (e.g., `auth`, `chiffrage`, `suppliers`, `projects`, `analytics`, `documents`, `batigest`).
+*   **AI Services**: Integration of `DateIntelligenceService`, `OCRService`, and `AIService`.
+*   **Error Handling**: Unified system with typed errors, dedicated error middleware, and structured logging with correlation IDs.
+*   **Performance Optimizations**: Adaptive caching, prefetching, debouncing/throttling (frontend); database indexing, Redis caching, optimized queries (backend).
+*   **Data Synchronization**: Bidirectional sync with Monday.com, configuration-driven data mapping.
+*   **N+1 Query Optimization**: `KpiRepository` uses a single CTE for analytics, replacing multiple queries.
+*   **Asynchronous Operations**: `asyncHandler` pattern for all routes ensures consistent error handling.
+*   **API Response Handling**: `normalizeApiResponse<T>()` for consistent, type-safe API responses.
+*   **Resilience**: Retry system with exponential backoff and CircuitBreakerManager for external APIs.
+*   **Correlation IDs**: `AsyncLocalStorage`-based request tracing.
+*   **Global Search**: Server-side optimized SQL search across key entities.
+*   **PDF Engine**: Integrated PDF template engine.
 
-**Migration Progress (Nov 2025):**
-- 150+ methods extracted across 11 repositories (60%+ strategic coverage of critical business operations)
-- **Routes Migration (Wave 1) ✅**: 4 route modules migrated to dependency injection
-  - Commercial, Projects, Analytics, Suppliers modules use `storage: IStorage` parameter
-  - Factory pattern with `createXxxRoutes(storage)` preserves testability
-  - All API endpoints operational, zero functional regressions
-- **Services Migration (Wave 2) ✅**: 5 analytics/scheduler services migrated to `import type`
-  - BusinessAnalyticsService, TechnicalMetricsService, DateIntelligenceService
-  - PeriodicDetectionScheduler, DateAlertDetectionService
-  - Type-only imports eliminate runtime dependencies on storage-poc
-  - Dependency injection pattern preserved in all constructors
-- **Services Migration (Wave 3) ✅**: 7 AI/Context services migrated to `import type`
-  - AIService, BusinessContextService, ChatbotOrchestrationService
-  - ContextBuilderService, ContextCacheService, ContextTierService, PredictiveEngineService
-  - All services operational with constructor-based DI pattern preserved
-  - Architect-validated runtime stability
-- **Services Migration (Wave 4) ✅**: 6 Monday.com services migrated to `import type`
-  - MondayDataService, MondayMigrationService (consolidated & legacy)
-  - MondayExportService, MondayProductionMigrationService, MondayProductionFinalService
-  - Monday.com integration fully operational (50 boards, export/webhook/sync)
-  - Architect-validated runtime stability
-- **Services Migration (Wave 5) ✅**: 3 infrastructure services migrated to `import type` - **ALL services migration complete**
-  - SQLEngineService, ActionExecutionService, SafetyGuardsService
-  - Type-only imports eliminate runtime dependencies on storage-poc
-  - Dependency injection pattern preserved in all constructors
-  - Architect-validated runtime stability
-- **Routes Migration (Wave 6) ✅**: System et Configuration modules créés avec 29 routes
-  - Module System (6 routes): /api/health, /api/users, /api/search/global, /api/objects/* (upload, download, delete)
-  - Module Configuration (23 routes): scoring config, material-color rules, equipment batteries, margin targets, classification tags, entity tags
-  - Factory pattern createSystemRoutes(storage, eventBus) et createConfigurationRoutes(storage, eventBus) avec dependency injection complète
-  - Intégré dans server/routes.ts avec **16 modules actifs** (vs 15 avant Wave 6)
-  - TypeScript propre (zero LSP diagnostics), architect-validated, production-ready
-- **Migration Summary (Waves 1-6):**
-  - **6 route modules** migrés (Commercial, Projects, Analytics, Suppliers, System, Configuration) avec dependency injection pattern
-  - 21 services (type-only imports with constructor DI)
-  - ZERO runtime `import { IStorage }` dans le codebase (grep verified)
-  - Production-ready architecture with clean separation of concerns
-  - routes-poc.ts: 11,998 LOC → **~5,100 LOC** (58% reduction after Wave 6)
-- Double cast pattern `as unknown as IStorage` enables progressive migration
-- All modules active and validated by architect review
-- Application running without regressions, all repositories architect-validated
+**Feature Specifications**:
+*   Distinction between "AOs Monday" (read-only client requests) and "Offers Saxium" (active working documents).
+*   Batigest ERP integration.
+*   EventBus for inter-component communication.
 
-**Migration Pattern:**
-1. Create repository with BaseRepository pattern → 2. Update StorageFacade with try/catch + legacy fallback → 3. Routes use facade → 4. Verify parity → 5. Remove legacy code
-
-See `/docs/ARCHITECTURE_OPTIMIZATION_ROADMAP.md` for detailed migration plan and metrics.
-
-*   **UI/UX Decisions**:
-    *   Consistent and modern design using shadcn/ui, Tailwind CSS, and Radix UI.
-    *   "Couverture Mapping" dashboard for visual progress of Monday.com data integration.
-    *   Optimized List components prevent re-renders in large lists.
-    *   Draft system allows saving incomplete forms with conditional validation.
-    *   Customizable DataTables featuring column visibility, reordering, sorting, and filtering.
-
-*   **Technical Implementations**:
-    *   **Monday.com Data Mapping**: Configuration-driven extraction system using JSON for dynamic mapping.
-    *   **Performance Optimizations**: Adaptive caching, prefetching, debouncing/throttling, route-based lazy loading (frontend); database indexing, Redis caching, optimized queries, network compression (backend).
-    *   **Error Handling**: Unified system with typed errors (ValidationError, NotFoundError, DatabaseError, UnauthorizedError, ExternalAPIError), dedicated error middleware, and structured logging with correlation IDs.
-    *   **API Response Handling**: `normalizeApiResponse<T>()` for consistent, type-safe API responses.
-    *   **Retry System**: Exponential backoff for external API calls.
-    *   **Cache System**: `CacheService` with in-memory adapter (Redis-ready), proactive invalidation, and monitoring.
-    *   **Correlation IDs**: `AsyncLocalStorage`-based request tracing.
-    *   **Global Search**: Server-side optimized SQL search across AOs, Offers, and Projects.
-    *   **Monday.com Sync**: Bidirectional synchronization for key fields.
-    *   **Data Extraction**: Robust AO extraction from Monday.com with validation.
-    *   **Resilience Infrastructure**: RetryService with exponential backoff and CircuitBreakerManager for external APIs.
-    *   **N+1 Query Optimization**: `KpiRepository` with a single CTE query replaces 132 individual queries for analytics.
-    *   **AsyncHandler Pattern**: 100% route coverage (152 handlers) with centralized error handling, eliminating try-catch boilerplate.
-
-*   **Feature Specifications**:
-    *   Modular backend routes (`auth`, `chiffrage`, `suppliers`, `projects`, `analytics`, `documents`, `batigest`).
-    *   PDF template engine.
-    *   Batigest ERP integration.
-    *   AI services (`DateIntelligenceService`, `OCRService`, `AIService`).
-    *   EventBus for inter-component communication.
-    *   Distinction between "AOs Monday" (read-only client requests) and "Offers Saxium" (active working documents).
-
-*   **System Design Choices**:
-    *   Fullstack TypeScript for end-to-end type safety.
-    *   PostgreSQL (Neon) with Drizzle ORM.
-    *   `shared/` folder for common types and schemas.
-    *   Vitest for unit tests and Playwright for E2E regression tests.
-    *   **Modular Storage Architecture**: Progressive refactoring from a monolithic `storage-poc.ts` to domain-based repositories (Commercial, Production, Suppliers, Analytics) using Repository Pattern, UnitOfWork for transactions, and StorageFacade for backward compatibility.
+**System Design Choices**:
+*   Fullstack TypeScript for end-to-end type safety.
+*   PostgreSQL (Neon) with Drizzle ORM.
+*   `shared/` folder for common types and schemas.
+*   Vitest for unit tests and Playwright for E2E regression tests.
+*   **Modular Storage Architecture**: Progressive refactoring from a monolithic storage layer to domain-based repositories (Commercial, Production, Suppliers, Analytics, etc.) using the Repository Pattern, Unit of Work for transactions, and StorageFacade for backward compatibility.
 
 ## External Dependencies
 *   **Replit Services**: OIDC authentication, PostgreSQL, Object Storage.

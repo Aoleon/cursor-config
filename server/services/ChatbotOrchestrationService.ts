@@ -6,7 +6,7 @@ import { BusinessContextService } from "./BusinessContextService";
 import { ActionExecutionService } from "./ActionExecutionService";
 import { EventBus } from "../eventBus";
 import { getTechnicalMetricsService } from "./consolidated/TechnicalMetricsService";
-import { IStorage } from "../storage-poc";
+import type { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { sql, eq, and, desc, gte, lte, asc } from "drizzle-orm";
 import crypto from "crypto";

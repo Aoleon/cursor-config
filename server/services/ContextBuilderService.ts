@@ -1,4 +1,4 @@
-import { IStorage } from "../storage-poc";
+import type { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { eq, and, desc, sql, or, inArray, isNotNull, gte, lte } from "drizzle-orm";
 import { logger } from '../utils/logger';

@@ -95,9 +95,17 @@ The application employs a modern fullstack architecture. The frontend leverages 
 - **Services**: Domain-based grouping
   - Integration (Monday), Intelligence (AI/Context), Monitoring (Analytics/Metrics)
 
-**Migration Progress:**
+**Migration Progress (Nov 2025):**
 - 150+ methods extracted across 11 repositories (60%+ strategic coverage of critical business operations)
-- Commercial routes migrated and operational with startup logging
+- **Routes Migration (Wave 1) ✅**: 4 route modules migrated to dependency injection
+  - Commercial, Projects, Analytics, Suppliers modules use `storage: IStorage` parameter
+  - Factory pattern with `createXxxRoutes(storage)` preserves testability
+  - All API endpoints operational, zero functional regressions
+- **Services Migration (Wave 2) ✅**: 5 analytics/scheduler services migrated to `import type`
+  - BusinessAnalyticsService, TechnicalMetricsService, DateIntelligenceService
+  - PeriodicDetectionScheduler, DateAlertDetectionService
+  - Type-only imports eliminate runtime dependencies on storage-poc
+  - Dependency injection pattern preserved in all constructors
 - Double cast pattern `as unknown as IStorage` enables progressive migration
 - All modules active and validated by architect review
 - Application running without regressions, all repositories architect-validated

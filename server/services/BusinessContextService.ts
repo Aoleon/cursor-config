@@ -1,4 +1,4 @@
-import { IStorage } from "../storage-poc";
+import type { IStorage } from "../storage-poc";
 import { RBACService } from "./RBACService";
 import { EventBus } from "../eventBus";
 import { db } from "../db";

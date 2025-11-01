@@ -1,4 +1,4 @@
-import { IStorage } from "../storage-poc";
+import type { IStorage } from "../storage-poc";
 import { logger } from "../utils/logger";
 import type {
   ContextTierProfile,

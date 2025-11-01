@@ -1,4 +1,4 @@
-import { IStorage } from "../storage-poc";
+import type { IStorage } from "../storage-poc";
 import crypto from "crypto";
 import memoize from "memoizee";
 import { logger } from "../utils/logger";

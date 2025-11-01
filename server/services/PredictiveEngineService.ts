@@ -1,4 +1,4 @@
-import { IStorage, DateRange, MetricFilters } from "../storage-poc";
+import type { IStorage, DateRange, MetricFilters } from "../storage-poc";
 import { getSafetyGuardsService } from "./SafetyGuardsService";
 import type { 
   Project, ProjectStatus, User, Offer

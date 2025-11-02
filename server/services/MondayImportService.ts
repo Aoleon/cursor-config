@@ -7,10 +7,21 @@ import {
   InsertProject, 
   InsertAo, 
   InsertSupplier, 
-  InsertProjectTask 
+  InsertProjectTask,
+  insertProjectSchema,
+  insertAoSchema,
+  insertSupplierSchema
 } from '../../shared/schema';
 
 export class MondayImportService {
+  
+  /**
+   * Helper to convert all numeric decimal fields to strings for Postgres compatibility
+   */
+  private coerceDecimalToString(value: any): string | null {
+    if (value === null || value === undefined) return null;
+    return typeof value === 'number' ? value.toString() : value;
+  }
   
   async importBoardAsProjects(
     boardId: string, 
@@ -40,12 +51,49 @@ export class MondayImportService {
         try {
           const projectData = this.mapItemToProject(item, mapping);
           
-          if (!projectData.name) {
-            result.errors.push(`Item ${item.id}: nom manquant`);
+          // Validate data with Zod schema
+          const validation = insertProjectSchema.safeParse(projectData);
+          if (!validation.success) {
+            const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+            result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
             continue;
           }
 
-          const project = await storage.createProject(projectData);
+          // Check if project already exists with this mondayItemId (upsert strategy)
+          const existingProject = await storage.getProjectByMondayItemId(item.id);
+
+          // Convert decimal fields back to string for Postgres (Zod transforms them to number)
+          const dataForStorage = {
+            ...validation.data,
+            montantEstime: typeof validation.data.montantEstime === 'number' 
+              ? validation.data.montantEstime.toString() 
+              : validation.data.montantEstime,
+            montantFinal: typeof (validation.data as any).montantFinal === 'number'
+              ? (validation.data as any).montantFinal.toString()
+              : (validation.data as any).montantFinal,
+            budget: typeof (validation.data as any).budget === 'number'
+              ? (validation.data as any).budget.toString()
+              : (validation.data as any).budget
+          };
+
+          let project;
+          if (existingProject) {
+            // Update existing project
+            project = await storage.updateProject(existingProject.id, dataForStorage);
+            logger.info('Projet mis à jour depuis Monday', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsProjects',
+                projectId: project.id,
+                mondayItemId: item.id,
+                action: 'update'
+              }
+            });
+          } else {
+            // Create new project
+            project = await storage.createProject(dataForStorage);
+          }
+          
           result.importedCount++;
           result.createdIds.push(project.id);
 
@@ -132,12 +180,46 @@ export class MondayImportService {
         try {
           const aoData = this.mapItemToAO(item, mapping);
           
-          if (!aoData.reference) {
-            result.errors.push(`Item ${item.id}: référence manquante`);
+          // Validate data with Zod schema
+          const validation = insertAoSchema.safeParse(aoData);
+          if (!validation.success) {
+            const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+            result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
             continue;
           }
 
-          const ao = await storage.createAo(aoData);
+          // Check if AO already exists with this mondayItemId (upsert strategy)
+          const existingAo = await storage.getAOByMondayItemId(item.id);
+
+          // Convert decimal fields back to string for Postgres (Zod transforms them to number)
+          const dataForStorage = {
+            ...validation.data,
+            montantEstime: typeof validation.data.montantEstime === 'number' 
+              ? validation.data.montantEstime.toString() 
+              : validation.data.montantEstime,
+            amountEstimate: typeof (validation.data as any).amountEstimate === 'number'
+              ? (validation.data as any).amountEstimate.toString()
+              : (validation.data as any).amountEstimate
+          };
+
+          let ao;
+          if (existingAo) {
+            // Update existing AO
+            ao = await storage.updateAo(existingAo.id, dataForStorage);
+            logger.info('AO mis à jour depuis Monday', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsAOs',
+                aoId: ao.id,
+                mondayItemId: item.id,
+                action: 'update'
+              }
+            });
+          } else {
+            // Create new AO
+            ao = await storage.createAo(dataForStorage);
+          }
+
           result.importedCount++;
           result.createdIds.push(ao.id);
 
@@ -215,12 +297,35 @@ export class MondayImportService {
         try {
           const supplierData = this.mapItemToSupplier(item, mapping);
           
-          if (!supplierData.name) {
-            result.errors.push(`Item ${item.id}: nom fournisseur manquant`);
+          // Validate data with Zod schema
+          const validation = insertSupplierSchema.safeParse(supplierData);
+          if (!validation.success) {
+            const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+            result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
             continue;
           }
 
-          const supplier = await storage.createSupplier(supplierData);
+          // Check if Supplier already exists with this mondayItemId (upsert strategy)
+          const existingSupplier = await storage.getSupplierByMondayItemId(item.id);
+
+          let supplier;
+          if (existingSupplier) {
+            // Update existing Supplier
+            supplier = await storage.updateSupplier(existingSupplier.id, validation.data);
+            logger.info('Fournisseur mis à jour depuis Monday', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsSuppliers',
+                supplierId: supplier.id,
+                mondayItemId: item.id,
+                action: 'update'
+              }
+            });
+          } else {
+            // Create new Supplier
+            supplier = await storage.createSupplier(validation.data);
+          }
+
           result.importedCount++;
           result.createdIds.push(supplier.id);
 
@@ -267,7 +372,7 @@ export class MondayImportService {
       }
     }
 
-    // Ensure required fields
+    // Ensure required fields with coerced decimal strings
     return {
       name: mappedData.name || item.name,
       client: mappedData.client || 'Client importé Monday',
@@ -277,7 +382,10 @@ export class MondayImportService {
       description: mappedData.description || null,
       startDate: mappedData.startDate || null,
       endDate: mappedData.endDate || null,
-      budget: mappedData.budget || null
+      budget: this.coerceDecimalToString(mappedData.budget),
+      montantEstime: this.coerceDecimalToString(mappedData.montantEstime),
+      montantFinal: this.coerceDecimalToString(mappedData.montantFinal),
+      mondayItemId: item.id
     };
   }
 
@@ -294,7 +402,7 @@ export class MondayImportService {
       }
     }
 
-    // Ensure required fields with defaults
+    // Ensure required fields with defaults and coerced decimal strings
     return {
       reference: mappedData.reference || item.name,
       menuiserieType: mappedData.menuiserieType || 'fenetre',
@@ -305,8 +413,10 @@ export class MondayImportService {
       dateLimiteRemise: mappedData.dateLimiteRemise || null,
       typeMarche: mappedData.typeMarche || null,
       description: mappedData.description || null,
-      montantEstime: mappedData.montantEstime || null,
-      isDraft: false
+      montantEstime: this.coerceDecimalToString(mappedData.montantEstime),
+      amountEstimate: this.coerceDecimalToString(mappedData.amountEstimate),
+      isDraft: false,
+      mondayItemId: item.id
     };
   }
 
@@ -331,7 +441,8 @@ export class MondayImportService {
       siret: mappedData.siret || null,
       specialties: mappedData.specialties || [],
       rating: mappedData.rating || null,
-      notes: mappedData.notes || null
+      notes: mappedData.notes || null,
+      mondayItemId: item.id
     };
   }
 
@@ -498,10 +609,10 @@ export class MondayImportService {
           createdId = created.id;
           saxiumEntity = created;
         } else if (changeType === 'update') {
-          // OPTIMISATION: Use pagination to find existing project by Monday ID or name
+          // OPTIMISATION: Use pagination to find existing project by Monday Item ID or name
           const { projects } = await storage.getProjectsPaginated(undefined, undefined, 100, 0);
           const existingProject = projects.find(p => 
-            p.mondayId === itemId || p.name === item.name
+            p.mondayItemId === itemId || p.name === item.name
           );
           
           if (existingProject) {
@@ -558,10 +669,10 @@ export class MondayImportService {
           createdId = created.id;
           saxiumEntity = created;
         } else if (changeType === 'update') {
-          // Try to find existing AO by Monday ID or reference
+          // Try to find existing AO by Monday Item ID or reference
           const aos = await storage.getAos();
           const existingAo = aos.find(a => 
-            a.mondayId === itemId || a.reference === item.name
+            a.mondayItemId === itemId || a.reference === item.name
           );
           
           if (existingAo) {

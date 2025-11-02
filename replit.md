@@ -43,7 +43,7 @@ The application features a modern fullstack architecture. The frontend uses Reac
     - **Administration**: `auth`, `system`, `configuration`, `admin`, `ops`, `team`, `hr`
     - **Stakeholders**: `stakeholders` (extended in Wave 8 with AO/project contacts)
     - **AI & Automation**: `chatbot`, `alerts`, `testing`
-    - **Integrations**: `monday` (data sync dashboard)
+    - **Integrations**: `monday` (data sync dashboard, import fixes Nov 2025)
 *   **AI Services**: Integration of `DateIntelligenceService`, `OCRService`, and `AIService`.
 *   **Error Handling**: Unified system with typed errors, dedicated error middleware, and structured logging with correlation IDs.
 *   **Performance Optimizations**: Adaptive caching, prefetching, debouncing/throttling (frontend); database indexing, Redis caching, optimized queries (backend).
@@ -60,6 +60,16 @@ The application features a modern fullstack architecture. The frontend uses Reac
 *   Distinction between "AOs Monday" (read-only client requests) and "Offers Saxium" (active working documents).
 *   Batigest ERP integration.
 *   EventBus for inter-component communication.
+
+**Recent Changes (November 2025)**:
+*   **Monday.com Import Fixes**: 7 critical corrections to ensure data integrity
+    - Added `mondayItemId` tracking in all imports (Projects, AOs, Suppliers)
+    - Fixed webhook sync to use correct field (`mondayItemId` vs `mondayId`)
+    - Implemented Zod validation before all `storage.create*()` calls
+    - Added upsert strategy with O(1) lookup via `getProjectByMondayItemId()`, `getAOByMondayItemId()`, `getSupplierByMondayItemId()`
+    - Fixed decimal→string coercion via `coerceDecimalToString()` helper for Postgres compatibility (montantEstime, montantFinal, budget, amountEstimate)
+    - Eliminated N+1 queries and full table scans in import loops
+    - Implemented all getXxxByMondayItemId() in both DatabaseStorage and MemStorage
 
 **System Design Choices**:
 *   Fullstack TypeScript for end-to-end type safety.

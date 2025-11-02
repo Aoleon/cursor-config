@@ -162,6 +162,7 @@ export interface IStorage {
   getProjects(search?: string, status?: string): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]>;
   getProjectsPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ projects: Array<Project & { responsibleUser?: User; offer?: Offer }>, total: number }>;
   getProject(id: string): Promise<(Project & { responsibleUser?: User; offer?: Offer }) | undefined>;
+  getProjectByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, project: Partial<InsertProject>): Promise<Project>;
   
@@ -180,6 +181,7 @@ export interface IStorage {
   // Supplier operations - Gestion des fournisseurs
   getSuppliers(search?: string, status?: string): Promise<Supplier[]>;
   getSupplier(id: string): Promise<Supplier | undefined>;
+  getSupplierByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Supplier | undefined>;
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
   updateSupplier(id: string, supplier: Partial<InsertSupplier>): Promise<Supplier>;
   deleteSupplier(id: string): Promise<void>;
@@ -1740,6 +1742,15 @@ export class DatabaseStorage implements IStorage {
     return { ...project, responsibleUser, offer };
   }
 
+  async getProjectByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Project | undefined> {
+    const dbInstance = tx || db;
+    const [project] = await dbInstance
+      .select()
+      .from(projects)
+      .where(eq(projects.mondayItemId, mondayItemId));
+    return project;
+  }
+
   async createProject(project: InsertProject): Promise<Project> {
     return safeInsert('projects', async () => {
       const [newProject] = await db.insert(projects).values(project).returning();
@@ -1933,6 +1944,15 @@ export class DatabaseStorage implements IStorage {
   async getSupplier(id: string): Promise<Supplier | undefined> {
     const result = await db.select().from(suppliers).where(eq(suppliers.id, id));
     return result[0];
+  }
+
+  async getSupplierByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Supplier | undefined> {
+    const dbInstance = tx || db;
+    const [supplier] = await dbInstance
+      .select()
+      .from(suppliers)
+      .where(eq(suppliers.mondayItemId, mondayItemId));
+    return supplier;
   }
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
@@ -4722,6 +4742,10 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
+  async getProjectByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Project | undefined> {
+    return undefined;
+  }
+
   async createProject(project: InsertProject): Promise<Project> {
     throw new Error("MemStorage: createProject not implemented for POC");
   }
@@ -4774,6 +4798,10 @@ export class MemStorage implements IStorage {
 
   async getSupplier(id: string): Promise<Supplier | undefined> {
     return this.suppliers.get(id);
+  }
+
+  async getSupplierByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Supplier | undefined> {
+    return Array.from(this.suppliers.values()).find(s => s.mondayItemId === mondayItemId);
   }
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {

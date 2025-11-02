@@ -252,7 +252,7 @@ export const realtimeEventSchema = z.object({
   userId: z.string().optional(), // Pour filtrage futur
   
   // Données additionnelles contextuelles
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export type RealtimeEvent = z.infer<typeof realtimeEventSchema>;
@@ -611,7 +611,7 @@ export const eventMessageTemplates: Record<EventType, (event: RealtimeEvent) => 
   // === TEMPLATES CHATBOT ===
   [EventType.CHATBOT_QUERY_PROCESSED]: (event) => ({
     title: "💬 Requête chatbot traitée",
-    message: `Requête traitée avec succès ${event.metadata?.query_text ? ': "' + event.metadata.query_text.substring(0, 50) + '..."' : ''}`
+    message: `Requête traitée avec succès ${typeof event.metadata?.query_text === 'string' ? ': "' + event.metadata.query_text.substring(0, 50) + '..."' : ''}`
   }),
 
   [EventType.CHATBOT_FEEDBACK_RECEIVED]: (event) => ({

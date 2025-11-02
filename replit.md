@@ -62,7 +62,7 @@ The application features a modern fullstack architecture. The frontend uses Reac
 *   EventBus for inter-component communication.
 
 **Recent Changes (November 2025)**:
-*   **Monday.com Import Fixes** ✅ **PRODUCTION-READY**: 10 critical corrections to ensure data integrity
+*   **Monday.com Import Fixes** ✅ **PRODUCTION-READY**: 11 critical corrections to ensure data integrity
     - Added `mondayItemId` tracking in all imports (Projects, AOs, Suppliers)
     - Fixed webhook sync to use correct field (`mondayItemId` vs `mondayId`)
     - Implemented Zod validation before all `storage.create*()` calls
@@ -73,6 +73,7 @@ The application features a modern fullstack architecture. The frontend uses Reac
     - **NULL-HANDLING FIX**: `coerceDecimalToString()` now preserves `null` (not `undefined`) to allow clearing decimal fields on re-import
     - **DRIZZLE COMPATIBILITY**: `removeUndefined()` applied uniformly before Zod validation and before storage calls for all 3 entities
     - **TELEMETRY ACCURACY**: EventBus now emits correct CREATE vs UPDATE events (PROJECT_CREATED/UPDATED, OFFER_CREATED/UPDATED) with accurate logging
+    - **EVENTTYPES FIX**: Added missing `PROJECT_UPDATED`, `OFFER_UPDATED`, `AO_CREATED`, `AO_STATUS_CHANGED` in EventType enum and eventMessageTemplates (fixed "event unknown" bug)
 
 **System Design Choices**:
 *   Fullstack TypeScript for end-to-end type safety.

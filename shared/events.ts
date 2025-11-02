@@ -15,9 +15,11 @@ export enum EventType {
   OFFER_SIGNED = 'offer.signed',
   OFFER_VALIDATED = 'offer.validated',
   OFFER_CREATED = 'offer.created',
+  OFFER_UPDATED = 'offer.updated',
   
   // Projets  
   PROJECT_CREATED = 'project.created',
+  PROJECT_UPDATED = 'project.updated',
   PROJECT_STATUS_CHANGED = 'project.status_changed',
   PROJECT_TASK_ASSIGNED = 'project.task_assigned',
   
@@ -334,6 +336,16 @@ export type WsMessage = z.infer<typeof wsMessageSchema>;
 // ========================================
 
 export const eventMessageTemplates: Record<EventType, (event: RealtimeEvent) => { title: string; message: string }> = {
+  [EventType.AO_CREATED]: (event) => ({
+    title: "Nouvel AO",
+    message: `📋 Nouvel appel d'offre créé : ${event.metadata?.reference || event.entityId}`
+  }),
+  
+  [EventType.AO_STATUS_CHANGED]: (event) => ({
+    title: "Statut AO modifié",
+    message: `📋 AO ${event.metadata?.reference || event.entityId} : ${event.prevStatus} → ${event.newStatus}`
+  }),
+  
   [EventType.OFFER_SIGNED]: (event) => ({
     title: "Offre signée",
     message: `✅ L'offre ${event.metadata?.reference || event.entityId} a été signée par le client`
@@ -352,6 +364,11 @@ export const eventMessageTemplates: Record<EventType, (event: RealtimeEvent) => 
   [EventType.PROJECT_CREATED]: (event) => ({
     title: "Nouveau projet",
     message: `🚀 Nouveau projet créé : ${event.metadata?.name || event.entityId}`
+  }),
+  
+  [EventType.PROJECT_UPDATED]: (event) => ({
+    title: "Projet mis à jour",
+    message: `📝 Projet ${event.metadata?.name || event.entityId} mis à jour depuis ${event.metadata?.source || 'l\'application'}`
   }),
   
   [EventType.PROJECT_STATUS_CHANGED]: (event) => ({
@@ -417,6 +434,11 @@ export const eventMessageTemplates: Record<EventType, (event: RealtimeEvent) => 
   [EventType.OFFER_CREATED]: (event) => ({
     title: "Nouvelle offre",
     message: `📋 Nouvelle offre créée : ${event.metadata?.reference || event.entityId}`
+  }),
+  
+  [EventType.OFFER_UPDATED]: (event) => ({
+    title: "Offre mise à jour",
+    message: `📝 Offre ${event.metadata?.reference || event.entityId} mise à jour depuis ${event.metadata?.source || 'l\'application'}`
   }),
   
   [EventType.PROJECT_TASK_ASSIGNED]: (event) => ({

@@ -117,7 +117,8 @@ export async function safeQuery<T>(
         continue;
       }
       
-      // Log final failure
+      // Log final failure with Postgres error details
+      const pgError: any = lastError;
       logger.error('Database query failed permanently', lastError, {
         service,
         metadata: {
@@ -125,7 +126,14 @@ export async function safeQuery<T>(
           attempt: attempt + 1,
           maxRetries: retries,
           duration,
-          retryable
+          retryable,
+          // Expose Postgres error details for debugging
+          errorCode: pgError?.code,
+          errorDetail: pgError?.detail,
+          errorConstraint: pgError?.constraint,
+          errorTable: pgError?.table,
+          errorColumn: pgError?.column,
+          errorMessage: lastError.message
         }
       });
       

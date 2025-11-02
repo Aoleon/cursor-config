@@ -17,10 +17,22 @@ export class MondayImportService {
   
   /**
    * Helper to convert all numeric decimal fields to strings for Postgres compatibility
+   * IMPORTANT: Preserves null to allow clearing persisted values on re-import
    */
-  private coerceDecimalToString(value: any): string | null {
-    if (value === null || value === undefined) return null;
+  private coerceDecimalToString(value: any): string | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
     return typeof value === 'number' ? value.toString() : value;
+  }
+
+  /**
+   * Remove undefined values from object to avoid Drizzle issues
+   * IMPORTANT: Preserves null to allow clearing persisted values on re-import
+   */
+  private removeUndefined<T extends Record<string, any>>(obj: T): Partial<T> {
+    return Object.fromEntries(
+      Object.entries(obj).filter(([_, v]) => v !== undefined)
+    ) as Partial<T>;
   }
   
   async importBoardAsProjects(
@@ -51,8 +63,11 @@ export class MondayImportService {
         try {
           const projectData = this.mapItemToProject(item, mapping);
           
+          // Remove undefined values before validation
+          const cleanedData = this.removeUndefined(projectData);
+          
           // Validate data with Zod schema
-          const validation = insertProjectSchema.safeParse(projectData);
+          const validation = insertProjectSchema.safeParse(cleanedData);
           if (!validation.success) {
             const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
             result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
@@ -63,7 +78,7 @@ export class MondayImportService {
           const existingProject = await storage.getProjectByMondayItemId(item.id);
 
           // Convert decimal fields back to string for Postgres (Zod transforms them to number)
-          const dataForStorage = {
+          const dataForStorage = this.removeUndefined({
             ...validation.data,
             montantEstime: typeof validation.data.montantEstime === 'number' 
               ? validation.data.montantEstime.toString() 
@@ -74,12 +89,15 @@ export class MondayImportService {
             budget: typeof (validation.data as any).budget === 'number'
               ? (validation.data as any).budget.toString()
               : (validation.data as any).budget
-          };
+          });
 
           let project;
+          let wasUpdate = false;
+          
           if (existingProject) {
             // Update existing project
-            project = await storage.updateProject(existingProject.id, dataForStorage);
+            project = await storage.updateProject(existingProject.id, dataForStorage as any);
+            wasUpdate = true;
             logger.info('Projet mis à jour depuis Monday', {
               service: 'MondayImportService',
               metadata: {
@@ -91,18 +109,28 @@ export class MondayImportService {
             });
           } else {
             // Create new project
-            project = await storage.createProject(dataForStorage);
+            project = await storage.createProject(dataForStorage as any);
+            logger.info('Projet créé depuis Monday', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsProjects',
+                projectId: project.id,
+                mondayItemId: item.id,
+                action: 'create'
+              }
+            });
           }
           
           result.importedCount++;
           result.createdIds.push(project.id);
 
+          // Publish appropriate event based on action
           eventBus.publish({
             id: crypto.randomUUID(),
-            type: EventType.PROJECT_CREATED,
+            type: wasUpdate ? EventType.PROJECT_UPDATED : EventType.PROJECT_CREATED,
             entity: 'project',
             entityId: project.id,
-            message: `Projet "${project.name}" importé depuis Monday.com`,
+            message: `Projet "${project.name}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis Monday.com`,
             severity: 'success',
             affectedQueryKeys: [['/api/projects']],
             userId: 'monday-import',
@@ -110,16 +138,8 @@ export class MondayImportService {
             metadata: {
               source: 'monday.com',
               mondayItemId: item.id,
-              boardId
-            }
-          });
-
-          logger.info('Projet créé depuis Monday', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsProjects',
-              projectId: project.id,
-              mondayItemId: item.id
+              boardId,
+              action: wasUpdate ? 'update' : 'create'
             }
           });
         } catch (error: any) {
@@ -180,8 +200,11 @@ export class MondayImportService {
         try {
           const aoData = this.mapItemToAO(item, mapping);
           
+          // Remove undefined values before validation
+          const cleanedData = this.removeUndefined(aoData);
+          
           // Validate data with Zod schema
-          const validation = insertAoSchema.safeParse(aoData);
+          const validation = insertAoSchema.safeParse(cleanedData);
           if (!validation.success) {
             const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
             result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
@@ -192,7 +215,7 @@ export class MondayImportService {
           const existingAo = await storage.getAOByMondayItemId(item.id);
 
           // Convert decimal fields back to string for Postgres (Zod transforms them to number)
-          const dataForStorage = {
+          const dataForStorage = this.removeUndefined({
             ...validation.data,
             montantEstime: typeof validation.data.montantEstime === 'number' 
               ? validation.data.montantEstime.toString() 
@@ -200,12 +223,15 @@ export class MondayImportService {
             amountEstimate: typeof (validation.data as any).amountEstimate === 'number'
               ? (validation.data as any).amountEstimate.toString()
               : (validation.data as any).amountEstimate
-          };
+          });
 
           let ao;
+          let wasUpdate = false;
+          
           if (existingAo) {
             // Update existing AO
-            ao = await storage.updateAo(existingAo.id, dataForStorage);
+            ao = await storage.updateAo(existingAo.id, dataForStorage as any);
+            wasUpdate = true;
             logger.info('AO mis à jour depuis Monday', {
               service: 'MondayImportService',
               metadata: {
@@ -217,18 +243,28 @@ export class MondayImportService {
             });
           } else {
             // Create new AO
-            ao = await storage.createAo(dataForStorage);
+            ao = await storage.createAo(dataForStorage as any);
+            logger.info('AO créé depuis Monday', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsAOs',
+                aoId: ao.id,
+                mondayItemId: item.id,
+                action: 'create'
+              }
+            });
           }
 
           result.importedCount++;
           result.createdIds.push(ao.id);
 
+          // Publish appropriate event based on action
           eventBus.publish({
             id: crypto.randomUUID(),
-            type: EventType.OFFER_CREATED,
+            type: wasUpdate ? EventType.OFFER_UPDATED : EventType.OFFER_CREATED,
             entity: 'offer',
             entityId: ao.id,
-            message: `AO "${ao.reference}" importé depuis Monday.com`,
+            message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis Monday.com`,
             severity: 'success',
             affectedQueryKeys: [['/api/aos']],
             userId: 'monday-import',
@@ -236,16 +272,8 @@ export class MondayImportService {
             metadata: {
               source: 'monday.com',
               mondayItemId: item.id,
-              boardId
-            }
-          });
-
-          logger.info('AO créé depuis Monday', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsAOs',
-              aoId: ao.id,
-              mondayItemId: item.id
+              boardId,
+              action: wasUpdate ? 'update' : 'create'
             }
           });
         } catch (error: any) {
@@ -297,8 +325,11 @@ export class MondayImportService {
         try {
           const supplierData = this.mapItemToSupplier(item, mapping);
           
+          // Remove undefined values before validation
+          const cleanedData = this.removeUndefined(supplierData);
+          
           // Validate data with Zod schema
-          const validation = insertSupplierSchema.safeParse(supplierData);
+          const validation = insertSupplierSchema.safeParse(cleanedData);
           if (!validation.success) {
             const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
             result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
@@ -308,10 +339,16 @@ export class MondayImportService {
           // Check if Supplier already exists with this mondayItemId (upsert strategy)
           const existingSupplier = await storage.getSupplierByMondayItemId(item.id);
 
+          // Remove undefined values before storage
+          const dataForStorage = this.removeUndefined(validation.data);
+
           let supplier;
+          let wasUpdate = false;
+          
           if (existingSupplier) {
             // Update existing Supplier
-            supplier = await storage.updateSupplier(existingSupplier.id, validation.data);
+            supplier = await storage.updateSupplier(existingSupplier.id, dataForStorage as any);
+            wasUpdate = true;
             logger.info('Fournisseur mis à jour depuis Monday', {
               service: 'MondayImportService',
               metadata: {
@@ -323,20 +360,20 @@ export class MondayImportService {
             });
           } else {
             // Create new Supplier
-            supplier = await storage.createSupplier(validation.data);
+            supplier = await storage.createSupplier(dataForStorage as any);
+            logger.info('Fournisseur créé depuis Monday', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsSuppliers',
+                supplierId: supplier.id,
+                mondayItemId: item.id,
+                action: 'create'
+              }
+            });
           }
 
           result.importedCount++;
           result.createdIds.push(supplier.id);
-
-          logger.info('Fournisseur créé depuis Monday', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsSuppliers',
-              supplierId: supplier.id,
-              mondayItemId: item.id
-            }
-          });
         } catch (error: any) {
           result.errors.push(`Item ${item.id}: ${error.message}`);
           result.success = false;
@@ -378,10 +415,10 @@ export class MondayImportService {
       client: mappedData.client || 'Client importé Monday',
       location: mappedData.location || 'À définir',
       status: mappedData.status || 'passation',
-      offerId: mappedData.offerId || null,
-      description: mappedData.description || null,
-      startDate: mappedData.startDate || null,
-      endDate: mappedData.endDate || null,
+      offerId: mappedData.offerId || undefined,
+      description: mappedData.description || undefined,
+      startDate: mappedData.startDate || undefined,
+      endDate: mappedData.endDate || undefined,
       budget: this.coerceDecimalToString(mappedData.budget),
       montantEstime: this.coerceDecimalToString(mappedData.montantEstime),
       montantFinal: this.coerceDecimalToString(mappedData.montantFinal),

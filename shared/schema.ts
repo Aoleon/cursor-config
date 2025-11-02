@@ -2862,20 +2862,20 @@ export const insertAoSchema = createInsertSchema(aos).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  // Transform string dates from frontend to Date objects
-  dateLimiteRemise: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-  dateRenduAO: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-  dateSortieAO: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-  dateAcceptationAO: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-  demarragePrevu: z.string().optional().transform((val) => val ? new Date(val) : undefined)
+  // Transform string dates from frontend to Date objects (allow null from Monday import)
+  dateLimiteRemise: z.string().nullable().optional().transform((val) => val ? new Date(val) : undefined),
+  dateRenduAO: z.string().nullable().optional().transform((val) => val ? new Date(val) : undefined),
+  dateSortieAO: z.string().nullable().optional().transform((val) => val ? new Date(val) : undefined),
+  dateAcceptationAO: z.string().nullable().optional().transform((val) => val ? new Date(val) : undefined),
+  demarragePrevu: z.string().nullable().optional().transform((val) => val ? new Date(val) : undefined)
     .refine((date) => {
       if (!date) return true;
       const maxFuture = new Date();
       maxFuture.setFullYear(maxFuture.getFullYear() + 3);
       return date <= maxFuture;
     }, "La date de démarrage prévue ne peut pas être dans plus de 3 ans"),
-  dateLivraisonPrevue: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-  dateOS: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  dateLivraisonPrevue: z.string().nullable().optional().transform((val) => val ? new Date(val) : undefined),
+  dateOS: z.string().nullable().optional().transform((val) => val ? new Date(val) : undefined),
   cctp: z.string().optional(),
   
   // NOUVELLES VALIDATIONS MÉTIER BTP

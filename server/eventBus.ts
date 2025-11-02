@@ -19,6 +19,7 @@ interface SubscriptionInfo {
   handler: EventHandler;
   filter?: EventFilter;
   subscribedAt: Date;
+  listener: (event: RealtimeEvent) => void;
 }
 
 export class EventBus extends EventEmitter {
@@ -88,15 +89,6 @@ export class EventBus extends EventEmitter {
   public subscribe(handler: EventHandler, filter?: EventFilter): string {
     const subscriptionId = crypto.randomUUID();
     
-    const subscription: SubscriptionInfo = {
-      id: subscriptionId,
-      handler,
-      filter,
-      subscribedAt: new Date(),
-    };
-
-    this.subscriptions.set(subscriptionId, subscription);
-
     // Créer un handler filtré
     const filteredHandler = (event: RealtimeEvent) => {
       if (!filter || this.matchesFilter(event, filter)) {
@@ -115,6 +107,15 @@ export class EventBus extends EventEmitter {
       }
     };
 
+    const subscription: SubscriptionInfo = {
+      id: subscriptionId,
+      handler,
+      filter,
+      subscribedAt: new Date(),
+      listener: filteredHandler,
+    };
+
+    this.subscriptions.set(subscriptionId, subscription);
     this.on('event', filteredHandler);
 
     log(`EventBus: New subscription ${subscriptionId} with filter: ${JSON.stringify(filter)}`);
@@ -130,9 +131,9 @@ export class EventBus extends EventEmitter {
       return false;
     }
 
+    // Supprimer le listener de l'EventEmitter
+    this.off('event', subscription.listener);
     this.subscriptions.delete(subscriptionId);
-    // Note: EventEmitter ne permet pas de supprimer un listener spécifique facilement
-    // Dans un vrai système, il faudrait garder une référence au handler
     
     log(`EventBus: Unsubscribed ${subscriptionId}`);
     return true;

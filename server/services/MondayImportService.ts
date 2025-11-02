@@ -63,19 +63,78 @@ export class MondayImportService {
         try {
           const projectData = this.mapItemToProject(item, mapping);
           
+          // INSTRUMENTATION: Log mapped data before cleaning
+          logger.info('🔍 [DEBUG] Mapped project data', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsProjects',
+              itemId: item.id,
+              itemName: item.name,
+              projectData
+            }
+          });
+          
           // Remove undefined values before validation
           const cleanedData = this.removeUndefined(projectData);
+          
+          // INSTRUMENTATION: Log cleaned data before validation
+          logger.info('🔍 [DEBUG] Cleaned data before validation', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsProjects',
+              itemId: item.id,
+              cleanedData
+            }
+          });
           
           // Validate data with Zod schema
           const validation = insertProjectSchema.safeParse(cleanedData);
           if (!validation.success) {
             const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+            logger.error('❌ [DEBUG] Validation Zod échouée', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsProjects',
+                itemId: item.id,
+                errors,
+                cleanedData,
+                validationIssues: validation.error.issues
+              }
+            });
             result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
             continue;
           }
+          
+          // INSTRUMENTATION: Log successful validation
+          logger.info('✅ [DEBUG] Validation passed', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsProjects',
+              itemId: item.id,
+              validatedData: validation.data
+            }
+          });
 
           // Check if project already exists with this mondayItemId (upsert strategy)
+          logger.info('🔍 [DEBUG] Checking for existing project', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsProjects',
+              itemId: item.id,
+              mondayItemId: item.id
+            }
+          });
+          
           const existingProject = await storage.getProjectByMondayItemId(item.id);
+          
+          logger.info('🔍 [DEBUG] Existing project check result', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsProjects',
+              itemId: item.id,
+              existingProject: existingProject ? { id: existingProject.id, name: existingProject.name } : null
+            }
+          });
 
           // Convert decimal fields back to string for Postgres (Zod transforms them to number)
           const dataForStorage = this.removeUndefined({
@@ -90,12 +149,29 @@ export class MondayImportService {
               ? (validation.data as any).budget.toString()
               : (validation.data as any).budget
           });
+          
+          logger.info('🔍 [DEBUG] Data for storage', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsProjects',
+              itemId: item.id,
+              dataForStorage
+            }
+          });
 
           let project;
           let wasUpdate = false;
           
           if (existingProject) {
             // Update existing project
+            logger.info('🔍 [DEBUG] Updating existing project', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsProjects',
+                projectId: existingProject.id,
+                itemId: item.id
+              }
+            });
             project = await storage.updateProject(existingProject.id, dataForStorage as any);
             wasUpdate = true;
             logger.info('Projet mis à jour depuis Monday', {
@@ -109,8 +185,17 @@ export class MondayImportService {
             });
           } else {
             // Create new project
+            logger.info('🔍 [DEBUG] Creating new project', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsProjects',
+                itemId: item.id
+              }
+            });
+            
             project = await storage.createProject(dataForStorage as any);
-            logger.info('Projet créé depuis Monday', {
+            
+            logger.info('✅ [DEBUG] Projet créé depuis Monday', {
               service: 'MondayImportService',
               metadata: {
                 operation: 'importBoardAsProjects',
@@ -143,6 +228,16 @@ export class MondayImportService {
             }
           });
         } catch (error: any) {
+          logger.error('❌ [DEBUG] Error during storage operation', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsProjects',
+              itemId: item.id,
+              itemName: item.name,
+              error: error.message,
+              errorStack: error.stack
+            }
+          });
           result.errors.push(`Item ${item.id}: ${error.message}`);
           result.success = false;
         }
@@ -167,9 +262,7 @@ export class MondayImportService {
         }
       });
 
-      result.success = false;
-      result.errors.push(error.message);
-      return result;
+      throw error;
     }
   }
 
@@ -200,16 +293,54 @@ export class MondayImportService {
         try {
           const aoData = this.mapItemToAO(item, mapping);
           
+          logger.info('🔍 [DEBUG] Mapped AO data', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsAOs',
+              itemId: item.id,
+              itemName: item.name,
+              aoData
+            }
+          });
+          
           // Remove undefined values before validation
           const cleanedData = this.removeUndefined(aoData);
+          
+          logger.info('🔍 [DEBUG] Cleaned AO data before validation', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsAOs',
+              itemId: item.id,
+              cleanedData
+            }
+          });
           
           // Validate data with Zod schema
           const validation = insertAoSchema.safeParse(cleanedData);
           if (!validation.success) {
             const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+            logger.error('❌ [DEBUG] AO Validation Zod échouée', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsAOs',
+                itemId: item.id,
+                errors,
+                cleanedData,
+                validationIssues: validation.error.issues
+              }
+            });
             result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
             continue;
           }
+          
+          logger.info('✅ [DEBUG] AO Validation passed', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsAOs',
+              itemId: item.id,
+              validatedData: validation.data
+            }
+          });
 
           // Check if AO already exists with this mondayItemId (upsert strategy)
           const existingAo = await storage.getAOByMondayItemId(item.id);
@@ -277,6 +408,16 @@ export class MondayImportService {
             }
           });
         } catch (error: any) {
+          logger.error('❌ [DEBUG] Error during AO storage operation', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsAOs',
+              itemId: item.id,
+              itemName: item.name,
+              error: error.message,
+              errorStack: error.stack
+            }
+          });
           result.errors.push(`Item ${item.id}: ${error.message}`);
           result.success = false;
         }
@@ -292,9 +433,7 @@ export class MondayImportService {
         }
       });
 
-      result.success = false;
-      result.errors.push(error.message);
-      return result;
+      throw error;
     }
   }
 
@@ -325,16 +464,54 @@ export class MondayImportService {
         try {
           const supplierData = this.mapItemToSupplier(item, mapping);
           
+          logger.info('🔍 [DEBUG] Mapped Supplier data', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsSuppliers',
+              itemId: item.id,
+              itemName: item.name,
+              supplierData
+            }
+          });
+          
           // Remove undefined values before validation
           const cleanedData = this.removeUndefined(supplierData);
+          
+          logger.info('🔍 [DEBUG] Cleaned Supplier data before validation', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsSuppliers',
+              itemId: item.id,
+              cleanedData
+            }
+          });
           
           // Validate data with Zod schema
           const validation = insertSupplierSchema.safeParse(cleanedData);
           if (!validation.success) {
             const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+            logger.error('❌ [DEBUG] Supplier Validation Zod échouée', {
+              service: 'MondayImportService',
+              metadata: {
+                operation: 'importBoardAsSuppliers',
+                itemId: item.id,
+                errors,
+                cleanedData,
+                validationIssues: validation.error.issues
+              }
+            });
             result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
             continue;
           }
+          
+          logger.info('✅ [DEBUG] Supplier Validation passed', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsSuppliers',
+              itemId: item.id,
+              validatedData: validation.data
+            }
+          });
 
           // Check if Supplier already exists with this mondayItemId (upsert strategy)
           const existingSupplier = await storage.getSupplierByMondayItemId(item.id);
@@ -375,6 +552,16 @@ export class MondayImportService {
           result.importedCount++;
           result.createdIds.push(supplier.id);
         } catch (error: any) {
+          logger.error('❌ [DEBUG] Error during Supplier storage operation', {
+            service: 'MondayImportService',
+            metadata: {
+              operation: 'importBoardAsSuppliers',
+              itemId: item.id,
+              itemName: item.name,
+              error: error.message,
+              errorStack: error.stack
+            }
+          });
           result.errors.push(`Item ${item.id}: ${error.message}`);
           result.success = false;
         }
@@ -390,9 +577,7 @@ export class MondayImportService {
         }
       });
 
-      result.success = false;
-      result.errors.push(error.message);
-      return result;
+      throw error;
     }
   }
 

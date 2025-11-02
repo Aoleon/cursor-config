@@ -626,16 +626,10 @@ class MondayService {
             })) || [];
           
           case 'email':
-            return {
-              email: parsed.email || parsed.text,
-              text: parsed.text
-            };
+            return parsed.email || parsed.text || null;
           
           case 'phone':
-            return {
-              phone: parsed.phone || parsed.text,
-              text: parsed.text
-            };
+            return parsed.phone || parsed.text || null;
           
           case 'link':
             return {

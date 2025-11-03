@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Wrench, Lock, User, LogIn, Briefcase } from "lucide-react";
-import { SiMicrosoftazure } from "react-icons/si";
+import { Wrench, Lock, User, LogIn, Briefcase, Cloud } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -233,7 +232,7 @@ export default function Login() {
               className="w-full border-2 border-[#0078D4] text-[#0078D4] hover:bg-[#0078D4] hover:text-white"
               data-testid="button-login-microsoft"
             >
-              <SiMicrosoftazure className="w-5 h-5 mr-2" />
+              <Cloud className="w-5 h-5 mr-2" />
               Se connecter avec Microsoft
             </Button>
             

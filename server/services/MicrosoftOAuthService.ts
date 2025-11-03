@@ -34,7 +34,7 @@ interface IProfile {
 type VerifyCallback = (error: any, user?: any, info?: any) => void;
 
 // Import dynamique de la stratégie
-const { OIDCStrategy } = require('passport-azure-ad');
+import { OIDCStrategy } from 'passport-azure-ad';
 
 export class MicrosoftOAuthService {
   private storage: IStorage;

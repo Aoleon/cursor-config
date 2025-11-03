@@ -9,8 +9,7 @@
  */
 
 import { Router } from 'express';
-import type { Request, Response } from 'express';
-import { isAuthenticated } from '../../replitAuth';
+import type { Request, Response, NextFunction } from 'express';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { validateBody } from '../../middleware/validation';
 import { rateLimits } from '../../middleware/rate-limiter';
@@ -20,6 +19,19 @@ import type { IStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
 import type { AuthUser, BasicAuthRequest, AuthHealthStatus } from './types';
 import { basicLoginSchema } from '../../validation-schemas';
+
+/**
+ * Simple auth middleware - checks for session user (basic or Microsoft)
+ * Exported to replace old Replit Auth isAuthenticated middleware
+ */
+export const isAuthenticated = (req: any, res: Response, next: NextFunction) => {
+  const user = req.session?.user || req.user;
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Non authentifié' });
+  }
+  req.user = user;
+  next();
+};
 
 export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router {
   const router = Router();

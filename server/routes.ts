@@ -32,8 +32,10 @@ import { mondayService } from "./services/MondayService";
 import { logger } from "./utils/logger";
 
 export async function registerRoutes(app: Express) {
-  // 1. Setup authentication FIRST (required by modular routes)
-  await setupAuth(app);
+  // 1. Authentication setup - REMOVED Replit Auth, now using:
+  //    - Basic Auth (username/password + role selector) for development and internal staff
+  //    - Microsoft Azure AD OAuth for clients and external users
+  // await setupAuth(app); // REMOVED - Replaced by multi-provider auth
   
   // 2. Get eventBus from app (set in server/index.ts)
   const eventBus = app.get('eventBus');

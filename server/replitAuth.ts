@@ -508,7 +508,20 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = req.user as any;
+  // NEW MULTI-PROVIDER AUTH: Simple check for session user (basic or Microsoft)
+  const user = (req as any).session?.user || req.user;
+  
+  if (user) {
+    (req as any).user = user;
+    return next();
+  }
+  
+  // Not authenticated - return 401
+  return res.status(401).json({ success: false, message: 'Non authentifié' });
+  
+  // ===== OLD CODE BELOW (kept for reference, but commented out) =====
+  /*
+  const user_old = req.user as any;
   const session = (req as any).session;
   
   // CORRECTION BLOCKER 3: Bypass auth pour tests E2E
@@ -737,4 +750,5 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
+  */
 };

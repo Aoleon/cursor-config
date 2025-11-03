@@ -10,8 +10,8 @@ import {
   supplierQuoteSessions, aoLotSuppliers, supplierDocuments, supplierQuoteAnalysis,
   equipmentBatteries, marginTargets, projectSubElements, classificationTags, entityTags, employeeLabels, employeeLabelAssignments,
   bugReports,
-  purchaseOrders, clientQuotes, batigestExportQueue,
-  type User, type UpsertUser, 
+  purchaseOrders, clientQuotes, batigestExportQueue, documents,
+  type User, type UpsertUser, type Document, type InsertDocument, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
   type Project, type InsertProject,
@@ -658,6 +658,13 @@ export interface IStorage {
   updateSupplierDocument(id: string, document: Partial<InsertSupplierDocument>): Promise<SupplierDocument>;
   deleteSupplierDocument(id: string): Promise<void>;
   getDocumentsBySession(sessionId: string): Promise<SupplierDocument[]>; // Documents d'une session spécifique
+
+  // Documents operations - Gestion centralisée des documents (OneDrive sync)
+  createDocument(document: InsertDocument): Promise<Document>;
+  getDocument(id: string): Promise<Document | undefined>;
+  getDocumentsByEntity(entityType: string, entityId: string): Promise<Document[]>;
+  updateDocument(id: string, document: Partial<InsertDocument>): Promise<Document>;
+  deleteDocument(id: string): Promise<void>;
 
   // Supplier Quote Analysis operations - Gestion de l'analyse OCR des devis
   getSupplierQuoteAnalyses(documentId?: string, sessionId?: string): Promise<(SupplierQuoteAnalysis & { document?: any; reviewedByUser?: any })[]>;
@@ -4263,6 +4270,147 @@ export class DatabaseStorage implements IStorage {
           sessionId,
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
+        }
+      });
+      throw error;
+    }
+  }
+
+  // ========================================
+  // DOCUMENTS OPERATIONS - Gestion centralisée des documents (OneDrive sync)
+  // ========================================
+
+  async createDocument(document: InsertDocument): Promise<Document> {
+    try {
+      const [newDocument] = await db.insert(documents).values(document).returning();
+      logger.info('Document créé', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createDocument',
+          documentId: newDocument.id,
+          fileName: document.name,
+          oneDriveId: document.oneDriveId
+        }
+      });
+      return newDocument;
+    } catch (error) {
+      logger.error('Erreur création document', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'createDocument',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
+      throw error;
+    }
+  }
+
+  async getDocument(id: string): Promise<Document | undefined> {
+    try {
+      const [document] = await db.select().from(documents).where(eq(documents.id, id));
+      return document;
+    } catch (error) {
+      logger.error('Erreur récupération document', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getDocument',
+          documentId: id,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async getDocumentsByEntity(entityType: string, entityId: string): Promise<Document[]> {
+    try {
+      let query = db.select().from(documents);
+      
+      // Filter by entity type
+      if (entityType === 'ao') {
+        query = query.where(eq(documents.aoId, entityId)) as any;
+      } else if (entityType === 'offer') {
+        query = query.where(eq(documents.offerId, entityId)) as any;
+      } else if (entityType === 'project') {
+        query = query.where(eq(documents.projectId, entityId)) as any;
+      }
+      
+      const docs = await query;
+      logger.info('Documents récupérés par entité', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getDocumentsByEntity',
+          entityType,
+          entityId,
+          count: docs.length
+        }
+      });
+      return docs;
+    } catch (error) {
+      logger.error('Erreur getDocumentsByEntity', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getDocumentsByEntity',
+          entityType,
+          entityId,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async updateDocument(id: string, document: Partial<InsertDocument>): Promise<Document> {
+    try {
+      const [updatedDocument] = await db.update(documents)
+        .set(document)
+        .where(eq(documents.id, id))
+        .returning();
+      
+      if (!updatedDocument) {
+        throw new Error(`Document ${id} non trouvé`);
+      }
+      
+      logger.info('Document mis à jour', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateDocument',
+          documentId: id
+        }
+      });
+      
+      return updatedDocument;
+    } catch (error) {
+      logger.error('Erreur mise à jour document', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateDocument',
+          documentId: id,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async deleteDocument(id: string): Promise<void> {
+    try {
+      await db.delete(documents).where(eq(documents.id, id));
+      logger.info('Document supprimé', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteDocument',
+          documentId: id
+        }
+      });
+    } catch (error) {
+      logger.error('Erreur suppression document', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'deleteDocument',
+          documentId: id,
+          error: error instanceof Error ? error.message : String(error)
         }
       });
       throw error;

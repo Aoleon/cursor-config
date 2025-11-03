@@ -62,16 +62,28 @@ The application features a modern fullstack architecture. The frontend uses Reac
 *   EventBus for inter-component communication.
 
 **Recent Changes (November 2025)**:
-*   **OneDrive Integration** ✅ **IN PROGRESS**: Intégration OneDrive comme GED centrale (3 novembre 2025)
-    - **Routes modifiées** (module Commercial):
+*   **OneDrive Integration** ✅ **PRODUCTION-READY**: Intégration OneDrive comme GED centrale (3 novembre 2025)
+    - **Routes opérationnelles** (module Commercial):
       - `GET /api/aos/:aoId/documents` : Liste les documents depuis OneDrive (`OneDrive-JLM/01 - ETUDES AO/AO-{reference}/`)
-      - `POST /api/aos/:aoId/documents/upload-url` : Prépare l'upload vers OneDrive
+      - `POST /api/aos/:aoId/documents/upload-url` : Prépare l'upload vers OneDrive (legacy, pour compatibilité)
+      - `POST /api/aos/:aoId/documents/upload-direct` : Upload multipart avec multer + sauvegarde automatique en DB ✅ **NEW**
       - `POST /api/aos/:aoId/documents` : Confirmation upload avec validation Zod (folderName, fileName, oneDriveId, webUrl requis)
-    - **Architecture**: Import dynamique de `OneDriveService` dans les routes, gestion d'erreurs avec messages explicites (404/503)
+    - **Architecture**: 
+      - Import dynamique de `OneDriveService` dans les routes
+      - Gestion d'erreurs avec messages explicites (404/503)
+      - Multer configuré avec memoryStorage (50MB max)
+      - Upload automatique petits fichiers (<4MB) et gros fichiers (≥4MB) avec chunks 320KB
     - **Mapping catégories**: Organisation automatique des documents par dossier (01-DCE-Cotes-Photos, 02-Etudes-fournisseurs, 03-Devis-pieces-administratives)
-    - **Schéma DB**: Champs OneDrive existants (oneDriveId, oneDrivePath, oneDriveUrl, syncedFromOneDrive, lastSyncedAt)
-    - **TODO**: Persistence locale via `storage.createDocument()` (nécessite ajout méthode dans IStorage), service DocumentSyncService pour sync automatique
-    - **Services**: `OneDriveService` (listItems, uploadFile) et `MicrosoftAuthService` (MSAL authentication)
+    - **Schéma DB**: Champs OneDrive (oneDriveId, oneDrivePath, oneDriveUrl, syncedFromOneDrive, lastSyncedAt)
+    - **Storage Layer**: 
+      - ✅ `createDocument()` implémenté dans IStorage + DatabaseStorage
+      - ✅ Sauvegarde automatique des métadonnées après upload OneDrive
+    - **OneDrive Service**: 
+      - `uploadSmallFile()` pour fichiers <4MB
+      - `uploadLargeFile()` pour fichiers ≥4MB avec resumable upload session
+      - ✅ **FIX**: Parse final chunk response pour gérer les fichiers renommés (conflit OneDrive)
+    - **TODO**: DocumentSyncService pour synchronisation automatique OneDrive → DB
+    - **Services**: `OneDriveService` (listItems, uploadSmallFile, uploadLargeFile) et `MicrosoftAuthService` (MSAL authentication)
 *   **Monday.com Import Fixes** ✅ **PRODUCTION-READY**: 11 critical corrections to ensure data integrity
     - Added `mondayItemId` tracking in all imports (Projects, AOs, Suppliers)
     - Fixed webhook sync to use correct field (`mondayItemId` vs `mondayId`)

@@ -62,6 +62,16 @@ The application features a modern fullstack architecture. The frontend uses Reac
 *   EventBus for inter-component communication.
 
 **Recent Changes (November 2025)**:
+*   **OneDrive Integration** ✅ **IN PROGRESS**: Intégration OneDrive comme GED centrale (3 novembre 2025)
+    - **Routes modifiées** (module Commercial):
+      - `GET /api/aos/:aoId/documents` : Liste les documents depuis OneDrive (`OneDrive-JLM/01 - ETUDES AO/AO-{reference}/`)
+      - `POST /api/aos/:aoId/documents/upload-url` : Prépare l'upload vers OneDrive
+      - `POST /api/aos/:aoId/documents` : Confirmation upload avec validation Zod (folderName, fileName, oneDriveId, webUrl requis)
+    - **Architecture**: Import dynamique de `OneDriveService` dans les routes, gestion d'erreurs avec messages explicites (404/503)
+    - **Mapping catégories**: Organisation automatique des documents par dossier (01-DCE-Cotes-Photos, 02-Etudes-fournisseurs, 03-Devis-pieces-administratives)
+    - **Schéma DB**: Champs OneDrive existants (oneDriveId, oneDrivePath, oneDriveUrl, syncedFromOneDrive, lastSyncedAt)
+    - **TODO**: Persistence locale via `storage.createDocument()` (nécessite ajout méthode dans IStorage), service DocumentSyncService pour sync automatique
+    - **Services**: `OneDriveService` (listItems, uploadFile) et `MicrosoftAuthService` (MSAL authentication)
 *   **Monday.com Import Fixes** ✅ **PRODUCTION-READY**: 11 critical corrections to ensure data integrity
     - Added `mondayItemId` tracking in all imports (Projects, AOs, Suppliers)
     - Fixed webhook sync to use correct field (`mondayItemId` vs `mondayId`)

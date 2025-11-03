@@ -2,6 +2,8 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import { microsoftAuthService } from './MicrosoftAuthService';
 import { logger } from '../utils/logger';
 import { executeOneDrive } from './resilience';
+import { getCacheService, TTL_CONFIG } from './CacheService';
+import type { CacheService } from './CacheService';
 import type { Readable } from 'stream';
 
 export interface OneDriveFile {
@@ -48,6 +50,7 @@ export interface DeltaResponse {
 
 export class OneDriveService {
   private client: Client;
+  private cache: CacheService;
 
   constructor() {
     this.client = Client.init({
@@ -62,18 +65,34 @@ export class OneDriveService {
       }
     });
 
-    logger.info('OneDriveService initialized');
+    // PERF-5: Initialize cache for OneDrive metadata
+    this.cache = getCacheService();
+
+    logger.info('OneDriveService initialized', {
+      metadata: { cacheEnabled: true }
+    });
   }
 
   /**
-   * Get user's drive information
+   * Get user's drive information (with cache)
    * Note: Uses /me endpoint which requires delegated permissions.
    * For app-only access, you would need to use /drives/{drive-id} or /users/{user-id}/drive
    */
   async getDriveInfo() {
+    // PERF-5: Check cache first
+    const cacheKey = this.cache.buildKey('onedrive', 'drive-info');
+    const cached = await this.cache.get<any>(cacheKey);
+    
+    if (cached) {
+      logger.debug('OneDrive drive info from cache', {
+        metadata: { cacheKey }
+      });
+      return cached;
+    }
+
     try {
       const drive = await this.client.api('/me/drive').get();
-      return {
+      const driveInfo = {
         id: drive.id,
         driveType: drive.driveType,
         owner: drive.owner?.user?.displayName,
@@ -83,6 +102,11 @@ export class OneDriveService {
           remaining: drive.quota?.remaining
         }
       };
+
+      // PERF-5: Cache the result
+      await this.cache.set(cacheKey, driveInfo, TTL_CONFIG.ONEDRIVE_DRIVE_INFO);
+
+      return driveInfo;
     } catch (error) {
       logger.error('Failed to get drive info', error as Error);
       throw new Error('Failed to retrieve OneDrive information');
@@ -115,11 +139,22 @@ export class OneDriveService {
   }
 
   /**
-   * List files and folders in a specific path (with pagination support)
+   * List files and folders in a specific path (with pagination support + cache)
    */
   async listItems(path: string = ''): Promise<(OneDriveFile | OneDriveFolder)[]> {
+    // PERF-5: Check cache first
+    const cacheKey = this.cache.buildKey('onedrive', 'list', { path });
+    const cached = await this.cache.get<(OneDriveFile | OneDriveFolder)[]>(cacheKey);
+    
+    if (cached) {
+      logger.debug('OneDrive directory list from cache', {
+        metadata: { path, itemCount: cached.length }
+      });
+      return cached;
+    }
+
     // PERF-4: Wrap with retry + circuit breaker
-    return executeOneDrive(async () => {
+    const items = await executeOneDrive(async () => {
       const endpoint = path 
         ? `/me/drive/root:/${this.encodePath(path)}:/children`
         : '/me/drive/root/children';
@@ -145,23 +180,58 @@ export class OneDriveService {
 
       return allItems;
     }, `listItems:${path || 'root'}`);
+
+    // PERF-5: Cache the result
+    await this.cache.set(cacheKey, items, TTL_CONFIG.ONEDRIVE_DIRECTORY_LIST);
+
+    return items;
   }
 
   /**
-   * PERF-1: Get items using delta query (incremental sync)
+   * PERF-5: Get stored delta link for a path from cache
+   */
+  async getDeltaLink(path: string): Promise<string | null> {
+    const cacheKey = this.cache.buildKey('onedrive', 'delta-link', { path });
+    return await this.cache.get<string>(cacheKey);
+  }
+
+  /**
+   * PERF-5: Store delta link for a path in cache
+   */
+  async saveDeltaLink(path: string, deltaLink: string): Promise<void> {
+    const cacheKey = this.cache.buildKey('onedrive', 'delta-link', { path });
+    await this.cache.set(cacheKey, deltaLink, TTL_CONFIG.ONEDRIVE_DELTA_LINK);
+    logger.debug('OneDrive delta link saved', {
+      metadata: { path, cacheKey }
+    });
+  }
+
+  /**
+   * PERF-1: Get items using delta query (incremental sync with cached deltaLink)
    * Returns only changed items since last deltaLink
    * @param path - The folder path to track
-   * @param previousDeltaLink - Delta link from previous sync (null for initial sync)
+   * @param previousDeltaLink - Delta link from previous sync (null = check cache, then initial sync)
    * @returns Delta response with items and new deltaLink
    */
   async getItemsDelta(path: string = '', previousDeltaLink?: string | null): Promise<DeltaResponse> {
+    // PERF-5: If no previousDeltaLink provided, check cache
+    let deltaLink = previousDeltaLink;
+    if (!deltaLink) {
+      deltaLink = await this.getDeltaLink(path);
+      if (deltaLink) {
+        logger.info('OneDrive delta: using cached delta link', {
+          metadata: { path }
+        });
+      }
+    }
+
     // PERF-4: Wrap with retry + circuit breaker
-    return executeOneDrive(async () => {
+    const result = await executeOneDrive(async () => {
       let endpoint: string;
       
-      if (previousDeltaLink) {
-        // Use previous delta link for incremental changes
-        endpoint = previousDeltaLink;
+      if (deltaLink) {
+        // Use delta link for incremental changes
+        endpoint = deltaLink;
         logger.info('OneDrive delta: incremental sync', {
           metadata: { path, hasPreviousDelta: true }
         });
@@ -178,7 +248,7 @@ export class OneDriveService {
 
       const allItems: (OneDriveFile | OneDriveFolder)[] = [];
       let nextLink: string | null = endpoint;
-      let deltaLink: string | null = null;
+      let newDeltaLink: string | null = null;
 
       // Follow pagination and delta links
       while (nextLink) {
@@ -215,7 +285,7 @@ export class OneDriveService {
 
         // Check for delta link (indicates end of delta sequence)
         if (response['@odata.deltaLink']) {
-          deltaLink = response['@odata.deltaLink'];
+          newDeltaLink = response['@odata.deltaLink'];
           nextLink = null;
           
           logger.info('OneDrive delta: sync complete', {
@@ -240,10 +310,40 @@ export class OneDriveService {
 
       return {
         items: allItems,
-        deltaLink,
+        deltaLink: newDeltaLink,
         hasMore: false
       };
     }, `getItemsDelta:${path || 'root'}`);
+
+    // PERF-5: Save new delta link to cache if we got one
+    if (result.deltaLink) {
+      await this.saveDeltaLink(path, result.deltaLink);
+    }
+
+    return result;
+  }
+
+  /**
+   * PERF-5: Invalidate cache for a specific path
+   */
+  async invalidateCache(path?: string): Promise<void> {
+    if (path) {
+      // Invalidate specific path
+      const listCacheKey = this.cache.buildKey('onedrive', 'list', { path });
+      const deltaCacheKey = this.cache.buildKey('onedrive', 'delta-link', { path });
+      
+      await this.cache.invalidate(listCacheKey);
+      await this.cache.invalidate(deltaCacheKey);
+      
+      logger.info('OneDrive cache invalidated for path', {
+        metadata: { path }
+      });
+    } else {
+      // Invalidate all OneDrive cache
+      await this.cache.invalidatePattern('onedrive:*');
+      
+      logger.info('All OneDrive cache invalidated');
+    }
   }
 
   /**

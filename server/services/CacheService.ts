@@ -11,7 +11,12 @@ export const TTL_CONFIG = {
   MONDAY_BOARD_DETAIL: 300,     // 5 minutes
   ANALYTICS_KPI: 120,            // 2 minutes
   ANALYTICS_REALTIME: 60,        // 1 minute
-  ANALYTICS_METRICS: 90          // 1.5 minutes
+  ANALYTICS_METRICS: 90,         // 1.5 minutes
+  // PERF-5: OneDrive cache TTLs
+  ONEDRIVE_FILE_METADATA: 300,  // 5 minutes - file/folder metadata
+  ONEDRIVE_DIRECTORY_LIST: 180, // 3 minutes - directory listings
+  ONEDRIVE_DELTA_LINK: 3600,    // 1 hour - delta sync tokens (long-lived)
+  ONEDRIVE_DRIVE_INFO: 600      // 10 minutes - drive information
 } as const;
 
 // ========================================

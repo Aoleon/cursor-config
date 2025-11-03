@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { logger } from '../utils/logger';
 import type { IStorage } from '../storage-poc';
 import { DocumentSyncService } from './DocumentSyncService';
+import type { SyncError } from './DocumentSyncService';
 
 export class SyncScheduler {
   private cronJob: cron.ScheduledTask | null = null;
@@ -84,9 +85,10 @@ export class SyncScheduler {
     await this.start();
   }
 
-  private async syncAOWithTimeout(aoId: string, aoReference: string, timeoutMs: number = 60000): Promise<{ documentsAdded: number; documentsUpdated: number; documentsDeleted: number; errors: string[] }> {
+  // ROBUST-1: Standardisé pour utiliser la signature correcte de DocumentSyncService
+  private async syncAOWithTimeout(aoId: string, aoReference: string, timeoutMs: number = 60000): Promise<{ documentsAdded: number; documentsUpdated: number; documentsDeleted: number; errors: SyncError[] }> {
     return Promise.race([
-      this.documentSyncService.syncAODocuments(aoId),
+      this.documentSyncService.syncDocuments({ aoId, aoReference }),
       new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error(`Timeout après ${timeoutMs}ms`)), timeoutMs)
       )
@@ -119,7 +121,7 @@ export class SyncScheduler {
       let totalDocumentsAdded = 0;
       let totalDocumentsUpdated = 0;
       let totalDocumentsDeleted = 0;
-      const errors: string[] = [];
+      const errors: SyncError[] = [];
       const AO_SYNC_TIMEOUT_MS = 120000;
 
       logger.info('[SyncScheduler] Synchronisation de tous les AOs', {
@@ -143,8 +145,11 @@ export class SyncScheduler {
             }
           });
         } catch (error: any) {
-          const errorMsg = `AO ${ao.reference}: ${error.message}`;
-          errors.push(errorMsg);
+          errors.push({
+            type: 'unknown',
+            message: `AO ${ao.reference}: ${error.message}`,
+            originalError: error
+          });
           logger.warn('[SyncScheduler] Erreur synchronisation AO', {
             metadata: {
               aoId: ao.id,
@@ -167,7 +172,7 @@ export class SyncScheduler {
           documentsAdded: totalDocumentsAdded,
           documentsUpdated: totalDocumentsUpdated,
           documentsDeleted: totalDocumentsDeleted,
-          errors,
+          errors: errors.map(e => e.message), // Convert to string[] for storage
           duration
         }
       });
@@ -192,7 +197,7 @@ export class SyncScheduler {
         lastSyncAt: new Date(),
         nextSyncAt: this.getNextRun(),
         lastSyncResult: {
-          errors: [error instanceof Error ? error.message : String(error)],
+          errors: [error instanceof Error ? error.message : String(error)], // Already string format for storage
           duration
         }
       });

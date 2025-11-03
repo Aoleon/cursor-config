@@ -10,15 +10,27 @@
 
 import { logger } from '../utils/logger';
 import { oneDriveService } from './OneDriveService';
+import { buildAoPath, buildAoCategoryPath, getAoCategories } from '../config/onedrive.config';
 import type { IStorage } from '../storage';
 import type { EventBus } from '../eventBus';
 
-interface SyncResult {
+// ROBUST-3: Types d'erreurs détaillés
+export interface SyncError {
+  type: 'category_scan' | 'document_create' | 'document_update' | 'document_delete' | 'onedrive_api' | 'unknown';
+  category?: string;
+  documentName?: string;
+  message: string;
+  originalError?: any;
+}
+
+export interface SyncResult {
   success: boolean;
   documentsAdded: number;
   documentsUpdated: number;
   documentsDeleted: number;
-  errors: string[];
+  errors: SyncError[];
+  categoriesScanned: number;
+  categoriesFailed: number;
 }
 
 interface SyncOptions {
@@ -54,7 +66,12 @@ export class DocumentSyncService {
         documentsAdded: 0,
         documentsUpdated: 0,
         documentsDeleted: 0,
-        errors: ['Synchronisation déjà en cours']
+        errors: [{
+          type: 'unknown',
+          message: 'Synchronisation déjà en cours pour cet AO'
+        }],
+        categoriesScanned: 0,
+        categoriesFailed: 0
       };
     }
 
@@ -64,12 +81,28 @@ export class DocumentSyncService {
       documentsAdded: 0,
       documentsUpdated: 0,
       documentsDeleted: 0,
-      errors: []
+      errors: [],
+      categoriesScanned: 0,
+      categoriesFailed: 0
     };
 
     try {
       logger.info('[DocumentSyncService] Début synchronisation', {
         metadata: { aoId, aoReference, force }
+      });
+
+      // PERF-5 FIX: Invalider le cache OneDrive avant sync pour garantir données fraîches
+      const basePath = buildAoPath(aoReference);
+      const categories = getAoCategories();
+      
+      // Invalider cache pour chaque catégorie
+      for (const category of categories) {
+        const categoryPath = buildAoCategoryPath(aoReference, category);
+        await oneDriveService.invalidateCache(categoryPath);
+      }
+
+      logger.debug('[DocumentSyncService] Cache OneDrive invalidé', {
+        metadata: { aoId, aoReference, categoriesInvalidated: categories.length }
       });
 
       // Récupérer les documents existants en DB
@@ -82,23 +115,14 @@ export class DocumentSyncService {
           .map(doc => [doc.oneDriveId!, doc])
       );
 
-      // Chemin OneDrive de base pour l'AO
-      const basePath = `OneDrive-JLM/01 - ETUDES AO/AO-${aoReference}`;
-
-      // Catégories de documents à synchroniser
-      const categories = [
-        '01-DCE-Cotes-Photos',
-        '02-Etudes-fournisseurs',
-        '03-Devis-pieces-administratives'
-      ];
-
       // Map des fichiers OneDrive trouvés
       const oneDriveFilesMap = new Map<string, any>();
 
       // PERF-3: Scanner toutes les catégories en parallèle
       const categoryPromises = categories.map(async (category) => {
         try {
-          const categoryPath = `${basePath}/${category}`;
+          // ROBUST-2: Utiliser helper pour construire le path
+          const categoryPath = buildAoCategoryPath(aoReference, category);
           const items = await oneDriveService.listItems(categoryPath);
 
           // Filtrer uniquement les fichiers (pas les dossiers)
@@ -121,10 +145,20 @@ export class DocumentSyncService {
       // Attendre toutes les catégories en parallèle
       const categoryResults = await Promise.all(categoryPromises);
 
-      // Agréger les résultats
+      // Agréger les résultats (ROBUST-3: Error handling granulaire)
       for (const { category, files, error } of categoryResults) {
+        result.categoriesScanned++;
         if (error) {
-          result.errors.push(`Erreur scan ${category}: ${error}`);
+          result.categoriesFailed++;
+          result.errors.push({
+            type: 'category_scan',
+            category,
+            message: error,
+            originalError: error
+          });
+          logger.warn('[DocumentSyncService] Erreur scan catégorie', {
+            metadata: { aoId, aoReference, category, error }
+          });
         }
         for (const file of files) {
           oneDriveFilesMap.set(file.id, { ...file, category });
@@ -161,8 +195,21 @@ export class DocumentSyncService {
               lastSyncedAt: new Date()
             });
             result.documentsAdded++;
+            logger.debug('[DocumentSyncService] Document ajouté', {
+              metadata: { aoId, documentName: fileData.name, category: fileData.category }
+            });
           } catch (error: any) {
-            result.errors.push(`Erreur ajout ${fileData.name}: ${error.message}`);
+            // ROBUST-3: Error typing et logging détaillé
+            result.errors.push({
+              type: 'document_create',
+              category: fileData.category,
+              documentName: fileData.name,
+              message: error.message || String(error),
+              originalError: error
+            });
+            logger.error('[DocumentSyncService] Erreur création document', {
+              metadata: { aoId, documentName: fileData.name, error: error.message }
+            });
           }
         } else {
           // ✅ Mettre à jour les métadonnées (nom, path, url, category, filePath) + lastSyncedAt
@@ -209,7 +256,17 @@ export class DocumentSyncService {
             }
             result.documentsUpdated++;
           } catch (error: any) {
-            result.errors.push(`Erreur update ${fileData.name}: ${error.message}`);
+            // ROBUST-3: Error typing et logging détaillé
+            result.errors.push({
+              type: 'document_update',
+              category: fileData.category,
+              documentName: fileData.name,
+              message: error.message || String(error),
+              originalError: error
+            });
+            logger.error('[DocumentSyncService] Erreur mise à jour document', {
+              metadata: { aoId, documentId: existingDoc.id, documentName: fileData.name, error: error.message }
+            });
           }
         }
       }
@@ -220,8 +277,20 @@ export class DocumentSyncService {
           try {
             await this.storage.deleteDocument(doc.id);
             result.documentsDeleted++;
+            logger.debug('[DocumentSyncService] Document supprimé', {
+              metadata: { aoId, documentId: doc.id, documentName: doc.name }
+            });
           } catch (error: any) {
-            result.errors.push(`Erreur suppression ${doc.name}: ${error.message}`);
+            // ROBUST-3: Error typing et logging détaillé
+            result.errors.push({
+              type: 'document_delete',
+              documentName: doc.name,
+              message: error.message || String(error),
+              originalError: error
+            });
+            logger.error('[DocumentSyncService] Erreur suppression document', {
+              metadata: { aoId, documentId: doc.id, documentName: doc.name, error: error.message }
+            });
           }
         }
       }
@@ -236,7 +305,12 @@ export class DocumentSyncService {
 
     } catch (error: any) {
       result.success = false;
-      result.errors.push(`Erreur globale: ${error.message}`);
+      // ROBUST-3: Error typing pour erreur globale
+      result.errors.push({
+        type: 'unknown',
+        message: `Erreur globale de synchronisation: ${error.message || String(error)}`,
+        originalError: error
+      });
       logger.error('[DocumentSyncService] Erreur synchronisation', error, {
         metadata: { aoId, aoReference }
       });

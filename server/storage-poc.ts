@@ -138,7 +138,11 @@ export interface IStorage {
   // User operations
   getUsers(): Promise<User[]>;
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByMicrosoftId(microsoftId: string): Promise<User | undefined>;
   upsertUser(userData: UpsertUser): Promise<User>;
+  createUser(userData: Partial<InsertUser>): Promise<User>;
   
   // AO operations - Base pour éviter double saisie
   getAos(): Promise<Ao[]>;
@@ -923,6 +927,36 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByMicrosoftId(microsoftId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.microsoftId, microsoftId));
+    return user;
+  }
+
+  async createUser(userData: Partial<InsertUser>): Promise<User> {
+    return safeQuery(async () => {
+      const [user] = await db
+        .insert(users)
+        .values(userData)
+        .returning();
+      return user;
+    }, {
+      retries: 2,
+      service: 'StoragePOC',
+      operation: 'createUser',
+      logQuery: true
+    });
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {

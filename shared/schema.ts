@@ -1117,14 +1117,32 @@ export const projectSuppliers = pgTable("project_suppliers", {
   };
 });
 
+// Enum pour les rôles utilisateurs
+export const userRoleEnum = pgEnum("user_role", [
+  "admin",
+  "ca",
+  "chef_equipe",
+  "technicien_be",
+  "technicien_terrain",
+  "client"
+]);
+
 // Table des utilisateurs (simplifiée pour POC)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  
+  // Authentification basique
+  username: varchar("username").unique(),
+  password: varchar("password"),
+  
+  // Authentification Microsoft
+  microsoftId: varchar("microsoft_id").unique(),
+  
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").default("technicien_be"), // POC : BE ou terrain
+  role: userRoleEnum("role").default("technicien_be"),
   isActive: boolean("is_active").default(true),
   chargeStatus: chargeStatusEnum("charge_status").default("disponible"),
   

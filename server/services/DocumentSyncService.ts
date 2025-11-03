@@ -129,9 +129,10 @@ export class DocumentSyncService {
               filePath: `onedrive/${aoReference}/${fileData.category}/${fileData.name}`,
               category: fileData.category as any,
               uploadedBy: 'system', // TODO: récupérer l'utilisateur qui a uploadé
+              aoId, // ✅ Association AO pour getDocumentsByEntity
               metadata: {
-                aoId, // Stocké temporairement en metadata
-                aoReference
+                aoReference,
+                syncSource: 'onedrive-sync'
               },
               oneDriveId: fileData.id,
               oneDrivePath: `${basePath}/${fileData.category}/${fileData.name}`,
@@ -144,12 +145,43 @@ export class DocumentSyncService {
             result.errors.push(`Erreur ajout ${fileData.name}: ${error.message}`);
           }
         } else {
-          // Mettre à jour lastSyncedAt
+          // ✅ Mettre à jour les métadonnées (nom, path, url, category, filePath) + lastSyncedAt + backfill aoId manquant
           const existingDoc = existingDocsMap.get(oneDriveId)!;
+          const needsBackfill = !existingDoc.aoId; // Documents synchro avant la correction aoId
+          const needsUpdate = 
+            existingDoc.name !== fileData.name ||
+            existingDoc.oneDrivePath !== `${basePath}/${fileData.category}/${fileData.name}` ||
+            existingDoc.oneDriveUrl !== fileData.webUrl ||
+            existingDoc.filePath !== `onedrive/${aoReference}/${fileData.category}/${fileData.name}` ||
+            existingDoc.category !== fileData.category;
+
           try {
             await this.storage.updateDocument(existingDoc.id, {
+              aoId, // ✅ Backfill aoId manquant pour documents legacy
+              name: fileData.name,
+              originalName: fileData.name,
+              filePath: `onedrive/${aoReference}/${fileData.category}/${fileData.name}`,
+              category: fileData.category as any,
+              oneDrivePath: `${basePath}/${fileData.category}/${fileData.name}`,
+              oneDriveUrl: fileData.webUrl,
               lastSyncedAt: new Date()
             });
+            if (needsBackfill) {
+              logger.info('[DocumentSyncService] Backfill aoId effectué', {
+                metadata: { documentId: existingDoc.id, aoId }
+              });
+            }
+            if (needsUpdate) {
+              logger.info('[DocumentSyncService] Métadonnées mises à jour', {
+                metadata: { 
+                  documentId: existingDoc.id, 
+                  oldName: existingDoc.name, 
+                  newName: fileData.name,
+                  oldCategory: existingDoc.category,
+                  newCategory: fileData.category
+                }
+              });
+            }
             result.documentsUpdated++;
           } catch (error: any) {
             result.errors.push(`Erreur update ${fileData.name}: ${error.message}`);

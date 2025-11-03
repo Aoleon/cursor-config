@@ -82,7 +82,15 @@ The application features a modern fullstack architecture. The frontend uses Reac
       - `uploadSmallFile()` pour fichiers <4MB
       - `uploadLargeFile()` pour fichiers ≥4MB avec resumable upload session
       - ✅ **FIX**: Parse final chunk response pour gérer les fichiers renommés (conflit OneDrive)
-    - **TODO**: DocumentSyncService pour synchronisation automatique OneDrive → DB
+    - **Frontend Integration** ✅ **COMPLETE**:
+      - Hook `use-ao-documents.ts` mis à jour pour utiliser le pattern upload-direct multipart
+      - Composant `DocumentUploadZone` avec drag & drop déjà intégré dans `ao-detail.tsx`
+      - Support progression upload en temps réel via XMLHttpRequest
+      - Invalidation automatique du cache React Query après upload
+    - **DocumentSyncService** ✅ **IMPLÉMENTÉ**:
+      - Synchronisation OneDrive → DB pour détection nouveaux documents
+      - Utilise metadata temporairement pour aoId (migration document_links à venir)
+      - Gestion des conflits et doublons via oneDriveId
     - **Services**: `OneDriveService` (listItems, uploadSmallFile, uploadLargeFile) et `MicrosoftAuthService` (MSAL authentication)
 *   **Monday.com Import Fixes** ✅ **PRODUCTION-READY**: 11 critical corrections to ensure data integrity
     - Added `mondayItemId` tracking in all imports (Projects, AOs, Suppliers)

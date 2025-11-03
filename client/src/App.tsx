@@ -152,6 +152,8 @@ function Router() {
       {/* ============= WORKFLOW - Processus avant-vente AO → Offre ============= */}
       <Route path="/workflow/etude-technique" component={() => <ProtectedRoute component={EtudeTechnique} />} />
       <Route path="/workflow/chiffrage" component={() => <ProtectedRoute component={ChiffrageWorkflow} />} />
+      <Route path="/workflow/validation" component={() => <ProtectedRoute component={ValidationList} />} />
+      <Route path="/workflow/transform" component={() => <ProtectedRoute component={TransformList} />} />
       <Route path="/workflow/envoi-devis" component={() => <ProtectedRoute component={EnvoiDevis} />} />
       <Route path="/workflow/planification" component={() => <ProtectedRoute component={PlanificationWorkflow} />} />
       <Route path="/workflow/chantier" component={() => <ProtectedRoute component={ChantierWorkflow} />} />

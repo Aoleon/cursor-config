@@ -10,8 +10,8 @@ import {
   supplierQuoteSessions, aoLotSuppliers, supplierDocuments, supplierQuoteAnalysis,
   equipmentBatteries, marginTargets, projectSubElements, classificationTags, entityTags, employeeLabels, employeeLabelAssignments,
   bugReports,
-  purchaseOrders, clientQuotes, batigestExportQueue, documents,
-  type User, type UpsertUser, type Document, type InsertDocument, 
+  purchaseOrders, clientQuotes, batigestExportQueue, documents, syncConfig,
+  type User, type UpsertUser, type Document, type InsertDocument, type SyncConfig, type InsertSyncConfig, 
   type Ao, type InsertAo,
   type Offer, type InsertOffer,
   type Project, type InsertProject,
@@ -665,6 +665,10 @@ export interface IStorage {
   getDocumentsByEntity(entityType: string, entityId: string): Promise<Document[]>;
   updateDocument(id: string, document: Partial<InsertDocument>): Promise<Document>;
   deleteDocument(id: string): Promise<void>;
+
+  // Sync Config operations - Configuration synchronisation OneDrive automatique
+  getSyncConfig(): Promise<SyncConfig | undefined>;
+  updateSyncConfig(config: Partial<InsertSyncConfig>): Promise<SyncConfig>;
 
   // Supplier Quote Analysis operations - Gestion de l'analyse OCR des devis
   getSupplierQuoteAnalyses(documentId?: string, sessionId?: string): Promise<(SupplierQuoteAnalysis & { document?: any; reviewedByUser?: any })[]>;
@@ -4410,6 +4414,69 @@ export class DatabaseStorage implements IStorage {
           service: 'StoragePOC',
           operation: 'deleteDocument',
           documentId: id,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  // ========================================
+  // SYNC CONFIG OPERATIONS - CONFIGURATION SYNCHRONISATION ONEDRIVE
+  // ========================================
+
+  async getSyncConfig(): Promise<SyncConfig | undefined> {
+    try {
+      const [config] = await db.select().from(syncConfig).limit(1);
+      return config;
+    } catch (error) {
+      logger.error('Erreur récupération sync config', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'getSyncConfig',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async updateSyncConfig(config: Partial<InsertSyncConfig>): Promise<SyncConfig> {
+    try {
+      const existing = await this.getSyncConfig();
+      
+      if (!existing) {
+        // Créer une nouvelle config si elle n'existe pas
+        const [newConfig] = await db.insert(syncConfig).values(config as InsertSyncConfig).returning();
+        logger.info('Sync config créée', {
+          metadata: {
+            service: 'StoragePOC',
+            operation: 'updateSyncConfig'
+          }
+        });
+        return newConfig;
+      }
+
+      const [updatedConfig] = await db
+        .update(syncConfig)
+        .set({ ...config, updatedAt: new Date() })
+        .where(eq(syncConfig.id, existing.id))
+        .returning();
+
+      logger.info('Sync config mise à jour', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateSyncConfig',
+          configId: existing.id
+        }
+      });
+
+      return updatedConfig;
+    } catch (error) {
+      logger.error('Erreur mise à jour sync config', {
+        metadata: {
+          service: 'StoragePOC',
+          operation: 'updateSyncConfig',
           error: error instanceof Error ? error.message : String(error)
         }
       });
@@ -8937,6 +9004,15 @@ export class MemStorage implements IStorage {
       metadata: { operation: 'transaction' }
     });
     return callback(db as DrizzleTransaction);
+  }
+
+  // Sync Config operations - Not implemented in MemStorage
+  async getSyncConfig(): Promise<SyncConfig | undefined> {
+    throw new Error("MemStorage: getSyncConfig not implemented");
+  }
+
+  async updateSyncConfig(config: Partial<InsertSyncConfig>): Promise<SyncConfig> {
+    throw new Error("MemStorage: updateSyncConfig not implemented");
   }
 
 }

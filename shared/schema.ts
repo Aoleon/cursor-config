@@ -3532,6 +3532,37 @@ export const documentCollectionLinks = pgTable("document_collection_links", {
 });
 
 // ========================================
+// CONFIGURATION SYNCHRONISATION ONEDRIVE
+// ========================================
+
+export const syncConfig = pgTable("sync_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Configuration de la synchronisation automatique
+  isEnabled: boolean("is_enabled").default(false).notNull(),
+  cronExpression: varchar("cron_expression").default("0 */6 * * *").notNull(), // Toutes les 6 heures par défaut
+  
+  // Statistiques de synchronisation
+  lastSyncAt: timestamp("last_sync_at"),
+  nextSyncAt: timestamp("next_sync_at"),
+  lastSyncStatus: varchar("last_sync_status"), // success | error | running
+  lastSyncResult: jsonb("last_sync_result").$type<{
+    totalAOs?: number;
+    totalDocuments?: number;
+    documentsAdded?: number;
+    documentsUpdated?: number;
+    documentsDeleted?: number;
+    errors?: string[];
+    duration?: number;
+  }>().default(sql`'{}'::jsonb`),
+  
+  // Métadonnées
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ========================================
 // SYSTÈME DE VALIDATION BE ENRICHI
 // ========================================
 
@@ -3800,6 +3831,16 @@ export const insertDocumentCollectionSchema = createInsertSchema(documentCollect
   createdAt: true,
   updatedAt: true,
 });
+
+// Schéma d'insertion pour la configuration de synchronisation
+export const insertSyncConfigSchema = createInsertSchema(syncConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSyncConfig = z.infer<typeof insertSyncConfigSchema>;
+export type SyncConfig = typeof syncConfig.$inferSelect;
 
 // Schémas d'insertion pour le système de validation BE
 export const insertBeValidationTemplateSchema = createInsertSchema(beValidationTemplates).omit({

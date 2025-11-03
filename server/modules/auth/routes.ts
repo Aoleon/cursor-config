@@ -63,19 +63,49 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
   // AUTHENTICATION ROUTES
   // ========================================
 
-  // Basic Auth Login Route (Development and Internal Staff)
+  // Basic Auth Login Route (Development ONLY - Security Critical)
   router.post('/api/login/basic', 
     rateLimits.auth, // Rate limiting: 5 attempts per 15 minutes
     validateBody(basicLoginSchema),
     asyncHandler(async (req: Request, res: Response) => {
+    
+    // SECURITY: Strict development-only enforcement
+    if (process.env.NODE_ENV !== 'development') {
+      logger.warn('[Auth] Tentative accès route basic en production bloquée', {
+        metadata: {
+          route: '/api/login/basic',
+          method: 'POST',
+          ip: req.ip,
+          userAgent: req.headers['user-agent']
+        }
+      });
+      return res.status(404).json({ message: 'Not found' });
+    }
+    
     const { username, password, role } = req.body as BasicAuthRequest & { role?: string };
+
+    // SECURITY: Validate role is in allowed list
+    const allowedRoles = ['admin', 'ca', 'chef_equipe', 'technicien_be', 'technicien_terrain', 'client'];
+    const validatedRole = role && allowedRoles.includes(role) ? role : 'admin';
+    
+    if (role && !allowedRoles.includes(role)) {
+      logger.warn('[Auth] Tentative assignation rôle invalide bloquée', {
+        metadata: {
+          route: '/api/login/basic',
+          method: 'POST',
+          attemptedRole: role,
+          username
+        }
+      });
+    }
 
     logger.info('[Auth] Tentative connexion basic', { 
       metadata: { 
         route: '/api/login/basic',
         method: 'POST',
         username,
-        role,
+        requestedRole: role,
+        validatedRole,
         hasSession: !!(req as any).session
       }
     });
@@ -88,7 +118,7 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
         firstName: 'Admin',
         lastName: 'Development',
         profileImageUrl: null,
-        role: role || 'admin',
+        role: validatedRole,
         isBasicAuth: true,
       };
 

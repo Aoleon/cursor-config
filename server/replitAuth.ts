@@ -508,16 +508,85 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // NEW MULTI-PROVIDER AUTH: Simple check for session user (basic or Microsoft)
+  // MULTI-PROVIDER AUTH: Check for session user (basic or Microsoft)
   const user = (req as any).session?.user || req.user;
   
-  if (user) {
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Non authentifié' });
+  }
+
+  // For basic auth users, no token expiration check needed
+  if (user.isBasicAuth) {
     (req as any).user = user;
     return next();
   }
-  
-  // Not authenticated - return 401
-  return res.status(401).json({ success: false, message: 'Non authentifié' });
+
+  // For Microsoft OAuth users, check token expiration
+  if (user.isMicrosoftAuth && user.expiresAt) {
+    const now = Math.floor(Date.now() / 1000);
+    
+    // Token still valid
+    if (now < user.expiresAt) {
+      (req as any).user = user;
+      return next();
+    }
+
+    // Token expired - try to refresh if refresh token available
+    if (user.refreshToken) {
+      try {
+        logger.info('[Auth] Microsoft token expired, attempting refresh', {
+          metadata: {
+            userId: user.id,
+            expiresAt: new Date(user.expiresAt * 1000).toISOString()
+          }
+        });
+
+        // Import token refresh utilities
+        const { refreshMicrosoftToken } = await import('./services/MicrosoftOAuthService');
+        const newTokens = await refreshMicrosoftToken(user.refreshToken);
+
+        // Update user object with new tokens
+        const updatedUser = {
+          ...user,
+          accessToken: newTokens.accessToken,
+          refreshToken: newTokens.refreshToken || user.refreshToken,
+          expiresAt: Math.floor(Date.now() / 1000) + 3600
+        };
+
+        // Save updated session
+        (req as any).session.user = updatedUser;
+        (req as any).user = updatedUser;
+
+        logger.info('[Auth] Microsoft token refreshed successfully', {
+          metadata: { userId: user.id }
+        });
+
+        return next();
+      } catch (error) {
+        logger.error('[Auth] Failed to refresh Microsoft token', {
+          metadata: {
+            userId: user.id,
+            error: error instanceof Error ? error.message : String(error)
+          }
+        });
+        
+        // Clear session and return 401
+        (req as any).session.user = null;
+        return res.status(401).json({ success: false, message: 'Session expirée' });
+      }
+    }
+
+    // No refresh token available
+    logger.warn('[Auth] Microsoft token expired and no refresh token', {
+      metadata: { userId: user.id }
+    });
+    (req as any).session.user = null;
+    return res.status(401).json({ success: false, message: 'Session expirée' });
+  }
+
+  // User authenticated but no expiration info (shouldn't happen, but be safe)
+  (req as any).user = user;
+  next();
   
   // ===== OLD CODE BELOW (kept for reference, but commented out) =====
   /*

@@ -14,6 +14,7 @@ export interface OneDriveFile {
   lastModifiedDateTime: string;
   isFolder: boolean;
   parentPath?: string;
+  deleted?: boolean; // For delta sync - indicates item was deleted
 }
 
 export interface OneDriveFolder {
@@ -24,6 +25,7 @@ export interface OneDriveFolder {
   createdDateTime: string;
   lastModifiedDateTime: string;
   parentPath?: string;
+  deleted?: boolean; // For delta sync - indicates folder was deleted
 }
 
 export interface UploadOptions {
@@ -35,6 +37,12 @@ export interface UploadOptions {
 export interface ShareLinkOptions {
   type: 'view' | 'edit' | 'embed';
   scope: 'anonymous' | 'organization';
+}
+
+export interface DeltaResponse {
+  items: (OneDriveFile | OneDriveFolder)[];
+  deltaLink: string | null;
+  hasMore: boolean;
 }
 
 export class OneDriveService {
@@ -106,7 +114,7 @@ export class OneDriveService {
   }
 
   /**
-   * List files and folders in a specific path
+   * List files and folders in a specific path (with pagination support)
    */
   async listItems(path: string = ''): Promise<(OneDriveFile | OneDriveFolder)[]> {
     try {
@@ -114,13 +122,132 @@ export class OneDriveService {
         ? `/me/drive/root:/${this.encodePath(path)}:/children`
         : '/me/drive/root/children';
 
-      const response = await this.client.api(endpoint).get();
-      const items = response.value || [];
+      const allItems: (OneDriveFile | OneDriveFolder)[] = [];
+      let nextLink: string | null = endpoint;
 
-      return items.map((item: any) => this.mapToOneDriveItem(item, path));
+      // PERF-2: Pagination support - follow @odata.nextLink
+      while (nextLink) {
+        const response = await this.client.api(nextLink).get();
+        const items = response.value || [];
+        
+        allItems.push(...items.map((item: any) => this.mapToOneDriveItem(item, path)));
+
+        nextLink = response['@odata.nextLink'] || null;
+        
+        if (nextLink) {
+          logger.info('OneDrive pagination: fetching next page', {
+            metadata: { path, currentItems: allItems.length }
+          });
+        }
+      }
+
+      return allItems;
     } catch (error) {
       logger.error('Failed to list OneDrive items', error as Error, { metadata: { path } });
       throw new Error(`Failed to list items in path: ${path}`);
+    }
+  }
+
+  /**
+   * PERF-1: Get items using delta query (incremental sync)
+   * Returns only changed items since last deltaLink
+   * @param path - The folder path to track
+   * @param previousDeltaLink - Delta link from previous sync (null for initial sync)
+   * @returns Delta response with items and new deltaLink
+   */
+  async getItemsDelta(path: string = '', previousDeltaLink?: string | null): Promise<DeltaResponse> {
+    try {
+      let endpoint: string;
+      
+      if (previousDeltaLink) {
+        // Use previous delta link for incremental changes
+        endpoint = previousDeltaLink;
+        logger.info('OneDrive delta: incremental sync', {
+          metadata: { path, hasPreviousDelta: true }
+        });
+      } else {
+        // Initial sync - use delta endpoint
+        endpoint = path
+          ? `/me/drive/root:/${this.encodePath(path)}:/delta`
+          : '/me/drive/root/delta';
+        
+        logger.info('OneDrive delta: initial sync', {
+          metadata: { path }
+        });
+      }
+
+      const allItems: (OneDriveFile | OneDriveFolder)[] = [];
+      let nextLink: string | null = endpoint;
+      let deltaLink: string | null = null;
+
+      // Follow pagination and delta links
+      while (nextLink) {
+        const response = await this.client.api(nextLink).get();
+        const items = response.value || [];
+        
+        // Map ALL items including deleted ones (consumers need to handle deletions)
+        const mappedItems = items.map((item: any) => {
+          // For deleted items, create minimal object with deleted flag
+          if (item.deleted) {
+            const isFolder = !!item.folder;
+            return {
+              id: item.id,
+              name: item.name || 'deleted-item',
+              deleted: true,
+              isFolder,
+              parentPath: path,
+              // Include minimal metadata if available (for folders)
+              ...(isFolder && { itemCount: 0 })
+            } as OneDriveFile | OneDriveFolder;
+          }
+          return this.mapToOneDriveItem(item, path);
+        });
+        
+        allItems.push(...mappedItems);
+        
+        // Log deletion events
+        const deletedCount = items.filter((i: any) => i.deleted).length;
+        if (deletedCount > 0) {
+          logger.info('OneDrive delta: deletions detected', {
+            metadata: { path, deletedItems: deletedCount }
+          });
+        }
+
+        // Check for delta link (indicates end of delta sequence)
+        if (response['@odata.deltaLink']) {
+          deltaLink = response['@odata.deltaLink'];
+          nextLink = null;
+          
+          logger.info('OneDrive delta: sync complete', {
+            metadata: {
+              path,
+              totalItems: allItems.length,
+              hasDeltaLink: true
+            }
+          });
+        } else if (response['@odata.nextLink']) {
+          // More pages available
+          nextLink = response['@odata.nextLink'];
+          
+          logger.info('OneDrive delta: fetching next page', {
+            metadata: { path, currentItems: allItems.length }
+          });
+        } else {
+          // No more data
+          nextLink = null;
+        }
+      }
+
+      return {
+        items: allItems,
+        deltaLink,
+        hasMore: false
+      };
+    } catch (error) {
+      logger.error('Failed to get OneDrive items delta', error as Error, {
+        metadata: { path, hasPreviousDelta: !!previousDeltaLink }
+      });
+      throw new Error(`Failed to get delta for path: ${path}`);
     }
   }
 

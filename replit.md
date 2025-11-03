@@ -85,7 +85,28 @@ The application features a modern fullstack architecture. The frontend uses Reac
       - ✅ Error Handling (3 tests): Zod validation, API failures, removeUndefined
       - ✅ EventBus Telemetry (3 tests): correct types, metadata, no "unknown" events
     - **Purpose**: Prevent regression of 11 critical corrections, continuous validation of import pipeline
-    - **Next Steps**: Integrate into CI/CD pipeline, monitor production logs for new debug instrumentation
+    - **CI/CD Integration**: ✅ GitHub Actions configured (`.github/workflows/ci.yml`)
+*   **Pipeline CI/CD** ✅ **CONFIGURÉ**: Validation automatique sur push/PR
+    - **Workflow**: `.github/workflows/ci.yml` (GitHub Actions)
+    - **Déclenchement**: Push ou PR sur branches `main` et `develop`
+    - **Jobs**:
+      - Type checking TypeScript (`npm run check`)
+      - Tests Monday.com import regression (13/13 passing)
+      - Tous tests backend avec couverture (seuils: 86% lines/statements/functions, 81% branches)
+      - Upload artefacts de couverture (rétention 30 jours)
+    - **Cache**: npm cache pour accélérer builds
+    - **Documentation**: `TESTING.md` (guide complet CLI, debugging, patterns)
+    - **Commandes**:
+      ```bash
+      # Tests Monday.com uniquement
+      npx vitest run --config vitest.backend.config.ts tests/integration/monday-import-regression.test.ts
+      
+      # Tous tests backend
+      npx vitest run --config vitest.backend.config.ts
+      
+      # Avec couverture
+      npx vitest run --coverage --config vitest.backend.config.ts
+      ```
 
 **System Design Choices**:
 *   Fullstack TypeScript for end-to-end type safety.

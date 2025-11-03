@@ -95,29 +95,49 @@ export class DocumentSyncService {
       // Map des fichiers OneDrive trouvés
       const oneDriveFilesMap = new Map<string, any>();
 
-      // Scanner chaque catégorie
-      for (const category of categories) {
+      // PERF-3: Scanner toutes les catégories en parallèle
+      const categoryPromises = categories.map(async (category) => {
         try {
           const categoryPath = `${basePath}/${category}`;
           const items = await oneDriveService.listItems(categoryPath);
 
           // Filtrer uniquement les fichiers (pas les dossiers)
-          const files = items.filter(item => 'size' in item);
+          const files = items.filter(item => 'size' in item && !item.deleted);
 
-          for (const file of files) {
-            oneDriveFilesMap.set(file.id, { ...file, category });
-          }
+          return { category, files, error: null };
         } catch (error: any) {
           if (error.message?.includes('404')) {
             // Dossier n'existe pas encore, normal
             logger.debug('[DocumentSyncService] Catégorie non trouvée', {
               metadata: { aoId, category }
             });
+            return { category, files: [], error: null };
           } else {
-            result.errors.push(`Erreur scan ${category}: ${error.message}`);
+            return { category, files: [], error: error.message };
           }
         }
+      });
+
+      // Attendre toutes les catégories en parallèle
+      const categoryResults = await Promise.all(categoryPromises);
+
+      // Agréger les résultats
+      for (const { category, files, error } of categoryResults) {
+        if (error) {
+          result.errors.push(`Erreur scan ${category}: ${error}`);
+        }
+        for (const file of files) {
+          oneDriveFilesMap.set(file.id, { ...file, category });
+        }
       }
+
+      logger.info('[DocumentSyncService] Scan OneDrive terminé', {
+        metadata: {
+          aoId,
+          categories: categories.length,
+          filesFound: oneDriveFilesMap.size
+        }
+      });
 
       // Ajouter les nouveaux documents
       for (const [oneDriveId, fileData] of Array.from(oneDriveFilesMap.entries())) {

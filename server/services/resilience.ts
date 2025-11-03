@@ -71,6 +71,24 @@ const SENDGRID_CIRCUIT_CONFIG: CircuitBreakerOptions = {
   errorWindow: 60000,    // 60s window for counting errors
 };
 
+/**
+ * Microsoft OneDrive/Graph API: Moderate retries for file operations
+ */
+const ONEDRIVE_RETRY_CONFIG: Partial<RetryOptions> = {
+  maxAttempts: 4,
+  initialDelayMs: 1000,  // 1s initial
+  maxDelayMs: 15000,     // 15s max
+};
+
+/**
+ * Microsoft OneDrive: Moderate threshold for Graph API
+ */
+const ONEDRIVE_CIRCUIT_CONFIG: CircuitBreakerOptions = {
+  threshold: 4,          // 4 errors triggers open
+  timeout: 90000,        // 90s before half-open
+  errorWindow: 45000,    // 45s window for counting errors
+};
+
 // ========================================
 // CIRCUIT BREAKER INITIALIZATION
 // ========================================
@@ -91,11 +109,14 @@ function initializeCircuitBreakers() {
   // Register SendGrid breaker
   circuitBreakerManager.getBreaker('sendgrid', SENDGRID_CIRCUIT_CONFIG);
   
+  // Register Microsoft OneDrive breaker
+  circuitBreakerManager.getBreaker('onedrive', ONEDRIVE_CIRCUIT_CONFIG);
+  
   logger.info('Circuit breakers initialized', {
     metadata: {
       service: 'Resilience',
       operation: 'initializeCircuitBreakers',
-      providers: ['monday', 'gpt', 'claude', 'openai', 'sendgrid']
+      providers: ['monday', 'gpt', 'claude', 'openai', 'sendgrid', 'onedrive']
     }
   });
 }
@@ -219,6 +240,32 @@ export async function executeSendGrid<T>(
   }
 }
 
+/**
+ * PERF-4: Execute Microsoft OneDrive/Graph API call with retry + circuit breaker
+ */
+export async function executeOneDrive<T>(
+  operation: () => Promise<T>,
+  operationName: string
+): Promise<T> {
+  const breaker = circuitBreakerManager.getBreaker('onedrive');
+  
+  try {
+    return await breaker.execute(async () => {
+      return await retryService.execute(operation, ONEDRIVE_RETRY_CONFIG);
+    });
+  } catch (error) {
+    logger.error('OneDrive operation failed after retries', {
+      metadata: {
+        service: 'Resilience',
+        provider: 'onedrive',
+        operation: operationName,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    });
+    throw error;
+  }
+}
+
 // ========================================
 // MONITORING HELPERS
 // ========================================
@@ -232,7 +279,7 @@ export function getResilienceStats() {
     retryService: {
       // Add retry service stats if available
       configured: true,
-      providers: ['monday', 'openai', 'gpt', 'claude', 'sendgrid']
+      providers: ['monday', 'openai', 'gpt', 'claude', 'sendgrid', 'onedrive']
     }
   };
 }

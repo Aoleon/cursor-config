@@ -1,6 +1,7 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { microsoftAuthService } from './MicrosoftAuthService';
 import { logger } from '../utils/logger';
+import { executeOneDrive } from './resilience';
 import type { Readable } from 'stream';
 
 export interface OneDriveFile {
@@ -117,7 +118,8 @@ export class OneDriveService {
    * List files and folders in a specific path (with pagination support)
    */
   async listItems(path: string = ''): Promise<(OneDriveFile | OneDriveFolder)[]> {
-    try {
+    // PERF-4: Wrap with retry + circuit breaker
+    return executeOneDrive(async () => {
       const endpoint = path 
         ? `/me/drive/root:/${this.encodePath(path)}:/children`
         : '/me/drive/root/children';
@@ -142,10 +144,7 @@ export class OneDriveService {
       }
 
       return allItems;
-    } catch (error) {
-      logger.error('Failed to list OneDrive items', error as Error, { metadata: { path } });
-      throw new Error(`Failed to list items in path: ${path}`);
-    }
+    }, `listItems:${path || 'root'}`);
   }
 
   /**
@@ -156,7 +155,8 @@ export class OneDriveService {
    * @returns Delta response with items and new deltaLink
    */
   async getItemsDelta(path: string = '', previousDeltaLink?: string | null): Promise<DeltaResponse> {
-    try {
+    // PERF-4: Wrap with retry + circuit breaker
+    return executeOneDrive(async () => {
       let endpoint: string;
       
       if (previousDeltaLink) {
@@ -243,12 +243,7 @@ export class OneDriveService {
         deltaLink,
         hasMore: false
       };
-    } catch (error) {
-      logger.error('Failed to get OneDrive items delta', error as Error, {
-        metadata: { path, hasPreviousDelta: !!previousDeltaLink }
-      });
-      throw new Error(`Failed to get delta for path: ${path}`);
-    }
+    }, `getItemsDelta:${path || 'root'}`);
   }
 
   /**

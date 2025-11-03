@@ -37,36 +37,59 @@ export function useAoDocuments(aoId: string) {
     enabled: !!aoId,
   });
 
-  // Mutation pour obtenir l'URL d'upload
-  const getUploadUrlMutation = useMutation({
-    mutationFn: async ({ folderName, fileName }: { folderName: string; fileName: string }) => {
-      const response = await fetch(`/api/aos/${aoId}/documents/upload-url`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderName, fileName }),
-      });
-      if (!response.ok) throw new Error('Failed to get upload URL');
-      return response.json();
-    },
-  });
+  // Mutation pour upload direct multipart (nouveau pattern simplifié)
+  const uploadMutation = useMutation({
+    mutationFn: async ({ file, folderName, onProgress }: { 
+      file: File; 
+      folderName: string;
+      onProgress?: (progress: number) => void;
+    }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folderName', folderName);
+      formData.append('fileName', file.name);
 
-  // Mutation pour confirmer l'upload
-  const confirmUploadMutation = useMutation({
-    mutationFn: async (data: { folderName: string; fileName: string; fileSize: number; uploadedUrl: string }) => {
-      const response = await fetch(`/api/aos/${aoId}/documents`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable && onProgress) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            onProgress(percentComplete);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch (err) {
+              reject(new Error('Erreur parsing réponse serveur'));
+            }
+          } else {
+            try {
+              const errorResponse = JSON.parse(xhr.responseText);
+              reject(new Error(errorResponse.message || `Erreur HTTP ${xhr.status}`));
+            } catch {
+              reject(new Error(`Erreur HTTP ${xhr.status}`));
+            }
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Erreur réseau')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload annulé')));
+
+        xhr.open('POST', `/api/aos/${aoId}/documents/upload-direct`);
+        xhr.send(formData);
       });
-      if (!response.ok) throw new Error('Failed to confirm upload');
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/aos/${aoId}/documents`] });
     },
   });
 
-  // Fonction pour uploader un fichier
+  // Fonction pour uploader un fichier (utilise le nouveau pattern upload-direct)
   const uploadFile = async (file: File, folderName: string) => {
     const uploadId = `${folderName}-${file.name}-${Date.now()}`;
     
@@ -77,98 +100,36 @@ export function useAoDocuments(aoId: string) {
         [uploadId]: { fileName: file.name, progress: 0, status: 'uploading' }
       }));
 
-      // 1. Obtenir l'URL d'upload
-      const { uploadUrl } = await getUploadUrlMutation.mutateAsync({
+      // Upload direct multipart vers OneDrive
+      await uploadMutation.mutateAsync({
+        file,
         folderName,
-        fileName: file.name,
-      });
-
-      // 2. Uploader le fichier
-      const xhr = new XMLHttpRequest();
-      
-      return new Promise<void>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const progress = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(prev => ({
-              ...prev,
-              [uploadId]: { fileName: file.name, progress, status: 'uploading' }
-            }));
-          }
-        });
-
-        xhr.addEventListener('load', async () => {
-          if (xhr.status === 200) {
-            try {
-              // 3. Confirmer l'upload
-              await confirmUploadMutation.mutateAsync({
-                folderName,
-                fileName: file.name,
-                fileSize: file.size,
-                uploadedUrl: uploadUrl,
-              });
-
-              setUploadProgress(prev => ({
-                ...prev,
-                [uploadId]: { fileName: file.name, progress: 100, status: 'success' }
-              }));
-
-              // Supprimer le progrès après 2 secondes
-              setTimeout(() => {
-                setUploadProgress(prev => {
-                  const updated = { ...prev };
-                  delete updated[uploadId];
-                  return updated;
-                });
-              }, 2000);
-
-              toast({
-                title: "Succès",
-                description: `${file.name} a été uploadé avec succès`,
-              });
-
-              resolve();
-            } catch (error) {
-              setUploadProgress(prev => ({
-                ...prev,
-                [uploadId]: { fileName: file.name, progress: 0, status: 'error' }
-              }));
-              toast({
-                title: "Erreur",
-                description: "Erreur lors de la confirmation de l'upload",
-                variant: "destructive",
-              });
-              reject(error);
-            }
-          } else {
-            setUploadProgress(prev => ({
-              ...prev,
-              [uploadId]: { fileName: file.name, progress: 0, status: 'error' }
-            }));
-            toast({
-              title: "Erreur",
-              description: "Erreur lors de l'upload du fichier",
-              variant: "destructive",
-            });
-            reject(new Error('Upload failed'));
-          }
-        });
-
-        xhr.addEventListener('error', () => {
+        onProgress: (progress) => {
           setUploadProgress(prev => ({
             ...prev,
-            [uploadId]: { fileName: file.name, progress: 0, status: 'error' }
+            [uploadId]: { fileName: file.name, progress: Math.round(progress), status: 'uploading' }
           }));
-          toast({
-            title: "Erreur",
-            description: "Erreur lors de l'upload du fichier",
-            variant: "destructive",
-          });
-          reject(new Error('Upload failed'));
-        });
+        }
+      });
 
-        xhr.open('PUT', uploadUrl);
-        xhr.send(file);
+      // Marquer comme succès
+      setUploadProgress(prev => ({
+        ...prev,
+        [uploadId]: { fileName: file.name, progress: 100, status: 'success' }
+      }));
+
+      // Supprimer le progrès après 2 secondes
+      setTimeout(() => {
+        setUploadProgress(prev => {
+          const updated = { ...prev };
+          delete updated[uploadId];
+          return updated;
+        });
+      }, 2000);
+
+      toast({
+        title: "Succès",
+        description: `${file.name} a été uploadé avec succès sur OneDrive`,
       });
     } catch (error) {
       setUploadProgress(prev => ({
@@ -177,7 +138,7 @@ export function useAoDocuments(aoId: string) {
       }));
       toast({
         title: "Erreur",
-        description: "Erreur lors de l'upload",
+        description: error instanceof Error ? error.message : "Erreur lors de l'upload",
         variant: "destructive",
       });
       throw error;
@@ -198,6 +159,6 @@ export function useAoDocuments(aoId: string) {
     uploadFile,
     uploadProgress,
     stats,
-    isUploading: getUploadUrlMutation.isPending || confirmUploadMutation.isPending,
+    isUploading: uploadMutation.isPending,
   };
 }

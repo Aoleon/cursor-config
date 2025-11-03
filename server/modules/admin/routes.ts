@@ -589,5 +589,144 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     })
   );
 
+  // ========================================
+  // ONEDRIVE SYNC CONFIGURATION ROUTES
+  // ========================================
+
+  /**
+   * GET /api/admin/sync-config
+   * 
+   * Récupère la configuration de synchronisation automatique OneDrive
+   * - Statut (activé/désactivé)
+   * - Expression cron (fréquence)
+   * - Dernière synchronisation (date, statut, résultat)
+   * - Prochaine synchronisation planifiée
+   * 
+   * @access admin/executive
+   */
+  router.get('/api/admin/sync-config',
+    isAuthenticated,
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        logger.info('[Admin] Récupération configuration synchronisation OneDrive', {
+          metadata: {
+            route: '/api/admin/sync-config',
+            method: 'GET',
+            userId: req.user?.id
+          }
+        });
+        
+        const config = await storage.getSyncConfig();
+        
+        if (!config) {
+          sendSuccess(res, {
+            isEnabled: false,
+            cronExpression: '0 */6 * * *',
+            lastSyncAt: null,
+            nextSyncAt: null,
+            lastSyncStatus: null,
+            lastSyncResult: {}
+          });
+          return;
+        }
+        
+        logger.info('[Admin] Configuration synchronisation récupérée', {
+          metadata: {
+            isEnabled: config.isEnabled,
+            lastSyncStatus: config.lastSyncStatus
+          }
+        });
+        
+        sendSuccess(res, config);
+      } catch (error: any) {
+        logger.error('[Admin] Erreur récupération configuration sync', {
+          metadata: { 
+            error: error.message, 
+            stack: error.stack,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la récupération de la configuration");
+      }
+    })
+  );
+
+  /**
+   * PATCH /api/admin/sync-config
+   * 
+   * Met à jour la configuration de synchronisation automatique OneDrive
+   * - Active/désactive la synchronisation automatique
+   * - Modifie la fréquence (expression cron)
+   * - Redémarre le scheduler avec la nouvelle configuration
+   * 
+   * @body isEnabled?: boolean - Activer/désactiver
+   * @body cronExpression?: string - Expression cron (ex: '0 *\/6 * * *')
+   * @access admin/executive
+   */
+  router.patch('/api/admin/sync-config',
+    isAuthenticated,
+    rateLimits.general,
+    asyncHandler(async (req: any, res: Response) => {
+      try {
+        const { isEnabled, cronExpression } = req.body;
+        
+        logger.info('[Admin] Mise à jour configuration synchronisation OneDrive', {
+          metadata: {
+            route: '/api/admin/sync-config',
+            method: 'PATCH',
+            userId: req.user?.id,
+            isEnabled,
+            cronExpression
+          }
+        });
+        
+        // Validation basique de l'expression cron si fournie
+        if (cronExpression && typeof cronExpression !== 'string') {
+          throw createError.validation("Expression cron invalide");
+        }
+        
+        const updatedConfig = await storage.updateSyncConfig({
+          isEnabled,
+          cronExpression,
+          updatedBy: req.user?.id || 'system'
+        });
+        
+        // Redémarrer le scheduler avec la nouvelle configuration
+        const syncScheduler = req.app.get('syncScheduler');
+        if (syncScheduler) {
+          await syncScheduler.restart();
+          logger.info('[Admin] Scheduler redémarré avec nouvelle configuration', {
+            metadata: {
+              isEnabled: updatedConfig.isEnabled,
+              cronExpression: updatedConfig.cronExpression
+            }
+          });
+        }
+        
+        eventBus.emit('admin:sync_config_updated', {
+          userId: req.user?.id,
+          config: updatedConfig,
+          updatedAt: new Date()
+        });
+        
+        sendSuccess(res, {
+          message: "Configuration mise à jour avec succès",
+          config: updatedConfig,
+          schedulerStatus: syncScheduler?.getStatus() || { isRunning: false, isScheduled: false }
+        }, 200);
+        
+      } catch (error: any) {
+        logger.error('[Admin] Erreur mise à jour configuration sync', {
+          metadata: { 
+            error: error.message, 
+            stack: error.stack,
+            userId: req.user?.id
+          }
+        });
+        throw createError.database("Erreur lors de la mise à jour de la configuration");
+      }
+    })
+  );
+
   return router;
 }

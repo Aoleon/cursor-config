@@ -96,7 +96,9 @@ export default function AoDetail() {
     uploadFile,
     uploadProgress,
     stats: documentStats,
-    isUploading
+    isUploading,
+    syncDocuments,
+    isSyncing
   } = useAoDocuments(id || "");
   
   // État local pour le formulaire
@@ -2371,9 +2373,30 @@ export default function AoDetail() {
                           <h4 className="font-medium text-gray-900">Résumé des documents</h4>
                           <p className="text-sm text-on-surface-muted">Total des fichiers stockés pour ce dossier</p>
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-gray-900">{documentStats.total}</div>
-                          <div className="text-xs text-on-surface-muted">documents</div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={syncDocuments}
+                            disabled={isSyncing}
+                            data-testid="button-sync-documents"
+                          >
+                            {isSyncing ? (
+                              <>
+                                <Download className="mr-2 h-4 w-4 animate-spin" />
+                                Synchronisation...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="mr-2 h-4 w-4" />
+                                Synchroniser OneDrive
+                              </>
+                            )}
+                          </Button>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-gray-900">{documentStats.total}</div>
+                            <div className="text-xs text-on-surface-muted">documents</div>
+                          </div>
                         </div>
                       </div>
                       

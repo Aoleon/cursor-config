@@ -42,7 +42,17 @@ export async function registerRoutes(app: Express) {
   // durant la migration progressive. Pattern standard pour migration progressive.
   const storageInterface = storage as unknown as IStorage;
   
-  // 4. Create and mount modular routes AFTER auth setup
+  // 4. Initialize DocumentSyncService singleton BEFORE routes
+  const { initializeDocumentSyncService } = await import('./services/DocumentSyncService');
+  initializeDocumentSyncService(storageInterface, eventBus);
+  logger.info('✅ DocumentSyncService initialized', {
+    metadata: {
+      module: 'DocumentSyncService',
+      operation: 'initialize'
+    }
+  });
+  
+  // 5. Create and mount modular routes AFTER auth setup
   const chiffrageRouter = createChiffrageRouter(storageInterface, eventBus);
   const batigestRouter = createBatigestRouter(storageInterface, eventBus);
   const authRouter = createAuthRouter(storageInterface, eventBus);

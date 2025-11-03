@@ -129,8 +129,8 @@ export class DocumentSyncService {
               filePath: `onedrive/${aoReference}/${fileData.category}/${fileData.name}`,
               category: fileData.category as any,
               uploadedBy: 'system', // TODO: récupérer l'utilisateur qui a uploadé
-              aoId, // ✅ Association AO pour getDocumentsByEntity
               metadata: {
+                aoId, // ✅ Association AO stockée dans metadata pour getDocumentsByEntity
                 aoReference,
                 syncSource: 'onedrive-sync'
               },
@@ -145,9 +145,10 @@ export class DocumentSyncService {
             result.errors.push(`Erreur ajout ${fileData.name}: ${error.message}`);
           }
         } else {
-          // ✅ Mettre à jour les métadonnées (nom, path, url, category, filePath) + lastSyncedAt + backfill aoId manquant
+          // ✅ Mettre à jour les métadonnées (nom, path, url, category, filePath) + lastSyncedAt
           const existingDoc = existingDocsMap.get(oneDriveId)!;
-          const needsBackfill = !existingDoc.aoId; // Documents synchro avant la correction aoId
+          const currentMetadata = (existingDoc.metadata as any) || {};
+          const needsBackfill = !currentMetadata.aoId; // Documents synchro avant la correction aoId
           const needsUpdate = 
             existingDoc.name !== fileData.name ||
             existingDoc.oneDrivePath !== `${basePath}/${fileData.category}/${fileData.name}` ||
@@ -157,13 +158,17 @@ export class DocumentSyncService {
 
           try {
             await this.storage.updateDocument(existingDoc.id, {
-              aoId, // ✅ Backfill aoId manquant pour documents legacy
               name: fileData.name,
               originalName: fileData.name,
               filePath: `onedrive/${aoReference}/${fileData.category}/${fileData.name}`,
               category: fileData.category as any,
               oneDrivePath: `${basePath}/${fileData.category}/${fileData.name}`,
               oneDriveUrl: fileData.webUrl,
+              metadata: {
+                ...currentMetadata,
+                aoId, // ✅ Backfill aoId manquant dans metadata pour documents legacy
+                aoReference
+              },
               lastSyncedAt: new Date()
             });
             if (needsBackfill) {

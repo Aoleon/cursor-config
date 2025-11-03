@@ -145,6 +145,49 @@ export function useAoDocuments(aoId: string) {
     }
   };
 
+  // Mutation pour synchronisation manuelle OneDrive → DB
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/aos/${aoId}/documents/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      const data = await response.json();
+      
+      // Gérer les erreurs HTTP (409 = sync en cours, 500 = erreur serveur)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur lors de la synchronisation');
+      }
+      
+      // Vérifier success dans la réponse (même en HTTP 200)
+      if (!data.success) {
+        throw new Error(data.message || data.errors?.join(', ') || 'Synchronisation échouée');
+      }
+      
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/aos/${aoId}/documents`] });
+      toast({
+        title: "Synchronisation terminée",
+        description: `${data.documentsAdded} ajoutés, ${data.documentsUpdated} mis à jour, ${data.documentsDeleted} supprimés`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur de synchronisation",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fonction pour lancer la synchronisation manuelle
+  const syncDocuments = () => {
+    syncMutation.mutate();
+  };
+
   // Calculer les statistiques
   const stats = {
     total: Object.values(documents).reduce((acc: number, folder: any) => acc + folder.length, 0),
@@ -160,5 +203,7 @@ export function useAoDocuments(aoId: string) {
     uploadProgress,
     stats,
     isUploading: uploadMutation.isPending,
+    syncDocuments,
+    isSyncing: syncMutation.isPending,
   };
 }

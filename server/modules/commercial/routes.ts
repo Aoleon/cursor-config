@@ -805,6 +805,84 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     })
   );
 
+  // POST /api/aos/:aoId/documents/sync - Synchroniser les documents OneDrive → DB
+  router.post('/api/aos/:aoId/documents/sync',
+    isAuthenticated,
+    validateParams(commonParamSchemas.aoId),
+    asyncHandler(async (req: any, res: Response) => {
+      const aoId = req.params.aoId;
+      
+      logger.info('[Commercial] Démarrage synchronisation documents OneDrive', {
+        metadata: {
+          route: '/api/aos/:aoId/documents/sync',
+          method: 'POST',
+          aoId,
+          userId: req.user?.id
+        }
+      });
+      
+      const ao = await storage.getAo(aoId);
+      if (!ao) {
+        throw new NotFoundError("AO introuvable");
+      }
+      
+      try {
+        // Import singleton DocumentSyncService
+        const { getDocumentSyncService } = await import('../../services/DocumentSyncService');
+        const syncService = getDocumentSyncService();
+        
+        // Lancer la synchronisation
+        const result = await syncService.syncDocuments({
+          aoId,
+          aoReference: ao.reference,
+          force: false
+        });
+        
+        logger.info('[Commercial] Synchronisation documents terminée', {
+          metadata: {
+            aoId,
+            aoReference: ao.reference,
+            ...result
+          }
+        });
+        
+        // Retourner HTTP 409 si sync déjà en cours, 500 si erreur globale
+        if (!result.success) {
+          if (result.errors.some(err => err.includes('déjà en cours'))) {
+            res.status(409).json({
+              success: false,
+              message: 'Synchronisation déjà en cours pour cet AO',
+              errors: result.errors
+            });
+            return;
+          }
+          res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la synchronisation',
+            documentsAdded: result.documentsAdded,
+            documentsUpdated: result.documentsUpdated,
+            documentsDeleted: result.documentsDeleted,
+            errors: result.errors
+          });
+          return;
+        }
+        
+        res.json({
+          success: true,
+          documentsAdded: result.documentsAdded,
+          documentsUpdated: result.documentsUpdated,
+          documentsDeleted: result.documentsDeleted,
+          errors: result.errors
+        });
+      } catch (error: any) {
+        logger.error('[Commercial] Erreur synchronisation OneDrive', error, {
+          metadata: { aoId, aoReference: ao.reference }
+        });
+        throw error;
+      }
+    })
+  );
+
   // ========================================
   // AO CONTACTS ROUTES - Table de liaison AO ↔ Contacts
   // ========================================

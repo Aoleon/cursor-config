@@ -82,6 +82,9 @@ const SystemStatus = lazy(() => import("@/pages/SystemStatusPage"));
 const ChatbotPage = lazy(() => import("@/pages/chatbot"));
 const ChatbotDemo = lazy(() => import("@/pages/ChatbotDemo"));
 
+// OneDrive
+const OneDriveManager = lazy(() => import("@/pages/OneDriveManager"));
+
 function ProtectedRoute({ component: Component, showSidebar = true }: { component: React.ComponentType<any>; showSidebar?: boolean }) {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -209,6 +212,9 @@ function Router() {
       <Route path="/batigest/dashboard" component={() => <ProtectedRoute component={BatigestDashboard} />} />
       <Route path="/batigest/purchase-order-generator" component={() => <ProtectedRoute component={PurchaseOrderGenerator} />} />
       <Route path="/batigest/client-quote-generator" component={() => <ProtectedRoute component={ClientQuoteGenerator} />} />
+
+      {/* OneDrive */}
+      <Route path="/onedrive" component={() => <ProtectedRoute component={OneDriveManager} />} />
       
       {/* ============= MONDAY.COM INTEGRATION ============= */}
       <Route path="/monday/import" component={() => <ProtectedRoute component={MondayImport} />} />

@@ -58,6 +58,8 @@ export class OneDriveService {
 
   /**
    * Get user's drive information
+   * Note: Uses /me endpoint which requires delegated permissions.
+   * For app-only access, you would need to use /drives/{drive-id} or /users/{user-id}/drive
    */
   async getDriveInfo() {
     try {
@@ -74,6 +76,31 @@ export class OneDriveService {
       };
     } catch (error) {
       logger.error('Failed to get drive info', error as Error);
+      throw new Error('Failed to retrieve OneDrive information');
+    }
+  }
+
+  /**
+   * Get drive information using a specific user ID or drive ID
+   * Use this for application-only authentication
+   */
+  async getDriveByUserId(userId: string) {
+    try {
+      const drive = await this.client.api(`/users/${userId}/drive`).get();
+      return {
+        id: drive.id,
+        driveType: drive.driveType,
+        owner: drive.owner?.user?.displayName,
+        quota: {
+          total: drive.quota?.total,
+          used: drive.quota?.used,
+          remaining: drive.quota?.remaining
+        }
+      };
+    } catch (error) {
+      logger.error('Failed to get drive info by user ID', error as Error, {
+        metadata: { userId }
+      });
       throw new Error('Failed to retrieve OneDrive information');
     }
   }

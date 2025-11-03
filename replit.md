@@ -62,7 +62,7 @@ The application features a modern fullstack architecture. The frontend uses Reac
 *   EventBus for inter-component communication.
 
 **Recent Changes (November 2025)**:
-*   **OneDrive Integration** ✅ **PRODUCTION-READY**: Intégration OneDrive comme GED centrale (3 novembre 2025)
+*   **OneDrive Integration** ✅ **PHASE 1 COMPLETE**: Intégration OneDrive comme GED centrale (3 novembre 2025)
     - **Routes opérationnelles** (module Commercial):
       - `GET /api/aos/:aoId/documents` : Liste les documents depuis OneDrive (`OneDrive-JLM/01 - ETUDES AO/AO-{reference}/`)
       - `POST /api/aos/:aoId/documents/upload-url` : Prépare l'upload vers OneDrive (legacy, pour compatibilité)
@@ -88,12 +88,18 @@ The application features a modern fullstack architecture. The frontend uses Reac
       - Support progression upload en temps réel via XMLHttpRequest
       - Invalidation automatique du cache React Query après upload
     - **DocumentSyncService** ✅ **PRODUCTION-READY** (validé architecte):
+      - **Singleton partagé** : initializeDocumentSyncService() au démarrage, syncInProgress global
       - Synchronisation OneDrive → DB pour détection nouveaux documents
-      - **Backfill automatique** : aoId ajouté aux documents legacy au resync
+      - **Backfill automatique** : metadata.aoId ajouté aux documents legacy au resync
       - **Métadonnées complètes** : name, path, url, category, filePath mis à jour
       - **Gestion renommages** : détection et propagation des renames OneDrive
       - **Gestion déplacements** : changements de catégorie détectés et appliqués
       - Gestion des conflits et doublons via oneDriveId unique
+    - **Synchronisation manuelle** ✅ **PRODUCTION-READY** (validé architecte):
+      - Route POST /api/aos/:aoId/documents/sync avec HTTP 409/500 pour erreurs
+      - Hook useSyncAoDocuments avec validation data.success et toast notifications
+      - Bouton UI "Synchroniser OneDrive" avec loading state et data-testid
+      - Métriques temps réel (documentsAdded/Updated/Deleted)
     - **Services**: `OneDriveService` (listItems, uploadSmallFile, uploadLargeFile) et `MicrosoftAuthService` (MSAL authentication)
 *   **Monday.com Import Fixes** ✅ **PRODUCTION-READY**: 11 critical corrections to ensure data integrity
     - Added `mondayItemId` tracking in all imports (Projects, AOs, Suppliers)

@@ -3438,6 +3438,14 @@ export const documents = pgTable("documents", {
   downloadCount: integer("download_count").default(0),
   viewCount: integer("view_count").default(0),
   
+  // Intégration OneDrive
+  oneDriveId: varchar("onedrive_id"), // ID du fichier sur OneDrive
+  oneDrivePath: text("onedrive_path"), // Chemin complet sur OneDrive
+  oneDriveUrl: text("onedrive_url"), // URL web du fichier
+  oneDriveShareLink: text("onedrive_share_link"), // Lien de partage si créé
+  syncedFromOneDrive: boolean("synced_from_onedrive").default(false), // Document provient d'OneDrive
+  lastSyncedAt: timestamp("last_synced_at"), // Dernière synchronisation
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
@@ -3447,6 +3455,8 @@ export const documents = pgTable("documents", {
     tagsIdx: index("documents_tags_idx").using('gin', table.tags),
     checksumIdx: index("documents_checksum_idx").on(table.checksum),
     archivedIdx: index("documents_archived_idx").on(table.isArchived),
+    oneDriveIdIdx: index("documents_onedrive_id_idx").on(table.oneDriveId),
+    syncedFromOneDriveIdx: index("documents_synced_onedrive_idx").on(table.syncedFromOneDrive),
   };
 });
 

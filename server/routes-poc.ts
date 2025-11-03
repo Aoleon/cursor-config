@@ -36,6 +36,7 @@ import { PeriodicDetectionScheduler } from "./services/PeriodicDetectionSchedule
 import { eventBus } from "./eventBus";
 import { getAIService } from "./services/AIService";
 import aiServiceRoutes from "./routes/ai-service";
+import oneDriveRoutes from "./routes/onedrive";
 import { RBACService } from "./services/RBACService";
 import { SQLEngineService } from "./services/SQLEngineService";
 import { BusinessContextService } from "./services/BusinessContextService";
@@ -288,6 +289,9 @@ registerTeamsRoutes(app);
 
 // Enregistrer les routes du service IA multi-modèles Text-to-SQL - SÉCURISÉES
 app.use("/api/ai", isAuthenticated, rateLimits.creation, aiServiceRoutes);
+
+// Enregistrer les routes OneDrive
+app.use("/api/onedrive", isAuthenticated, oneDriveRoutes);
 
   // ============================================================
   // PROJECT TIMELINES & PERFORMANCE METRICS ROUTES - MIGRATED TO server/modules/projects/routes.ts

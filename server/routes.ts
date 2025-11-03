@@ -7,6 +7,7 @@ import { setupAuth } from "./replitAuth";
 import { createChiffrageRouter } from "./modules/chiffrage/routes";
 import { createBatigestRouter } from "./modules/batigest/routes";
 import { createAuthRouter } from "./modules/auth/routes";
+import { createMicrosoftAuthRoutes } from "./modules/auth/microsoftAuth";
 import { createSuppliersRouter } from "./modules/suppliers/routes";
 import { createProjectsRouter } from "./modules/projects/routes";
 import { createAnalyticsRouter } from "./modules/analytics/routes";
@@ -72,6 +73,7 @@ export async function registerRoutes(app: Express) {
   const chiffrageRouter = createChiffrageRouter(storageInterface, eventBus);
   const batigestRouter = createBatigestRouter(storageInterface, eventBus);
   const authRouter = createAuthRouter(storageInterface, eventBus);
+  const microsoftAuthRouter = createMicrosoftAuthRoutes(storageInterface);
   const suppliersRouter = createSuppliersRouter(storageInterface, eventBus);
   const projectsRouter = createProjectsRouter(storageInterface, eventBus);
   const analyticsRouter = createAnalyticsRouter(storageInterface, eventBus);
@@ -92,6 +94,7 @@ export async function registerRoutes(app: Express) {
   app.use(chiffrageRouter);
   app.use(batigestRouter);
   app.use(authRouter);
+  app.use(microsoftAuthRouter);
   app.use(suppliersRouter);
   app.use(projectsRouter);
   app.use(analyticsRouter);

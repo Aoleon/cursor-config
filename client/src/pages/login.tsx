@@ -5,9 +5,11 @@ import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Wrench, Lock, User, LogIn } from "lucide-react";
+import { Wrench, Lock, User, LogIn, Briefcase } from "lucide-react";
+import { SiMicrosoftazure } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -17,9 +19,19 @@ import { useLocation } from "wouter";
 const basicLoginSchema = z.object({
   username: z.string().min(1, "Le nom d'utilisateur est requis"),
   password: z.string().min(1, "Le mot de passe est requis"),
+  role: z.enum(["admin", "ca", "chef_equipe", "technicien_be", "technicien_terrain", "client"]),
 });
 
 type BasicLoginData = z.infer<typeof basicLoginSchema>;
+
+const ROLE_OPTIONS = [
+  { value: "admin", label: "Administrateur" },
+  { value: "ca", label: "Chargé d'Affaires" },
+  { value: "chef_equipe", label: "Chef d'Équipe" },
+  { value: "technicien_be", label: "Technicien BE" },
+  { value: "technicien_terrain", label: "Technicien Terrain" },
+  { value: "client", label: "Client" },
+];
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -31,6 +43,7 @@ export default function Login() {
     defaultValues: {
       username: "",
       password: "",
+      role: "admin",
     },
   });
 
@@ -65,9 +78,9 @@ export default function Login() {
     }
   };
 
-  const handleRobinswoodLogin = () => {
-    // Redirection vers l'authentification OIDC Robinswood
-    window.location.href = "/api/login";
+  const handleMicrosoftLogin = () => {
+    // Redirection vers l'authentification Microsoft Azure AD
+    window.location.href = "/auth/microsoft";
   };
 
   return (
@@ -146,6 +159,31 @@ export default function Login() {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rôle</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-role">
+                            <SelectValue placeholder="Sélectionnez un rôle" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {ROLE_OPTIONS.map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
+                              {role.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <Button
                   type="submit"
                   className="w-full"
@@ -186,23 +224,21 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Authentification Robinswood (OIDC) */}
+        {/* Authentification Microsoft */}
         <Card className="border-0 shadow-card">
           <CardContent className="pt-6">
             <Button
-              onClick={handleRobinswoodLogin}
+              onClick={handleMicrosoftLogin}
               variant="outline"
-              className="w-full border-2 border-primary text-primary hover:bg-primary hover:text-on-primary"
-              data-testid="button-login-robinswood"
+              className="w-full border-2 border-[#0078D4] text-[#0078D4] hover:bg-[#0078D4] hover:text-white"
+              data-testid="button-login-microsoft"
             >
-              <div className="w-5 h-5 mr-2 bg-primary rounded flex items-center justify-center">
-                <span className="text-on-primary text-xs font-bold">R</span>
-              </div>
-              Connexion Robinswood
+              <SiMicrosoftazure className="w-5 h-5 mr-2" />
+              Se connecter avec Microsoft
             </Button>
             
             <p className="text-xs text-muted-foreground text-center mt-2">
-              Authentification via le compte Robinswood
+              Authentification via le compte Microsoft Azure AD
             </p>
           </CardContent>
         </Card>

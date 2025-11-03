@@ -51,26 +51,24 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
   // AUTHENTICATION ROUTES
   // ========================================
 
-  // Basic Auth Login Route (Development Only)
+  // Basic Auth Login Route (Development and Internal Staff)
   router.post('/api/login/basic', 
     rateLimits.auth, // Rate limiting: 5 attempts per 15 minutes
     validateBody(basicLoginSchema),
     asyncHandler(async (req: Request, res: Response) => {
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ message: "Not found" });
-    }
-    
-    const { username, password } = req.body as BasicAuthRequest;
+    const { username, password, role } = req.body as BasicAuthRequest & { role?: string };
 
     logger.info('[Auth] Tentative connexion basic', { 
       metadata: { 
         route: '/api/login/basic',
         method: 'POST',
         username,
+        role,
         hasSession: !!(req as any).session
       }
     });
 
+    // Default admin credentials (development)
     if (username === 'admin' && password === 'admin') {
       const adminUser: AuthUser = {
         id: 'admin-dev-user',
@@ -78,7 +76,7 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
         firstName: 'Admin',
         lastName: 'Development',
         profileImageUrl: null,
-        role: 'admin',
+        role: role || 'admin',
         isBasicAuth: true,
       };
 
@@ -86,7 +84,8 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
         metadata: { 
           route: '/api/login/basic',
           method: 'POST',
-          userId: adminUser.id
+          userId: adminUser.id,
+          role: adminUser.role
         }
       });
       

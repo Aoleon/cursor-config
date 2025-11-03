@@ -25,12 +25,12 @@ export default function ValidationList() {
     },
     onSuccess: (data, aoId) => {
       // Invalider les queries reliées
-      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_attente_validation" }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "fin_etudes_validee" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_cours_chiffrage" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "finalise" }] });
       queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       
       toast({
-        title: "Fin d'études validée",
+        title: "Validation BE réussie",
         description: "L'AO peut maintenant être transformé en projet",
       });
     },
@@ -43,16 +43,14 @@ export default function ValidationList() {
     }
   });
 
-  // Récupérer les AOs Monday en attente de validation
+  // Récupérer les AOs en cours de chiffrage (prêts pour validation BE)
   const { data: offers = [], isLoading, error } = useQuery({
-    queryKey: ["/api/aos", { status: "en_attente_validation" }],
+    queryKey: ["/api/aos", { status: "en_cours_chiffrage" }],
     queryFn: async () => {
       console.log("🔍 Chargement des AOs en attente de validation...");
       try {
-        // Récupérer uniquement les AOs en statut "en_attente_validation"
-        // Un AO doit passer explicitement de "en_cours_chiffrage" à "en_attente_validation"
-        // quand le chiffrage est terminé et il est prêt pour validation
-        const response = await fetch("/api/aos?status=en_attente_validation");
+        // Récupérer les AOs en statut "en_cours_chiffrage" (après étude technique, en attente de validation BE)
+        const response = await fetch("/api/aos?status=en_cours_chiffrage");
         const result = await response.json();
         
         // L'API retourne { success: true, data: [...] }
@@ -75,7 +73,7 @@ export default function ValidationList() {
   // Fonction pour obtenir le badge de statut
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      'en_attente_validation': { label: 'Prêt pour validation', variant: 'secondary' as const, color: 'text-orange-600' },
+      'en_cours_chiffrage': { label: 'Prêt pour validation', variant: 'secondary' as const, color: 'text-orange-600' },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { 
       label: status, 
@@ -296,7 +294,7 @@ export default function ValidationList() {
                         Voir détails
                       </Button>
                       
-                      {offer.status === 'en_attente_validation' && !offer.finEtudesValidatedAt && (
+                      {offer.status === 'en_cours_chiffrage' && !offer.finEtudesValidatedAt && (
                         <Button 
                           size="sm"
                           onClick={() => validateStudiesMutation.mutate(offer.id)}
@@ -304,7 +302,7 @@ export default function ValidationList() {
                           data-testid={`button-validate-${offer.id}`}
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
-                          {validateStudiesMutation.isPending ? 'Validation...' : 'Valider fin d\'études'}
+                          {validateStudiesMutation.isPending ? 'Validation...' : 'Valider BE'}
                         </Button>
                       )}
                       

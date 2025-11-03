@@ -26,9 +26,9 @@ export default function ChiffrageList() {
       return response.json();
     },
     onSuccess: (data, aoId) => {
-      // Invalider les queries reliées avec les nouvelles clés cohérentes
-      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: ["en_attente_fournisseurs", "en_cours_chiffrage"] }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_attente_fournisseurs" }] });
+      // Invalider les queries reliées
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: ["etude", "en_cours_chiffrage"] }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "etude" }] });
       queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_cours_chiffrage" }] });
       queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       
@@ -46,25 +46,25 @@ export default function ChiffrageList() {
     }
   });
 
-  // Récupérer les AOs Monday prêts pour chiffrage et en cours de chiffrage
+  // Récupérer les AOs prêts pour chiffrage (après étude technique) et en cours de chiffrage
   const { data: offers = [], isLoading, error } = useQuery({
-    queryKey: ["/api/aos", { status: ["en_attente_fournisseurs", "en_cours_chiffrage"] }],
+    queryKey: ["/api/aos", { status: ["etude", "en_cours_chiffrage"] }],
     queryFn: async () => {
       console.log("🔍 Chargement des AOs pour chiffrage...");
       try {
-        // Récupérer les AOs prêts à chiffrer ET en cours de chiffrage
-        const [resAttente, resEnCours] = await Promise.all([
-          fetch("/api/aos?status=en_attente_fournisseurs").then(r => r.json()),
+        // Récupérer les AOs prêts à chiffrer (étude terminée) ET en cours de chiffrage
+        const [resEtude, resEnCours] = await Promise.all([
+          fetch("/api/aos?status=etude").then(r => r.json()),
           fetch("/api/aos?status=en_cours_chiffrage").then(r => r.json())
         ]);
         
         // Extraire les données des réponses formatées avec sendSuccess
-        const aosAttenteFournisseurs = resAttente?.data || [];
+        const aosEtude = resEtude?.data || [];
         const aosEnCoursChiffrage = resEnCours?.data || [];
         
-        const allOffers = [...aosAttenteFournisseurs, ...aosEnCoursChiffrage];
+        const allOffers = [...aosEtude, ...aosEnCoursChiffrage];
         console.log("✅ Données reçues:", {
-          pretAChiffrer: aosAttenteFournisseurs?.length || 0,
+          pretAChiffrer: aosEtude?.length || 0,
           enCoursChiffrage: aosEnCoursChiffrage?.length || 0,
           total: allOffers.length
         });
@@ -81,7 +81,7 @@ export default function ChiffrageList() {
   // Fonction pour obtenir le badge de statut
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      'en_attente_fournisseurs': { label: 'Prêt à chiffrer', variant: 'default' as const, color: 'text-blue-600' },
+      'etude': { label: 'Prêt à chiffrer', variant: 'default' as const, color: 'text-blue-600' },
       'en_cours_chiffrage': { label: 'En cours de chiffrage', variant: 'secondary' as const, color: 'text-orange-600' },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { 
@@ -110,7 +110,7 @@ export default function ChiffrageList() {
   // Calcul des statistiques
   const stats = {
     total: offers.length,
-    pretAChiffrer: offers.filter((offer: any) => offer.status === 'en_attente_fournisseurs').length,
+    pretAChiffrer: offers.filter((offer: any) => offer.status === 'etude').length,
     enCoursChiffrage: offers.filter((offer: any) => offer.status === 'en_cours_chiffrage').length,
     montantTotal: offers.reduce((sum: number, offer: any) => sum + (offer.estimatedAmount || 0), 0),
   };

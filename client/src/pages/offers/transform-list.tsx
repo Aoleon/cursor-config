@@ -43,13 +43,13 @@ export default function TransformList() {
     }
   });
 
-  // Récupérer les AOs Monday prêts à transformer
+  // Récupérer les AOs prêts à transformer (statut finalise)
   const { data: offers = [], isLoading, error } = useQuery({
     queryKey: ["/api/aos", "transform"],
     queryFn: async () => {
       console.log("🔍 Chargement des AOs prêts à transformer...");
       try {
-        const response = await fetch("/api/aos?status=fin_etudes_validee,valide,signe");
+        const response = await fetch("/api/aos?status=finalise");
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
@@ -101,8 +101,8 @@ export default function TransformList() {
     }
     
     const statusMap = {
-      'fin_etudes_validee': { label: 'Validée BE', variant: 'default' as const, color: 'text-primary' },
-      'valide': { label: 'Prête', variant: 'secondary' as const, color: 'text-success' },
+      'finalise': { label: 'Finalisée', variant: 'default' as const, color: 'text-primary' },
+      'en_cours_chiffrage': { label: 'En chiffrage', variant: 'secondary' as const, color: 'text-orange-600' },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { 
       label: status, 
@@ -130,9 +130,9 @@ export default function TransformList() {
   // Calcul des statistiques
   const stats = {
     total: offers.length,
-    validees: offers.filter((offer: any) => offer.status === 'fin_etudes_validee').length,
-    pretes: offers.filter((offer: any) => offer.status === 'valide').length,
+    finalisees: offers.filter((offer: any) => offer.status === 'finalise').length,
     transformees: offers.filter((offer: any) => isTransformed(offer.id)).length,
+    restantes: offers.filter((offer: any) => !isTransformed(offer.id)).length,
   };
 
   if (isLoading) {
@@ -195,23 +195,23 @@ export default function TransformList() {
         
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Validées BE</CardTitle>
+            <CardTitle className="text-sm font-medium">Finalisées</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {stats.validees}
+              {stats.finalisees}
             </div>
-            <p className="text-xs text-muted-foreground">Fin d'études OK</p>
+            <p className="text-xs text-muted-foreground">Validées BE</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Prêtes</CardTitle>
+            <CardTitle className="text-sm font-medium">Restantes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {stats.pretes}
+              {stats.restantes}
             </div>
             <p className="text-xs text-muted-foreground">À transformer</p>
           </CardContent>

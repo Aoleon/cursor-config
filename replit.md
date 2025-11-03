@@ -87,10 +87,13 @@ The application features a modern fullstack architecture. The frontend uses Reac
       - Composant `DocumentUploadZone` avec drag & drop déjà intégré dans `ao-detail.tsx`
       - Support progression upload en temps réel via XMLHttpRequest
       - Invalidation automatique du cache React Query après upload
-    - **DocumentSyncService** ✅ **IMPLÉMENTÉ**:
+    - **DocumentSyncService** ✅ **PRODUCTION-READY** (validé architecte):
       - Synchronisation OneDrive → DB pour détection nouveaux documents
-      - Utilise metadata temporairement pour aoId (migration document_links à venir)
-      - Gestion des conflits et doublons via oneDriveId
+      - **Backfill automatique** : aoId ajouté aux documents legacy au resync
+      - **Métadonnées complètes** : name, path, url, category, filePath mis à jour
+      - **Gestion renommages** : détection et propagation des renames OneDrive
+      - **Gestion déplacements** : changements de catégorie détectés et appliqués
+      - Gestion des conflits et doublons via oneDriveId unique
     - **Services**: `OneDriveService` (listItems, uploadSmallFile, uploadLargeFile) et `MicrosoftAuthService` (MSAL authentication)
 *   **Monday.com Import Fixes** ✅ **PRODUCTION-READY**: 11 critical corrections to ensure data integrity
     - Added `mondayItemId` tracking in all imports (Projects, AOs, Suppliers)

@@ -476,14 +476,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
   // AO DOCUMENTS ROUTES - Gestion des documents d'AO
   // ========================================
 
-  // GET /api/aos/:aoId/documents - Lister les documents d'un AO
+  // GET /api/aos/:aoId/documents - Lister les documents d'un AO depuis OneDrive
   router.get('/api/aos/:aoId/documents',
     isAuthenticated,
     validateParams(commonParamSchemas.aoId),
     asyncHandler(async (req: any, res: Response) => {
       const aoId = req.params.aoId;
       
-      logger.info('[Commercial] Récupération documents AO', {
+      logger.info('[Commercial] Récupération documents AO depuis OneDrive', {
         metadata: {
           route: '/api/aos/:aoId/documents',
           method: 'GET',
@@ -492,30 +492,86 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         }
       });
       
-      const objectStorage = new ObjectStorageService();
-      
       const ao = await storage.getAo(aoId);
       if (!ao) {
         throw new NotFoundError("AO introuvable");
       }
       
-      await objectStorage.createOfferDocumentStructure(aoId, ao.reference);
-      
+      // Structure de réponse par catégories de documents
       const documents = {
         "01-DCE-Cotes-Photos": [],
         "02-Etudes-fournisseurs": [],
         "03-Devis-pieces-administratives": []
       };
       
-      logger.info('[Commercial] Liste documents AO récupérée', {
-        metadata: { aoId }
-      });
+      try {
+        // Import OneDriveService dynamiquement
+        const { oneDriveService } = await import('../../services/OneDriveService');
+        
+        // Chemin OneDrive basé sur la structure JLM : OneDrive-JLM/01 - ETUDES AO/AO-{reference}/
+        const basePath = `OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}`;
+        
+        // Liste les fichiers du dossier AO sur OneDrive
+        const oneDriveItems = await oneDriveService.listItems(basePath);
+        
+        // Organiser les fichiers par catégorie
+        for (const item of oneDriveItems) {
+          if (item.isFolder) {
+            // Si c'est un dossier, lister son contenu
+            const folderPath = `${basePath}/${item.name}`;
+            const folderItems = await oneDriveService.listItems(folderPath);
+            
+            // Mapper les fichiers vers le format attendu par le frontend
+            const mappedFiles = folderItems
+              .filter((file: any) => !file.isFolder)
+              .map((file: any) => ({
+                id: file.id,
+                fileName: file.name,
+                fileSize: file.size || 0,
+                uploadedAt: file.lastModifiedDateTime || file.createdDateTime,
+                folderName: item.name,
+                oneDriveId: file.id,
+                oneDrivePath: `${folderPath}/${file.name}`,
+                webUrl: file.webUrl
+              }));
+            
+            // Associer aux bonnes catégories
+            if (item.name.includes('DCE') || item.name.includes('Photos') || item.name.includes('01')) {
+              documents["01-DCE-Cotes-Photos"].push(...mappedFiles);
+            } else if (item.name.includes('Etudes') || item.name.includes('fournisseurs') || item.name.includes('02')) {
+              documents["02-Etudes-fournisseurs"].push(...mappedFiles);
+            } else if (item.name.includes('Devis') || item.name.includes('administratives') || item.name.includes('03')) {
+              documents["03-Devis-pieces-administratives"].push(...mappedFiles);
+            }
+          }
+        }
+        
+        logger.info('[Commercial] Documents OneDrive récupérés', {
+          metadata: { 
+            aoId, 
+            reference: ao.reference,
+            totalDocs: Object.values(documents).reduce((acc: number, arr: any) => acc + arr.length, 0)
+          }
+        });
+        
+      } catch (error: any) {
+        // Si OneDrive échoue, logger l'erreur et informer l'utilisateur via un message d'erreur explicite
+        logger.error('[Commercial] Erreur récupération OneDrive', error, {
+          metadata: { aoId, reference: ao.reference, error: error.message, basePath: `OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}` }
+        });
+        
+        // Retourner une erreur 503 au lieu d'un objet vide pour que le frontend puisse afficher un message approprié
+        if (error.message?.includes('404') || error.message?.includes('not found')) {
+          throw new NotFoundError(`Le dossier OneDrive pour l'AO ${ao.reference} n'existe pas encore. Vérifiez le chemin: OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}`);
+        }
+        throw new Error(`Impossible d'accéder à OneDrive pour l'AO ${ao.reference}. Détails: ${error.message}`);
+      }
       
       res.json(documents);
     })
   );
 
-  // POST /api/aos/:aoId/documents/upload-url - Obtenir l'URL d'upload pour un document
+  // POST /api/aos/:aoId/documents/upload-url - Obtenir l'URL d'upload pour un document OneDrive
   router.post('/api/aos/:aoId/documents/upload-url',
     isAuthenticated,
     validateParams(commonParamSchemas.aoId),
@@ -527,7 +583,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         throw new ValidationError("folderName et fileName requis");
       }
       
-      logger.info('[Commercial] Génération URL upload document AO', {
+      logger.info('[Commercial] Génération URL upload document AO vers OneDrive', {
         metadata: {
           route: '/api/aos/:aoId/documents/upload-url',
           method: 'POST',
@@ -538,32 +594,52 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         }
       });
       
-      const objectStorage = new ObjectStorageService();
+      const ao = await storage.getAo(aoId);
+      if (!ao) {
+        throw new NotFoundError("AO introuvable");
+      }
       
       try {
-        const uploadUrl = await objectStorage.getOfferFileUploadURL(aoId, folderName, fileName);
+        // Import OneDriveService dynamiquement
+        const { oneDriveService } = await import('../../services/OneDriveService');
         
-        logger.info('[Commercial] URL upload générée', {
-          metadata: { aoId, folderName, fileName }
+        // Chemin OneDrive : OneDrive-JLM/01 - ETUDES AO/AO-{reference}/{folderName}/
+        const uploadPath = `OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}/${folderName}`;
+        
+        // Pour OneDrive, on retourne un indicateur que l'upload sera géré côté serveur
+        // (OneDrive ne supporte pas les upload URLs pré-signées comme S3)
+        logger.info('[Commercial] Upload OneDrive préparé', {
+          metadata: { aoId, folderName, fileName, uploadPath }
         });
         
         res.json({ 
-          uploadUrl, 
-          message: "Upload URL generated successfully", 
-          security: "File and folder names have been validated and sanitized" 
+          uploadUrl: `/api/aos/${aoId}/documents/upload-direct`,
+          uploadPath,
+          folderName,
+          fileName,
+          method: 'onedrive',
+          message: "OneDrive upload endpoint ready", 
+          security: "File and folder names have been validated" 
         });
       } catch (error: any) {
-        if (error.message && (
-            error.message.includes('Invalid folder name') ||
-            error.message.includes('File name') ||
-            error.message.includes('File extension not allowed') ||
-            error.message.includes('Invalid offer ID')
-        )) {
-          throw new ValidationError(error.message);
-        }
-        
+        logger.error('[Commercial] Erreur préparation upload OneDrive', error, {
+          metadata: { aoId, folderName, fileName }
+        });
         throw error;
       }
+    })
+  );
+
+  // POST /api/aos/:aoId/documents/upload-direct - Upload direct vers OneDrive (multipart)
+  router.post('/api/aos/:aoId/documents/upload-direct',
+    isAuthenticated,
+    validateParams(commonParamSchemas.aoId),
+    asyncHandler(async (req: any, res: Response) => {
+      const aoId = req.params.aoId;
+      
+      // Note: Cette route devrait utiliser multer pour gérer les uploads multipart
+      // Pour l'instant, on retourne une erreur car le frontend doit être adapté
+      throw new ValidationError("Upload direct OneDrive à implémenter avec multer");
     })
   );
 

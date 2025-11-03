@@ -43,7 +43,7 @@ export async function registerRoutes(app: Express) {
   const storageInterface = storage as unknown as IStorage;
   
   // 4. Initialize DocumentSyncService singleton BEFORE routes
-  const { initializeDocumentSyncService } = await import('./services/DocumentSyncService');
+  const { initializeDocumentSyncService, getDocumentSyncService } = await import('./services/DocumentSyncService');
   initializeDocumentSyncService(storageInterface, eventBus);
   logger.info('✅ DocumentSyncService initialized', {
     metadata: {
@@ -52,7 +52,23 @@ export async function registerRoutes(app: Express) {
     }
   });
   
-  // 5. Create and mount modular routes AFTER auth setup
+  // 5. Initialize SyncScheduler for automatic OneDrive sync
+  const { SyncScheduler } = await import('./services/SyncScheduler');
+  const documentSyncService = getDocumentSyncService();
+  const syncScheduler = new SyncScheduler(storageInterface, documentSyncService);
+  await syncScheduler.start();
+  logger.info('✅ SyncScheduler initialized', {
+    metadata: {
+      module: 'SyncScheduler',
+      operation: 'initialize',
+      status: syncScheduler.getStatus()
+    }
+  });
+  
+  // Store syncScheduler in app for access in routes
+  app.set('syncScheduler', syncScheduler);
+  
+  // 6. Create and mount modular routes AFTER auth setup
   const chiffrageRouter = createChiffrageRouter(storageInterface, eventBus);
   const batigestRouter = createBatigestRouter(storageInterface, eventBus);
   const authRouter = createAuthRouter(storageInterface, eventBus);

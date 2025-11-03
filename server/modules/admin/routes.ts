@@ -20,6 +20,7 @@ import type { EventBus } from '../../eventBus';
 import { z } from 'zod';
 import { insertDateIntelligenceRuleSchema, projectStatusEnum } from '@shared/schema';
 import { DateIntelligenceRulesSeeder } from '../../seeders/dateIntelligenceRulesSeeder';
+import { isValidCron } from 'cron-validator';
 
 // ========================================
 // VALIDATION SCHEMAS
@@ -680,9 +681,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
           }
         });
         
-        // Validation basique de l'expression cron si fournie
-        if (cronExpression && typeof cronExpression !== 'string') {
-          throw createError.validation("Expression cron invalide");
+        // Validation de l'expression cron si fournie
+        if (cronExpression !== undefined) {
+          if (typeof cronExpression !== 'string') {
+            throw createError.validation("Expression cron doit être une chaîne de caractères");
+          }
+          if (!isValidCron(cronExpression, { seconds: false })) {
+            throw createError.validation("Expression cron invalide. Format attendu: '0 */6 * * *'");
+          }
         }
         
         const updatedConfig = await storage.updateSyncConfig({

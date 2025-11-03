@@ -16,13 +16,18 @@ export class SyncScheduler {
 
   async start(): Promise<void> {
     try {
-      const config = await this.storage.getSyncConfig();
+      let config = await this.storage.getSyncConfig();
       
       if (!config) {
-        logger.info('[SyncScheduler] Aucune configuration trouvée, utilisation des valeurs par défaut', {
+        logger.info('[SyncScheduler] Aucune configuration trouvée, création config par défaut', {
           metadata: { service: 'SyncScheduler', operation: 'start' }
         });
-        return;
+        
+        config = await this.storage.updateSyncConfig({
+          isEnabled: false,
+          cronExpression: '0 */6 * * *',
+          updatedBy: 'system'
+        });
       }
 
       if (!config.isEnabled) {
@@ -79,6 +84,15 @@ export class SyncScheduler {
     await this.start();
   }
 
+  private async syncAOWithTimeout(aoId: string, aoReference: string, timeoutMs: number = 60000): Promise<{ documentsAdded: number; documentsUpdated: number; documentsDeleted: number; errors: string[] }> {
+    return Promise.race([
+      this.documentSyncService.syncAODocuments(aoId),
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error(`Timeout après ${timeoutMs}ms`)), timeoutMs)
+      )
+    ]);
+  }
+
   private async runSync(): Promise<void> {
     if (this.isRunning) {
       logger.warn('[SyncScheduler] Synchronisation déjà en cours, skip', {
@@ -106,16 +120,38 @@ export class SyncScheduler {
       let totalDocumentsUpdated = 0;
       let totalDocumentsDeleted = 0;
       const errors: string[] = [];
+      const AO_SYNC_TIMEOUT_MS = 120000;
+
+      logger.info('[SyncScheduler] Synchronisation de tous les AOs', {
+        metadata: { service: 'SyncScheduler', totalAOs: aos.length }
+      });
 
       for (const ao of aos) {
         try {
-          const result = await this.documentSyncService.syncAODocuments(ao.id);
+          const result = await this.syncAOWithTimeout(ao.id, ao.reference, AO_SYNC_TIMEOUT_MS);
           totalDocumentsAdded += result.documentsAdded;
           totalDocumentsUpdated += result.documentsUpdated;
           totalDocumentsDeleted += result.documentsDeleted;
           errors.push(...result.errors);
+          
+          logger.debug('[SyncScheduler] AO synchronisé', {
+            metadata: {
+              aoId: ao.id,
+              aoReference: ao.reference,
+              documentsAdded: result.documentsAdded,
+              documentsUpdated: result.documentsUpdated
+            }
+          });
         } catch (error: any) {
-          errors.push(`AO ${ao.reference}: ${error.message}`);
+          const errorMsg = `AO ${ao.reference}: ${error.message}`;
+          errors.push(errorMsg);
+          logger.warn('[SyncScheduler] Erreur synchronisation AO', {
+            metadata: {
+              aoId: ao.id,
+              aoReference: ao.reference,
+              error: error.message
+            }
+          });
         }
       }
 

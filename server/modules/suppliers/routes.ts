@@ -114,15 +114,17 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         }
       });
 
-      const suppliers = await storage.getSuppliers({
-        search,
-        specialization,
-        status,
-        limit: parseInt(limit),
-        offset: parseInt(offset)
-      });
+      // Get all suppliers (storage.getSuppliers returns Supplier[])
+      const allSuppliers = await storage.getSuppliers(search, status);
+      
+      // Apply manual pagination
+      const total = allSuppliers.length;
+      const paginatedSuppliers = allSuppliers.slice(
+        parseInt(offset), 
+        parseInt(offset) + parseInt(limit)
+      );
 
-      sendPaginatedSuccess(res, suppliers.data, suppliers.total);
+      sendPaginatedSuccess(res, paginatedSuppliers, total);
     })
   );
 

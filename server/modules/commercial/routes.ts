@@ -643,38 +643,66 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     })
   );
 
-  // POST /api/aos/:aoId/documents - Confirmer l'upload d'un document
+  // POST /api/aos/:aoId/documents - Confirmer l'upload d'un document OneDrive
   router.post('/api/aos/:aoId/documents',
     isAuthenticated,
     validateParams(commonParamSchemas.aoId),
+    validateBody(z.object({
+      folderName: z.string().min(1, "folderName requis"),
+      fileName: z.string().min(1, "fileName requis"),
+      oneDriveId: z.string().min(1, "oneDriveId requis"),
+      webUrl: z.string().url("webUrl doit être une URL valide"),
+      fileSize: z.number().int().nonnegative().optional(),
+      oneDrivePath: z.string().optional()
+    })),
     asyncHandler(async (req: any, res: Response) => {
       const aoId = req.params.aoId;
-      const { folderName, fileName, fileSize, uploadedUrl } = req.body;
+      const { folderName, fileName, fileSize, oneDriveId, oneDrivePath, webUrl } = req.body;
       
-      logger.info('[Commercial] Confirmation upload document AO', {
+      logger.info('[Commercial] Confirmation upload document AO vers OneDrive', {
         metadata: {
           route: '/api/aos/:aoId/documents',
           method: 'POST',
           aoId,
           fileName,
           fileSize,
+          folderName,
+          oneDriveId,
           userId: req.user?.id
         }
       });
       
+      const ao = await storage.getAo(aoId);
+      if (!ao) {
+        throw new NotFoundError("AO introuvable");
+      }
+      
+      // Métadonnées du document uploadé sur OneDrive (tous les champs validés)
       const documentInfo = {
-        id: `${aoId}-${folderName}-${Date.now()}`,
+        id: oneDriveId, // OneDrive ID validé par Zod
         aoId,
         folderName,
         fileName,
-        fileSize,
+        fileSize: fileSize || 0,
         uploadedAt: new Date().toISOString(),
-        uploadedUrl
+        oneDriveId,
+        oneDrivePath: oneDrivePath || `OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}/${folderName}/${fileName}`,
+        webUrl,
+        syncedFromOneDrive: true
       };
       
-      logger.info('[Commercial] Upload document confirmé', {
-        metadata: { aoId, fileName, fileSize }
+      logger.info('[Commercial] Upload document OneDrive confirmé', {
+        metadata: { 
+          aoId, 
+          fileName, 
+          fileSize, 
+          oneDriveId,
+          reference: ao.reference 
+        }
       });
+      
+      // TODO: Sauvegarder dans la table documents pour persistence locale
+      // await storage.createDocument(documentInfo);
       
       res.json(documentInfo);
     })

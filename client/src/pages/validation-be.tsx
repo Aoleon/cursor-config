@@ -37,20 +37,20 @@ export default function ValidationBE() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Récupérer les AOs Monday en attente de validation BE
+  // Récupérer les AOs Monday en cours de chiffrage (prêts pour validation BE)
   const { data: offers, isLoading, error } = useQuery({
-    queryKey: ["/api/aos", { status: "en_attente_validation" }],
+    queryKey: ["/api/aos", { status: "en_cours_chiffrage" }],
     queryFn: async () => {
-      console.log("🔍 Chargement des AOs en attente de validation BE...");
+      console.log("🔍 Chargement des AOs en cours de chiffrage...");
       try {
-        const response = await fetch("/api/aos?status=en_attente_validation");
+        const response = await fetch("/api/aos?status=en_cours_chiffrage");
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
         const result = await response.json();
         // L'API retourne { success: true, data: [...] }
         const data = Array.isArray(result) ? result : (result?.data || []);
-        console.log("✅ Données reçues:", data?.length, "AOs en attente de validation");
+        console.log("✅ Données reçues:", data?.length, "AOs en cours de chiffrage");
         return data;
       } catch (err) {
         console.error("❌ Erreur lors de la récupération des AOs:", err);
@@ -84,7 +84,7 @@ export default function ValidationBE() {
       return response.json();
     },
     onSuccess: (_, { approved }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_attente_validation" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_cours_chiffrage" }] });
       queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       toast({
         title: approved ? "AO validé" : "AO rejeté",
@@ -111,9 +111,9 @@ export default function ValidationBE() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "en_attente_validation": return "bg-warning/10 text-warning";
-      case "validee": return "bg-success/10 text-success";
-      case "rejetee": return "bg-error/10 text-error";
+      case "en_cours_chiffrage": return "bg-warning/10 text-warning";
+      case "finalise": return "bg-success/10 text-success";
+      case "archive": return "bg-error/10 text-error";
       default: return "bg-surface-muted text-on-surface-muted";
     }
   };
@@ -163,7 +163,7 @@ export default function ValidationBE() {
                 variant="outline" 
                 size="sm" 
                 className="mt-3"
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_attente_validation" }] })}
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_cours_chiffrage" }] })}
               >
                 Réessayer
               </Button>

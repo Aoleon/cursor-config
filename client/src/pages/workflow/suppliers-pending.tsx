@@ -21,20 +21,20 @@ export default function SuppliersPending() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Récupérer les AOs Monday validés/signés
+  // Récupérer les AOs Monday finalisés
   const { data: offers, isLoading, error } = useQuery({
     queryKey: ["/api/aos", "sent-quotes"],
     queryFn: async () => {
-      console.log("🔍 Chargement des AOs validés/signés...");
+      console.log("🔍 Chargement des AOs finalisés...");
       try {
-        const response = await fetch("/api/aos?status=valide,signe,transforme_en_projet");
+        const response = await fetch("/api/aos?status=finalise");
         if (!response.ok) {
           throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
         const result = await response.json();
         // L'API retourne { success: true, data: [...] }
         const data = Array.isArray(result) ? result : (result?.data || []);
-        console.log("✅ Données reçues:", data?.length, "AOs validés");
+        console.log("✅ Données reçues:", data?.length, "AOs finalisés");
         return data;
       } catch (err) {
         console.error("❌ Erreur lors de la récupération des AOs:", err);
@@ -70,9 +70,8 @@ export default function SuppliersPending() {
   // Fonction pour obtenir le statut badge
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      'valide': { label: 'Validé', variant: 'default' as const, color: 'text-blue-600' },
-      'signe': { label: 'Signé', variant: 'default' as const, color: 'text-green-600' },
-      'transforme_en_projet': { label: 'En projet', variant: 'secondary' as const, color: 'text-purple-600' },
+      'finalise': { label: 'Finalisé', variant: 'default' as const, color: 'text-green-600' },
+      'archive': { label: 'Archivé', variant: 'secondary' as const, color: 'text-gray-600' },
     };
     const statusInfo = statusMap[status as keyof typeof statusMap] || { label: status, variant: 'outline' as const, color: 'text-gray-600' };
     return (
@@ -114,8 +113,8 @@ export default function SuppliersPending() {
       );
     }
 
-    // Lien externe si l'offre est signée
-    if (offer.status === 'signe') {
+    // Lien externe pour les AOs finalisés
+    if (offer.status === 'finalise') {
       actions.push(
         <Button 
           key="external"
@@ -193,35 +192,35 @@ export default function SuppliersPending() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total envoyées</CardTitle>
+            <CardTitle className="text-sm font-medium">Total finalisés</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{offers?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Offres validées</p>
+            <p className="text-xs text-muted-foreground">AOs finalisés</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Signées</CardTitle>
+            <CardTitle className="text-sm font-medium">Finalisés</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {(offers ?? []).filter((offer: any) => offer.status === 'signe').length}
+              {(offers ?? []).filter((offer: any) => offer.status === 'finalise').length}
             </div>
-            <p className="text-xs text-muted-foreground">Clients acceptés</p>
+            <p className="text-xs text-muted-foreground">Prêts pour transformation</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">En projets</CardTitle>
+            <CardTitle className="text-sm font-medium">Avec projets</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {(offers ?? []).filter((offer: any) => offer.status === 'transforme_en_projet').length}
+              {(offers ?? []).filter((offer: any) => getAssociatedProject(offer.id)).length}
             </div>
-            <p className="text-xs text-muted-foreground">Projets actifs</p>
+            <p className="text-xs text-muted-foreground">Projets créés</p>
           </CardContent>
         </Card>
 
@@ -322,11 +321,11 @@ export default function SuppliersPending() {
                   <div className="flex items-center gap-4 mb-3">
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
-                      <span className="text-sm">Offre validée</span>
+                      <span className="text-sm">AO finalisé</span>
                     </div>
                     <div className="flex items-center">
-                      <Send className={`h-4 w-4 mr-1 ${offer.status === 'signe' ? 'text-green-600' : 'text-gray-400'}`} />
-                      <span className="text-sm">Envoyée client</span>
+                      <Send className={`h-4 w-4 mr-1 ${offer.status === 'finalise' ? 'text-green-600' : 'text-gray-400'}`} />
+                      <span className="text-sm">Prêt pour envoi</span>
                     </div>
                     <div className="flex items-center">
                       <ArrowRight className={`h-4 w-4 mr-1 ${getAssociatedProject(offer.id) ? 'text-purple-600' : 'text-gray-400'}`} />

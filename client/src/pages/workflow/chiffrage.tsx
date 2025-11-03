@@ -62,7 +62,7 @@ export default function Chiffrage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ 
-            status: "en_attente_validation",
+            status: "finalise",
             dpgfGenerated: true,
             validatedAt: new Date()
           })
@@ -80,7 +80,7 @@ export default function Chiffrage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_cours_chiffrage" }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_attente_validation" }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "finalise" }] });
       queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       toast({
         title: "Chiffrage validé",

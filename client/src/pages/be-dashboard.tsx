@@ -58,7 +58,7 @@ export default function BEDashboard() {
   // Calculate BE statistics
   const beStats = {
     totalOffers: offers.length,
-    inProgress: offers.filter((offer: OfferItem) => offer.status === 'en_chiffrage').length,
+    inProgress: offers.filter((offer: OfferItem) => offer.status === 'en_cours_chiffrage').length,
     priority: offers.filter((offer: OfferItem) => offer.isPriority).length,
     overloaded: beWorkload.filter((w: BeWorkloadItem) => parseFloat(w.loadPercentage) > 100).length,
     avgWorkload: beWorkload.length > 0 

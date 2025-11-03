@@ -203,6 +203,7 @@ export class OneDriveService {
       const fileSize = fileBuffer.length;
       const chunkSize = 320 * 1024; // 320KB chunks
       let uploadedBytes = 0;
+      let finalResponse: Response | null = null;
 
       // Upload in chunks
       while (uploadedBytes < fileSize) {
@@ -223,17 +224,32 @@ export class OneDriveService {
         }
 
         uploadedBytes = chunkEnd;
+        finalResponse = response;
         logger.debug('Upload progress', { 
           metadata: { uploadedBytes, fileSize, percentage: (uploadedBytes / fileSize * 100).toFixed(1) }
         });
       }
 
+      // Parse final response to get uploaded file metadata
+      // OneDrive returns the file metadata in the final chunk response
+      if (!finalResponse) {
+        throw new Error('Upload completed but no response received');
+      }
+
+      const uploadedItem = await finalResponse.json();
+      
       logger.info('Large file uploaded to OneDrive', { 
-        metadata: { fileName, path, size: fileSize }
+        metadata: { 
+          fileName, 
+          path, 
+          size: fileSize,
+          actualName: uploadedItem.name,
+          oneDriveId: uploadedItem.id
+        }
       });
       
-      // Get the uploaded file info
-      return await this.getItemByPath(fullPath) as OneDriveFile;
+      // Return the metadata from the upload response (handles renamed files correctly)
+      return this.mapToOneDriveItem(uploadedItem) as OneDriveFile;
     } catch (error) {
       logger.error('Failed to upload large file to OneDrive', error as Error, { 
         metadata: { fileName: options.fileName }

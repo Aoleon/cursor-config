@@ -40,6 +40,7 @@ import {
 } from '../../validation-schemas';
 import { calculerDateLimiteRemiseAuto, calculerDateRemiseJ15 } from '../../dateUtils';
 import { ObjectStorageService } from '../../objectStorage';
+import multer from 'multer';
 
 // ========================================
 // VALIDATION SCHEMAS
@@ -80,6 +81,14 @@ const selectSupplierSchema = z.object({
 
 export function createCommercialRouter(storage: IStorage, eventBus: EventBus): Router {
   const router = Router();
+
+  // Configuration multer pour uploads en mémoire
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 50 * 1024 * 1024 // 50MB max
+    }
+  });
 
   // ========================================
   // AO ROUTES - Appels d'Offres Management
@@ -634,12 +643,100 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
   router.post('/api/aos/:aoId/documents/upload-direct',
     isAuthenticated,
     validateParams(commonParamSchemas.aoId),
+    upload.single('file'),
     asyncHandler(async (req: any, res: Response) => {
       const aoId = req.params.aoId;
+      const file = req.file;
+      const { folderName } = req.body;
       
-      // Note: Cette route devrait utiliser multer pour gérer les uploads multipart
-      // Pour l'instant, on retourne une erreur car le frontend doit être adapté
-      throw new ValidationError("Upload direct OneDrive à implémenter avec multer");
+      if (!file) {
+        throw new ValidationError("Aucun fichier fourni");
+      }
+      
+      if (!folderName) {
+        throw new ValidationError("folderName requis");
+      }
+      
+      logger.info('[Commercial] Upload direct vers OneDrive', {
+        metadata: {
+          route: '/api/aos/:aoId/documents/upload-direct',
+          method: 'POST',
+          aoId,
+          fileName: file.originalname,
+          fileSize: file.size,
+          folderName,
+          userId: req.user?.id
+        }
+      });
+      
+      const ao = await storage.getAo(aoId);
+      if (!ao) {
+        throw new NotFoundError("AO introuvable");
+      }
+      
+      try {
+        // Import OneDriveService dynamiquement
+        const { oneDriveService } = await import('../../services/OneDriveService');
+        
+        // Chemin OneDrive : OneDrive-JLM/01 - ETUDES AO/AO-{reference}/{folderName}/
+        const uploadPath = `OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}/${folderName}`;
+        
+        // Upload vers OneDrive
+        const fileBuffer = file.buffer;
+        const uploadedFile = file.size > 4 * 1024 * 1024 
+          ? await oneDriveService.uploadLargeFile(fileBuffer, {
+              path: uploadPath,
+              fileName: file.originalname,
+              conflictBehavior: 'rename'
+            })
+          : await oneDriveService.uploadSmallFile(fileBuffer, {
+              path: uploadPath,
+              fileName: file.originalname,
+              conflictBehavior: 'rename'
+            });
+        
+        // Sauvegarder les métadonnées en base de données
+        const document = await storage.createDocument({
+          name: uploadedFile.name,
+          type: file.mimetype,
+          size: uploadedFile.size,
+          aoId,
+          category: folderName,
+          oneDriveId: uploadedFile.id,
+          oneDrivePath: `${uploadPath}/${uploadedFile.name}`,
+          oneDriveUrl: uploadedFile.webUrl,
+          syncedFromOneDrive: true,
+          lastSyncedAt: new Date()
+        });
+        
+        logger.info('[Commercial] Document uploadé et sauvegardé', {
+          metadata: {
+            aoId,
+            documentId: document.id,
+            fileName: uploadedFile.name,
+            fileSize: uploadedFile.size,
+            oneDriveId: uploadedFile.id
+          }
+        });
+        
+        res.json({
+          success: true,
+          document: {
+            id: document.id,
+            name: uploadedFile.name,
+            size: uploadedFile.size,
+            oneDriveId: uploadedFile.id,
+            webUrl: uploadedFile.webUrl,
+            category: folderName,
+            uploadedAt: document.uploadedAt
+          }
+        });
+      } catch (error: any) {
+        logger.error('[Commercial] Erreur upload OneDrive', error, {
+          metadata: { aoId, fileName: file.originalname, folderName }
+        });
+        throw error;
+      }
     })
   );
 

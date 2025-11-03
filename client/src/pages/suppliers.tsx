@@ -116,12 +116,12 @@ export default function Suppliers() {
   });
   const supplierRequests = supplierRequestsData?.data || [];
 
-  // Fetch AOs Monday for dropdown
+  // Fetch AOs for dropdown
   const { data: offersData } = useQuery<any>({
     queryKey: ['/api/aos'],
   });
   const offers = (offersData?.data || []).filter((offer: any) => 
-    ['nouveau', 'en_chiffrage', 'en_validation'].includes(offer.status)
+    ['etude', 'en_cours_chiffrage', 'finalise'].includes(offer.status)
   );
 
   // Create supplier mutation

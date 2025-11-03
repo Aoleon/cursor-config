@@ -23,11 +23,11 @@ export default function EtudeTechnique() {
   const queryClient = useQueryClient();
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
 
-  // Récupérer les AOs Monday en statut "nouveau" (étude technique)
+  // Récupérer les AOs en statut "etude" (étude technique)
   const { data: offers, isLoading, error } = useQuery({
-    queryKey: ["/api/aos", { status: "nouveau" }],
+    queryKey: ["/api/aos", { status: "etude" }],
     queryFn: async () => {
-      const response = await fetch("/api/aos?status=nouveau");
+      const response = await fetch("/api/aos?status=etude");
       if (!response.ok) {
         throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
       }
@@ -50,8 +50,8 @@ export default function EtudeTechnique() {
       return response.json();
     },
     onSuccess: (data, aoId) => {
-      // Invalider les queries reliées pour les AOs Monday
-      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "nouveau" }] });
+      // Invalider les queries reliées pour les AOs
+      queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "etude" }] });
       queryClient.invalidateQueries({ queryKey: ["/api/aos", { status: "en_cours_chiffrage" }] });
       queryClient.invalidateQueries({ queryKey: ["/api/aos"] });
       

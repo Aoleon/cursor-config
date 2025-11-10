@@ -404,7 +404,6 @@ export class SQLEngineService {
           debugInfo: {
             generatedSQL: generatedSQL,
             validationErrors: postValidation.violations,
-            queryAnalysis: (requas unknown)unknown).queryAnalysis,
             executionTime: Date.now() - startTime
           }
         };

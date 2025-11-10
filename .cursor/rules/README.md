@@ -82,7 +82,8 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 - **context-search.md** : Recherche contextuelle avancée
 - **long-term-autonomy.md** : Autonomie longue durée (heures/jours)
 - **automated-testing-debugging.md** : Tests E2E et débogage automatisé
-- **transversal-performance.md** : **NOUVEAU** Performance transversale et autonomie
+- **transversal-performance.md** : Performance transversale et autonomie
+- **pre-task-evaluation.md** : **NOUVEAU** Évaluation préalable impérative (rapidité, performance, robustesse, maintenabilité)
 - **examples.md** : Exemples concrets du projet
 - **patterns.md** : Patterns réutilisables documentés
 - **quick-reference.md** : Référence rapide patterns
@@ -213,7 +214,8 @@ Les règles sont automatiquement chargées par Cursor selon le contexte. Vous po
 - `@.cursor/rules/context-search.md` - Recherche contextuelle avancée
 - `@.cursor/rules/long-term-autonomy.md` - Autonomie longue durée
 - `@.cursor/rules/automated-testing-debugging.md` - Tests E2E et débogage automatisé
-- `@.cursor/rules/transversal-performance.md` - **NOUVEAU** Performance transversale et autonomie
+- `@.cursor/rules/transversal-performance.md` - Performance transversale et autonomie
+- `@.cursor/rules/pre-task-evaluation.md` - **NOUVEAU** Évaluation préalable impérative
 - `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 - `@AGENTS.md` - Instructions complètes pour l'agent
 

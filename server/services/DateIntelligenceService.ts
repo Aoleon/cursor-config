@@ -451,7 +451,7 @@ class CalculationEngine {
 
 export class DateIntelligenceService {
   private calculationEngine: CalculationEngine;
-  private cache: Map<st, unknown>unknown> = new Map();
+  private cache: Map<string, unknown> = new Map();
   private readonly CACHE_TTL = 3600000; // 1 heure en millisecondes
 
   constructor(private storage: IStorage) {
@@ -477,9 +477,7 @@ export class DateIntelligenceService {
       }
     }
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Récupérer les règles actives
       const activeRules = await this.storage.getActiveRules({ 
         phase, 
@@ -496,15 +494,15 @@ export class DateIntelligenceService {
       });
 
       return result;
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'DateIntelligenceService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[DateIntelligenceService] Erreur lors du calcul de la durée de phase', {
+        metadata: {
+          service: 'DateIntelligenceService',
+          operation: 'calculatePhaseDuration',
+          phase,
+          projectId,
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       throw new DatabaseError(`Impossible de calculer la durée pour la phase ${phase}`, error as Error);
     }

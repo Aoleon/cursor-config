@@ -721,19 +721,23 @@ await cacheService.set(cacheKey, result, { ttl: 86400 });
 **Référence:** `@.cursor/rules/context-search.md` - Recherche contextuelle avancée  
 **Référence:** `@.cursor/rules/long-term-autonomy.md` - Autonomie longue durée (heures/jours)  
 **Référence:** `@.cursor/rules/automated-testing-debugging.md` - Tests E2E et débogage automatisé  
-**Référence:** `@.cursor/rules/transversal-performance.md` - **NOUVEAU** Performance transversale et autonomie
+**Référence:** `@.cursor/rules/transversal-performance.md` - Performance transversale et autonomie  
+**Référence:** `@.cursor/rules/pre-task-evaluation.md` - **NOUVEAU** Évaluation préalable impérative (rapidité, performance, robustesse, maintenabilité)
 
 ### Stratégies d'Optimisation
 
 **Avant de Commencer une Tâche:**
-1. ✅ Lire `activeContext.md` pour connaître l'état actuel
-2. ✅ Lire `projectbrief.md` pour comprendre le périmètre
-3. ✅ Lire `systemPatterns.md` pour comprendre l'architecture
-4. ✅ Vérifier fichiers de référence pertinents avec `@`
-5. ✅ Comprendre le contexte avant de modifier
-6. ✅ Chercher code similaire existant (`codebase_search`)
-7. ✅ Détecter anti-patterns dans fichiers cibles
-8. ✅ Corriger anti-patterns automatiquement
+1. ✅ **ÉVALUER PRÉALABLEMENT** différentes approches selon 4 critères (rapidité, performance, robustesse, maintenabilité)
+2. ✅ Lire `activeContext.md` pour connaître l'état actuel
+3. ✅ Lire `projectbrief.md` pour comprendre le périmètre
+4. ✅ Lire `systemPatterns.md` pour comprendre l'architecture
+5. ✅ Vérifier fichiers de référence pertinents avec `@`
+6. ✅ Comprendre le contexte avant de modifier
+7. ✅ Chercher code similaire existant (`codebase_search`)
+8. ✅ Détecter anti-patterns dans fichiers cibles
+9. ✅ Corriger anti-patterns automatiquement
+
+**Référence:** `@.cursor/rules/pre-task-evaluation.md` - Évaluation préalable complète
 
 **Pendant le Développement:**
 1. ✅ Utiliser patterns établis (ne pas réinventer)

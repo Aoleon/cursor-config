@@ -1,0 +1,454 @@
+{
+  "total": 74,
+  "byType": {
+    "todo": 57,
+    "deprecated": 14,
+    "legacy": 3
+  },
+  "items": [
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/eventBus.ts",
+      "line": 2022,
+      "content": "// TODO: Implémenter la logique de preloading business hours",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/eventBus.ts",
+      "line": 2049,
+      "content": "// TODO: Implémenter la logique de weekend warming",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/eventBus.ts",
+      "line": 2141,
+      "content": "// TODO: Implémenter la logique de preloading AO workflow",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/eventBus.ts",
+      "line": 2169,
+      "content": "// TODO: Implémenter la logique de preloading Offre→Projet",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/eventBus.ts",
+      "line": 2197,
+      "content": "// TODO: Implémenter la logique de preloading Projet workflow",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/eventBus.ts",
+      "line": 2226,
+      "content": "// TODO: Implémenter la logique de preloading Tâche",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/eventBus.ts",
+      "line": 2252,
+      "content": "// TODO: Implémenter la logique de preloading Analytics dashboard",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/index.ts",
+      "line": 338,
+      "content": "const julienUserId = 'julien-lamborot-user-id'; // TODO: récupérer dynamiquement",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/modules/commercial/routes.ts",
+      "line": 494,
+      "content": "// TODO: Sauvegarder dans la table documents pour persistence locale",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/routes-admin.ts",
+      "line": 14,
+      "content": "// TODO: Migrer routes admin correctement",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/routes-migration.ts",
+      "line": 491,
+      "content": "// TODO: Implémenter reset si nécessaire",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/AIService.ts",
+      "line": 1456,
+      "content": "userId: \"system\", // TODO: récupérer l'userId réel du contexte",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/AIService.ts",
+      "line": 1473,
+      "content": "userId: \"system\", // TODO: récupérer l'userId réel",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/AIService.ts",
+      "line": 1477,
+      "content": "processedQuery: request.query, // TODO: implémenter le preprocessing",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/AIService.ts",
+      "line": 1479,
+      "content": "fallbackUsed: false, // TODO: tracker les fallbacks",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ChatbotOrchestrationService.ts",
+      "line": 1527,
+      "content": "// TODO: Implémenter une méthode de validation pure dans SQLEngineService",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ChatbotOrchestrationService.ts",
+      "line": 1831,
+      "content": "// TODO: Implémenter les statistiques complètes",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ChatbotOrchestrationService.ts",
+      "line": 1859,
+      "content": "avg_response_time_ms: 2500, // TODO: calculer la vraie moyenne",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ChatbotOrchestrationService.ts",
+      "line": 1861,
+      "content": "estimated_total_cost: 0, // TODO: calculer le coût",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ChatbotOrchestrationService.ts",
+      "line": 1863,
+      "content": "avg_queries_per_user: 0 // TODO: calculer la moyenne",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ChatbotOrchestrationService.ts",
+      "line": 1865,
+      "content": "breakdown_data: [], // TODO: implémenter les données de breakdown",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ChatbotOrchestrationService.ts",
+      "line": 1867,
+      "content": "role_distribution: {}, // TODO: implémenter la distribution par rôle",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ChatbotOrchestrationService.ts",
+      "line": 1957,
+      "content": "estimatedCost: \"0.0000\" // TODO: calculer le coût réel - convertir en string",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ChatbotOrchestrationService.ts",
+      "line": 2394,
+      "content": "// TODO: Implémenter la méthode dans ActionExecutionService",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 209,
+      "content": "'system', // TODO: Récupérer userId réel",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 212,
+      "content": "'complex' // TODO: Déterminer complexité",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 237,
+      "content": "{ role: 'system' }, // TODO: Contexte utilisateur réel",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 372,
+      "content": "compressionTimeMs: 0, // TODO: Mesurer temps compression",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 2134,
+      "content": "// TODO: Implémenter selon pattern buildAOContextLimited",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 2154,
+      "content": "// TODO: Implémenter selon pattern buildAOContextLimited",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 2173,
+      "content": "// TODO: Implémenter selon pattern buildAOContextLimited",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 2192,
+      "content": "// TODO: Implémenter selon pattern buildAOContextLimited",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 2211,
+      "content": "// TODO: Implémenter selon pattern buildAOContextLimited",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 2259,
+      "content": "// TODO: Requêtes limitées selon maxDays",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 2337,
+      "content": "// TODO: Enrichissement selon profil",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 2369,
+      "content": "// TODO: Enrichissement selon profil et limites temporelles",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/ContextBuilderService.ts",
+      "line": 2403,
+      "content": "// TODO: Enrichissement selon profil",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/DateAlertDetectionService.ts",
+      "line": 2105,
+      "content": "// TODO: Implémenter évaluation échéances",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/DateAlertDetectionService.ts",
+      "line": 2110,
+      "content": "// TODO: Implémenter évaluation prévisions revenus",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/DateAlertDetectionService.ts",
+      "line": 2115,
+      "content": "// TODO: Implémenter évaluation retards projets",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/DateAlertDetectionService.ts",
+      "line": 2120,
+      "content": "// TODO: Implémenter évaluation dépassements budget",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/DocumentSyncService.ts",
+      "line": 168,
+      "content": "uploadedBy: 'system', // TODO: récupérer l'utilisateur qui a uploadé",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/MenuiserieBusinessRules.ts",
+      "line": 695,
+      "content": "// TODO: Ajouter calcul des jours fériés variables (Pâques, etc.)",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/MondayMigrationService.ts",
+      "line": 235,
+      "content": "* @deprecated Utiliser migrateFromAnalyzedData() pour migration production",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/MondayMigrationService.ts",
+      "line": 343,
+      "content": "* @deprecated Utiliser migrateFromAnalyzedData() pour migration production",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/SQLEngineService.ts",
+      "line": 1496,
+      "content": "// TODO: Implémenter détection patterns sophistiqués",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/SQLEngineService.ts",
+      "line": 1504,
+      "content": "// TODO: Analyser les appels de fonctions dans l'AST",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/SQLEngineService.ts",
+      "line": 1512,
+      "content": "// TODO: Analyser WHERE clauses pour user_id",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/SQLEngineService.ts",
+      "line": 1881,
+      "content": "// TODO: Persister en base pour audit complet",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/consolidated/BusinessAnalyticsService.ts",
+      "line": 557,
+      "content": "onTimeDelivery: 0, // TODO: calculate based on deadlines",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/consolidated/BusinessAnalyticsService.ts",
+      "line": 559,
+      "content": "teamUtilization: 0 // TODO: implement from team load metrics",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/consolidated/BusinessAnalyticsService.ts",
+      "line": 622,
+      "content": "const teamUtilization = tasks.length > 0 ? 75 : 0; // TODO: implement proper calculation",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/consolidated/BusinessAnalyticsService.ts",
+      "line": 676,
+      "content": "// TODO: Filter by department when field is available",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/emailService.ts",
+      "line": 582,
+      "content": "// TODO: Implémentation SendGrid réelle avec resilience wrapper",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/services/emailService.ts",
+      "line": 829,
+      "content": "// TODO: Intégrer avec un système de tâches programmées (comme node-cron)",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/analytics/KpiRepository.ts",
+      "line": 44,
+      "content": "baselineComparisonMs: number; // LEGACY_AVG_MS for reference",
+      "type": "legacy"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/chiffrage/ChiffrageRepository.ts",
+      "line": 667,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/chiffrage/ChiffrageRepository.ts",
+      "line": 674,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/chiffrage/ChiffrageRepository.ts",
+      "line": 681,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/chiffrage/ChiffrageRepository.ts",
+      "line": 693,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/chiffrage/ChiffrageRepository.ts",
+      "line": 700,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/chiffrage/ChiffrageRepository.ts",
+      "line": 707,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/date-intelligence/DateIntelligenceRepository.ts",
+      "line": 775,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser getRule pour DateIntelligenceRule ou getDateAlert pour DateAlert",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/date-intelligence/DateIntelligenceRepository.ts",
+      "line": 782,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser getAllRules, getActiveRules, ou getDateAlerts",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/date-intelligence/DateIntelligenceRepository.ts",
+      "line": 789,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/date-intelligence/DateIntelligenceRepository.ts",
+      "line": 801,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser deleteRule ou deleteDateAlert",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/date-intelligence/DateIntelligenceRepository.ts",
+      "line": 808,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/date-intelligence/DateIntelligenceRepository.ts",
+      "line": 815,
+      "content": "* @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques avec filtres",
+      "type": "deprecated"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage/facade/StorageFacade.ts",
+      "line": 446,
+      "content": "// Legacy user operations",
+      "type": "legacy"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage-poc.ts",
+      "line": 3119,
+      "content": "// TODO: Phase 6+ - Add proper filtering by status",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/storage-poc.ts",
+      "line": 3121,
+      "content": "// TODO: Phase 6+ - Add proper ordering support",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/tests/services/MondayMigrationService.test.ts",
+      "line": 507,
+      "content": "// LEGACY ADAPTER TESTS",
+      "type": "legacy"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/utils/rate-limit-monitor.ts",
+      "line": 83,
+      "content": "// TODO: Send alert to administrators",
+      "type": "todo"
+    },
+    {
+      "file": "/Users/thibault/Développements /JLM App/jlm-app/server/utils/rate-limit-monitor.ts",
+      "line": 232,
+      "content": "// TODO: Integrate with metrics service when available",
+      "type": "todo"
+    }
+  ]
+}

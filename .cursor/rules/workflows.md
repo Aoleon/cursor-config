@@ -2,15 +2,34 @@
 
 ## 🔄 Workflows Courants du Projet
 
+### Workflow 0: Évaluation Préalable (IMPÉRATIF)
+
+**IMPÉRATIF:** Avant toute implémentation, évaluer systématiquement différentes approches.
+
+**Étapes:**
+1. Analyser la tâche (objectif, contraintes, dépendances)
+2. Identifier au moins 2-3 approches différentes
+3. Évaluer chaque approche selon 4 critères :
+   - **Rapidité** (complexité, temps, parallélisation)
+   - **Performance** (mémoire, CPU, cache, optimisations)
+   - **Robustesse** (erreurs, validation, résilience, tests)
+   - **Maintenabilité** (clarté, documentation, testabilité, réutilisabilité)
+4. Comparer approches et sélectionner la meilleure
+5. Documenter sélection avec raisonnement
+6. Implémenter approche sélectionnée
+
+**Référence:** `@.cursor/rules/pre-task-evaluation.md` - Évaluation préalable complète
+
 ### Workflow 1: Créer une Nouvelle Route API
 
 **Étapes:**
-1. Vérifier si module existe dans `server/modules/`
-2. Si oui, ajouter route dans `server/modules/[module]/routes.ts`
-3. Si non, créer nouveau module ou ajouter dans module approprié
-4. Utiliser factory pattern: `export function create[Module]Router(...)`
-5. Utiliser `asyncHandler`, `validateBody`, `logger`
-6. Tester la route
+1. **ÉVALUER PRÉALABLEMENT** différentes approches (Workflow 0)
+2. Vérifier si module existe dans `server/modules/`
+3. Si oui, ajouter route dans `server/modules/[module]/routes.ts`
+4. Si non, créer nouveau module ou ajouter dans module approprié
+5. Utiliser factory pattern: `export function create[Module]Router(...)`
+6. Utiliser `asyncHandler`, `validateBody`, `logger`
+7. Tester la route
 
 **Pattern:**
 ```typescript
@@ -64,11 +83,12 @@ export function create[Module]Router(
 ### Workflow 2: Modifier un Service Métier
 
 **Étapes:**
-1. Lire `server/utils/README-UTILS.md`
-2. Vérifier si service existe dans `server/services/`
-3. Utiliser `logger` au lieu de `console.log`
-4. Utiliser `withErrorHandling` pour gestion d'erreurs
-5. Tester le service
+1. **ÉVALUER PRÉALABLEMENT** différentes approches (Workflow 0)
+2. Lire `server/utils/README-UTILS.md`
+3. Vérifier si service existe dans `server/services/`
+4. Utiliser `logger` au lieu de `console.log`
+5. Utiliser `withErrorHandling` pour gestion d'erreurs
+6. Tester le service
 
 **Pattern:**
 ```typescript

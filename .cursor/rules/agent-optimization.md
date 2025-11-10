@@ -4,6 +4,24 @@
 
 ## 🎯 Stratégies d'Optimisation
 
+### 0. Évaluation Préalable (IMPÉRATIF)
+
+**Principe:** Avant toute implémentation, évaluer systématiquement différentes approches selon 4 critères essentiels.
+
+**IMPÉRATIF:**
+- ✅ Analyser la tâche (objectif, contraintes, dépendances)
+- ✅ Identifier au moins 2-3 approches différentes
+- ✅ Évaluer chaque approche selon 4 critères :
+  - **Rapidité** (complexité, temps, parallélisation)
+  - **Performance** (mémoire, CPU, cache, optimisations)
+  - **Robustesse** (erreurs, validation, résilience, tests)
+  - **Maintenabilité** (clarté, documentation, testabilité, réutilisabilité)
+- ✅ Comparer approches et sélectionner la meilleure
+- ✅ Documenter sélection avec raisonnement
+- ✅ Implémenter approche sélectionnée
+
+**Référence:** `@.cursor/rules/pre-task-evaluation.md` - Évaluation préalable complète
+
 ### 1. Auto-Amélioration Continue
 
 **Principe:** L'agent doit être capable de s'auto-éditer et d'améliorer ses performances de manière autonome.

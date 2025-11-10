@@ -1057,9 +1057,7 @@ export class OCRService {
 
   // Méthode principale pour traiter un PDF (AO - existante)
   async processPDF(pdfBuffer: Buffer): Promise<OCRResult> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Démarrage traitement PDF', {
         metadata: {
           service: 'OCRService',
@@ -1127,15 +1125,14 @@ export class OCRService {
               fieldsMappedCount: contextualResult.mappingResults.length
             }
           });
-          
-        
-    },
-    {
-      operation: 'async',
-service: 'ocrService',;
-      metadata: {}
-    }
-  );
+        } catch (error) {
+          // Continuer avec les champs de base si le moteur contextuel échoue
+          logger.warn('[OCRService] Le moteur contextuel a échoué, utilisation des champs de base', {
+            metadata: {
+              service: 'OCRService',
+              operation: 'processPDF',
+              error: error instanceof Error ? error.message : String(error)
+            }
           });
         }
         
@@ -1163,9 +1160,8 @@ service: 'ocrService',;
         }
       });
       return await this.processWithOCR(pdfBuffer);
-      
     } catch (error) {
-      logger.error('Erreur traitement PDF', {
+      logger.error('[OCRService] Erreur traitement PDF', {
         metadata: {
           service: 'OCRService',
           operation: 'processPDF',
@@ -1186,16 +1182,14 @@ service: 'ocrService',;
           throw new AppError(`Erreur lors du traitement OCR - Erreur générale: ${error.message}`, 500);
         }
       } else {
-        throw new AppError(`Erreur lors du traitement OCR - Erreur inconnue: ${String(error, 500)}`);
+        throw new AppError(`Erreur lors du traitement OCR - Erreur inconnue: ${String(error)}`, 500);
       }
     }
   }
 
   // Extraction de texte natif depuis PDF
   private async extractNativeText(pdfBuffer: Buffer): Promise<string> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       if (!pdfParseModule) {
         logger.info('pdf-parse non initialisé, appel initializeModules', {
           metadata: {
@@ -1233,55 +1227,15 @@ service: 'ocrService',;
         }
       });
       return extractedText;
-    
-    },
-    {
-      operation: 'async',
-      service: 'ocrService',
-      metadata: {}
-    }
-  );
-        });
-      }
-      
-      // Calculer le scoring technique après détection des critères
-      const technicalScoring = await this.computeTechnicalScoring(processedFields.specialCriteria, processedFields.reference);
-      
-      logger.info('Traitement OCR terminé', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'processWithOCR',
-          charactersSimulated: fullText.length
-        }
-      });
-      
-      return {
-        extractedText: fullText,
-        confidence: finalConfidence,
-        processedFields,
-        technicalScoring,
-        contextualResult,
-        rawData: { method: 'ocr-poc', note: 'POC simulation for scanned PDFs' }
-      };
-      
     } catch (error) {
-      logger.error('Échec traitement OCR', {
+      logger.error('[OCRService] Erreur lors de l\'extraction du texte natif', {
         metadata: {
           service: 'OCRService',
-          operation: 'processWithOCR',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
+          operation: 'extractNativeText',
+          error: error instanceof Error ? error.message : String(error)
         }
       });
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      if (errorMessage.includes('Tesseract')) {
-        throw new AppError(`Échec initialisation Tesseract - OCR indisponible: ${errorMessage}`, 500);
-      } else if (errorMessage.includes('sharp')) {
-        throw new AppError(`Échec preprocessing image pour OCR: ${errorMessage}`, 500);
-      } else {
-        throw new AppError(`Erreur OCR non spécifiée: ${errorMessage}`, 500);
-      }
+      return ''; // Retourner chaîne vide pour déclencher le fallback OCR
     }
   }
   
@@ -1407,9 +1361,7 @@ Réponses publiées au plus tard le 22/03/2025
 
   // Préprocessing d'image pour améliorer l'OCR
   private async preprocessImage(imageBuffer: Buffer): Promise<Buffer> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       return await sharp(imageBuffer)
         .grayscale()                    // Convertir en niveaux de gris
         .normalize()                    // Normaliser le contraste
@@ -1417,16 +1369,15 @@ Réponses publiées au plus tard le 22/03/2025
         .threshold(128)                 // Binarisation
         .png({ quality: 100 })          // Compression sans perte
         .toBuffer();
-    
-    },
-    {
-      operation: 'async',
-      service: 'ocrService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[OCRService] Erreur lors du preprocessing de l\'image', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'preprocessImage',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
-      return imageBuffer;
+      return imageBuffer; // Retourner l'image originale en cas d'erreur
     }
   }
 

@@ -719,7 +719,8 @@ await cacheService.set(cacheKey, result, { ttl: 86400 });
 **Référence:** `@.cursor/rules/auto-detection.md` - Détection automatique des anti-patterns  
 **Référence:** `@.cursor/rules/advanced-learning.md` - Stratégies d'apprentissage avancées (Reflexion, ICE)  
 **Référence:** `@.cursor/rules/context-search.md` - Recherche contextuelle avancée  
-**Référence:** `@.cursor/rules/long-term-autonomy.md` - **NOUVEAU** Autonomie longue durée (heures/jours)
+**Référence:** `@.cursor/rules/long-term-autonomy.md` - Autonomie longue durée (heures/jours)  
+**Référence:** `@.cursor/rules/automated-testing-debugging.md` - **NOUVEAU** Tests E2E et débogage automatisé
 
 ### Stratégies d'Optimisation
 

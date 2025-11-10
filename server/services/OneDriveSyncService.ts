@@ -327,7 +327,8 @@ service: 'OneDriveSyncService',;
       }
       
       // Essayer aussi avec le nom de l'AO
-      if (ao.name && filePath.includes(ao.name)) {
+      const name = typeof aoRecord.name === 'string' ? aoRecord.name : '';
+      if (name && filePath.includes(name)) {
         return ao;
       }
     }

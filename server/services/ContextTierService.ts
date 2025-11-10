@@ -188,14 +188,16 @@ export class ContextTierService implements ContextTierServiceInterface {
       });
       
       // Fallback vers tier COMPREHENSIVE en cas d'erreur
-      const fallbackProfile = this.getContextProfile('comprehensive', entityType, userContext.role || 'user');
+      const context = userContext as Record<string, unknown>;
+      const userRole = (typeof context.role === 'string' ? context.role : 'user') || 'user';
+      const fallbackProfile = this.getContextProfile('comprehensive', entityType, userRole);
       this.performanceMetrics.fallbackCount++;
       
       return {
         detectedTier: 'comprehensive',
         confidence: 0.5,
         queryAnalysis: { intent: 'complex_validation', complexity: 'expert', entityMentions: [], relationMentions: [], temporalMentions: [] },
-        userContext: { role: userContext.role || 'user', permissions: [], recentActivity: [], expertiseLevel: 'standard' },
+        userContext: { role: userRole, permissions: [], recentActivity: [], expertiseLevel: 'standard' },
         businessFactors: { entityComplexity: 1.0, relationsCount: 10, dataVolume: 'high', timeframe: 'historical' },
         recommendedProfile: fallbackProfile,
         alternativeProfiles: [],

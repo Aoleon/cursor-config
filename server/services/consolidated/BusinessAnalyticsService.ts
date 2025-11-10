@@ -312,9 +312,7 @@ class ConversionCalculator extends BaseCalculator {
   }
 
   async calculatePipelineConversion(period: DateRange): Promise<PipelineMetric> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const [aoToOffer, offerToProject] = await Promise.all([
         this.calculateAOToOfferConversion(period),
         this.calculateOfferToProjectConversion(period)
@@ -333,15 +331,13 @@ class ConversionCalculator extends BaseCalculator {
           offerToProjectTrend: offerToProject.trend
         }
       };
-
-    
-    },
-    {
-      operation: 'metrics',
-      service: 'BusinessAnalyticsService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[BusinessAnalyticsService] Erreur lors du calcul de la conversion pipeline', {
+        metadata: {
+          operation: 'calculatePipelineConversion',
+          service: 'BusinessAnalyticsService',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       return {
         aoToOffer: 0,

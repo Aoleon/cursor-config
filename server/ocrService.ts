@@ -532,9 +532,7 @@ export class OCRService {
     corrections: FieldCorrection[];
     validationScore: number;
   }> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Validation et correction champs', {
         metadata: {
           service: 'OCRService',
@@ -563,15 +561,14 @@ export class OCRService {
         corrections: contextualResult.suggestedCorrections,
         validationScore
       };
-      
-    
-    },
-    {
-      operation: 'async',
-      service: 'ocrService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[OCRService] Erreur lors de la validation et correction des champs', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'validateAndCorrectFields',
+          documentType,
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       return {
         correctedFields: fields,

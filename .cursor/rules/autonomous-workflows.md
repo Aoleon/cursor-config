@@ -39,16 +39,20 @@ for (const subtask of executionPlan) {
 }
 ```
 
-### 2. Validation et Auto-Correction
+### 2. Validation et Auto-Correction avec Tests E2E
 
-**Principe:** L'agent doit valider automatiquement ses actions et corriger les erreurs sans intervention humaine.
+**Principe:** L'agent doit valider automatiquement ses actions avec tests E2E et corriger les erreurs sans intervention humaine.
 
 **TOUJOURS:**
 - ✅ Valider les modifications avant de les appliquer
 - ✅ Vérifier les types TypeScript après modifications
-- ✅ Vérifier les tests après modifications
+- ✅ Exécuter tests unitaires pertinents après modifications
+- ✅ Exécuter tests E2E pertinents après modifications importantes
+- ✅ Déboguer automatiquement les échecs de tests E2E
 - ✅ Corriger automatiquement les erreurs détectées
 - ✅ Documenter les corrections effectuées
+
+**Référence:** `@.cursor/rules/automated-testing-debugging.md` - Tests E2E et débogage automatisé
 
 **Pattern:**
 ```typescript
@@ -706,7 +710,8 @@ async function validateMultiLevel(code: string): Promise<ValidationResult> {
 ### Documentation Essentielle
 - `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation
 - `@.cursor/rules/advanced-learning.md` - Stratégies d'apprentissage avancées
-- `@.cursor/rules/long-term-autonomy.md` - **NOUVEAU** Autonomie longue durée
+- `@.cursor/rules/long-term-autonomy.md` - Autonomie longue durée
+- `@.cursor/rules/automated-testing-debugging.md` - **NOUVEAU** Tests E2E et débogage automatisé
 - `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 - `@.cursor/rules/workflows.md` - Workflows détaillés
 - `@.cursor/rules/troubleshooting.md` - Guide résolution problèmes

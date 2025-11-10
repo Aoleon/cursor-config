@@ -80,7 +80,8 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 - **auto-detection.md** : Détection automatique des anti-patterns
 - **advanced-learning.md** : Stratégies d'apprentissage avancées (Reflexion, ICE)
 - **context-search.md** : Recherche contextuelle avancée
-- **long-term-autonomy.md** : **NOUVEAU** Autonomie longue durée (heures/jours)
+- **long-term-autonomy.md** : Autonomie longue durée (heures/jours)
+- **automated-testing-debugging.md** : **NOUVEAU** Tests E2E et débogage automatisé
 - **examples.md** : Exemples concrets du projet
 - **patterns.md** : Patterns réutilisables documentés
 - **quick-reference.md** : Référence rapide patterns
@@ -209,7 +210,8 @@ Les règles sont automatiquement chargées par Cursor selon le contexte. Vous po
 - `@.cursor/rules/auto-detection.md` - Détection automatique anti-patterns
 - `@.cursor/rules/advanced-learning.md` - Stratégies d'apprentissage avancées
 - `@.cursor/rules/context-search.md` - Recherche contextuelle avancée
-- `@.cursor/rules/long-term-autonomy.md` - **NOUVEAU** Autonomie longue durée
+- `@.cursor/rules/long-term-autonomy.md` - Autonomie longue durée
+- `@.cursor/rules/automated-testing-debugging.md` - **NOUVEAU** Tests E2E et débogage automatisé
 - `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 - `@AGENTS.md` - Instructions complètes pour l'agent
 

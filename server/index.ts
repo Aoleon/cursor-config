@@ -232,37 +232,32 @@ app.use((req, res, next) => {
     }
   });
   
-  return withErrorHandling(
+  await withErrorHandling(
     async () => {
-
-    logger.info('Appel eventBus.integratePredictiveEngine', {
-      metadata: {
-        module: 'ExpressApp',
-        operation: 'integratePredictiveEngine'
-      }
-    });
-    await eventBus.integratePredictiveEngine(predictiveEngineService);
-    logger.info('Intégration PredictiveEngine terminée', {
-      metadata: {
-        module: 'ExpressApp',
-        operation: 'integratePredictiveEngine',
-        context: {
-          preloadingActive: true,
-          backgroundCycles: ['business_hours', 'peak', 'weekend', 'nightly']
+      logger.info('Appel eventBus.integratePredictiveEngine', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'integratePredictiveEngine'
         }
-      }
-    });
-  
+      });
+      await eventBus.integratePredictiveEngine(predictiveEngineService);
+      logger.info('Intégration PredictiveEngine terminée', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'integratePredictiveEngine',
+          context: {
+            preloadingActive: true,
+            backgroundCycles: ['business_hours', 'peak', 'weekend', 'nightly']
+          }
+        }
+      });
     },
     {
-      operation: 'if',
+      operation: 'integratePredictiveEngine',
       service: 'index',
       metadata: {}
     }
   );
-      }
-    });
-  }
   
   const dateAlertDetectionService = new DateAlertDetectionService(
     storageInterface,
@@ -373,11 +368,9 @@ app.use((req, res, next) => {
       metadata: {}
     }
   );
-      });
-    }
   }, {
     eventTypes: ['technical.alert' as any],
-entities: ['technical'];
+    entities: ['technical']
   });
   
   log('[EventBus] Abonnement aux alertes techniques configuré pour Julien LAMBOROT');
@@ -396,47 +389,42 @@ entities: ['technical'];
     }
   });
   
-  return withErrorHandling(
+  await withErrorHandling(
     async () => {
-
-    // À ce point, routes-poc.ts a été exécuté et PredictiveEngineService créé
-    // Récupérer l'instance depuis l'app ou importer directement
-    const routesPoc = await import('./routes-poc');
-    const predictiveEngineService = (routesPoc as any).predictiveEngineService;
-    
-    logger.info('Instance PredictiveEngine récupérée', {
-      metadata: {
-        module: 'ExpressApp',
-        operation: 'integratePredictiveEngineFinal',
-        context: { instanceAvailable: !!predictiveEngineService }
-      }
-    });
-    
-    // INTÉGRATION CRITIQUE pour activation preloading background
-    eventBus.integratePredictiveEngine(predictiveEngineService);
-    
-    logger.info('Intégration finale PredictiveEngine réussie', {
-      metadata: {
-        module: 'ExpressApp',
-        operation: 'integratePredictiveEngineFinal',
-        context: {
-          backgroundCyclesActive: true,
-          cacheOptimizationEnabled: true,
-          targetLatencyReduction: '25s→10s'
+      // À ce point, routes-poc.ts a été exécuté et PredictiveEngineService créé
+      // Récupérer l'instance depuis l'app ou importer directement
+      const routesPoc = await import('./routes-poc');
+      const predictiveEngineService = (routesPoc as any).predictiveEngineService;
+      
+      logger.info('Instance PredictiveEngine récupérée', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'integratePredictiveEngineFinal',
+          context: { instanceAvailable: !!predictiveEngineService }
         }
-      }
-    });
-  
+      });
+      
+      // INTÉGRATION CRITIQUE pour activation preloading background
+      eventBus.integratePredictiveEngine(predictiveEngineService);
+      
+      logger.info('Intégration finale PredictiveEngine réussie', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'integratePredictiveEngineFinal',
+          context: {
+            backgroundCyclesActive: true,
+            cacheOptimizationEnabled: true,
+            targetLatencyReduction: '25s→10s'
+          }
+        }
+      });
     },
     {
-      operation: 'if',
+      operation: 'integratePredictiveEngineFinal',
       service: 'index',
       metadata: {}
     }
   );
-      }
-    });
-  }
 
   // ========================================
   // CONFIGURATION VITE/STATIC (AVANT GESTIONNAIRES D'ERREURS)
@@ -534,9 +522,7 @@ entities: ['technical'];
       }
     });
     
-    return withErrorHandling(
-    async () => {
-
+    try {
       // 1. Fermer les nouvelles connexions
       logger.info('Fermeture serveur HTTP', {
         metadata: {
@@ -593,14 +579,14 @@ entities: ['technical'];
         }
       });
       process.exit(0);
-    
-    },
-    {
-      operation: 'if',
-      service: 'index',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('Erreur lors du graceful shutdown', {
+        metadata: {
+          module: 'ExpressApp',
+          operation: 'gracefulShutdown',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
       });
       process.exit(1);
     }

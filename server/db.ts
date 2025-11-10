@@ -1,5 +1,4 @@
 import { Pool as NeonPool, neonConfig, PoolClient as NeonPoolClient } from '@neondatabase/serverless';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { Pool as PgPool, PoolClient as PgPoolClient } from 'pg';
 import { drizzle as drizzleNeon } from 'drizzle-orm/neon-serverless';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
@@ -20,9 +19,9 @@ function detectDatabaseProvider(): 'neon' | 'nhost' | 'standard' {
   const databaseUrl = process.env.DATABASE_URL;
   
   if (!databaseUrl) {
-    throw new AppError(
+    throw new Error(
       "DATABASE_URL must be set. Did you forget to provision a database?",
-    , 500);
+    );
   }
 
   // Détection Neon (serverless avec WebSocket)

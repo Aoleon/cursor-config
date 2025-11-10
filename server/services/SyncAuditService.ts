@@ -88,7 +88,7 @@ export class SyncAuditService {
   
   private setupEventListeners() {
     // Export success - Project or AO successfully exported to Monday
-    eventBus.on('monday:export:success', async (event: any) => {
+    eventBus.on('monday:export:success', async (event: unknown) => {
       const syncState: SyncState = {
         entityId: event.entityId,
         entityType: event.entityType || 'project',
@@ -163,7 +163,7 @@ export class SyncAuditService {
     });
     
     // Sync conflict - Monday data conflicts with Saxium data
-    eventBus.on('monday:sync:conflict', async (event: any) => {
+    eventBus.on('monday:sync:conflict', async (event: unknown) => {
       const syncState: SyncState = {
         entityId: event.entityId,
         entityType: event.entityType || 'project',
@@ -244,7 +244,7 @@ export class SyncAuditService {
     });
     
     // Export failed - Error during export to Monday
-    eventBus.on('monday:export:failed', async (event: any) => {
+    eventBus.on('monday:export:failed', async (event: unknown) => {
       const syncState: SyncState = {
         entityId: event.entityId,
         entityType: event.entityType || 'project',
@@ -321,7 +321,7 @@ export class SyncAuditService {
     });
     
     // Sync success - Generic sync success event
-    eventBus.on('monday:sync:success', (event: any) => {
+    eventBus.on('monday:sync:success', (e: unknown)unknown) => {
       logger.info('[SyncAudit] Sync réussie', {
         service: 'SyncAuditService',
         metadata: {

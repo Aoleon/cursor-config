@@ -60,10 +60,10 @@ export interface MigrationBatchResult {
 export interface BatchResult {
   index: number;
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   mondayId: string;
-  sourceRow?: any;
+  source: unknown;unknown;
 }
 
 export interface AuthenticMondayData {
@@ -306,7 +306,7 @@ export class MondayProductionFinalService {
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0]; // Première feuille
     const worksheet = workbook.Sheets[sheetName];
-    const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+    const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
     
     logger.info('Feuille Excel chargée', {
       metadata: {
@@ -387,7 +387,7 @@ export class MondayProductionFinalService {
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0]; // Première feuille
     const worksheet = workbook.Sheets[sheetName];
-    const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+    const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1as unknown[]ny[][];
     
     logger.info('Feuille Excel chargée', {
       metadata: {
@@ -456,7 +456,7 @@ export class MondayProductionFinalService {
    * EXTRACTION DONNÉES AO DEPUIS LIGNE EXCEL AUTHENTIQUE
    * Utilise patterns réels identifiés dans gap analysis
    */
-  private extractAoDataFromExcelRow(row: any[], rowIndex: number): MondayAoData | null {
+  private extractAoDataFromExcelRow(row: unknown[], rowIndex: number): MondayAoData | null {
     const name = String(row[0] || '').trim();
     
     if (!name || name.length < 3) {
@@ -497,7 +497,7 @@ export class MondayProductionFinalService {
   /**
    * EXTRACTION DONNÉES PROJET DEPUIS LIGNE EXCEL AUTHENTIQUE
    */
-  private extractProjectDataFromExcelRow(row: any[], rowIndex: number): MondayProjectData | null {
+  private extractProjectDataFromExcelRow: unknown[]ny[], rowIndex: number): MondayProjectData | null {
     const name = String(row[0] || '').trim();
     
     if (!name || name.length < 3) {
@@ -763,7 +763,7 @@ export class MondayProductionFinalService {
    * Corriger conversion Date avant toISOString pour éliminer "value.toISOString is not a function"
    * SELON SPÉCIFICATIONS DEMANDE: retourne null si conversion échoue
    */
-  private safeToISOString(value: any): string | null {
+  private safeToISOString(value: unknown): string | null {
     if (!value) return null;
     
     // Si déjà string ISO, retourner directement

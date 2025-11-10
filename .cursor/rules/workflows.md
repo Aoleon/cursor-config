@@ -254,14 +254,49 @@ app.use(create[Module]Router(storage, eventBus));
 - `@server/modules/documents/coreRoutes.ts` - Exemple migration
 - `@activeContext.md` - État migration actuelle
 
-### Workflow 7: Ajouter Test
+### Workflow 7: Ajouter Test avec Validation E2E
 
 **Étapes:**
 1. Identifier type de test (unitaire, E2E)
 2. Créer test dans `tests/backend/` ou `tests/frontend/` ou `e2e/`
 3. Utiliser patterns établis
-4. Vérifier couverture de code
-5. S'assurer test passe
+4. Exécuter test et valider qu'il passe
+5. Exécuter tests E2E pertinents si modification importante
+6. Déboguer automatiquement les échecs
+7. Vérifier couverture de code
+8. S'assurer tous les tests passent
+
+**Pattern E2E:**
+```typescript
+// e2e/workflows/[workflow].spec.ts
+import { test, expect } from '@playwright/test';
+import { generateTestData, cleanupTestData } from '../fixtures/test-data';
+
+test.describe('Workflow [Workflow]', () => {
+  let createdIds: Record<string, string[]>;
+  
+  test.beforeEach(async () => {
+    createdIds = {};
+  });
+  
+  test.afterEach(async ({ page }) => {
+    await cleanupTestData(page, createdIds);
+  });
+  
+  test('Scénario complet', async ({ page }) => {
+    // 1. Setup
+    const testData = generateTestData();
+    
+    // 2. Exécuter workflow
+    await executeWorkflow(page, testData);
+    
+    // 3. Valider résultats
+    await validateResults(page, testData);
+  });
+});
+```
+
+**Référence:** `@.cursor/rules/automated-testing-debugging.md` - Tests E2E et débogage automatisé
 
 **Pattern Backend:**
 ```typescript
@@ -310,22 +345,33 @@ describe('Component', () => {
 ### Pendant le Développement
 - [ ] Suivre patterns établis
 - [ ] Utiliser utilitaires partagés
+- [ ] Comprendre relations transversales entre modules
+- [ ] Optimiser performances avec cache et parallélisation
 - [ ] Détecter anti-patterns en temps réel
 - [ ] Corriger anti-patterns automatiquement
 - [ ] Logger avec contexte structuré
 - [ ] Gérer erreurs avec types appropriés
 - [ ] Valider modifications après chaque étape
+- [ ] Monitorer métriques de performance
+
+**Référence:** `@.cursor/rules/transversal-performance.md` - Performance transversale et autonomie
 
 ### Après le Développement
 - [ ] Détecter anti-patterns dans code modifié
 - [ ] Corriger anti-patterns automatiquement
 - [ ] Valider types TypeScript
 - [ ] Valider conventions du projet
+- [ ] Exécuter tests unitaires pertinents
+- [ ] Exécuter tests E2E pertinents
+- [ ] Déboguer automatiquement les échecs de tests E2E
+- [ ] Exécuter suite complète de tests E2E
 - [ ] Tester la fonctionnalité
 - [ ] Vérifier couverture de code
 - [ ] Vérifier pas de régression
 - [ ] Mettre à jour documentation si nécessaire
 - [ ] Documenter apprentissages
+
+**Référence:** `@.cursor/rules/automated-testing-debugging.md` - Tests E2E et débogage automatisé
 
 ## 🔍 Détection Automatique Intégrée
 

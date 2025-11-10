@@ -29,9 +29,9 @@
 // 4. Réutiliser pour actions futures
 ```
 
-### 2. Utilisation Optimale du Contexte
+### 2. Utilisation Optimale du Contexte avec Performance Transversale
 
-**Principe:** Utiliser le contexte de manière ciblée et hiérarchisée pour maximiser la pertinence.
+**Principe:** Utiliser le contexte de manière ciblée et hiérarchisée pour maximiser la pertinence et les performances transversales.
 
 **Hiérarchie du Contexte:**
 1. **Fichiers directement modifiés** (priorité maximale)
@@ -45,12 +45,19 @@
 - ✅ Référencer exemples concrets avec @
 - ✅ Utiliser @Docs pour documentation externe
 - ✅ Utiliser @Web pour informations récentes
+- ✅ Comprendre relations transversales entre modules
+- ✅ Réutiliser patterns établis entre modules
+- ✅ Optimiser performances avec cache intelligent
 
 **NE JAMAIS:**
 - ❌ Inclure 20+ fichiers (surcharge contextuelle)
 - ❌ Inclure fichiers non pertinents
 - ❌ Ignorer fichiers de mémoire
 - ❌ Dupliquer contexte déjà présent
+- ❌ Ignorer relations transversales
+- ❌ Dupliquer patterns existants
+
+**Référence:** `@.cursor/rules/transversal-performance.md` - Performance transversale et autonomie
 
 ### 3. Recherche et Exploration Proactive
 
@@ -368,12 +375,18 @@ codebase_search("How is this type used correctly?", target_directories)
 ### Après le Développement
 - [ ] Détecter anti-patterns dans code modifié
 - [ ] Corriger anti-patterns automatiquement
+- [ ] Exécuter tests unitaires pertinents
+- [ ] Exécuter tests E2E pertinents
+- [ ] Déboguer automatiquement les échecs de tests E2E
+- [ ] Exécuter suite complète de tests E2E
 - [ ] Vérifier tests passent
 - [ ] Vérifier couverture de code
 - [ ] Vérifier types TypeScript
 - [ ] Vérifier pas de régression
 - [ ] Mettre à jour documentation si nécessaire
 - [ ] Documenter apprentissages
+
+**Référence:** `@.cursor/rules/automated-testing-debugging.md` - Tests E2E et débogage automatisé
 
 ## 🔍 Détection Automatique des Problèmes Courants
 

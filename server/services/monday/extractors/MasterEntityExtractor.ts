@@ -3,14 +3,14 @@ import type { SplitterContext } from '../types';
 import { extractSIRET } from '../parsers';
 
 export class MasterEntityExtractor extends BaseExtractor<{
-  maitresOuvrage: any[];
-  maitresOeuvre: any[];
+  maitresOuvrage: unknown[];
+  maitresOe: unknown[]ny[];
 }> {
   name = 'MasterEntityExtractor';
   
-  async extract(context: SplitterContext): Promise<{ maitresOuvrage: any[]; maitresOeuvre: any[] }> {
-    const maitresOuvrage: any[] = [];
-    const maitresOeuvre: any[] = [];
+  async extract(context: SplitterContext): Promise<{ maitre: unknown[]e: unknown[]; m: unknown[]euvunknown[]ny[] }> {
+    cons: unknown[]esOunknown[]e: unknown[] = [];
+   : unknown[]maiunknown[]euvunknown any[] = [];
     
     const masterMappings = context.config.mappings.masterEntities || [];
     

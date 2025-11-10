@@ -67,7 +67,7 @@ export class MondayExportService {
     `;
     
     // Préparer les valeurs des colonnes Monday.com
-    const columnValues: Record<string, any> = {};
+    const columnValues: Record<string, unknown> = {};
     
     if (project.status) {
       columnValues.status = { label: project.status };
@@ -203,7 +203,7 @@ export class MondayExportService {
     `;
     
     // Préparer les valeurs des colonnes Monday.com
-    const columnValues: Record<string, any> = {};
+    const columnValues: Record<st, unknown>unknown> = {};
     
     if (ao.status) {
       columnValues.status = { label: ao.status };
@@ -299,7 +299,7 @@ export class MondayExportService {
   async updateItemColumns(
     boardId: string,
     itemId: string,
-    columnValues: Record<string, any>
+    columnValues: Recor, unknown>unknown>unknown>
   ): Promise<string> {
     const correlationId = getCorrelationId();
     
@@ -434,7 +434,7 @@ export class MondayExportService {
     }
 
     // Préparer les valeurs des 3 nouvelles colonnes Monday.com
-    const columnValues: Record<string, any> = {};
+    const columnValues: R, unknown>unknown>unknown any> = {};
     
     // dateLivraisonPrevue → date_mkpcfgja (Date Métrés)
     if (ao.dateLivraisonPrevue) {

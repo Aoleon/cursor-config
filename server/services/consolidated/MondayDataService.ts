@@ -89,8 +89,8 @@ export interface ExportOptions {
 export interface PreviewResult {
   boardName: string;
   itemCount: number;
-  columns: any[];
-  suggestedMappings: any[];
+  columns: unknown[];
+  suggestedMapp: unknown[]ny[];
 }
 
 // ========================================
@@ -302,7 +302,7 @@ service: 'MondayDataService',;
     boardId: string;
     itemId: string;
     changeType: 'create' | 'update' | 'delete';
-    data?: any;
+    data?: unknown;
     mondayUpdatedAt?: Date;
   }): Promise<void> {
     const { boardId, itemId, changeType, data, mondayUpdatedAt } = params;
@@ -338,7 +338,7 @@ service: 'MondayDataService',;
         return;
       }
       
-      let saxiumEntity: any;
+      let saxiumEn: unknown;unknown;
       let createdId: string | undefined;
       
       if (entityType === 'project') {
@@ -406,7 +406,7 @@ service: 'MondayDataService',;
         
         eventBus.publish({
           id: crypto.randomUUID(),
-          type: 'monday:sync:success' as any,
+          type: 'monday:sync:success' as unknown,
           entity: eventEntity as 'project' | 'offer' | 'supplier',
           entityId: createdId,
           message: `${entityType} synchronisé depuis Monday.com`,
@@ -526,7 +526,7 @@ service: 'MondayDataService',;
       }
     `;
     
-    const columnValues: Record<string, any> = {};
+    const columnValues: Record<string, unknown> = {};
     
     if (project.status) {
       columnValues.status = { label: project.status };
@@ -652,7 +652,7 @@ service: 'MondayDataService',;
       }
     `;
     
-    const columnValues: Record<string, any> = {};
+    const columnValues: Record<st, unknown>unknown> = {};
     
     if (ao.status) {
       columnValues.status = { label: ao.status };
@@ -741,7 +741,7 @@ service: 'MondayDataService',;
   async updateItemColumns(
     boardId: string,
     itemId: string,
-    columnValues: Record<string, any>
+    columnValues: Recor, unknown>unknown>unknown>
   ): Promise<string> {
     const correlationId = getCorrelationId();
     
@@ -853,7 +853,7 @@ service: 'MondayDataService',;
       return null;
     }
 
-    const columnValues: Record<string, any> = {};
+    const columnValues: R, unknown>unknown>unknown any> = {};
     
     if (ao.dateLivraisonPrevue) {
       columnValues.date_mkpcfgja = ao.dateLivraisonPrevue.toISOString().split('T')[0];
@@ -916,7 +916,7 @@ service: 'MondayDataService',;
       maitresOuvrage: number;
       maitresOeuvre: number;
     };
-    diagnostics: any[];
+    dia: unknown[]s: unknown[];
   }> {
     logger.info('Analyse Monday item pour opportunités éclatement', {
       service: 'MondayDataService',
@@ -960,7 +960,7 @@ service: 'MondayDataService',;
    * Uses transaction for atomicity
    */
   async splitData(
-    mondayItemOrId: string | any,
+    mondayItemOrId: string | unknown,
     boardId: string,
     options: SplitOptions = {}
   ): Promise<SplitResult> {
@@ -1053,7 +1053,7 @@ service: 'MondayDataService',;
 
         const existingAO = await this.storage.getAOByMondayItemId(mondayItemId, tx);
         
-        let currentAO: any;
+        let c: unknown;unknownnown;any;
         
         if (existingAO) {
           const cleanedAoData = this.cleanEnumFields(aoData);
@@ -1198,9 +1198,9 @@ service: 'MondayDataService',;
   transformItem(
     item: MondayItem,
     mapping: ImportMapping,
-    options: TransformOptions = {}
+    options: TransformOptionunknown {}
   ): any {
-    const transformed: any = {
+    const transformed: unknown = {
       name: item.name
     };
 
@@ -1266,7 +1266,7 @@ service: 'MondayDataService',;
   // ========================================
 
   private mapItemToProject(item: MondayItem, mapping: ImportMapping): InsertProject {
-    const mappedData: any = {
+    const mapped: unknown =ny = {
       name: item.name
     };
 
@@ -1292,7 +1292,7 @@ service: 'MondayDataService',;
   }
 
   private mapItemToAO(item: MondayItem, mapping: ImportMapping): InsertAo {
-    const mappedData: any = {
+    const ma: unknown =a: unknown = {
       reference: item.name
     };
 
@@ -1320,7 +1320,7 @@ service: 'MondayDataService',;
   }
 
   private mapItemToSupplier(item: MondayItem, mapping: ImportMapping): InsertSupplier {
-    const mappedData: any = {
+    cons: unknown =dDaunknown =ny = {
       name: item.name
     };
 
@@ -1344,11 +1344,8 @@ service: 'MondayDataService',;
     };
   }
 
-  private suggestColumnMappings(
-    columns: any[],
-    targetEntity: 'project' | 'ao' | 'supplier' | 'task'
-  ): any[] {
-    const mappings: any[] = [];
+  private suggestColumnMappings(: unknown[]lumunknown[]ny[],
+    targetEntity: 'project' | 'ao' | 'suppli: unknown[unknownsunknown[]): any[] : unknown[unknownsunknown[]pings: any[] = [];
 
     const mappingRules: Record<string, Record<string, string[]>> = {
       project: {
@@ -1404,7 +1401,7 @@ service: 'MondayDataService',;
     return mappings;
   }
 
-  private extractColumnValue(columnValue: any): any {
+  private extractColumnValueunknownlumnValue: unknown): any {
     if (columnValue.type === 'text') {
       return columnValue.text || columnValue.value;
     } else if (columnValue.type === 'numbers') {
@@ -1438,7 +1435,7 @@ service: 'MondayDataService',;
     return 'project';
   }
 
-  private handleConflict(entity: any, mondayUpdatedAt: Date | undefined, entityType: string, itemId: string): void {
+  private handleConflict(entity: unknown, mondayUpdatedAt: Date | undefined, entityType: string, itemId: string): void {
     const saxiumUpdatedAt = entity.updatedAt;
     const mondayTime = mondayUpdatedAt || new Date();
     
@@ -1468,7 +1465,7 @@ service: 'MondayDataService',;
   }
 
   private mapMasterToContactData(
-    masterData: any,
+    master: unknown, unknown,
     role: 'maitre_ouvrage' | 'maitre_oeuvre'
   ): ExtractedContactData {
     return {
@@ -1487,7 +1484,7 @@ service: 'MondayDataService',;
     };
   }
 
-  private mapContactToIndividualData(contactData: any): IndividualContactData {
+  private mapContactToIndividualData(contact: unknown)unknown): IndividualContactData {
     const fullName = contactData.name || '';
     const nameParts = fullName.trim().split(/\s+/);
     const firstName = nameParts[0] || '';
@@ -1506,7 +1503,7 @@ service: 'MondayDataService',;
     };
   }
 
-  private cleanEnumFields(data: any): any {
+  private clunknowunknownumFie: unknown)unknown)any): any {
     const cleaned = { ...data };
     
     if (typeof cleaned.operationalStatus === 'number') {

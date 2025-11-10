@@ -2,10 +2,10 @@ import { BaseExtractor } from './BaseExtractor';
 import type { SplitterContext } from '../types';
 import { parseAddress } from '../parsers';
 
-export class AddressExtractor extends BaseExtractor<any | null> {
+export class AddressExtractor extends BaseExtractor<unknown | null> {
   name = 'AddressExtractor';
   
-  async extract(context: SplitterContext): Promise<any | null> {
+  async extract(context: SplitterContext): Promunknown |ny | null> {
     const addressMappings = context.config.mappings.address || [];
     
     for (const mapping of addressMappings) {

@@ -2,11 +2,11 @@ import { BaseExtractor } from './BaseExtractor';
 import type { SplitterContext } from '../types';
 import { detectContactRole } from '../parsers';
 
-export class ContactExtractor extends BaseExtractor<any[]> {
+export class ContactExtractor extends BaseExtractor<unknown[]> {
   name = 'ContactExtractor';
   
-  async extract(context: SplitterContext): Promise<any[]> {
-    const contacts: any[] = [];
+  async extract(context: SplitterContext): Pro<unknown[]>y[]> {
+    const contacts: unknown[] = [];
     const contactMappings = context.config.mappings.contacts || [];
     
     for (const mapping of contactMappings) {
@@ -33,7 +33,7 @@ export class ContactExtractor extends BaseExtractor<any[]> {
     const uniqueContacts = contacts.reduce((acc, contact) => {
       if (!contact.email) return acc;
       
-      const existing = acc.find((c: any) => c.email === contact.email);
+      const existing = acc.find((c: unknown) => c.email === contact.email);
       if (!existing) {
         acc.push(contact);
       }

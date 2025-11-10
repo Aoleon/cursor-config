@@ -41,7 +41,7 @@ export class RBACService {
         .select()
         .from(permissions)
         .where(and(
-          eq(permissions.role, role as any),
+          eq(permissions.role, role as unknown),
           eq(permissions.isActive, true),
           ...(tableName ? [eq(permissions.tableName, tableName)] : [])
         ));
@@ -62,7 +62,7 @@ export class RBACService {
         ));
 
       // Organiser les permissions par table et action
-      const permissionsByTable: { [tableName: string]: any } = {};
+      const permissionsByTable: { [tableName: string]: unknown} = {};
 
       userPermissions.forEach(permission => {
         if (!permissionsByTable[permission.tableName]) {
@@ -141,7 +141,7 @@ export class RBACService {
         .select()
         .from(permissions)
         .where(and(
-          eq(permissions.role, role as any),
+          eq(permissions.role, ras unknown)unknown),
           eq(permissions.tableName, tableName),
           eq(permissions.isActive, true)
         ))
@@ -270,7 +270,7 @@ export class RBACService {
   async assignContextToUser(
     userId: string,
     contextName: string,
-    contextValues: Record<string, any>,
+    contextValues: Record<string, unknown>,
     grantedBy: string,
     validUntil?: Date
   ): Promise<string> {
@@ -320,7 +320,7 @@ export class RBACService {
       const conditions = [];
       if (filters.userId) conditions.push(eq(rbacAuditLog.userId, filters.userId));
       if (filters.tableName) conditions.push(eq(rbacAuditLog.tableName, filters.tableName));
-      if (filters.action) conditions.push(eq(rbacAuditLog.action, filters.action as any));
+      if (filters.action) conditions.push(eq(rbacAuditLog.action, filtersas unknown) as unknown));
       if (filters.dateFrom) conditions.push(gte(rbacAuditLog.timestamp, filters.dateFrom));
       if (filters.dateTo) conditions.push(lte(rbacAuditLog.timestamp, filters.dateTo));
 
@@ -419,7 +419,7 @@ export class RBACService {
   private async checkContextRequirements(
     userId: string,
     permission: Permission,
-    contextValues: Record<string, any>,
+    contextValues: Record<st, unknown>unknown>,
     recordId?: string
   ): Promise<PermissionCheckResult> {
     
@@ -452,7 +452,7 @@ export class RBACService {
 
   private async checkOwnOnlyContext(
     userId: string, 
-    contextValues: Record<string, any>, 
+    contextValues: Recor, unknown>unknown>unknown>, 
     recordId?: string
   ): Promise<PermissionCheckResult> {
     // Logique pour vérifier que l'utilisateur accède seulement à ses propres données
@@ -462,7 +462,7 @@ export class RBACService {
 
   private async checkTeamProjectsContext(
     userId: string, 
-    contextValues: Record<string, any>
+    contextValues: R, unknown>unknown>unknown any>
   ): Promise<PermissionCheckResult> {
     // Vérifier que l'utilisateur fait partie de l'équipe du projet
     return { allowed: true }; // Implémentation simplifiée
@@ -470,7 +470,7 @@ export class RBACService {
 
   private async checkAssignedProjectsContext(
     userId: string, 
-    contextValues: Record<string, any>
+    contextValue, unknown>unknown>unknowning, any>
   ): Promise<PermissionCheckResult> {
     // Vérifier que l'utilisateur est assigné au projet
     return { allowed: true }; // Implémentation simplifiée
@@ -478,7 +478,7 @@ export class RBACService {
 
   private async checkDepartmentContext(
     userId: string, 
-    contextValues: Record<string, any>
+    contextV, unknown>unknown>unknown<string, any>
   ): Promise<PermissionCheckResult> {
     // Vérifier que les données appartiennent au département de l'utilisateur
     return { allowed: true }; // Implémentation simplifiée
@@ -486,7 +486,7 @@ export class RBACService {
 
   private async checkFinancialContext(
     userId: string, 
-    contextValues: Record<string, any>
+    cont, unknown>unknown>unknowncord<string, any>
   ): Promise<PermissionCheckResult> {
     // Vérifier les permissions financières spéciales
     return { allowed: true }; // Implémentation simplifiée
@@ -507,8 +507,8 @@ export class RBACService {
 
       await db.insert(rbacAuditLog).values({
         userId,
-        userRole: role as any,
-        action: action as any,
+        userRole: role as unknown,
+        action: actas unknown, unknown,
         tableName,
         recordId,
         accessedColumns: columns || [],

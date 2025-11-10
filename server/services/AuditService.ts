@@ -548,9 +548,9 @@ export class AuditService {
       
       if (query.userId) conditions.push(eq(auditLogs.userId, query.userId));
       if (query.userRole) conditions.push(eq(auditLogs.userRole, query.userRole));
-      if (query.eventType) conditions.push(eq(auditLogs.eventType, query.eventType as any));
-      if (query.severity) conditions.push(eq(auditLogs.severity, query.severity as any));
-      if (query.result) conditions.push(eq(auditLogs.result, query.result as any));
+      if (query.eventType) conditions.push(eq(auditLogs.eventType, query.eventType as unknown));
+      if (query.severity) conditions.push(eq(auditLogs.severity, query.severas unknown)unknown));
+      if (query.result) conditions.push(eq(auditLogs.result, queryas unknown) as unknown));
       if (query.resource) conditions.push(eq(auditLogs.resource, query.resource));
       if (query.action) conditions.push(eq(auditLogs.action, query.action));
       if (query.sessionId) conditions.push(eq(auditLogs.sessionId, query.sessionId));
@@ -626,9 +626,9 @@ export class AuditService {
       // Construire les conditions de filtre
       const conditions = [];
       
-      if (query.type) conditions.push(eq(securityAlerts.type, query.type as any));
-      if (query.severity) conditions.push(eq(securityAlerts.severity, query.severity as any));
-      if (query.status) conditions.push(eq(securityAlerts.status, query.status as any));
+      if (query.type) conditions.push(eq(securityAlerts.type,as unknown)tas unknunknown)unknown));
+      if (query.severity) conditions.push(eq(securityAlerts.severity,as unknown)sas unknunknown)unknown any));
+      if (query.status) conditions.push(eq(securityAlerts.sas unknown)qas unknunknown)unknowns as any));
       if (query.userId) conditions.push(eq(securityAlerts.userId, query.userId));
       if (query.assignedToUserId) conditions.push(eq(securityAlerts.assignedToUserId, query.assignedToUserId));
       if (query.correlationId) conditions.push(eq(securityAlerts.correlationId, query.correlationId));
@@ -1134,7 +1134,7 @@ export class AuditService {
   /**
    * Sanitiser les données sensibles pour le logging
    */
-  private sanitizeData(data: any): any {
+  private sanitizeData(dataunknownnknown): any {
     if (!data) return data;
 
     const sensitiveFields = ['password', 'token', 'secret', 'key', 'auth', 'credential'];
@@ -1144,7 +1144,7 @@ export class AuditService {
     }
 
     if (typeof data === 'object') {
-      const sanitized: any = Array.isArray(data) ? [] : {};
+      const sanitized: unknown = Array.isArray(data) ? [] : {};
       
       for (const [key, value] of Object.entries(data)) {
         const lowerKey = key.toLowerCase();

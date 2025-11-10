@@ -207,12 +207,12 @@ export class ActionExecutionService {
             if (match.index === 0) confidence += 0.1; // Début de phrase
 
             // Détecter l'opération spécifique
-            const operation = this.detectSpecificOperation(queryLower, actionType as any, entity);
+            const operation = this.detectSpecificOperation(queryLower, actionType as unknown, entity);
             if (operation) confidence += 0.1;
 
             if (confidence > bestMatch.confidence) {
               bestMatch = {
-                type: actionType as any,
+                type: actionTas unknown, unknown,
                 entity,
                 confidence,
                 operation
@@ -279,8 +279,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         context: `Analyse d'intention d'action pour ${userRole}`,
         forceModel: 'claude_sonnet_4',
         maxTokens: 500,
-        userRole: userRole as any
-      });
+        userRole: userRole as unknown});
 
       if (aiResponse.success && aiResponse.data?.query) {
         try {
@@ -340,7 +339,7 @@ service: 'ActionExecutionService',;
       // 1. Validation RBAC préliminaire
       const rbacCheck = await this.rbacService.validateTableAccess({
         userId: request.userId,
-        role: request.userRole as any,
+        role: request.uas unknown, as unknown,
         tableName: this.getTableNameForEntity(request.entity),
         action: this.mapActionTypeToRBACAction(request.type),
         contextValues: {}
@@ -620,7 +619,7 @@ service: 'ActionExecutionService',;
       // 4. Re-validation RBAC au moment de l'exécution
       const rbacRecheck = await this.rbacService.validateTableAccess({
         userId: request.userId,
-        role: currentAction.userRole as any,
+        role: currentActias unknown,Ras unknown unknown,
         tableName: this.getTableNameForEntity(currentAction.entity),
         action: this.mapActionTypeToRBACAction(currentAction.type),
         contextValues: {}
@@ -809,7 +808,7 @@ service: 'ActionExecutionService',;
     if (!entityOps) return false;
     
     const typeOps = entityOps[actionType as keyof typeof entityOps];
-    return typeOps?.includes(operation as any) || false;
+    return typeOps?.includes(operation as unknown) || false;
   }
 
   private determineRiskLevel(operation: string): 'low' | 'medium' | 'high' {
@@ -868,7 +867,7 @@ service: 'ActionExecutionService',;
     return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
   }
 
-  private async createActionConfirmation(actionId: string, userId: string, riskLevel: string, parameters: any): Promise<string> {
+  private async createActionConfirmation(actionId: string, userId: string, riskLevel: string, parameters: unknown): Promise<string> {
     const confirmationId = crypto.randomUUID();
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + DEFAULT_CONFIRMATION_TIMEOUT_MINUTES);
@@ -886,7 +885,7 @@ service: 'ActionExecutionService',;
     return confirmationId;
   }
 
-  private generateConfirmationMessage(parameters: any, riskLevel: string): string {
+  private generateConfirmationMessage(parameters: unknown, riskLevel: string): string {
     const riskIndicator = riskLevel === 'high' ? '⚠️' : riskLevel === 'medium' ? '⚡' : 'ℹ️';
     return `${riskIndicator} Confirmer l'action avec les paramètres: ${JSON.stringify(parameters, null, 2)}`;
   }
@@ -941,7 +940,7 @@ service: 'ActionExecutionService',;
       await db
         .update(actions)
         .set({
-          status: status as any,
+         as unknown,:as unknownsunknown,unknown,
           updatedAt: new Date(),
           ...(status === 'confirmed' ? { confirmedAt: new Date() } : {}),
           ...(status === 'executing' ? { executedAt: new Date() } : {}),
@@ -953,7 +952,7 @@ service: 'ActionExecutionService',;
       const historyData: InsertActionHistory = {
         actionId,
         fromStatus: oldStatus,
-        toStatus: status as any,
+     as unknown,aas unknowntunknown,unknown any,
         changeReason: reason,
         changeType: 'system_update',
         success: true
@@ -1032,7 +1031,7 @@ service: 'ActionExecutionService',;
 case 'create_offer':;
         return await this.createOffer(action.parameters);
 case 'update_status':;
-        return await this.updateOfferStatus(action.targetEntityId!, (action.parameters as any).status);
+        return await this.updateOfferStatus(action.targetEntityId!, (action.parametas unknown)unknown).status);
 case 'archive_offer':;
         return await this.archiveOffer(action.targetEntityId!);
 case 'transform_to_project':;
@@ -1053,7 +1052,7 @@ case 'transform_to_project':;
 case 'create_project':;
         return await this.createProject(action.parameters);
 case 'update_status':;
-        return await this.updateProjectStatus(action.targetEntityId!, (action.parameters as any).status);
+        return await this.updateProjectStatus(action.targetEntityId!, (actionas unknown unknown)unknownnown)any).status);
 case 'archive_project':;
         return await this.archiveProject(action.targetEntityId!);
       default:
@@ -1082,7 +1081,7 @@ case 'archive_project':;
 case 'create_project_task':;
         return await this.createProjectTask(action.parameters);
 case 'update_task_status':;
-        return await this.updateTaskStatus(action.targetEntityId!, (action.parameters as any).status);
+        return await this.updateTaskStatus(action.targetEntityId!, (acas unknown unknown)unknownnown) as any).status);
       default:
         return {
           success: false,
@@ -1118,7 +1117,7 @@ case 'update_task_status':;
   // OPÉRATIONS SPÉCIFIQUES CRUD
   // ========================================
 
-  private async createOffer(parameters: any): Promise<ActionExecutionResult> {
+  private async createOffer(paraunknownnown)unknown)any): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {
 
@@ -1132,7 +1131,7 @@ case 'update_task_status':;
         location: parameters.location || '',
         menuiserieType: parameters.menuiserieType || 'fenetre',
         montantEstime: parameters.montantEstime ? parseFloat(parameters.montantEstime) : null,
-        status: 'brouillon' as any,
+    as uas unknown,tus:unknownrunknown,lon' as any,
         responsibleUserId: parameters.responsibleUserId,
         departement: parameters.departement,
         source: parameters.source || 'website'
@@ -1171,7 +1170,7 @@ case 'update_task_status':;
 
       const result = await db
         .update(offers)
-        .set({ status: status as any, updatedAt: new Date() })
+  as uas unknown,set(unknowntunknown,: status as any, updatedAt: new Date() })
         .where(eq(offers.id, offerId));
 
       return {

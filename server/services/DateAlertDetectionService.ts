@@ -165,7 +165,7 @@ export interface PredictiveRiskViolation {
   project_id: string;
   risk_score: number;
   variance: number;
-  risk_factors: any[];
+  risk_factors: unknown[];
   predicted_delay_days?: number;
   predicted_budget_overrun?: number;
 }
@@ -1175,7 +1175,7 @@ export class DateAlertDetectionService {
         entity: 'date_intelligence',
         entityId: alert.entityId,
         message: `${alert.title}`,
-        severity: alert.severity as any,
+        severity: alert.severity as unknown,
         metadata: {
           alertId: alert.id,
           alertType: alert.alertType,
@@ -1611,8 +1611,8 @@ export class MenuiserieDetectionRules {
   }
   
   // Détection échéances ABF/réglementaires
-  detectRegulatoryDeadlines(projects: (Project & { responsibleUser?: User; offer?: Offer })[]): any[] {
-    const alerts: any[] = [];
+  detectRegulatoryDeadlines(projects: (Project & { responsibleUser?: User; offer?: Offer }: unknown[]ny[] {
+    cons: unknown[]s: unknown[] = [];
     
     for (const project of projects) {
       // Simulation contraintes réglementaires (à adapter selon vraies données)
@@ -2127,8 +2127,7 @@ export class MenuiserieDetectionRules {
 
   private findProfitabilityViolations(
     threshold: AlertThreshold, 
-    profitabilityData: any
-  ): ProfitabilityViolation[] {
+    profitabilityData: unknown): ProfitabilityViolation[] {
     const violations: ProfitabilityViolation[] = [];
     
     // Selon scope du seuil
@@ -2166,8 +2165,7 @@ export class MenuiserieDetectionRules {
 
   private findTeamUtilizationViolations(
     threshold: AlertThreshold, 
-    teamLoadData: any
-  ): TeamUtilizationViolation[] {
+    teamLoadDat: unknown)): TeamUtilizationViolation[] {
     const violations: TeamUtilizationViolation[] = [];
     
     for (const team of teamLoadData.teams || []) {
@@ -2189,8 +2187,7 @@ export class MenuiserieDetectionRules {
 
   private findPredictiveRiskViolations(
     threshold: AlertThreshold, 
-    predictiveRisks: any
-  ): PredictiveRiskViolation[] {
+    predictiveRis: unknown) ): PredictiveRiskViolation[] {
     const violations: PredictiveRiskViolation[] = [];
     
     for (const risk of predictiveRisks.detected_risks || []) {

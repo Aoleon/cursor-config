@@ -340,7 +340,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
       const workbook = XLSX.readFile(file);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
 
       // Determine file type and extract data
       if (file.includes('AO_Planning')) {
@@ -365,7 +365,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
     return { aos, projects };
   }
 
-  private extractAoDataFromExcelRow(row: any[], rowIndex: number): MondayAoData | null {
+  private extractAoDataFromExcelRow(row: unknown[], rowIndex: number): MondayAoData | null {
     return withErrorHandling(
     async () => {
 
@@ -394,7 +394,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
     }
   }
 
-  private extractProjectDataFromExcelRow(row: any[], rowIndex: number): MondayProjectData | null {
+  private extractProjectDataFromExcelRow(row: unknown[], rowIndex: number): MondayProjectData | null {
     return withErrorHandling(
     async () => {
 
@@ -641,7 +641,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
   }
 
   private async bulkInsert(
-    items: any[],
+    items: unknown[],
     entityType: string,
     batchSize: number
   ): Promise<{

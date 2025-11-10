@@ -233,7 +233,7 @@ export interface PreloadingTask {
   triggerEvent?: string; // Événement déclencheur
   estimatedExecutionTime: number; // Millisecondes
   maxRetries: number;
-  contextConfig: any; // Configuration contexte à preloader
+  contextConfig: unknown; // Configuration contexte à preloader
 }
 
 export interface PreloadingSchedule {
@@ -277,19 +277,19 @@ export interface CacheEntry<T> {
 
 export class PredictiveEngineService {
   private storage: IStorage;
-  private cache: Map<string, CacheEntry<any>>;
+  private cache: Map<string, CacheEntry<unknown>>;
   private readonly CACHE_TTL_MINUTES = 30;
   private readonly CACHE_MAX_SIZE = 1000;
   
   // ÉTAPE 3 PHASE 3 PERFORMANCE : Safety Guards intégration
-  private safetyGuards: any;
+  private safetyGu: unknown;unknown;
 
   // ÉTAPE 3 PHASE 3 PERFORMANCE : Preloading prédictif
   private entityAccessLog: Map<string, EntityAccessEntry> = new Map();
   private userAccessPatterns: Map<string, UserAccessPattern> = new Map();
   private btpWorkflowPatterns: Map<string, BTPWorkflowPattern> = new Map();
   private preloadingSchedule: PreloadingSchedule;
-  private contextCacheService: any = null; // Référence vers ContextCacheService
+  private contextCacheService: unknown = null; // Référence vers ContextCacheService
   
   // Configuration preloading
   private readonly HEATMAP_RETENTION_HOURS = 72; // 3 jours
@@ -846,7 +846,7 @@ service: 'PredictiveEngineService',;
   /**
    * Analyse les facteurs de risque d'un projet
    */
-  private analyzeRiskFactors(project: Project, delayHistory: any[]): RiskFactor[] {
+  private analyzeRiskFactors(project: Project, delayHistory: unknown[]): RiskFactor[] {
     const factors: RiskFactor[] = [];
 
     // Analyse complexité
@@ -890,7 +890,7 @@ service: 'PredictiveEngineService',;
   /**
    * Prédit les retards et dépassements budgétaires
    */
-  private predictDelaysAndOverruns(project: Project, delayHistory: any[]): { delay: number; overrun: number } {
+  private predictDelaysAndOverruns(project: Project, delayHis: unknown[]ny[]): { delay: number; overrun: number } {
     // Analyse basée sur l'historique de projets similaires
     const similarProjects = delayHistory.filter(h => 
       h.project_type === project.menuiserieType
@@ -969,7 +969,7 @@ service: 'PredictiveEngineService',;
   /**
    * Filtre projets selon paramètres de requête
    */
-  private filterProjectsByParams(projects: any[], params: RiskQueryParams): any[] {
+  private filterProjectsByParams(: unknown[]s: unknown[], params: Risk: unknown[]ramunknown[]ny[] {
     let filtered = projects;
 
     if (params.project_types) {
@@ -1011,7 +1011,7 @@ service: 'PredictiveEngineService',;
   /**
    * Récupère KPIs actuels via AnalyticsService
    */
-  private async getCurrentKPIs(period: DateRange): Promise<any> {
+  private async getCurrentKPIs(period: DateRange): Pro<unknown>unknown> {
     return withErrorHandling(
     async () => {
 
@@ -1057,7 +1057,7 @@ service: 'PredictiveEngineService',;
   /**
    * Récupère benchmarks secteur
    */
-  private async getSectorBenchmarks(): Promise<any> {
+  private async getSectorBenchmarks():<unknown>unknown>unknown> {
     return withErrorHandling(
     async () => {
 
@@ -1085,7 +1085,7 @@ service: 'PredictiveEngineService',;
   /**
    * Génère recommandations revenue/conversion
    */
-  private async generateRevenueRecommendations(currentKPIs: any, benchmarks: any): Promise<BusinessRecommendation[]> {
+  private async generateRevenueRecommendations(currentKPIs: unknown, benchmarks: unknown): Promise<BusinessRecommendation[]> {
     const recommendations: BusinessRecommendation[] = [];
 
     if (currentKPIs.conversion_rate < benchmarks.industry_avg_conversion) {
@@ -1118,7 +1118,7 @@ service: 'PredictiveEngineService',;
   /**
    * Génère recommandations optimisation coûts/délais
    */
-  private async generateCostOptimizationRecommendations(currentKPIs: any, benchmarks: any): Promise<BusinessRecommendation[]> {
+  private async generateCostOptimizationRecommendations(current: unknown, unknown, benchm: unknown)unknown): Promise<BusinessRecommendation[]> {
     const recommendations: BusinessRecommendation[] = [];
 
     if (currentKPIs.avg_project_duration > benchmarks.avg_duration_benchmark) {
@@ -1202,7 +1202,7 @@ service: 'PredictiveEngineService',;
   /**
    * Génère recommandations qualité
    */
-  private async generateQualityRecommendations(currentKPIs: any): Promise<BusinessRecommendation[]> {
+  private async generateQualityRecommendations(cur: unknown)unknunknown)any): Promise<BusinessRecommendation[]> {
     const recommendations: BusinessRecommendation[] = [];
 
     // Exemple de recommandation qualité basée sur les données
@@ -1259,7 +1259,7 @@ service: 'PredictiveEngineService',;
   /**
    * Calcule niveau de confiance des prévisions
    */
-  private calculateConfidenceLevel(historical: any[], forecasts: any[]): number {
+  private calculateConfidence: unknown[]istoric: unknown[][], forunknunknown[]s: any[]): number {
     if (historical.length < 3) return 40; // Confiance faible si peu de données
     
     // Calcul variance données historiques
@@ -1280,7 +1280,7 @@ service: 'PredictiveEngineService',;
   /**
    * Identifie facteurs explicatifs des tendances
    */
-  private identifyUnderlyingFactors(historical: any[]): string[] {
+  private identifyUnde: unknown[]actors(unknunknown[]rical: any[]): string[] {
     const factors: string[] = [];
     
     if (historical.length < 2) return ['Données insuffisantes'];
@@ -1324,7 +1324,7 @@ service: 'PredictiveEngineService',;
   /**
    * Calcule volatilité historique
    */
-  private calculateVolatility(historical: any[]): number {
+  private ca: unknown[]Volatilunknunknown[]istorical: any[]): number {
     if (historical.length < 2) return 50;
     
     const revenues = historical.map(h => h.total_revenue);
@@ -1337,7 +1337,7 @@ service: 'PredictiveEngineService',;
   /**
    * Détecte direction de tendance
    */
-  private detectTrendDirection(historical: any[]): 'up' | 'down' | 'stable' {
+  private: unknown[]TrendDiunknunknown[]on(historical: any[]): 'up' | 'down' | 'stable' {
     if (historical.length < 3) return 'stable';
     
     const recent = historical.slice(-3);
@@ -1358,7 +1358,7 @@ service: 'PredictiveEngineService',;
   /**
    * Génère clé de cache unique
    */
-  private getCacheKey(method: string, params: any): string {
+  private getCacheKey(method: unknown unknown)unknown)ms: any): string {
     return `predictive_${method}_${JSON.stringify(params)}`;
   }
 
@@ -1502,7 +1502,7 @@ service: 'PredictiveEngineService',;
   /**
    * Récupère données historiques délais projets via storage
    */
-  private async getProjectDelayHistory(params: { start_date: string; end_date: string }): Promise<any[]> {
+  private async getProjectDelayHistory(params: { start_date: string; end_date: string }): Promise<unknown[]> {
     return withErrorHandling(
     async () => {
 
@@ -1527,7 +1527,7 @@ service: 'PredictiveEngineService',;
   /**
    * Intégration avec ContextCacheService pour preloading
    */
-  public integrateWithContextCache(contextCacheService: any): void {
+  public integrateWithContextCache(cunknown unknown)unknown)ervice: any): void {
     this.contextCacheService = contextCacheService;
     logger.info('Intégration ContextCacheService activée', {
       metadata: {
@@ -1835,7 +1835,7 @@ service: 'PredictiveEngineService',;
     
     if (!entry) {
       entry = {
-        entityType: entityType as any,
+        entityType: entityType as unknown,
         entityId,
         accessCount: 0,
         lastAccessTime: now,
@@ -1997,7 +1997,7 @@ service: 'PredictiveEngineService',;
    */
   private async predictFromUserPatterns(
     userPattern: UserAccessPattern,
-    currentContext: any,
+    curren: unknown,xt: unknown,
     now: number
   ): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
@@ -2035,7 +2035,7 @@ service: 'PredictiveEngineService',;
    * ÉTAPE 3 BUSINESS PATTERN RECOGNITION : Prédit accès basé sur workflows BTP typiques
    * Analyse sophistiquée des séquences métier menuiserie française
    */
-  private async predictFromBTPWorkflows(currentContext: any, now: number): Promise<AccessPrediction[]> {
+  private async predictFromBTPWounknownlows(cu: unknown,onteunknown,any, now: number): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
     
     if (!currentContext) return predictions;
@@ -2196,7 +2196,7 @@ service: 'PredictiveEngineService',;
         };
 
         // Métadonnées BTP spécialisées
-        (prediction as any).btpMetadata = {
+        (prediction as unknown).btpMetadata = {
           workflowStage: workflow.to,
           estimatedDuration: this.estimateWorkflowStageDuration(workflow.to),
           dependencies: this.getWorkflowDependencies(workflow),
@@ -2222,7 +2222,7 @@ service: 'PredictiveEngineService',;
   /**
    * Prédictions basées sur patterns spécifiques aux rôles utilisateur BTP
    */
-  private async predictFromUserRolePatterns(currentContext: any, now: number): Promise<AccessPrediction[]> {
+  private async predictFromUserRunknownPattern: unknown,entCunknown,xt: any, now: number): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
     const userRole = currentContext.userRole || 'other';
     
@@ -2309,7 +2309,7 @@ service: 'PredictiveEngineService',;
   /**
    * Prédictions saisonnalité spécifique menuiserie française
    */
-  private async predictFromSeasonalPatterns(currentContext: any, now: number): Promise<AccessPrediction[]> {
+  private async predictFromSunknownonalPat: unknown,currunknown,ontext: any, now: number): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
     const currentMonth = new Date(now).getMonth();
     const currentHour = new Date(now).getHours();
@@ -2446,7 +2446,7 @@ service: 'PredictiveEngineService',;
   /**
    * Vérifie correspondance contexte avec workflow
    */
-  private isWorkflowContextMatch(context: any, workflow: any): boolean {
+  private isWork: unknown,nteunknownatunknown,o: unknown)unknown), workflow: any): boolean {
     // Vérifications spécialisées selon type de workflow
     if (workflow.requiresValidation && context.userRole !== 'admin' && context.userRole !== 'commercial') {
       return false;
@@ -2466,7 +2466,7 @@ service: 'PredictiveEngineService',;
   /**
    * Prédit ID entité selon type et contexte
    */
-  private async predictEntityId(entityType: string, context: any): Promise<string> {
+  private async prediunknownntityId(ent: unknown)unknown)tring, context: any): Promise<string> {
     // Logique prédiction ID selon relations métier
     if (context.entityId && context.entityType) {
       // Relations directes
@@ -2504,7 +2504,7 @@ service: 'PredictiveEngineService',;
   /**
    * Détermine exigences contexte selon workflow
    */
-  private determineContextRequirements(workflow: any): string[] {
+  priunknowne determine: unknown)unknown)uirements(workflow: any): string[] {
     const requirements: string[] = ['standard'];
     
     if (workflow.complexity === 'high') {
@@ -2545,8 +2545,8 @@ service: 'PredictiveEngineService',;
 
   /**
    * Obtient dépendances workflow
-   */
-  private getWorkflowDependencies(workflow: any): string[] {
+  unknown
+  private : unknown)unknown)wDependencies(workflow: any): string[] {
     const deps: string[] = [];
     
     if (workflow.supplierDependency) deps.push('supplier_availability');
@@ -2731,7 +2731,7 @@ service: 'PredictiveEngineService',;
   /**
    * Génère configuration contexte pour preloading
    */
-  private generateContextConfig(prediction: AccessPrediction): any {
+  punknownate generateContextConfig(prediction: AccessPrediction): any {
     return {
       complexity: prediction.contextRequirements.includes('comprehensive') ? 'comprehensive' :
                  prediction.contextRequirements.includes('standard') ? 'standard' : 'minimal',
@@ -2982,9 +2982,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
   // ========================================
 
   /**
-   * Analyse des risques - alias pour detectProjectRisks pour compatibilité routes
-   */
-  async analyzeRisks(params?: any): Promise<any[]> {
+   * Analyse des risques - alias pour detectProjectRisks pour cunknownatibilité route: unknown)unknown)async analyzeRisks(params?: any): Pro<unknown[]>y[]> {
     return withErrorHandling(
     async () => {
 
@@ -3011,9 +3009,9 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
   }
 
   /**
-   * Sauvegarde un snapshot d'analyse
+   * Sauvegarde un snapshot dunknownnknown)se
    */
-  async saveSnapshot(data: any): Promise<any> {
+  async saveSnapshot(data: a<unknown>unknown>ise<any> {
     return withErrorHandling(
     async () => {
 
@@ -3052,9 +3050,9 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
   }
 
   /**
-   * Récupère les snapshots d'analyse
-   */
-  async getSnapshots(params?: any): Promise<any[]> {
+   * Récupère unknown snapshots unknownnknown)yse
+unknown)/
+  async getSnapshots(parunknown[] any):<unknown[]>e<any[]> {
     return withErrorHandling(
     async () => {
 

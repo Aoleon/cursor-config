@@ -105,7 +105,7 @@ export class ContextTierService implements ContextTierServiceInterface {
    */
   async detectContextTier(
     query: string,
-    userContext: any,
+    userContext: unknown,
     entityType: AIContextualData['entityType']
   ): Promise<ContextTierDetectionResult> {
     const startTime = Date.now();
@@ -394,7 +394,7 @@ export class ContextTierService implements ContextTierServiceInterface {
   /**
    * Analyse contexte et capacités utilisateur
    */
-  private analyzeUserContext(userContext: any): ContextTierDetectionResult['userContext'] {
+  private analyzeUserContext(userContext: unknown): ContextTierDetectionResult['userContext'] {
     return {
       role: userContext.role || 'user',
       permissions: userContext.permissions || [],
@@ -406,7 +406,7 @@ export class ContextTierService implements ContextTierServiceInterface {
   /**
    * Détermine niveau d'expertise utilisateur
    */
-  private determineExpertiseLevel(userContext: any): 'junior' | 'standard' | 'expert' {
+  private determineExpertiseLevel(userCon: unknown)unknown): 'junior' | 'standard' | 'expert' {
     const role = userContext.role || '';
     const permissions = userContext.permissions || [];
     

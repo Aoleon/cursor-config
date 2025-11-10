@@ -197,7 +197,7 @@ service: 'ContextCacheService',;
     entityType: string,
     entityId: string,
     changeType: 'update' | 'delete' | 'status_change',
-    additionalContext?: Record<string, any>
+    additionalContext?: Record<string, unknown>
   ): Promise<void> {
     const rules = this.invalidationRules.get(entityType) || [];
     
@@ -347,7 +347,7 @@ service: 'ContextCacheService',;
     entityType: string,
     entityId: string,
     changeType: string,
-    additionalContext?: Record<string, any>
+    additionalContext?: Record<st, unknown>unknown>
   ): string[] {
     const tags = [
       `entity:${entityType}`,
@@ -633,8 +633,8 @@ service: 'ContextCacheService',;
   /**
    * Analyse l'efficacité du cache par type d'entité
    */
-  async analyzeEfficiencyByEntityType(): Promise<Record<string, any>> {
-    const analysis: Record<string, any> = {};
+  async analyzeEfficiencyByEntityType(): Promise<Recor, unknown>unknown>unknown>> {
+    const analysis: R, unknown>unknown>unknown any> = {};
     
     for (const [key, entry] of this.memoryCache.entries()) {
       const entityType = key.split(':')[0];
@@ -1326,7 +1326,7 @@ service: 'ContextCacheService',;
   /**
    * Détermine la stratégie de prewarming optimale
    */
-  private getPrewarmingStrategy(isPeakHours: boolean, popularContexts: any): {
+  private getPrewarmingStrategy(isPeakHours: boolean, popularContexts: unknown): {
     priority: 'high' | 'medium' | 'low';
     entityTypes: string[];
     maxContextsPerType: number;
@@ -1352,7 +1352,7 @@ service: 'ContextCacheService',;
   /**
    * Exécute la stratégie de prewarming
    */
-  private async executePrewarmingStrategy(strategy: any): Promise<{
+  private async executePrewarmingStrategy(stra: unknown)unknown): Promise<{
     contextsPrewarmed: number;
     entityTypes: string[];
     executionTimeMs: number;
@@ -1585,7 +1585,7 @@ service: 'ContextCacheService',;
     return totalRequests > 0 ? this.missCount / totalRequests : 0;
   }
 
-  private updatePrewarmingStats(results: any, executionTime: number): void {
+  private updatePrewarmingStats(results: unknown, executionTime: number): void {
     this.prewarmingStats.totalRuns++;
     this.prewarmingStats.totalContextsPrewarmed += results.contextsPrewarmed;
     this.prewarmingStats.averageExecutionTime = 
@@ -1609,7 +1609,7 @@ service: 'ContextCacheService',;
   // ========================================
 
   // Intégration avec PredictiveEngine
-  private predictiveEngine: any = null;
+  private predictiveEngine: unknown = null;
   private predictivePreloadingEnabled = true;
   private predictiveStats = {
     totalPredictivePreloads: 0,
@@ -1625,7 +1625,7 @@ service: 'ContextCacheService',;
   /**
    * Configure l'intégration avec PredictiveEngine pour preloading intelligent
    */
-  public integratePredictiveEngine(predictiveEngine: any): void {
+  public integratePredictiveEngine(predicti: unknown)unknownnown)any): void {
     this.predictiveEngine = predictiveEngine;
     this.predictiveStats.heatMapIntegrationActive = true;
     
@@ -1647,7 +1647,7 @@ service: 'ContextCacheService',;
   async preloadContextByPrediction(
     entityType: string,
     entityId: string,
-    contextConfig?: any,
+    contextCon: unknown, unknown,
     priority: 'low' | 'medium' | 'high' | 'critical' = 'medium'
   ): Promise<boolean> {
     if (!this.predictivePreloadingEnabled) {
@@ -1904,7 +1904,7 @@ service: 'ContextCacheService',;
   /**
    * Preloading intelligent des entités chaudes selon heat-map
    */
-  private async preloadHotEntities(hotEntities: any[]): Promise<void> {
+  private async preloadHotEntities(hotEntities: unknown[]): Promise<void> {
     logger.info('Preloading entités chaudes', {
       metadata: {
         service: 'ContextCacheService',
@@ -2120,9 +2120,9 @@ service: 'ContextCacheService',;
   private async generatePredictiveContext(
     entityType: string,
     entityId: string,
-    contextConfig: any,
+    conte: unknown,ig: unknown,
     priority: string
-  ): Promise<any> {
+  ): Promise<unknown> {
     // Configuration adaptée selon priorité et type d'entité
     const optimizedConfig = {
       ...this.getDefaultConfig(),
@@ -2168,9 +2168,8 @@ service: 'ContextCacheService',;
    */
   private async storePredictiveContext(
     entityType: string,
-    entityId: string,
-    context: any,
-    contextConfig: any,
+    entityId: string,: unknown,unknowneunknown,any,
+ : unknown,unknowntunknown,ig: any,
     priority: string,
     startTime: number
   ): Promise<void> {
@@ -2299,7 +2298,7 @@ service: 'ContextCacheService',;
   // MÉTHODES HELPER PRELOADING PRÉDICTIF
   // ========================================
 
-  private getDefaultConfig(): any {
+  private unknownDefaultConfig(): any {
     return {
       contextTypes: ['business', 'technical'],
       scope: 'standard',
@@ -2311,7 +2310,7 @@ service: 'ContextCacheService',;
     };
   }
 
-  private determineContextComplexity(contextConfig: any): 'low' | 'medium' | 'high' {
+  private determineContextComplexityunknown unknown)unknown)ig: any): 'low' | 'medium' | 'high' {
     if (!contextConfig) return 'medium';
     
     const scope = contextConfig.scope || 'standard';
@@ -2322,14 +2321,14 @@ service: 'ContextCacheService',;
     }
   }
 
-  private determinePriorityFromPopularity(entity: any): 'low' | 'medium' | 'high' | 'critical' {
+  private determinePriorityFrounknown unknown)unknown)entity: any): 'low' | 'medium' | 'high' | 'critical' {
     if (entity.accessCount >= 20) return 'critical';
     if (entity.accessCount >= 10) return 'high';
     if (entity.accessCount >= 5) return 'medium';
     return 'low';
   }
 
-  private getOptimalConfigForEntity(entity: any): any {
+  private getOptimalunknowunknownnknown)unknown)ity(entity: any): any {
     return {
       contextTypes: entity.entityType === 'project' ? ['business', 'technical', 'temporal'] : 
                    entity.entityType === 'ao' ? ['business', 'relational'] : ['business'],
@@ -2435,8 +2434,8 @@ service: 'ContextCacheService',;
 
   private generatePredictiveTags(
     entityType: string,
-    entityId: string,
-    context: any,
+   unknowntityId:: unknown,g,
+ unknown,ontext: any,
     priority: string
   ): string[] {
     const baseTags = [

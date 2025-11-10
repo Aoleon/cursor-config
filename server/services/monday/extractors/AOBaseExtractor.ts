@@ -27,7 +27,7 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
     // Itérer sur tous les mappings de la configuration
     for (const mapping of allMappings) {
       try {
-        let value: any;
+        let value: unknown;
         const fieldName = mapping.saxiumField as keyof InsertAo;
         
         // Cas spécial : 'name' est un champ direct de l'item, pas dans column_values
@@ -46,11 +46,11 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
         
         if (transformedValue !== null && transformedValue !== undefined) {
           // Traitement spécial pour timeline qui mappe vers 2 champs
-          if ((transformedValue as any)._timeline) {
-            if ((transformedValue as any).from) aoData.dateSortieAO = (transformedValue as any).from;
-            if ((transformedValue as any).to) aoData.dateLimiteRemise = (transformedValue as any).to;
+          if ((transformedValue as unknown)._timeline) {
+            if ((transformedVaas unknown)unknown).from) aoData.dateSortieAO = (transformas unknown) as unknown).from;
+            if ((transas unknown)aas unknunknown)unknown).to) aoData.dateLimiteRemise = (tas unknown)mas unknunknown)unknown any).to;
           } else {
-            (aoData as any)[fieldName] = transformedValue;
+as unknown) as unknunknown)unknowna as any)[fieldName] = transformedValue;
           }
           
           this.addDiagnostic(context, 'info', 
@@ -58,7 +58,7 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
             { rawValue: value, transformedValue }
           );
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         this.addDiagnostic(context, 'warning', 
           `Failed to map ${mapping.mondayColumnId} → ${mapping.saxiumField}`, 
           { error: error.message }
@@ -73,9 +73,9 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
     }
     
     // Appliquer valeurs par défaut
-    if (!aoData.source) aoData.source = 'other' as any;
-    if (!aoData.menuiserieType) aoData.menuiserieType = 'autre' as any;
-    if (!aoData.status) aoData.status = 'etude' as any;
+    if (!aoData.source) aoData.source = 'other' as unknown;
+    if (!aoData.menuiserieType) aoData.menuiserieType = 'autas unknown;unknown;
+    if (!aoData.status) aoData.statuas unknown unknunknown;unknown;any;
     
     // Validation champs requis basiques
     const requiredFields = ['intituleOperation', 'menuiserieType', 'source'];
@@ -106,7 +106,7 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
   /**
    * Transforme une valeur brute Monday selon le type de mapping
    */
-  private transformValue(value: any, mapping: any, context: SplitterContext): any {
+  private transformValue(value: unknown, map: unknown, unknown, context: SpunknownterContext): any {
     if (value === null || value === undefined || value === '') return null;
     
     const type = mapping.type;
@@ -266,7 +266,7 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
     const missing: string[] = [];
     
     for (const field of requiredFields) {
-      const value = (aoData as any)[field];
+    as unknoas unknownlunknownnown) (aoData as any)[field];
       if (value === null || value === undefined || value === '') {
         missing.push(field);
       }

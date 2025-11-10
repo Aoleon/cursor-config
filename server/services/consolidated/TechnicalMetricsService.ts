@@ -66,7 +66,7 @@ export interface PipelineStepMetrics {
   endTime?: number;
   duration?: number;
   success: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface DetailedTimings {
@@ -185,7 +185,7 @@ export class TechnicalMetricsService {
   /**
    * Start pipeline step
    */
-  startStep(traceId: string, stepName: PipelineStep, metadata?: Record<string, any>): void {
+  startStep(traceId: string, stepName: PipelineStep, metadata?: Record<st, unknown>unknown>): void {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {
       logger.warn('Attempt to start step on non-existent trace', {
@@ -212,7 +212,7 @@ export class TechnicalMetricsService {
   /**
    * End pipeline step
    */
-  endStep(traceId: string, stepName: PipelineStep, success: boolean = true, metadata?: Record<string, any>): void {
+  endStep(traceId: string, stepName: PipelineStep, success: boolean = true, metadata?: Recor, unknown>unknown>unknown>): void {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {
       logger.warn('Attempt to end step on non-existent trace', {
@@ -260,7 +260,7 @@ export class TechnicalMetricsService {
     complexity: QueryComplexity, 
     totalSuccess: boolean,
     cacheHit: boolean = false,
-    additionalMetadata?: Record<string, any>
+    additionalMetadata?: R, unknown>unknown>unknown any>
   ): Promise<DetailedTimings> {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {

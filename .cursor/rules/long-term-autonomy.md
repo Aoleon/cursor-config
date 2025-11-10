@@ -587,6 +587,7 @@ async function dynamicPrioritization(tasks: Task[]): Promise<Result> {
 - `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes
 - `@.cursor/rules/advanced-learning.md` - Stratégies d'apprentissage
 - `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation
+- `@.cursor/rules/transversal-performance.md` - **NOUVEAU** Performance transversale et autonomie
 
 ### Fichiers de Mémoire
 - `@activeContext.md` - État actuel et focus

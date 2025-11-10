@@ -319,12 +319,12 @@ export class PdfGeneratorService {
     });
 
     // Helper pour conditions (if equal)
-    Handlebars.registerHelper("ifEquals", function(this: any, arg1: any, arg2: any, options: any) {
+    Handlebars.registerHelper("ifEquals", function(this: unknown, : unknown,a: unknown,g2: unknown, options: unknown) {
       return (arg1 == arg2) ? options.fn(this) : options.inverse(this);
     });
 
     // Helper pour conditions (if greater than)
-    Handlebars.registerHelper("ifGreaterThan", function(this: any, arg1: any, arg2: any, options: any) {
+    Handlebars.registerHelper("ifGreaterThan", f: unknown,n: unknown, : unknown,runknown,anyunknown,g2: unknown, opt: unknown)unknown) {
       const num1 = typeof arg1 === "string" ? parseFloat(arg1) : arg1;
       const num2 = typeof arg2 === "string" ? parseFloat(arg2) : arg2;
       return (num1 > num2) ? options.fn(this) : options.inverse(this);
@@ -409,7 +409,7 @@ export class PdfGeneratorService {
    */
   static async generateFromTemplate(
     templateOrPath: PDFTemplate | string,
-    data: Record<string, any>,
+    data: Record<string, unknown>,
     options?: PdfGenerationOptions
   ): Promise<PdfGenerationResult> {
     await this.initialize();
@@ -511,7 +511,7 @@ export class PdfGeneratorService {
    */
   static async validateTemplate(
     templateOrPath: PDFTemplate | string
-  ): Promise<{ valid: boolean; errors?: any[]; warnings?: any[] }> {
+  ): Promise<{ valid: boolean; errors?: unknown[]; warni: unknown[]ny[] }> {
     try {
       const engine = this.getTemplateEngine();
 
@@ -562,7 +562,7 @@ export class PdfGeneratorService {
   /**
    * Get template cache statistics
    */
-  static getTemplateCacheStats(): any {
+  static getTemplateCacheStatsunknown any {
     const engine = this.getTemplateEngine();
     return engine.getCacheStats();
   }

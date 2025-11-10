@@ -94,7 +94,7 @@ export interface BoardColumnMetadata {
   id: string;
   title: string;
   type: string;
-  settings?: any;
+  settings?: unknown;
   description?: string;
 }
 
@@ -161,7 +161,7 @@ export class MondayIntegrationService {
    * Execute GraphQL query against Monday.com API
    * Includes correlation ID propagation and resilience wrapper
    */
-  async executeGraphQL<T = any>(query: string, variables?: any): Promise<T> {
+  async executeGraphQL<T = unknown>(query: string, variables?: unknown): Promise<T> {
     const correlationId = getCorrelationId();
     
     return executeMonday(
@@ -508,7 +508,7 @@ export class MondayIntegrationService {
       }
     `;
 
-    const result = await this.executeGraphQL<{ boards: any[] }>(query, { 
+    const result = await this.executeGraphQL<{ boards: unknown[] }>(query, { 
       boardIds: [parseInt(boardId)]
     });
     const boardData = result.boards?.[0];
@@ -565,7 +565,7 @@ export class MondayIntegrationService {
         }
       `;
 
-      const result = await this.executeGraphQL<{ me: any }>(query);
+      const result = await this.executeGraphQL<{ me: unknown}>(query);
       
       logger.info('Monday.com connection test successful', {
         service: 'MondayIntegrationService',
@@ -642,7 +642,7 @@ export class MondayIntegrationService {
   /**
    * Extract typed value from Monday column value
    */
-  extractColumnValue(columnValue: MondayColumnValue): any {
+  extractColumnValue(columnValue: MondayColumnValue): unknown {
     return withErrorHandling(
     async () => {
 
@@ -674,7 +674,7 @@ export class MondayIntegrationService {
             return parsed.date || null;
           
           case 'people':
-            return parsed.personsAndTeams?.map((p: any) => ({
+            return parsed.personsAndTeams?.ma: unknown)unknown) => ({
               id: p.id,
               name: p.name,
               email: p.email
@@ -711,7 +711,7 @@ export class MondayIntegrationService {
           
           case 'board-relation':
             return {
-              linkedItems: parsed.linkedPulseIds?.map((item: any) => ({
+              linkedItems: parsed.linkedPulseIds?.m: unknown)unknunknown)any) => ({
                 id: item.linkedPulseId || item,
                 boardId: item.boardId
               })) || []
@@ -720,7 +720,7 @@ export class MondayIntegrationService {
           case 'subtasks':
           case 'subitems':
             return {
-              subitemIds: parsed.linkedPulseIds?.map((item: any) => 
+              subitemIds: parsed.linkedPulseId: unknown)unknunknown)em: any) => 
                 item.linkedPulseId || item
               ) || [],
               count: parsed.linkedPulseIds?.length || 0
@@ -763,7 +763,7 @@ export class MondayIntegrationService {
    * Process Monday.com webhook event
    * Includes idempotence check and event deduplication
    */
-  async handleWebhook(payload: any): Promise<void> {
+  async handl: unknown)unknunknown)ayload: any): Promise<void> {
     const { event } = payload;
     const eventId = event?.eventId || event?.id;
     
@@ -837,7 +837,7 @@ export class MondayIntegrationService {
       // Publish to EventBus for downstream processing
       eventBus.publish({
         id: crypto.randomUUID(),
-        type: 'monday:webhook:received' as any,
+        type: 'monday:webhook:received' as unknown,
         entity: 'system',
         entityId: itemIdentifier,
         message: `Monday webhook processed for item ${itemIdentifier}`,
@@ -1089,7 +1089,7 @@ service: 'MondayIntegrationService',;
     return allBoards.map(board => ({ id: board.id, name: board.name }));
   }
 
-  private parseSettings(settingsStr: string): any {
+  private parseSettings(settinunknowntr: string): any {
     try {
       return JSON.parse(settingsStr);
     } catch {

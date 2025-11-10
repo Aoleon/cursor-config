@@ -84,16 +84,16 @@ export class BatigestExportService {
       date: quote.createdAt?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
       clientNom: quote.clientName,
       clientAdresse: quote.clientAddress || undefined,
-      lignes: (quote.items as any[]).map((item, index) => ({
+      lignes: (quote.items as unknown[]).map((item, index) => ({
         numero: index + 1,
         designation: item.description,
         quantite: item.quantity,
         prixUnitaire: item.unitPrice,
         montantHT: item.total
       })),
-      totalHT: parseFloat(quote.totalHT as any),
-      totalTVA: parseFloat(quote.totalTVA as any),
-      totalTTC: parseFloat(quote.totalTTC as any),
+      totalHT: parseFloat(quote.totalHT as unknown),
+      totalTVA: parseFloat(quote.totalas unknown)unknown),
+      totalTTC: parseFloat(quote.tas unknown) as unknown),
       conditionsPaiement: quote.paymentTerms || undefined,
       delaiLivraison: quote.deliveryDelay || undefined,
       validiteJours: quote.validityDate 
@@ -113,16 +113,16 @@ export class BatigestExportService {
       date: order.createdAt?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
       fournisseurNom: order.supplierName,
       fournisseurAdresse: order.deliveryAddress || undefined,
-      lignes: (order.items as any[]).map((item, index) => ({
+      lignes: (order.itas unknown[]ny[]).map((item, index) => ({
         numero: index + 1,
         designation: item.description,
         quantite: item.quantity,
         prixUnitaire: item.unitPrice,
         montantHT: item.total
       })),
-      totalHT: parseFloat(order.totalHT as any),
-      totalTVA: parseFloat(order.totalTVA as any),
-      totalTTC: parseFloat(order.totalTTC as any),
+      totalHT: parseFloat(oras unknown)aas unknunknown)unknown),
+      totalTVA: parseFloatas unknown)tas unknunknown)unknown any),
+      totalTTC: parseFas unknown)das unknunknown)unknownC as any),
       dateEchue: order.expectedDeliveryDate?.toISOString().split('T')[0] || undefined,
       modePaiement: order.paymentTerms || undefined
     };
@@ -214,7 +214,7 @@ export class BatigestExportService {
     const headers = ['Type', 'Reference', 'Date', 'ClientNom', 'Designation', 'Quantite', 'PrixUnitaire', 'MontantHT', 'TotalHT', 'TotalTVA', 'TotalTTC'];
     const date = quote.createdAt?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0];
     
-    const rows = (quote.items as any[]).map((item, index) => [
+    const rows = (as unknown unknown[]as unknown[]).map((item, index) => [
       'DEVIS',
       quote.reference,
       date,
@@ -223,9 +223,9 @@ export class BatigestExportService {
       item.quantity,
       item.unitPrice.toFixed(2),
       item.total.toFixed(2),
-      index === 0 ? parseFloat(quote.totalHT as any).toFixed(2) : '',
-      index === 0 ? parseFloat(quote.totalTVA as any).toFixed(2) : '',
-      index === 0 ? parseFloat(quote.totalTTC as any).toFixed(2) : ''
+      index === 0 ? pas unknoas unknownqunknown)unknowntalHT as any).toFixed(2) : '',
+      index === 0 as unknoas unknownaunknown)unknown.totalTVA as any).toFixed(2) : '',
+      index ==as unknoas unknowneunknown)unknownuote.totalTTC as any).toFixed(2) : ''
     ].join(';'));
 
     return [headers.join(';'), ...rows].join('\n');
@@ -238,7 +238,7 @@ export class BatigestExportService {
     const headers = ['Type', 'Reference', 'Date', 'FournisseurNom', 'Designation', 'Quantite', 'PrixUnitaire', 'MontantHT', 'TotalHT', 'TotalTVA', 'TotalTTC'];
     const date = order.createdAt?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0];
     
-    const rows = (order.items as any[]).map((item, index) => [
+  as unknownt rows = (as unknown[]emsunknown[]ny[]).map((item, index) => [
       'BON_COMMANDE',
       order.reference,
       date,
@@ -247,9 +247,9 @@ export class BatigestExportService {
       item.quantity,
       item.unitPrice.toFixed(2),
       item.total.toFixed(2),
-      index === 0 ? parseFloat(order.totalHT as any).toFixed(2) : '',
-      index === 0 ? parseFloat(order.totalTVA as any).toFixed(2) : '',
-      index === 0 ? parseFloat(order.totalTTC as any).toFixed(2) : ''
+      indas uas unknown)0 ? unknown)unknownoat(order.totalHT as any).toFixed(2) : '',
+      as uas unknown)== 0unknown)unknowneFloat(order.totalTVA as any).toFixed(2) : '',
+  as uas unknown)ex =unknown)unknownparseFloat(order.totalTTC as any).toFixed(2) : ''
     ].join(';'));
 
     return [headers.join(';'), ...rows].join('\n');
@@ -259,9 +259,7 @@ export class BatigestExportService {
    * Export complet avec XML et CSV
    */
   async exportClientQuote(quote: ClientQuote): Promise<BatigestExportResult> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('[BatigestExport] Export devis client', {
         metadata: {
           service: 'BatigestExportService',
@@ -284,14 +282,14 @@ export class BatigestExportService {
           format: 'both'
         }
       };
-    
-    },
-    {
-      operation: 'Saxium',
-      service: 'BatigestExportService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[BatigestExport] Erreur lors de l\'export du devis client', {
+        metadata: {
+          service: 'BatigestExportService',
+          operation: 'exportClientQuote',
+          reference: quote.reference,
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
 
       return {

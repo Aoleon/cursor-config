@@ -42,7 +42,7 @@ interface CacheEntry<T> {
 }
 
 export class MemoryCacheAdapter implements ICacheAdapter {
-  private cache: Map<string, CacheEntry<any>> = new Map();
+  private cache: Map<string, CacheEntry<unknown>> = new Map();
   private cleanupInterval: NodeJS.Timeout;
 
   constructor(cleanupIntervalMs: number = 60000) {
@@ -170,7 +170,7 @@ export class CacheService {
   /**
    * Build normalized cache key
    */
-  buildKey(service: string, resource: string, params?: Record<string, any>): string {
+  buildKey(service: string, resource: string, params?: Record<string, unknown>): string {
     const baseKey = `${service}:${resource}`;
     
     if (!params || Object.keys(params).length === 0) {

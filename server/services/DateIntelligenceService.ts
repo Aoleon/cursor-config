@@ -78,7 +78,7 @@ export interface AppliedRule {
   phase: ProjectStatus | null;
   multiplierApplied: number;
   durationImpact: number;
-  conditions: Record<string, any>;
+  conditions: Record<string, unknown>;
 }
 
 export interface PlanningIssue {
@@ -451,7 +451,7 @@ class CalculationEngine {
 
 export class DateIntelligenceService {
   private calculationEngine: CalculationEngine;
-  private cache: Map<string, any> = new Map();
+  private cache: Map<st, unknown>unknown> = new Map();
   private readonly CACHE_TTL = 3600000; // 1 heure en millisecondes
 
   constructor(private storage: IStorage) {

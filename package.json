@@ -26,6 +26,7 @@
     "extract:duplicated-code": "tsx scripts/extract-duplicated-code.ts",
     "audit:technical-debt": "tsx scripts/technical-debt-audit.ts",
     "eliminate:technical-debt": "tsx scripts/eliminate-technical-debt.ts",
+    "replace:any-to-unknown": "tsx scripts/replace-any-with-unknown.ts",
     "migrate:phase2-critical": "tsx scripts/migrate-phase2-critical.ts",
     "test:auto-debug": "tsx scripts/auto-test-debug.ts",
     "test:auto-fix": "tsx scripts/auto-test-debug.ts && npm run check",

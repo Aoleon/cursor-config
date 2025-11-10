@@ -4,16 +4,20 @@
 
 ## 🎯 Stratégies d'Autonomie
 
-### 1. Planification Autonome des Tâches
+### 1. Planification Autonome des Tâches avec Performance Transversale
 
-**Principe:** L'agent doit être capable de planifier et exécuter des séquences de tâches complexes de manière autonome.
+**Principe:** L'agent doit être capable de planifier et exécuter des séquences de tâches complexes de manière autonome avec optimisation transversale.
 
 **TOUJOURS:**
 - ✅ Décomposer les tâches complexes en sous-tâches
 - ✅ Identifier les dépendances entre tâches
-- ✅ Planifier l'ordre d'exécution optimal
+- ✅ Comprendre relations transversales entre modules
+- ✅ Planifier l'ordre d'exécution optimal avec parallélisation
+- ✅ Optimiser performances avec cache intelligent
 - ✅ Valider chaque étape avant de continuer
 - ✅ Documenter le plan d'exécution
+
+**Référence:** `@.cursor/rules/transversal-performance.md` - Performance transversale et autonomie
 
 **Pattern:**
 ```typescript
@@ -711,7 +715,8 @@ async function validateMultiLevel(code: string): Promise<ValidationResult> {
 - `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation
 - `@.cursor/rules/advanced-learning.md` - Stratégies d'apprentissage avancées
 - `@.cursor/rules/long-term-autonomy.md` - Autonomie longue durée
-- `@.cursor/rules/automated-testing-debugging.md` - **NOUVEAU** Tests E2E et débogage automatisé
+- `@.cursor/rules/automated-testing-debugging.md` - Tests E2E et débogage automatisé
+- `@.cursor/rules/transversal-performance.md` - **NOUVEAU** Performance transversale et autonomie
 - `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 - `@.cursor/rules/workflows.md` - Workflows détaillés
 - `@.cursor/rules/troubleshooting.md` - Guide résolution problèmes

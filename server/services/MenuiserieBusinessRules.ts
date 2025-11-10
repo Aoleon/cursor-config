@@ -604,7 +604,7 @@ export function getApplicableRules(
   phase: string | null,
   projectType?: string,
   complexity?: string,
-  conditions?: Record<string, any>
+  conditions?: Record<string, unknown>
 ): typeof DEFAULT_MENUISERIE_RULES {
   
   return DEFAULT_MENUISERIE_RULES.filter(rule => {

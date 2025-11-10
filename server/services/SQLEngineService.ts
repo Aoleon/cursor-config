@@ -246,7 +246,7 @@ export class SQLEngineService {
       const enrichedContext = await this.buildIntelligentContext(request);
 
       // 2.5 UTILISATION DE L'ANALYSE D'INTENTION
-      const queryAnalysis = (request as any).queryAnalysis;
+      const queryAnalysis = (request as unknown).queryAnalysis;
       const queryComplexity = queryAnalysis?.complexity || this.detectQueryComplexity(request.naturalLanguageQuery);
       const queryType = queryAnalysis?.queryType || this.analyzeQueryType(request.naturalLanguageQuery);
       
@@ -404,7 +404,7 @@ export class SQLEngineService {
           debugInfo: {
             generatedSQL: generatedSQL,
             validationErrors: postValidation.violations,
-            queryAnalysis: (request as any).queryAnalysis,
+            queryAnalysis: (requas unknown)unknown).queryAnalysis,
             executionTime: Date.now() - startTime
           }
         };
@@ -457,7 +457,7 @@ export class SQLEngineService {
       }
 
       // 6. Exécution sécurisée si pas en mode dry-run
-      let results: any[] = [];
+      let results: unknown[] = [];
       let executionTime = 0;
 
       if (!request.dryRun) {
@@ -746,7 +746,7 @@ LIMIT 25;`);
     userContext?: string;
     enrichedContext: string;
     queryType: string;
-    template: any;
+    template: unknown;
     guardrails: string;
     performanceHints: string[];
     examples: string[];
@@ -1401,7 +1401,7 @@ service: 'SQLEngineService',;
   /**
    * Extrait toutes les tables référencées dans l'AST
    */
-  private extractTablesFromAST(ast: any): string[] {
+  private extractTablesFromAST(ast: unknown): string[] {
     const tables: string[] = [];
     
     // Tables FROM clause
@@ -1432,7 +1432,7 @@ service: 'SQLEngineService',;
   /**
    * Extrait toutes les colonnes référencées dans l'AST
    */
-  private extractColumnsFromAST(ast: any): Array<{table?: string, column: string}> {
+  private extractColumnsFromAST: unknunknown)unknown): Array<{table?: string, column: string}> {
     const columns: Array<{table?: string, column: string}> = [];
     
     // Colonnes SELECT
@@ -1456,7 +1456,7 @@ service: 'SQLEngineService',;
   /**
    * Détecte les patterns d'injection sophistiqués via AST
    */
-  private detectAdvancedInjectionPatterns(ast: any, violations: string[]): void {
+  private detectAdvancedInjectionPatterns(ast: unknown, violations: string[]): void {
     // Détection UNION injections
     if (ast.union) {
       violations.push('UNION statements non autorisés - risque d\'injection');
@@ -1474,7 +1474,7 @@ service: 'SQLEngineService',;
   /**
    * Validation des contraintes métier JLM
    */
-  private validateBusinessConstraints(ast: any, userRole: string, violations: string[]): void {
+  private validateBusinessConstraints: unknown, unknown, userRole: string, violations: string[]): void {
     // Les utilisateurs non-admin doivent avoir des filtres user_id
     if (userRole !== 'admin') {
       const hasUserFilter = this.hasUserIdFilter(ast);
@@ -1493,7 +1493,7 @@ service: 'SQLEngineService',;
   /**
    * Vérifie la présence de sous-requêtes suspectes
    */
-  private hasNestedSelectionsWithSuspiciousPatterns(ast: any): boolean {
+  private hasNestedSelectionsWithSuspiciousPatt: unknunknown)unknown any): boolean {
     // TODO: Implémenter détection patterns sophistiqués
     return false;
   }
@@ -1501,7 +1501,7 @@ service: 'SQLEngineService',;
   /**
    * Détecte les fonctions système dangereuses
    */
-  private detectDangerousFunctions(ast: any, violations: string[]): void {
+  private detectDangerousFunct: unknown,st: unknown, violations: string[]): void {
     // TODO: Analyser les appels de fonctions dans l'AST
     // Chercher pg_sleep, version(), etc.
   }
@@ -1509,7 +1509,7 @@ service: 'SQLEngineService',;
   /**
    * Vérifie la présence d'un filtre user_id
    */
-  private hasUserIdFilter(ast: any): boolean {
+  private hasUser: unknunknown)unknownast: any): boolean {
     // TODO: Analyser WHERE clauses pour user_id
     return false;
   }
@@ -1529,7 +1529,7 @@ service: 'SQLEngineService',;
   ): Promise<{
     success: boolean;
     filteredSQL?: string;
-    parameters?: any[];
+    paramet: unknown[]ny[];
     filtersApplied?: string[];
     rbacViolations?: string[];
   }> {
@@ -1539,7 +1539,7 @@ service: 'SQLEngineService',;
       const filtersApplied: string[] = [];
       const violations: string[] = [];
       let filteredSQL = sql;
-      const parameters: any[] = [userId]; // Premier paramètre toujours userId
+      const pa: unknown[]s: unknown[] = [userId]; // Premier paramètre toujours userId
       let rbacFiltersRequired = false;
       let rbacFiltersApplied = false;
 
@@ -1845,7 +1845,7 @@ service: 'SQLEngineService',;
     return warnings;
   }
 
-  private generateSuggestions(sql: string, securityCheck: any, rbacResult: any): string[] {
+  private generateSuggestions(sql: string, s: unknown,yCheck:: unknunknown)unknowncResult: any): string[] {
     const suggestions: string[] = [];
 
     if (!securityCheck.isSecure) {
@@ -1982,11 +1982,11 @@ Contraintes:
    * Sanitize SQL results pour JSON serialization
    * Convertit BigInt → string, Date → ISO, Buffer → base64
    */
-  private sanitizeResultsForJSON(results: any[]): any[] {
+  private sanitizeResultsFor: unknow: unknown[unknunknown[unknown[]): any[] {
     return results.map(row => this.sanitizeValueForJSON(row));
   }
 
-  private sanitizeValueForJSON(value: any): any {
+  private saniti: unknunknunknowunknownForJSON(value: any): any {
     if (value === null || value === undefined) {
       return value;
     }
@@ -2012,7 +2012,7 @@ Contraintes:
         return value.map(item => this.sanitizeValueForJSON(item));
       }
       
-      const sanitized: Record<string, any> = {};
+      const sanitized: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(value)) {
         sanitized[key] = this.sanitizeValueForJSON(val);
       }

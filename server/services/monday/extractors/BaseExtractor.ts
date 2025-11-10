@@ -1,13 +1,13 @@
 import type { SplitterContext, SplitterDiagnostic } from '../types';
 import { MondayService } from '../../MondayService';
 
-export interface IExtractor<T = any> {
+export interface IExtractor<T = unknown> {
   name: string;
   extract(context: SplitterContext): Promise<T>;
-  addDiagnostic(context: SplitterContext, level: 'info' | 'warning' | 'error', message: string, data?: any): void;
+  addDiagnostic(context: SplitterContext, level: 'info' | 'warning' | 'error', message: string, data?: unknown): void;
 }
 
-export abstract class BaseExtractor<T = any> implements IExtractor<T> {
+export abstract class BaseExtractor<unknown>unknown> implements IExtractor<T> {
   abstract name: string;
   
   abstract extract(context: SplitterContext): Promise<T>;
@@ -16,7 +16,7 @@ export abstract class BaseExtractor<T = any> implements IExtractor<T> {
     context: SplitterContext, 
     level: 'info' | 'warning' | 'error', 
     message: string, 
-    data?: any
+    d: unknown)
   ): void {
     context.diagnostics.push({
       level,
@@ -26,7 +26,7 @@ export abstract class BaseExtractor<T = any> implements IExtractor<T> {
     });
   }
   
-  protected getColumnValue(context: SplitterContext, columnId: string): any {
+  protected getColumnValue(context: SplitterContext, columnId: strinunknown any {
     const column = context.mondayItem.column_values?.find(col => col.id === columnId);
     if (!column) return null;
     

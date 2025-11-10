@@ -77,16 +77,15 @@ export class AIService {
   private anthropic: Anthropic;
   private openai: OpenAI | null;
   private storage: IStorage;
-  private contextBuilder: any;
-  private contextCache: any;
-  private performanceMetrics: any;
+  private contextBuilder: unknown;
+  private contextC: unknown;unknown;
+  private performanc: unknown;unknown;unknown;
   // Circuit breakers pour chaque provider
   private circuitBreakerManager: CircuitBreakerManager;
   private claudeBreaker: CircuitBreaker;
   private gptBreaker: CircuitBreaker;
   // Cache in-memory en fallback si DB échoue
-  private memoryCache: Map<string, {
-    data: any;
+  private memoryCache: Map<string: unknown;unknown;unknown any;
     expiresAt: Date;
     tokensUsed: number;
   }> = new Map();
@@ -882,9 +881,9 @@ export class AIService {
       };
     }
     
-    let lastError: any = null;
+    let lastError: unknown = null;
     let fallbackAttempted = false;
-    let retryStats: any = null;
+    let retryS: unknown =ny = null;
 
     // Obtenir la configuration selon le modèle
     const providerName = modelSelection.selectedModel === "claude_sonnet_4" ? 'claude' : 'openai';
@@ -931,7 +930,7 @@ export class AIService {
             backoffMultiplier: modelConfig.backoffMultiplier,
             retryCondition: (error) => {
               // Ne pas retry si circuit breaker ouvert
-              if ((error as any)?.circuitBreakerOpen) {
+              if ((error as unknown)?.circuitBreakerOpen) {
                 return false;
               }
               // Utiliser la fonction isRetryableError importée
@@ -1021,7 +1020,7 @@ export class AIService {
               maxDelay: fallbackConfig.maxDelay || 10000,
               backoffMultiplier: fallbackConfig.backoffMultiplier,
               retryCondition: (error) => {
-                if ((error as any)?.circuitBreakerOpen) {
+                if ((eras unknown)unknown)?.circuitBreakerOpen) {
                   return false;
                 }
                 return isRetryableError(error);
@@ -1243,7 +1242,7 @@ export class AIService {
   /**
    * Récupère une réponse du cache si disponible
    */
-  private async getCachedResponse(request: AiQueryRequest): Promise<any | null> {
+  private async getCachedResponse(request: AiQueryRequest): Promise<unknown | null> {
     const queryHash = this.generateQueryHash(request);
     
     // Fallback 1: Essayer le cache in-memory d'abord (plus rapide)
@@ -1330,7 +1329,7 @@ export class AIService {
   /**
    * Met en cache une réponse réussie
    */
-  private async cacheResponse(request: AiQueryRequest, responseData: any): Promise<void> {
+  private async cacheResponse(request: AiQueryRequest, responseData: unknown): Promise<void> {
     const queryHash = this.generateQueryHash(request);
     const expiresAt = new Date(Date.now() + CACHE_EXPIRY_HOURS * 60 * 60 * 1000);
     
@@ -1451,7 +1450,7 @@ export class AIService {
     async () => {
 
       const responseTime = Date.now() - startTime;
-      const costEstimate = this.calculateCostEstimate(modelUsed as any, tokensUsed);
+      const costEstimate = this.calculateCostEstimate(modelUsed as unknown, tokensUsed);
 
       const metrics: InsertAiModelMetrics = {
         userId: "system", // TODO: récupérer l'userId réel du contexte

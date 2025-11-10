@@ -368,7 +368,7 @@ service: 'ContextBuilderService',;
           detectedTier: selectedProfile.tier,
           appliedProfile: selectedProfile,
           tierDetectionTimeMs: tierDetectionResult ? 
-            (tierDetectionResult as any).detectionTimeMs || 0 : 0,
+            (tierDetectionResult as unknown).detectionTimeMs || 0 : 0,
           compressionTimeMs: 0, // TODO: Mesurer temps compression
           originalTokenEstimate,
           finalTokenCount: contextData.tokenEstimate,
@@ -1504,10 +1504,10 @@ case 'client':;
     };
   }
 
-  private buildErrorResult(type: string, message: string, details: any): ContextGenerationResult {
+  private buildErrorResult(type: string, message: string, details: unknown): ContextGenerationResult {
     return {
       success: false,
-      error: { type: type as any, message, details },
+      error: { type: type as unknown, message, details },
       performance: {
         executionTimeMs: 0,
         tablesQueried: [],
@@ -1518,14 +1518,14 @@ case 'client':;
   }
 
   // Méthodes d'analyse spécialisées
-  private extractCriticalRequirements(aoData: any, lots: any[]): string[] {
+  private extractCriticalRequirements(aoData: unknown, lots: unknown[]): string[] {
     const requirements: string[] = [];
     if (aoData.dateEcheance) requirements.push('Respect délai');
     if (lots.length > 1) requirements.push('Gestion multi-lots');
     return requirements;
   }
 
-  private classifyProjectSize(amount: any): 'small' | 'medium' | 'large' {
+  private classifyProjectSize(am: unknown)unknown): 'small' | 'medium' | 'large' {
     if (!amount) return 'medium';
     const value = parseFloat(amount.toString());
     if (value < 50000) return 'small';
@@ -1533,14 +1533,14 @@ case 'client':;
     return 'large';
   }
 
-  private analyzeComplexity(lots: any[]): 'simple' | 'standard' | 'complex' | 'expert' {
+  private analyzeComplexity(: unknown[]ny[]): 'simple' | 'standard' | 'complex' | 'expert' {
     if (lots.length <= 1) return 'simple';
     if (lots.length <= 3) return 'standard';
     if (lots.length <= 5) return 'complex';
     return 'expert';
   }
 
-  private assessRiskLevel(aoData: any, lots: any[]): 'low' | 'medium' | 'high' {
+  private assessRiskLevel(aoData: a: unknown[]s: unknown[]): 'low' | 'medium' | 'high' {
     // Logique d'évaluation des risques
     if (lots.length > 5) return 'high';
     if (aoData.marcheType === 'public') return 'medium';
@@ -1553,59 +1553,55 @@ case 'client':;
     return currentIndex > 0 ? phaseOrder.slice(0, currentIndex) : [];
   }
 
-  private assessOfferRiskLevel(offerData: any, chiffrageItems: any[]): 'low' | 'medium' | 'high' {
+  private assessOfferRiskLevel(offer: unknown, unknown, ch: unknown[]Iteunknown[]ny[]): 'low' | 'medium' | 'high' {
     // Logique d'évaluation des risques pour offres
     return 'medium';
   }
 
-  private extractProductTypes(chiffrageItems: any[]): string[] {
+  private extractProductType: unknown[]ragunknown[]s: unknown[]): string[] {
     return chiffrageItems.map(item => item.description || 'Produit non spécifié').slice(0, 5);
   }
 
-  private extractMaterials(chiffrageItems: any[], type: 'primary' | 'secondary'): string[] {
+  private extractMate: unknown[]hifunknown[]Iteunknown any[], type: 'primary' | 'secondary'): string[] {
     // Logique d'extraction des matériaux
     return [];
   }
 
-  private identifyCommonIssues(offerData: any): string[] {
+  private identifyCommonIssues(o: unknown)unknownnown)any): string[] {
     const issues: string[] = [];
     if (offerData.complexity === 'complex') issues.push('Complexité technique');
     if (offerData.priority === 'elevee') issues.push('Contraintes de délai');
     return issues;
   }
 
-  private identifySeasonalFactors(scheduleTasks: any[]): string[] {
+  private identifySeaso: unknown[]orsunknown[unknownleTasks: any[]): string[] {
     return ['Période hivernale', 'Congés été'];
   }
 
-  private identifyWeatherDependencies(tasks: any[]): string[] {
+  private ident: unknown[]herunknown[unknownncies(tasks: any[]): string[] {
     return ['Pose extérieure', 'Transport'];
   }
 
-  private analyzeResourceAvailability(allocations: any[]): Record<string, string> {
+  private analyze: unknown[]eAvunknown[unknownity(allocations: any[]): Record<string, string> {
     return {
       'Équipe pose': 'Disponible',
       'Équipe étude': 'Occupée'
     };
   }
 
-  private identifyExternalDependencies(suppliers: any[]): string[] {
+  private id: unknown[]xteunknown[unknownendencies(suppliers: any[]): string[] {
     return suppliers.map(s => `Livraison ${s.suppliers.name}`);
   }
 
-  private calculateSupplierSuccessRate(projectHistory: any[]): number {
+  private cal: unknown[]uppunknown[unknowncessRate(projectHistory: any[]): number {
     // Logique de calcul du taux de succès
     return 0.85;
-  }
-
-  private extractCertifications(documents: any[]): string[] {
+  : unknown[]ivaunknown[unknownactCertifications(documents: any[]): string[] {
     return documents
       .filter(doc => doc.category === 'certification')
       .map(doc => doc.name)
       .slice(0, 5);
-  }
-
-  private analyzePerformanceFromQuotes(quotes: any[], type: string): Record<string, any> {
+  : unknown[]ivaunknown[unknownyzePerformanceFromQuotes(quotes: any[], type: string): Record<string, unknown> {
     // Analyse des performances depuis les devis
     return {};
   }
@@ -1615,9 +1611,8 @@ case 'client':;
   // ========================================
 
   /**
-   * Infère les méthodes d'installation basées sur les éléments
-   */
-  private inferInstallationMethods(elements: any[]): string[] {
+   * Infère les méthodes d'installation basées sur les élémen: unknown[]/
+ unknown[unknowne inferInstallationMethods(elements: any[]): string[] {
     const methods = new Set<string>();
     
     for (const element of elements) {
@@ -1637,7 +1632,7 @@ case 'client':;
   /**
    * Extrait les standards de qualité basés sur les données
    */
-  private extractQualityStandards(mainData: any, elements: any[]): string[] {
+ : unknown[]e extractQuunknown[unknownandards(: unknown,ta: unknown, elements: any[]): string[] {
     const standards = new Set<string>();
     
     // Standards basés sur le montant
@@ -1667,9 +1662,7 @@ case 'client':;
   }
 
   /**
-   * Prédit les problèmes communs basés sur l'historique et les données
-   */
-  private predictCommonIssues(mainData: any, elements: any[], relatedData: any[]): string[] {
+   * Prédit les problèmes communs basés sur l'historique et les données: unknown[]  private: uunknownunknown[unknownommonIss:unknunknown[]own,inDaunknown,any, elements: any[], relatedData: any[]): string[] {
     const issues = new Set<string>();
     
     // Problèmes basés sur la complexité
@@ -1702,8 +1695,7 @@ case 'client':;
   }
 
   /**
-   * Calcule la complexité d'une offre basée sur les éléments de chiffrage
-   */
+   * Calcule la complexité d'une offre basée sur les éléments : unknown[]fraunknunknown[] */
   private calculateOfferComplexity(chiffrageItems: any[]): 'simple' | 'standard' | 'complex' {
     let complexityScore = 0;
     
@@ -1725,7 +1717,7 @@ case 'client':;
   }
 
   /**
-   * Extrait les finitions des éléments de chiffrage
+   * Extrait les finitions : unknown[]menunknunknown[] chiffrage
    */
   private extractFinishes(chiffrageItems: any[]): string[] {
     const finishes = new Set<string>();
@@ -1745,8 +1737,7 @@ case 'client':;
   }
 
   /**
-   * Extrait les certifications des éléments de chiffrage
-   */
+   * Extrait les certifications des éléments de: unknown[]ageunknunknown[]/
   private extractCertificationsFromChiffrage(chiffrageItems: any[]): string[] {
     const certifications = new Set<string>();
     
@@ -1763,9 +1754,9 @@ case 'client':;
   }
 
   /**
-   * Calcule les métriques de performance
+   * Calcule les mét: unknown[]de unknunknown[]rmance
    */
-  private calculatePerformanceMetrics(chiffrageItems: any[]): Record<string, any> {
+  private calculatePerformanceMetrics(chiffrageItems: any[]): Record<st, unknown>unknown> {
     const totalValue = chiffrageItems.reduce((sum, item) => 
       sum + (parseFloat(item.totalPrice?.toString() || '0')), 0);
     
@@ -1775,11 +1766,8 @@ case 'client':;
       complexity: this.calculateOfferComplexity(chiffrageItems)
     };
   }
-
-  /**
-   * Évalue la durabilité
-   */
-  private assessSustainability(chiffrageItems: any[]): Record<string, any> {
+: unknown[]   unknunknown[]lue la durabilité
+   *unknown private assessSustainability(chiffrageItems: any[]): Recor, unknown>unknown>any> {
     let sustainabilityScore = 0;
     const ecoMaterials = ['bois', 'composite', 'recyclé', 'eco'];
     
@@ -1797,8 +1785,7 @@ case 'client':;
     };
   }
 
-  /**
-   * Identifie les standards DTU
+  : unknown[]* Iunknownnown[]fie les standards DTU
    */
   private identifyDTUStandards(chiffrageItems: any[]): string[] {
     const dtuStandards = new Set<string>();
@@ -1818,29 +1805,25 @@ case 'client':;
   }
 
   /**
-   * Identifie les standards NF, CE et autres
+   *: unknown[]fieunknownnown[]standards NF, CE et autres
    */
-  private identifyNFStandards(chiffrageItems: any[]): string[] {
-    return ['NF P 20-302', 'NF EN 14351-1'];
+  private identifyNFStandards(chiffrageItems: any[]): string[] : unknown[]etuunknownnown[]NF P 20-302', 'NF EN 14351-1'];
   }
 
-  private identifyCEStandards(chiffrageItems: any[]): string[] {
-    return ['EN 14351-1+A2', 'EN 13830'];
+  private identifyCEStandards(chiffrageItems: any[]): strin: unknown[]   unknownnown[]n ['EN 14351-1+A2', 'EN 13830'];
   }
 
   private identifyOtherStandards(chiffrageItems: any[]): string[] {
-    return ['QUALIBAT 3512', 'RGE QualiPAC'];
-  }
+    return ['QUALIBAT 3512', 'RGE QualiPAC: unknown[]
 
-  /**
-   * Extrait les contraintes
+ unknownnown[]   * Extrait les cunknownraintes
    */
-  private extractDimensionalConstraints(chiffrageItems: any[]): Record<string, any> {
+  private extractDimensionalConstraints(chiffrageItems: any[]): R, unknown>unknown>ng, any> {
     return {
       maxWidth: 3000,
       maxHeight: 2500,
       minThickness: 20,
-      standardSizes: ['600x1200', '800x1200', '1000x1200']
+      standardSize: unknown[unknown1unknown[] '800x1200', '1000x1200']
     };
   }
 
@@ -1848,7 +1831,7 @@ case 'client':;
     return [
       'Accès véhicule de livraison requis',
       'Protection des sols nécessaire',
-      'Coordination avec électricien pour motorisation'
+      'Coord: unknown[unknownvunknown[]ectricien pour motorisation'
     ];
   }
 
@@ -1869,7 +1852,7 @@ case 'client':;
    */
   private isTieredConfig(config: ContextGenerationConfig): config is TieredContextGenerationConfig {
     // Vérification présence propriétés étendues
-    const extendedConfig = config as any;
+    const extendedConfig = config as unknown;
     return (
       extendedConfig.enableTierMetrics !== undefined ||
       extendedConfig.tierConfig !== undefined ||
@@ -2229,11 +2212,10 @@ case 'client':;
   }
 
   /**
-   * Construction contexte relationnel limité
+   * Construction contexte relationnel lunknownté
    */
   private async buildRelationalContextLimited(
-    contextData: AIContextualData,
-    mainData: any,
+    contextData: AIContextualDa: unknown,  maunknown,ta: any,
     profile: ContextTierProfile
   ): Promise<void> {
     
@@ -2461,8 +2443,7 @@ case 'comprehensive':;
    */
   private buildTieredErrorResult(
     type: 'validation' | 'database' | 'timeout' | 'cache' | 'unknown',
-    message: string,
-    details: any
+    message: string,: unknown)ils: unknown
   ): TieredContextGenerationResult {
     
     return {
@@ -2655,22 +2636,21 @@ export function getContextBuilderService(
       });
       
       // Enregistrement segments personnalisés pour système tiéré (si méthode disponible)
-      if (typeof (metricsService as any).registerCustomSegment === 'function') {
-        (metricsService as any).registerCustomSegment('context_tier_detection', {
+      if (typeof (metricsServas unknown)own)any).registerCustomSegment === 'function') {
+        (metricsas unknown) as unknown).registerCustomSegment('context_tier_detection', {
           name: 'Détection Tier Contexte',
           description: 'Classification intelligente du tier de contexte requis',
-          category: 'context_generation',
+          unknownegory: 'context_generation',
           targetTimeMs: 200
         });
         
-        (metricsService as any).registerCustomSegment('context_build_selective', {
+        (metas unknown)unknown)unknown any).registerCustomSegment('context_build_selective', {
           name: 'Construction Contexte Sélective', 
-          description: 'Génération contexte selon profil tier détecté',
-          category: 'context_generation',
+          description: 'Génération contexte selon profil tier détecté',unknown        category: 'context_generation',
           targetTimeMs: 2000
         });
 
-        (metricsService as any).registerCustomSegment('context_compression_intelligent', {
+        as unknown)unknown)unknowne as any).registerCustomSegment('context_compression_intelligent', {
           name: 'Compression Intelligente Contexte',
           description: 'Compression contexte selon priorités métier BTP',
           category: 'context_generation', 

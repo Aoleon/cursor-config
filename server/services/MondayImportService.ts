@@ -20,7 +20,7 @@ export class MondayImportService {
    * Helper to convert all numeric decimal fields to strings for Postgres compatibility
    * IMPORTANT: Preserves null to allow clearing persisted values on re-import
    */
-  private coerceDecimalToString(value: any): string | null | undefined {
+  private coerceDecimalToString(value: unknown): string | null | undefined {
     if (value === undefined) return undefined;
     if (value === null) return null;
     return typeof value === 'number' ? value.toString() : value;
@@ -30,7 +30,7 @@ export class MondayImportService {
    * Remove undefined values from object to avoid Drizzle issues
    * IMPORTANT: Preserves null to allow clearing persisted values on re-import
    */
-  private removeUndefined<T extends Record<string, any>>(obj: T): Partial<T> {
+  private removeUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
     return Object.fromEntries(
       Object.entries(obj).filter(([_, v]) => v !== undefined)
     ) as Partial<T>;
@@ -145,12 +145,12 @@ export class MondayImportService {
             montantEstime: typeof validation.data.montantEstime === 'number' 
               ? validation.data.montantEstime.toString() 
               : validation.data.montantEstime,
-            montantFinal: typeof (validation.data as any).montantFinal === 'number'
-              ? (validation.data as any).montantFinal.toString()
-              : (validation.data as any).montantFinal,
-            budget: typeof (validation.data as any).budget === 'number'
-              ? (validation.data as any).budget.toString()
-              : (validation.data as any).budget
+            montantFinal: typeof (validation.data as unknown).montantFinal === 'number'
+              ? (validation.das unknown)unknown).montantFinal.toString()
+              : (validatias unknown) as unknown).montantFinal,
+            budget: typeof (valias unknown)das unknunknown)unknown).budget === 'number'
+              ? (as unknown)ias unknunknown)unknown any).budget.toString()
+             as unknown)ias unknunknown)unknowna as any).budget
           });
           
           logger.info('🔍 [DEBUG] Data for storage', {
@@ -175,7 +175,7 @@ export class MondayImportService {
                 itemId: item.id
               }
             });
-            project = await storage.updateProject(existingProject.id, dataForStorage as any);
+            project = await storage.updateProject(existingProas unknown),as unknunknown)unknownorage as any);
             wasUpdate = true;
             logger.info('Projet mis à jour depuis Monday', {
               service: 'MondayImportService',
@@ -196,7 +196,7 @@ export class MondayImportService {
               }
             });
             
-            project = await storage.createProject(dataForStorage as any);
+            project = await storage.cas unknown)oas unknunknown)unknownorStorage as any);
             
             logger.info('✅ [DEBUG] Projet créé depuis Monday', {
               service: 'MondayImportService',
@@ -252,7 +252,7 @@ service: 'MondayImportService',;
       });
 
       return result;
-    } catch (error: any) {
+unknown)unknownatch (e: unknown)any) {
       logger.error('Erreur import Monday', {
         service: 'MondayImportService',
         metadata: {
@@ -352,9 +352,7 @@ service: 'MondayImportService',;
             montantEstime: typeof validation.data.montantEstime === 'number' 
               ? validation.data.montantEstime.toString() 
               : validation.data.montantEstime,
-            amountEstimate: typeof (validation.data as any).amountEstimate === 'number'
-              ? (validation.data as any).amountEstimate.toString()
-              : (validation.data as any).amountEstimate
+            amountEsas unknown) as unknown)unknown (validation.data as any).amountEstimate === 'numbeas unknown) as unknown)unknown   ? (validation.data as any).amountEstimate.toStas unknown) as unknown)unknown       : (validation.data as any).amountEstimate
           });
 
           let ao;
@@ -362,7 +360,7 @@ service: 'MondayImportService',;
           
           if (existingAo) {
             // Update existing AO
-            ao = await storage.updateAo(existingAo.id, dataForStorage as any);
+            ao = await stoas unknown)das unknown)unknownexistingAo.id, dataForStorage as any);
             wasUpdate = true;
             logger.info('AO mis à jour depuis Monday', {
               service: 'MondayImportService',
@@ -375,7 +373,7 @@ service: 'MondayImportService',;
             });
           } else {
             // Create new AO
-            ao = await storage.createAo(dataForStorage as any);
+       as unknown) as unknown)unknownt storage.createAo(dataForStorage as any);
             logger.info('AO créé depuis Monday', {
               service: 'MondayImportService',
               metadata: {
@@ -418,10 +416,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
   );: ${error.message}`);
           result.success = false;
         }
-      }
-
-      return result;
-    } catch (error: any) {
+      unknown)unknown  return result;
+    } catc: unknown)or: any) {
       logger.error('Erreur import Monday AOs', {
         service: 'MondayImportService',
         metadata: {
@@ -523,7 +519,7 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
           
           if (existingSupplier) {
             // Update existing Supplier
-            supplier = await storage.updateSupplier(existingSupplier.id, dataForStorage as any);
+            supplier = await storageas unknown)unknown)unknownnownr(existingSupplier.id, dataForStorage as any);
             wasUpdate = true;
             logger.info('Fournisseur mis à jour depuis Monday', {
               service: 'MondayImportService',
@@ -536,7 +532,7 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
             });
           } else {
             // Create new Supplier
-            supplier = await storage.createSupplier(dataForStorage as any);
+           as unknown)unknown)unknownnownait storage.createSupplier(dataForStorage as any);
             logger.info('Fournisseur créé depuis Monday', {
               service: 'MondayImportService',
               metadata: {
@@ -559,11 +555,10 @@ service: 'MondayImportService',;
     }
   );: ${error.message}`);
           result.success = false;
-        }
-      }
+    unknown)unknown     }
 
       return result;
-    } catch (error: any) {
+    } : unknown)(error: any) {
       logger.error('Erreur import Monday Fournisseurs', {
         service: 'MondayImportService',
         metadata: {
@@ -577,7 +572,7 @@ service: 'MondayImportService',;
   }
 
   private mapItemToProject(item: MondayItem, mapping: ImportMapping): InsertProject {
-    const mappedData: any = {
+    const mappedData: unknown = {
       name: item.name
     };
 
@@ -607,7 +602,7 @@ service: 'MondayImportService',;
   }
 
   private mapItemToAO(item: MondayItem, mapping: ImportMapping): InsertAo {
-    const mappedData: any = {
+    const mapped: unknown =ny = {
       reference: item.name
     };
 
@@ -638,7 +633,7 @@ service: 'MondayImportService',;
   }
 
   private mapItemToSupplier(item: MondayItem, mapping: ImportMapping): InsertSupplier {
-    const mappedData: any = {
+    const ma: unknown =a: unknown = {
       name: item.name
     };
 
@@ -666,8 +661,8 @@ service: 'MondayImportService',;
   async previewImport(boardId: string, targetEntity: string): Promise<{
     boardName: string;
     itemCount: number;
-    columns: any[];
-    suggestedMappings: any[];
+    columns: unknown[];
+    suggestedMapp: unknown[]ny[];
   }> {
     const boardData = await mondayService.getBoardData(boardId);
     
@@ -697,10 +692,10 @@ service: 'MondayImportService',;
   }
 
   private suggestColumnMappings(
-    columns: any[],
-    targetEntity: 'project' | 'ao' | 'supplier' | 'task'
-  ): any[] {
-    const mappings: any[] = [];
+   : unknown[]s: unknown[],
+    targetEntity: 'project' | 'ao' | 'supplierunknown unknown[]'
+ unknown[]ny[] {
+  : unknown[] maunknown[]s: any[] = [];
 
     const mappingRules: Record<string, Record<string, string[]>> = {
       project: {
@@ -760,7 +755,7 @@ service: 'MondayImportService',;
     boardId: string;
     itemId: string;
     changeType: 'create' | 'update' | 'delete';
-    data?: any;
+    data?: unknown;
     mondayUpdatedAt?: Date;
   }): Promise<void> {
     const { boardId, itemId, changeType, data, mondayUpdatedAt } = params;
@@ -811,7 +806,7 @@ service: 'MondayImportService',;
       }
       
       // Map to Saxium entity
-      let saxiumEntity: any;
+      let saxiumEn: unknown;unknown;
       let createdId: string | undefined;
       
       if (entityType === 'project') {
@@ -943,7 +938,7 @@ service: 'MondayImportService',;
         
         eventBus.publish({
           id: crypto.randomUUID(),
-          type: 'monday:sync:success' as any,
+          type: 'monday:sync:success' as unknown,
           entity: eventEntity as 'project' | 'offer' | 'supplier',
           entityId: createdId,
 message: `${entityType} synchronisé depuis Monday.com`,;

@@ -37,7 +37,7 @@ export class MondayDataSplitter {
    * Helper pour mapper données master entity vers ExtractedContactData
    */
   private mapMasterToContactData(
-    masterData: any,
+    masterData: unknown,
     role: 'maitre_ouvrage' | 'maitre_oeuvre'
   ): ExtractedContactData {
     return {
@@ -60,8 +60,7 @@ export class MondayDataSplitter {
    * Mappe données contact depuis extracteur vers format IndividualContactData
    */
   private mapContactToIndividualData(
-    contactData: any
-  ): IndividualContactData {
+    contactData: unknown): IndividualContactData {
     // Parser le nom complet en prénom/nom
     const fullName = contactData.name || '';
     const nameParts = fullName.trim().split(/\s+/);
@@ -97,7 +96,7 @@ export class MondayDataSplitter {
       maitresOuvrage: number;
       maitresOeuvre: number;
     };
-    diagnostics: any[];
+    diagnostics: unknown[];
   }> {
     logger.info('Analyse Monday item pour opportunités éclatement', {
       service: 'MondayDataSplitter',
@@ -146,7 +145,7 @@ export class MondayDataSplitter {
    * @param dryRun - Si true, rollback la transaction à la fin (ne sauvegarde pas en base, pour tests)
    */
   async splitItem(
-    mondayItemOrId: string | any,
+    mondayItemOrId: string | unknown,
     boardId: string,
     storage: IStorage,
     config?: MondaySplitterConfig,
@@ -239,7 +238,7 @@ export class MondayDataSplitter {
         // Vérifier si un AO avec ce mondayItemId existe déjà
         const existingAO = await storage.getAOByMondayItemId(mondayItemId, tx);
         
-        let currentAO: any;
+        let currentAO: unknown;
         
         if (existingAO) {
           // AO existe déjà, on le met à jour avec les nouvelles données extraites

@@ -712,7 +712,7 @@ export class BusinessContextService {
         userId: context.cache_metadata.cache_key, // Utilisation temporaire, devrait être userId réel
         userRole: context.roleSpecificConstraints.user_role,
         contextKey: cacheKey,
-        contextData: context as any,
+        contextData: context as unknown,
         expiresAt,
         createdAt: new Date(),
         accessCount: 0,
@@ -853,10 +853,10 @@ export class BusinessContextService {
       }>;
     }>;
     businessDictionary: Record<string, string>;
-    domainContexts: Record<string, any>;
+    domainContexts: Record<string, unknown>;
   }> {
     const metadata = {
-      tables: {} as any,
+      tables:as unknown, unknown,
       businessDictionary: this.getJLMBusinessDictionary(),
       domainContexts: this.getDomainSpecializedContexts()
     };
@@ -1205,7 +1205,7 @@ export class BusinessContextService {
   /**
    * Enrichit les tables restantes avec métadonnées
    */
-  private async enrichRemainingTables(metadata: any): Promise<void> {
+  private async enrichRemainingTables(metadata: unknown): Promise<void> {
     // Table SUPPLIERS - Fournisseurs
     metadata.tables.suppliers = {
       tableName: 'suppliers',
@@ -1720,7 +1720,7 @@ export class BusinessContextService {
   /**
    * Contextes spécialisés par domaine métier
    */
-  private getDomainSpecializedContexts(): Record<string, any> {
+  private getDomainSpecializedContexts(): Record<st, unknown>unknown> {
     return {
       financier: {
         description: 'Contexte pour analyses financières et chiffrage',
@@ -2647,8 +2647,8 @@ export class BusinessContextService {
    */
   private async selectEnrichmentElements(
     request: ContextEnrichmentRequest,
-    analysis: any
-  ): Promise<{ schemas: any[]; examples: any[]; confidence: number }> {
+    anal: unknown)
+  ): Promise<{ schemas: unknown[]; exam: unknown[]ny[]; confidence: number }> {
     // Implémentation simplifiée - à étendre
     return {
       schemas: [],
@@ -2662,7 +2662,7 @@ export class BusinessContextService {
    */
   private buildEnrichedContextString(
     currentContext: string,
-    elements: any,
+    elements: unknown,
     mode: string
   ): string {
     // Implémentation basique - à étendre
@@ -2672,7 +2672,7 @@ export class BusinessContextService {
   /**
    * Génère des suggestions de raffinement
    */
-  private generateRefinementSuggestions(analysis: any, elements: any): string[] {
+  private generateRefinementSuggestions(anal: un, unknown,,unknown, ele: unknown) unknown): string[] {
     return [
       "Préciser la période d'analyse",
       "Spécifier le type de projet",
@@ -2735,7 +2735,7 @@ export class BusinessContextService {
     generationTime: number,
     cacheHit: boolean,
     context: BusinessContext | null,
-    error?: any
+ : unknown): unknown
   ): Promise<void> {
     return withErrorHandling(
     async () => {
@@ -3043,8 +3043,8 @@ export class BusinessContextService {
    * Sélectionne les tables pertinentes selon l'analyse
    */
   private selectRelevantTables(
-    queryAnalysis: any,
-    allTables: Record<string, any>
+    query: unknown,unknown,unknown,
+    allTables: Recor, unknown>unknunknown>any>
   ): string[] {
     const relevantTables = new Set<string>();
     
@@ -3076,7 +3076,7 @@ export class BusinessContextService {
   /**
    * Filtre les colonnes selon le rôle et le domaine
    */
-  private filterColumnsForRole(columns: any[], userRole: string, domain: string): any[] {
+  private filterColumnsForRole: unknown[]s: unknown[], userRole: string, dom: unknown[]rinunknown[]ny[] {
     return columns.filter(col => {
       // Exclure les colonnes sensibles selon le rôle
       if (col.name.includes('margin') && userRole !== 'admin' && userRole !== 'chef_projet') {
@@ -3103,8 +3103,8 @@ export class BusinessContextService {
    * Sélectionne les exemples SQL pertinents
    */
   private async selectRelevantSQLExamples(
-    queryAnalysis: any,
-    allTables: Record<string, any>,
+    q: unknown,unknunknown,is: any,
+    allTables: R, unknown>unknownnown>ng, any>,
     relevantTables: string[]
   ): Promise<Array<{description: string; sql: string; explanation: string}>> {
     const examples: Array<{description: string; sql: string; explanation: string}> = [];
@@ -3114,7 +3114,7 @@ export class BusinessContextService {
       const table = allTables[tableName];
       if (table?.sqlExamples) {
         // Filtrer les exemples selon les mots-clés de la requête
-        const relevantExamples = table.sqlExamples.filter((ex: any) => {
+        const relevantExamples = table.sqlExamples.: ununknownwn)((unknown)any) => {
           const exampleText = `${ex.description} ${ex.sql}`.toLowerCase();
           return queryAnalysis.keywords.some((keyword: string) => exampleText.includes(keyword));
         });
@@ -3134,7 +3134,7 @@ export class BusinessContextService {
   /**
    * Génère les jointures recommandées
    */
-  private getRecommendedJoins(tables: string[], allTables: Record<string, any>): string[] {
+  private getRecommendedJoins(tables: string[], allTable, unknunknown>unknown>string, any>): string[] {
     const joins: string[] = [];
     
     // Jointures standards
@@ -3212,7 +3212,7 @@ export class BusinessContextService {
 
       // Cache en mémoire simplifié pour SQL
       this.memoryCache.set(key, {
-        data: { contextData: context } as any,
+        data: { contextData: coas unknown, as unknown,
         expiresAt: new Date(Date.now() + ttlMinutes * 60 * 1000),
         hitCount: 0
       });
@@ -3238,7 +3238,7 @@ export class BusinessContextService {
       const cached = this.memoryCache.get(key);
       if (cached && cached.expiresAt > new Date()) {
         cached.hitCount++;
-        return (cached.data as any).contextData || null;
+        return (cached.data as unknown).contextData || null;
       }
     
     },

@@ -72,7 +72,7 @@ export interface MigrationReport {
   isDryRun: boolean;
   
   // Preview données transformées (dry-run only)
-  preview?: any[];
+  preview?: unknown[];
 }
 
 /**
@@ -143,7 +143,7 @@ export class MondayMigrationServiceEnhanced {
       });
 
       // Étape 2: Transform & Validate
-      const transformedItems: any[] = [];
+      const transformedI: unknown[]ny[] = [];
       
       for (const item of items) {
         try {
@@ -263,7 +263,7 @@ service: 'MondayMigrationServiceEnhanced',;
         {
           maxRetries: 3,
           initialDelay: 1000,
-          retryCondition: (error: any) => {
+          retryCondition: (error: unknown) => {
             // Retry sur rate limits et erreurs serveur
             return error?.response?.status === 429 || error?.response?.status >= 500;
           }
@@ -297,9 +297,9 @@ service: 'MondayMigrationServiceEnhanced',;
    * TRANSFORM ITEM Monday → Saxium
    * Applique mapping configuration et transformations
    */
-  async transformItem(item: MondayItem, entityType: EntityType): Promise<any> {
+  async transformItem(item: MondayItem, entityType: EntityType): Promise<unknown> {
     const config = getMappingConfig(entityType);
-    const transformed: any = {};
+    const transformed: unknown = {};
 
     // CRITIQUE: Préserver Monday item ID natif AVANT mapping pour transformations
     // L'ID Monday natif (ex: 18115615455) doit être disponible pour les transformations
@@ -361,7 +361,7 @@ service: 'MondayMigrationServiceEnhanced',;
    * VALIDATE ITEM avec Zod schema
    * Retourne données validées ou throw ZodError
    */
-  async validateItem(data: any, entityType: EntityType): Promise<any> {
+  async validateItem(data: unknown, entityType: EntityType): Pro<unknown>unknown> {
     const schemas = {
       aos: insertAoSchema,
       projects: insertProjectSchema,
@@ -394,7 +394,7 @@ service: 'MondayMigrationServiceEnhanced',;
    * Utilise Promise.allSettled pour traiter 20 items en parallèle par batch
    */
   async bulkInsert(
-    items: any[],
+ : unknown[]s: unknown[],
     entityType: EntityType,
     options: {
       batchSize?: number;
@@ -538,8 +538,8 @@ service: 'MondayMigrationServiceEnhanced',;
   /**
    * Extrait valeurs colonnes Monday en Map
    */
-  private extractColumnValues(item: MondayItem): Map<string, any> {
-    const values = new Map<string, any>();
+  private extractColumnValues(item: MondayItem): Map<string, unknown> {
+    const values = new Map<st, unknunknown>unknown>();
 
     for (const columnValue of item.column_values || []) {
       // Utiliser la méthode extractColumnValue de MondayService
@@ -590,7 +590,7 @@ service: 'MondayMigrationServiceEnhanced',;
   /**
    * Insère entity via storage interface
    */
-  private async insertEntity(data: any, entityType: EntityType): Promise<any> {
+  private async insertEntity(: unknown, unknown, entityType: EntityType):<unknunknown>unknown<any> {
     switch (entityType) {
       case 'aos':
         return await this.storage.createAo(data as InsertAo);

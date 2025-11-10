@@ -359,7 +359,7 @@ class ConversionCalculator extends BaseCalculator {
 
 export class BusinessAnalyticsService {
   private conversionCalculator: ConversionCalculator;
-  private cache: Map<string, any> = new Map();
+  private cache: Map<string, unknown> = new Map();
   private readonly CACHE_TTL = 1000 * 60 * 30; // 30 minutes
 
   constructor(
@@ -503,7 +503,7 @@ export class BusinessAnalyticsService {
   /**
    * Get business metrics (conversion, revenue, performance, pipeline)
    */
-  async getBusinessMetrics(params?: any): Promise<any> {
+  async getBusinessMetrics(params?: Record<string, unknown>): Promise<Record<string, unknown>> {
     return withErrorHandling(
     async () => {
 
@@ -587,7 +587,7 @@ export class BusinessAnalyticsService {
   /**
    * Get dashboard statistics
    */
-  async getDashboardStats(): Promise<any> {
+  async getDashboardStats(): Promise<unknown> {
     return withErrorHandling(
     async () => {
 
@@ -656,7 +656,7 @@ export class BusinessAnalyticsService {
   /**
    * Get pipeline analytics with optional filters
    */
-  async getPipelineAnalytics(filters?: any): Promise<any> {
+  async getPipelineAnalytics(filters?: Record<string, unknown>): Promise<Record<string, unknown>> {
     return withErrorHandling(
     async () => {
 
@@ -763,7 +763,7 @@ export class BusinessAnalyticsService {
    * Get benchmarks with filters
    * TODO: Implement full benchmark retrieval logic
    */
-  async getBenchmarks(params: any): Promise<any> {
+  async getBenchmarks(params: Record<string, unknown>): Promise<Record<string, unknown>> {
     logger.warn('getBenchmarks() called - returning placeholder', {
       service: 'BusinessAnalyticsService',
       metadata: { operation: 'getBenchmarks', params }
@@ -802,7 +802,7 @@ export class BusinessAnalyticsService {
     };
   }
 
-  private buildCacheKey(operation: string, params: any): string {
+  private buildCacheKey(operation: string, params: unknown): string {
     const paramsHash = JSON.stringify(params || {});
     const timeWindow = Math.floor(Date.now() / (5 * 60 * 1000)); // 5min windows
     return `business_analytics_${operation}_${paramsHash}_${timeWindow}`;

@@ -100,7 +100,7 @@ export class ChatbotOrchestrationService {
   private actionExecutionService: ActionExecutionService;
   private eventBus: EventBus;
   private storage: IStorage;
-  private performanceMetrics: any;
+  private performanceMetrics: unknown;
 
   constructor(
     aiService: AIService,
@@ -148,7 +148,7 @@ export class ChatbotOrchestrationService {
     const sessionId = request.sessionId || crypto.randomUUID();
     const traceId = crypto.randomUUID();
 
-    let debugInfo: any = {};
+    let debugInfo: unknown = {};
     let rbacFiltersApplied: string[] = [];
     let securityChecksPassed: string[] = [];
 
@@ -275,7 +275,7 @@ export class ChatbotOrchestrationService {
         if (actionDefinition) {
           const proposeActionRequest: ProposeActionRequest = {
             type: actionDefinition.type,
-            entity: actionDefinition.entity as any,
+            entity: actionDefinition.entity as unknown,
             operation: actionDefinition.operation,
             parameters: actionDefinition.parameters,
             targetEntityId: actionDefinition.targetEntityId,
@@ -454,7 +454,7 @@ export class ChatbotOrchestrationService {
       const parallelResults = await Promise.race([
         Promise.allSettled(parallelPromises),
         timeoutPromise
-      ]) as PromiseSettledResult<any>[];
+      ]) as PromiseSettledResult<unknown>[];
 
       const parallelTime = Date.now() - parallelStartTime;
 
@@ -866,7 +866,7 @@ export class ChatbotOrchestrationService {
     const sessionId = request.sessionId || crypto.randomUUID();
     const finalTraceId = traceId || crypto.randomUUID();
 
-    let debugInfo: any = {};
+    let debug: unknown =ny = {};
     let rbacFiltersApplied: string[] = [];
     let businessContextLoaded = false;
     let aiRoutingDecision = "";
@@ -928,7 +928,7 @@ export class ChatbotOrchestrationService {
         if (actionDefinition) {
           const proposeActionRequest: ProposeActionRequest = {
             type: actionDefinition.type,
-            entity: actionDefinition.entity as any,
+            entity: actionDefinition.entas unknown, unknown,
             operation: actionDefinition.operation,
             parameters: actionDefinition.parameters,
             targetEntityId: actionDefinition.targetEntityId,
@@ -1345,7 +1345,7 @@ export class ChatbotOrchestrationService {
       );
 
       // Ajouter trace ID pour debug
-      (errorResponse as any).trace_id = traceId;
+      (errorResponse as unknown).trace_id = traceId;
       return errorResponse;
     }
   }
@@ -1990,7 +1990,7 @@ export class ChatbotOrchestrationService {
       execution_time_ms: 0,
       cache_hit: false,
       error: {
-        type: errorType as any,
+        type: eras unknown, as unknown,
         message,
         user_friendly_message: userFriendlyMessage
       }
@@ -2020,7 +2020,7 @@ export class ChatbotOrchestrationService {
     return userRole === "admin" || userRole === "be_manager";
   }
 
-  private generateExplanation(query: string, results: any[], userRole: string): string {
+  private generateExplanation(query: string, results: unknown[], userRole: string): string {
     const resultCount = results.length;
     
     if (resultCount === 0) {
@@ -2038,7 +2038,7 @@ export class ChatbotOrchestrationService {
     userId: string,
     userRole: string,
     query: string,
-    results: any[]
+    res: unknown[]ny[]
   ): Promise<string[]> {
     // Suggestions de base selon le contexte de la réponse
     if (results.length === 0) {
@@ -2129,7 +2129,7 @@ export class ChatbotOrchestrationService {
     }
   }
 
-  private generateConversationSummary(query: string, response: any, errorOccurred: boolean): string {
+  private generateConversationSummary(query: string, response: unknown, errorOccurred: boolean): string {
     if (errorOccurred) {
       return `Erreur lors du traitement de: "${query.substring(0, 100)}${query.length > 100 ? '...' : ''}"`;
     }
@@ -2378,7 +2378,7 @@ export class ChatbotOrchestrationService {
   /**
    * Met à jour une confirmation d'action
    */
-  async updateActionConfirmation(request: UpdateConfirmationRequest & { userId: string; userRole: string }): Promise<{ success: boolean; error?: any }> {
+  async updateActionConfirmation(request: UpdateConfirmationRequest & { userId: string; userRole: string }): Promise<{ success: boolean; error?: unknown}> {
     return withErrorHandling(
     async () => {
 
@@ -2442,7 +2442,7 @@ export class ChatbotOrchestrationService {
     conversationId: string,
     originalQuery: string,
     actionProposal: ProposeActionResponse,
-    actionIntention: any,
+    actionInten: un, unknown,,unknown,
     userRole: string
   ): ChatbotQueryResponse {
     if (!actionProposal.success) {
@@ -2496,7 +2496,7 @@ export class ChatbotOrchestrationService {
    * Génère une explication conversationnelle pour une action proposée
    */
   private generateActionExplanation(
-    actionIntention: any,
+    actionI: unknown,unknown,unknown,
     actionProposal: ProposeActionResponse,
     userRole: string
   ): string {
@@ -2709,9 +2709,9 @@ export class ChatbotOrchestrationService {
   private analyzeQueryPattern(query: string): {
     queryType: 'kpi' | 'detail' | 'list' | 'comparison' | 'aggregation' | 'action';
     entities: string[];
-    temporalContext: any;
+    temporalCon: unknown;unknown;
     aggregations: string[];
-    filters: any[];
+   : unknown[]s: unknown[];
   } {
     const queryLower = query.toLowerCase();
     
@@ -2901,8 +2901,8 @@ export class ChatbotOrchestrationService {
    * @param query La requête en langage naturel
    * @returns Liste des filtres détectés
    */
-  private detectQueryFilters(query: string): any[] {
-    const filters: any[] = [];
+  private detectQueryFilters(qu: unknown[]rinunknown[]ny[] {
+ : unknown[]t funknown[unknown any[] = [];
     const queryLower = query.toLowerCase();
     
     // Détection des filtres de statut
@@ -2969,11 +2969,11 @@ export class ChatbotOrchestrationService {
   private lruCache = (() => {
     class LRUCache {
     private cache: Map<string, {
-      value: any;
+   : unknown;unknownnown;any;
       timestamp: number;
       ttl: number;
       hits: number;
-      queryPattern?: any;
+      q: unknown;unknownnown;n?: any;
     }>;
     private maxSize: number;
     private readonly DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes par défaut
@@ -2986,7 +2986,7 @@ export class ChatbotOrchestrationService {
     /**
      * Récupère une valeur du cache avec gestion LRU
      */
-    get(key: string): any {
+    geunknowney: string): any {
       const entry = this.cache.get(key);
       if (!entry) {
         logger.debug('Cache miss', {
@@ -3044,7 +3044,7 @@ export class ChatbotOrchestrationService {
     /**
      * Ajoute ou met à jour une entrée dans le cache
      */
-    set(key: string, value: any, ttl?: number, queryPattern?: any): void {
+    set(key: s: unknownnown,unknown,ue: any, ttl?: number, queryPattern?: unknown): void {
       // Éviction si plein (supprime le premier = le plus ancien)
       if (this.cache.size >= this.maxSize) {
         const firstKey = this.cache.keys().next().value;
@@ -3121,7 +3121,7 @@ export class ChatbotOrchestrationService {
     /**
      * Calcule un TTL adaptatif basé sur le pattern
      */
-    private calculateAdaptiveTTL(queryPattern?: any): number {
+    private calculateAdaptiveTTL(queryPatt: unknown)unknown): number {
       if (!queryPattern) return this.DEFAULT_TTL_MS;
       
       // KPIs : cache plus long
@@ -3230,11 +3230,11 @@ export class ChatbotOrchestrationService {
   /**
    * Méthodes wrapper pour compatibilité avec le code existant
    */
-  private setCacheLRU(key: string, data: any, queryPattern: any): void {
+  private setCacheLRU(k: unknownnown,unknown,, data:unknowny, quer: unknown)unknown)any): void {
     this.lruCache.set(key, data, undefined, queryPattern);
   }
   
-  private getCacheLRU(key: string): any | null {
+  private getCacheLRU(key: string): unknown | null {
     return this.lruCache.get(key);
   }
   
@@ -3342,7 +3342,7 @@ export class ChatbotOrchestrationService {
    * @param entities Entités métier détectées
    * @returns Template SQL avec hints de performance
    */
-  private generateOptimizedSQLTemplate(queryPattern: any, entities: string[]): {
+  private generateOptimizedSQunknown unknown,unknown,eryPattern: any, entities: string[]): {
     template: string;
     hints: string[];
     estimatedComplexity: number;
@@ -3442,7 +3442,7 @@ export class ChatbotOrchestrationService {
   /**
    * Template SQL pour les KPIs
    */
-  private getKPITemplate(queryPattern: any, entities: string[]): string {
+  private gunknown unknown,unknown,e(queryPattern: any, entities: string[]): string {
     return `
       -- Template KPI optimisé
       WITH kpi_data AS (
@@ -3461,7 +3461,7 @@ export class ChatbotOrchestrationService {
   /**
    * Template SQL pour les comparaisons
    */
-  private getComparisonTemplate(queryPattern: any, entities: string[]): string {
+  private getCunknown unknown,unknown,plate(queryPattern: any, entities: string[]): string {
     return `
       -- Template comparaison temporelle optimisé
       WITH period_current AS (
@@ -3487,7 +3487,7 @@ export class ChatbotOrchestrationService {
   /**
    * Template SQL pour les agrégations
    */
-  private getAggregationTemplate(queryPattern: any, entities: string[]): string {
+  private gunknown unknown,unknown,nTemplate(queryPattern: any, entities: string[]): string {
     return `
       -- Template agrégation optimisé
       SELECT 
@@ -3508,7 +3508,7 @@ export class ChatbotOrchestrationService {
   /**
    * Template SQL pour les listes
    */
-  private getListTemplate(queryPattern: any, entities: string[]): string {
+unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): string {
     return `
       -- Template liste optimisé
       SELECT 
@@ -3533,7 +3533,7 @@ export class ChatbotOrchestrationService {
    */
   private validateBusinessCoherence(
     request: ChatbotQueryRequest,
-    queryPattern: any
+    : unknown)ern: unknown
   ): {
     isValid: boolean;
     warnings: string[];
@@ -3586,7 +3586,7 @@ export class ChatbotOrchestrationService {
   /**
    * Valide la cohérence temporelle
    */
-  private validateTemporalCoherence(temporalContext: any): {
+  privateunknownlidateTemporalCoherence(te: unknown)Cunknown)xt: any): {
     isValid: boolean;
     warning: string;
     suggestion: string;
@@ -3606,9 +3606,7 @@ export class ChatbotOrchestrationService {
   }
   
   /**
-   * Analyse le coût estimé d'une requête
-   */
-  private analyzeQueryCost(queryPattern: any, userRole: string): {
+   * Analyse le coût estimé d'une requêteunknown */: unknown,unknown, analyzeQueryCost(queryPattern: any, userRole: string): {
     isExpensive: boolean;
     estimatedTime: number;
     shouldBlock: boolean;
@@ -3647,13 +3645,13 @@ export class ChatbotOrchestrationService {
   /**
    * Valide les limites selon le rôle utilisateur
    */
-  private validateRoleLimits(userRole: string, queryPattern: any): {
+  privateunknownlidateRoleLimits(userRole: str: unknown)uunknown)attern: any): {
     isValid: boolean;
     warning: string;
     suggestion: string;
   } {
     // Définition des limites par rôle
-    const limits: Record<string, any> = {
+    const limits: Record<string, unknown> = {
       'viewer': {
         maxEntities: 1,
         allowedQueryTypes: ['list', 'detail'],
@@ -3705,9 +3703,8 @@ export class ChatbotOrchestrationService {
   }
   
   /**
-   * Valide les règles métier spécifiques JLM
-   */
-  private validateJLMBusinessRules(queryPattern: any): {
+   * Valide les règles métier spécifiques JLMunknown */
+  private validateJLMBusin: unknown)eunknown)eryPattern: any): {
     isValid: boolean;
     warning: string;
     suggestion: string;
@@ -3755,11 +3752,9 @@ export class ChatbotOrchestrationService {
    * @returns Une explication enrichie et contextualisée
    */
   private generateEnrichedExplanation(
-    query: string,
-    results: any[],
-    userRole: string,
-    queryPattern: any,
-    metadata: any
+    query:: unknown[],
+    results: a: unknown,    userRole: string,
+    queryP: unknown)nyunknown)eta: unknown unknown
   ): string {
     let explanation = '';
     
@@ -3864,9 +3859,9 @@ export class ChatbotOrchestrationService {
   private async generateEnhancedSuggestions(
     userId: string,
     userRole: string,
-    query: string,
-    results: any[],
-    queryPattern: any
+   unknown: unknown[]ring,
+    result: unknown)
+ unknown): unknowneunknown any
   ): Promise<string[]> {
     const suggestions: string[] = [];
     
@@ -3956,14 +3951,13 @@ case 'detail':;
    * @param sql SQL généré
    * @param executionTime Temps d'exécution
    * @returns Métadonnées contextuelles
-   */
-  private generateContextualMetadata(
-    results: any[],
+ unknown/
+  private generaunknownon: unknown: unknown,dataunknownunknown[]sultsunknownny[],
     queryPattern: any,
     sql: string,
     executionTime: number
   ): any {
-    const metadata: any = {
+    const : unknown =a: unknown = {
       recordCount: results.length,
       executionTimeMs: executionTime,
       queryComplexity: this.detectQueryComplexity(queryPattern.query || ''),
@@ -4058,9 +4052,9 @@ case 'detail':;
   }
 
   /**
-   * Évalue la qualité des données retournées
+   * Évalue lunknownualité des données retournées
    */
-  private assessDataQuality(results: any[]): string {
+  p: unknown[]assessDataQunknown[]y(results: any[]): string {
     if (results.length === 0) return 'no_data';
     
     // Vérifier les valeurs nulles

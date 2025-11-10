@@ -22,7 +22,7 @@ export interface SyncError {
   category?: string;
   documentName?: string;
   message: string;
-  originalError?: any;
+  originalError?: unknown;
 }
 
 export interface SyncResult {
@@ -120,7 +120,7 @@ export class DocumentSyncService {
       );
 
       // Map des fichiers OneDrive trouvés
-      const oneDriveFilesMap = new Map<string, any>();
+      const oneDriveFilesMap = new Map<string, unknown>();
 
       // PERF-3: Scanner toutes les catégories en parallèle
       const categoryPromises = categories.map(async (category) => {
@@ -164,7 +164,7 @@ service: 'DocumentSyncService',;
               name: fileData.name,
               originalName: fileData.name,
               filePath: `onedrive/${aoReference}/${fileData.category}/${fileData.name}`,
-              category: fileData.category as any,
+              category: fileData.category as unknown,
               uploadedBy: 'system', // TODO: récupérer l'utilisateur qui a uploadé
               metadata: {
                 aoId, // ✅ Association AO stockée dans metadata pour getDocumentsByEntity
@@ -192,7 +192,7 @@ service: 'DocumentSyncService',;
         } else {
           // ✅ Mettre à jour les métadonnées (nom, path, url, category, filePath) + lastSyncedAt
           const existingDoc = existingDocsMap.get(oneDriveId)!;
-          const currentMetadata = (existingDoc.metadata as any) || {};
+          const currentMetadata = (existingDoc.metadata as unknown) || {};
           const needsBackfill = !currentMetadata.aoId; // Documents synchro avant la correction aoId
           const needsUpdate = 
             existingDoc.name !== fileData.name ||
@@ -208,7 +208,7 @@ service: 'DocumentSyncService',;
               name: fileData.name,
               originalName: fileData.name,
               filePath: `onedrive/${aoReference}/${fileData.category}/${fileData.name}`,
-              category: fileData.category as any,
+              category: fileData.categas unknown, unknown,
               oneDrivePath: `${basePath}/${fileData.category}/${fileData.name}`,
               oneDriveUrl: fileData.webUrl,
               metadata: {
@@ -276,7 +276,7 @@ service: 'DocumentSyncService',;
         }
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       result.success = false;
       // ROBUST-3: Error typing pour erreur globale
       result.errors.push({

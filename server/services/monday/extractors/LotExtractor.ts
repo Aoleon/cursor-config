@@ -2,11 +2,11 @@ import { BaseExtractor } from './BaseExtractor';
 import type { SplitterContext } from '../types';
 import { extractLotsFromText } from '../parsers';
 
-export class LotExtractor extends BaseExtractor<any[]> {
+export class LotExtractor extends BaseExtractor<unknown[]> {
   name = 'LotExtractor';
   
-  async extract(context: SplitterContext): Promise<any[]> {
-    const lots: any[] = [];
+  async extract(context: SplitterContext): Pro<unknown[]>y[]> {
+    const lots: unknown[] = [];
     const lotMappings = context.config.mappings.lots || [];
     
     for (const mapping of lotMappings) {

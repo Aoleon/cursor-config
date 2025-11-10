@@ -720,7 +720,8 @@ await cacheService.set(cacheKey, result, { ttl: 86400 });
 **Référence:** `@.cursor/rules/advanced-learning.md` - Stratégies d'apprentissage avancées (Reflexion, ICE)  
 **Référence:** `@.cursor/rules/context-search.md` - Recherche contextuelle avancée  
 **Référence:** `@.cursor/rules/long-term-autonomy.md` - Autonomie longue durée (heures/jours)  
-**Référence:** `@.cursor/rules/automated-testing-debugging.md` - **NOUVEAU** Tests E2E et débogage automatisé
+**Référence:** `@.cursor/rules/automated-testing-debugging.md` - Tests E2E et débogage automatisé  
+**Référence:** `@.cursor/rules/transversal-performance.md` - **NOUVEAU** Performance transversale et autonomie
 
 ### Stratégies d'Optimisation
 

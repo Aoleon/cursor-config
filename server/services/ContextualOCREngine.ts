@@ -512,22 +512,22 @@ export class ContextualOCREngine {
     // Stratégie multi-niveau pour trouver des AOs similaires
     const similarityStrategies = [
       // Niveau 1: Client + localisation exacte (priorité max)
-      (ao: any) => ao.client === fields.client && ao.location === fields.location,
+      (ao: unknown) => ao.client === fields.client && ao.location === fields.location,
       
       // Niveau 2: Même client + même département
-      (ao: any) => ao.client === fields.client && ao.departement === fields.departement,
+     : unknown)unknown) => ao.client === fields.client && ao.departement === fields.departement,
       
       // Niveau 3: Même département + même type de menuiserie 
-      (ao: any) => ao.departement === fields.departement && ao.menuiserieType === fields.menuiserieType,
+ : unknown)unknown)unknown) => ao.departement === fields.departement && ao.menuiserieType === fields.menuiserieType,
       
       // Niveau 4: Client connu avec localisation proche (correspondance floue)
-      (ao: any) => ao.client === fields.client && this.isLocationProximate(ao.location, fields.location),
+   unknown)unknown any) => ao.client === fields.client && this.isLocationProximate(ao.location, fields.location),
       
       // Niveau 5: Type de menuiserie similaire même région
-      (ao: any) => ao.menuiserieType === fields.menuiserieType && this.isSameRegion(ao.departement, fields.departement)
+   unknown(ao: any) => ao.menuiserieType === fields.menuiserieType && this.isSameRegion(ao.departement, fields.departement)
     ];
     
-    let bestMatch: any = null;
+    let bestMatch: unknown = null;
     let matchStrategy = -1;
     
     // Appliquer les stratégies par ordre de priorité
@@ -953,7 +953,7 @@ case 'volet':;
    * MÉTRIQUES DE PERFORMANCE OCR - Système de monitoring avancé
    */
   generatePerformanceMetrics(
-    ocrResult: any, 
+    ocrResult: unknown, 
     contextualResult: ContextualOCRResult,
     documentType: 'ao' | 'supplier_quote'
   ): OCRPerformanceMetrics {
@@ -1035,7 +1035,7 @@ case 'volet':;
   /**
    * Génère des patterns adaptatifs basés sur le contexte
    */
-  generateAdaptivePatterns(documentType: 'ao' | 'supplier_quote', context?: any): Record<string, RegExp[]> {
+  generateAdaptivePatterns(documentType: 'ao' | 'supplier_quot: unknunknunknown)ntext?: any): Record<string, RegExp[]> {
     if (!this.context) return {};
 
     const adaptivePatterns: Record<string, RegExp[]> = {};
@@ -1080,7 +1080,7 @@ case 'volet':;
    */
   private calculateFieldCompleteness(extractedFields: AOFieldsExtracted | SupplierQuoteFields, documentType: string): number {
     const totalExpected = this.getTotalExpectedFields(documentType);
-    const extractedCount = Object.keys(extractedFields).filter(key => (extractedFields as any)[key] != null).length;
+    const extractedCount = Object.keys(extractedFields).filter(key => (extractedFields as unknown)[key] != null).length;
     
     return Math.min(1, extractedCount / totalExpected);
   }
@@ -1099,7 +1099,7 @@ case 'volet':;
     let score = 0;
     let maxScore = 0;
     
-    const fields = extractedFields as any;
+    const fields = extractedFields as unknown;
     
     // Reconnaissance départements prioritaires JLM (50, 62)
     if (fields.departement) {
@@ -1148,7 +1148,7 @@ case 'volet':;
    * Calcule la précision de reconnaissance des départements
    */
   private calculateDepartmentAccuracy(extractedFields: AOFieldsExtracted | SupplierQuoteFields): number {
-    const fields = extractedFields as any;
+    const fields = extractedFieas unknown;unknown;
     if (!fields.departement) return 0;
     
     // Vérification format département français (01-95)
@@ -1166,7 +1166,7 @@ case 'volet':;
    * Calcule le score d'extraction des matériaux
    */
   private calculateMaterialExtractionScore(extractedFields: AOFieldsExtracted | SupplierQuoteFields): number {
-    const fields = extractedFields as any;
+    const fields = extracteas unknown; as unknown;
     if (!fields.materials || fields.materials.length === 0) return 0;
     
     let score = 0;
@@ -1200,7 +1200,7 @@ case 'volet':;
    * Calcule le score de détection des critères spéciaux
    */
   private calculateSpecialCriteriaScore(extractedFields: AOFieldsExtracted | SupplierQuoteFields): number {
-    const fields = extractedFields as any;
+    const fields = extras unknown;unknown unknunknown;any;
     if (!fields.specialCriteria) return 0;
     
     const criteria = fields.specialCriteria;

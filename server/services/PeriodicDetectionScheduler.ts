@@ -480,8 +480,8 @@ service: 'PeriodicDetectionScheduler',;
       
       // Notification des meilleures opportunités (gain > 3 jours)
       const highValueOpportunities = optimizationAlerts.filter(alert => {
-        const suggestedActions = alert.suggestedActions as any;
-        return suggestedActions && Array.isArray(suggestedActions) && suggestedActions.some((action: any) => 
+        const suggestedActions = alert.suggestedActions as unknown;
+        return suggestedActions && Array.isArray(suggestedActions) && suggestedActions.some((action: unknown) => 
           action.action && action.action.includes('3') || action.action.includes('gain')
         );
       });
@@ -729,7 +729,7 @@ service: 'PeriodicDetectionScheduler',;
     }
   }
 
-  private async handleProjectStatusChanged(projectId: string, metadata: any): Promise<void> {
+  private async handleProjectStatusChanged(projectId: string, meta: unknown)unknown): Promise<void> {
     return withErrorHandling(
     async () => {
 
@@ -774,7 +774,7 @@ service: 'PeriodicDetectionScheduler',;
     }
   }
 
-  private async handleTimelineRecalculated(entityId: string, metadata: any): Promise<void> {
+  private async handleTimelineRecalculated(entityId: string, : unknown)unknown)unknown): Promise<void> {
     return withErrorHandling(
     async () => {
 
@@ -803,7 +803,7 @@ service: 'PeriodicDetectionScheduler',;
     }
   }
 
-  private async handleOfferSigned(offerId: string, metadata: any): Promise<void> {
+  private async handleOfferSigned(offerId: stri: unknown)unknown)unknown any): Promise<void> {
     return withErrorHandling(
     async () => {
 
@@ -865,7 +865,7 @@ service: 'PeriodicDetectionScheduler',;
     }
   }
 
-  private async handleTechnicalAlertImpact(alertId: string, metadata: any): Promise<void> {
+  private async handleTechnicalAlertImpact(alertId: : unknown)unknown)unknownata: any): Promise<void> {
     return withErrorHandling(
     async () => {
 
@@ -1033,7 +1033,7 @@ service: 'PeriodicDetectionScheduler',;
       
       const conflictAlerts = await this.dateAlertDetectionService.detectPlanningConflicts(timeframe);
       const projectConflictAlerts = conflictAlerts.filter(alert => 
-        alert.entityId === project.id || (alert as any).affectedProjects?.includes(project.id)
+        alert.entityId === project.id || (alert as unknown).affectedProjects?.includes(project.id)
       );
       
       const allAlerts = [...delayAlerts, ...projectConflictAlerts];
@@ -1088,7 +1088,7 @@ service: 'PeriodicDetectionScheduler',;
       
       // Filtrer conflits affectant plusieurs projets
       const interProjectConflicts = conflictAlerts.filter(alert => {
-        const metadata = alert as any;
+        const metadata = alas unknown;unknown;
         return metadata.affectedProjects && metadata.affectedProjects.length > 1;
       });
       
@@ -1233,7 +1233,7 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
       
       this.eventBus.publish({
         id: `daily-report-${Date.now()}`,
-        type: 'analytics.calculated' as any,
+        type: 'analytics.calculated' as unknown,
         entity: 'system',
         entityId: 'daily-planning-report',
         title: '📊 Rapport Planning Quotidien',
@@ -1325,7 +1325,7 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
 
       this.eventBus.publish({
         id: `critical-batch-${Date.now()}`,
-        type: 'date_intelligence.planning_issue_detected' as any,
+        type: 'date_intelligence.planning_issue_detectas unknown, unknown,
         entity: 'date_intelligence',
         entityId: 'critical-alerts-batch',
         title: '🚨 Alertes Critiques Détectées',
@@ -1363,7 +1363,7 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
       
       this.eventBus.publish({
         id: `optimizations-${Date.now()}`,
-        type: 'analytics.calculated' as any,
+        type: 'analytics.calcas unknown, as unknown,
         entity: 'date_intelligence',
         entityId: 'optimization-opportunities',
         title: '💡 Opportunités d\'Optimisation',
@@ -1399,7 +1399,7 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
 
       this.eventBus.publish({
         id: `risk-deterioration-${profile.projectId}-${Date.now()}`,
-        type: 'date_intelligence.planning_issue_detected' as any,
+        type: 'date_intelligence.planning_issuas unknown,tas unknown unknown,
         entity: 'project',
         entityId: profile.projectId,
         title: '📉 Détérioration Profil de Risque',

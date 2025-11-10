@@ -91,7 +91,7 @@ class MondayService {
     });
   }
 
-  private async executeQuery<T = any>(query: string, variables?: any): Promise<T> {
+  private async executeQuery<T = unknown>(query: string, variables?: unknown): Promise<T> {
     // Récupérer correlation ID pour propagation
     const correlationId = getCorrelationId();
     
@@ -434,7 +434,7 @@ class MondayService {
       }
     `;
 
-    const result = await this.executeQuery<{ boards: any[] }>(query, { 
+    const result = await this.executeQuery<{ boards: unknown[] }>(query, { 
       boardIds: [parseInt(boardId)]
     });
     const boardData = result.boards?.[0];
@@ -489,7 +489,7 @@ class MondayService {
         }
       `;
 
-      const result = await this.executeQuery<{ me: any }>(query);
+      const result = await this.executeQuery<{ me: unknown}>(query);
       
       logger.info('Connexion Monday.com testée avec succès', {
         service: 'MondayService',
@@ -560,7 +560,7 @@ class MondayService {
     return item;
   }
 
-  extractColumnValue(columnValue: MondayColumnValue): any {
+  extractColumnValue(columnValue: MondayColumnValue): unknown {
     try {
       // PRIORITÉ : Utiliser les champs directs des fragments GraphQL (label, values)
       // avant de parser le JSON value (plus fiable)
@@ -619,7 +619,7 @@ class MondayService {
             return parsed.date || null;
           
           case 'people':
-            return parsed.personsAndTeams?.map((p: any) => ({
+            return parsed.personsAndTeams?.ma: unknown)unknown) => ({
               id: p.id,
               name: p.name,
               email: p.email
@@ -650,7 +650,7 @@ class MondayService {
           
           case 'board-relation':
             return {
-              linkedItems: parsed.linkedPulseIds?.map((item: any) => ({
+              linkedItems: parsed.linkedPulseIds?.m: unknown)unknunknown)any) => ({
                 id: item.linkedPulseId || item,
                 boardId: item.boardId
               })) || []
@@ -659,7 +659,7 @@ class MondayService {
           case 'subtasks':
           case 'subitems':
             return {
-              subitemIds: parsed.linkedPulseIds?.map((item: any) => 
+              subitemIds: parsed.linkedPulseId: unknown)unknunknown)em: any) => 
                 item.linkedPulseId || item
               ) || [],
               count: parsed.linkedPulseIds?.length || 0

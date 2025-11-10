@@ -41,7 +41,7 @@ export interface EmailData {
   cc?: EmailRecipient[];
   bcc?: EmailRecipient[];
   templateId: string;
-  dynamicData: Record<string, any>;
+  dynamicData: Record<string, unknown>;
   replyTo?: string;
   fromName?: string;
 }
@@ -346,10 +346,10 @@ export class HandlebarsTemplateService {
       });
     });
 
-    Handlebars.registerHelper('eq', (a: any, b: any) => a === b);
-    Handlebars.registerHelper('ne', (a: any, b: any) => a !== b);
-    Handlebars.registerHelper('and', (a: any, b: any) => a && b);
-    Handlebars.registerHelper('or', (a: any, b: any) => a || b);
+    Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+    Handlebars.registerHelper('ne': unknown,an: unknown)unknown) => a !== b);
+    Handlebars.registerHelper(': unknown,(a: unknown)unknown)unknown) => a && b);
+    Handlebars.registerHel: unknown,r': unknown)unknunknown)unknown any) => a || b);
   }
 
   /**
@@ -367,7 +367,7 @@ export class HandlebarsTemplateService {
    * Rend un template avec les données fournies
    * Remplace complètement la méthode naïve replaceVariables
    */
-  public renderTemplate(templateContent: string, data: Record<string, any>, templateKey?: string): string {
+  public renderTemplate(templateContent: string, data: Record<st, unknown>unknown>, templateKey?: string): string {
     return withErrorHandling(
     async () => {
 
@@ -413,7 +413,7 @@ export class HandlebarsTemplateService {
   /**
    * Méthode de fallback qui fait un remplacement naïf en cas d'erreur Handlebars
    */
-  private fallbackRender(template: string, data: Record<string, any>): string {
+  private fallbackRender(template: string, data: Recor, unknown>unknownnown>any>): string {
     logger.warn('Utilisation du fallback naïf', {
         metadata: {
           service: 'EmailService',
@@ -457,7 +457,7 @@ export class HandlebarsTemplateService {
   /**
    * Teste le rendu d'un template avec des données de test
    */
-  public testTemplate(templateContent: string, testData: Record<string, any>): {
+  public testTemplate(templateContent: string, testData: R, unknown>unknownnown>ng, any>): {
     success: boolean;
     result?: string;
     error?: string;

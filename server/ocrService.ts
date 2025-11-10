@@ -586,9 +586,7 @@ export class OCRService {
     completedFieldNames: string[];
     completionScore: number;
   }> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Auto-complétion depuis données maître', {
         metadata: {
           service: 'OCRService',
@@ -650,15 +648,13 @@ export class OCRService {
         completedFieldNames,
         completionScore
       };
-      
-    
-    },
-    {
-      operation: 'async',
-      service: 'ocrService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[OCRService] Erreur lors de l\'auto-complétion depuis les données maître', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'autoCompleteFromMasterData',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       return {
         completedFields: fields,
@@ -672,9 +668,7 @@ export class OCRService {
    * Auto-complète les contacts maître depuis la base de données
    */
   private async autoCompleteMasterContacts(fields: AOFieldsExtracted, completedFieldNames: string[]): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Chercher les maîtres d'ouvrage existants
       if (fields.maitreOuvrageNom && !fields.maitreOuvrageEmail) {
         const maitresOuvrage = await storage.getMaitresOuvrage();
@@ -717,16 +711,15 @@ export class OCRService {
           }
         }
       }
-      
-    
-    },
-    {
-      operation: 'async',
-      service: 'ocrService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[OCRService] Erreur lors de l\'auto-complétion des contacts maître', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'autoCompleteMasterContacts',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
+      // Ne pas lever d'erreur, juste logger
     }
   }
 
@@ -871,9 +864,7 @@ export class OCRService {
     sessionId: string,
     aoLotId: string
   ): Promise<SupplierQuoteOCRResult> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Début analyse devis fournisseur', {
         metadata: {
           service: 'OCRService',
@@ -985,17 +976,16 @@ export class OCRService {
             documentType: 'supplier_quote'
           });
         }
-        
-      
-    },
-    {
-      operation: 'async',
-service: 'ocrService',;
-      metadata: {}
-    }
-  );
-        });
+      } catch (error) {
         // Continuer avec les champs de base si le moteur contextuel échoue
+        logger.warn('[OCRService] Le moteur contextuel a échoué, utilisation des champs de base', {
+          metadata: {
+            service: 'OCRService',
+            operation: 'processSupplierQuote',
+            documentId: documentId,
+            error: error instanceof Error ? error.message : String(error)
+          }
+        });
       }
       
       // Étape 4: Calculer les scores de qualité (avec bonus contextuel)
@@ -1047,9 +1037,8 @@ service: 'ocrService',;
           contextualEnhanced: !!contextualResult
         }
       };
-      
     } catch (error) {
-      logger.error('Erreur analyse devis fournisseur', {
+      logger.error('[OCRService] Erreur analyse devis fournisseur', {
         metadata: {
           service: 'OCRService',
           operation: 'processSupplierQuote',

@@ -6,7 +6,7 @@ export interface MondayColumnMapping {
   saxiumField: string;
   type: 'text' | 'numbers' | 'date' | 'people' | 'location' | 'subitems' | 'subtasks' | 'long-text' | 'status' | 'dropdown' | 'timeline';
   required?: boolean;
-  defaultValue?: any;
+  defaultValue?: unknown;
   description?: string;
   enumMapping?: Record<string, string>; // Pour status/dropdown: mapping valeurs Monday → enum Saxium
   transform?: string; // Transformations spéciales: booleanFromStatus, arrayWrap
@@ -79,12 +79,11 @@ export interface SplitterContext {
   mondayItem: MondayItem;
   config: MondaySplitterConfig;
   extractedData: {
-    baseAO?: any;
-    lots?: any[];
-    contacts?: any[];
-    maitresOuvrage?: any[];
-    maitresOeuvre?: any[];
-    addresses?: any[];
+    bas: unknown;unknown;
+    lots?: unknown[];
+    conta: unknown[]ny[];
+    maitres: unknown[]?: unknown[];
+    ma: unknown[]uvrunknown[]ny[]: unknown[]ddrunknown[]?: unknown[];
   };
   diagnostics: SplitterDiagnostic[];
 }
@@ -92,8 +91,7 @@ export interface SplitterContext {
 export interface SplitterDiagnostic {
   level: 'info' | 'warning' | 'error';
   extractor: string;
-  message: string;
-  data?: any;
+  message: string;: unknown;unknunknown;any;
 }
 
 // Résultat de l'éclatement
@@ -107,11 +105,10 @@ export interface SplitResult {
   mastersCreated: number;
   diagnostics: SplitterDiagnostic[];
   extractedData?: { // Données extraites (rempli en mode dry-run)
-    ao?: any;
-    lots?: any[];
-    contacts?: any[];
-    maitresOuvrage?: any[];
-    maitresOeuvre?: any[];
-    addresses?: any[];
+   : unknown[]ny;
+    lot: unknown[][];
+    contacts?: unknown[];
+    maitresOuunknown[unknownown[]any[];
+    m: uunknown[]n[]euvre?: anyunknown[]   unknownresses?: any[];
   };
 }

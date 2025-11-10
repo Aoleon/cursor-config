@@ -89,7 +89,7 @@ export class OneDriveService {
   async getDriveInfo() {
     // PERF-5: Check cache first
     const cacheKey = this.cache.buildKey('onedrive', 'drive-info');
-    const cached = await this.cache.get<any>(cacheKey);
+    const cached = await this.cache.get<unknown>(cacheKey);
     
     if (cached) {
       logger.debug('OneDrive drive info from cache', {
@@ -185,7 +185,7 @@ export class OneDriveService {
         const response = await this.client.api(nextLink).get();
         const items = response.value || [];
         
-        allItems.push(...items.map((item: any) => this.mapToOneDriveItem(item, path)));
+        allItems.push(...items.map((item: unknown) => this.mapToOneDriveItem(item, path)));
 
         nextLink = response['@odata.nextLink'] || null;
         
@@ -274,7 +274,7 @@ export class OneDriveService {
         const items = response.value || [];
         
         // Map ALL items including deleted ones (consumers need to handle deletions)
-        const mappedItems = items.map((item: any) => {
+        const mappedItems = items.map((: unknown)unknown) => {
           // For deleted items, create minimal object with deleted flag
           if (item.deleted) {
             const isFolder = !!item.folder;
@@ -294,7 +294,7 @@ export class OneDriveService {
         allItems.push(...mappedItems);
         
         // Log deletion events
-        const deletedCount = items.filter((i: any) => i.deleted).length;
+        const deletedCount = items.f: unknown)unknown)unknown) => i.deleted).length;
         if (deletedCount > 0) {
           logger.info('OneDrive delta: deletions detected', {
             metadata: { path, deletedItems: deletedCount }
@@ -621,8 +621,8 @@ service: 'OneDriveService',;
 
       const items = response.value || [];
       return items
-        .filter((item: any) => item.file) // Only files, not folders
-        .map((item: any) => this.mapToOneDriveItem(item) as OneDriveFile);
+        .: unknown)unknown)unknown any) => item.file) // Only files, not folders
+  : unknown)unknown)unknowntem: any) => this.mapToOneDriveItem(item) as OneDriveFile);
     
     },
     {
@@ -700,7 +700,7 @@ service: 'OneDriveService',;
     return withErrorHandling(
     async () => {
 
-      const updateData: any = {};
+      const updateData: unknown = {};
       if (newName) updateData.name = newName;
       if (newParentId) updateData.parentReference = { id: newParentId };
 
@@ -723,7 +723,7 @@ service: 'OneDriveService',;
     }
   }
 
-  private mapToOneDriveItem(item: any, parentPath?: string): OneDriveFile | OneDriveFolder {
+  private mapToOneDriveItem(item: unknown, parentPath?: string): OneDriveFile | OneDriveFolder {
     const isFolder = !!item.folder;
     
     const baseItem = {

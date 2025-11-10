@@ -414,7 +414,7 @@ Pour chaque lot identifié, extrais le maximum d'informations techniques disponi
 
 Format de réponse attendu:
 {
-"lots": [;
+"lots": [
     {
       "numero": "numéro/référence du lot (ex: 07.1, LOT-02, etc.)",
       "designation": "désignation complète du lot",

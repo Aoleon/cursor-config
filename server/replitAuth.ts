@@ -532,9 +532,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
     // Token expired - try to refresh if refresh token available
     if (user.refreshToken) {
-      return withErrorHandling(
-    async () => {
-
+      try {
         logger.info('[Auth] Microsoft token expired, attempting refresh', {
           metadata: {
             userId: user.id,
@@ -563,14 +561,14 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         });
 
         return next();
-      
-    },
-    {
-      operation: 'if',
-      service: 'replitAuth',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('[ReplitAuth] Erreur lors du rafraîchissement du token Microsoft', {
+          metadata: {
+            module: 'ReplitAuth',
+            operation: 'isAuthenticated',
+            userId: user.id,
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         
         // Clear session and return 401

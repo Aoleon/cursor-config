@@ -705,7 +705,8 @@ async function validateMultiLevel(code: string): Promise<ValidationResult> {
 
 ### Documentation Essentielle
 - `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation
-- `@.cursor/rules/advanced-learning.md` - **NOUVEAU** Stratégies d'apprentissage avancées
+- `@.cursor/rules/advanced-learning.md` - Stratégies d'apprentissage avancées
+- `@.cursor/rules/long-term-autonomy.md` - **NOUVEAU** Autonomie longue durée
 - `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 - `@.cursor/rules/workflows.md` - Workflows détaillés
 - `@.cursor/rules/troubleshooting.md` - Guide résolution problèmes

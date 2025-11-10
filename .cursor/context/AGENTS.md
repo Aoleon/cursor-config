@@ -717,8 +717,9 @@ await cacheService.set(cacheKey, result, { ttl: 86400 });
 **Référence:** `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation complètes  
 **Référence:** `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes pour runs plus longs  
 **Référence:** `@.cursor/rules/auto-detection.md` - Détection automatique des anti-patterns  
-**Référence:** `@.cursor/rules/advanced-learning.md` - **NOUVEAU** Stratégies d'apprentissage avancées (Reflexion, ICE)  
-**Référence:** `@.cursor/rules/context-search.md` - **NOUVEAU** Recherche contextuelle avancée
+**Référence:** `@.cursor/rules/advanced-learning.md` - Stratégies d'apprentissage avancées (Reflexion, ICE)  
+**Référence:** `@.cursor/rules/context-search.md` - Recherche contextuelle avancée  
+**Référence:** `@.cursor/rules/long-term-autonomy.md` - **NOUVEAU** Autonomie longue durée (heures/jours)
 
 ### Stratégies d'Optimisation
 

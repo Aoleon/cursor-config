@@ -51,9 +51,7 @@ const initializeModules = async (): Promise<void> => {
     return;
   }
   
-  return withErrorHandling(
-    async () => {
-
+  try {
     isInitializingPdfParse = true;
     logger.info('Initialisation module pdf-parse', {
       metadata: {
@@ -77,15 +75,9 @@ const initializeModules = async (): Promise<void> => {
         operation: 'initializeModules'
       }
     });
-  
-    },
-    {
-      operation: 'async',
-      service: 'ocrService',
-      metadata: {}
-    }
-  );
-    });
+    isInitializingPdfParse = false;
+  } catch (error) {
+    isInitializingPdfParse = false;
     logger.info('Tentative initialisation fallback pdf-parse', {
       metadata: {
         service: 'OCRService',
@@ -93,9 +85,7 @@ const initializeModules = async (): Promise<void> => {
       }
     });
     
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Fallback: essayer d'importer différemment
       const { default: pdfParse } = await import('pdf-parse');
       pdfParseModule = pdfParse;
@@ -105,26 +95,17 @@ const initializeModules = async (): Promise<void> => {
           operation: 'initializeModules'
         }
       });
-    
-    },
-    {
-      operation: 'async',
-      service: 'ocrService',
-      metadata: {}
-    }
-  );
-      });
+    } catch (fallbackError) {
       // Ne pas lever d'erreur ici, continuer avec OCR uniquement
       pdfParseModule = null;
       logger.info('Continuation avec traitement OCR uniquement', {
         metadata: {
           service: 'OCRService',
-          operation: 'initializeModules'
+          operation: 'initializeModules',
+          error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
         }
       });
     }
-  } finally {
-    isInitializingPdfParse = false;
   }
 };
 
@@ -456,9 +437,7 @@ export class OCRService {
       return;
     }
     
-    return withErrorHandling(
-    async () => {
-
+    try {
       this.isInitializingTesseract = true;
       logger.info('Initialisation Tesseract worker', {
         metadata: {
@@ -478,16 +457,15 @@ export class OCRService {
           operation: 'initialize'
         }
       });
-    
-    },
-    {
-      operation: 'async',
-      service: 'ocrService',
-      metadata: {}
-    }
-  );
-      });
+    } catch (error) {
       this.tesseractWorker = null;
+      logger.error('[OCRService] Erreur lors de l\'initialisation de Tesseract', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'initialize',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
       throw new AppError(`Failed to initialize Tesseract: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     } finally {
       this.isInitializingTesseract = false;
@@ -509,9 +487,7 @@ export class OCRService {
    * Génère des patterns adaptatifs basés sur les données contextuelles
    */
   async generateAdaptivePatterns(documentType: 'ao' | 'supplier_quote'): Promise<Record<string, RegExp[]>> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Génération patterns adaptatifs', {
         metadata: {
           service: 'OCRService',
@@ -535,15 +511,14 @@ export class OCRService {
         }
       });
       return combinedPatterns;
-      
-    
-    },
-    {
-      operation: 'async',
-      service: 'ocrService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[OCRService] Erreur lors de la génération des patterns adaptatifs', {
+        metadata: {
+          service: 'OCRService',
+          operation: 'generateAdaptivePatterns',
+          documentType,
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       return AO_PATTERNS; // Fallback vers patterns de base
     }

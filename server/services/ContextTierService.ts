@@ -142,7 +142,9 @@ export class ContextTierService implements ContextTierServiceInterface {
       const { tier, confidence } = this.determineTier(complexityScore, queryAnalysis);
       
       // 6. Génération du profil recommandé
-      const recommendedProfile = this.getContextProfile(tier, entityType, userContext.role || 'user');
+      const context = userContext as Record<string, unknown>;
+      const userRole = (typeof context.role === 'string' ? context.role : 'user') || 'user';
+      const recommendedProfile = this.getContextProfile(tier, entityType, userRole);
       
       const detectionTime = Date.now() - startTime;
       

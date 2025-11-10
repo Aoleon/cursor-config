@@ -130,9 +130,7 @@ class CalculationEngine {
     context: ProjectContext,
     activeRules: DateIntelligenceRule[]
   ): Promise<PhaseDurationResult> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       // 1. Trouver la règle applicable
       const applicableRule = this.findApplicableRule(phase, context, activeRules);
       
@@ -228,15 +226,14 @@ class CalculationEngine {
         factors: appliedFactors,
         warnings
       };
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'DateIntelligenceService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[DateIntelligenceService] Erreur lors du calcul de la durée', {
+        metadata: {
+          operation: 'calculateDuration',
+          service: 'DateIntelligenceService',
+          phase,
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       // Fallback sécurisé
       return this.getDefaultDuration(phase, context);

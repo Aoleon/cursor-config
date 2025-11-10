@@ -166,8 +166,11 @@ service: 'OneDriveSyncService',;
     async () => {
 
       // Vérifier si le fichier existe déjà (par oneDriveId)
-      const existingDocs = await this.storage.getAllDocuments();
-      const existingDoc = existingDocs.find((doc: any) => doc.oneDriveId === file.id);
+      const existingDocs = await this.storage.getSupplierDocuments();
+      const existingDoc = existingDocs.find((doc) => {
+        const docRecord = doc as Record<string, unknown>;
+        return docRecord.oneDriveId === file.id;
+      });
 
       // Déterminer la catégorie du document basée sur son extension
       const category = this.categorizeFile(file.name);
@@ -271,10 +274,11 @@ service: 'OneDriveSyncService',;
     async () => {
 
       // Récupérer tous les documents synchronisés depuis OneDrive non liés
-      const documents = await this.storage.getAllDocuments();
-      const oneDriveDocs = documents.filter((doc: any) => 
-        doc.syncedFromOneDrive && doc.oneDrivePath
-      );
+      const documents = await this.storage.getSupplierDocuments();
+      const oneDriveDocs = documents.filter((doc) => {
+        const docRecord = doc as Record<string, unknown>;
+        return docRecord.syncedFromOneDrive && docRecord.oneDrivePath;
+      });
 
       // Récupérer tous les AO
       const aos = await this.storage.getAllAOs();
@@ -313,10 +317,12 @@ service: 'OneDriveSyncService',;
   /**
    * Trouver un AO correspondant basé sur le chemin du fichier
    */
-  private findMatchingAO(filePath: string, aos: any[]): any | null {
+  private findMatchingAO(filePath: string, aos: unknown[]): unknown | null {
     // Logique simple: chercher la référence de l'AO dans le chemin du fichier
     for (const ao of aos) {
-      if (ao.reference && filePath.includes(ao.reference)) {
+      const aoRecord = ao as Record<string, unknown>;
+      const reference = typeof aoRecord.reference === 'string' ? aoRecord.reference : '';
+      if (reference && filePath.includes(reference)) {
         return ao;
       }
       

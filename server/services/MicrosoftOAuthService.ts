@@ -29,11 +29,11 @@ interface IProfile {
   };
   _json: {
     email?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
-type VerifyCallback = (error: any, user?: any, info?: any) => void;
+type VerifyCallback = (error: unknown, user?: unknown, info?: unknown) => void;
 
 // Import dynamique de la stratégie
 import { OIDCStrategy } from 'passport-azure-ad';
@@ -70,7 +70,7 @@ export class MicrosoftOAuthService {
       validateIssuer: true,
       passReqToCallback: false,
       scope: ['profile', 'email', 'openid'],
-      loggingLevel: process.env.NODE_ENV === 'development' ? 'info' as any : 'error' as any,
+      loggingLevel: process.env.NODE_ENV === 'development' ? 'info' as unknown as string : 'error' as unknown as string,
     };
 
     passport.use('azure-ad', new OIDCStrategy(

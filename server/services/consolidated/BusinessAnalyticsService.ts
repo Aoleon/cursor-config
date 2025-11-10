@@ -246,9 +246,7 @@ class ConversionCalculator extends BaseCalculator {
     filters?: BusinessFilters,
     disableTrend: boolean = false
   ): Promise<ConversionMetric> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.debug('[BusinessAnalyticsService] calculateOfferToProjectConversion - Using SQL aggregation', {
         metadata: { period, filters }
       });
@@ -296,15 +294,13 @@ class ConversionCalculator extends BaseCalculator {
         trend,
         byUser: Object.keys(byUser).length > 0 ? byUser : undefined
       };
-
-    
-    },
-    {
-      operation: 'metrics',
-      service: 'BusinessAnalyticsService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[BusinessAnalyticsService] Erreur lors du calcul de la conversion Offer->Project', {
+        metadata: {
+          operation: 'calculateOfferToProjectConversion',
+          service: 'BusinessAnalyticsService',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       return {
         rate: 0,

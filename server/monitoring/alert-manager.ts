@@ -4,6 +4,7 @@
  */
 
 import { logger } from '../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
 import { ErrorEvent, ErrorMetrics, TimeWindowMetrics } from './error-collector';
 
 // ========================================
@@ -298,11 +299,18 @@ export class AlertManager {
         continue;
       }
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await this.checkRule(rule, metrics, now);
-      } catch (error) {
-        logger.error(`Erreur lors de la vérification de la règle ${rule.id}`, error as Error);
-      }
+      
+    },
+    {
+      operation: 'Map',
+      service: 'alert-manager',
+      metadata: {}
+    }
+  );
     }
 
     // Résoudre les alertes qui ne sont plus déclenchées
@@ -472,13 +480,20 @@ export class AlertManager {
       const handler = this.notificationCallbacks.get(action);
       
       if (handler) {
-        try {
+        return withErrorHandling(
+    async () => {
+
           await handler(alert);
           alert.notificationsSent++;
           alert.lastNotificationAt = new Date();
-        } catch (error) {
-          logger.error(`Échec de l'envoi de notification ${action} pour l'alerte ${alert.id}`, error as Error);
-        }
+        
+    },
+    {
+      operation: 'Map',
+      service: 'alert-manager',
+      metadata: {}
+    }
+  );
       } else if (action === 'log') {
         // Log par défaut si pas de handler
         this.logAlert(alert);

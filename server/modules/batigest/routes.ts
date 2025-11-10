@@ -8,6 +8,7 @@
  */
 
 import { Router } from 'express';
+import { withErrorHandling } from './utils/error-handler';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler } from '../../middleware/errorHandler';
@@ -258,7 +259,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           metadata: { reference: orderData.reference }
         });
 
-        try {
+        return withErrorHandling(
+    async () => {
+
           // Charger le template purchase-order
           const templatePath = 'templates/purchase-order.html';
           const templateContent = await loadTemplate(templatePath);
@@ -278,9 +281,14 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               if (supplier) {
                 supplierName = supplier.nom;
               }
-            } catch (err) {
-              logger.warn('[Batigest] Impossible de récupérer le fournisseur', err as Error);
-            }
+            
+    },
+    {
+      operation: 'documents',
+service: 'routes',;
+      metadata: {}
+    }
+  );
           }
 
           // Calculer les totaux
@@ -458,7 +466,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           metadata: { reference: quoteData.reference }
         });
 
-        try {
+        return withErrorHandling(
+    async () => {
+
           // Charger le template client-quote
           const templatePath = 'templates/client-quote.html';
           const templateContent = await loadTemplate(templatePath);
@@ -562,13 +572,14 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           res.send(result.pdf);
           return;
 
-        } catch (error) {
-          logger.error('[Batigest] Erreur génération PDF preview', error as Error, {
-            reference: quoteData.reference
-          });
-          throw new ValidationError('Impossible de générer le PDF: ' + 
-            (error instanceof Error ? error.message : 'Erreur inconnue'));
-        }
+        
+    },
+    {
+      operation: 'documents',
+      service: 'routes',
+      metadata: {}
+    }
+  );
       }
 
       // ========================================

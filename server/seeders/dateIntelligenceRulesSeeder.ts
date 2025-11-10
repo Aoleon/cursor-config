@@ -1,4 +1,7 @@
 import { storage } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { logger } from './utils/logger';
 import { DEFAULT_MENUISERIE_RULES } from "../services/MenuiserieBusinessRules";
 import type { InsertDateIntelligenceRule } from "@shared/schema";
 
@@ -13,25 +16,27 @@ export class DateIntelligenceRulesSeeder {
    * Initialise toutes les règles métier pré-configurées
    */
   static async seedDefaultRules(): Promise<{seeded: boolean; count: number}> {
-    console.log('[DateIntelligenceSeeder] Initialisation des règles métier menuiserie...');
+    logger.info('[DateIntelligenceSeeder] Initialisation des règles métier menuiserie...');
     
     // CORRECTION BLOCKER 4: Confirmer le nombre de règles pré-configurées attendues
     const expectedRulesCount = DEFAULT_MENUISERIE_RULES.length;
-    console.log(`[DateIntelligenceSeeder] ASSERTION - Nombre de règles métier pré-configurées: ${expectedRulesCount} règles disponibles`);
+    logger.info(`[DateIntelligenceSeeder] ASSERTION - Nombre de règles métier pré-configurées: ${expectedRulesCount} règles disponibles`);
     
     // Assertion de sécurité pour s'assurer qu'on a au moins 18+ règles comme requis
     if (expectedRulesCount < 18) {
-      throw new Error(`ASSERTION FAILED: Seulement ${expectedRulesCount} règles pré-configurées, minimum 18 requis`);
+      throw new AppError(`ASSERTION FAILED: Seulement ${expectedRulesCount} règles pré-configurées, minimum 18 requis`, 500);
     }
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Vérifier s'il y a déjà des règles
       const existingRules = await storage.getAllRules();
       
       if (existingRules.length > 0) {
-        console.log(`[DateIntelligenceSeeder] ${existingRules.length} règles déjà présentes, aucun seeding nécessaire`);
+        logger.info(`[DateIntelligenceSeeder] ${existingRules.length} règles déjà présentes, aucun seeding nécessaire`);
         // Log de confirmation même si pas de seeding
-        console.log(`[DateIntelligenceSeeder] VALIDATION CONFIRMATION - Total règles en base: ${existingRules.length}/${expectedRulesCount} règles attendues`);
+        logger.info(`[DateIntelligenceSeeder] VALIDATION CONFIRMATION - Total règles en base: ${existingRules.length}/${expectedRulesCount} règles attendues`);
         return {seeded: false, count: existingRules.length};
       }
       
@@ -50,34 +55,38 @@ export class DateIntelligenceRulesSeeder {
           const seededRule = await storage.createRule(ruleData);
           seededCount++;
           
-          console.log(`[DateIntelligenceSeeder] Règle initialisée: ${seededRule.name} (${seededRule.phase || 'toutes phases'})`);
-        } catch (error) {
-          errorCount++;
-          console.error(`[DateIntelligenceSeeder] Erreur initialisation règle "${ruleConfig.name}":`, error);
-        }
+          logger.info(`[DateIntelligenceSeeder] Règle initialisée: ${seededRule.name} (${seededRule.phase || 'toutes phases'})`);
+        
+    },
+    {
+      operation: 'seedDefaultRules',
+service: 'dateIntelligenceRulesSeeder',;
+      metadata: {}
+    }
+  );
       }
       
-      console.log(`[DateIntelligenceSeeder] Seeding terminé: ${seededCount} règles initialisées, ${errorCount} erreurs`);
+      logger.info(`[DateIntelligenceSeeder] Seeding terminé: ${seededCount} règles initialisées, ${errorCount} erreurs`);
       
       // CORRECTION BLOCKER 4: Confirmation finale explicite du nombre de règles seedées
-      console.log(`[DateIntelligenceSeeder] ✅ CONFIRMATION FINALE - Règles métier seedées: ${seededCount}/${expectedRulesCount} (${((seededCount/expectedRulesCount)*100).toFixed(1)}% succès)`);
+      logger.info(`[DateIntelligenceSeeder] ✅ CONFIRMATION FINALE - Règles métier seedées: ${seededCount}/${expectedRulesCount} (${((seededCount/expectedRulesCount)*100).toFixed(1)}% succès)`);
       
       // Assertion finale pour validation
       if (seededCount >= 18) {
-        console.log(`[DateIntelligenceSeeder] ✅ VALIDATION RÉUSSIE - ${seededCount} règles seedées (minimum 18+ requis satisfait)`);
+        logger.info(`[DateIntelligenceSeeder] ✅ VALIDATION RÉUSSIE - ${seededCount} règles seedées (minimum 18+ requis satisfait)`);
       } else {
-        console.warn(`[DateIntelligenceSeeder] ⚠️ ATTENTION - Seulement ${seededCount} règles seedées (minimum 18 recommandé)`);
+        logger.warn($1)`);
       }
       
       if (seededCount > 0) {
-        console.log('[DateIntelligenceSeeder] 🎯 Règles métier menuiserie françaises prêtes pour utilisation');
+        logger.info('[DateIntelligenceSeeder] 🎯 Règles métier menuiserie françaises prêtes pour utilisation');
       }
       
       return {seeded: true, count: seededCount};
       
     } catch (error) {
-      console.error('[DateIntelligenceSeeder] Erreur lors du seeding des règles:', error);
-      throw new Error('Impossible d\'initialiser les règles métier menuiserie');
+      logger.error('Erreur', '[DateIntelligenceSeeder] Erreur lors du seeding des règles:', error);
+      throw new AppError('Impossible d\'initialiser les règles métier menuiserie', 500);
     }
   }
   
@@ -86,9 +95,11 @@ export class DateIntelligenceRulesSeeder {
    * ATTENTION : Opération destructive, utiliser avec précaution
    */
   static async resetAllRules(): Promise<void> {
-    console.log('[DateIntelligenceSeeder] RESET des règles métier (opération destructive)...');
+    logger.info('[DateIntelligenceSeeder] RESET des règles métier (opération destructive)...');
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Supprimer toutes les règles existantes
       const existingRules = await storage.getAllRules();
       let deletedCount = 0;
@@ -97,19 +108,24 @@ export class DateIntelligenceRulesSeeder {
         try {
           await storage.deleteRule(rule.id);
           deletedCount++;
-        } catch (error) {
-          console.error(`[DateIntelligenceSeeder] Erreur suppression règle ${rule.id}:`, error);
-        }
+        
+    },
+    {
+      operation: 'seedDefaultRules',
+service: 'dateIntelligenceRulesSeeder',;
+      metadata: {}
+    }
+  );
       }
       
-      console.log(`[DateIntelligenceSeeder] ${deletedCount} règles supprimées`);
+      logger.info(`[DateIntelligenceSeeder] ${deletedCount} règles supprimées`);
       
       // Réinitialiser avec les règles par défaut
       await this.seedDefaultRules();
       
     } catch (error) {
-      console.error('[DateIntelligenceSeeder] Erreur lors du reset des règles:', error);
-      throw new Error('Impossible de réinitialiser les règles métier');
+      logger.error('Erreur', '[DateIntelligenceSeeder] Erreur lors du reset des règles:', error);
+      throw new AppError('Impossible de réinitialiser les règles métier', 500);
     }
   }
   
@@ -117,9 +133,11 @@ export class DateIntelligenceRulesSeeder {
    * Mise à jour incrémentale des règles (ajoute seulement les manquantes)
    */
   static async updateDefaultRules(): Promise<void> {
-    console.log('[DateIntelligenceSeeder] Mise à jour incrémentale des règles...');
+    logger.info('[DateIntelligenceSeeder] Mise à jour incrémentale des règles...');
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       const existingRules = await storage.getAllRules();
       const existingNames = new Set(existingRules.map(rule => rule.name));
       
@@ -137,18 +155,23 @@ export class DateIntelligenceRulesSeeder {
             const addedRule = await storage.createRule(ruleData);
             addedCount++;
             
-            console.log(`[DateIntelligenceSeeder] Nouvelle règle ajoutée: ${addedRule.name}`);
-          } catch (error) {
-            console.error(`[DateIntelligenceSeeder] Erreur ajout règle "${ruleConfig.name}":`, error);
-          }
+            logger.info(`[DateIntelligenceSeeder] Nouvelle règle ajoutée: ${addedRule.name}`);
+          
+    },
+    {
+      operation: 'seedDefaultRules',
+service: 'dateIntelligenceRulesSeeder',;
+      metadata: {}
+    }
+  );
         }
       }
       
-      console.log(`[DateIntelligenceSeeder] Mise à jour terminée: ${addedCount} nouvelles règles ajoutées`);
+      logger.info(`[DateIntelligenceSeeder] Mise à jour terminée: ${addedCount} nouvelles règles ajoutées`);
       
     } catch (error) {
-      console.error('[DateIntelligenceSeeder] Erreur lors de la mise à jour des règles:', error);
-      throw new Error('Impossible de mettre à jour les règles métier');
+      logger.error('Erreur', '[DateIntelligenceSeeder] Erreur lors de la mise à jour des règles:', error);
+      throw new AppError('Impossible de mettre à jour les règles métier', 500);
     }
   }
   
@@ -163,7 +186,9 @@ export class DateIntelligenceRulesSeeder {
     systemRules: number;
     customRules: number;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const allRules = await storage.getAllRules();
       
       const stats = {
@@ -188,10 +213,14 @@ export class DateIntelligenceRulesSeeder {
       }
       
       return stats;
-    } catch (error) {
-      console.error('[DateIntelligenceSeeder] Erreur récupération statistiques:', error);
-      throw new Error('Impossible de récupérer les statistiques des règles');
+    
+    },
+    {
+      operation: 'seedDefaultRules',
+      service: 'dateIntelligenceRulesSeeder',
+      metadata: {}
     }
+  );
   }
   
   /**
@@ -202,9 +231,11 @@ export class DateIntelligenceRulesSeeder {
     issues: string[];
     warnings: string[];
   }> {
-    console.log('[DateIntelligenceSeeder] Validation de la cohérence des règles...');
+    logger.info('[DateIntelligenceSeeder] Validation de la cohérence des règles...');
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       const allRules = await storage.getAllRules();
       const issues: string[] = [];
       const warnings: string[] = [];
@@ -258,15 +289,19 @@ export class DateIntelligenceRulesSeeder {
       
       const isValid = issues.length === 0;
       
-      console.log(`[DateIntelligenceSeeder] Validation terminée: ${isValid ? 'SUCCÈS' : 'ÉCHEC'}`);
-      console.log(`[DateIntelligenceSeeder] Issues: ${issues.length}, Warnings: ${warnings.length}`);
+      logger.info(`[DateIntelligenceSeeder] Validation terminée: ${isValid ? 'SUCCÈS' : 'ÉCHEC'}`);
+      logger.info(`[DateIntelligenceSeeder] Issues: ${issues.length}, Warnings: ${warnings.length}`);
       
       return { isValid, issues, warnings };
       
-    } catch (error) {
-      console.error('[DateIntelligenceSeeder] Erreur validation des règles:', error);
-      throw new Error('Impossible de valider la cohérence des règles');
+    
+    },
+    {
+      operation: 'seedDefaultRules',
+      service: 'dateIntelligenceRulesSeeder',
+      metadata: {}
     }
+  );
   }
 }
 
@@ -274,8 +309,10 @@ export class DateIntelligenceRulesSeeder {
  * Fonction d'initialisation automatique appelée au démarrage
  */
 export async function initializeDefaultRules(): Promise<void> {
-  try {
-    console.log('[DateIntelligenceSeeder] Initialisation automatique des règles métier...');
+  return withErrorHandling(
+    async () => {
+
+    logger.info('[DateIntelligenceSeeder] Initialisation automatique des règles métier...');
     
     // Seeder les règles par défaut si nécessaire
     const seedResult = await DateIntelligenceRulesSeeder.seedDefaultRules();
@@ -283,8 +320,8 @@ export async function initializeDefaultRules(): Promise<void> {
     // TOUJOURS valider la cohérence (même si pas de nouveau seeding)
     const validation = await DateIntelligenceRulesSeeder.validateRulesConsistency();
     if (!validation.isValid) {
-      console.warn('[DateIntelligenceSeeder] Issues détectées dans les règles:', validation.issues);
-      console.log('[DateIntelligenceSeeder] 🔧 Auto-correction: Réinitialisation des règles invalides...');
+      logger.warn($1);
+      logger.info('[DateIntelligenceSeeder] 🔧 Auto-correction: Réinitialisation des règles invalides...');
       
       // AUTO-FIX: Reset et re-seed avec le code corrigé
       await DateIntelligenceRulesSeeder.resetAllRules();
@@ -292,31 +329,33 @@ export async function initializeDefaultRules(): Promise<void> {
       // Re-valider après auto-fix
       const revalidation = await DateIntelligenceRulesSeeder.validateRulesConsistency();
       if (revalidation.isValid) {
-        console.log('[DateIntelligenceSeeder] ✅ Auto-correction réussie - Validation: SUCCÈS');
+        logger.info('[DateIntelligenceSeeder] ✅ Auto-correction réussie - Validation: SUCCÈS');
       } else {
-        console.error('[DateIntelligenceSeeder] ❌ Auto-correction échouée - Issues persistent:', revalidation.issues);
+        logger.error('[DateIntelligenceSeeder] ❌ Auto-correction échouée - Issues persistent:', revalidation.issues);
       }
     } else {
-      console.log('[DateIntelligenceSeeder] ✅ Validation initiale: SUCCÈS - Aucune issue détectée');
+      logger.info('[DateIntelligenceSeeder] ✅ Validation initiale: SUCCÈS - Aucune issue détectée');
     }
     
     if (validation.warnings.length > 0) {
-      console.warn('[DateIntelligenceSeeder] Warnings:', validation.warnings);
+      logger.warn($1);
     }
     
     // Afficher les statistiques
     const stats = await DateIntelligenceRulesSeeder.getRulesStatistics();
-    console.log('[DateIntelligenceSeeder] Statistiques des règles métier:');
-    console.log(`  - Total: ${stats.totalRules} règles (${stats.activeRules} actives)`);
-    console.log(`  - Système: ${stats.systemRules}, Personnalisées: ${stats.customRules}`);
-    console.log(`  - Par phase: ${JSON.stringify(stats.rulesByPhase)}`);
+    logger.info('[DateIntelligenceSeeder] Statistiques des règles métier:');
+    logger.info(`  - Total: ${stats.totalRules} règles (${stats.activeRules} actives)`);
+    logger.info(`  - Système: ${stats.systemRules}, Personnalisées: ${stats.customRules}`);
+    logger.info(`  - Par phase: ${JSON.stringify(stats.rulesByPhase)}`);
     
-    console.log('[DateIntelligenceSeeder] Système de règles métier prêt');
+    logger.info('[DateIntelligenceSeeder] Système de règles métier prêt');
     
-  } catch (error) {
-    console.error('[DateIntelligenceSeeder] ERREUR CRITIQUE lors de l\'initialisation des règles:', error);
-    // Ne pas faire échouer le démarrage de l'application
-    // mais alerter sur le problème
-    console.warn('[DateIntelligenceSeeder] L\'application continue sans les règles pré-configurées');
-  }
+  
+    },
+    {
+      operation: 'seedDefaultRules',
+      service: 'dateIntelligenceRulesSeeder',
+      metadata: {}
+    }
+  );
 }

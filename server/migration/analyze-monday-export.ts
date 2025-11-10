@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { logger } from './utils/logger';
 import path from 'path';
 
 interface MondayItem {
@@ -30,12 +31,12 @@ interface AnalysisResult {
 
 // Read and parse the JSON file
 const jsonPath = path.join(process.cwd(), 'attached_assets', 'export-monday.json');
-console.log('📖 Lecture du fichier:', jsonPath);
+logger.info('📖 Lecture du fichier:', jsonPath);
 
 const rawData = fs.readFileSync(jsonPath, 'utf-8');
 const mondayData = JSON.parse(rawData);
 
-console.log('✅ Fichier parsé avec succès');
+logger.info('✅ Fichier parsé avec succès');
 
 // Initialize analysis
 const analysis: AnalysisResult = {
@@ -58,14 +59,14 @@ const allTypes = new Set<string>();
 
 // Analyze each board
 for (const [fileName, fileContent] of Object.entries(mondayData)) {
-  console.log(`\n🔍 Analyse du fichier: ${fileName}`);
+  logger.info(`\n🔍 Analyse du fichier: ${fileName}`);
   
   if (typeof fileContent !== 'object' || fileContent === null) continue;
   
   for (const [boardName, boardItems] of Object.entries(fileContent as Record<string, any>)) {
     if (!Array.isArray(boardItems)) continue;
     
-    console.log(`  📋 Board: ${boardName} (${boardItems.length} items)`);
+    logger.info(`  📋 Board: ${boardName} (${boardItems.length} items)`);
     
     const boardKey = boardName.toLowerCase().replace(/[^a-z0-9]/g, '_');
     
@@ -181,9 +182,9 @@ for (const [fileName, fileContent] of Object.entries(mondayData)) {
     boardAnalysis.columns = Array.from(columnSet);
     boardAnalysis.groups = Array.from(groupSet);
     
-    console.log(`    ✓ ${itemCount} items trouvés`);
-    console.log(`    ✓ ${columnSet.size} colonnes détectées`);
-    console.log(`    ✓ ${groupSet.size} groupes détectés`);
+    logger.info(`    ✓ ${itemCount} items trouvés`);
+    logger.info(`    ✓ ${columnSet.size} colonnes détectées`);
+    logger.info(`    ✓ ${groupSet.size} groupes détectés`);
   }
   
   analysis.total_boards++;
@@ -217,7 +218,7 @@ const finalAnalysis = {
 // Write JSON analysis
 const jsonOutputPath = path.join(process.cwd(), 'server', 'migration', 'monday-analysis.json');
 fs.writeFileSync(jsonOutputPath, JSON.stringify(finalAnalysis, null, 2), 'utf-8');
-console.log(`\n✅ Analyse JSON écrite: ${jsonOutputPath}`);
+logger.info(`\n✅ Analyse JSON écrite: ${jsonOutputPath}`);
 
 // Generate Markdown report
 let mdReport = `# Rapport d'Analyse Monday.com Export
@@ -391,12 +392,12 @@ Les chantiers Monday contiennent souvent:
 
 const mdOutputPath = path.join(process.cwd(), 'server', 'migration', 'monday-report.md');
 fs.writeFileSync(mdOutputPath, mdReport, 'utf-8');
-console.log(`✅ Rapport Markdown écrit: ${mdOutputPath}`);
+logger.info(`✅ Rapport Markdown écrit: ${mdOutputPath}`);
 
-console.log('\n🎉 Analyse terminée avec succès!\n');
-console.log('📊 Résumé:');
-console.log(`   - ${analysis.total_boards} boards analysés`);
-console.log(`   - ${analysis.total_items} items trouvés`);
-console.log(`   - ${analysis.statuses.length} statuts uniques`);
-console.log(`   - ${analysis.project_patterns.cities.length} villes`);
-console.log(`   - ${analysis.project_patterns.clients.length} clients`);
+logger.info('\n🎉 Analyse terminée avec succès!\n');
+logger.info('📊 Résumé:');
+logger.info(`   - ${analysis.total_boards} boards analysés`);
+logger.info(`   - ${analysis.total_items} items trouvés`);
+logger.info(`   - ${analysis.statuses.length} statuts uniques`);
+logger.info(`   - ${analysis.project_patterns.cities.length} villes`);
+logger.info(`   - ${analysis.project_patterns.clients.length} clients`);

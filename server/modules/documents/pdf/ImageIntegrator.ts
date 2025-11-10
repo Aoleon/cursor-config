@@ -4,6 +4,8 @@
  */
 
 import { Logger } from '../../../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { ObjectStorageService } from '../../../objectStorage';
 import sharp from 'sharp';
 import { readFile } from 'fs/promises';
@@ -141,22 +143,20 @@ export class ImageIntegrator {
     const processed: Record<string, ProcessedImage> = {};
 
     for (const reference of references) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const processedImage = await this.processImage(reference, providedImages);
         processed[reference.raw] = processedImage;
         successful.push(reference);
-      } catch (error) {
-        logger.error('Failed to process image', error as Error, {
-          reference: reference.raw
-        });
-
-        // Try fallback if available
-        if (reference.options?.fallback) {
-          try {
-            const fallbackImage = await this.loadFallbackImage(reference.options.fallback);
-            processed[reference.raw] = fallbackImage;
-            successful.push(reference);
-          } catch (fallbackError) {
+      
+    },
+    {
+      operation: 'Logger',
+      service: 'ImageIntegrator',
+      metadata: {}
+    }
+  ); catch (fallbackError) {
             failed.push(reference);
           }
         } else {
@@ -213,20 +213,20 @@ export class ImageIntegrator {
     let basePath: string;
 
     switch (reference.type) {
-      case 'pub':
+case 'pub':;
         const publicPaths = this.objectStorage.getPublicObjectSearchPaths();
         basePath = publicPaths[0] || 'public';
         break;
-      case 'private':
+case 'private':;
         basePath = process.env.PRIVATE_OBJECT_DIR || '.private';
         break;
-      case 'product':
+case 'product':;
         basePath = 'public/products';
         break;
-      case 'logo':
+case 'logo':;
         basePath = 'public/logos';
         break;
-      case 'signature':
+case 'signature':;
         basePath = '.private/signatures';
         break;
       default:
@@ -241,7 +241,9 @@ export class ImageIntegrator {
     if (!identifier.includes('.')) {
       for (const ext of this.supportedFormats) {
         const fullPath = `${path}.${ext}`;
-        try {
+        return withErrorHandling(
+    async () => {
+
           await this.objectStorage.headObject(fullPath);
           return fullPath;
         } catch {
@@ -263,114 +265,14 @@ export class ImageIntegrator {
     try {
       const buffer = await this.objectStorage.getObject(path);
       return this.processImageBuffer(buffer, options);
-    } catch (error) {
-      throw new Error(`Failed to load image from object storage: ${path}`);
+    
+    },
+    {
+      operation: 'Logger',
+service: 'ImageIntegrator',;
+      metadata: {}
     }
-  }
-
-  /**
-   * Load image from file path
-   */
-  private async loadImageFromPath(
-    path: string,
-    options?: ImageOptions
-  ): Promise<ProcessedImage> {
-    try {
-      const buffer = await readFile(path);
-      return this.processImageBuffer(buffer, options);
-    } catch (error) {
-      throw new Error(`Failed to load image from path: ${path}`);
-    }
-  }
-
-  /**
-   * Load fallback image
-   */
-  private async loadFallbackImage(fallbackPath: string): Promise<ProcessedImage> {
-    const defaultFallbackPath = join(__dirname, '../../../assets/placeholder.png');
-    const path = fallbackPath || defaultFallbackPath;
-
-    try {
-      const buffer = await readFile(path);
-      return this.processImageBuffer(buffer);
-    } catch (error) {
-      // Return a simple placeholder
-      return {
-        base64: this.generatePlaceholderImage(),
-        width: 300,
-        height: 200,
-        format: 'svg',
-        size: 1024,
-        optimized: false
-      };
-    }
-  }
-
-  /**
-   * Process image buffer with optimizations
-   */
-  private async processImageBuffer(
-    buffer: Buffer,
-    options?: ImageOptions
-  ): Promise<ProcessedImage> {
-    let processedBuffer = buffer;
-    let metadata;
-
-    try {
-      const image = sharp(buffer);
-      metadata = await image.metadata();
-
-      // Apply resizing if specified
-      if (options?.width || options?.height) {
-        image.resize({
-          width: options.width ? Number(options.width) : undefined,
-          height: options.height ? Number(options.height) : undefined,
-          fit: options.fit || 'contain',
-          position: options.position || 'center'
-        });
-      }
-
-      // Apply max dimensions if specified
-      if (options?.maxWidth || options?.maxHeight) {
-        const currentWidth = metadata.width || 0;
-        const currentHeight = metadata.height || 0;
-        const maxWidth = options.maxWidth ? Number(options.maxWidth) : currentWidth;
-        const maxHeight = options.maxHeight ? Number(options.maxHeight) : currentHeight;
-
-        if (currentWidth > maxWidth || currentHeight > maxHeight) {
-          image.resize({
-            width: maxWidth,
-            height: maxHeight,
-            fit: 'inside'
-          });
-        }
-      }
-
-      // Apply quality for JPEG images
-      if (metadata.format === 'jpeg' && options?.quality) {
-        image.jpeg({ quality: options.quality });
-      }
-
-      // Convert to buffer
-      processedBuffer = await image.toBuffer();
-
-      // Update metadata after processing
-      const processedMetadata = await sharp(processedBuffer).metadata();
-
-      return {
-        base64: `data:image/${processedMetadata.format};base64,${processedBuffer.toString('base64')}`,
-        width: processedMetadata.width || 0,
-        height: processedMetadata.height || 0,
-        format: processedMetadata.format || 'unknown',
-        size: processedBuffer.length,
-        optimized: true
-      };
-    } catch (error) {
-      logger.warn('Failed to optimize image, using original', { error });
-
-      // Fallback to original
-      return {
-        base64: `data:image/png;base64,${buffer.toString('base64')}`,
+  );`,
         width: metadata?.width || 0,
         height: metadata?.height || 0,
         format: metadata?.format || 'png',
@@ -434,10 +336,10 @@ export class ImageIntegrator {
    */
   private generatePlaceholderImage(): string {
     const svg = `
-      <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
-        <rect width="300" height="200" fill="#f0f0f0"/>
-        <text x="150" y="100" text-anchor="middle" fill="#999" font-size="16">
-          Image Not Available
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">;
+<rect width="300" height="200" fill="#f0f0f0"/>;
+<text x="150" y="100" text-anchor="middle" fill="#999" font-size="16">;
+Image Not Available;
         </text>
       </svg>
     `;

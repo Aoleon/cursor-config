@@ -46,7 +46,9 @@ export async function safeQuery<T>(
   const startTime = Date.now();
   
   for (let attempt = 0; attempt < retries; attempt++) {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Log query start if requested
       if (logQuery) {
         logger.debug('Executing database query', {
@@ -88,34 +90,14 @@ export async function safeQuery<T>(
       
       return result;
       
-    } catch (error) {
-      lastError = error as Error;
-      const duration = Date.now() - startTime;
-      
-      // Check if error is retryable
-      const retryable = isRetryableError(error);
-      const isLastAttempt = attempt === retries - 1;
-      
-      if (retryable && !isLastAttempt) {
-        // Calculate exponential backoff delay
-        const delay = retryDelay * Math.pow(2, attempt);
-        
-        logger.warn('Retryable query error, will retry', {
-          service,
-          metadata: {
-            operation,
-            attempt: attempt + 1,
-            maxRetries: retries,
-            retryIn: delay,
-            duration,
-            error: lastError.message
-          }
-        });
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
+    
+    },
+    {
+      operation: 'now',
+      service: 'safe-query',
+      metadata: {}
+    }
+  );
       
       // Log final failure with Postgres error details
       const pgError: any = lastError;
@@ -166,7 +148,9 @@ export async function safeBatch<T>(
   
   const startTime = Date.now();
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     logger.debug('Executing batch queries', {
       service,
       metadata: {
@@ -198,19 +182,14 @@ export async function safeBatch<T>(
     
     return results;
     
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    logger.error('Batch query execution failed', error as Error, {
-      service,
-      metadata: {
-        operation,
-        queryCount: queries.length,
-        duration
-      }
-    });
-    
-    throw error;
-  }
+  
+    },
+    {
+      operation: 'now',
+      service: 'safe-query',
+      metadata: {}
+    }
+  );
 }
 
 /**
@@ -254,18 +233,19 @@ export async function safeGetOne<T>(
   entityName: string = 'Record',
   options: SafeQueryOptions = {}
 ): Promise<T | null> {
-  try {
+  return withErrorHandling(
+    async () => {
+
     const result = await safeQuery(queryFn, options);
     return result ?? null;
-  } catch (error) {
-    // Log error but return null for not found
-    logger.warn(`${entityName} not found or query failed`, {
-      service: options.service || 'SafeGetOne',
-      metadata: {
-        operation: options.operation || 'getOne',
-        entityName,
-        error: error instanceof Error ? error.message : String(error)
-      }
+  
+    },
+    {
+      operation: 'now',
+      service: 'safe-query',
+      metadata: {}
+    }
+  );
     });
     return null;
   }
@@ -283,15 +263,18 @@ export async function safeCount(
   queryFn: () => Promise<number>,
   options: SafeQueryOptions = {}
 ): Promise<number> {
-  try {
+  return withErrorHandling(
+    async () => {
+
     return await safeQuery(queryFn, options);
-  } catch (error) {
-    logger.warn('Count query failed, returning 0', {
-      service: options.service || 'SafeCount',
-      metadata: {
-        operation: options.operation || 'count',
-        error: error instanceof Error ? error.message : String(error)
-      }
+  
+    },
+    {
+      operation: 'now',
+      service: 'safe-query',
+      metadata: {}
+    }
+  );
     });
     return 0;
   }
@@ -309,19 +292,22 @@ export async function safeExists(
   queryFn: () => Promise<boolean | { exists: boolean }>,
   options: SafeQueryOptions = {}
 ): Promise<boolean> {
-  try {
+  return withErrorHandling(
+    async () => {
+
     const result = await safeQuery(queryFn, options);
     if (typeof result === 'boolean') {
       return result;
     }
     return result?.exists ?? false;
-  } catch (error) {
-    logger.warn('Existence check failed, returning false', {
-      service: options.service || 'SafeExists',
-      metadata: {
-        operation: options.operation || 'exists',
-        error: error instanceof Error ? error.message : String(error)
-      }
+  
+    },
+    {
+      operation: 'now',
+      service: 'safe-query',
+      metadata: {}
+    }
+  );
     });
     return false;
   }
@@ -332,7 +318,9 @@ export async function safeExists(
  * Used to verify database connectivity
  */
 export async function healthCheck(): Promise<boolean> {
-  try {
+  return withErrorHandling(
+    async () => {
+
     await safeQuery(
       () => db.execute(sql`SELECT 1 as health`),
       {
@@ -343,15 +331,14 @@ export async function healthCheck(): Promise<boolean> {
       }
     );
     return true;
-  } catch (error) {
-    logger.error('Database health check failed', error as Error, {
-      service: 'HealthCheck',
-      metadata: {
-        operation: 'ping'
-      }
-    });
-    return false;
-  }
+  
+    },
+    {
+      operation: 'now',
+      service: 'safe-query',
+      metadata: {}
+    }
+  );
 }
 
 /**
@@ -362,61 +349,22 @@ export async function safeInsert<T>(
   insertFn: () => Promise<T>,
   options: SafeQueryOptions = {}
 ): Promise<T> {
-  try {
+  return withErrorHandling(
+    async () => {
+
     return await safeQuery(insertFn, {
       ...options,
       service: options.service || 'SafeInsert',
       operation: options.operation || `insert_${tableName}`
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    
-    // Check for unique constraint violations
-    if (message.includes('duplicate key') || message.includes('unique constraint')) {
-      throw new DatabaseError(
-        `Un enregistrement similaire existe déjà dans ${tableName}`,
-        error as Error
-      );
-    }
-    
-    // Check for foreign key violations
-    if (message.includes('foreign key')) {
-      throw new DatabaseError(
-        `Référence invalide dans ${tableName}`,
-        error as Error
-      );
-    }
-    
-    throw error;
-  }
-}
-
-/**
- * Wrapper for update operations with optimistic locking
- */
-export async function safeUpdate<T>(
-  tableName: string,
-  updateFn: () => Promise<T>,
-  expectedCount: number = 1,
-  options: SafeQueryOptions = {}
-): Promise<T> {
-  const result = await safeQuery(updateFn, {
-    ...options,
-    service: options.service || 'SafeUpdate',
-    operation: options.operation || `update_${tableName}`
-  });
   
-  // Check if update affected expected number of rows
-  if (Array.isArray(result) && result.length !== expectedCount) {
-    logger.warn('Update affected unexpected number of rows', {
-      service: options.service || 'SafeUpdate',
-      metadata: {
-        operation: options.operation || `update_${tableName}`,
-        expectedCount,
-        actualCount: result.length
-      }
-    });
-  }
+    },
+    {
+      operation: 'now',
+      service: 'safe-query',
+      metadata: {}
+    }
+  );
   
   return result;
 }

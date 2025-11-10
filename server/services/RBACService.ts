@@ -14,6 +14,7 @@ import {
   users
 } from "@shared/schema";
 import type { IStorage } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
 import { eq, and, or, desc, asc, gt, gte, lte, inArray, sql, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { logger } from "../utils/logger";
@@ -34,7 +35,9 @@ export class RBACService {
     role: string, 
     tableName?: string
   ): Promise<UserPermissionsResponse> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer les permissions pour le rôle
       let permissionsQuery = db
         .select()
@@ -101,17 +104,14 @@ export class RBACService {
         lastUpdated: new Date()
       };
 
-    } catch (error) {
-      logger.error('Erreur récupération permissions utilisateur', {
-        metadata: {
-          service: 'RBACService',
-          operation: 'getUserPermissions',
-          userId,
-          role,
-          tableName,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RBACService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Erreur lors de la récupération des permissions utilisateur', error as Error);
     }
@@ -123,7 +123,9 @@ export class RBACService {
    * @returns Résultat de la validation
    */
   async validateTableAccess(request: AccessValidationRequest): Promise<PermissionCheckResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const { userId, role, tableName, action, columns = [], recordId, contextValues = {} } = request;
 
       // Admin a toujours accès (bypass)
@@ -199,18 +201,14 @@ export class RBACService {
         auditRequired: permission.dataSensitivity === 'confidential' || permission.dataSensitivity === 'restricted'
       };
 
-    } catch (error) {
-      logger.error('Erreur validation accès table', {
-        metadata: {
-          service: 'RBACService',
-          operation: 'validateTableAccess',
-          userId: request.userId,
-          role: request.role,
-          tableName: request.tableName,
-          action: request.action,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RBACService',
+      metadata: {}
+    }
+  );
       });
       return {
         allowed: false,
@@ -235,7 +233,9 @@ export class RBACService {
     requiredParameters: string[] = [],
     appliesTo: string[] = []
   ): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newContext] = await db.insert(permissionContexts).values({
         contextName,
         description,
@@ -247,15 +247,14 @@ export class RBACService {
       }).returning();
 
       return newContext.id;
-    } catch (error) {
-      logger.error('Erreur création contexte permission', {
-        metadata: {
-          service: 'RBACService',
-          operation: 'createPermissionContext',
-          contextName,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RBACService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Erreur lors de la création du contexte', error as Error);
     }
@@ -277,7 +276,9 @@ export class RBACService {
     grantedBy: string,
     validUntil?: Date
   ): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [assignment] = await db.insert(userPermissionContexts).values({
         userId,
         contextName,
@@ -288,17 +289,14 @@ export class RBACService {
       }).returning();
 
       return assignment.id;
-    } catch (error) {
-      logger.error('Erreur assignation contexte utilisateur', {
-        metadata: {
-          service: 'RBACService',
-          operation: 'assignContextToUser',
-          userId,
-          contextName,
-          grantedBy,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RBACService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Erreur lors de l\'assignation du contexte', error as Error);
     }
@@ -318,7 +316,9 @@ export class RBACService {
     limit?: number;
     offset?: number;
   }): Promise<RbacAuditLog[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const conditions = [];
       if (filters.userId) conditions.push(eq(rbacAuditLog.userId, filters.userId));
       if (filters.tableName) conditions.push(eq(rbacAuditLog.tableName, filters.tableName));
@@ -345,17 +345,14 @@ export class RBACService {
       } else {
         return await finalQuery;
       }
-    } catch (error) {
-      logger.error('Erreur récupération historique audit', {
-        metadata: {
-          service: 'RBACService',
-          operation: 'getAuditHistory',
-          userId: filters.userId,
-          tableName: filters.tableName,
-          action: filters.action,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RBACService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Erreur lors de la récupération de l\'audit', error as Error);
     }
@@ -507,7 +504,9 @@ export class RBACService {
     success: boolean = true,
     denialReason?: string
   ): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.insert(rbacAuditLog).values({
         userId,
         userRole: role as any,
@@ -520,18 +519,14 @@ export class RBACService {
         sensitivityLevel: 'internal', // Par défaut
         timestamp: new Date()
       });
-    } catch (error) {
-      logger.error('Erreur enregistrement audit', {
-        metadata: {
-          service: 'RBACService',
-          operation: 'logAccess',
-          userId,
-          role,
-          tableName,
-          action,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RBACService',
+      metadata: {}
+    }
+  );
       });
       // Ne pas faire échouer l'opération principale si l'audit échoue
     }

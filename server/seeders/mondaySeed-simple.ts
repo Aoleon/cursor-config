@@ -13,6 +13,7 @@
  */
 
 import { storage } from '../storage-poc';
+import { withErrorHandling } from './utils/error-handler';
 // Logger non disponible - utilisation de console.log
 import { createHash } from 'crypto';
 import type { 
@@ -133,7 +134,9 @@ export class MondaySimpleSeed {
     const counts: Record<string, number> = {};
     const errors: string[] = [];
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       this.logger.info('[Monday Seed] Démarrage du seed intelligent...');
 
       if (options.validateOnly) {
@@ -171,15 +174,14 @@ export class MondaySimpleSeed {
         }
       };
 
-    } catch (error) {
-      this.logger.error('[Monday Seed] Erreur:', error);
-      errors.push(error instanceof Error ? error.message : 'Unknown error');
-      
-      return {
-        success: false,
-        counts,
-        errors,
-        summary: { error: 'Seed failed' }
+    
+    },
+    {
+      operation: 'AOS',
+      service: 'mondaySeed-simple',
+      metadata: {}
+    }
+  );
       };
     }
   }
@@ -222,7 +224,9 @@ export class MondaySimpleSeed {
         continue; // Idempotence
       }
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.upsertUser({
           email: userData.email,
           firstName: userData.firstName,
@@ -230,9 +234,14 @@ export class MondaySimpleSeed {
           role: userData.role as any
         });
         seededCount++;
-      } catch (error) {
-        this.logger.warn(`Erreur création user ${i}:`, error);
-      }
+      
+    },
+    {
+      operation: 'AOS',
+      service: 'mondaySeed-simple',
+      metadata: {}
+    }
+  );
     }
 
     return seededCount;
@@ -266,12 +275,19 @@ export class MondaySimpleSeed {
         source: this.generator.selectFromArray(["mail", "phone", "website"], `ao-source-${i}`) as any
       };
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.createAo(aoData);
         seededCount++;
-      } catch (error) {
-        this.logger.warn(`Erreur création AO ${i}:`, error);
-      }
+      
+    },
+    {
+      operation: 'AOS',
+      service: 'mondaySeed-simple',
+      metadata: {}
+    }
+  );
     }
 
     return seededCount;
@@ -305,12 +321,19 @@ export class MondaySimpleSeed {
         menuiserieType: this.generator.selectFromArray(["fenetre", "porte", "portail", "volet"], `offer-type-${i}`) as any
       };
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.createOffer(offerData);
         seededCount++;
-      } catch (error) {
-        this.logger.warn(`Erreur création offer ${i}:`, error);
-      }
+      
+    },
+    {
+      operation: 'AOS',
+      service: 'mondaySeed-simple',
+      metadata: {}
+    }
+  );
     }
 
     return seededCount;
@@ -348,12 +371,19 @@ export class MondaySimpleSeed {
         endDate: new Date(Date.now() + this.generator.numberInRange(120, 300, `project-end-${i}`) * 24 * 60 * 60 * 1000)
       };
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.createProject(projectData);
         seededCount++;
-      } catch (error) {
-        this.logger.warn(`Erreur création project ${i}:`, error);
-      }
+      
+    },
+    {
+      operation: 'AOS',
+      service: 'mondaySeed-simple',
+      metadata: {}
+    }
+  );
     }
 
     return seededCount;
@@ -383,12 +413,19 @@ export class MondaySimpleSeed {
         endDate: new Date(Date.now() + this.generator.numberInRange(7, 60, `task-due-${i}`) * 24 * 60 * 60 * 1000)
       };
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.createProjectTask(taskData);
         seededCount++;
-      } catch (error) {
-        this.logger.warn(`Erreur création task ${i}:`, error);
-      }
+      
+    },
+    {
+      operation: 'AOS',
+      service: 'mondaySeed-simple',
+      metadata: {}
+    }
+  );
     }
 
     return seededCount;

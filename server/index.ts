@@ -1,3 +1,10 @@
+// Charger les variables d'environnement depuis .env en développement
+import { config } from 'dotenv';
+import { withErrorHandling } from './utils/error-handler';
+if (process.env.NODE_ENV !== 'production') {
+  config();
+}
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -167,7 +174,7 @@ app.use((req, res, next) => {
         stack: undefined
       }
     });
-    throw new Error('SINGLETON VIOLATION: AuditService already initialized');
+    throw new AppError('SINGLETON VIOLATION: AuditService already initialized', 500);
   }
   
   const { AuditService } = await import('./services/AuditService');
@@ -225,7 +232,9 @@ app.use((req, res, next) => {
     }
   });
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     logger.info('Appel eventBus.integratePredictiveEngine', {
       metadata: {
         module: 'ExpressApp',
@@ -243,14 +252,14 @@ app.use((req, res, next) => {
         }
       }
     });
-  } catch (error) {
-    logger.error('Échec intégration PredictiveEngine', {
-      metadata: {
-        module: 'ExpressApp',
-        operation: 'integratePredictiveEngine',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        context: { continuingStartup: true }
+  
+    },
+    {
+      operation: 'if',
+      service: 'index',
+      metadata: {}
+    }
+  );
       }
     });
   }
@@ -291,7 +300,9 @@ app.use((req, res, next) => {
   
   // Abonnement aux événements TECHNICAL_ALERT
   eventBus.subscribe(async (event) => {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Traiter uniquement les événements de type TECHNICAL_ALERT
       if (event.type !== 'technical.alert') {
         return;
@@ -354,20 +365,19 @@ app.use((req, res, next) => {
         assignedToUserId: julienUserId
       });
       
-    } catch (error) {
-      log(`[EventBus] Erreur traitement alerte technique: ${error}`);
-      logger.error('Erreur traitement alerte technique EventBus', {
-        metadata: {
-          module: 'ExpressApp',
-          operation: 'handleTechnicalAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'if',
+      service: 'index',
+      metadata: {}
+    }
+  );
       });
     }
   }, {
     eventTypes: ['technical.alert' as any],
-    entities: ['technical']
+entities: ['technical'];
   });
   
   log('[EventBus] Abonnement aux alertes techniques configuré pour Julien LAMBOROT');
@@ -386,7 +396,9 @@ app.use((req, res, next) => {
     }
   });
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     // À ce point, routes-poc.ts a été exécuté et PredictiveEngineService créé
     // Récupérer l'instance depuis l'app ou importer directement
     const routesPoc = await import('./routes-poc');
@@ -414,14 +426,14 @@ app.use((req, res, next) => {
         }
       }
     });
-  } catch (error) {
-    logger.error('Échec intégration finale PredictiveEngine', {
-      metadata: {
-        module: 'ExpressApp',
-        operation: 'integratePredictiveEngineFinal',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        context: { performanceImpact: 'preloading_disabled' }
+  
+    },
+    {
+      operation: 'if',
+      service: 'index',
+      metadata: {}
+    }
+  );
       }
     });
   }
@@ -493,10 +505,10 @@ app.use((req, res, next) => {
   });
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
+  // Other ports are firewalled. Default to 4000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
+  const port = parseInt(process.env.PORT || '4000', 10);
   server.listen({
     port,
     host: "0.0.0.0",
@@ -522,7 +534,9 @@ app.use((req, res, next) => {
       }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. Fermer les nouvelles connexions
       logger.info('Fermeture serveur HTTP', {
         metadata: {
@@ -579,16 +593,14 @@ app.use((req, res, next) => {
         }
       });
       process.exit(0);
-    } catch (error) {
-      logger.error('Erreur durant arrêt graceful', {
-        metadata: {
-          module: 'ExpressApp',
-          operation: 'gracefulShutdown',
-          signal,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          exitCode: 1
-        }
+    
+    },
+    {
+      operation: 'if',
+      service: 'index',
+      metadata: {}
+    }
+  );
       });
       process.exit(1);
     }

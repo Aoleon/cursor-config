@@ -19,6 +19,8 @@
  */
 
 import type { IStorage } from '../../storage-poc';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { IMigrationStorage } from '../../storage-migration';
 import { 
   insertAoSchema, 
@@ -188,7 +190,9 @@ class ExcelImportStrategy implements IMigrationStrategy {
       }
     });
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Load Excel files
       const excelFiles = config.source?.excelFiles || this.getDefaultExcelFiles();
       const authenticData = await this.loadAuthenticMondayData(excelFiles);
@@ -254,14 +258,14 @@ class ExcelImportStrategy implements IMigrationStrategy {
 
       return result;
 
-    } catch (error) {
-      logger.error('Erreur migration Excel Import', {
-        metadata: {
-          service: 'MondayMigrationService',
-          strategy: 'excel_import',
-          migrationId,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'MondayMigrationService',
+      service: 'MondayMigrationService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -362,7 +366,9 @@ class ExcelImportStrategy implements IMigrationStrategy {
   }
 
   private extractAoDataFromExcelRow(row: any[], rowIndex: number): MondayAoData | null {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const name = String(row[0] || '').trim();
       if (!name || name.length < 3) return null;
 
@@ -375,16 +381,23 @@ class ExcelImportStrategy implements IMigrationStrategy {
         reference: `AO-${rowIndex}`,
         projectSize: row[5] ? String(row[5]) : undefined
       };
-    } catch (error) {
-      logger.warn('Failed to extract AO data', {
-        metadata: { rowIndex, error: error instanceof Error ? error.message : String(error) }
+    
+    },
+    {
+      operation: 'MondayMigrationService',
+      service: 'MondayMigrationService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
   }
 
   private extractProjectDataFromExcelRow(row: any[], rowIndex: number): MondayProjectData | null {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const name = String(row[0] || '').trim();
       if (!name || name.length < 3) return null;
 
@@ -396,9 +409,14 @@ class ExcelImportStrategy implements IMigrationStrategy {
         projectSubtype: this.extractProjectSubtype(name),
         geographicZone: this.extractCity(name)
       };
-    } catch (error) {
-      logger.warn('Failed to extract project data', {
-        metadata: { rowIndex, error: error instanceof Error ? error.message : String(error) }
+    
+    },
+    {
+      operation: 'MondayMigrationService',
+      service: 'MondayMigrationService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
@@ -463,7 +481,9 @@ class ExcelImportStrategy implements IMigrationStrategy {
     };
 
     for (const [index, ao] of aoData.entries()) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const validatedAo = this.validateAndTransformAoData(ao);
 
         if (!dryRun) {
@@ -486,243 +506,14 @@ class ExcelImportStrategy implements IMigrationStrategy {
           });
         }
 
-      } catch (error) {
-        result.errors++;
-        result.failed.push({
-          id: ao.mondayItemId,
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
-    }
-
-    return result;
-  }
-
-  private async migrateAuthenticProjects(
-    projectData: MondayProjectData[],
-    sourceFile: string,
-    dryRun?: boolean
-  ): Promise<{
-    migrated: number;
-    errors: number;
-    successful: string[];
-    failed: Array<{ id: string; error: string }>;
-  }> {
-    const result = {
-      migrated: 0,
-      errors: 0,
-      successful: [] as string[],
-      failed: [] as Array<{ id: string; error: string }>
-    };
-
-    for (const [index, project] of projectData.entries()) {
-      try {
-        const validatedProject = this.validateAndTransformProjectData(project);
-
-        if (!dryRun) {
-          const createdProject = await this.storage.createProject(validatedProject);
-          result.migrated++;
-          result.successful.push(createdProject.id);
-        } else {
-          result.migrated++;
-          result.successful.push(`dry_run_${project.mondayProjectId}`);
-        }
-
-        // Progress logging
-        if ((index + 1) % 100 === 0) {
-          logger.info('Project migration progress', {
-            metadata: {
-              progress: index + 1,
-              total: projectData.length,
-              percentage: Math.round(((index + 1) / projectData.length) * 100)
-            }
-          });
-        }
-
-      } catch (error) {
-        result.errors++;
-        result.failed.push({
-          id: project.mondayProjectId,
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
-    }
-
-    return result;
-  }
-
-  private validateAndTransformAoData(aoData: MondayAoData): InsertAo {
-    const validated = validateMondayAoData(aoData);
-    
-    return {
-      reference: validated.reference,
-      clientName: validated.clientName,
-      city: validated.city,
-      operationalStatus: this.mapOperationalStatus(validated.operationalStatus),
-      aoCategory: validated.aoCategory,
-      projectSize: validated.projectSize,
-      mondayItemId: validated.mondayItemId,
-      clientRecurrency: validated.clientRecurrency,
-      estimatedDelay: validated.estimatedDelay || new Date().toISOString().split('T')[0],
-      departement: this.inferDepartement(validated.city),
-      name: `AO ${validated.clientName} - ${validated.city}`,
-      description: `Migration Monday.com - ${validated.mondayItemId}`,
-      status: 'draft',
-      priority: 'normal'
-    };
-  }
-
-  private validateAndTransformProjectData(projectData: MondayProjectData): InsertProject {
-    const validated = validateMondayProjectData(projectData);
-    
-    return {
-      name: validated.name,
-      clientName: validated.clientName,
-      geographicZone: validated.geographicZone,
-      status: this.mapProjectStatus(validated.workflowStage),
-      projectSubtype: validated.projectSubtype,
-      buildingCount: validated.buildingCount,
-      mondayProjectId: validated.mondayProjectId,
-      description: `Migration Monday.com - ${validated.mondayProjectId}`,
-      priority: 'normal',
-      startDate: new Date().toISOString().split('T')[0],
-      targetEndDate: this.calculateDefaultEndDate()
-    };
-  }
-
-  private mapOperationalStatus(status: MondayAoData['operationalStatus']): string {
-    const mapping: Record<string, string> = {
-      'A RELANCER': 'a_relancer',
-      'AO EN COURS': 'en_cours',
-      'GAGNE': 'gagne',
-      'PERDU': 'perdu',
-      'ABANDONNE': 'abandonne'
-    };
-    return mapping[status] || 'en_cours';
-  }
-
-  private mapProjectStatus(stage: MondayProjectData['workflowStage']): string {
-    const mapping: Record<string, string> = {
-      'NOUVEAUX': 'passation',
-      'En cours': 'etude',
-      'ETUDE': 'etude',
-      'VISA': 'visa_architecte',
-      'PLANIFICATION': 'planification',
-      'APPROVISIONNEMENT': 'approvisionnement',
-      'CHANTIER': 'chantier',
-      'SAV': 'sav'
-    };
-    return mapping[stage] || 'etude';
-  }
-
-  private inferDepartement(city: string): string {
-    const pasDeCalaisZones = ['BOULOGNE', 'ETAPLES', 'BERCK', 'DESVRES', 'FRUGES', 'BETHUNE'];
-    const nordZones = ['DUNKERQUE', 'GRANDE-SYNTHE'];
-    
-    if (pasDeCalaisZones.some(zone => city.includes(zone))) return '62';
-    if (nordZones.some(zone => city.includes(zone))) return '59';
-    return '62';
-  }
-
-  private calculateDefaultEndDate(): string {
-    const date = new Date();
-    date.setMonth(date.getMonth() + 6);
-    return date.toISOString().split('T')[0];
-  }
-}
-
-// ========================================
-// STRATEGY: PATTERN BASED (INCREMENTAL)
-// ========================================
-
-/**
- * Pattern-Based Strategy - Incremental migration using analyzed patterns
- * Based on MondayProductionMigrationService
- */
-class PatternBasedStrategy implements IMigrationStrategy {
-  readonly name: MigrationStrategyType = 'pattern_based';
-  private warnings: string[] = [];
-
-  constructor(private storage: IStorage) {}
-
-  async migrate(config: MigrationConfig): Promise<MigrationResult> {
-    const migrationId = `migration_pattern_${Date.now()}`;
-    const startedAt = new Date();
-    this.warnings = [];
-
-    logger.info('Démarrage migration Pattern-Based Strategy', {
-      metadata: {
-        service: 'MondayMigrationService',
-        strategy: 'pattern_based',
-        migrationId,
-        entityType: config.entityType
-      }
-    });
-
-    try {
-      const count = config.source?.count || (config.entityType === 'both' ? 1911 : 911);
       
-      const result: MigrationResult = {
-        migrationId,
-        strategyUsed: 'pattern_based',
-        entityType: config.entityType,
-        startedAt,
-        completedAt: new Date(),
-        duration: 0,
-        totalLines: 0,
-        totalMigrated: 0,
-        totalErrors: 0,
-        totalWarnings: 0,
-        source: 'pattern_based_generation',
-        warnings: [],
-        success: true,
-        isDryRun: config.options?.dryRun || false
-      };
-
-      // Migrate AOs
-      if (config.entityType === 'aos' || config.entityType === 'both') {
-        const aosData = generateRealisticJLMData(911, 'aos') as MondayAoData[];
-        result.aos = await this.migratePatternBasedAOs(aosData, config.options?.dryRun);
-        result.totalMigrated += result.aos.migrated;
-        result.totalErrors += result.aos.errors;
-        result.totalLines += aosData.length;
-      }
-
-      // Migrate Projects
-      if (config.entityType === 'projects' || config.entityType === 'both') {
-        const projectsData = generateRealisticJLMData(1000, 'projects') as MondayProjectData[];
-        result.projects = await this.migratePatternBasedProjects(projectsData, config.options?.dryRun);
-        result.totalMigrated += result.projects.migrated;
-        result.totalErrors += result.projects.errors;
-        result.totalLines += projectsData.length;
-      }
-
-      result.completedAt = new Date();
-      result.duration = result.completedAt.getTime() - startedAt.getTime();
-      result.warnings = this.warnings;
-      result.totalWarnings = this.warnings.length;
-      result.success = result.totalErrors === 0;
-
-      logger.info('Migration Pattern-Based terminée', {
-        metadata: {
-          service: 'MondayMigrationService',
-          strategy: 'pattern_based',
-          migrationId,
-          duration: result.duration,
-          totalMigrated: result.totalMigrated
-        }
-      });
-
-      return result;
-
-    } catch (error) {
-      logger.error('Erreur migration Pattern-Based', {
-        metadata: {
-          service: 'MondayMigrationService',
-          strategy: 'pattern_based',
-          migrationId,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    },
+    {
+      operation: 'MondayMigrationService',
+      service: 'MondayMigrationService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -764,7 +555,9 @@ class PatternBasedStrategy implements IMigrationStrategy {
       const batch = aoData.slice(i, i + batchSize);
       
       for (const ao of batch) {
-        try {
+        return withErrorHandling(
+    async () => {
+
           const validatedAo = validateMondayAoData(ao);
           const saxiumAo: InsertAo = {
             reference: validatedAo.reference,
@@ -792,232 +585,14 @@ class PatternBasedStrategy implements IMigrationStrategy {
             result.successful.push(`dry_run_${ao.mondayItemId}`);
           }
 
-        } catch (error) {
-          result.errors++;
-          result.failed.push({
-            id: ao.mondayItemId || 'unknown',
-            error: error instanceof Error ? error.message : String(error)
-          });
-        }
-      }
-
-      // Progress logging
-      logger.info('AO batch progress', {
-        metadata: {
-          progress: Math.min(i + batchSize, aoData.length),
-          total: aoData.length
-        }
-      });
-    }
-
-    return result;
-  }
-
-  private async migratePatternBasedProjects(
-    projectData: MondayProjectData[],
-    dryRun?: boolean
-  ): Promise<{
-    migrated: number;
-    errors: number;
-    successful: string[];
-    failed: Array<{ id: string; error: string }>;
-  }> {
-    const result = {
-      migrated: 0,
-      errors: 0,
-      successful: [] as string[],
-      failed: [] as Array<{ id: string; error: string }>
-    };
-
-    const batchSize = 50;
-    for (let i = 0; i < projectData.length; i += batchSize) {
-      const batch = projectData.slice(i, i + batchSize);
-      
-      for (const project of batch) {
-        try {
-          const validatedProject = validateMondayProjectData(project);
-          const saxiumProject: InsertProject = {
-            name: validatedProject.name,
-            clientName: validatedProject.clientName,
-            geographicZone: validatedProject.geographicZone,
-            status: this.mapProjectStatus(validatedProject.workflowStage),
-            projectSubtype: validatedProject.projectSubtype,
-            buildingCount: validatedProject.buildingCount,
-            mondayProjectId: validatedProject.mondayProjectId,
-            description: `Pattern-based migration - ${validatedProject.mondayProjectId}`,
-            priority: 'normal',
-            startDate: new Date().toISOString().split('T')[0],
-            targetEndDate: this.calculateDefaultEndDate()
-          };
-
-          if (!dryRun) {
-            const createdProject = await this.storage.createProject(saxiumProject);
-            result.migrated++;
-            result.successful.push(createdProject.id);
-          } else {
-            result.migrated++;
-            result.successful.push(`dry_run_${project.mondayProjectId}`);
-          }
-
-        } catch (error) {
-          result.errors++;
-          result.failed.push({
-            id: project.mondayProjectId || 'unknown',
-            error: error instanceof Error ? error.message : String(error)
-          });
-        }
-      }
-
-      // Progress logging
-      logger.info('Project batch progress', {
-        metadata: {
-          progress: Math.min(i + batchSize, projectData.length),
-          total: projectData.length
-        }
-      });
-    }
-
-    return result;
-  }
-
-  private mapOperationalStatus(status: MondayAoData['operationalStatus']): string {
-    const mapping: Record<string, string> = {
-      'A RELANCER': 'a_relancer',
-      'AO EN COURS': 'en_cours',
-      'GAGNE': 'gagne',
-      'PERDU': 'perdu',
-      'ABANDONNE': 'abandonne'
-    };
-    return mapping[status] || 'en_cours';
-  }
-
-  private mapProjectStatus(stage: MondayProjectData['workflowStage']): string {
-    const mapping: Record<string, string> = {
-      'NOUVEAUX': 'passation',
-      'En cours': 'etude',
-      'ETUDE': 'etude',
-      'VISA': 'visa_architecte',
-      'PLANIFICATION': 'planification',
-      'APPROVISIONNEMENT': 'approvisionnement',
-      'CHANTIER': 'chantier',
-      'SAV': 'sav'
-    };
-    return mapping[stage] || 'etude';
-  }
-
-  private calculateDefaultEndDate(): string {
-    const date = new Date();
-    date.setMonth(date.getMonth() + 6);
-    return date.toISOString().split('T')[0];
-  }
-}
-
-// ========================================
-// STRATEGY: API MIGRATION (DELTA SYNC)
-// ========================================
-
-/**
- * API Migration Strategy - Delta sync from Monday.com API
- * Based on MondayMigrationServiceEnhanced
- */
-class APIMigrationStrategy implements IMigrationStrategy {
-  readonly name: MigrationStrategyType = 'api_migration';
-  private mondayService: MondayService;
-
-  constructor(private storage: IMigrationStorage) {
-    this.mondayService = new MondayService();
-  }
-
-  async migrate(config: MigrationConfig): Promise<MigrationResult> {
-    const migrationId = `migration_api_${Date.now()}`;
-    const startedAt = new Date();
-
-    logger.info('Démarrage migration API Strategy', {
-      metadata: {
-        service: 'MondayMigrationService',
-        strategy: 'api_migration',
-        migrationId,
-        boardId: config.source?.boardId,
-        entityType: config.entityType
-      }
-    });
-
-    try {
-      const boardId = config.source?.boardId;
-      if (!boardId) {
-        throw new Error('Board ID required for API migration strategy');
-      }
-
-      const result: MigrationResult = {
-        migrationId,
-        strategyUsed: 'api_migration',
-        entityType: config.entityType,
-        startedAt,
-        completedAt: new Date(),
-        duration: 0,
-        totalLines: 0,
-        totalMigrated: 0,
-        totalErrors: 0,
-        totalWarnings: 0,
-        source: `monday_api_board_${boardId}`,
-        warnings: [],
-        success: true,
-        isDryRun: config.options?.dryRun || false
-      };
-
-      // Fetch items from Monday API with retry logic
-      const items = await this.fetchAllItemsWithRetry(boardId);
-      result.totalLines = items.length;
-
-      // Transform and migrate
-      const transformedItems = await this.transformAndValidateItems(items, config.entityType);
-      
-      if (!config.options?.dryRun) {
-        const insertResult = await this.bulkInsert(
-          transformedItems,
-          config.entityType,
-          config.options?.batchSize || 100
-        );
         
-        result.totalMigrated = insertResult.migrated;
-        result.totalErrors = insertResult.errors.length;
-        
-        if (config.entityType === 'aos' || config.entityType === 'both') {
-          result.aos = {
-            migrated: insertResult.migrated,
-            errors: insertResult.errors.length,
-            successful: insertResult.successful,
-            failed: insertResult.errors.map(e => ({ id: e.mondayId, error: e.error }))
-          };
-        }
-      } else {
-        result.totalMigrated = transformedItems.length;
-      }
-
-      result.completedAt = new Date();
-      result.duration = result.completedAt.getTime() - startedAt.getTime();
-      result.success = result.totalErrors === 0;
-
-      logger.info('Migration API terminée', {
-        metadata: {
-          service: 'MondayMigrationService',
-          strategy: 'api_migration',
-          migrationId,
-          duration: result.duration,
-          totalMigrated: result.totalMigrated
-        }
-      });
-
-      return result;
-
-    } catch (error) {
-      logger.error('Erreur migration API', {
-        metadata: {
-          service: 'MondayMigrationService',
-          strategy: 'api_migration',
-          migrationId,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    },
+    {
+      operation: 'MondayMigrationService',
+      service: 'MondayMigrationService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -1044,50 +619,20 @@ class APIMigrationStrategy implements IMigrationStrategy {
       return { items: 0, duration: 0 };
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const items = await this.fetchAllItemsWithRetry(config.source.boardId);
       const estimatedDuration = items.length * 150; // ~150ms per item with API + transform + validate
       return { items: items.length, duration: estimatedDuration };
-    } catch (error) {
-      return { items: 0, duration: 0 };
+    
+    },
+    {
+      operation: 'MondayMigrationService',
+      service: 'MondayMigrationService',
+      metadata: {}
     }
-  }
-
-  private async fetchAllItemsWithRetry(boardId: string): Promise<MondayItem[]> {
-    return withRetry(
-      async () => {
-        const boardData = await this.mondayService.getBoardData(boardId);
-        return boardData.items;
-      },
-      {
-        retries: 3,
-        retryDelay: 1000,
-        retryCondition: (error: any) => {
-          return error?.response?.status === 429 || error?.response?.status >= 500;
-        }
-      }
-    );
-  }
-
-  private async transformAndValidateItems(items: MondayItem[], entityType: string): Promise<any[]> {
-    const transformed: any[] = [];
-
-    for (const item of items) {
-      try {
-        // Transform logic would go here based on entityType
-        // For now, simplified transformation
-        const transformedItem = {
-          mondayId: item.id,
-          name: item.name,
-          // Add more transformation logic
-        };
-        transformed.push(transformedItem);
-      } catch (error) {
-        logger.warn('Failed to transform item', {
-          metadata: {
-            mondayId: item.id,
-            error: error instanceof Error ? error.message : String(error)
-          }
+  );
         });
       }
     }
@@ -1169,13 +714,13 @@ export class MondayMigrationService {
     
     const strategy = this.strategies.get(strategyType);
     if (!strategy) {
-      throw new Error(`Unknown migration strategy: ${strategyType}`);
+      throw new AppError(`Unknown migration strategy: ${strategyType}`, 500);
     }
 
     // Validate configuration
     const validation = await strategy.validate(config);
     if (!validation.valid) {
-      throw new Error(`Migration validation failed: ${validation.errors.join(', ')}`);
+      throw new AppError(`Migration validation failed: ${validation.errors.join(', ', 500)}`);
     }
 
     // Execute migration
@@ -1258,7 +803,7 @@ export class MondayMigrationService {
     const strategy = this.strategies.get(strategyType);
     
     if (!strategy) {
-      throw new Error(`Unknown migration strategy: ${strategyType}`);
+      throw new AppError(`Unknown migration strategy: ${strategyType}`, 500);
     }
 
     const estimate = await strategy.estimate(config);

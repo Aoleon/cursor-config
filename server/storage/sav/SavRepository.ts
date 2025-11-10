@@ -11,6 +11,8 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { logger } from './utils/logger';
 import { 
   savInterventions,
   type SavIntervention, 
@@ -83,7 +85,7 @@ export class SavRepository extends BaseRepository<
    * ```typescript
    * const intervention = await repo.findById('550e8400-...');
    * if (intervention) {
-   *   console.log(`Intervention: ${intervention.title}`);
+   *   logger.info(`Intervention: ${intervention.title}`);
    * }
    * ```
    */
@@ -101,7 +103,7 @@ export class SavRepository extends BaseRepository<
    * @example
    * ```typescript
    * const allInterventions = await repo.findAll();
-   * console.log(`Total interventions: ${allInterventions.length}`);
+   * logger.info(`Total interventions: ${allInterventions.length}`);
    * ```
    */
   async findAll(filters?: SearchFilters, tx?: DrizzleTransaction): Promise<SavIntervention[]> {
@@ -123,7 +125,7 @@ export class SavRepository extends BaseRepository<
    *   {},
    *   { page: 1, limit: 20 }
    * );
-   * console.log(`Page 1: ${result.data.length} interventions sur ${result.total}`);
+   * logger.info(`Page 1: ${result.data.length} interventions sur ${result.total}`);
    * ```
    */
   async findPaginated(
@@ -157,7 +159,7 @@ export class SavRepository extends BaseRepository<
    *   '550e8400-...',
    *   '660f9500-...'
    * ]);
-   * console.log(`${deleted} interventions supprimées`);
+   * logger.info(`${deleted} interventions supprimées`);
    * ```
    */
   async deleteMany(ids: string[], tx?: DrizzleTransaction): Promise<number> {
@@ -180,7 +182,7 @@ export class SavRepository extends BaseRepository<
    * ```typescript
    * const exists = await repo.exists('550e8400-...');
    * if (!exists) {
-   *   console.log('Intervention introuvable');
+   *   logger.info('Intervention introuvable');
    * }
    * ```
    */
@@ -206,7 +208,7 @@ export class SavRepository extends BaseRepository<
    * // Toutes les interventions d'un projet
    * const interventions = await repo.getSavInterventions('550e8400-...');
    * interventions.forEach(i => {
-   *   console.log(`${i.interventionNumber}: ${i.title} (${i.status})`);
+   *   logger.info(`${i.interventionNumber}: ${i.title} (${i.status})`);
    * });
    * 
    * // Dans une transaction
@@ -249,16 +251,16 @@ export class SavRepository extends BaseRepository<
    * ```typescript
    * const intervention = await repo.getSavIntervention('550e8400-...');
    * if (intervention) {
-   *   console.log(`Intervention: ${intervention.title}`);
-   *   console.log(`Status: ${intervention.status}`);
-   *   console.log(`Priorité: ${intervention.priority}`);
+   *   logger.info(`Intervention: ${intervention.title}`);
+   *   logger.info(`Status: ${intervention.status}`);
+   *   logger.info(`Priorité: ${intervention.priority}`);
    * }
    * 
    * // Dans une transaction
    * await withTransaction(db, async (tx) => {
    *   const intervention = await repo.getSavIntervention('550e8400-...', tx);
    *   if (!intervention) {
-   *     throw new Error('Intervention not found');
+   *     throw new NotFoundError('Intervention not found');
    *   }
    * });
    * ```
@@ -308,7 +310,7 @@ export class SavRepository extends BaseRepository<
    *   assignedTeam: 'team-uuid'
    * });
    * 
-   * console.log(`Intervention créée: ${newIntervention.id}`);
+   * logger.info(`Intervention créée: ${newIntervention.id}`);
    * 
    * // Dans une transaction
    * await withTransaction(db, async (tx) => {
@@ -345,7 +347,7 @@ export class SavRepository extends BaseRepository<
 
         const newIntervention = result[0];
         if (!newIntervention) {
-          throw new Error('Failed to create SAV intervention');
+          throw new AppError('Failed to create SAV intervention', 500);
         }
 
         this.emitEvent('sav_intervention:created', { 
@@ -385,7 +387,7 @@ export class SavRepository extends BaseRepository<
    *   resolutionNotes: 'Vitrage remplacé, problème résolu'
    * });
    * 
-   * console.log(`Intervention mise à jour: ${updated.status}`);
+   * logger.info(`Intervention mise à jour: ${updated.status}`);
    * 
    * // Dans une transaction
    * await withTransaction(db, async (tx) => {
@@ -455,7 +457,7 @@ export class SavRepository extends BaseRepository<
    * @example
    * ```typescript
    * await repo.deleteSavIntervention('550e8400-...');
-   * console.log('Intervention supprimée');
+   * logger.info('Intervention supprimée');
    * 
    * // Dans une transaction avec cascade
    * await withTransaction(db, async (tx) => {

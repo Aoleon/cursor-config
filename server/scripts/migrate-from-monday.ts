@@ -19,6 +19,7 @@
  */
 
 import { getMondayMigrationServiceEnhanced, type MigrationOptions } from '../services/MondayMigrationServiceEnhanced';
+import { withErrorHandling } from './utils/error-handler';
 import { getMondaySchemaAnalyzer } from '../services/MondaySchemaAnalyzer';
 import { storage } from '../storage-poc';
 import { logger } from '../utils/logger';
@@ -79,7 +80,7 @@ function parseArgs(): Partial<MigrationOptions> & { help?: boolean; analyze?: bo
  * Affiche aide CLI
  */
 function printHelp() {
-  console.log(`
+  logger.info(`
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                 MONDAY.COM → SAXIUM MIGRATION SCRIPT                      ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
@@ -144,7 +145,7 @@ RAPPORT DE MIGRATION:
  * Affiche rapport migration formatté
  */
 function printReport(report: any) {
-  console.log(`
+  logger.info(`
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                     RAPPORT MIGRATION MONDAY → SAXIUM                     ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
@@ -198,15 +199,17 @@ ${JSON.stringify(report.preview, null, 2)}
  * Exécute analyse board
  */
 async function runAnalyze(entityType: EntityType, boardId?: string) {
-  console.log(`\n🔍 Analyse structure board Monday.com pour: ${entityType}\n`);
+  logger.info(`\n🔍 Analyse structure board Monday.com pour: ${entityType}\n`);
 
   const analyzer = getMondaySchemaAnalyzer();
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     // Analyser board(s)
     const analysis = await analyzer.analyzeBoards(boardId ? [boardId] : undefined);
     
-    console.log(`
+    logger.info(`
 📊 ANALYSE COMPLÈTE
    Boards analysés:      ${analysis.totalBoards}
    Total colonnes:       ${analysis.totalColumns}
@@ -216,19 +219,25 @@ async function runAnalyze(entityType: EntityType, boardId?: string) {
 `);
 
     for (const board of analysis.boards) {
-      console.log(`
+      logger.info(`
    Board: ${board.boardName || board.boardId}
    ID: ${board.boardId}
    Colonnes (${board.columns.length}):
 `);
       
       for (const col of board.columns) {
-        console.log(`      - ${col.id.padEnd(20)} ${col.title.padEnd(30)} [${col.type}]${col.description ? ` - ${col.description}` : ''}`);
+        logger.info(`      - ${col.id.padEnd(20)} ${col.title.padEnd(30)} [${col.type}]${col.description ? ` - ${col.description}` : ''}`);
       }
     }
 
-  } catch (error) {
-    console.error(`\n❌ Erreur analyse: ${error instanceof Error ? error.message : String(error)}\n`);
+  
+    },
+    {
+      operation: 'insertion',
+      service: 'migrate-from-monday',
+      metadata: {}
+    }
+  );\n`);
     process.exit(1);
   }
 }
@@ -247,9 +256,9 @@ async function main() {
 
   // Validation entity type requis
   if (!options.entityType && !options.analyze) {
-    console.error('\n❌ Erreur: --entity=TYPE est requis\n');
-    console.log('   Types valides: projects, aos, suppliers\n');
-    console.log('   Utilisez --help pour plus d\'informations\n');
+    logger.error('\n❌ Erreur: --entity=TYPE est requis\n');
+    logger.info('   Types valides: projects, aos, suppliers\n');
+    logger.info('   Utilisez --help pour plus d\'informations\n');
     process.exit(1);
   }
 
@@ -261,12 +270,12 @@ async function main() {
 
   // Vérifier API key Monday.com
   if (!process.env.MONDAY_API_KEY) {
-    console.error('\n❌ Erreur: MONDAY_API_KEY non configuré\n');
-    console.log('   Définissez la variable d\'environnement MONDAY_API_KEY\n');
+    logger.error('\n❌ Erreur: MONDAY_API_KEY non configuré\n');
+    logger.info('   Définissez la variable d\'environnement MONDAY_API_KEY\n');
     process.exit(1);
   }
 
-  console.log(`
+  logger.info(`
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                   DÉMARRAGE MIGRATION MONDAY → SAXIUM                     ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
@@ -282,7 +291,9 @@ async function main() {
 ⏳ Migration en cours...
   `);
 
-  try {
+  return withErrorHandling(
+    async () => {
+
     // Instancier service
     const migrationService = getMondayMigrationServiceEnhanced(storage);
 
@@ -294,20 +305,24 @@ async function main() {
 
     // Exit code selon résultat
     if (report.totalErrors > 0) {
-      console.log('⚠️  Migration terminée avec erreurs\n');
+      logger.info('⚠️  Migration terminée avec erreurs\n');
       process.exit(1);
     } else if (report.isDryRun) {
-      console.log('✅ Dry-run terminé avec succès\n');
+      logger.info('✅ Dry-run terminé avec succès\n');
       process.exit(0);
     } else {
-      console.log('✅ Migration terminée avec succès\n');
+      logger.info('✅ Migration terminée avec succès\n');
       process.exit(0);
     }
 
-  } catch (error) {
-    console.error(`
-❌ ERREUR CRITIQUE
-   ${error instanceof Error ? error.message : String(error)}
+  
+    },
+    {
+      operation: 'insertion',
+      service: 'migrate-from-monday',
+      metadata: {}
+    }
+  );
    
    Stack trace:
    ${error instanceof Error ? error.stack : 'N/A'}
@@ -319,6 +334,6 @@ async function main() {
 
 // Exécuter script
 main().catch((error) => {
-  console.error('Erreur fatale:', error);
+  logger.error('Erreur', 'Erreur fatale:', error);
   process.exit(1);
 });

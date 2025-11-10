@@ -1,4 +1,5 @@
 import type { IStorage } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
 import { RBACService } from "./RBACService";
 import { EventBus } from "../eventBus";
 import { db } from "../db";
@@ -108,7 +109,9 @@ export class BusinessContextService {
     const startTime = Date.now();
     const contextId = crypto.randomUUID();
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Génération contexte métier', {
         metadata: {
           service: 'BusinessContextService',
@@ -186,15 +189,14 @@ export class BusinessContextService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur génération contexte', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'generateBusinessContext',
-          contextId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
       
       await this.logMetrics(request, Date.now() - startTime, false, null, error);
@@ -226,7 +228,9 @@ export class BusinessContextService {
   async enrichContext(request: ContextEnrichmentRequest): Promise<ContextEnrichmentResponse> {
     const startTime = Date.now();
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. Validation
       const validationResult = contextEnrichmentRequestSchema.safeParse(request);
       if (!validationResult.success) {
@@ -277,14 +281,14 @@ export class BusinessContextService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur enrichissement contexte', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'enrichContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
       
       return {
@@ -311,7 +315,9 @@ export class BusinessContextService {
    * Met à jour les patterns d'apprentissage basés sur les retours utilisateur
    */
   async updateAdaptiveLearning(update: AdaptiveLearningUpdate): Promise<AdaptiveLearningResponse> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. Validation
       const validationResult = adaptiveLearningUpdateSchema.safeParse(update);
       if (!validationResult.success) {
@@ -405,14 +411,14 @@ export class BusinessContextService {
         optimization_suggestions: optimizationSuggestions
       };
 
-    } catch (error) {
-      logger.error('Erreur apprentissage adaptatif', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'updateAdaptiveLearning',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
       
       return {
@@ -613,7 +619,9 @@ export class BusinessContextService {
    * Récupère un contexte du cache (mémoire puis DB)
    */
   private async getCachedContext(cacheKey: string, ttlMinutes: number): Promise<BusinessContext | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. Vérification cache mémoire
       const memoryEntry = this.memoryCache.get(cacheKey);
       if (memoryEntry && memoryEntry.expiresAt > new Date()) {
@@ -669,14 +677,14 @@ export class BusinessContextService {
       }
 
       return null;
-    } catch (error) {
-      logger.error('Erreur récupération cache', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'getCachedContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
@@ -686,7 +694,9 @@ export class BusinessContextService {
    * Met en cache un contexte (mémoire et DB)
    */
   private async cacheContext(cacheKey: string, context: BusinessContext, ttlMinutes: number): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
       // 1. Cache mémoire
@@ -716,14 +726,14 @@ export class BusinessContextService {
         this.cleanupExpiredCache();
       }
 
-    } catch (error) {
-      logger.error('Erreur mise en cache', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'cacheContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
       // Non bloquant - continue sans cache
     }
@@ -780,7 +790,9 @@ export class BusinessContextService {
    * Initialise la base de connaissances menuiserie en différé
    */
   private async initializeDomainKnowledge(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       this.domainKnowledge = await this.loadMenuiserieDomainKnowledge();
       logger.info('Base de connaissances menuiserie initialisée', {
         metadata: {
@@ -788,14 +800,14 @@ export class BusinessContextService {
           operation: 'initializeDomainKnowledge'
         }
       });
-    } catch (error) {
-      logger.error('Erreur initialisation domaine', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'initializeDomainKnowledge',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
       // Fallback vers une base minimale
       this.domainKnowledge = this.getMinimalDomainKnowledge();
@@ -1907,7 +1919,9 @@ export class BusinessContextService {
    * Charge la base de connaissances menuiserie complète
    */
   private async loadMenuiserieDomainKnowledge(): Promise<MenuiserieDomain> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Import dynamique de la base de connaissances
       const { MENUISERIE_KNOWLEDGE_BASE } = await import('./MenuiserieKnowledgeBase');
       logger.info('Base de connaissances menuiserie chargée', {
@@ -1920,14 +1934,14 @@ export class BusinessContextService {
         }
       });
       return MENUISERIE_KNOWLEDGE_BASE;
-    } catch (error) {
-      logger.error('Erreur chargement base de connaissances', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'loadMenuiserieDomainKnowledge',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
       // Fallback vers base minimale
       return this.getMinimalDomainKnowledge();
@@ -2436,7 +2450,9 @@ export class BusinessContextService {
    * Récupère des exemples adaptatifs basés sur l'apprentissage
    */
   private async getAdaptiveExamples(userRole: string): Promise<QueryExample[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const learnedPatterns = await db
         .select()
         .from(adaptiveLearningPatterns)
@@ -2459,14 +2475,14 @@ export class BusinessContextService {
         business_value: "Pattern optimisé par l'usage répété",
         typical_results: "Résultats basés sur l'historique d'utilisation"
       }));
-    } catch (error) {
-      logger.error('Erreur récupération exemples adaptatifs', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'getAdaptiveExamples',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
@@ -2476,7 +2492,9 @@ export class BusinessContextService {
    * Construit le contexte RBAC spécialisé
    */
   private async buildRBACContext(userId: string, userRole: string): Promise<RBACContext> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const permissions = await this.rbacService.getUserPermissions(userId, userRole);
       
       return {
@@ -2495,14 +2513,14 @@ export class BusinessContextService {
           user_role: userRole
         }
       };
-    } catch (error) {
-      logger.error('Erreur construction RBAC', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'buildRBACContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
       // Fallback sécuritaire
       return {
@@ -2719,7 +2737,9 @@ export class BusinessContextService {
     context: BusinessContext | null,
     error?: any
   ): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const metrics: InsertBusinessContextMetricsLog = {
         id: crypto.randomUUID(),
         userId: request.userId,
@@ -2739,14 +2759,14 @@ export class BusinessContextService {
       };
 
       await db.insert(businessContextMetricsLog).values(metrics);
-    } catch (logError) {
-      logger.error('Erreur logging métriques', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'logMetrics',
-          error: logError instanceof Error ? logError.message : String(logError),
-          stack: logError instanceof Error ? logError.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -2764,7 +2784,9 @@ export class BusinessContextService {
     userRole: string,
     naturalLanguageQuery: string
   ): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const startTime = Date.now();
       
       // 1. Détection intelligente du domaine et des entités
@@ -2923,14 +2945,14 @@ export class BusinessContextService {
       
       return finalContext;
       
-    } catch (error) {
-      logger.error('Erreur contexte SQL enrichi', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'buildIntelligentContextForSQL',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
       // Fallback vers méthode basique
       return "Contexte métier JLM: tables offers, projects, aos, suppliers disponibles. Utilisez les jointures standards.";
@@ -3185,21 +3207,23 @@ export class BusinessContextService {
    * Cache pour contextes SQL
    */
   private async cacheSQLContext(key: string, context: string, ttlMinutes: number): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Cache en mémoire simplifié pour SQL
       this.memoryCache.set(key, {
         data: { contextData: context } as any,
         expiresAt: new Date(Date.now() + ttlMinutes * 60 * 1000),
         hitCount: 0
       });
-    } catch (error) {
-      // Non-bloquant
-      logger.error('Erreur cache SQL', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'cacheSQLContext',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -3208,105 +3232,22 @@ export class BusinessContextService {
    * Récupère un contexte SQL du cache
    */
   private async getCachedSQLContext(key: string): Promise<string | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const cached = this.memoryCache.get(key);
       if (cached && cached.expiresAt > new Date()) {
         cached.hitCount++;
         return (cached.data as any).contextData || null;
       }
-    } catch (error) {
-      // Non-bloquant
-    }
-    return null;
-  }
-
-  /**
-   * Convertit le contexte métier en chaîne optimisée pour IA
-   */
-  private contextToAIString(context: BusinessContext): string {
-    const sections: string[] = [];
     
-    // 1. Schémas de base de données
-    sections.push("=== SCHÉMAS BASE DE DONNÉES ===");
-    context.databaseSchemas.forEach(schema => {
-      sections.push(`Table: ${schema.businessName} (${schema.tableName})`);
-      sections.push(`Description: ${schema.description}`);
-      sections.push(`Colonnes principales: ${schema.columns.map(c => `${c.businessName} (${c.name})`).join(", ")}`);
-    });
-
-    // 2. Exemples de requêtes métier
-    sections.push("\n=== EXEMPLES REQUÊTES MÉTIER ===");
-    context.businessExamples.forEach(example => {
-      sections.push(`Requête: "${example.user_query}"`);
-      sections.push(`SQL: ${example.sql_example}`);
-      sections.push(`Explication: ${example.explanation}`);
-    });
-
-    // 3. Contraintes de rôle
-    sections.push("\n=== CONTRAINTES UTILISATEUR ===");
-    sections.push(`Rôle: ${context.roleSpecificConstraints.user_role}`);
-    sections.push(`Tables accessibles: ${context.roleSpecificConstraints.accessible_tables.join(", ")}`);
-    sections.push(`Portée des données: ${JSON.stringify(context.roleSpecificConstraints.data_scope)}`);
-
-    // 4. Contexte temporel
-    sections.push("\n=== CONTEXTE TEMPOREL ===");
-    sections.push(`Saison actuelle: ${context.temporal_context.current_season}`);
-    if (context.temporal_context.active_constraints.length > 0) {
-      sections.push(`Contraintes actives: ${context.temporal_context.active_constraints.join(", ")}`);
+    },
+    {
+      operation: 'Map',
+      service: 'BusinessContextService',
+      metadata: {}
     }
-
-    // 5. Terminologie métier
-    if (context.domainKnowledge.terminology) {
-      sections.push("\n=== TERMINOLOGIE MÉTIER ===");
-      Object.entries(context.domainKnowledge.terminology.business_to_sql).forEach(([business, sql]) => {
-        sections.push(`"${business}" → ${sql}`);
-      });
-    }
-
-    return sections.join("\n");
-  }
-
-  /**
-   * Récupère les métriques du service
-   */
-  async getServiceMetrics(): Promise<BusinessContextMetrics> {
-    try {
-      const metrics = await db
-        .select({
-          total_requests: sql`COUNT(*)`,
-          avg_generation_time: sql`AVG(generation_time_ms)`,
-          cache_hit_rate: sql`AVG(CASE WHEN cache_hit THEN 1.0 ELSE 0.0 END)`,
-        })
-        .from(businessContextMetricsLog)
-        .where(gte(businessContextMetricsLog.timestamp, new Date(Date.now() - 24 * 60 * 60 * 1000)));
-
-      const result = metrics[0];
-      
-      return {
-        total_requests: Number(result.total_requests) || 0,
-        cache_hit_rate: Number(result.cache_hit_rate) || 0,
-        avg_generation_time_ms: Number(result.avg_generation_time) || 0,
-        role_distribution: {},
-        most_requested_domains: {},
-        context_effectiveness: {
-          avg_confidence_score: 0.8,
-          user_satisfaction_rate: 0.85,
-          query_success_rate: 0.9
-        },
-        adaptive_learning_stats: {
-          patterns_learned: 0,
-          improvements_applied: 0,
-          personalization_level: {}
-        }
-      };
-    } catch (error) {
-      logger.error('Erreur récupération métriques', {
-        metadata: {
-          service: 'BusinessContextService',
-          operation: 'getServiceMetrics',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+  );
       });
       // Métriques par défaut
       return {

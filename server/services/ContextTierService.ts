@@ -1,4 +1,5 @@
 import type { IStorage } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
 import { logger } from "../utils/logger";
 import type {
   ContextTierProfile,
@@ -109,7 +110,9 @@ export class ContextTierService implements ContextTierServiceInterface {
   ): Promise<ContextTierDetectionResult> {
     const startTime = Date.now();
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Détection tier pour requête', {
         metadata: {
           service: 'ContextTierService',
@@ -172,15 +175,14 @@ export class ContextTierService implements ContextTierServiceInterface {
       
       return result;
 
-    } catch (error) {
-      logger.error('Erreur détection tier', {
-        metadata: {
-          service: 'ContextTierService',
-          operation: 'detectContextTier',
-          entityType,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'simples',
+      service: 'ContextTierService',
+      metadata: {}
+    }
+  );
       });
       
       // Fallback vers tier COMPREHENSIVE en cas d'erreur
@@ -604,18 +606,18 @@ export class ContextTierService implements ContextTierServiceInterface {
     
     const adaptations: Record<string, Record<string, Partial<ContextTierProfile>>> = {
       'ao': {
-        'minimal': { maxTokens: 400, maxRelationDepth: 1, targetBuildTimeMs: 800 },
-        'standard': { maxTokens: 1200, maxRelationDepth: 2, targetBuildTimeMs: 1500 },
+'minimal': { maxTokens: 400, maxRelationDepth: 1, targetBuildTimeMs: 800 },;
+'standard': { maxTokens: 1200, maxRelationDepth: 2, targetBuildTimeMs: 1500 },;
         'comprehensive': { maxTokens: 3500, maxRelationDepth: 4, targetBuildTimeMs: 2500 }
       },
       'project': {
-        'minimal': { maxTokens: 500, maxRelationDepth: 1, targetBuildTimeMs: 900 },
-        'standard': { maxTokens: 1500, maxRelationDepth: 3, targetBuildTimeMs: 1800 },
+'minimal': { maxTokens: 500, maxRelationDepth: 1, targetBuildTimeMs: 900 },;
+'standard': { maxTokens: 1500, maxRelationDepth: 3, targetBuildTimeMs: 1800 },;
         'comprehensive': { maxTokens: 4000, maxRelationDepth: 5, targetBuildTimeMs: 2500 }
       },
       'offer': {
-        'minimal': { maxTokens: 350, maxRelationDepth: 1, targetBuildTimeMs: 700 },
-        'standard': { maxTokens: 1000, maxRelationDepth: 2, targetBuildTimeMs: 1200 },
+'minimal': { maxTokens: 350, maxRelationDepth: 1, targetBuildTimeMs: 700 },;
+'standard': { maxTokens: 1000, maxRelationDepth: 2, targetBuildTimeMs: 1200 },;
         'comprehensive': { maxTokens: 3000, maxRelationDepth: 4, targetBuildTimeMs: 2000 }
       }
     };
@@ -753,13 +755,13 @@ export class ContextTierService implements ContextTierServiceInterface {
     
     // 2. Compression selon stratégie
     switch (profile.compressionStrategy) {
-      case 'priority_based':
+case 'priority_based':;
         await this.compressByPriority(compressedContext, profile);
         break;
-      case 'time_based':
+case 'time_based':;
         await this.compressByTime(compressedContext, profile);
         break;
-      case 'relevance_based':
+case 'relevance_based':;
         await this.compressByRelevance(compressedContext, profile);
         break;
     }

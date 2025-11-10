@@ -9,6 +9,8 @@
  */
 
 import { logger } from '../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { oneDriveService } from './OneDriveService';
 import { buildAoPath, buildAoCategoryPath, getAoCategories } from '../config/onedrive.config';
 import type { IStorage } from '../storage';
@@ -86,7 +88,9 @@ export class DocumentSyncService {
       categoriesFailed: 0
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('[DocumentSyncService] Début synchronisation', {
         metadata: { aoId, aoReference, force }
       });
@@ -129,37 +133,14 @@ export class DocumentSyncService {
           const files = items.filter(item => 'size' in item && !item.deleted);
 
           return { category, files, error: null };
-        } catch (error: any) {
-          if (error.message?.includes('404')) {
-            // Dossier n'existe pas encore, normal
-            logger.debug('[DocumentSyncService] Catégorie non trouvée', {
-              metadata: { aoId, category }
-            });
-            return { category, files: [], error: null };
-          } else {
-            return { category, files: [], error: error.message };
-          }
-        }
-      });
-
-      // Attendre toutes les catégories en parallèle
-      const categoryResults = await Promise.all(categoryPromises);
-
-      // Agréger les résultats (ROBUST-3: Error handling granulaire)
-      for (const { category, files, error } of categoryResults) {
-        result.categoriesScanned++;
-        if (error) {
-          result.categoriesFailed++;
-          result.errors.push({
-            type: 'category_scan',
-            category,
-            message: error,
-            originalError: error
-          });
-          logger.warn('[DocumentSyncService] Erreur scan catégorie', {
-            metadata: { aoId, aoReference, category, error }
-          });
-        }
+        
+    },
+    {
+      operation: 'Set',
+service: 'DocumentSyncService',;
+      metadata: {}
+    }
+  );
         for (const file of files) {
           oneDriveFilesMap.set(file.id, { ...file, category });
         }
@@ -176,7 +157,9 @@ export class DocumentSyncService {
       // Ajouter les nouveaux documents
       for (const [oneDriveId, fileData] of Array.from(oneDriveFilesMap.entries())) {
         if (!existingDocsMap.has(oneDriveId)) {
-          try {
+          return withErrorHandling(
+    async () => {
+
             await this.storage.createDocument({
               name: fileData.name,
               originalName: fileData.name,
@@ -198,19 +181,14 @@ export class DocumentSyncService {
             logger.debug('[DocumentSyncService] Document ajouté', {
               metadata: { aoId, documentName: fileData.name, category: fileData.category }
             });
-          } catch (error: any) {
-            // ROBUST-3: Error typing et logging détaillé
-            result.errors.push({
-              type: 'document_create',
-              category: fileData.category,
-              documentName: fileData.name,
-              message: error.message || String(error),
-              originalError: error
-            });
-            logger.error('[DocumentSyncService] Erreur création document', {
-              metadata: { aoId, documentName: fileData.name, error: error.message }
-            });
-          }
+          
+    },
+    {
+      operation: 'Set',
+      service: 'DocumentSyncService',
+      metadata: {}
+    }
+  );
         } else {
           // ✅ Mettre à jour les métadonnées (nom, path, url, category, filePath) + lastSyncedAt
           const existingDoc = existingDocsMap.get(oneDriveId)!;
@@ -223,7 +201,9 @@ export class DocumentSyncService {
             existingDoc.filePath !== `onedrive/${aoReference}/${fileData.category}/${fileData.name}` ||
             existingDoc.category !== fileData.category;
 
-          try {
+          return withErrorHandling(
+    async () => {
+
             await this.storage.updateDocument(existingDoc.id, {
               name: fileData.name,
               originalName: fileData.name,
@@ -255,43 +235,36 @@ export class DocumentSyncService {
               });
             }
             result.documentsUpdated++;
-          } catch (error: any) {
-            // ROBUST-3: Error typing et logging détaillé
-            result.errors.push({
-              type: 'document_update',
-              category: fileData.category,
-              documentName: fileData.name,
-              message: error.message || String(error),
-              originalError: error
-            });
-            logger.error('[DocumentSyncService] Erreur mise à jour document', {
-              metadata: { aoId, documentId: existingDoc.id, documentName: fileData.name, error: error.message }
-            });
-          }
+          
+    },
+    {
+      operation: 'Set',
+      service: 'DocumentSyncService',
+      metadata: {}
+    }
+  );
         }
       }
 
       // Marquer comme supprimés les documents qui ne sont plus dans OneDrive
       for (const [oneDriveId, doc] of Array.from(existingDocsMap.entries())) {
         if (!oneDriveFilesMap.has(oneDriveId)) {
-          try {
+          return withErrorHandling(
+    async () => {
+
             await this.storage.deleteDocument(doc.id);
             result.documentsDeleted++;
             logger.debug('[DocumentSyncService] Document supprimé', {
               metadata: { aoId, documentId: doc.id, documentName: doc.name }
             });
-          } catch (error: any) {
-            // ROBUST-3: Error typing et logging détaillé
-            result.errors.push({
-              type: 'document_delete',
-              documentName: doc.name,
-              message: error.message || String(error),
-              originalError: error
-            });
-            logger.error('[DocumentSyncService] Erreur suppression document', {
-              metadata: { aoId, documentId: doc.id, documentName: doc.name, error: error.message }
-            });
-          }
+          
+    },
+    {
+      operation: 'Set',
+      service: 'DocumentSyncService',
+      metadata: {}
+    }
+  );
         }
       }
 
@@ -376,7 +349,7 @@ export function initializeDocumentSyncService(storage: IStorage, eventBus: Event
 
 export function getDocumentSyncService(): DocumentSyncService {
   if (!documentSyncServiceInstance) {
-    throw new Error('DocumentSyncService non initialisé');
+    throw new AppError('DocumentSyncService non initialisé', 500);
   }
   return documentSyncServiceInstance;
 }

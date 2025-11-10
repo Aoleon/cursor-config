@@ -1,4 +1,5 @@
 import type { MondaySplitterConfig } from './types';
+import { withErrorHandling } from './utils/error-handler';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -38,16 +39,23 @@ export const MODELE_MEXT_CONFIG: MondaySplitterConfig = {
  */
 export function getBoardConfig(boardId: string): MondaySplitterConfig | null {
   // 1. Essayer de charger depuis fichier JSON
-  try {
+  return withErrorHandling(
+    async () => {
+
     const configPath = path.join(__dirname, 'boardConfigs', `ao-planning-${boardId}.json`);
     if (fs.existsSync(configPath)) {
       const configData = fs.readFileSync(configPath, 'utf-8');
       const config = JSON.parse(configData) as MondaySplitterConfig;
       return config;
     }
-  } catch (error: any) {
-    logger.warn('Failed to load board config from file', { metadata: { boardId, errorMessage: error.message } });
-  }
+  
+    },
+    {
+      operation: 'fileURLToPath',
+      service: 'defaultMappings',
+      metadata: {}
+    }
+  );
   
   // 2. Fallback vers config hardcodée
   if (boardId === '8952933832') {

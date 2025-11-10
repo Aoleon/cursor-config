@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { logger } from './utils/logger';
 import * as path from 'path';
 
 interface MondayItem {
@@ -531,7 +532,7 @@ function generateMondayToSaxiumMapping(analysis: CompleteAnalysis): any {
 }
 
 // Exécution
-console.log('🔍 Analyse complète Monday.com en cours...\n');
+logger.info('🔍 Analyse complète Monday.com en cours...\n');
 
 const analysis = analyzeMonday();
 const report = generateAnalysisReport(analysis);
@@ -556,13 +557,13 @@ fs.writeFileSync(
   JSON.stringify(mapping, null, 2)
 );
 
-console.log('✅ Analyse terminée!\n');
-console.log(`📊 ${analysis.totalBoards} boards analysés`);
-console.log(`📝 ${analysis.totalItems} items trouvés`);
-console.log(`🎯 ${analysis.globalStatuses.size} statuts détectés`);
-console.log(`📍 ${analysis.cities.size} villes identifiées`);
-console.log(`🏢 ${analysis.clients.size} clients trouvés`);
-console.log(`\n📁 Fichiers générés:`);
-console.log(`   - server/migration/monday-analysis.json`);
-console.log(`   - server/migration/monday-report.md`);
-console.log(`   - server/migration/monday-to-saxium-mapping.json`);
+logger.info('✅ Analyse terminée!\n');
+logger.info(`📊 ${analysis.totalBoards} boards analysés`);
+logger.info(`📝 ${analysis.totalItems} items trouvés`);
+logger.info(`🎯 ${analysis.globalStatuses.size} statuts détectés`);
+logger.info(`📍 ${analysis.cities.size} villes identifiées`);
+logger.info(`🏢 ${analysis.clients.size} clients trouvés`);
+logger.info(`\n📁 Fichiers générés:`);
+logger.info(`   - server/migration/monday-analysis.json`);
+logger.info(`   - server/migration/monday-report.md`);
+logger.info(`   - server/migration/monday-to-saxium-mapping.json`);

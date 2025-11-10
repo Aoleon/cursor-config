@@ -1,4 +1,6 @@
 import { ConfidentialClientApplication, AuthenticationResult } from '@azure/msal-node';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { logger } from '../utils/logger';
 
 interface TokenCache {
@@ -21,7 +23,7 @@ export class MicrosoftAuthService {
     const tenantId = process.env.AZURE_TENANT_ID;
 
     if (!clientId || !clientSecret || !tenantId) {
-      throw new Error('Azure credentials not configured. Please set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID');
+      throw new AppError('Azure credentials not configured. Please set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID', 500);
     }
 
     this.msalClient = new ConfidentialClientApplication({
@@ -44,7 +46,9 @@ export class MicrosoftAuthService {
       return this.tokenCache.accessToken;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Acquiring new Microsoft Graph access token');
       
       const result = await this.msalClient.acquireTokenByClientCredential({
@@ -52,7 +56,7 @@ export class MicrosoftAuthService {
       });
 
       if (!result || !result.accessToken) {
-        throw new Error('Failed to acquire access token');
+        throw new AppError('Failed to acquire access token', 500);
       }
 
       // Cache the token (expires in 1 hour typically, we refresh 5 minutes early)
@@ -70,10 +74,14 @@ export class MicrosoftAuthService {
       });
 
       return result.accessToken;
-    } catch (error) {
-      logger.error('Failed to acquire Microsoft Graph access token', error as Error);
-      throw new Error('Microsoft authentication failed');
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'MicrosoftAuthService',
+      metadata: {}
     }
+  );
   }
 
   async refreshToken(): Promise<void> {

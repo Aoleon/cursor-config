@@ -12,6 +12,8 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { logger } from './utils/logger';
 import { 
   aoContacts,
   projectContacts,
@@ -127,7 +129,7 @@ export class ContactsRepository extends BaseRepository<
    * // Tous les contacts d'un AO
    * const contacts = await repo.getAoContacts('550e8400-...');
    * contacts.forEach(c => {
-   *   console.log(`Contact: ${c.contact_id}, Type: ${c.link_type}`);
+   *   logger.info(`Contact: ${c.contact_id}, Type: ${c.link_type}`);
    * });
    * 
    * // Dans une transaction
@@ -203,7 +205,7 @@ export class ContactsRepository extends BaseRepository<
 
         const newContact = result[0];
         if (!newContact) {
-          throw new Error('Failed to create AO contact');
+          throw new AppError('Failed to create AO contact', 500);
         }
 
         this.emitEvent('ao_contact:created', { 
@@ -313,7 +315,7 @@ export class ContactsRepository extends BaseRepository<
    * // Tous les contacts d'un projet
    * const contacts = await repo.getProjectContacts('770e9600-...');
    * contacts.forEach(c => {
-   *   console.log(`Contact: ${c.contact_id}, Type: ${c.link_type}`);
+   *   logger.info(`Contact: ${c.contact_id}, Type: ${c.link_type}`);
    * });
    * 
    * // Dans une transaction
@@ -389,7 +391,7 @@ export class ContactsRepository extends BaseRepository<
 
         const newContact = result[0];
         if (!newContact) {
-          throw new Error('Failed to create project contact');
+          throw new AppError('Failed to create project contact', 500);
         }
 
         this.emitEvent('project_contact:created', { 

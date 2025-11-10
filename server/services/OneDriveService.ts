@@ -1,4 +1,6 @@
 import { Client } from '@microsoft/microsoft-graph-client';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { microsoftAuthService } from './MicrosoftAuthService';
 import { logger } from '../utils/logger';
 import { executeOneDrive } from './resilience';
@@ -55,13 +57,19 @@ export class OneDriveService {
   constructor() {
     this.client = Client.init({
       authProvider: async (done) => {
-        try {
+        return withErrorHandling(
+    async () => {
+
           const token = await microsoftAuthService.getAccessToken();
           done(null, token);
-        } catch (error) {
-          logger.error('OneDrive auth provider error', error as Error);
-          done(error as Error, null);
-        }
+        
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveService',
+      metadata: {}
+    }
+  );
       }
     });
 
@@ -90,7 +98,9 @@ export class OneDriveService {
       return cached;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const drive = await this.client.api('/me/drive').get();
       const driveInfo = {
         id: drive.id,
@@ -107,10 +117,14 @@ export class OneDriveService {
       await this.cache.set(cacheKey, driveInfo, TTL_CONFIG.ONEDRIVE_DRIVE_INFO);
 
       return driveInfo;
-    } catch (error) {
-      logger.error('Failed to get drive info', error as Error);
-      throw new Error('Failed to retrieve OneDrive information');
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveService',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -118,7 +132,9 @@ export class OneDriveService {
    * Use this for application-only authentication
    */
   async getDriveByUserId(userId: string) {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const drive = await this.client.api(`/users/${userId}/drive`).get();
       return {
         id: drive.id,
@@ -130,12 +146,14 @@ export class OneDriveService {
           remaining: drive.quota?.remaining
         }
       };
-    } catch (error) {
-      logger.error('Failed to get drive info by user ID', error as Error, {
-        metadata: { userId }
-      });
-      throw new Error('Failed to retrieve OneDrive information');
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveService',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -350,12 +368,19 @@ export class OneDriveService {
    * Get a specific file or folder by ID
    */
   async getItem(itemId: string): Promise<OneDriveFile | OneDriveFolder> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const item = await this.client.api(`/me/drive/items/${itemId}`).get();
       return this.mapToOneDriveItem(item);
-    } catch (error) {
-      logger.error('Failed to get OneDrive item', error as Error, { metadata: { itemId } });
-      throw new Error(`Failed to retrieve item: ${itemId}`);
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveService',
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 
@@ -363,12 +388,19 @@ export class OneDriveService {
    * Get a file by path
    */
   async getItemByPath(path: string): Promise<OneDriveFile | OneDriveFolder> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const item = await this.client.api(`/me/drive/root:/${this.encodePath(path)}`).get();
       return this.mapToOneDriveItem(item);
-    } catch (error) {
-      logger.error('Failed to get item by path', error as Error, { metadata: { path } });
-      throw new Error(`Failed to retrieve item at path: ${path}`);
+    
+    },
+    {
+      operation: 'constructor',
+service: 'OneDriveService',;
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 
@@ -379,7 +411,9 @@ export class OneDriveService {
     fileBuffer: Buffer, 
     options: UploadOptions
   ): Promise<OneDriveFile> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const { path, fileName, conflictBehavior = 'rename' } = options;
       const fullPath = path ? `${path}/${fileName}` : fileName;
 
@@ -392,11 +426,14 @@ export class OneDriveService {
         metadata: { fileName, path, size: fileBuffer.length }
       });
       return this.mapToOneDriveItem(item) as OneDriveFile;
-    } catch (error) {
-      logger.error('Failed to upload file to OneDrive', error as Error, { 
-        metadata: { fileName: options.fileName }
-      });
-      throw new Error(`Failed to upload file: ${options.fileName}`);
+    
+    },
+    {
+      operation: 'constructor',
+service: 'OneDriveService',;
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 
@@ -407,7 +444,9 @@ export class OneDriveService {
     fileBuffer: Buffer,
     options: UploadOptions
   ): Promise<OneDriveFile> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const { path, fileName, conflictBehavior = 'rename' } = options;
       const fullPath = path ? `${path}/${fileName}` : fileName;
 
@@ -442,7 +481,7 @@ export class OneDriveService {
         });
 
         if (!response.ok && response.status !== 202) {
-          throw new Error(`Upload failed with status ${response.status}`);
+          throw new AppError(`Upload failed with status ${response.status}`, 500);
         }
 
         uploadedBytes = chunkEnd;
@@ -455,7 +494,7 @@ export class OneDriveService {
       // Parse final response to get uploaded file metadata
       // OneDrive returns the file metadata in the final chunk response
       if (!finalResponse) {
-        throw new Error('Upload completed but no response received');
+        throw new AppError('Upload completed but no response received', 500);
       }
 
       const uploadedItem = await finalResponse.json();
@@ -472,11 +511,14 @@ export class OneDriveService {
       
       // Return the metadata from the upload response (handles renamed files correctly)
       return this.mapToOneDriveItem(uploadedItem) as OneDriveFile;
-    } catch (error) {
-      logger.error('Failed to upload large file to OneDrive', error as Error, { 
-        metadata: { fileName: options.fileName }
-      });
-      throw new Error(`Failed to upload large file: ${options.fileName}`);
+    
+    },
+    {
+      operation: 'constructor',
+service: 'OneDriveService',;
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 
@@ -484,9 +526,11 @@ export class OneDriveService {
    * Download a file
    */
   async downloadFile(itemId: string): Promise<Buffer> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const response = await this.client
-        .api(`/me/drive/items/${itemId}/content`)
+.api(`/me/drive/items/${itemId}/content`);
         .getStream();
 
       const chunks: Buffer[] = [];
@@ -499,11 +543,14 @@ export class OneDriveService {
         metadata: { itemId, size: buffer.length }
       });
       return buffer;
-    } catch (error) {
-      logger.error('Failed to download file from OneDrive', error as Error, { 
-        metadata: { itemId }
-      });
-      throw new Error(`Failed to download file: ${itemId}`);
+    
+    },
+    {
+      operation: 'constructor',
+service: 'OneDriveService',;
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 
@@ -511,9 +558,11 @@ export class OneDriveService {
    * Create a folder
    */
   async createFolder(folderName: string, parentPath: string = ''): Promise<OneDriveFolder> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const endpoint = parentPath
-        ? `/me/drive/root:/${this.encodePath(parentPath)}:/children`
+? `/me/drive/root:/${this.encodePath(parentPath)}:/children`;
         : '/me/drive/root/children';
 
       const folder = await this.client.api(endpoint).post({
@@ -526,11 +575,14 @@ export class OneDriveService {
         metadata: { folderName, parentPath }
       });
       return this.mapToOneDriveItem(folder) as OneDriveFolder;
-    } catch (error) {
-      logger.error('Failed to create folder on OneDrive', error as Error, { 
-        metadata: { folderName, parentPath }
-      });
-      throw new Error(`Failed to create folder: ${folderName}`);
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveService',
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 
@@ -538,16 +590,21 @@ export class OneDriveService {
    * Delete a file or folder
    */
   async deleteItem(itemId: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.client.api(`/me/drive/items/${itemId}`).delete();
       logger.info('Item deleted from OneDrive', { 
         metadata: { itemId }
       });
-    } catch (error) {
-      logger.error('Failed to delete item from OneDrive', error as Error, { 
-        metadata: { itemId }
-      });
-      throw new Error(`Failed to delete item: ${itemId}`);
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveService',
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 
@@ -555,7 +612,9 @@ export class OneDriveService {
    * Search for files
    */
   async searchFiles(query: string): Promise<OneDriveFile[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const response = await this.client
         .api(`/me/drive/root/search(q='${encodeURIComponent(query)}')`)
         .get();
@@ -564,11 +623,14 @@ export class OneDriveService {
       return items
         .filter((item: any) => item.file) // Only files, not folders
         .map((item: any) => this.mapToOneDriveItem(item) as OneDriveFile);
-    } catch (error) {
-      logger.error('Failed to search OneDrive files', error as Error, { 
-        metadata: { query }
-      });
-      throw new Error(`Search failed for query: ${query}`);
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveService',
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 
@@ -576,7 +638,9 @@ export class OneDriveService {
    * Create a sharing link
    */
   async createShareLink(itemId: string, options: ShareLinkOptions = { type: 'view', scope: 'organization' }): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const response = await this.client
         .api(`/me/drive/items/${itemId}/createLink`)
         .post({
@@ -588,11 +652,14 @@ export class OneDriveService {
         metadata: { itemId, type: options.type, scope: options.scope }
       });
       return response.link.webUrl;
-    } catch (error) {
-      logger.error('Failed to create share link', error as Error, { 
-        metadata: { itemId }
-      });
-      throw new Error(`Failed to create share link for item: ${itemId}`);
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveService',
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 
@@ -600,9 +667,11 @@ export class OneDriveService {
    * Copy a file or folder
    */
   async copyItem(itemId: string, destinationFolderId: string, newName?: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.client
-        .api(`/me/drive/items/${itemId}/copy`)
+.api(`/me/drive/items/${itemId}/copy`);
         .post({
           parentReference: {
             id: destinationFolderId
@@ -613,11 +682,14 @@ export class OneDriveService {
       logger.info('Item copied on OneDrive', { 
         metadata: { itemId, destinationFolderId, newName }
       });
-    } catch (error) {
-      logger.error('Failed to copy item on OneDrive', error as Error, { 
-        metadata: { itemId, destinationFolderId }
-      });
-      throw new Error(`Failed to copy item: ${itemId}`);
+    
+    },
+    {
+      operation: 'constructor',
+service: 'OneDriveService',;
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 
@@ -625,24 +697,29 @@ export class OneDriveService {
    * Move or rename a file or folder
    */
   async moveItem(itemId: string, newParentId?: string, newName?: string): Promise<OneDriveFile | OneDriveFolder> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const updateData: any = {};
       if (newName) updateData.name = newName;
       if (newParentId) updateData.parentReference = { id: newParentId };
 
       const item = await this.client
-        .api(`/me/drive/items/${itemId}`)
+.api(`/me/drive/items/${itemId}`);
         .patch(updateData);
 
       logger.info('Item moved/renamed on OneDrive', { 
         metadata: { itemId, newParentId, newName }
       });
       return this.mapToOneDriveItem(item);
-    } catch (error) {
-      logger.error('Failed to move/rename item on OneDrive', error as Error, { 
-        metadata: { itemId }
-      });
-      throw new Error(`Failed to move/rename item: ${itemId}`);
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveService',
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 

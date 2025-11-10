@@ -8,6 +8,7 @@
  */
 
 import { MondayService, type MondayColumn } from './MondayService';
+import { withErrorHandling } from './utils/error-handler';
 import { getCacheService, TTL_CONFIG } from './CacheService';
 import { logger } from '../utils/logger';
 
@@ -58,7 +59,9 @@ export class MondaySchemaAnalyzer {
       }
     });
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer les boards à analyser
       const boards = await this.getBoardsToAnalyze(boardIds);
       
@@ -85,14 +88,14 @@ export class MondaySchemaAnalyzer {
 
       return result;
 
-    } catch (error) {
-      logger.error('Erreur analyse boards Monday.com', {
-        metadata: {
-          service: 'MondaySchemaAnalyzer',
-          operation: 'analyzeBoards',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'optimisation',
+      service: 'MondaySchemaAnalyzer',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -130,7 +133,9 @@ export class MondaySchemaAnalyzer {
       }
     });
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer colonnes via MondayService
       const columns = await this.mondayService.getBoardColumns(boardId);
 
@@ -165,14 +170,14 @@ export class MondaySchemaAnalyzer {
 
       return structure;
 
-    } catch (error) {
-      logger.error('Erreur analyse structure board', {
-        metadata: {
-          service: 'MondaySchemaAnalyzer',
-          operation: 'analyzeBoardStructure',
-          boardId,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'optimisation',
+      service: 'MondaySchemaAnalyzer',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }

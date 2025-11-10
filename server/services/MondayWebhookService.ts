@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { withErrorHandling } from './utils/error-handler';
 import { logger } from '../utils/logger';
 import { mondayImportService } from './MondayImportService';
 import { eventBus } from '../eventBus';
@@ -77,7 +78,9 @@ export class MondayWebhookService {
       }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Route to MondayImportService
       await mondayImportService.syncFromMonday({
         boardId,
@@ -117,17 +120,14 @@ export class MondayWebhookService {
           itemId: itemIdentifier
         }
       });
-    } catch (error) {
-      logger.error('[Monday Webhook] Erreur traitement event', {
-        metadata: {
-          module: 'MondayWebhookService',
-          operation: 'processWebhook',
-          eventId,
-          boardId,
-          itemId: itemIdentifier,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'processWebhook',
+      service: 'MondayWebhookService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }

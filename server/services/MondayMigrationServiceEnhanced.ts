@@ -10,6 +10,8 @@
  */
 
 import { MondayService, type MondayItem, type MondayColumnValue } from './MondayService';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { IMigrationStorage } from '../storage-migration';
 import { logger } from '../utils/logger';
 import { withRetry } from '../utils/retry-helper';
@@ -121,7 +123,9 @@ export class MondayMigrationServiceEnhanced {
       preview: options.dryRun ? [] : undefined
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Étape 1: Fetch items depuis Monday.com
       const items = await this.fetchAllItems(
         report.boardId, 
@@ -153,21 +157,14 @@ export class MondayMigrationServiceEnhanced {
 
           transformedItems.push({ original: item, transformed: validated });
 
-        } catch (error) {
-          report.totalErrors++;
-          report.errors.push({
-            mondayId: item.id,
-            error: error instanceof Error ? error.message : String(error)
-          });
-
-          if (options.verbose) {
-            logger.warn('Erreur transformation/validation item', {
-              metadata: {
-                service: 'MondayMigrationServiceEnhanced',
-                operation: 'migrate',
-                mondayId: item.id,
-                error: error instanceof Error ? error.message : String(error)
-              }
+        
+    },
+    {
+      operation: 'API',
+service: 'MondayMigrationServiceEnhanced',;
+      metadata: {}
+    }
+  );
             });
           }
         }
@@ -257,7 +254,9 @@ export class MondayMigrationServiceEnhanced {
       }
     });
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Utiliser la méthode paginée avec curseur du MondayService
       const items = await withRetry(
         () => this.mondayService.getBoardItemsPaginated(boardId),
@@ -281,13 +280,14 @@ export class MondayMigrationServiceEnhanced {
 
       return items;
 
-    } catch (error) {
-      logger.error('Erreur fetch items Monday', {
-        metadata: {
-          service: 'MondayMigrationServiceEnhanced',
-          operation: 'fetchAllItems',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'API',
+      service: 'MondayMigrationServiceEnhanced',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -370,23 +370,20 @@ export class MondayMigrationServiceEnhanced {
 
     const schema = schemas[entityType];
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Validation Zod stricte
       return schema.parse(data);
       
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const fieldErrors = error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-        
-        logger.warn('Validation Zod échouée', {
-          metadata: {
-            service: 'MondayMigrationServiceEnhanced',
-            operation: 'validateItem',
-            entityType,
-            errors: fieldErrors
-          }
-        });
-      }
+    
+    },
+    {
+      operation: 'API',
+      service: 'MondayMigrationServiceEnhanced',
+      metadata: {}
+    }
+  );
       throw error;
     }
   }
@@ -558,7 +555,9 @@ export class MondayMigrationServiceEnhanced {
    * Vérifie si entity existe déjà (via mondayId)
    */
   private async checkIfExists(mondayId: string, entityType: EntityType): Promise<boolean> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       switch (entityType) {
         case 'aos': {
           const aos = await this.storage.getAos();
@@ -575,14 +574,14 @@ export class MondayMigrationServiceEnhanced {
         default:
           return false;
       }
-    } catch (error) {
-      logger.warn('Erreur vérification existence', {
-        metadata: {
-          service: 'MondayMigrationServiceEnhanced',
-          operation: 'checkIfExists',
-          mondayId,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'API',
+      service: 'MondayMigrationServiceEnhanced',
+      metadata: {}
+    }
+  );
       });
       return false;
     }
@@ -600,7 +599,7 @@ export class MondayMigrationServiceEnhanced {
       case 'suppliers':
         return await this.storage.createSupplier(data as InsertSupplier);
       default:
-        throw new Error(`Unknown entity type: ${entityType}`);
+        throw new AppError(`Unknown entity type: ${entityType}`, 500);
     }
   }
 }

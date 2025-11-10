@@ -1,4 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { logger } from '../utils/logger';
 import { getCacheService, TTL_CONFIG } from './CacheService';
 import { getCorrelationId } from '../middleware/correlation';
@@ -96,7 +98,9 @@ class MondayService {
     
     return executeMonday(
       async () => {
-        try {
+        return withErrorHandling(
+    async () => {
+
           logger.info('Exécution requête Monday.com GraphQL', {
             service: 'MondayService',
             metadata: {
@@ -124,21 +128,18 @@ class MondayService {
                 errors: response.data.errors
               }
             });
-            throw new Error(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors)}`);
+            throw new AppError(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors, 500)}`);
           }
 
           return response.data.data as T;
-        } catch (error: any) {
-          logger.error('Erreur requête Monday.com', {
-            service: 'MondayService',
-            metadata: {
-              operation: 'executeQuery',
-              error: error.message,
-              status: error.response?.status
-            }
-          });
-          throw error;
-        }
+        
+    },
+    {
+      operation: 'dropdown',
+      service: 'MondayService',
+      metadata: {}
+    }
+  );
       },
       'GraphQL Query'
     );
@@ -440,7 +441,7 @@ class MondayService {
     const boardData = result.boards?.[0];
 
     if (!boardData) {
-      throw new Error(`Board ${boardId} not found`);
+      throw new AppError(`Board ${boardId} not found`, 500);
     }
 
     // Récupérer TOUS les items avec pagination
@@ -476,7 +477,9 @@ class MondayService {
   }
 
   async testConnection(): Promise<boolean> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const query = `
         query {
           me {
@@ -499,16 +502,14 @@ class MondayService {
       });
 
       return true;
-    } catch (error) {
-      logger.error('Échec test connexion Monday.com', {
-        service: 'MondayService',
-        metadata: {
-          operation: 'testConnection',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      });
-      return false;
+    
+    },
+    {
+      operation: 'dropdown',
+      service: 'MondayService',
+      metadata: {}
     }
+  );
   }
 
   async getItem(itemId: string): Promise<MondayItem> {
@@ -545,7 +546,7 @@ class MondayService {
     const item = result.items?.[0];
 
     if (!item) {
-      throw new Error(`Item ${itemId} not found on Monday.com`);
+      throw new AppError(`Item ${itemId} not found on Monday.com`, 500);
     }
 
     logger.info('Item Monday.com récupéré', {

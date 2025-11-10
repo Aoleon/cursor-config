@@ -13,6 +13,7 @@
  */
 
 import { Router } from 'express';
+import { withErrorHandling } from './utils/error-handler';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler } from '../../middleware/errorHandler';
@@ -130,7 +131,9 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         return value;
       };
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         if (result.success) {
           logger.info('Préparation réponse success', {
             metadata: { userId }
@@ -166,14 +169,14 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           });
           res.status(statusCode).send(jsonResponse);
         }
-      } catch (serializationError) {
-        logger.error('ERREUR CRITIQUE sérialisation JSON', {
-          metadata: { 
-            userId, 
-            error: serializationError instanceof Error ? serializationError.message : String(serializationError),
-            resultType: typeof result.success,
-            resultKeys: Object.keys(result).join(', ')
-          }
+      
+    },
+    {
+      operation: 'createChatbotRouter',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         res.status(500).json({
           success: false,
@@ -405,7 +408,9 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         metadata: { userRole }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Vérification des services critiques
         const healthCheck = {
           chatbot_orchestration: "healthy",
@@ -438,9 +443,14 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           version: "1.0.0"
         });
 
-      } catch (error) {
-        logger.error('Erreur health check', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+      
+    },
+    {
+      operation: 'createChatbotRouter',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         res.status(503).json({
           success: false,
@@ -757,7 +767,9 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         metadata: { userRole }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Récupération des métriques via BusinessContextService
         const metrics = await businessContextService.getServiceMetrics();
 
@@ -767,9 +779,14 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           user_role: userRole
         });
 
-      } catch (error) {
-        logger.error('Erreur récupération métriques', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+      
+    },
+    {
+      operation: 'createChatbotRouter',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         res.status(500).json({
           success: false,
@@ -791,7 +808,9 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
     asyncHandler(async (req: any, res: Response) => {
       const { search, type, category } = req.query;
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Import de la base de connaissances
         const { MENUISERIE_KNOWLEDGE_BASE, findMaterialByName } = await import('../../services/MenuiserieKnowledgeBase');
         
@@ -819,9 +838,14 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           filters_applied: { search, type, category }
         });
         
-      } catch (error) {
-        logger.error('Erreur recherche matériaux', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+      
+    },
+    {
+      operation: 'createChatbotRouter',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         res.status(500).json({
           success: false,

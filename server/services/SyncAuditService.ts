@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
 import { eventBus } from '../eventBus';
 import { createRealtimeEvent, EventType } from '../../shared/events';
 
@@ -31,7 +32,9 @@ export class SyncAuditService {
    * Utilise les vraies colonnes mondaySyncStatus pour restaurer les états conflict/error
    */
   private async rebuildCacheFromDatabase() {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const { storage } = await import('../storage');
       
       const projects = await storage.getProjects();
@@ -71,13 +74,14 @@ export class SyncAuditService {
           totalSyncStates: this.syncStates.size
         }
       });
-    } catch (error) {
-      logger.error('[SyncAuditService] Failed to rebuild cache', {
-        service: 'SyncAuditService',
-        metadata: {
-          operation: 'rebuildCacheFromDatabase',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'SyncAuditService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -96,7 +100,9 @@ export class SyncAuditService {
       this.syncStates.set(event.entityId, syncState);
       
       // Persist to DB
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { storage } = await import('../storage');
         if (event.entityType === 'project') {
           await storage.updateProject(event.entityId, {
@@ -111,14 +117,14 @@ export class SyncAuditService {
             mondayId: event.mondayId
           });
         }
-      } catch (error) {
-        logger.error('[SyncAudit] Failed to persist synced status to DB', {
-          service: 'SyncAuditService',
-          metadata: {
-            operation: 'persist_synced',
-            entityId: event.entityId,
-            error: error instanceof Error ? error.message : String(error)
-          }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'SyncAuditService',
+      metadata: {}
+    }
+  );
         });
       }
       
@@ -170,7 +176,9 @@ export class SyncAuditService {
       this.syncStates.set(event.entityId, syncState);
       
       // Persist to DB
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { storage } = await import('../storage');
         if (event.entityType === 'project') {
           await storage.updateProject(event.entityId, {
@@ -187,14 +195,14 @@ export class SyncAuditService {
             mondayId: event.mondayId
           });
         }
-      } catch (error) {
-        logger.error('[SyncAudit] Failed to persist conflict status to DB', {
-          service: 'SyncAuditService',
-          metadata: {
-            operation: 'persist_conflict',
-            entityId: event.entityId,
-            error: error instanceof Error ? error.message : String(error)
-          }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'SyncAuditService',
+      metadata: {}
+    }
+  );
         });
       }
       
@@ -248,7 +256,9 @@ export class SyncAuditService {
       this.syncStates.set(event.entityId, syncState);
       
       // Persist to DB
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { storage } = await import('../storage');
         if (event.entityType === 'project') {
           await storage.updateProject(event.entityId, {
@@ -265,14 +275,14 @@ export class SyncAuditService {
             mondayId: event.mondayId
           });
         }
-      } catch (error) {
-        logger.error('[SyncAudit] Failed to persist error status to DB', {
-          service: 'SyncAuditService',
-          metadata: {
-            operation: 'persist_error',
-            entityId: event.entityId,
-            error: error instanceof Error ? error.message : String(error)
-          }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'SyncAuditService',
+      metadata: {}
+    }
+  );
         });
       }
       

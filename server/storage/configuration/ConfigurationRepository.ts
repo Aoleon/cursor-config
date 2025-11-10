@@ -12,6 +12,8 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { logger } from './utils/logger';
 import { 
   equipmentBatteries,
   marginTargets,
@@ -127,7 +129,7 @@ export class ConfigurationRepository extends BaseRepository<
    * // Toutes les batteries d'un projet
    * const batteries = await repo.getEquipmentBatteries('550e8400-...');
    * batteries.forEach(b => {
-   *   console.log(`Batterie: ${b.name}, Marque: ${b.brand}`);
+   *   logger.info(`Batterie: ${b.name}, Marque: ${b.brand}`);
    * });
    * 
    * // Toutes les batteries (sans filtre)
@@ -167,7 +169,7 @@ export class ConfigurationRepository extends BaseRepository<
    * ```typescript
    * const battery = await repo.getEquipmentBattery('550e8400-...');
    * if (battery) {
-   *   console.log(`Batterie: ${battery.name}, Capacité: ${battery.capacity}`);
+   *   logger.info(`Batterie: ${battery.name}, Capacité: ${battery.capacity}`);
    * }
    * ```
    */
@@ -232,7 +234,7 @@ export class ConfigurationRepository extends BaseRepository<
 
         const newBattery = result[0];
         if (!newBattery) {
-          throw new Error('Failed to create equipment battery');
+          throw new AppError('Failed to create equipment battery', 500);
         }
 
         this.emitEvent('equipment_battery:created', { 
@@ -356,7 +358,7 @@ export class ConfigurationRepository extends BaseRepository<
    * // Tous les objectifs d'un projet
    * const targets = await repo.getMarginTargets('550e8400-...');
    * targets.forEach(t => {
-   *   console.log(`Objectif: ${t.targetPercentage}%, Marge réalisée: ${t.actualPercentage}%`);
+   *   logger.info(`Objectif: ${t.targetPercentage}%, Marge réalisée: ${t.actualPercentage}%`);
    * });
    * 
    * // Tous les objectifs (sans filtre)
@@ -396,7 +398,7 @@ export class ConfigurationRepository extends BaseRepository<
    * ```typescript
    * const target = await repo.getMarginTarget('550e8400-...');
    * if (target) {
-   *   console.log(`Objectif: ${target.targetPercentage}%, Statut: ${target.status}`);
+   *   logger.info(`Objectif: ${target.targetPercentage}%, Statut: ${target.status}`);
    * }
    * ```
    */
@@ -459,7 +461,7 @@ export class ConfigurationRepository extends BaseRepository<
 
         const newTarget = result[0];
         if (!newTarget) {
-          throw new Error('Failed to create margin target');
+          throw new AppError('Failed to create margin target', 500);
         }
 
         this.emitEvent('margin_target:created', { 

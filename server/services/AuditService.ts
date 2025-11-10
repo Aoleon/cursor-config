@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { withErrorHandling } from './utils/error-handler';
 import { eq, and, or, desc, asc, gte, lte, sql, count, avg, max, min, isNull, inArray } from "drizzle-orm";
 import type { EventBus } from "../eventBus";
 import type { IStorage } from "../storage-poc";
@@ -122,7 +123,9 @@ export class AuditService {
    * Log un événement d'audit dans le système
    */
   async logEvent(event: AuditEvent): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const eventId = crypto.randomUUID();
       const timestamp = new Date();
 
@@ -191,14 +194,14 @@ export class AuditService {
 
       return eventId;
 
-    } catch (error) {
-      logger.error('Erreur lors du logging', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'logEvent',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Échec du logging d\'audit', error as Error);
     }
@@ -208,7 +211,9 @@ export class AuditService {
    * Créer une alerte de sécurité
    */
   async createSecurityAlert(alertData: SecurityAlertEvent): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const alertId = crypto.randomUUID();
       const timestamp = new Date();
 
@@ -294,14 +299,14 @@ export class AuditService {
       });
       return alertId;
 
-    } catch (error) {
-      logger.error('Erreur createSecurityAlert', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'createSecurityAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Échec de création d\'alerte de sécurité', error as Error);
     }
@@ -315,7 +320,9 @@ export class AuditService {
    * Analyser un événement pour détecter des patterns suspects
    */
   private async analyzeForSecurityAlerts(event: AuditEvent, eventId: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. Détection violations RBAC multiples
       if (event.eventType === 'rbac.violation') {
         await this.detectRepeatedRbacViolations(event);
@@ -339,14 +346,14 @@ export class AuditService {
         await this.detectUnauthorizedAccess(event);
       }
 
-    } catch (error) {
-      logger.error('Erreur analyzeForSecurityAlerts', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'analyzeForSecurityAlerts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -533,7 +540,9 @@ export class AuditService {
     total: number;
     pagination: { limit: number; offset: number; hasMore: boolean };
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Construire les conditions de filtre
       const conditions = [];
       
@@ -590,14 +599,14 @@ export class AuditService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur getAuditLogs', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'getAuditLogs',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Échec de récupération des logs d\'audit', error as Error);
     }
@@ -611,7 +620,9 @@ export class AuditService {
     total: number;
     pagination: { limit: number; offset: number; hasMore: boolean };
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Construire les conditions de filtre
       const conditions = [];
       
@@ -673,14 +684,14 @@ export class AuditService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur getSecurityAlerts', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'getSecurityAlerts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Échec de récupération des alertes de sécurité', error as Error);
     }
@@ -690,7 +701,9 @@ export class AuditService {
    * Générer métriques de sécurité globales
    */
   async getSecurityMetrics(timeRange: '1h' | '24h' | '7d' | '30d' = '24h'): Promise<SecurityMetrics> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const timeRangeMs = {
         '1h': 60 * 60 * 1000,
         '24h': 24 * 60 * 60 * 1000,
@@ -746,14 +759,14 @@ export class AuditService {
         alertsGenerated: alerts.alertsGenerated || 0
       };
 
-    } catch (error) {
-      logger.error('Erreur getSecurityMetrics', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'getSecurityMetrics',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Échec de calcul des métriques de sécurité', error as Error);
     }
@@ -763,7 +776,9 @@ export class AuditService {
    * Générer analytics chatbot détaillées
    */
   async getChatbotAnalytics(timeRange: '1h' | '24h' | '7d' | '30d' = '24h'): Promise<ChatbotAnalytics> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const timeRangeMs = {
         '1h': 60 * 60 * 1000,
         '24h': 24 * 60 * 60 * 1000,
@@ -840,14 +855,14 @@ export class AuditService {
         }, {} as Record<string, number>)
       };
 
-    } catch (error) {
-      logger.error('Erreur getChatbotAnalytics', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'getChatbotAnalytics',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Échec de calcul des analytics chatbot', error as Error);
     }
@@ -857,7 +872,9 @@ export class AuditService {
    * Générer rapport d'activité utilisateur
    */
   async getUserActivityReport(userId: string, timeRange: '7d' | '30d' = '30d'): Promise<UserActivityReport> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const timeRangeMs = timeRange === '7d' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
       const since = new Date(Date.now() - timeRangeMs);
 
@@ -915,14 +932,14 @@ export class AuditService {
         )
       };
 
-    } catch (error) {
-      logger.error('Erreur getUserActivityReport', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'getUserActivityReport',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Échec de génération du rapport d\'activité utilisateur', error as Error);
     }
@@ -941,7 +958,9 @@ export class AuditService {
     resolutionNote?: string,
     resolutionAction?: string
   ): Promise<boolean> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db
         .update(securityAlerts)
         .set({
@@ -978,14 +997,14 @@ export class AuditService {
 
       return true;
 
-    } catch (error) {
-      logger.error('Erreur resolveSecurityAlert', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'resolveSecurityAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
       return false;
     }
@@ -995,7 +1014,9 @@ export class AuditService {
    * Archiver anciens logs selon la configuration de rétention
    */
   async archiveOldLogs(): Promise<{ archived: number; deleted: number }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (!this.config.enableAutoArchive) {
         return { archived: 0, deleted: 0 };
       }
@@ -1037,14 +1058,14 @@ export class AuditService {
         deleted: deletedResult.rowCount || 0
       };
 
-    } catch (error) {
-      logger.error('Erreur archiveOldLogs', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'archiveOldLogs',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
       return { archived: 0, deleted: 0 };
     }
@@ -1054,7 +1075,9 @@ export class AuditService {
    * Exporter logs d'audit au format CSV
    */
   async exportAuditLogsCSV(query: AuditLogsQuery): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const { logs } = await this.getAuditLogs({ ...query, limit: 10000 }); // Max 10k pour export
 
       // Headers CSV
@@ -1091,14 +1114,14 @@ export class AuditService {
 
       return csvContent;
 
-    } catch (error) {
-      logger.error('Erreur exportAuditLogsCSV', {
-        metadata: {
-          service: 'AuditService',
-          operation: 'exportAuditLogsCSV',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError('Échec d\'export CSV des logs d\'audit', error as Error);
     }
@@ -1188,19 +1211,21 @@ export class AuditService {
     // Archivage automatique toutes les heures
     if (this.config.enableAutoArchive) {
       setInterval(async () => {
-        try {
+        return withErrorHandling(
+    async () => {
+
           await this.archiveOldLogs();
-        } catch (error) {
-          logger.error('Erreur archivage périodique', {
-            metadata: {
-              service: 'AuditService',
-              operation: 'periodicArchive',
-              error: error instanceof Error ? error.message : String(error),
-              stack: error instanceof Error ? error.stack : undefined
-            }
+        
+    },
+    {
+      operation: 'jours',
+      service: 'AuditService',
+      metadata: {}
+    }
+  );
           });
         }
-      }, 60 * 60 * 1000); // 1 heure
+}, 60 * 60 * 1000); // 1 heure;
     }
 
     // Nettoyage des cooldowns toutes les 10 minutes

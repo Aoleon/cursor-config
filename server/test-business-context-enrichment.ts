@@ -5,6 +5,7 @@
  */
 
 import { db } from "./db";
+import { withErrorHandling } from './utils/error-handler';
 import { BusinessContextService } from "./services/BusinessContextService";
 import { RBACService } from "./services/RBACService";
 import { EventBus } from "./eventBus";
@@ -12,10 +13,12 @@ import { MemStorage } from "./storage-poc";
 import { logger } from "./utils/logger";
 
 async function testBusinessContextEnrichment() {
-  console.log("🧪 Test des enrichissements BusinessContextService - Phase 3\n");
-  console.log("=" .repeat(60));
+  logger.info("🧪 Test des enrichissements BusinessContextService - Phase 3\n");
+  logger.info("=" .repeat(60));
 
-  try {
+  return withErrorHandling(
+    async () => {
+
     // Initialisation des services
     const storage = new MemStorage();
     const eventBus = new EventBus();
@@ -23,48 +26,48 @@ async function testBusinessContextEnrichment() {
     const businessContextService = new BusinessContextService(storage, rbacService, eventBus);
 
     // Test 1: Récupération des métadonnées enrichies
-    console.log("\n📊 Test 1: Récupération des métadonnées enrichies");
-    console.log("-".repeat(50));
+    logger.info("\n📊 Test 1: Récupération des métadonnées enrichies");
+    logger.info("-".repeat(50));
     
     const metadata = await businessContextService.getEnrichedSchemaMetadata();
     
-    console.log(`✅ Tables enrichies: ${Object.keys(metadata.tables).length}`);
-    console.log(`   Tables disponibles: ${Object.keys(metadata.tables).join(', ')}`);
+    logger.info(`✅ Tables enrichies: ${Object.keys(metadata.tables).length}`);
+    logger.info(`   Tables disponibles: ${Object.keys(metadata.tables).join(', ')}`);
     
-    console.log(`\n✅ Dictionnaire métier: ${Object.keys(metadata.businessDictionary).length} entrées`);
+    logger.info(`\n✅ Dictionnaire métier: ${Object.keys(metadata.businessDictionary).length} entrées`);
     const sampleDictEntries = Object.entries(metadata.businessDictionary).slice(0, 5);
     sampleDictEntries.forEach(([fr, sql]) => {
-      console.log(`   "${fr}" → ${sql}`);
+      logger.info(`   "${fr}" → ${sql}`);
     });
     
-    console.log(`\n✅ Contextes spécialisés: ${Object.keys(metadata.domainContexts).length}`);
-    console.log(`   Domaines: ${Object.keys(metadata.domainContexts).join(', ')}`);
+    logger.info(`\n✅ Contextes spécialisés: ${Object.keys(metadata.domainContexts).length}`);
+    logger.info(`   Domaines: ${Object.keys(metadata.domainContexts).join(', ')}`);
 
     // Test 2: Analyse d'une table enrichie (offers)
-    console.log("\n📋 Test 2: Analyse détaillée de la table 'offers'");
-    console.log("-".repeat(50));
+    logger.info("\n📋 Test 2: Analyse détaillée de la table 'offers'");
+    logger.info("-".repeat(50));
     
     const offersTable = metadata.tables.offers;
     if (offersTable) {
-      console.log(`✅ Table: ${offersTable.businessName} (${offersTable.tableName})`);
-      console.log(`   Description: ${offersTable.description}`);
-      console.log(`   Domaines: ${offersTable.domain.join(', ')}`);
-      console.log(`   Colonnes: ${offersTable.columns.length}`);
-      console.log(`   Relations: ${offersTable.relations.length}`);
-      console.log(`   Exemples SQL: ${offersTable.sqlExamples.length}`);
+      logger.info(`✅ Table: ${offersTable.businessName} (${offersTable.tableName})`);
+      logger.info(`   Description: ${offersTable.description}`);
+      logger.info(`   Domaines: ${offersTable.domain.join(', ')}`);
+      logger.info(`   Colonnes: ${offersTable.columns.length}`);
+      logger.info(`   Relations: ${offersTable.relations.length}`);
+      logger.info(`   Exemples SQL: ${offersTable.sqlExamples.length}`);
       
       // Afficher un exemple SQL
       if (offersTable.sqlExamples.length > 0) {
         const example = offersTable.sqlExamples[0];
-        console.log(`\n   Exemple SQL:`);
-        console.log(`   ${example.description}`);
-        console.log(`   ${example.sql.replace(/\n/g, '\n   ')}`);
+        logger.info(`\n   Exemple SQL:`);
+        logger.info(`   ${example.description}`);
+        logger.info(`   ${example.sql.replace(/\n/g, '\n   ')}`);
       }
     }
 
     // Test 3: Contexte SQL intelligent avec détection de domaine
-    console.log("\n🤖 Test 3: Génération de contexte SQL intelligent");
-    console.log("-".repeat(50));
+    logger.info("\n🤖 Test 3: Génération de contexte SQL intelligent");
+    logger.info("-".repeat(50));
     
     const testQueries = [
       {
@@ -86,7 +89,7 @@ async function testBusinessContextEnrichment() {
     ];
 
     for (const testCase of testQueries) {
-      console.log(`\n📝 Requête: "${testCase.query}"`);
+      logger.info(`\n📝 Requête: "${testCase.query}"`);
       
       const context = await businessContextService.buildIntelligentContextForSQL(
         "admin-test",
@@ -103,11 +106,11 @@ async function testBusinessContextEnrichment() {
       if (domainLine) {
         const detectedDomain = domainLine.split(':')[1].trim();
         const isCorrect = detectedDomain === testCase.expectedDomain;
-        console.log(`   ✅ Domaine détecté: ${detectedDomain} ${isCorrect ? '✓' : '✗ (attendu: ' + testCase.expectedDomain + ')'}`);
+        logger.info(`   ✅ Domaine détecté: ${detectedDomain} ${isCorrect ? '✓' : '✗ (attendu: ' + testCase.expectedDomain + ')'}`);
       }
       
       if (entitiesLine) {
-        console.log(`   ${entitiesLine}`);
+        logger.info(`   ${entitiesLine}`);
       }
       
       // Compter les tables incluses
@@ -116,7 +119,7 @@ async function testBusinessContextEnrichment() {
         if (lines[i].startsWith('TABLE:')) tableCount++;
         if (lines[i].startsWith('===')) break;
       }
-      console.log(`   ✅ Tables pertinentes incluses: ${tableCount}`);
+      logger.info(`   ✅ Tables pertinentes incluses: ${tableCount}`);
       
       // Vérifier la présence des sections enrichies
       const hasSynonyms = context.includes('=== SYNONYMES MÉTIER ===');
@@ -124,18 +127,18 @@ async function testBusinessContextEnrichment() {
       const hasJoins = context.includes('=== JOINTURES RECOMMANDÉES ===');
       const hasOptimization = context.includes('=== HINTS D\'OPTIMISATION ===');
       
-      console.log(`   ✅ Sections enrichies:`);
-      console.log(`      - Synonymes métier: ${hasSynonyms ? '✓' : '✗'}`);
-      console.log(`      - Exemples SQL: ${hasExamples ? '✓' : '✗'}`);
-      console.log(`      - Jointures recommandées: ${hasJoins ? '✓' : '✗'}`);
-      console.log(`      - Hints optimisation: ${hasOptimization ? '✓' : '✗'}`);
+      logger.info(`   ✅ Sections enrichies:`);
+      logger.info(`      - Synonymes métier: ${hasSynonyms ? '✓' : '✗'}`);
+      logger.info(`      - Exemples SQL: ${hasExamples ? '✓' : '✗'}`);
+      logger.info(`      - Jointures recommandées: ${hasJoins ? '✓' : '✗'}`);
+      logger.info(`      - Hints optimisation: ${hasOptimization ? '✓' : '✗'}`);
       
-      console.log(`   ✅ Taille contexte: ${context.length} caractères`);
+      logger.info(`   ✅ Taille contexte: ${context.length} caractères`);
     }
 
     // Test 4: Performance et cache
-    console.log("\n⚡ Test 4: Performance et cache");
-    console.log("-".repeat(50));
+    logger.info("\n⚡ Test 4: Performance et cache");
+    logger.info("-".repeat(50));
     
     const perfQuery = "Montrer les offres en cours de chiffrage";
     
@@ -147,7 +150,7 @@ async function testBusinessContextEnrichment() {
       perfQuery
     );
     const time1 = Date.now() - start1;
-    console.log(`✅ Premier appel: ${time1}ms`);
+    logger.info(`✅ Premier appel: ${time1}ms`);
     
     // Deuxième appel (avec cache)
     const start2 = Date.now();
@@ -157,41 +160,41 @@ async function testBusinessContextEnrichment() {
       perfQuery
     );
     const time2 = Date.now() - start2;
-    console.log(`✅ Deuxième appel (cache): ${time2}ms`);
+    logger.info(`✅ Deuxième appel (cache): ${time2}ms`);
     
     const speedup = Math.round((time1 / time2) * 100) / 100;
-    console.log(`✅ Amélioration performance: ${speedup}x plus rapide`);
+    logger.info(`✅ Amélioration performance: ${speedup}x plus rapide`);
 
     // Test 5: Vérification de l'intégration des domaines
-    console.log("\n🏗️ Test 5: Contextes spécialisés par domaine");
-    console.log("-".repeat(50));
+    logger.info("\n🏗️ Test 5: Contextes spécialisés par domaine");
+    logger.info("-".repeat(50));
     
     const domains = Object.keys(metadata.domainContexts);
     domains.forEach(domain => {
       const ctx = metadata.domainContexts[domain];
-      console.log(`\n✅ Domaine: ${domain}`);
-      console.log(`   Description: ${ctx.description}`);
+      logger.info(`\n✅ Domaine: ${domain}`);
+      logger.info(`   Description: ${ctx.description}`);
       if (ctx.tables) {
-        console.log(`   Tables principales: ${ctx.tables.join(', ')}`);
+        logger.info(`   Tables principales: ${ctx.tables.join(', ')}`);
       }
       if (ctx.business_rules) {
-        console.log(`   Règles métier: ${ctx.business_rules.length}`);
+        logger.info(`   Règles métier: ${ctx.business_rules.length}`);
       }
     });
 
-    console.log("\n" + "=".repeat(60));
-    console.log("✅ Tous les tests ont réussi !");
-    console.log("Les enrichissements du BusinessContextService sont opérationnels.");
-    console.log("=".repeat(60));
+    logger.info("\n" + "=".repeat(60));
+    logger.info("✅ Tous les tests ont réussi !");
+    logger.info("Les enrichissements du BusinessContextService sont opérationnels.");
+    logger.info("=".repeat(60));
 
-  } catch (error) {
-    console.error("\n❌ Erreur lors des tests:", error);
-    logger.error('Test BusinessContext échoué', {
-      metadata: {
-        service: 'TestBusinessContext',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+  
+    },
+    {
+      operation: 'testBusinessContextEnrichment',
+      service: 'test-business-context-enrichment',
+      metadata: {}
+    }
+  );
     });
     process.exit(1);
   }
@@ -200,10 +203,10 @@ async function testBusinessContextEnrichment() {
 // Exécution du test
 testBusinessContextEnrichment()
   .then(() => {
-    console.log("\n✨ Tests terminés avec succès");
+    logger.info("\n✨ Tests terminés avec succès");
     process.exit(0);
   })
   .catch(error => {
-    console.error("Erreur fatale:", error);
+    logger.error('Erreur', "Erreur fatale:", error);
     process.exit(1);
   });

@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { withErrorHandling } from './utils/error-handler';
 
 /**
  * Options de configuration du circuit breaker
@@ -125,7 +126,9 @@ export class CircuitBreaker {
     
     this.totalRequests++;
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Exécuter la fonction
       const result = await fn();
       
@@ -138,99 +141,14 @@ export class CircuitBreaker {
       
       return result;
       
-    } catch (error) {
-      // Enregistrer l'échec
-      this.onFailure();
-      
-      if (this.state === 'half-open') {
-        this.halfOpenRequests--;
-      }
-      
-      throw error;
+    
+    },
+    {
+      operation: 'circuit',
+      service: 'circuit-breaker',
+      metadata: {}
     }
-  }
-  
-  /**
-   * Vérifie si une requête peut être exécutée
-   */
-  private canExecute(): boolean {
-    // Nettoyer les anciens timestamps d'erreurs
-    this.cleanOldErrors();
-    
-    switch (this.state) {
-      case 'closed':
-        return true;
-        
-      case 'open':
-        // Vérifier si on peut passer en half-open
-        if (this.shouldTransitionToHalfOpen()) {
-          this.transitionToHalfOpen();
-          return true;
-        }
-        return false;
-        
-      case 'half-open':
-        // Permettre un nombre limité de requêtes en half-open
-        return this.halfOpenRequests < this.maxHalfOpenRequests;
-        
-      default:
-        return false;
-    }
-  }
-  
-  /**
-   * Enregistre un succès
-   */
-  private onSuccess(): void {
-    this.successes++;
-    this.consecutiveSuccesses++;
-    this.consecutiveFailures = 0;
-    this.lastSuccessTime = new Date();
-    
-    logger.info('Circuit breaker success', {
-      metadata: {
-        service: 'CircuitBreaker',
-        operation: 'onSuccess',
-        circuitName: this.name,
-        state: this.state,
-        consecutiveSuccesses: this.consecutiveSuccesses
-      }
-    });
-    
-    // Si en half-open et suffisamment de succès, fermer le circuit
-    if (this.state === 'half-open') {
-      if (this.consecutiveSuccesses >= 3) {
-        this.transitionToClosed();
-      }
-    }
-  }
-  
-  /**
-   * Enregistre un échec
-   */
-  private onFailure(): void {
-    this.failures++;
-    this.consecutiveFailures++;
-    this.consecutiveSuccesses = 0;
-    this.lastFailureTime = new Date();
-    this.errorTimestamps.push(Date.now());
-    
-    logger.warn('Circuit breaker failure', {
-      metadata: {
-        service: 'CircuitBreaker',
-        operation: 'onFailure',
-        circuitName: this.name,
-        state: this.state,
-        consecutiveFailures: this.consecutiveFailures,
-        threshold: this.threshold
-      }
-    });
-    
-    // Si en half-open, retourner immédiatement à open
-    if (this.state === 'half-open') {
-      this.transitionToOpen();
-      return;
-    }
+  );
     
     // Si fermé et trop d'échecs dans la fenêtre, ouvrir
     if (this.state === 'closed') {

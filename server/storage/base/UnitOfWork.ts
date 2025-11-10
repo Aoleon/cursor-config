@@ -4,6 +4,7 @@
  */
 
 import type { DrizzleTransaction } from '../types';
+import { withErrorHandling } from './utils/error-handler';
 import { withTransaction, type TransactionOptions } from '../../utils/database-helpers';
 import { logger } from '../../utils/logger';
 
@@ -81,7 +82,9 @@ export class UnitOfWork {
       }
     });
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Utilisation de withTransaction avec this.db pour utiliser l'instance correcte
       // Le commit est automatique si pas d'erreur, rollback automatique si erreur
       const result = await withTransaction(this.db, async (tx) => {
@@ -96,15 +99,14 @@ export class UnitOfWork {
       });
 
       return result;
-    } catch (error) {
-      logger.error('Unit of Work échouée, rollback automatique', error as Error, {
-        metadata: {
-          module: 'UnitOfWork',
-          operation: 'execute'
-        }
-      });
-      throw error;
+    
+    },
+    {
+      operation: 'begin',
+      service: 'UnitOfWork',
+      metadata: {}
     }
+  );
   }
 }
 

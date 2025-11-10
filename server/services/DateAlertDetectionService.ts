@@ -1,4 +1,5 @@
 import type { IStorage } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
 import { EventBus } from "../eventBus";
 import { DateIntelligenceService } from "./DateIntelligenceService";
 import { logger } from '../utils/logger';
@@ -191,7 +192,9 @@ export class DateAlertDetectionService {
   async detectDelayRisks(projectId?: string): Promise<InsertDateAlert[]> {
     const alerts: InsertDateAlert[] = [];
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer les projets actifs
       let projects: (Project & { responsibleUser?: User; offer?: Offer })[];
       
@@ -242,14 +245,14 @@ export class DateAlertDetectionService {
       });
       return alerts;
       
-    } catch (error) {
-      logger.error('Erreur détection risques de retard', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'detectDelayRisks',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
@@ -262,7 +265,9 @@ export class DateAlertDetectionService {
   async detectPlanningConflicts(timeframe: TimeRange): Promise<InsertDateAlert[]> {
     const alerts: InsertDateAlert[] = [];
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer toutes les timelines dans la période
       const allTimelines = await this.storage.getAllProjectTimelines();
       const timelinesInRange = allTimelines.filter(tl => {
@@ -304,14 +309,14 @@ export class DateAlertDetectionService {
       });
       return alerts;
       
-    } catch (error) {
-      logger.error('Erreur détection conflits de planning', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'detectPlanningConflicts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
@@ -326,7 +331,9 @@ export class DateAlertDetectionService {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() + daysAhead);
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. Vérification échéances projets
       const projects = await this.storage.getProjects();
       for (const project of projects) {
@@ -386,14 +393,14 @@ export class DateAlertDetectionService {
       });
       return alerts;
       
-    } catch (error) {
-      logger.error('Erreur détection échéances critiques', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'detectCriticalDeadlines',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
@@ -406,7 +413,9 @@ export class DateAlertDetectionService {
   async detectOptimizationOpportunities(): Promise<InsertDateAlert[]> {
     const alerts: InsertDateAlert[] = [];
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       const projects = await this.storage.getProjects();
       
       for (const project of projects) {
@@ -445,14 +454,14 @@ export class DateAlertDetectionService {
       });
       return alerts;
       
-    } catch (error) {
-      logger.error('Erreur détection opportunités d\'optimisation', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'detectOptimizationOpportunities',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
@@ -475,7 +484,9 @@ export class DateAlertDetectionService {
       recommendations: []
     };
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Démarrage détection globale', {
         metadata: {
           service: 'DateAlertDetectionService',
@@ -543,14 +554,14 @@ export class DateAlertDetectionService {
       
       return summary;
       
-    } catch (error) {
-      logger.error('Erreur détection globale', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'runPeriodicDetection',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       summary.detectionRunTime = Date.now() - startTime;
       return summary;
@@ -562,7 +573,9 @@ export class DateAlertDetectionService {
   // ========================================
   
   async acknowledgeAlert(alertId: string, userId: string, note?: string): Promise<DateAlert> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const updatedAlert = await this.storage.updateDateAlert(alertId, {
         status: 'acknowledged',
         acknowledgedAt: new Date(),
@@ -596,22 +609,23 @@ export class DateAlertDetectionService {
       });
       return updatedAlert;
       
-    } catch (error) {
-      logger.error('Erreur accusé réception alerte', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'acknowledgeAlert',
-          alertId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
   
   async resolveAlert(alertId: string, userId: string, resolution: string): Promise<DateAlert> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const updatedAlert = await this.storage.updateDateAlert(alertId, {
         status: 'resolved',
         resolvedAt: new Date(),
@@ -645,15 +659,14 @@ export class DateAlertDetectionService {
       });
       return updatedAlert;
       
-    } catch (error) {
-      logger.error('Erreur résolution alerte', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'resolveAlert',
-          alertId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -1150,7 +1163,9 @@ export class DateAlertDetectionService {
   }
 
   private async notifyNewAlert(alert: DateAlert): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Déterminer les utilisateurs à notifier
       const affectedUsers = await this.getAffectedUsers(alert);
       
@@ -1187,15 +1202,14 @@ export class DateAlertDetectionService {
         });
       }
       
-    } catch (error) {
-      logger.error('Erreur notification alerte', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'notifyAlertViaWebSocket',
-          alertId: alert.id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -1203,7 +1217,9 @@ export class DateAlertDetectionService {
   private async getAffectedUsers(alert: DateAlert): Promise<string[]> {
     const users: string[] = [];
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (alert.entityType === 'project') {
         const project = await this.storage.getProject(alert.entityId);
         if (project?.responsibleUserId) {
@@ -1221,14 +1237,14 @@ export class DateAlertDetectionService {
       
       return [...new Set(users)]; // Déduplication
       
-    } catch (error) {
-      logger.error('Erreur récupération utilisateurs affectés', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'getAffectedUsers',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
@@ -1242,7 +1258,9 @@ export class DateAlertDetectionService {
     project: Project, 
     delayRisk: DelayRiskDetection
   ): Promise<InsertDateAlert | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const severity = delayRisk.riskLevel === 'high' ? 'critical' : delayRisk.riskLevel === 'medium' ? 'warning' : 'info';
       
       return {
@@ -1262,14 +1280,14 @@ export class DateAlertDetectionService {
         suggestedActions: delayRisk.suggestedActions,
         status: 'pending'
       };
-    } catch (error) {
-      logger.error('Erreur création alerte risque retard', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'createDelayRiskAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
@@ -1279,7 +1297,9 @@ export class DateAlertDetectionService {
     project: Project,
     weatherRisk: DelayRisk
   ): Promise<InsertDateAlert | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return {
         entityType: 'project',
         entityId: project.id,
@@ -1295,21 +1315,23 @@ export class DateAlertDetectionService {
         suggestedActions: weatherRisk.mitigation.map(m => ({ action: m, priority: 'medium' as const, estimatedTime: 1, responsible: 'chef_equipe' })),
         status: 'pending'
       };
-    } catch (error) {
-      logger.error('Erreur création alerte retard météo', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'createWeatherDelayAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
   }
 
   private async createResourceConflictAlert(conflict: ResourceConflict): Promise<InsertDateAlert | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return {
         entityType: 'project',
         entityId: conflict.affectedProjects[0], // Premier projet affecté
@@ -1326,21 +1348,23 @@ export class DateAlertDetectionService {
         ],
         status: 'pending'
       };
-    } catch (error) {
-      logger.error('Erreur création alerte conflit ressource', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'createResourceConflictAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
   }
 
   private async createDependencyViolationAlert(violation: PlanningConflict): Promise<InsertDateAlert | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return {
         entityType: 'project',
         entityId: violation.affectedProjects[0],
@@ -1360,21 +1384,23 @@ export class DateAlertDetectionService {
         })),
         status: 'pending'
       };
-    } catch (error) {
-      logger.error('Erreur création alerte violation dépendance', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'createDependencyViolationAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
   }
 
   private async createScheduleOverlapAlert(overlap: PlanningConflict): Promise<InsertDateAlert | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return {
         entityType: 'project',
         entityId: overlap.affectedProjects[0],
@@ -1394,21 +1420,23 @@ export class DateAlertDetectionService {
         })),
         status: 'pending'
       };
-    } catch (error) {
-      logger.error('Erreur création alerte chevauchement planning', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'createScheduleOverlapAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
   }
 
   private async createCriticalDeadlineAlert(deadline: CriticalDeadline): Promise<InsertDateAlert | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const severity = deadline.daysRemaining <= deadline.bufferDays ? 'critical' : 
                       deadline.daysRemaining <= deadline.bufferDays * 2 ? 'warning' : 'info';
       
@@ -1433,14 +1461,14 @@ export class DateAlertDetectionService {
         })),
         status: 'pending'
       };
-    } catch (error) {
-      logger.error('Erreur création alerte échéance critique', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'createCriticalDeadlineAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
@@ -1450,7 +1478,9 @@ export class DateAlertDetectionService {
     deadline: CriticalDeadline, 
     authority: string
   ): Promise<InsertDateAlert | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return {
         entityType: deadline.entityType,
         entityId: deadline.entityId,
@@ -1469,21 +1499,23 @@ export class DateAlertDetectionService {
         ],
         status: 'pending'
       };
-    } catch (error) {
-      logger.error('Erreur création alerte échéance réglementaire', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'createRegulatoryDeadlineAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
   }
 
   private async createOptimizationAlert(opportunity: OptimizationOpportunity): Promise<InsertDateAlert | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return {
         entityType: opportunity.entityType,
         entityId: opportunity.entityId,
@@ -1499,14 +1531,14 @@ export class DateAlertDetectionService {
         ],
         status: 'pending'
       };
-    } catch (error) {
-      logger.error('Erreur création alerte optimisation', {
-        metadata: {
-          service: 'DateAlertDetectionService',
-          operation: 'createOptimizationAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
@@ -1774,7 +1806,9 @@ export class MenuiserieDetectionRules {
   private async evaluateProfitabilityThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
     const alertsCreated: string[] = [];
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. RÉCUPÉRER MÉTRIQUES RENTABILITÉ VIA ANALYTICS
       const profitabilityData = await this.analyticsService.calculateProfitabilityMetrics();
       
@@ -1819,10 +1853,14 @@ export class MenuiserieDetectionRules {
         }
       }
       
-    } catch (error) {
-      this.logger.error('Erreur évaluation seuils rentabilité:', error);
-      throw error;
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
     }
+  );
     
     return alertsCreated;
   }
@@ -1848,7 +1886,9 @@ export class MenuiserieDetectionRules {
       recommendations: []
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       this.logger.info('[BusinessThresholds] Démarrage évaluation seuils business');
       
       // 1. RÉCUPÉRER TOUS LES SEUILS ACTIFS
@@ -1928,17 +1968,22 @@ export class MenuiserieDetectionRules {
       
       return summary;
 
-    } catch (error) {
-      summary.detectionRunTime = Date.now() - startTime;
-      this.logger.error('[BusinessThresholds] Erreur évaluation seuils:', error);
-      throw error;
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
     }
+  );
   }
 
   private async evaluateTeamUtilizationThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
     const alertsCreated: string[] = [];
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. RÉCUPÉRER CHARGE ÉQUIPES VIA ANALYTICS
       const teamLoadData = await this.analyticsService.calculateTeamWorkloadMetrics();
       
@@ -1981,10 +2026,14 @@ export class MenuiserieDetectionRules {
         }
       }
       
-    } catch (error) {
-      this.logger.error('Erreur évaluation seuils utilisation équipe:', error);
-      throw error;
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
     }
+  );
     
     return alertsCreated;
   }
@@ -1992,7 +2041,9 @@ export class MenuiserieDetectionRules {
   private async evaluatePredictiveRiskThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
     const alertsCreated: string[] = [];
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. RÉCUPÉRER RISQUES PRÉDICTIFS
       const predictiveRisks = await this.predictiveEngineService.detectProjectRisks({
         risk_level: 'all',
@@ -2037,10 +2088,14 @@ export class MenuiserieDetectionRules {
         }
       }
       
-    } catch (error) {
-      this.logger.error('Erreur évaluation seuils risque prédictif:', error);
-      throw error;
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateAlertDetectionService',
+      metadata: {}
     }
+  );
     
     return alertsCreated;
   }

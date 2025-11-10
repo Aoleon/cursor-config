@@ -12,6 +12,7 @@
  */
 
 import { z } from 'zod';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import type { MondayAoData, MondayProjectData } from './mondayDataGenerator';
 import { logger } from './logger';
 
@@ -431,7 +432,7 @@ export function validateMondayAoData(data: MondayAoData): MondayAoData {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
-      throw new Error(`Validation Monday.com AO échouée: ${errorMessages}`);
+      throw new AppError(`Validation Monday.com AO échouée: ${errorMessages}`, 500);
     }
     throw error;
   }
@@ -463,7 +464,7 @@ export function validateMondayProjectData(data: MondayProjectData): MondayProjec
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
-      throw new Error(`Validation Monday.com Project échouée: ${errorMessages}`);
+      throw new AppError(`Validation Monday.com Project échouée: ${errorMessages}`, 500);
     }
     throw error;
   }
@@ -649,7 +650,7 @@ function validateWorkflowCompatibility(data: MondayProjectData): MondayProjectDa
 
   const saxiumStage = WORKFLOW_COMPATIBILITY[data.workflowStage as keyof typeof WORKFLOW_COMPATIBILITY];
   if (!saxiumStage) {
-    throw new Error(`Workflow stage "${data.workflowStage}" non compatible avec Saxium`);
+    throw new AppError(`Workflow stage "${data.workflowStage}" non compatible avec Saxium`, 500);
   }
 
   return data;

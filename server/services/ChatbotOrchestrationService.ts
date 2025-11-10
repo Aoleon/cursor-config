@@ -1,4 +1,5 @@
 import { AIService } from "./AIService";
+import { withErrorHandling } from './utils/error-handler';
 import { RBACService } from "./RBACService";
 import { SQLEngineService } from "./SQLEngineService";
 import { logger } from '../utils/logger';
@@ -193,7 +194,9 @@ export class ChatbotOrchestrationService {
       queryComplexity
     );
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('PARALLEL Démarrage requête', {
         metadata: {
           service: 'ChatbotOrchestrationService',
@@ -773,14 +776,14 @@ export class ChatbotOrchestrationService {
         } : undefined
       };
 
-    } catch (error) {
-      logger.error('Erreur pipeline parallèle', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'handleParallelQuery',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       // Enregistrer échec parallélisme
@@ -878,7 +881,9 @@ export class ChatbotOrchestrationService {
       this.detectQueryComplexity(request.query)
     );
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Démarrage requête', {
         metadata: {
           service: 'ChatbotOrchestrationService',
@@ -1282,15 +1287,14 @@ export class ChatbotOrchestrationService {
 
       return response;
 
-    } catch (error) {
-      logger.error('Erreur pipeline complet', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'handleQuery',
-          traceId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       // === FINALISER LE TRACING EN ERREUR ===
@@ -1391,7 +1395,9 @@ export class ChatbotOrchestrationService {
    * Génère des suggestions contextuelles basées sur le rôle et l'historique
    */
   async getIntelligentSuggestions(request: ChatbotSuggestionsRequest): Promise<ChatbotSuggestionsResponse> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const startTime = Date.now();
 
       // 1. Récupérer suggestions prédéfinies pour le rôle
@@ -1456,14 +1462,14 @@ export class ChatbotOrchestrationService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur suggestions', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'getSuggestions',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       await this.logUsageMetrics(
@@ -1497,7 +1503,9 @@ export class ChatbotOrchestrationService {
    * Valide une requête chatbot sans l'exécuter
    */
   async validateChatbotQuery(request: ChatbotValidateRequest): Promise<ChatbotValidateResponse> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const startTime = Date.now();
 
       // 1. Validation RBAC de base
@@ -1547,14 +1555,14 @@ export class ChatbotOrchestrationService {
         restricted_columns: []
       };
 
-    } catch (error) {
-      logger.error('Erreur validation', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'validateResponse',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       await this.logUsageMetrics(
@@ -1597,7 +1605,9 @@ export class ChatbotOrchestrationService {
    * Récupère l'historique des conversations d'un utilisateur
    */
   async getChatbotHistory(request: ChatbotHistoryRequest): Promise<ChatbotHistoryResponse> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const startTime = Date.now();
 
       // Construction des conditions WHERE
@@ -1689,14 +1699,14 @@ export class ChatbotOrchestrationService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur historique', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'getHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       await this.logUsageMetrics(
@@ -1729,7 +1739,9 @@ export class ChatbotOrchestrationService {
    * Enregistre le feedback utilisateur et déclenche l'apprentissage adaptatif
    */
   async processChatbotFeedback(request: ChatbotFeedbackRequest): Promise<ChatbotFeedbackResponse> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const feedbackId = crypto.randomUUID();
 
       // 1. Enregistrer le feedback
@@ -1785,14 +1797,14 @@ export class ChatbotOrchestrationService {
         thank_you_message: this.generateThankYouMessage(request.feedbackType, request.rating)
       };
 
-    } catch (error) {
-      logger.error('Erreur feedback', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'submitFeedback',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       return {
@@ -1813,7 +1825,9 @@ export class ChatbotOrchestrationService {
    * Génère des statistiques d'usage détaillées du chatbot
    */
   async getChatbotStats(request: ChatbotStatsRequest): Promise<ChatbotStatsResponse> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // TODO: Implémenter les statistiques complètes
       // Pour l'instant, on retourne des données de base
 
@@ -1860,14 +1874,14 @@ export class ChatbotOrchestrationService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur statistiques', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'getStats',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       return {
@@ -1901,16 +1915,18 @@ export class ChatbotOrchestrationService {
   // ========================================
 
   private async logConversation(conversation: InsertChatbotConversation): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.insert(chatbotConversations).values(conversation);
-    } catch (error) {
-      logger.error('Erreur logging conversation', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'logConversation',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -1923,7 +1939,9 @@ export class ChatbotOrchestrationService {
     success: boolean,
     tokensUsed: number
   ): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const metricsId = crypto.randomUUID();
       await db.insert(chatbotUsageMetrics).values({
         id: metricsId,
@@ -1938,14 +1956,14 @@ export class ChatbotOrchestrationService {
         totalTokensUsed: tokensUsed,
         estimatedCost: "0.0000" // TODO: calculer le coût réel - convertir en string
       });
-    } catch (error) {
-      logger.error('Erreur logging métriques', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'logMetrics',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -2069,7 +2087,9 @@ export class ChatbotOrchestrationService {
   }
 
   private async analyzeRecentPatterns(userId: string, userRole: string): Promise<string[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Analyser les requêtes récentes de l'utilisateur
       const recentQueries = await db
         .select({ query: chatbotConversations.query })
@@ -2096,14 +2116,14 @@ export class ChatbotOrchestrationService {
       }
 
       return patterns;
-    } catch (error) {
-      logger.error('Erreur analyse patterns', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'analyzePatterns',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
@@ -2188,7 +2208,9 @@ export class ChatbotOrchestrationService {
    * Propose une action sécurisée basée sur une intention détectée
    */
   async proposeAction(request: ProposeActionRequest): Promise<ProposeActionResponse> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Proposition d\'action', {
         metadata: {
           service: 'ChatbotOrchestrationService',
@@ -2212,14 +2234,14 @@ export class ChatbotOrchestrationService {
       );
 
       return response;
-    } catch (error) {
-      logger.error('Erreur proposition d\'action', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'proposeAction',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       await this.logUsageMetrics(
@@ -2247,7 +2269,9 @@ export class ChatbotOrchestrationService {
    * Exécute une action après confirmation utilisateur
    */
   async executeAction(request: ExecuteActionRequest): Promise<ExecuteActionResponse> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Exécution d\'action', {
         metadata: {
           service: 'ChatbotOrchestrationService',
@@ -2270,14 +2294,14 @@ export class ChatbotOrchestrationService {
       );
 
       return response;
-    } catch (error) {
-      logger.error('Erreur exécution d\'action', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'executeAction',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       await this.logUsageMetrics(
@@ -2304,7 +2328,9 @@ export class ChatbotOrchestrationService {
    * Récupère l'historique des actions d'un utilisateur
    */
   async getActionHistory(request: ActionHistoryRequest): Promise<ActionHistoryResponse> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Récupération historique actions', {
         metadata: {
           service: 'ChatbotOrchestrationService',
@@ -2326,14 +2352,14 @@ export class ChatbotOrchestrationService {
       );
 
       return response;
-    } catch (error) {
-      logger.error('Erreur historique actions', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'getActionHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       return {
@@ -2353,7 +2379,9 @@ export class ChatbotOrchestrationService {
    * Met à jour une confirmation d'action
    */
   async updateActionConfirmation(request: UpdateConfirmationRequest & { userId: string; userRole: string }): Promise<{ success: boolean; error?: any }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Mise à jour confirmation', {
         metadata: {
           service: 'ChatbotOrchestrationService',
@@ -2377,14 +2405,14 @@ export class ChatbotOrchestrationService {
       );
 
       return { success: true };
-    } catch (error) {
-      logger.error('Erreur mise à jour confirmation', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'updateConfirmation',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ChatbotOrchestrationService',
+      metadata: {}
+    }
+  );
       });
       
       await this.logUsageMetrics(
@@ -3844,19 +3872,19 @@ export class ChatbotOrchestrationService {
     
     // Suggestions basées sur le type de requête
     switch (queryPattern.queryType) {
-      case 'kpi':
+case 'kpi':;
         suggestions.push('Voir l\'évolution de ces KPIs sur le mois dernier');
         suggestions.push('Comparer avec la même période l\'année dernière');
         suggestions.push('Détailler par équipe ou par projet');
         break;
         
-      case 'comparison':
+case 'comparison':;
         suggestions.push('Analyser les facteurs de variation');
         suggestions.push('Voir le détail par semaine');
         suggestions.push('Exporter les données pour analyse approfondie');
         break;
         
-      case 'aggregation':
+case 'aggregation':;
         if (!queryPattern.aggregations.includes('group_by')) {
           suggestions.push('Grouper les résultats par catégorie');
         }
@@ -3864,7 +3892,7 @@ export class ChatbotOrchestrationService {
         suggestions.push('Afficher les valeurs extrêmes');
         break;
         
-      case 'list':
+case 'list':;
         if (results.length > 20) {
           suggestions.push('Filtrer par statut ou par date');
         }
@@ -3872,7 +3900,7 @@ export class ChatbotOrchestrationService {
         suggestions.push('Exporter la liste complète');
         break;
         
-      case 'detail':
+case 'detail':;
         suggestions.push('Voir l\'historique des modifications');
         suggestions.push('Comparer avec des éléments similaires');
         suggestions.push('Voir les documents associés');

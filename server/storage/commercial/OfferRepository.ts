@@ -11,6 +11,7 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { offers, aos, users, type Offer, type InsertOffer } from '@shared/schema';
 import type { DrizzleTransaction, PaginationOptions, PaginatedResult, SearchFilters, SortOptions } from '../types';
 import { eq, and, desc, ilike, or, count as drizzleCount } from 'drizzle-orm';
@@ -202,7 +203,7 @@ export class OfferRepository extends BaseRepository<
       async () => {
         const conditions = this.buildWhereConditions(filters);
         if (conditions.length === 0) {
-          throw new Error('deleteMany requires at least one filter condition for safety');
+          throw new AppError('deleteMany requires at least one filter condition for safety', 500);
         }
 
         const result = await dbToUse

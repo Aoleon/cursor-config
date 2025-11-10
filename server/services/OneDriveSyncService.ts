@@ -1,4 +1,5 @@
 import { oneDriveService, type OneDriveFile } from './OneDriveService';
+import { withErrorHandling } from './utils/error-handler';
 import type { IStorage } from '../storage-poc';
 import { logger } from '../utils/logger';
 import type { EventBus } from '../eventBus';
@@ -48,7 +49,9 @@ export class OneDriveSyncService {
       duration: 0
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const basePath = options.basePath || this.DEFAULT_AO_PATH;
       
       logger.info('Starting OneDrive synchronization', {
@@ -75,11 +78,14 @@ export class OneDriveSyncService {
           } else {
             result.filesSkipped++;
           }
-        } catch (error) {
-          logger.error('Failed to import file from OneDrive', error as Error, {
-            metadata: { fileName: file.name, fileId: file.id }
-          });
-          result.errors.push(`${file.name}: ${(error as Error).message}`);
+        
+    },
+    {
+      operation: 'constructor',
+service: 'OneDriveSyncService',;
+      metadata: {}
+    }
+  );: ${(error as Error).message}`);
         }
       }
 
@@ -121,7 +127,9 @@ export class OneDriveSyncService {
   private async scanFolder(path: string, recursive: boolean): Promise<OneDriveFile[]> {
     const allFiles: OneDriveFile[] = [];
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const items = await oneDriveService.listItems(path);
 
       for (const item of items) {
@@ -140,19 +148,23 @@ export class OneDriveSyncService {
       }
 
       return allFiles;
-    } catch (error) {
-      logger.error('Failed to scan OneDrive folder', error as Error, {
-        metadata: { path }
-      });
-      throw error;
+    
+    },
+    {
+      operation: 'constructor',
+service: 'OneDriveSyncService',;
+      metadata: {}
     }
+  );
   }
 
   /**
    * Importer un fichier depuis OneDrive dans la base de données
    */
   private async importFile(file: OneDriveFile, userId: string): Promise<'imported' | 'updated' | 'skipped'> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Vérifier si le fichier existe déjà (par oneDriveId)
       const existingDocs = await this.storage.getAllDocuments();
       const existingDoc = existingDocs.find((doc: any) => doc.oneDriveId === file.id);
@@ -216,12 +228,14 @@ export class OneDriveSyncService {
 
         return 'imported';
       }
-    } catch (error) {
-      logger.error('Failed to import OneDrive file', error as Error, {
-        metadata: { fileName: file.name, fileId: file.id }
-      });
-      throw error;
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveSyncService',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -253,7 +267,9 @@ export class OneDriveSyncService {
   async linkDocumentsToAOs(aoFolderPattern?: RegExp): Promise<number> {
     let linkedCount = 0;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer tous les documents synchronisés depuis OneDrive non liés
       const documents = await this.storage.getAllDocuments();
       const oneDriveDocs = documents.filter((doc: any) => 
@@ -284,10 +300,14 @@ export class OneDriveSyncService {
       }
 
       return linkedCount;
-    } catch (error) {
-      logger.error('Failed to link documents to AOs', error as Error);
-      throw error;
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveSyncService',
+      metadata: {}
     }
+  );
   }
 
   /**

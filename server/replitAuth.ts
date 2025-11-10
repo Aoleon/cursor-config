@@ -1,4 +1,6 @@
 import * as client from "openid-client";
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { Strategy, type VerifyFunction } from "openid-client/passport";
 
 import passport from "passport";
@@ -11,7 +13,7 @@ import { storage } from "./storage-poc";
 import { logger } from './utils/logger';
 
 if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
+  throw new AppError("Environment variable REPLIT_DOMAINS not provided", 500);
 }
 
 const getOidcConfig = memoize(
@@ -196,7 +198,9 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const claims = tokens.claims();
       if (!claims) {
         logger.error('Claims OIDC manquants', {
@@ -264,14 +268,14 @@ export async function setupAuth(app: Express) {
       });
       
       verified(null, user);
-    } catch (error) {
-      logger.error('Erreur dans callback OIDC verify', {
-        metadata: {
-          module: 'ReplitAuth',
-          operation: 'verifyOIDC',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'if',
+      service: 'replitAuth',
+      metadata: {}
+    }
+  );
       });
       verified(error, null);
     }
@@ -288,7 +292,7 @@ export async function setupAuth(app: Express) {
   for (const domain of domains) {
     // Détecter le protocole approprié
     const protocol = domain === 'localhost' ? 'http' : 'https';
-    const port = domain === 'localhost' ? ':5000' : '';
+    const port = domain === 'localhost' ? ':4000' : '';
     
     const strategy = new Strategy(
       {
@@ -317,7 +321,9 @@ export async function setupAuth(app: Express) {
   });
   
   passport.deserializeUser(async (serializedUser: any, cb) => {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Désérialisation utilisateur session', {
         metadata: {
           module: 'ReplitAuth',
@@ -381,14 +387,14 @@ export async function setupAuth(app: Express) {
       
       // Pour les autres types d'auth
       cb(null, dbUser);
-    } catch (error) {
-      logger.error('Erreur lors de la désérialisation utilisateur', {
-        metadata: {
-          module: 'ReplitAuth',
-          operation: 'deserializeUser',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'if',
+      service: 'replitAuth',
+      metadata: {}
+    }
+  );
       });
       cb(error, null);
     }
@@ -443,7 +449,9 @@ export async function setupAuth(app: Express) {
       });
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Créer un utilisateur test pour la session
       const testUser = {
         id: 'test-user-e2e-session',
@@ -490,14 +498,14 @@ export async function setupAuth(app: Express) {
           user: testUser
         });
       });
-    } catch (error) {
-      logger.error('Erreur dans test login', {
-        metadata: {
-          module: 'ReplitAuth',
-          operation: 'testLogin',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'if',
+      service: 'replitAuth',
+      metadata: {}
+    }
+  );
       });
       res.status(500).json({
         success: false,
@@ -533,7 +541,9 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
     // Token expired - try to refresh if refresh token available
     if (user.refreshToken) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         logger.info('[Auth] Microsoft token expired, attempting refresh', {
           metadata: {
             userId: user.id,
@@ -562,12 +572,14 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         });
 
         return next();
-      } catch (error) {
-        logger.error('[Auth] Failed to refresh Microsoft token', {
-          metadata: {
-            userId: user.id,
-            error: error instanceof Error ? error.message : String(error)
-          }
+      
+    },
+    {
+      operation: 'if',
+      service: 'replitAuth',
+      metadata: {}
+    }
+  );
         });
         
         // Clear session and return 401
@@ -688,7 +700,9 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         }
       });
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Stocker dans la session
         session.user = defaultDevUser;
         
@@ -730,14 +744,14 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         });
         return next();
         
-      } catch (error) {
-        logger.error('Erreur critique création utilisateur dev par défaut', {
-          metadata: {
-            module: 'ReplitAuth',
-            operation: 'isAuthenticated',
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined
-          }
+      
+    },
+    {
+      operation: 'if',
+      service: 'replitAuth',
+      metadata: {}
+    }
+  );
         });
         // En cas d'erreur, continuer avec le flow normal d'authentification
       }

@@ -1,4 +1,5 @@
 import { type Express } from "express";
+import { withErrorHandling } from './utils/error-handler';
 import { registerRoutes as registerPocRoutes } from "./routes-poc";
 import { storage, type IStorage } from "./storage-poc";
 import { setupAuth } from "./replitAuth";
@@ -183,7 +184,9 @@ export async function registerRoutes(app: Express) {
   
   await cacheService.warmupCache([
     async () => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         await mondayService.getBoards(50);
         logger.info('[CacheService] Monday boards préchargés', {
           metadata: {
@@ -191,13 +194,14 @@ export async function registerRoutes(app: Express) {
             operation: 'warmupCache'
           }
         });
-      } catch (error) {
-        logger.warn('[CacheService] Erreur préchargement Monday boards', {
-          metadata: {
-            module: 'Routes',
-            operation: 'warmupCache',
-            error: error instanceof Error ? error.message : String(error)
-          }
+      
+    },
+    {
+      operation: 'registerRoutes',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
       }
     }

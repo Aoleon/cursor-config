@@ -9,6 +9,7 @@
  */
 
 import type { IStorage, DatabaseStorage as DatabaseStorageType, DrizzleTransaction } from '../../storage-poc';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { DatabaseStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
 import { eventBus } from '../../eventBus';
@@ -442,7 +443,106 @@ export class StorageFacade {
   }
 
   // Legacy user operations
-  get upsertUser() { return this.legacyStorage.upsertUser.bind(this.legacyStorage); }
+  /**
+   * Récupère un utilisateur par son email
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    try {
+      const user = await this.userRepository.getUserByEmail(email);
+      if (user) {
+        this.facadeLogger.info('Utilisateur récupéré via UserRepository', {
+          metadata: { email, module: 'StorageFacade', operation: 'getUserByEmail' }
+        });
+      }
+      return user;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.getUserByEmail failed, falling back to legacy', {
+        metadata: { error, email, module: 'StorageFacade', operation: 'getUserByEmail' }
+      });
+      return await this.legacyStorage.getUserByEmail(email);
+    }
+  }
+
+  /**
+   * Récupère un utilisateur par son username
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    try {
+      const user = await this.userRepository.getUserByUsername(username);
+      if (user) {
+        this.facadeLogger.info('Utilisateur récupéré via UserRepository', {
+          metadata: { username, module: 'StorageFacade', operation: 'getUserByUsername' }
+        });
+      }
+      return user;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.getUserByUsername failed, falling back to legacy', {
+        metadata: { error, username, module: 'StorageFacade', operation: 'getUserByUsername' }
+      });
+      return await this.legacyStorage.getUserByUsername(username);
+    }
+  }
+
+  /**
+   * Récupère un utilisateur par son Microsoft ID
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async getUserByMicrosoftId(microsoftId: string): Promise<User | undefined> {
+    try {
+      const user = await this.userRepository.getUserByMicrosoftId(microsoftId);
+      if (user) {
+        this.facadeLogger.info('Utilisateur récupéré via UserRepository', {
+          metadata: { microsoftId, module: 'StorageFacade', operation: 'getUserByMicrosoftId' }
+        });
+      }
+      return user;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.getUserByMicrosoftId failed, falling back to legacy', {
+        metadata: { error, microsoftId, module: 'StorageFacade', operation: 'getUserByMicrosoftId' }
+      });
+      return await this.legacyStorage.getUserByMicrosoftId(microsoftId);
+    }
+  }
+
+  /**
+   * Crée un nouvel utilisateur
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async createUser(userData: Partial<UpsertUser>): Promise<User> {
+    try {
+      const user = await this.userRepository.createUser(userData);
+      this.facadeLogger.info('Utilisateur créé via UserRepository', {
+        metadata: { id: user.id, module: 'StorageFacade', operation: 'createUser' }
+      });
+      return user;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.createUser failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'createUser' }
+      });
+      return await this.legacyStorage.createUser(userData);
+    }
+  }
+
+  /**
+   * Crée ou met à jour un utilisateur (upsert)
+   * Utilise UserRepository avec fallback sur legacy
+   */
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    try {
+      const user = await this.userRepository.upsertUser(userData);
+      this.facadeLogger.info('Utilisateur upserté via UserRepository', {
+        metadata: { id: user.id, module: 'StorageFacade', operation: 'upsertUser' }
+      });
+      return user;
+    } catch (error) {
+      this.facadeLogger.warn('UserRepository.upsertUser failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'upsertUser' }
+      });
+      return await this.legacyStorage.upsertUser(userData);
+    }
+  }
 
   // ========================================
   // CONFIGURATION OPERATIONS - Déléguées vers ConfigurationRepository
@@ -2619,7 +2719,7 @@ export function initStorageFacade(eventBus: EventBus): StorageFacade {
  */
 export function getStorageFacade(): StorageFacade {
   if (!storageFacadeInstance) {
-    throw new Error('StorageFacade not initialized. Call initStorageFacade first.');
+    throw new AppError('StorageFacade not initialized. Call initStorageFacade first.', 500);
   }
   return storageFacadeInstance;
 }

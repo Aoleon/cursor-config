@@ -6,6 +6,7 @@
  */
 
 import { Router } from 'express';
+import { withErrorHandling } from './utils/error-handler';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler, sendSuccess, createError } from '../../middleware/errorHandler';
@@ -61,19 +62,19 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
         }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         const labelAssignments = await storage.getEmployeeLabelAssignments(userId);
         sendSuccess(res, labelAssignments);
-      } catch (error) {
-        logger.error('[HR] Erreur récupération labels employé', {
-          metadata: { 
-            route: '/api/employees/:id/labels',
-            method: 'GET',
-            employeeId: userId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'object',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database('Erreur lors de la récupération des labels employé');
       }
@@ -103,7 +104,9 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
         }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         const assignment = await storage.createEmployeeLabelAssignment({
           userId,
           labelId,
@@ -117,17 +120,14 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
         });
         
         sendSuccess(res, assignment, 'Label employé assigné avec succès');
-      } catch (error) {
-        logger.error('[HR] Erreur assignation label employé', {
-          metadata: { 
-            route: '/api/employees/:id/labels',
-            method: 'POST',
-            employeeId: userId,
-            labelId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'object',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database('Erreur lors de l\'assignation du label employé');
       }
@@ -155,7 +155,9 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
         }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.deleteEmployeeLabelAssignment(labelId);
         
         eventBus.emit('employee:label-removed', {
@@ -165,17 +167,14 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
         });
         
         sendSuccess(res, null, 'Label employé supprimé avec succès');
-      } catch (error) {
-        logger.error('[HR] Erreur suppression label employé', {
-          metadata: { 
-            route: '/api/employees/:userId/labels/:labelId',
-            method: 'DELETE',
-            targetUserId: userId,
-            labelId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            authenticatedUserId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'object',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database('Erreur lors de la suppression du label employé');
       }

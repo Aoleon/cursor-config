@@ -4,6 +4,7 @@ import type {
   TechnicalScoringResult
 } from "@shared/schema";
 import { defaultTechnicalScoringConfig as defaultConfig } from "@shared/schema";
+import { withErrorHandling } from './utils/error-handler';
 import { logger } from "../utils/logger";
 
 /**
@@ -87,7 +88,9 @@ export class ScoringService {
    * Valide une configuration de scoring
    */
   static validateConfig(config: TechnicalScoringConfig): boolean {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Vérifier que tous les poids sont dans la plage valide
       const weights = config.weights;
       const validWeights = Object.values(weights).every(w => w >= 0 && w <= 10);
@@ -96,14 +99,14 @@ export class ScoringService {
       const validThreshold = config.threshold >= 0 && config.threshold <= 50;
       
       return validWeights && validThreshold;
-    } catch (error) {
-      logger.error('Erreur validation config scoring', {
-        metadata: {
-          service: 'ScoringService',
-          operation: 'validateConfig',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'passif',
+      service: 'scoringService',
+      metadata: {}
+    }
+  );
       });
       return false;
     }

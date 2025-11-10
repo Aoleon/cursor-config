@@ -1,0 +1,94 @@
+{
+  "extends": [".eslintrc.json"],
+  "rules": {
+    // ========================================
+    // QUALITÉ CODE - RÈGLES STRICTES
+    // ========================================
+    
+    // INTERDICTION console.log/error (utiliser logger)
+    "no-console": ["error", { 
+      "allow": [] 
+    }],
+    
+    // INTERDICTION types any (utiliser types stricts)
+    "@typescript-eslint/no-explicit-any": ["error", {
+      "ignoreRestArgs": false,
+      "fixToUnknown": true
+    }],
+    
+    // INTERDICTION throw new Error() (utiliser erreurs typées)
+    "@typescript-eslint/no-throw-literal": ["error", {
+      "allowThrowingAny": false,
+      "allowThrowingUnknown": false
+    }],
+    
+    // LIMITE TAILLE FONCTIONS (max 100 lignes)
+    "max-lines-per-function": ["warn", {
+      "max": 100,
+      "skipBlankLines": true,
+      "skipComments": true
+    }],
+    
+    // LIMITE TAILLE FICHIERS (max 500 lignes)
+    "max-lines": ["warn", {
+      "max": 500,
+      "skipBlankLines": true,
+      "skipComments": true
+    }],
+    
+    // COMPLEXITÉ CYCLOMATIQUE (max 15)
+    "complexity": ["warn", 15],
+    
+    // INTERDICTION CODE DUPLIQUÉ
+    "no-duplicate-imports": "error",
+    
+    // OBLIGATION asyncHandler pour routes async
+    "@typescript-eslint/no-floating-promises": ["error", {
+      "ignoreVoid": false
+    }],
+    
+    // OBLIGATION gestion d'erreurs
+    "@typescript-eslint/no-misused-promises": ["error", {
+      "checksVoidReturn": false
+    }],
+    
+    // INTERDICTION paramètres non utilisés (sauf préfixés _)
+    "@typescript-eslint/no-unused-vars": ["error", {
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_"
+    }],
+    
+    // OBLIGATION return types explicites pour fonctions publiques
+    "@typescript-eslint/explicit-function-return-type": ["warn", {
+      "allowExpressions": true,
+      "allowTypedFunctionExpressions": true,
+      "allowHigherOrderFunctions": true,
+      "allowDirectConstAssertionInArrowFunctions": true
+    }],
+    
+    // INTERDICTION console dans tests (utiliser logger mock)
+    "no-console": ["error", { 
+      "allow": [] 
+    }]
+  },
+  "overrides": [
+    {
+      // Tests : règles plus souples
+      "files": ["**/*.test.ts", "**/*.spec.ts", "**/tests/**/*.ts"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "warn",
+        "max-lines-per-function": "off",
+        "max-lines": "off"
+      }
+    },
+    {
+      // Scripts : règles plus souples
+      "files": ["**/scripts/**/*.ts", "**/seeders/**/*.ts"],
+      "rules": {
+        "no-console": "warn",
+        "max-lines": "off"
+      }
+    }
+  ]
+}
+

@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { withErrorHandling } from './utils/error-handler';
 import { storage } from '../storage'
 import { validationMilestones, insertValidationMilestoneSchema } from '../../shared/schema'
 import { z } from 'zod'
@@ -103,7 +104,9 @@ router.patch('/:milestoneId', asyncHandler(async (req, res) => {
         }
       })
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Récupérer tous les milestones de cette offre
         const allMilestones = await storage.getValidationMilestones(updatedMilestone.offerId)
         
@@ -149,16 +152,14 @@ router.patch('/:milestoneId', asyncHandler(async (req, res) => {
             }
           })
         }
-      } catch (offerUpdateError) {
-        logger.error('Erreur vérification bouclage complet', offerUpdateError as Error, {
-          metadata: {
-            workflow: 'bouclage',
-            route: '/validation-milestones/:milestoneId',
-            offerId: updatedMilestone.offerId
-          }
-        })
-        // Ne pas faire échouer la requête si la vérification échoue
-      }
+      
+    },
+    {
+      operation: 'Router',
+      service: 'validation-milestones',
+      metadata: {}
+    }
+  );
     }
   }
   

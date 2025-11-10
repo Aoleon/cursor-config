@@ -5,12 +5,13 @@
 // ========================================
 
 import fetch from 'node-fetch';
+import { logger } from './utils/logger';
 
 const BASE_URL = 'http://localhost:5000';
 
 async function loginBasicAuth(): Promise<string | null> {
   try {
-    console.log('🔐 Connexion avec auth basique...');
+    logger.info('🔐 Connexion avec auth basique...');
     
     const response = await fetch(`${BASE_URL}/api/login/basic`, {
       method: 'POST',
@@ -24,7 +25,7 @@ async function loginBasicAuth(): Promise<string | null> {
     });
     
     if (!response.ok) {
-      console.log('❌ Échec connexion basic auth');
+      logger.info('❌ Échec connexion basic auth');
       return null;
     }
     
@@ -32,15 +33,15 @@ async function loginBasicAuth(): Promise<string | null> {
     const cookies = response.headers.raw()['set-cookie'];
     if (cookies && cookies.length > 0) {
       const sessionCookie = cookies[0].split(';')[0];
-      console.log('✅ Authentification réussie');
+      logger.info('✅ Authentification réussie');
       return sessionCookie;
     }
     
-    console.log('❌ Pas de cookie de session reçu');
+    logger.info('❌ Pas de cookie de session reçu');
     return null;
     
   } catch (error: any) {
-    console.log(`❌ Erreur auth: ${error.message}`);
+    logger.info(`❌ Erreur auth: ${error.message}`);
     return null;
   }
 }
@@ -86,12 +87,12 @@ async function testAuthenticatedEndpoint(endpoint: string, sessionCookie: string
 }
 
 async function validateAnalyticsEndpoints(): Promise<void> {
-  console.log('🚀 VALIDATION ENDPOINTS ANALYTICS AUTHENTIFIÉS\n');
+  logger.info('🚀 VALIDATION ENDPOINTS ANALYTICS AUTHENTIFIÉS\n');
   
   // 1. Authentification
   const sessionCookie = await loginBasicAuth();
   if (!sessionCookie) {
-    console.log('🚨 ARRÊT : Impossible de s\'authentifier');
+    logger.info('🚨 ARRÊT : Impossible de s\'authentifier');
     return;
   }
   
@@ -102,26 +103,26 @@ async function validateAnalyticsEndpoints(): Promise<void> {
     '/api/analytics/metrics'
   ];
   
-  console.log('\n📊 Test endpoints critiques...\n');
+  logger.info('\n📊 Test endpoints critiques...\n');
   
   let successCount = 0;
   let totalCount = 0;
   
   for (const endpoint of criticalEndpoints) {
-    console.log(`Testing ${endpoint}...`);
+    logger.info(`Testing ${endpoint}...`);
     const result = await testAuthenticatedEndpoint(endpoint, sessionCookie);
     totalCount++;
     
     if (result.success) {
       successCount++;
-      console.log(`✅ ${endpoint}: ${result.status} - Structure: ${result.hasValidStructure ? 'OK' : 'INVALID'}`);
+      logger.info(`✅ ${endpoint}: ${result.status} - Structure: ${result.hasValidStructure ? 'OK' : 'INVALID'}`);
       
       // Log structure pour validation
       if (result.data?.success !== undefined) {
-        console.log(`   → success: ${result.data.success}, hasData: ${!!result.data.data}`);
+        logger.info(`   → success: ${result.data.success}, hasData: ${!!result.data.data}`);
       }
     } else {
-      console.log(`❌ ${endpoint}: ${result.status} - ${result.error || 'Erreur'}`);
+      logger.info(`❌ ${endpoint}: ${result.status} - ${result.error || 'Erreur'}`);
     }
     
     // Pause entre tests
@@ -129,11 +130,11 @@ async function validateAnalyticsEndpoints(): Promise<void> {
   }
   
   // 3. Test spécifique alerts (stabilité)
-  console.log('\n🚨 Test stabilité alerts (critique)...');
+  logger.info('\n🚨 Test stabilité alerts (critique)...');
   const alertsResult = await testAuthenticatedEndpoint('/api/analytics/alerts', sessionCookie);
   
   if (alertsResult.success) {
-    console.log('✅ Route /api/analytics/alerts: STABLE');
+    logger.info('✅ Route /api/analytics/alerts: STABLE');
     
     // Vérifier structure executive alerts
     const alertsData = alertsResult.data?.data;
@@ -143,39 +144,39 @@ async function validateAnalyticsEndpoints(): Promise<void> {
         alertsData.critical_count !== undefined &&
         alertsData.recent_alerts !== undefined;
         
-      console.log(`   → Structure executive alerts: ${hasRequiredFields ? 'CONFORME' : 'INCOMPLÈTE'}`);
+      logger.info(`   → Structure executive alerts: ${hasRequiredFields ? 'CONFORME' : 'INCOMPLÈTE'}`);
       
       if (alertsData.data_warnings && alertsData.data_warnings.length > 0) {
-        console.log(`   ⚠️  Warnings: ${alertsData.data_warnings.join(', ')}`);
+        logger.info(`   ⚠️  Warnings: ${alertsData.data_warnings.join(', ')}`);
       }
     }
   } else {
-    console.log('❌ Route /api/analytics/alerts: INSTABLE');
+    logger.info('❌ Route /api/analytics/alerts: INSTABLE');
   }
   
   // 4. Résumé validation
-  console.log('\n' + '='.repeat(60));
-  console.log('🏗️  VALIDATION ARCHITECTURE FINALE');
-  console.log('='.repeat(60));
+  logger.info('\n' + '='.repeat(60));
+  logger.info('🏗️  VALIDATION ARCHITECTURE FINALE');
+  logger.info('='.repeat(60));
   
   const successRate = Math.round((successCount / totalCount) * 100);
   
-  console.log(`✅ Routing intégration: RÉSOLU (${successCount}/${totalCount} endpoints actifs)`);
-  console.log(`${alertsResult.success ? '✅' : '❌'} Alerts stabilité: ${alertsResult.success ? 'RÉSOLU' : 'ÉCHEC'}`);
-  console.log(`✅ Tests runtime réels: VALIDÉS`);
+  logger.info(`✅ Routing intégration: RÉSOLU (${successCount}/${totalCount} endpoints actifs)`);
+  logger.info(`${alertsResult.success ? '✅' : '❌'} Alerts stabilité: ${alertsResult.success ? 'RÉSOLU' : 'ÉCHEC'}`);
+  logger.info(`✅ Tests runtime réels: VALIDÉS`);
   
   // Verdict final
-  console.log('\n' + '='.repeat(60));
+  logger.info('\n' + '='.repeat(60));
   if (successRate >= 100 && alertsResult.success) {
-    console.log('🎉 PHASE 3.1.5 - ANALYTICS: ✅ 100% VALIDÉ');
-    console.log('Dashboard Analytics stable et fonctionnel pour validation architect');
+    logger.info('🎉 PHASE 3.1.5 - ANALYTICS: ✅ 100% VALIDÉ');
+    logger.info('Dashboard Analytics stable et fonctionnel pour validation architect');
   } else if (successRate >= 80) {
-    console.log('⚠️  PHASE 3.1.5 - ANALYTICS: 🟡 PARTIEL');
-    console.log('Fonctionnel mais avec warnings mineures');
+    logger.info('⚠️  PHASE 3.1.5 - ANALYTICS: 🟡 PARTIEL');
+    logger.info('Fonctionnel mais avec warnings mineures');
   } else {
-    console.log('🚨 PHASE 3.1.5 - ANALYTICS: ❌ ÉCHEC CRITIQUE');
+    logger.info('🚨 PHASE 3.1.5 - ANALYTICS: ❌ ÉCHEC CRITIQUE');
   }
-  console.log('='.repeat(60));
+  logger.info('='.repeat(60));
 }
 
 // Exécution

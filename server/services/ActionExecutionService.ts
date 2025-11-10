@@ -1,4 +1,5 @@
 import { AIService } from "./AIService";
+import { withErrorHandling } from './utils/error-handler';
 import { RBACService } from "./RBACService";
 import { AuditService } from "./AuditService";
 import { EventBus } from "../eventBus";
@@ -181,7 +182,9 @@ export class ActionExecutionService {
     confidence: number;
     operation?: string;
   } {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const queryLower = query.toLowerCase();
       let bestMatch = { type: null, entity: null, confidence: 0, operation: null };
 
@@ -227,14 +230,14 @@ export class ActionExecutionService {
         operation: bestMatch.operation || undefined
       };
 
-    } catch (error) {
-      logger.error('Erreur detectActionIntention', {
-        metadata: {
-          service: 'ActionExecutionService',
-          operation: 'detectActionIntention',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ActionExecutionService',
+      metadata: {}
+    }
+  );
       });
       return { hasActionIntention: false, confidence: 0 };
     }
@@ -244,7 +247,9 @@ export class ActionExecutionService {
    * Utilise l'IA pour analyser une intention d'action complexe
    */
   async analyzeActionWithAI(query: string, userRole: string): Promise<ActionDefinition | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const aiPrompt = `
 Analysez cette requête utilisateur et déterminez s'il s'agit d'une demande d'action CRUD sur le système Saxium.
 
@@ -281,13 +286,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         try {
           const result = JSON.parse(aiResponse.data.query);
           return result?.type ? result : null;
-        } catch (parseError) {
-          logger.warn('Erreur parsing JSON AI response', {
-            metadata: {
-              service: 'ActionExecutionService',
-              operation: 'analyzeActionWithAI',
-              issue: parseError instanceof Error ? parseError.message : String(parseError)
-            }
+        
+    },
+    {
+      operation: 'constructor',
+service: 'ActionExecutionService',;
+      metadata: {}
+    }
+  );
           });
           return null;
         }
@@ -319,7 +325,9 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
     const startTime = Date.now();
     const actionId = crypto.randomUUID();
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Proposition d\'action', {
         metadata: {
           service: 'ActionExecutionService',
@@ -483,14 +491,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         warnings: this.generateActionWarnings(request, riskLevel)
       };
 
-    } catch (error) {
-      logger.error('Erreur proposeAction', {
-        metadata: {
-          service: 'ActionExecutionService',
-          operation: 'proposeAction',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ActionExecutionService',
+      metadata: {}
+    }
+  );
       });
 
       await this.auditService.logEvent({
@@ -529,7 +537,9 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
     const startTime = Date.now();
     let currentAction: Action | null = null;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Exécution d\'action', {
         metadata: {
           service: 'ActionExecutionService',
@@ -720,14 +730,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         } : undefined
       };
 
-    } catch (error) {
-      logger.error('Erreur executeAction', {
-        metadata: {
-          service: 'ActionExecutionService',
-          operation: 'executeAction',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ActionExecutionService',
+      metadata: {}
+    }
+  );
       });
 
       // Marquer l'action comme échouée si possible
@@ -913,7 +923,9 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
   }
 
   private async updateActionStatus(actionId: string, status: string, reason: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer l'état actuel
       const currentAction = await db
         .select()
@@ -949,20 +961,22 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
 
       await db.insert(actionHistory).values([historyData]);
 
-    } catch (error) {
-      logger.error('Erreur updateActionStatus', {
-        metadata: {
-          service: 'ActionExecutionService',
-          operation: 'updateActionStatus',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ActionExecutionService',
+      metadata: {}
+    }
+  );
       });
     }
   }
 
   private async performActionExecution(action: Action): Promise<ActionExecutionResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Exécution opération', {
         metadata: {
           service: 'ActionExecutionService',
@@ -994,14 +1008,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
             }
           };
       }
-    } catch (error) {
-      logger.error('Erreur performActionExecution', {
-        metadata: {
-          service: 'ActionExecutionService',
-          operation: 'performActionExecution',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ActionExecutionService',
+      metadata: {}
+    }
+  );
       });
       return {
         success: false,
@@ -1015,13 +1029,13 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
 
   private async executeOfferAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
-      case 'create_offer':
+case 'create_offer':;
         return await this.createOffer(action.parameters);
-      case 'update_status':
+case 'update_status':;
         return await this.updateOfferStatus(action.targetEntityId!, (action.parameters as any).status);
-      case 'archive_offer':
+case 'archive_offer':;
         return await this.archiveOffer(action.targetEntityId!);
-      case 'transform_to_project':
+case 'transform_to_project':;
         return await this.transformOfferToProject(action.targetEntityId!);
       default:
         return {
@@ -1036,11 +1050,11 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
 
   private async executeProjectAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
-      case 'create_project':
+case 'create_project':;
         return await this.createProject(action.parameters);
-      case 'update_status':
+case 'update_status':;
         return await this.updateProjectStatus(action.targetEntityId!, (action.parameters as any).status);
-      case 'archive_project':
+case 'archive_project':;
         return await this.archiveProject(action.targetEntityId!);
       default:
         return {
@@ -1065,9 +1079,9 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
 
   private async executeTaskAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
-      case 'create_project_task':
+case 'create_project_task':;
         return await this.createProjectTask(action.parameters);
-      case 'update_task_status':
+case 'update_task_status':;
         return await this.updateTaskStatus(action.targetEntityId!, (action.parameters as any).status);
       default:
         return {
@@ -1105,7 +1119,9 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
   // ========================================
 
   private async createOffer(parameters: any): Promise<ActionExecutionResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const offerId = crypto.randomUUID();
       const reference = `OF-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
 
@@ -1130,14 +1146,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         affectedRows: 1,
         warnings: parameters.montantEstime ? [] : ['Montant estimé non spécifié']
       };
-    } catch (error) {
-      logger.error('Erreur createOffer', {
-        metadata: {
-          service: 'ActionExecutionService',
-          operation: 'createOffer',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ActionExecutionService',
+      metadata: {}
+    }
+  );
       });
       return {
         success: false,
@@ -1150,7 +1166,9 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
   }
 
   private async updateOfferStatus(offerId: string, status: string): Promise<ActionExecutionResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const result = await db
         .update(offers)
         .set({ status: status as any, updatedAt: new Date() })
@@ -1161,14 +1179,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         entityId: offerId,
         affectedRows: 1
       };
-    } catch (error) {
-      logger.error('Erreur updateOfferStatus', {
-        metadata: {
-          service: 'ActionExecutionService',
-          operation: 'updateOfferStatus',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ActionExecutionService',
+      metadata: {}
+    }
+  );
       });
       return {
         success: false,
@@ -1181,7 +1199,9 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
   }
 
   private async archiveOffer(offerId: string): Promise<ActionExecutionResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db
         .update(offers)
         .set({ status: 'archive', updatedAt: new Date() })
@@ -1193,312 +1213,14 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         affectedRows: 1,
         warnings: ['Offre archivée - action irréversible']
       };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          type: 'execution',
-          message: 'Erreur lors de l\'archivage'
-        }
-      };
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ActionExecutionService',
+      metadata: {}
     }
-  }
-
-  private async transformOfferToProject(offerId: string): Promise<ActionExecutionResult> {
-    try {
-      // Récupérer l'offre
-      const offerResults = await db
-        .select()
-        .from(offers)
-        .where(eq(offers.id, offerId))
-        .limit(1);
-
-      if (offerResults.length === 0) {
-        return {
-          success: false,
-          error: {
-            type: 'permission',
-            message: 'Offre introuvable'
-          }
-        };
-      }
-
-      const offer = offerResults[0];
-      const projectId = crypto.randomUUID();
-      const reference = `PROJ-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
-
-      // Créer le projet
-      const projectData = {
-        name: `Projet ${offer.client}`,
-        client: offer.client,
-        location: offer.location,
-        montantTotal: offer.montantFinal || offer.montantEstime,
-        status: 'passation' as any,
-        responsibleUserId: offer.responsibleUserId,
-        dateDebutPrevu: offer.demarragePrevu,
-        offerId: offer.id
-      };
-
-      await db.insert(projects).values([projectData]);
-
-      // Mettre à jour l'offre
-      await db
-        .update(offers)
-        .set({ 
-          status: 'transforme_en_projet',
-          updatedAt: new Date()
-        })
-        .where(eq(offers.id, offerId));
-
-      return {
-        success: true,
-        entityId: projectId,
-        affectedRows: 2,
-        sideEffects: [
-          {
-            entity: 'offer',
-            action: 'status_update',
-            details: { offerId, newStatus: 'transforme_en_projet' }
-          }
-        ]
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          type: 'execution',
-          message: 'Erreur lors de la transformation en projet'
-        }
-      };
-    }
-  }
-
-  private async createProject(parameters: any): Promise<ActionExecutionResult> {
-    try {
-      const projectId = crypto.randomUUID();
-      const reference = `PROJ-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
-
-      const projectData = {
-        name: parameters.name || `Projet ${parameters.client}`,
-        client: parameters.client,
-        location: parameters.location || '',
-        montantTotal: parameters.montantTotal ? parseFloat(parameters.montantTotal) : null,
-        status: 'passation' as any,
-        responsibleUserId: parameters.responsibleUserId,
-        offerId: parameters.offerId,
-        dateDebutPrevu: parameters.dateDebutPrevu ? new Date(parameters.dateDebutPrevu) : null
-      };
-
-      await db.insert(projects).values([projectData]);
-
-      return {
-        success: true,
-        entityId: projectId,
-        affectedRows: 1
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          type: 'execution',
-          message: 'Erreur lors de la création du projet'
-        }
-      };
-    }
-  }
-
-  private async updateProjectStatus(projectId: string, status: string): Promise<ActionExecutionResult> {
-    try {
-      await db
-        .update(projects)
-        .set({ status: status as any, updatedAt: new Date() })
-        .where(eq(projects.id, projectId));
-
-      return {
-        success: true,
-        entityId: projectId,
-        affectedRows: 1
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          type: 'execution',
-          message: 'Erreur lors de la mise à jour du statut du projet'
-        }
-      };
-    }
-  }
-
-  private async archiveProject(projectId: string): Promise<ActionExecutionResult> {
-    try {
-      // Marquer le projet comme terminé plutôt que de le supprimer
-      await db
-        .update(projects)
-        .set({ status: 'sav', updatedAt: new Date() }) // SAV est le dernier statut
-        .where(eq(projects.id, projectId));
-
-      return {
-        success: true,
-        entityId: projectId,
-        affectedRows: 1,
-        warnings: ['Projet marqué comme terminé (SAV)']
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          type: 'execution',
-          message: 'Erreur lors de l\'archivage du projet'
-        }
-      };
-    }
-  }
-
-  private async createProjectTask(parameters: any): Promise<ActionExecutionResult> {
-    try {
-      const taskId = crypto.randomUUID();
-
-      const taskData = {
-        id: taskId,
-        projectId: parameters.projectId,
-        name: parameters.name,
-        description: parameters.description,
-        status: 'a_faire' as any,
-        assignedUserId: parameters.assignedUserId,
-        dateEcheance: parameters.dateEcheance ? new Date(parameters.dateEcheance) : null,
-        priority: parameters.priority || 'normale'
-      };
-
-      await db.insert(projectTasks).values([taskData]);
-
-      return {
-        success: true,
-        entityId: taskId,
-        affectedRows: 1
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          type: 'execution',
-          message: 'Erreur lors de la création de la tâche'
-        }
-      };
-    }
-  }
-
-  private async updateTaskStatus(taskId: string, status: string): Promise<ActionExecutionResult> {
-    try {
-      await db
-        .update(projectTasks)
-        .set({ status: status as any, updatedAt: new Date() })
-        .where(eq(projectTasks.id, taskId));
-
-      return {
-        success: true,
-        entityId: taskId,
-        affectedRows: 1
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          type: 'execution',
-          message: 'Erreur lors de la mise à jour du statut de la tâche'
-        }
-      };
-    }
-  }
-
-  // ========================================
-  // HISTORIQUE ET RECHERCHE D'ACTIONS
-  // ========================================
-
-  /**
-   * Récupère l'historique des actions pour un utilisateur
-   */
-  async getActionHistory(request: ActionHistoryRequest): Promise<ActionHistoryResponse> {
-    try {
-      let query = db
-        .select()
-        .from(actions)
-        .orderBy(desc(actions.proposedAt));
-
-      // Appliquer les filtres
-      const conditions = [];
-      
-      if (request.userId) {
-        conditions.push(eq(actions.userId, request.userId));
-      }
-      
-      if (request.actionType) {
-        conditions.push(eq(actions.type, request.actionType));
-      }
-      
-      if (request.entity) {
-        conditions.push(eq(actions.entity, request.entity));
-      }
-      
-      if (request.status) {
-        conditions.push(eq(actions.status, request.status));
-      }
-      
-      if (request.riskLevel) {
-        conditions.push(eq(actions.riskLevel, request.riskLevel));
-      }
-      
-      if (request.startDate) {
-        conditions.push(gte(actions.proposedAt, new Date(request.startDate)));
-      }
-      
-      if (request.endDate) {
-        conditions.push(lte(actions.proposedAt, new Date(request.endDate)));
-      }
-
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
-
-      // Pagination
-      const results = await query
-        .limit(request.limit || 20)
-        .offset(request.offset || 0);
-
-      // Nettoyer les résultats selon les options
-      const cleanedActions = results.map(action => ({
-        ...action,
-        parameters: request.includeParameters ? action.parameters : undefined,
-        executionResult: request.includeResults ? action.executionResult : undefined
-      }));
-
-      // Compter le total pour la pagination
-      const countQuery = db
-        .select({ count: sql`count(*)` })
-        .from(actions);
-        
-      if (conditions.length > 0) {
-        countQuery.where(and(...conditions));
-      }
-      
-      const countResult = await countQuery;
-      const total = Number(countResult[0]?.count || 0);
-
-      return {
-        success: true,
-        actions: cleanedActions as Action[],
-        total,
-        hasMore: (request.offset || 0) + results.length < total
-      };
-
-    } catch (error) {
-      logger.error('Erreur getActionHistory', {
-        metadata: {
-          service: 'ActionExecutionService',
-          operation: 'getActionHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+  );
       });
       return {
         success: false,

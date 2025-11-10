@@ -7,6 +7,7 @@
  */
 
 import { Router } from 'express';
+import { withErrorHandling } from './utils/error-handler';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler, sendSuccess, sendPaginatedSuccess, createError } from '../../middleware/errorHandler';
@@ -194,14 +195,21 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     requireTechnicalValidationRole,
     validateQuery(technicalAlertsFilterSchema),
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const filter = req.query as any;
         const alerts = await storage.listTechnicalAlerts(filter);
         
         sendSuccess(res, alerts);
-      } catch (error) {
-        logger.error('Erreur récupération alertes techniques', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la récupération des alertes techniques");
       }
@@ -214,7 +222,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     requireTechnicalValidationRole,
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id } = req.params;
         const alert = await storage.getTechnicalAlert(id);
         
@@ -223,9 +233,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         }
         
         sendSuccess(res, alert);
-      } catch (error) {
-        logger.error('Erreur récupération alerte technique', {
-          metadata: { error: error instanceof Error ? error.message : String(error), alertId: req.params.id }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw error;
       }
@@ -239,7 +254,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req, res) => {
       const { id } = req.params;
-      try {
+      return withErrorHandling(
+    async () => {
+
         const userId = req.session?.user?.id;
         
         if (!userId) {
@@ -258,9 +275,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         }
         
         sendSuccess(res, { alertId: id });
-      } catch (error) {
-        logger.error('Erreur acknowledgment alerte technique', {
-          metadata: { error: error instanceof Error ? error.message : String(error), alertId: id }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw error;
       }
@@ -274,7 +296,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req, res) => {
       const { id } = req.params;
-      try {
+      return withErrorHandling(
+    async () => {
+
         const userId = req.session?.user?.id;
         
         if (!userId) {
@@ -293,9 +317,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         }
         
         sendSuccess(res, { alertId: id });
-      } catch (error) {
-        logger.error('Erreur validation alerte technique', {
-          metadata: { error: error instanceof Error ? error.message : String(error), alertId: id }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw error;
       }
@@ -310,7 +339,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateBody(bypassTechnicalAlertSchema),
     asyncHandler(async (req, res) => {
       const { id } = req.params;
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { until, reason } = req.body;
         const userId = req.session?.user?.id;
         
@@ -331,9 +362,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         }
         
         sendSuccess(res, { alertId: id, until, reason });
-      } catch (error) {
-        logger.error('Erreur bypass alerte technique', {
-          metadata: { error: error instanceof Error ? error.message : String(error), alertId: id }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw error;
       }
@@ -346,14 +382,21 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     requireTechnicalValidationRole,
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id } = req.params;
         const history = await storage.listTechnicalAlertHistory(id);
         
         sendSuccess(res, history);
-      } catch (error) {
-        logger.error('Erreur récupération historique alerte technique', {
-          metadata: { error: error instanceof Error ? error.message : String(error), alertId: req.params.id }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la récupération de l'historique");
       }
@@ -368,7 +411,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         return res.status(404).json({ message: "Not found" });
       }
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         const alertData = req.body;
         
         // Valider les données d'entrée basiques
@@ -399,9 +444,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           message: 'Alerte test créée',
           alert 
         });
-      } catch (error) {
-        logger.error('Erreur création alerte test', {
-          metadata: { error: error instanceof Error ? error.message : String(error) }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw error;
       }
@@ -417,7 +467,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     isAuthenticated,
     validateQuery(alertsFilterSchema),
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { entityType, entityId, status, severity, limit, offset } = req.query;
         
         logger.info('Récupération alertes avec filtres', {
@@ -460,12 +512,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         };
         
         sendPaginatedSuccess(res, result.alerts, { page: Math.floor(numOffset / numLimit) + 1, limit: numLimit, total });
-      } catch (error: any) {
-        logger.error('Erreur récupération alertes', {
-          metadata: { error: error.message, stack: error.stack }
-        });
-        throw createError.database("Erreur lors de la récupération des alertes");
-      }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -476,7 +530,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateParams(commonParamSchemas.id),
     validateBody(acknowledgeAlertSchema),
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id } = req.params;
         const { note } = req.body;
         const userId = (req as any).user?.id || 'unknown';
@@ -514,15 +570,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         });
         
         sendSuccess(res, acknowledgedAlert);
-      } catch (error: any) {
-        logger.error('Erreur acquittement alerte', {
-          metadata: { error: error.message, stack: error.stack }
-        });
-        
-        // Re-lancer les erreurs AppError
-        if (error.statusCode) {
-          throw error;
-        }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         
         throw createError.database("Erreur lors de l'acquittement de l'alerte", {
           alertId: req.params.id,
@@ -542,7 +597,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       resolution: z.string().optional()
     })),
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id } = req.params;
         const { actionTaken, resolution } = req.body;
         const userId = (req as any).user?.id || 'unknown';
@@ -565,14 +622,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         });
         
         sendSuccess(res, resolvedAlert);
-      } catch (error: any) {
-        logger.error('Erreur résolution alerte', {
-          metadata: { error: error.message, stack: error.stack }
-        });
-        
-        if (error.statusCode) {
-          throw error;
-        }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         
         throw createError.database("Erreur lors de la résolution de l'alerte", {
           alertId: req.params.id,
@@ -586,7 +643,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
   router.get("/api/date-alerts/dashboard",
     isAuthenticated,
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const userId = (req as any).user?.id;
         logger.info('Récupération dashboard pour utilisateur', {
           metadata: { userId }
@@ -676,13 +735,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         
         sendSuccess(res, dashboard);
         
-      } catch (error: any) {
-        logger.error('Erreur récupération dashboard', {
-          metadata: { error: error.message, stack: error.stack }
-        });
-        throw createError.database("Erreur lors de la récupération du dashboard", {
-          errorType: 'DASHBOARD_FETCH_FAILED'
-        });
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  ););
       }
     })
   );
@@ -697,7 +757,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       daysAhead: z.number().min(1).max(90).default(7).optional()
     })),
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { detectionType, projectId, daysAhead } = req.body;
         const userId = (req as any).user?.id;
         
@@ -782,14 +844,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         
         sendSuccess(res, response, 201);
         
-      } catch (error: any) {
-        logger.error('Erreur exécution détection', {
-          metadata: { error: error.message, stack: error.stack }
-        });
-        throw createError.database("Erreur lors de l'exécution de la détection", {
-          detectionType: req.body.detectionType,
-          errorType: 'MANUAL_DETECTION_FAILED'
-        });
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  ););
       }
     })
   );
@@ -805,7 +867,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       urgency: z.enum(['normal', 'high', 'immediate']).default('high')
     })),
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id } = req.params;
         const { escalationLevel, reason, urgency } = req.body;
         const userId = (req as any).user?.id;
@@ -906,14 +970,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         
         sendSuccess(res, response, `Alerte escaladée au niveau ${escalationLevel}`);
         
-      } catch (error: any) {
-        logger.error('Erreur escalade alerte', {
-          metadata: { error: error.message, stack: error.stack }
-        });
-        
-        if (error.statusCode) {
-          throw error;
-        }
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         
         throw createError.database("Erreur lors de l'escalade de l'alerte", {
           alertId: req.params.id,
@@ -932,7 +996,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       includeResolved: z.boolean().default(false)
     })),
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { period, groupBy, includeResolved } = req.query;
         
         logger.info('Récupération résumé alertes', {
@@ -1107,13 +1173,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         
         sendSuccess(res, summary);
         
-      } catch (error: any) {
-        logger.error('Erreur génération résumé', {
-          metadata: { error: error.message, stack: error.stack }
-        });
-        throw createError.database("Erreur lors de la génération du résumé", {
-          errorType: 'ALERTS_SUMMARY_FAILED'
-        });
+      
+    },
+    {
+      operation: 'Alerts',
+      service: 'routes',
+      metadata: {}
+    }
+  ););
       }
     })
   );

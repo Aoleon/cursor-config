@@ -1,0 +1,130 @@
+# Cursor Ignore - Fichiers à exclure de l'indexation
+
+# Dépendances
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
+dist/
+build/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Environnement
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Fichiers sensibles
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Cache
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Tests
+test-results/
+playwright-report/
+coverage/
+
+# Documentation générée
+*.html (sauf index.html)
+*.pdf
+
+# Assets volumineux
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Fichiers temporaires
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Migrations générées (garder seulement les fichiers source)
+migrations/*.sql
+migrations/meta/
+
+# Lock files (optionnel - peut être utile pour contexte)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Fichiers de configuration sensibles
+drizzle.config.ts (garder mais ne pas indexer le contenu sensible)
+
+# Fichiers de test volumineux
+test-*.ts (sauf tests/ et e2e/)
+test-*.js
+test-*.mjs
+
+# Scripts de migration temporaires
+migrate_*.py
+migrate_*.js
+
+# Rapports d'audit (garder mais ne pas indexer)
+RAPPORT_*.md
+AUDIT_*.md
+
+# Fichiers de diagnostic
+*.png (screenshots)
+*.jpg (screenshots)
+diagnostics/
+*.diagnostic
+
+# Fichiers de backup
+*.bak
+*.backup
+*.old
+
+# Fichiers de données volumineux
+*.csv
+*.xlsx
+*.xls
+
+# Fichiers OCR temporaires
+*.traineddata (garder mais ne pas indexer)
+
+# Fichiers de configuration Replit
+replit.nix
+.replit
+

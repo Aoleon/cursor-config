@@ -1,4 +1,5 @@
 import { AIService } from "./AIService";
+import { withErrorHandling } from './utils/error-handler';
 import { RBACService } from "./RBACService";
 import { BusinessContextService } from "./BusinessContextService";
 import { EventBus } from "../eventBus";
@@ -216,7 +217,9 @@ export class SQLEngineService {
     const startTime = Date.now();
     const queryId = crypto.randomUUID();
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Démarrage requête', {
       metadata: {
         service: 'SQLEngineService',
@@ -513,15 +516,14 @@ export class SQLEngineService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur requête', {
-      metadata: {
-        service: 'SQLEngineService',
-        operation: 'executeNaturalLanguageQuery',
-        queryId,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'secondes',
+      service: 'SQLEngineService',
+      metadata: {}
+    }
+  );
     });
       
       return {
@@ -543,7 +545,9 @@ export class SQLEngineService {
    * Valide un SQL existant selon les règles RBAC et sécurité
    */
   async validateSQL(request: SQLValidationRequest): Promise<SQLValidationResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. Validation sécurité de base
       const securityCheck = await this.validateSQLSecurity(request.sql, request.userId, request.userRole);
       
@@ -567,222 +571,14 @@ export class SQLEngineService {
         suggestions: this.generateSuggestions(request.sql, securityCheck, rbacResult)
       };
 
-    } catch (error) {
-      return {
-        isValid: false,
-        isSecure: false,
-        allowedTables: [],
-        deniedTables: [],
-        allowedColumns: [],
-        deniedColumns: [],
-        securityViolations: [`Erreur de validation: ${error}`],
-        rbacViolations: []
-      };
-    }
-  }
-
-  // ========================================
-  // TYPES DE REQUÊTES ET TEMPLATES SPÉCIALISÉS
-  // ========================================
-
-  private readonly QUERY_TYPES = {
-    KPI_METRICS: 'kpi_metrics',
-    LIST_DETAILS: 'list_details', 
-    COMPARISONS: 'comparisons',
-    ANALYTICS: 'analytics',
-    SEARCH: 'search'
-  } as const;
-
-  private readonly PROMPT_TEMPLATES = {
-    kpi_metrics: {
-      focus: ['COUNT', 'SUM', 'AVG', 'GROUP BY', 'HAVING'],
-      guardrails: `
--- KPI/METRICS SPECIFIC RULES:
--- Must use GROUP BY for dimensions
--- Limit to 100 rows for aggregated results
--- Use DATE_TRUNC for time grouping
--- Include COUNT(*) for volume metrics`,
-      examples: [
-        `-- Monthly revenue by project type
-SELECT 
-  DATE_TRUNC('month', created_at) as month,
-  project_type,
-  COUNT(*) as total_projects,
-  SUM(montant_total) as revenue
-FROM projects
-WHERE created_at >= NOW() - INTERVAL '12 months'
-GROUP BY 1, 2
-ORDER BY 1 DESC, 4 DESC
-LIMIT 100;`
-      ]
-    },
-    list_details: {
-      focus: ['WHERE', 'ORDER BY', 'LIMIT', 'OFFSET', 'JOIN'],
-      guardrails: `
--- LIST/DETAILS SPECIFIC RULES:
--- Must include ORDER BY clause
--- Must include LIMIT/OFFSET for pagination
--- Maximum 50 rows per page
--- Include relevant JOIN for details`,
-      examples: [
-        `-- List recent projects with details
-SELECT 
-  p.id, p.name, p.status, p.created_at,
-  u.name as responsable_name
-FROM projects p
-LEFT JOIN users u ON p.responsible_user_id = u.id
-WHERE p.status = 'active'
-ORDER BY p.created_at DESC
-LIMIT 50 OFFSET 0;`
-      ]
-    },
-    comparisons: {
-      focus: ['CTE', 'CASE WHEN', 'LAG', 'LEAD', 'JOIN'],
-      guardrails: `
--- COMPARISON SPECIFIC RULES:
--- Use CTEs for readability
--- Maximum 24 months timeframe
--- Use CASE WHEN for categorization
--- Include delta calculations`,
-      examples: [
-        `-- Compare current vs previous period
-WITH current_period AS (
-  SELECT COUNT(*) as current_count, SUM(montant_total) as current_revenue
-  FROM projects
-  WHERE date_created >= NOW() - INTERVAL '3 months'
-),
-previous_period AS (
-  SELECT COUNT(*) as previous_count, SUM(montant_total) as previous_revenue
-  FROM projects
-  WHERE date_created >= NOW() - INTERVAL '6 months' 
-    AND date_created < NOW() - INTERVAL '3 months'
-)
-SELECT 
-  c.current_count, p.previous_count,
-  c.current_revenue, p.previous_revenue,
-  CASE 
-    WHEN p.previous_count > 0 
-    THEN ROUND(((c.current_count - p.previous_count)::numeric / p.previous_count) * 100, 2)
-    ELSE NULL
-  END as count_change_pct
-FROM current_period c, previous_period p;`
-      ]
-    },
-    analytics: {
-      focus: ['CTE', 'WINDOW', 'RANK', 'DENSE_RANK', 'PERCENTILE'],
-      guardrails: `
--- ANALYTICS SPECIFIC RULES:
--- Prefer CTEs over subqueries
--- Limit window functions usage
--- Include appropriate indexes hints
--- Max 3 analytical functions per query`,
-      examples: [
-        `-- Top performers analysis
-WITH project_stats AS (
-  SELECT 
-    responsible_user_id,
-    COUNT(*) as project_count,
-    AVG(montant_total) as avg_revenue,
-    RANK() OVER (ORDER BY COUNT(*) DESC) as rank_by_count
-  FROM projects
-  WHERE date_created >= NOW() - INTERVAL '6 months'
-  GROUP BY responsible_user_id
-)
-SELECT * FROM project_stats
-WHERE rank_by_count <= 10
-ORDER BY rank_by_count;`
-      ]
-    },
-    search: {
-      focus: ['LIKE', 'ILIKE', 'SIMILAR TO', 'GIN INDEX', 'TEXT SEARCH'],
-      guardrails: `
--- SEARCH SPECIFIC RULES:
--- Use ILIKE for case-insensitive search
--- Add % wildcards appropriately
--- Consider GIN indexes for text
--- Limit results to 100`,
-      examples: [
-        `-- Search projects by name or description
-SELECT 
-  id, name, description, status, date_created
-FROM projects
-WHERE name ILIKE '%menuiserie%' 
-   OR description ILIKE '%menuiserie%'
-ORDER BY date_created DESC
-LIMIT 100;`
-      ]
-    }
-  };
-
-  // ========================================
-  // CONSTRUCTION DU CONTEXTE INTELLIGENT AMÉLIORÉ
-  // ========================================
-
-  /**
-   * Utilise BusinessContextService pour générer un contexte métier intelligent et adaptatif
-   * AMÉLIORATION PHASE 4: Templates adaptatifs et guardrails contextuels
-   */
-  private async buildIntelligentContext(request: SQLQueryRequest): Promise<string> {
-    const startTime = Date.now();
     
-    try {
-      // 1. Détection du type de requête
-      const queryType = this.analyzeQueryType(request.naturalLanguageQuery);
-      
-      logger.info('Contexte intelligent - Type détecté', {
-        metadata: {
-          service: 'SQLEngineService',
-          operation: 'buildIntelligentContext',
-          queryType,
-          userId: request.userId,
-          userRole: request.userRole
-        }
-      });
-      
-      // 2. Récupération du contexte enrichi de BusinessContextService
-      const enrichedContext = await this.businessContextService.buildIntelligentContextForSQL(
-        request.userId,
-        request.userRole,
-        request.naturalLanguageQuery
-      );
-
-      // 3. Sélection du template adapté
-      const template = this.PROMPT_TEMPLATES[queryType as keyof typeof this.PROMPT_TEMPLATES];
-      
-      // 4. Construction des guardrails adaptifs
-      const adaptiveGuardrails = this.buildAdaptiveGuardrails(queryType, request.userRole);
-      
-      // 5. Génération des hints de performance contextuels
-      const performanceHints = this.generatePerformanceHints(request.naturalLanguageQuery, queryType);
-      
-      // 6. Sélection d'exemples pertinents
-      const relevantExamples = this.selectRelevantExamples(queryType, request.naturalLanguageQuery);
-      
-      // 7. Construction du prompt optimisé pour Claude/GPT
-      const optimizedPrompt = this.buildOptimizedPrompt({
-        userContext: request.context,
-        enrichedContext,
-        queryType,
-        template,
-        guardrails: adaptiveGuardrails,
-        performanceHints,
-        examples: relevantExamples,
-        userRole: request.userRole
-      });
-
-      // 8. Métriques de qualité
-      await this.trackPromptQuality(queryType, Date.now() - startTime);
-
-      return optimizedPrompt;
-
-    } catch (error) {
-      logger.error('Erreur génération contexte intelligent', {
-        metadata: {
-          service: 'SQLEngineService',
-          operation: 'buildIntelligentContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    },
+    {
+      operation: 'secondes',
+      service: 'SQLEngineService',
+      metadata: {}
+    }
+  );
       });
       
       // Fallback vers contexte basique
@@ -1077,7 +873,9 @@ LIMIT 25;`);
     const warnings: string[] = [];
     const sqlLower = sql.toLowerCase();
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Prétraiter le SQL pour gérer les expressions INTERVAL avant parsing
       const { processedSQL, hasSemicolon, intervalReplacements } = this.preprocessSQLForParsing(sql);
       
@@ -1168,52 +966,14 @@ LIMIT 25;`);
         }
       }
 
-    } catch (parseError) {
-      violations.push(`SQL parsing error: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+    
+    },
+    {
+      operation: 'secondes',
+      service: 'SQLEngineService',
+      metadata: {}
     }
-
-    return {
-      isValid: violations.length === 0,
-      violations,
-      warnings
-    };
-  }
-
-  /**
-   * Track des métriques de qualité des prompts
-   */
-  private async trackPromptQuality(
-    queryType: string,
-    generationTime: number,
-    success: boolean = true,
-    retryCount: number = 0
-  ): Promise<void> {
-    try {
-      await this.eventBus.publish('sql_engine.prompt_metrics', {
-        queryType,
-        generationTime,
-        success,
-        retryCount,
-        timestamp: new Date()
-      });
-
-      logger.info('Métriques prompt SQL', {
-        metadata: {
-          service: 'SQLEngineService',
-          operation: 'trackPromptQuality',
-          queryType,
-          generationTime,
-          success,
-          retryCount
-        }
-      });
-    } catch (error) {
-      logger.error('Erreur tracking métriques', {
-        metadata: {
-          service: 'SQLEngineService',
-          operation: 'trackPromptQuality',
-          error: error instanceof Error ? error.message : String(error)
-        }
+  );
       });
     }
   }
@@ -1275,7 +1035,9 @@ INSTRUCTIONS DE BASE:
       }
     });
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 0. NETTOYAGE SQL COMPLET : Retirer TOUS les commentaires et normaliser
       let cleanedSQL = sql;
       try {
@@ -1300,16 +1062,14 @@ INSTRUCTIONS DE BASE:
             cleanedSQLPreview: cleanedSQL.substring(0, 150) + (cleanedSQL.length > 150 ? '...' : '')
           }
         });
-      } catch (cleanError) {
-        logger.warn('Erreur nettoyage SQL, utilisation SQL brut', {
-      metadata: {
-        service: 'SQLEngineService',
-        operation: 'validateSQL',
-        cleanError
-      }
-    });
-        cleanedSQL = sql.trim();
-      }
+      
+    },
+    {
+      operation: 'secondes',
+service: 'SQLEngineService',;
+      metadata: {}
+    }
+  );
       
       // 1. PRÉTRAITEMENT pour supporter la syntaxe PostgreSQL INTERVAL
       // Utiliser la méthode commune de prétraitement
@@ -1773,7 +1533,9 @@ INSTRUCTIONS DE BASE:
     filtersApplied?: string[];
     rbacViolations?: string[];
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const filtersApplied: string[] = [];
       const violations: string[] = [];
       let filteredSQL = sql;
@@ -1931,125 +1693,14 @@ INSTRUCTIONS DE BASE:
         filtersApplied
       };
 
-    } catch (error) {
-      return {
-        success: false,
-        rbacViolations: [`Erreur application RBAC: ${error}`]
-      };
+    
+    },
+    {
+      operation: 'secondes',
+      service: 'SQLEngineService',
+      metadata: {}
     }
-  }
-
-  // ========================================
-  // EXÉCUTION SÉCURISÉE AVEC TIMEOUT
-  // ========================================
-
-  /**
-   * Décode les entités HTML dans une chaîne SQL
-   */
-  private decodeHTMLEntities(text: string): string {
-    return text
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&#x27;/g, "'")
-      .replace(/&#x2F;/g, '/')
-      .replace(/&nbsp;/g, ' ');
-  }
-
-  /**
-   * Exécute le SQL avec timeout et limitation de résultats
-   */
-  private async executeSecureSQL(
-    sql: string, 
-    parameters: any[], 
-    maxResults: number, 
-    timeoutMs: number
-  ): Promise<{
-    success: boolean;
-    results?: any[];
-    executionTime?: number;
-    error?: any;
-  }> {
-    const startTime = Date.now();
-    
-    // Limitation des résultats si pas déjà présente
-    const limitedSQL = this.ensureLimitClause(sql, maxResults);
-    
-    // Décoder les entités HTML qui pourraient être présentes dans le SQL
-    const decodedSQL = this.decodeHTMLEntities(limitedSQL);
-
-    try {
-
-      // Exécution avec timeout robuste (évite unhandled rejection)
-      let timeoutId: NodeJS.Timeout | null = null;
-      let isTimedOut = false;
-      
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          isTimedOut = true;
-          reject(new Error('Query timeout'));
-        }, timeoutMs);
-      });
-
-      // Créer la promesse de requête  
-      // Pour exécuter du SQL dynamique dans Drizzle avec Neon
-      // On utilise directement le pool sous-jacent pour le SQL brut
-      const queryPromise = pool.query(decodedSQL);
-      
-      try {
-        // Race entre la requête et le timeout
-        const results = await Promise.race([
-          queryPromise,
-          timeoutPromise
-        ]) as any[];
-        
-        // Nettoyer le timeout si la requête réussit avant
-        if (timeoutId) clearTimeout(timeoutId);
-        
-        // Marquer la requête comme terminée pour éviter les rejets non gérés
-        isTimedOut = true;
-        
-        // Si la requête est encore en cours, l'ignorer (elle finira en arrière-plan)
-        queryPromise.catch(() => {
-          // Ignorer les erreurs après le succès
-        });
-        
-        const executionTime = Date.now() - startTime;
-
-        return {
-          success: true,
-          results: Array.isArray(results) ? results : [results],
-          executionTime
-        };
-      } catch (raceError) {
-        // Nettoyer le timeout même en cas d'erreur
-        if (timeoutId) clearTimeout(timeoutId);
-        
-        // Marquer comme timeout et gérer la promesse de requête
-        isTimedOut = true;
-        
-        // Ignorer les erreurs de la requête après timeout
-        queryPromise.catch(() => {
-          // Ignorer les erreurs après timeout
-        });
-        
-        throw raceError;
-      }
-
-    } catch (error) {
-      // Log détaillé de l'erreur pour diagnostic
-      logger.error('Erreur exécution SQL sécurisée', error as Error, {
-        metadata: {
-          module: 'SQLEngineService',
-          operation: 'executeSecureSQL',
-          sqlPreview: decodedSQL.substring(0, 200),
-          errorDetails: error instanceof Error ? {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-          } : String(error)
+  ); : String(error)
         }
       });
       
@@ -2215,7 +1866,9 @@ INSTRUCTIONS DE BASE:
     resultCount: number, 
     startTime: number
   ): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Query executed', {
       metadata: {
         service: 'SQLEngineService',
@@ -2237,14 +1890,14 @@ INSTRUCTIONS DE BASE:
       //   executionTimeMs: Date.now() - startTime
       // });
       
-    } catch (error) {
-      logger.error('Erreur logging', {
-      metadata: {
-        service: 'SQLEngineService',
-        operation: 'logQueryToAudit',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'secondes',
+      service: 'SQLEngineService',
+      metadata: {}
+    }
+  );
     });
     }
   }

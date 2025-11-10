@@ -4,6 +4,8 @@
  */
 
 import { Pool, neonConfig, PoolClient } from '@neondatabase/serverless';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from 'ws';
 import * as schema from '@shared/schema';
@@ -61,7 +63,9 @@ class ConnectionManager extends EventEmitter {
       throw error;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Create pool with optimized settings
       this.pool = new Pool({
         connectionString: process.env.DATABASE_URL,
@@ -88,37 +92,14 @@ class ConnectionManager extends EventEmitter {
         }
       });
 
-    } catch (error) {
-      this.handleInitializationError(error);
+    
+    },
+    {
+      operation: 'now',
+      service: 'config',
+      metadata: {}
     }
-  }
-
-  /**
-   * Attach event listeners to the pool
-   */
-  private attachPoolListeners(): void {
-    if (!this.pool) return;
-
-    // Error handling
-    this.pool.on('error', (err: Error, client: PoolClient) => {
-      this.connectionStats.failedConnections++;
-      this.connectionStats.lastError = new Date();
-      
-      logger.error('Pool client error', err, {
-        metadata: {
-          module: 'DatabaseConfig',
-          operation: 'poolError',
-          stats: this.connectionStats
-        }
-      });
-
-      // Emit error event for external handling
-      this.emit('error', err);
-      
-      // Attempt reconnection if critical error
-      if (this.isCriticalError(err)) {
-        this.handleReconnection();
-      }
+  );
     });
 
     // Connection lifecycle events
@@ -252,53 +233,21 @@ class ConnectionManager extends EventEmitter {
       }
     });
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Close existing pool if any
       if (this.pool) {
         try {
           await this.pool.end();
-        } catch (error) {
-          // Ignore errors when closing failed pool
-          logger.debug('Error closing pool during reconnection', {
-            metadata: {
-              module: 'DatabaseConfig',
-              operation: 'reconnect',
-              error: error instanceof Error ? error.message : String(error)
-            }
-          });
-        }
-      }
-
-      // Reinitialize pool
-      this.initializePool();
-      
-      // Test connection
-      await this.testConnection();
-      
-      // Reset reconnection state
-      this.reconnectAttempts = 0;
-      this.isConnected = true;
-      
-      logger.info('Database reconnection successful', {
-        metadata: {
-          module: 'DatabaseConfig',
-          operation: 'reconnect'
-        }
-      });
-      
-      this.emit('reconnected');
-      
-    } catch (error) {
-      logger.error('Database reconnection failed', error as Error, {
-        metadata: {
-          module: 'DatabaseConfig',
-          operation: 'reconnect',
-          attempt: this.reconnectAttempts
-        }
-      });
-      
-      this.handleReconnection();
+        
+    },
+    {
+      operation: 'now',
+service: 'config',;
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -306,11 +255,13 @@ class ConnectionManager extends EventEmitter {
    */
   private async testConnection(): Promise<void> {
     if (!this.pool) {
-      throw new Error('Pool not initialized');
+      throw new AppError('Pool not initialized', 500);
     }
 
     const client = await this.pool.connect();
-    try {
+    return withErrorHandling(
+    async () => {
+
       await client.query('SELECT 1');
       this.connectionStats.successfulQueries++;
       this.connectionStats.lastSuccess = new Date();
@@ -336,13 +287,14 @@ class ConnectionManager extends EventEmitter {
 
       try {
         await this.testConnection();
-      } catch (error) {
-        logger.warn('Health check failed', {
-          metadata: {
-            module: 'DatabaseConfig',
-            operation: 'healthCheck',
-            error: error instanceof Error ? error.message : String(error)
-          }
+      
+    },
+    {
+      operation: 'now',
+service: 'config',;
+      metadata: {}
+    }
+  );
         });
         
         if (this.isCriticalError(error as Error)) {
@@ -350,7 +302,7 @@ class ConnectionManager extends EventEmitter {
           this.handleReconnection();
         }
       }
-    }, 30000); // 30 seconds
+}, 30000); // 30 seconds;
   }
 
   /**
@@ -457,7 +409,9 @@ class ConnectionManager extends EventEmitter {
         }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await this.pool.end();
         logger.info('Database pool closed successfully', {
           metadata: {
@@ -465,14 +419,14 @@ class ConnectionManager extends EventEmitter {
             operation: 'close'
           }
         });
-      } catch (error) {
-        logger.error('Error closing database pool', error as Error, {
-          metadata: {
-            module: 'DatabaseConfig',
-            operation: 'close'
-          }
-        });
-      }
+      
+    },
+    {
+      operation: 'now',
+      service: 'config',
+      metadata: {}
+    }
+  );
 
       this.pool = null;
       this.isConnected = false;

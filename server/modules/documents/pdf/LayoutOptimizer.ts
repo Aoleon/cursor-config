@@ -4,6 +4,8 @@
  */
 
 import { Logger } from '../../../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import type {
   LayoutOptions,
   LayoutMargins,
@@ -63,7 +65,9 @@ export class LayoutOptimizer {
     const startTime = Date.now();
     const mergedOptions = this.mergeOptions(options);
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       let optimized = html;
 
       // Apply optimizations in sequence
@@ -99,9 +103,14 @@ export class LayoutOptimizer {
       logger.info('Layout optimization completed', { duration });
 
       return optimized;
-    } catch (error) {
-      logger.error('Layout optimization failed', error as Error);
-      throw new Error(`Layout optimization failed: ${error}`);
+    
+    },
+    {
+      operation: 'Logger',
+      service: 'LayoutOptimizer',
+      metadata: {}
+    }
+  );`, 500);
     }
   }
 

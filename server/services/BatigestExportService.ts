@@ -10,6 +10,7 @@
  */
 
 import { logger } from '../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
 import type { ClientQuote, PurchaseOrder } from '@shared/schema';
 
 // ========================================
@@ -258,7 +259,9 @@ export class BatigestExportService {
    * Export complet avec XML et CSV
    */
   async exportClientQuote(quote: ClientQuote): Promise<BatigestExportResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('[BatigestExport] Export devis client', {
         metadata: {
           service: 'BatigestExportService',
@@ -281,14 +284,14 @@ export class BatigestExportService {
           format: 'both'
         }
       };
-    } catch (error) {
-      logger.error('[BatigestExport] Erreur export devis', {
-        metadata: {
-          service: 'BatigestExportService',
-          operation: 'exportClientQuote',
-          error: error instanceof Error ? error.message : String(error),
-          reference: quote.reference
-        }
+    
+    },
+    {
+      operation: 'Saxium',
+      service: 'BatigestExportService',
+      metadata: {}
+    }
+  );
       });
 
       return {
@@ -308,7 +311,9 @@ export class BatigestExportService {
    * Export bon de commande avec XML et CSV
    */
   async exportPurchaseOrder(order: PurchaseOrder): Promise<BatigestExportResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('[BatigestExport] Export bon de commande', {
         metadata: {
           service: 'BatigestExportService',
@@ -331,14 +336,14 @@ export class BatigestExportService {
           format: 'both'
         }
       };
-    } catch (error) {
-      logger.error('[BatigestExport] Erreur export bon commande', {
-        metadata: {
-          service: 'BatigestExportService',
-          operation: 'exportPurchaseOrder',
-          error: error instanceof Error ? error.message : String(error),
-          reference: order.reference
-        }
+    
+    },
+    {
+      operation: 'Saxium',
+      service: 'BatigestExportService',
+      metadata: {}
+    }
+  );
       });
 
       return {

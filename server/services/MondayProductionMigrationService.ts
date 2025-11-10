@@ -18,6 +18,8 @@
  */
 
 import type { IStorage } from '../storage-poc';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { type InsertAo, type InsertProject } from '@shared/schema';
 import { type MondayAoData, type MondayProjectData } from '../utils/mondayDataGenerator';
 import { validateMondayAoData, validateMondayProjectData, validateAndParseMondayDate } from '../utils/mondayValidator';
@@ -192,7 +194,9 @@ export class MondayProductionMigrationService {
     
     this.resetWarnings();
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Charger données basées analyses réelles JLM
       const jlmData = this.loadJLMAnalyzedData();
       
@@ -248,16 +252,16 @@ export class MondayProductionMigrationService {
       
       return result;
       
-    } catch (error) {
-      logger.error('Erreur critique migration production', {
-        metadata: {
-          service: 'MondayProductionMigrationService',
-          operation: 'migrateProductionData',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'com',
+      service: 'MondayProductionMigrationService',
+      metadata: {}
+    }
+  );
       });
-      throw new Error(`Migration production échouée: ${error instanceof Error ? error.message : String(error)}`);
+      throw new AppError(`Migration production échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
   }
 
@@ -399,7 +403,9 @@ export class MondayProductionMigrationService {
     const results: BatchResult[] = [];
     
     for (const [index, ao] of aoData.entries()) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Validation avec parser dates français corrigé
         const validatedAo = this.validateAndTransformAoData(ao);
         
@@ -426,26 +432,14 @@ export class MondayProductionMigrationService {
           });
         }
         
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        logger.error('Erreur migration AO ligne', {
-          metadata: {
-            service: 'MondayProductionMigrationService',
-            operation: 'migrateAnalyzedAOs',
-            line: index + 1,
-            mondayItemId: ao.mondayItemId,
-            error: errorMsg,
-            stack: error instanceof Error ? error.stack : undefined
-          }
-        });
-        
-        results.push({
-          index,
-          success: false,
-          error: errorMsg,
-          data: ao,
-          mondayId: ao.mondayItemId
-        });
+      
+    },
+    {
+      operation: 'com',
+      service: 'MondayProductionMigrationService',
+      metadata: {}
+    }
+  ););
       }
     }
     
@@ -467,7 +461,9 @@ export class MondayProductionMigrationService {
     const results: BatchResult[] = [];
     
     for (const [index, project] of projectData.entries()) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Validation avec mapping workflow Saxium
         const validatedProject = this.validateAndTransformProjectData(project);
         
@@ -494,26 +490,14 @@ export class MondayProductionMigrationService {
           });
         }
         
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        logger.error('Erreur migration projet ligne', {
-          metadata: {
-            service: 'MondayProductionMigrationService',
-            operation: 'migrateAnalyzedProjects',
-            line: index + 1,
-            mondayProjectId: project.mondayProjectId,
-            error: errorMsg,
-            stack: error instanceof Error ? error.stack : undefined
-          }
-        });
-        
-        results.push({
-          index,
-          success: false,
-          error: errorMsg,
-          data: project,
-          mondayId: project.mondayProjectId
-        });
+      
+    },
+    {
+      operation: 'com',
+      service: 'MondayProductionMigrationService',
+      metadata: {}
+    }
+  ););
       }
     }
     
@@ -566,7 +550,7 @@ export class MondayProductionMigrationService {
       return saxiumAo;
       
     } catch (error) {
-      throw new Error(`Validation AO échouée (${aoData.mondayItemId}): ${error instanceof Error ? error.message : String(error)}`);
+      throw new AppError(`Validation AO échouée (${aoData.mondayItemId}, 500): ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -610,7 +594,7 @@ export class MondayProductionMigrationService {
       return saxiumProject;
       
     } catch (error) {
-      throw new Error(`Validation Project échouée (${projectData.mondayProjectId}): ${error instanceof Error ? error.message : String(error)}`);
+      throw new AppError(`Validation Project échouée (${projectData.mondayProjectId}, 500): ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

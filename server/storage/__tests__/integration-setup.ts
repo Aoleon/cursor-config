@@ -7,6 +7,7 @@
  */
 
 import { vi } from 'vitest';
+import { logger } from './utils/logger';
 
 // Configuration de l'environnement de test avec vraie DB
 process.env.NODE_ENV = 'test';
@@ -14,7 +15,7 @@ process.env.NODE_ENV = 'test';
 // Utiliser la vraie DATABASE_URL (connexion à la DB de développement ou test)
 // IMPORTANT: Ces tests modifient une vraie base de données
 if (!process.env.DATABASE_URL) {
-  console.warn('⚠️  DATABASE_URL non définie - les tests d\'intégration pourraient échouer');
+  logger.warn('⚠️  DATABASE_URL non définie - les tests d\'intégration pourraient échouer');
 }
 
 // DÉMOCK la base de données qui a été mockée par tests/backend/setup.ts

@@ -1,4 +1,5 @@
 import type { IStorage } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
 import { eventBus } from "../eventBus";
 import { logger } from "../utils/logger";
 import { NotFoundError, DatabaseError } from "../utils/error-handler";
@@ -129,7 +130,9 @@ class CalculationEngine {
     context: ProjectContext,
     activeRules: DateIntelligenceRule[]
   ): Promise<PhaseDurationResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // 1. Trouver la règle applicable
       const applicableRule = this.findApplicableRule(phase, context, activeRules);
       
@@ -226,16 +229,14 @@ class CalculationEngine {
         warnings
       };
       
-    } catch (error) {
-      logger.error('Erreur calcul durée', {
-        metadata: {
-          service: 'DateIntelligenceService',
-          operation: 'calculateDuration',
-          phase,
-          projectType: context.projectType,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateIntelligenceService',
+      metadata: {}
+    }
+  );
       });
       // Fallback sécurisé
       return this.getDefaultDuration(phase, context);
@@ -479,7 +480,9 @@ export class DateIntelligenceService {
       }
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer les règles actives
       const activeRules = await this.storage.getActiveRules({ 
         phase, 
@@ -497,16 +500,14 @@ export class DateIntelligenceService {
 
       return result;
       
-    } catch (error) {
-      logger.error('Erreur calcul durée phase', {
-        metadata: {
-          service: 'DateIntelligenceService',
-          operation: 'calculatePhaseDuration',
-          projectId,
-          phase,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateIntelligenceService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError(`Impossible de calculer la durée pour la phase ${phase}`, error as Error);
     }
@@ -520,7 +521,9 @@ export class DateIntelligenceService {
     constraints: PlanningConstraint[] = []
   ): Promise<ProjectTimeline[]> {
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer le projet
       const project = await this.storage.getProject(projectId);
       if (!project) {
@@ -583,16 +586,14 @@ export class DateIntelligenceService {
 
       return timelines;
       
-    } catch (error) {
-      logger.error('Erreur génération timeline projet', {
-        metadata: {
-          service: 'DateIntelligenceService',
-          operation: 'generateProjectTimeline',
-          projectId,
-          constraintsCount: constraints.length,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateIntelligenceService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError(`Impossible de générer la timeline du projet ${projectId}`, error as Error);
     }
@@ -607,7 +608,9 @@ export class DateIntelligenceService {
     newDate: Date
   ): Promise<CascadeUpdateResult> {
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Calculer les effets cascade
       const cascadeEffects = await this.calculationEngine.calculateDependentPhases(
         projectId, 
@@ -682,17 +685,14 @@ export class DateIntelligenceService {
         alertsGenerated
       };
       
-    } catch (error) {
-      logger.error('Erreur recalcul cascade depuis phase', {
-        metadata: {
-          service: 'DateIntelligenceService',
-          operation: 'recalculateFromPhase',
-          projectId,
-          fromPhase,
-          newDate: newDate.toISOString(),
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateIntelligenceService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError(`Impossible de recalculer depuis la phase ${fromPhase}`, error as Error);
     }
@@ -705,7 +705,9 @@ export class DateIntelligenceService {
     context: CalculationContext
   ): Promise<AppliedRule[]> {
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer toutes les règles actives pertinentes
       const allRules = await this.storage.getActiveRules();
       
@@ -743,16 +745,14 @@ export class DateIntelligenceService {
 
       return appliedRules.sort((a, b) => Math.abs(b.durationImpact) - Math.abs(a.durationImpact));
       
-    } catch (error) {
-      logger.error('Erreur application règles intelligence', {
-        metadata: {
-          service: 'DateIntelligenceService',
-          operation: 'applyIntelligenceRules',
-          projectId: context.projectId,
-          currentPhase: context.currentPhase,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateIntelligenceService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError(`Impossible d'appliquer les règles d'intelligence`, error as Error);
     }
@@ -765,7 +765,9 @@ export class DateIntelligenceService {
     timeline: ProjectTimeline[]
   ): Promise<PlanningIssue[]> {
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       const issues: PlanningIssue[] = [];
 
       // 1. Détecter les chevauchements de phases
@@ -868,15 +870,14 @@ export class DateIntelligenceService {
         return (severityOrder[b.severity] || 0) - (severityOrder[a.severity] || 0);
       });
       
-    } catch (error) {
-      logger.error('Erreur détection problèmes planification', {
-        metadata: {
-          service: 'DateIntelligenceService',
-          operation: 'detectPlanningIssues',
-          timelineLength: timeline.length,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'DateIntelligenceService',
+      metadata: {}
+    }
+  );
       });
       throw new DatabaseError(`Impossible de détecter les problèmes de planification`, error as Error);
     }

@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { withErrorHandling } from './utils/error-handler';
 import { contactService, type ExtractedContactData, type ContactLinkResult } from './contactService';
 import { logger } from './utils/logger';
 
@@ -109,7 +110,9 @@ export class DocumentProcessor {
    * @returns Les données extraites structurées
    */
   async extractAOInformation(content: string, filename: string): Promise<ExtractedAOData> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const prompt = `
 Tu es un expert en analyse de documents d'appels d'offres (AO) dans le secteur de la menuiserie.
 
@@ -237,13 +240,14 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       logger.info('DocumentProcessor - Extracted AO data', { metadata: { filename, hasReference: !!cleanedData.reference, hasLots: !!cleanedData.lots } });
       return cleanedData;
 
-    } catch (error) {
-      logger.error('DocumentProcessor - Error processing document', error as Error, { metadata: { filename } });
-      
-      // En cas d'erreur, retourner un objet avec au moins le nom du fichier comme référence
-      return {
-        reference: filename.replace(/\.[^/.]+$/, ""), // Enlever l'extension
-        description: `Document importé: ${filename}`,
+    
+    },
+    {
+      operation: 'Anthropic',
+      service: 'documentProcessor',
+      metadata: {}
+    }
+  );`,
       };
     }
   }
@@ -254,7 +258,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
    * @returns Les données enrichies avec les informations de liaison des contacts
    */
   async processExtractedContactsWithLinking(extractedData: ExtractedAOData): Promise<ExtractedAOData> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('DocumentProcessor - Processing extracted contacts');
       
       const contactsToProcess: ExtractedContactData[] = [];
@@ -307,11 +313,14 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         linkedContacts
       };
       
-    } catch (error) {
-      logger.error('DocumentProcessor - Error processing contacts', error as Error);
-      // En cas d'erreur, retourner les données originales sans liaison
-      return extractedData;
+    
+    },
+    {
+      operation: 'Anthropic',
+      service: 'documentProcessor',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -322,7 +331,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
    * @returns Le contenu textuel extrait
    */
   async extractTextFromFile(fileUrl: string, filename: string): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Pour le POC, utiliser le contenu réel des documents fournis
       if (filename.includes("RPAO SCICV BOULOGNE SANDETTIE")) {
         return this.getBoulogneDocumentContent();
@@ -359,8 +370,14 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
               return this.generateDemoContent(filename);
             }
         }
-      } catch (fetchError) {
-        logger.warn('DocumentProcessor - Fetch error', { metadata: { filename, error: String(fetchError) } });
+      
+    },
+    {
+      operation: 'Anthropic',
+      service: 'documentProcessor',
+      metadata: {}
+    }
+  ); });
         return this.generateDemoContent(filename);
       }
 
@@ -378,9 +395,11 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
    * @returns Liste des lots extraits avec leurs informations détaillées
    */
   async extractDetailedLots(content: string, filename: string): Promise<ExtractedLotData[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const prompt = `
-Tu es un expert en analyse de documents techniques de menuiserie et d'appels d'offres.
+Tu es un expert en analyse de documents techniques de menuiserie et d'appels d'offres.;
 
 Analyse le contenu suivant et extrais tous les lots de menuiserie avec leurs spécifications techniques détaillées.
 
@@ -390,12 +409,12 @@ Contenu:
 ${content.substring(0, 15000)}
 ---
 
-Extrais et structure TOUS les lots de menuiserie trouvés au format JSON strict.
-Pour chaque lot identifié, extrais le maximum d'informations techniques disponibles.
+Extrais et structure TOUS les lots de menuiserie trouvés au format JSON strict.;
+Pour chaque lot identifié, extrais le maximum d'informations techniques disponibles.;
 
 Format de réponse attendu:
 {
-  "lots": [
+"lots": [;
     {
       "numero": "numéro/référence du lot (ex: 07.1, LOT-02, etc.)",
       "designation": "désignation complète du lot",
@@ -420,15 +439,15 @@ Format de réponse attendu:
 }
 
 Règles importantes:
-- Extrais TOUS les lots de menuiserie mentionnés dans le document
-- Si une information n'est pas trouvée, utilise null
-- Pour les quantités et montants, extrais uniquement les nombres
-- Inférer le statut le plus probable selon le contexte du document
-- Sois très précis sur les spécifications techniques
-- Inclure tous les détails trouvés dans technicalDetails
-- Les normes doivent être une liste de strings
+- Extrais TOUS les lots de menuiserie mentionnés dans le document;
+- Si une information n'est pas trouvée, utilise null;
+- Pour les quantités et montants, extrais uniquement les nombres;
+- Inférer le statut le plus probable selon le contexte du document;
+- Sois très précis sur les spécifications techniques;
+- Inclure tous les détails trouvés dans technicalDetails;
+- Les normes doivent être une liste de strings;
 
-Réponds UNIQUEMENT avec le JSON, sans explication.
+Réponds UNIQUEMENT avec le JSON, sans explication.;
 `;
 
       const response = await anthropic.messages.create({
@@ -487,10 +506,14 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       logger.info('DocumentProcessor - Extracted lots', { metadata: { filename, lotsCount: cleanedLots.length } });
       return cleanedLots;
 
-    } catch (error) {
-      logger.error('DocumentProcessor - Error extracting detailed lots', error as Error, { metadata: { filename } });
-      return [];
+    
+    },
+    {
+      operation: 'Anthropic',
+service: 'documentProcessor',;
+      metadata: {}
     }
+  );
   }
 
   /**

@@ -17,6 +17,8 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { logger } from './utils/logger';
 import { 
   users,
   teamResources,
@@ -161,7 +163,7 @@ export class UserRepository extends BaseRepository<
    * @example
    * ```typescript
    * const users = await repo.getUsers();
-   * console.log(`${users.length} utilisateurs trouvés`);
+   * logger.info(`${users.length} utilisateurs trouvés`);
    * ```
    */
   async getUsers(tx?: DrizzleTransaction): Promise<User[]> {
@@ -187,7 +189,7 @@ export class UserRepository extends BaseRepository<
    * ```typescript
    * const user = await repo.getUser('550e8400-...');
    * if (user) {
-   *   console.log(`Utilisateur: ${user.firstName} ${user.lastName}`);
+   *   logger.info(`Utilisateur: ${user.firstName} ${user.lastName}`);
    * }
    * ```
    */
@@ -210,6 +212,137 @@ export class UserRepository extends BaseRepository<
     );
   }
 
+  /**
+   * Récupère un utilisateur par son email
+   * 
+   * @param email - Email de l'utilisateur
+   * @param tx - Transaction optionnelle
+   * @returns L'utilisateur trouvé ou undefined si non trouvé
+   */
+  async getUserByEmail(email: string, tx?: DrizzleTransaction): Promise<User | undefined> {
+    const dbToUse = this.getDb(tx);
+
+    return this.executeQuery(
+      async () => {
+        const [user] = await dbToUse
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+
+        return user;
+      },
+      'getUserByEmail',
+      { email }
+    );
+  }
+
+  /**
+   * Récupère un utilisateur par son username
+   * 
+   * @param username - Username de l'utilisateur
+   * @param tx - Transaction optionnelle
+   * @returns L'utilisateur trouvé ou undefined si non trouvé
+   */
+  async getUserByUsername(username: string, tx?: DrizzleTransaction): Promise<User | undefined> {
+    const dbToUse = this.getDb(tx);
+
+    return this.executeQuery(
+      async () => {
+        const [user] = await dbToUse
+          .select()
+          .from(users)
+          .where(eq(users.username, username))
+          .limit(1);
+
+        return user;
+      },
+      'getUserByUsername',
+      { username }
+    );
+  }
+
+  /**
+   * Récupère un utilisateur par son Microsoft ID
+   * 
+   * @param microsoftId - Microsoft ID de l'utilisateur
+   * @param tx - Transaction optionnelle
+   * @returns L'utilisateur trouvé ou undefined si non trouvé
+   */
+  async getUserByMicrosoftId(microsoftId: string, tx?: DrizzleTransaction): Promise<User | undefined> {
+    const dbToUse = this.getDb(tx);
+
+    return this.executeQuery(
+      async () => {
+        const [user] = await dbToUse
+          .select()
+          .from(users)
+          .where(eq(users.microsoftId, microsoftId))
+          .limit(1);
+
+        return user;
+      },
+      'getUserByMicrosoftId',
+      { microsoftId }
+    );
+  }
+
+  /**
+   * Crée un nouvel utilisateur
+   * 
+   * @param userData - Données de l'utilisateur à créer
+   * @param tx - Transaction optionnelle
+   * @returns L'utilisateur créé
+   */
+  async createUser(userData: Partial<UpsertUser>, tx?: DrizzleTransaction): Promise<User> {
+    const dbToUse = this.getDb(tx);
+
+    return this.executeQuery(
+      async () => {
+        const [user] = await safeInsert(
+          'users',
+          () => dbToUse.insert(users).values(userData).returning(),
+          undefined,
+          { service: this.repositoryName, operation: 'createUser' }
+        );
+        return user;
+      },
+      'createUser',
+      {}
+    );
+  }
+
+  /**
+   * Crée ou met à jour un utilisateur (upsert)
+   * 
+   * @param userData - Données de l'utilisateur
+   * @param tx - Transaction optionnelle
+   * @returns L'utilisateur créé ou mis à jour
+   */
+  async upsertUser(userData: UpsertUser, tx?: DrizzleTransaction): Promise<User> {
+    const dbToUse = this.getDb(tx);
+
+    return this.executeQuery(
+      async () => {
+        const [user] = await dbToUse
+          .insert(users)
+          .values(userData)
+          .onConflictDoUpdate({
+            target: users.id,
+            set: {
+              ...userData,
+              updatedAt: new Date(),
+            },
+          })
+          .returning();
+
+        return user;
+      },
+      'upsertUser',
+      {}
+    );
+  }
+
   // ========================================
   // TEAM RESOURCES - 3 MÉTHODES
   // ========================================
@@ -227,7 +360,7 @@ export class UserRepository extends BaseRepository<
    * // Toutes les ressources d'un projet (1 requête avec leftJoin)
    * const resources = await repo.getTeamResources('550e8400-...');
    * resources.forEach(r => {
-   *   console.log(`Ressource: ${r.role}, User: ${r.user?.firstName}`);
+   *   logger.info(`Ressource: ${r.role}, User: ${r.user?.firstName}`);
    * });
    * 
    * // Toutes les ressources (1 requête)
@@ -323,7 +456,7 @@ export class UserRepository extends BaseRepository<
 
         const newResource = result[0];
         if (!newResource) {
-          throw new Error('Failed to create team resource');
+          throw new AppError('Failed to create team resource', 500);
         }
 
         this.emitEvent('team_resource:created', { 
@@ -412,7 +545,7 @@ export class UserRepository extends BaseRepository<
    * // Charge BE d'une semaine spécifique (1 requête avec leftJoin)
    * const workload = await repo.getBeWorkload(42, 2024);
    * workload.forEach(w => {
-   *   console.log(`User: ${w.user?.firstName}, Charge: ${w.chargeLevel}`);
+   *   logger.info(`User: ${w.user?.firstName}, Charge: ${w.chargeLevel}`);
    * });
    * 
    * // Toute la charge BE (1 requête)
@@ -543,7 +676,7 @@ export class UserRepository extends BaseRepository<
 
           const updated = result[0];
           if (!updated) {
-            throw new Error('Failed to update BE workload');
+            throw new AppError('Failed to update BE workload', 500);
           }
 
           this.emitEvent('be_workload:updated', { 
@@ -563,7 +696,7 @@ export class UserRepository extends BaseRepository<
 
           const newWorkload = result[0];
           if (!newWorkload) {
-            throw new Error('Failed to create BE workload');
+            throw new AppError('Failed to create BE workload', 500);
           }
 
           this.emitEvent('be_workload:created', { 
@@ -663,7 +796,7 @@ export class UserRepository extends BaseRepository<
 
         const newLabel = result[0];
         if (!newLabel) {
-          throw new Error('Failed to create employee label');
+          throw new AppError('Failed to create employee label', 500);
         }
 
         this.emitEvent('employee_label:created', { 
@@ -845,7 +978,7 @@ export class UserRepository extends BaseRepository<
 
         const newAssignment = result[0];
         if (!newAssignment) {
-          throw new Error('Failed to create employee label assignment');
+          throw new AppError('Failed to create employee label assignment', 500);
         }
 
         this.emitEvent('employee_label_assignment:created', { 

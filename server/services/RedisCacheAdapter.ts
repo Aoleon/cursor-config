@@ -1,4 +1,6 @@
 import Redis, { Redis as RedisClient } from 'ioredis';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { logger } from '../utils/logger';
 import type { ICacheAdapter } from './CacheService';
 
@@ -16,7 +18,7 @@ export class RedisCacheAdapter implements ICacheAdapter {
     const connectionString = redisUrl || process.env.REDIS_URL;
 
     if (!connectionString) {
-      throw new Error('REDIS_URL is required for RedisCacheAdapter');
+      throw new AppError('REDIS_URL is required for RedisCacheAdapter', 500);
     }
 
     this.client = new Redis(connectionString, {
@@ -101,7 +103,9 @@ export class RedisCacheAdapter implements ICacheAdapter {
   }
 
   async get<T>(key: string): Promise<T | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const value = await this.client.get(key);
       
       if (value === null) {
@@ -109,53 +113,58 @@ export class RedisCacheAdapter implements ICacheAdapter {
       }
 
       return JSON.parse(value) as T;
-    } catch (error) {
-      logger.error('[RedisCacheAdapter] Error getting key', {
-        metadata: {
-          service: 'RedisCacheAdapter',
-          operation: 'get',
-          key,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RedisCacheAdapter',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
   }
 
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const serialized = JSON.stringify(value);
       await this.client.setex(key, ttlSeconds, serialized);
-    } catch (error) {
-      logger.error('[RedisCacheAdapter] Error setting key', {
-        metadata: {
-          service: 'RedisCacheAdapter',
-          operation: 'set',
-          key,
-          ttlSeconds,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RedisCacheAdapter',
+      metadata: {}
+    }
+  );
       });
     }
   }
 
   async del(key: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.client.del(key);
-    } catch (error) {
-      logger.error('[RedisCacheAdapter] Error deleting key', {
-        metadata: {
-          service: 'RedisCacheAdapter',
-          operation: 'del',
-          key,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RedisCacheAdapter',
+      metadata: {}
+    }
+  );
       });
     }
   }
 
   async flush(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.client.flushdb();
       logger.info('[RedisCacheAdapter] Cache flushed', {
         metadata: {
@@ -163,42 +172,49 @@ export class RedisCacheAdapter implements ICacheAdapter {
           operation: 'flush'
         }
       });
-    } catch (error) {
-      logger.error('[RedisCacheAdapter] Error flushing cache', {
-        metadata: {
-          service: 'RedisCacheAdapter',
-          operation: 'flush',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RedisCacheAdapter',
+      metadata: {}
+    }
+  );
       });
     }
   }
 
   async keys(): Promise<string[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return await this.client.keys('*');
-    } catch (error) {
-      logger.error('[RedisCacheAdapter] Error getting keys', {
-        metadata: {
-          service: 'RedisCacheAdapter',
-          operation: 'keys',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RedisCacheAdapter',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
   }
 
   async size(): Promise<number> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return await this.client.dbsize();
-    } catch (error) {
-      logger.error('[RedisCacheAdapter] Error getting size', {
-        metadata: {
-          service: 'RedisCacheAdapter',
-          operation: 'size',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RedisCacheAdapter',
+      metadata: {}
+    }
+  );
       });
       return 0;
     }
@@ -215,7 +231,9 @@ export class RedisCacheAdapter implements ICacheAdapter {
    * Gracefully disconnect from Redis
    */
   async disconnect(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.client.quit();
       logger.info('[RedisCacheAdapter] Disconnected from Redis', {
         metadata: {
@@ -223,13 +241,14 @@ export class RedisCacheAdapter implements ICacheAdapter {
           operation: 'disconnect'
         }
       });
-    } catch (error) {
-      logger.error('[RedisCacheAdapter] Error disconnecting', {
-        metadata: {
-          service: 'RedisCacheAdapter',
-          operation: 'disconnect',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'RedisCacheAdapter',
+      metadata: {}
+    }
+  );
       });
     }
   }

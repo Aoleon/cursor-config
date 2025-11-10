@@ -3,15 +3,16 @@
  */
 
 import { MondayService } from '../services/MondayService';
+import { logger } from './utils/logger';
 
 async function analyzeUniqueValues() {
   const service = new MondayService();
   const boardId = '3946257560';
   
-  console.log('🔍 Analyse valeurs uniques board AO\n');
+  logger.info('🔍 Analyse valeurs uniques board AO\n');
   
   const items = await service.getBoardItemsPaginated(boardId);
-  console.log(`📦 Total items: ${items.length}\n`);
+  logger.info(`📦 Total items: ${items.length}\n`);
   
   // Map pour stocker valeurs uniques par colonne
   const uniqueValues = new Map<string, Set<any>>();
@@ -45,18 +46,18 @@ async function analyzeUniqueValues() {
   }
   
   // Afficher résultats
-  console.log('📊 VALEURS UNIQUES PAR COLONNE:\n');
+  logger.info('📊 VALEURS UNIQUES PAR COLONNE:\n');
   for (const columnId of importantColumns) {
     const values = uniqueValues.get(columnId);
     if (values && values.size > 0) {
-      console.log(`[${columnId}]:`);
+      logger.info(`[${columnId}]:`);
       Array.from(values).sort().forEach(v => {
         const parsed = JSON.parse(v);
-        console.log(`  - ${parsed}`);
+        logger.info(`  - ${parsed}`);
       });
-      console.log(`  Total: ${values.size} valeurs\n`);
+      logger.info(`  Total: ${values.size} valeurs\n`);
     } else {
-      console.log(`[${columnId}]: (vide)\n`);
+      logger.info(`[${columnId}]: (vide)\n`);
     }
   }
 }

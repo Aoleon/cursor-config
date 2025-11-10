@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { logger } from './utils/logger';
 
 // Configuration de connexion Sage Batigest
@@ -247,7 +249,9 @@ export class BatigestService {
    * Initialise la connexion à la base Sage Batigest (ou mode simulation)
    */
   async connect(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (SIMULATION_MODE) {
         await simulateLatency(50, 150);
         this.isConnected = true;
@@ -263,10 +267,14 @@ export class BatigestService {
         this.isConnected = true;
         logger.info('BatigestService - Connection established');
       }
-    } catch (error) {
-      logger.error('BatigestService - Connection error', error as Error);
-      throw new Error('Impossible de se connecter à Sage Batigest');
+    
+    },
+    {
+      operation: 'parseInt',
+      service: 'batigestService',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -443,7 +451,9 @@ export class BatigestService {
     batigestData?: BatigestDevis;
     message: string;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (!batigestRef) {
         return {
           synchronized: false,
@@ -514,12 +524,14 @@ export class BatigestService {
         message: 'Synchronisation réussie avec Batigest'
       };
       
-    } catch (error) {
-      logger.error('BatigestService - Synchronization error', error as Error);
-      return {
-        synchronized: false,
-        message: 'Erreur lors de la synchronisation avec Batigest'
-      };
+    
+    },
+    {
+      operation: 'parseInt',
+      service: 'batigestService',
+      metadata: {}
+    }
+  );;
     }
   }
 
@@ -684,7 +696,9 @@ export class BatigestService {
    * Test de connectivité Batigest (avec support simulation)
    */
   async testConnection(): Promise<{ connected: boolean; message: string; mode?: string }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (SIMULATION_MODE) {
         await simulateLatency(100, 300);
         return {
@@ -704,136 +718,14 @@ export class BatigestService {
         mode: 'production',
         message: `Connexion OK - Test effectué le ${result.recordset[0].TEST_DATE}`
       };
-    } catch (error) {
-      return {
-        connected: false,
-        message: `Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
-      };
+    
+    },
+    {
+      operation: 'parseInt',
+      service: 'batigestService',
+      metadata: {}
     }
-  }
-
-  /**
-   * Génère automatiquement un code chantier Batigest pour un projet
-   * Implémentation avec idempotence et gestion d'erreurs
-   */
-  async generateChantierCode(projectId: string, offerData: {
-    reference?: string;
-    client?: string;
-    intituleOperation?: string;
-    montantPropose?: string;
-  }): Promise<{
-    success: boolean;
-    batigestRef?: string;
-    message: string;
-    alreadyExists?: boolean;
-  }> {
-    try {
-      await this.connect();
-      
-      if (SIMULATION_MODE) {
-        await simulateLatency(200, 400);
-        
-        // Génération déterministe basée sur l'ID du projet pour idempotence
-        const hash = projectId.slice(-6).toUpperCase();
-        const year = new Date().getFullYear();
-        const generatedCode = `CHT-${year}-${hash}`;
-        
-        logger.info('BatigestService - Code chantier generated', { metadata: { generatedCode, projectId } });
-        
-        // Simuler le cas où un code existe déjà (idempotence)
-        if (Math.random() > 0.8) {
-          return {
-            success: true,
-            batigestRef: generatedCode,
-            message: `Code chantier existant réutilisé: ${generatedCode}`,
-            alreadyExists: true
-          };
-        }
-        
-        return {
-          success: true,
-          batigestRef: generatedCode,
-          message: `Nouveau code chantier généré avec succès: ${generatedCode}`,
-          alreadyExists: false
-        };
-      }
-      
-      // Mode réel avec base de données Batigest
-      const sql = (await import('mssql')).default;
-      
-      // Vérifier si un code existe déjà pour ce projet (idempotence)
-      const checkQuery = `
-        SELECT TOP 1 CODE_CHANTIER 
-        FROM CHANTIERS 
-        WHERE REFERENCE_EXTERNE = @projectId
-      `;
-      
-      const checkRequest = this.pool!.request();
-      checkRequest.input('projectId', sql.VarChar(50), projectId);
-      const checkResult = await checkRequest.query(checkQuery);
-      
-      if (checkResult.recordset.length > 0) {
-        const existingCode = checkResult.recordset[0].CODE_CHANTIER;
-        return {
-          success: true,
-          batigestRef: existingCode,
-          message: `Code chantier existant réutilisé: ${existingCode}`,
-          alreadyExists: true
-        };
-      }
-      
-      // Générer un nouveau code chantier
-      const year = new Date().getFullYear();
-      const sequence = await this.getNextChantierSequence();
-      const generatedCode = `CHT-${year}-${sequence.toString().padStart(4, '0')}`;
-      
-      // Insérer le nouveau chantier dans Batigest
-      const insertQuery = `
-        INSERT INTO CHANTIERS (
-          CODE_CHANTIER, 
-          REFERENCE_EXTERNE, 
-          INTITULE, 
-          CLIENT_NOM, 
-          MONTANT_PREVISIONNEL,
-          DATE_CREATION,
-          STATUT,
-          RESPONSABLE
-        ) VALUES (
-          @codeChantier,
-          @projectId,
-          @intitule,
-          @client,
-          @montant,
-          @dateCreation,
-          'PREPARATION',
-          'SYSTEM_AUTO'
-        )
-      `;
-      
-      const insertRequest = this.pool!.request();
-      insertRequest.input('codeChantier', sql.VarChar(20), generatedCode);
-      insertRequest.input('projectId', sql.VarChar(50), projectId);
-      insertRequest.input('intitule', sql.VarChar(200), offerData.intituleOperation || 'Projet automatique');
-      insertRequest.input('client', sql.VarChar(100), offerData.client || 'Client non spécifié');
-      insertRequest.input('montant', sql.Money, parseFloat(offerData.montantPropose || '0'));
-      insertRequest.input('dateCreation', sql.DateTime, new Date());
-      
-      await insertRequest.query(insertQuery);
-      
-      logger.info('BatigestService - New code chantier created', { metadata: { generatedCode } });
-      
-      return {
-        success: true,
-        batigestRef: generatedCode,
-        message: `Nouveau code chantier créé avec succès: ${generatedCode}`,
-        alreadyExists: false
-      };
-      
-    } catch (error) {
-      logger.error('BatigestService - Error generating code chantier', error as Error);
-      return {
-        success: false,
-        message: `Erreur lors de la génération automatique du code chantier: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+  );`
       };
     }
   }

@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import fs from "fs";
 import path from "path";
 import { createServer as createViteServer, type ViteDevServer } from "vite";
@@ -37,9 +38,9 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   const distPath = path.resolve(import.meta.dirname, "..", "dist/public");
   if (!fs.existsSync(distPath)) {
-    throw new Error(
+    throw new AppError(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
+    , 500);
   }
   app.use(express.static(distPath));
   // Fallback to index.html for SPA routing

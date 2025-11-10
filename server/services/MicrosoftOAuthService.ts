@@ -1,4 +1,6 @@
 import passport from 'passport';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { logger } from '../utils/logger';
 import type { IStorage } from '../storage-poc';
 
@@ -81,7 +83,9 @@ export class MicrosoftOAuthService {
         refreshToken: string,
         done: VerifyCallback
       ) => {
-        try {
+        return withErrorHandling(
+    async () => {
+
           logger.info('[MicrosoftOAuth] User authenticated via Microsoft', {
             metadata: {
               service: 'MicrosoftOAuthService',
@@ -139,12 +143,14 @@ export class MicrosoftOAuthService {
           });
 
           return done(null, authenticatedUser);
-        } catch (error) {
-          logger.error('[MicrosoftOAuth] Error during Microsoft authentication', {
-            metadata: {
-              service: 'MicrosoftOAuthService',
-              error: error instanceof Error ? error.message : String(error)
-            }
+        
+    },
+    {
+      operation: 'ad',
+      service: 'MicrosoftOAuthService',
+      metadata: {}
+    }
+  );
           });
           return done(error as Error);
         }
@@ -171,10 +177,12 @@ export async function refreshMicrosoftToken(refreshToken: string): Promise<{
   const tenantID = process.env.AZURE_TENANT_ID;
 
   if (!clientID || !clientSecret || !tenantID) {
-    throw new Error('Azure AD credentials not configured');
+    throw new AppError('Azure AD credentials not configured', 500);
   }
 
-  try {
+  return withErrorHandling(
+    async () => {
+
     const tokenEndpoint = `https://login.microsoftonline.com/${tenantID}/oauth2/v2.0/token`;
     
     const params = new URLSearchParams({
@@ -195,7 +203,7 @@ export async function refreshMicrosoftToken(refreshToken: string): Promise<{
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Token refresh failed: ${error}`);
+      throw new AppError(`Token refresh failed: ${error}`, 500);
     }
 
     const data = await response.json();
@@ -211,11 +219,14 @@ export async function refreshMicrosoftToken(refreshToken: string): Promise<{
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
     };
-  } catch (error) {
-    logger.error('[MicrosoftOAuth] Token refresh error', {
-      metadata: {
-        error: error instanceof Error ? error.message : String(error)
-      }
+  
+    },
+    {
+      operation: 'ad',
+      service: 'MicrosoftOAuthService',
+      metadata: {}
+    }
+  );
     });
     throw error;
   }

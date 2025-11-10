@@ -8,6 +8,7 @@
  */
 
 import { Router } from 'express';
+import { withErrorHandling } from './utils/error-handler';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler, sendSuccess, createError } from '../../middleware/errorHandler';
@@ -240,20 +241,20 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     rateLimits.general,
     validateParams(z.object({ aoId: z.string().uuid("ID AO invalide") })),
     asyncHandler(async (req: any, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { aoId } = req.params;
         const contacts = await storage.getAoContacts(aoId);
         sendSuccess(res, contacts);
-      } catch (error) {
-        logger.error('Erreur getAoContacts', {
-          metadata: { 
-            route: '/api/ao-contacts/:aoId',
-            method: 'GET',
-            aoId: req.params.aoId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'ouvrage',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la récupération des contacts AO");
       }
@@ -266,22 +267,21 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     rateLimits.creation,
     validateBody(insertAoContactsSchema),
     asyncHandler(async (req: any, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const contactData = req.body;
         const newContact = await storage.createAoContact(contactData);
         logger.info('Liaison AO-Contact créée avec succès', { metadata: { aoId: req.body.aoId, contactId: req.body.contactId } });
         sendSuccess(res, newContact, 201);
-      } catch (error) {
-        logger.error('Erreur createAoContact', {
-          metadata: { 
-            route: '/api/ao-contacts',
-            method: 'POST',
-            aoId: req.body.aoId,
-            contactId: req.body.contactId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'ouvrage',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la création de la liaison AO-Contact");
       }
@@ -294,21 +294,21 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     rateLimits.general,
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req: any, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id } = req.params;
         await storage.deleteAoContact(id);
         logger.info('Liaison AO-Contact supprimée avec succès', { metadata: { id: req.params.id } });
         sendSuccess(res, null);
-      } catch (error) {
-        logger.error('Erreur deleteAoContact', {
-          metadata: { 
-            route: '/api/ao-contacts/:id',
-            method: 'DELETE',
-            id: req.params.id,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'ouvrage',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la suppression de la liaison AO-Contact");
       }
@@ -325,20 +325,20 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     rateLimits.general,
     validateParams(z.object({ projectId: z.string().uuid("ID Projet invalide") })),
     asyncHandler(async (req: any, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { projectId } = req.params;
         const contacts = await storage.getProjectContacts(projectId);
         sendSuccess(res, contacts);
-      } catch (error) {
-        logger.error('Erreur getProjectContacts', {
-          metadata: { 
-            route: '/api/project-contacts/:projectId',
-            method: 'GET',
-            projectId: req.params.projectId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'ouvrage',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la récupération des contacts projet");
       }
@@ -351,22 +351,21 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     rateLimits.creation,
     validateBody(insertProjectContactsSchema),
     asyncHandler(async (req: any, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const contactData = req.body;
         const newContact = await storage.createProjectContact(contactData);
         logger.info('Liaison Project-Contact créée avec succès', { metadata: { projectId: req.body.projectId, contactId: req.body.contactId } });
         sendSuccess(res, newContact, 201);
-      } catch (error) {
-        logger.error('Erreur createProjectContact', {
-          metadata: { 
-            route: '/api/project-contacts',
-            method: 'POST',
-            projectId: req.body.projectId,
-            contactId: req.body.contactId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'ouvrage',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la création de la liaison Project-Contact");
       }
@@ -379,21 +378,21 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     rateLimits.general,
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req: any, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id } = req.params;
         await storage.deleteProjectContact(id);
         logger.info('Liaison Project-Contact supprimée avec succès', { metadata: { id: req.params.id } });
         sendSuccess(res, null);
-      } catch (error) {
-        logger.error('Erreur deleteProjectContact', {
-          metadata: { 
-            route: '/api/project-contacts/:id',
-            method: 'DELETE',
-            id: req.params.id,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'ouvrage',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la suppression de la liaison Project-Contact");
       }

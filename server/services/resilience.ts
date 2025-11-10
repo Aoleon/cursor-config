@@ -10,6 +10,7 @@
  */
 
 import { retryService, type RetryOptions } from '../utils/retry-service.js';
+import { withErrorHandling } from './utils/error-handler';
 import { circuitBreakerManager, type CircuitBreakerOptions } from '../utils/circuit-breaker.js';
 import { logger } from '../utils/logger.js';
 
@@ -165,18 +166,20 @@ export async function executeMonday<T>(
 ): Promise<T> {
   const breaker = circuitBreakerManager.getBreaker('monday');
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     return await breaker.execute(async () => {
       return await retryService.execute(operation, MONDAY_RETRY_CONFIG);
     });
-  } catch (error) {
-    logger.error('Monday.com operation failed after retries', {
-      metadata: {
-        service: 'Resilience',
-        provider: 'monday',
-        operation: operationName,
-        error: error instanceof Error ? error.message : String(error)
-      }
+  
+    },
+    {
+      operation: 'OpenAI',
+      service: 'resilience',
+      metadata: {}
+    }
+  );
     });
     throw error;
   }
@@ -195,20 +198,20 @@ export async function executeOpenAI<T>(
   const breakerName = normalizeModelName(model);
   const breaker = circuitBreakerManager.getBreaker(breakerName);
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     return await breaker.execute(async () => {
       return await retryService.execute(operation, OPENAI_RETRY_CONFIG);
     });
-  } catch (error) {
-    logger.error('OpenAI operation failed after retries', {
-      metadata: {
-        service: 'Resilience',
-        provider: breakerName,
-        operation: operationName,
-        model: model,
-        normalizedModel: breakerName,
-        error: error instanceof Error ? error.message : String(error)
-      }
+  
+    },
+    {
+      operation: 'OpenAI',
+      service: 'resilience',
+      metadata: {}
+    }
+  );
     });
     throw error;
   }
@@ -223,18 +226,20 @@ export async function executeSendGrid<T>(
 ): Promise<T> {
   const breaker = circuitBreakerManager.getBreaker('sendgrid');
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     return await breaker.execute(async () => {
       return await retryService.execute(operation, SENDGRID_RETRY_CONFIG);
     });
-  } catch (error) {
-    logger.error('SendGrid operation failed after retries', {
-      metadata: {
-        service: 'Resilience',
-        provider: 'sendgrid',
-        operation: operationName,
-        error: error instanceof Error ? error.message : String(error)
-      }
+  
+    },
+    {
+      operation: 'OpenAI',
+      service: 'resilience',
+      metadata: {}
+    }
+  );
     });
     throw error;
   }
@@ -249,18 +254,20 @@ export async function executeOneDrive<T>(
 ): Promise<T> {
   const breaker = circuitBreakerManager.getBreaker('onedrive');
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     return await breaker.execute(async () => {
       return await retryService.execute(operation, ONEDRIVE_RETRY_CONFIG);
     });
-  } catch (error) {
-    logger.error('OneDrive operation failed after retries', {
-      metadata: {
-        service: 'Resilience',
-        provider: 'onedrive',
-        operation: operationName,
-        error: error instanceof Error ? error.message : String(error)
-      }
+  
+    },
+    {
+      operation: 'OpenAI',
+      service: 'resilience',
+      metadata: {}
+    }
+  );
     });
     throw error;
   }

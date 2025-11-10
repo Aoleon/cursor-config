@@ -4,6 +4,7 @@
  */
 
 import { OCRService } from '../ocrService';
+import { logger } from './utils/logger';
 import { ContextualOCREngine } from '../services/ContextualOCREngine';
 import { AOFieldsExtracted } from '@shared/schema';
 
@@ -46,7 +47,7 @@ export class ContextualOCRValidator {
   async validateOCRImprovements(): Promise<OCRValidationResult[]> {
     const results: OCRValidationResult[] = [];
 
-    console.log('🧪 [OCR-VALIDATION] Début des tests de validation du moteur OCR contextuel...');
+    logger.info('🧪 [OCR-VALIDATION] Début des tests de validation du moteur OCR contextuel...');
 
     // Test 1: Extraction AO avec données clients connues
     const test1 = await this.testClientRecognition();
@@ -74,7 +75,7 @@ export class ContextualOCRValidator {
    * Test 1: Reconnaissance des clients existants avec variations de nom
    */
   private async testClientRecognition(): Promise<OCRValidationResult> {
-    console.log('📋 Test 1: Reconnaissance des clients avec variations...');
+    logger.info('📋 Test 1: Reconnaissance des clients avec variations...');
 
     const testData: Partial<AOFieldsExtracted> = {
       client: 'HABITAT 62 - BAILLEUR SOCIAL', // Variation du nom dans la base
@@ -123,7 +124,7 @@ export class ContextualOCRValidator {
    * Test 2: Validation et correction des montants
    */
   private async testAmountValidation(): Promise<OCRValidationResult> {
-    console.log('💰 Test 2: Validation des montants avec données historiques...');
+    logger.info('💰 Test 2: Validation des montants avec données historiques...');
 
     const testData: Partial<AOFieldsExtracted> = {
       client: 'HABITAT 62',
@@ -167,7 +168,7 @@ export class ContextualOCRValidator {
    * Test 3: Auto-complétion des contacts
    */
   private async testContactAutoCompletion(): Promise<OCRValidationResult> {
-    console.log('👥 Test 3: Auto-complétion des contacts depuis base maître...');
+    logger.info('👥 Test 3: Auto-complétion des contacts depuis base maître...');
 
     const testData: Partial<AOFieldsExtracted> = {
       client: 'HABITAT 62',
@@ -210,7 +211,7 @@ export class ContextualOCRValidator {
    * Test 4: Mapping intelligent des localisations
    */
   private async testLocationMapping(): Promise<OCRValidationResult> {
-    console.log('🗺️ Test 4: Mapping intelligent des localisations...');
+    logger.info('🗺️ Test 4: Mapping intelligent des localisations...');
 
     const testData: Partial<AOFieldsExtracted> = {
       location: 'Calais centre', // Variation minuscule/majuscule
@@ -271,8 +272,8 @@ export class ContextualOCRValidator {
    * Génère un rapport de validation complet
    */
   private generateValidationReport(results: OCRValidationResult[]): void {
-    console.log('\n📊 [RAPPORT DE VALIDATION] Moteur OCR Contextuel vs Standard\n');
-    console.log('=' .repeat(80));
+    logger.info('\n📊 [RAPPORT DE VALIDATION] Moteur OCR Contextuel vs Standard\n');
+    logger.info('=' .repeat(80));
 
     let totalStandardAccuracy = 0;
     let totalContextualAccuracy = 0;
@@ -283,38 +284,38 @@ export class ContextualOCRValidator {
       totalContextualAccuracy += result.contextualOCR.accuracy;
       totalImprovement += result.improvementPercentage;
 
-      console.log(`\n${index + 1}. ${result.testName}`);
-      console.log(`   Standard OCR: ${result.standardOCR.accuracy.toFixed(1)}% précision`);
-      console.log(`   Contextuel OCR: ${result.contextualOCR.accuracy.toFixed(1)}% précision`);
-      console.log(`   📈 Amélioration: +${result.improvementPercentage.toFixed(1)}%`);
-      console.log(`   🎯 ${result.summary}`);
+      logger.info(`\n${index + 1}. ${result.testName}`);
+      logger.info(`   Standard OCR: ${result.standardOCR.accuracy.toFixed(1)}% précision`);
+      logger.info(`   Contextuel OCR: ${result.contextualOCR.accuracy.toFixed(1)}% précision`);
+      logger.info(`   📈 Amélioration: +${result.improvementPercentage.toFixed(1)}%`);
+      logger.info(`   🎯 ${result.summary}`);
     });
 
     const avgStandardAccuracy = totalStandardAccuracy / results.length;
     const avgContextualAccuracy = totalContextualAccuracy / results.length;
     const avgImprovement = totalImprovement / results.length;
 
-    console.log('\n' + '=' .repeat(80));
-    console.log('📈 RÉSULTATS GLOBAUX:');
-    console.log(`   • OCR Standard moyen: ${avgStandardAccuracy.toFixed(1)}% de précision`);
-    console.log(`   • OCR Contextuel moyen: ${avgContextualAccuracy.toFixed(1)}% de précision`);
-    console.log(`   • 🎯 AMÉLIORATION MOYENNE: +${avgImprovement.toFixed(1)}%`);
+    logger.info('\n' + '=' .repeat(80));
+    logger.info('📈 RÉSULTATS GLOBAUX:');
+    logger.info(`   • OCR Standard moyen: ${avgStandardAccuracy.toFixed(1)}% de précision`);
+    logger.info(`   • OCR Contextuel moyen: ${avgContextualAccuracy.toFixed(1)}% de précision`);
+    logger.info(`   • 🎯 AMÉLIORATION MOYENNE: +${avgImprovement.toFixed(1)}%`);
     
     if (avgImprovement >= 20) {
-      console.log('   ✅ OBJECTIF ATTEINT: Amélioration ≥ 20% comme demandé');
+      logger.info('   ✅ OBJECTIF ATTEINT: Amélioration ≥ 20% comme demandé');
     } else {
-      console.log('   ⚠️ OBJECTIF PARTIEL: Amélioration < 20%');
+      logger.info('   ⚠️ OBJECTIF PARTIEL: Amélioration < 20%');
     }
 
-    console.log('\n🏆 BÉNÉFICES CLÉS:');
-    console.log('   • Mapping intelligent des clients avec variations de nom');
-    console.log('   • Validation et correction automatique des montants');
-    console.log('   • Auto-complétion des contacts depuis données maître');
-    console.log('   • Normalisation et validation des localisations');
-    console.log('   • Réduction significative des erreurs humaines');
-    console.log('   • Amélioration de la cohérence des données');
+    logger.info('\n🏆 BÉNÉFICES CLÉS:');
+    logger.info('   • Mapping intelligent des clients avec variations de nom');
+    logger.info('   • Validation et correction automatique des montants');
+    logger.info('   • Auto-complétion des contacts depuis données maître');
+    logger.info('   • Normalisation et validation des localisations');
+    logger.info('   • Réduction significative des erreurs humaines');
+    logger.info('   • Amélioration de la cohérence des données');
 
-    console.log('\n=' .repeat(80));
+    logger.info('\n=' .repeat(80));
   }
 
   /**

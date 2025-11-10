@@ -7,6 +7,7 @@
  */
 
 import { Router } from 'express';
+import { withErrorHandling } from './utils/error-handler';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler, sendSuccess, createError } from '../../middleware/errorHandler';
@@ -32,7 +33,9 @@ async function collectServerInfo(): Promise<{
   systemInfo: Record<string, any>;
   timestamp: string;
 }> {
-  try {
+  return withErrorHandling(
+    async () => {
+
     let serverLogs = '';
     try {
       const { exec } = require('child_process');
@@ -41,43 +44,14 @@ async function collectServerInfo(): Promise<{
       
       const logData = await execPromise('tail -n 100 /dev/null 2>/dev/null || echo "Logs serveur non disponibles"');
       serverLogs = logData.stdout || 'Logs serveur non disponibles';
-    } catch (logError) {
-      serverLogs = 'Erreur lors de la collecte des logs serveur';
+    
+    },
+    {
+      operation: 'collectServerInfo',
+service: 'routes',;
+      metadata: {}
     }
-
-    const environment = {
-      NODE_ENV: process.env.NODE_ENV || 'unknown',
-      NODE_VERSION: process.version,
-      PLATFORM: process.platform,
-      ARCH: process.arch,
-    };
-
-    const systemInfo = {
-      uptime: `${Math.floor(process.uptime())} secondes`,
-      memory: {
-        used: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB`,
-        total: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)} MB`,
-        rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)} MB`
-      },
-      pid: process.pid,
-      cwd: process.cwd()
-    };
-
-    return {
-      serverLogs,
-      version: process.version,
-      environment,
-      systemInfo,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    logger.error('[Testing] Erreur collecte informations serveur', {
-      metadata: { 
-        context: 'bug_report_system',
-        function: 'collectServerInfo',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+  );
     });
     return {
       serverLogs: 'Erreur lors de la collecte',
@@ -93,7 +67,9 @@ async function collectServerInfo(): Promise<{
  * Intégration GitHub Issues API
  */
 async function createGitHubIssue(bugReport: InsertBugReport, serverInfo: any): Promise<string | null> {
-  try {
+  return withErrorHandling(
+    async () => {
+
     const githubToken = process.env.GITHUB_TOKEN;
     const repoOwner = process.env.GITHUB_REPO_OWNER || 'saxium-team';
     const repoName = process.env.GITHUB_REPO_NAME || 'saxium';
@@ -186,16 +162,14 @@ ${serverInfo.serverLogs}
     });
     return issueData.html_url;
 
-  } catch (error) {
-    logger.error('[Testing] Erreur création issue GitHub', {
-      metadata: { 
-        context: 'bug_report_system',
-        function: 'createGitHubIssue',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        bugReportTitle: bugReport.title,
-        bugReportType: bugReport.type
-      }
+  
+    },
+    {
+      operation: 'collectServerInfo',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     });
     return null;
   }
@@ -422,7 +396,9 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
         consoleLogs: req.body.consoleLogs || []
       };
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         logger.info('[Testing] Insertion rapport de bug en base', {
           metadata: {
             type: bugReportData.type,
@@ -439,16 +415,14 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
         let githubIssueUrl: string | null = null;
         try {
           githubIssueUrl = await createGitHubIssue(bugReportData, serverInfo);
-        } catch (githubError) {
-          logger.error('[Testing] Erreur GitHub non bloquante', {
-            metadata: { 
-              route: '/api/bug-reports',
-              method: 'POST',
-              error: githubError instanceof Error ? githubError.message : String(githubError),
-              stack: githubError instanceof Error ? githubError.stack : undefined,
-              bugReportId: savedBugReport.id,
-              userId: req.user?.id
-            }
+        
+    },
+    {
+      operation: 'collectServerInfo',
+service: 'routes',;
+      metadata: {}
+    }
+  );
           });
         }
 

@@ -1,4 +1,6 @@
 import { eq, desc, and, sql, gte, lte, count, sum, avg, ne, ilike } from "drizzle-orm";
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { 
   users, aos, offers, projects, projectTasks, suppliers, supplierRequests, teamResources, beWorkload,
   chiffrageElements, dpgfDocuments, aoLots, maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre,
@@ -43,6 +45,8 @@ import {
   type BusinessAlert, type InsertBusinessAlert, type UpdateBusinessAlert,
   type AlertsQuery, type ThresholdKey, type AlertSeverity, type AlertStatus, type AlertType,
   projectStatusEnum,
+  contactLinkTypeEnum,
+  departementEnum,
   type ProjectReserve, type InsertProjectReserve,
   type SavIntervention, type InsertSavIntervention,
   type SavWarrantyClaim, type InsertSavWarrantyClaim,
@@ -138,6 +142,7 @@ export interface IStorage {
   // User operations
   getUsers(): Promise<User[]>;
   getUser(id: string): Promise<User | undefined>;
+  // UserRepository methods - MIGRATED TO server/storage/users/UserRepository.ts
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByMicrosoftId(microsoftId: string): Promise<User | undefined>;
@@ -500,9 +505,9 @@ export interface IStorage {
 
   // Sauvegarder snapshots forecasts
   saveForecastSnapshot(forecast: {
-    forecast_data: any;     // Résultats forecast JSON
+    forecast_data: Record<string, unknown>;     // Résultats forecast JSON
     generated_at: string;   // Timestamp génération
-    params: any;           // Paramètres utilisés
+    params: Record<string, unknown>;           // Paramètres utilisés
   }): Promise<string>;     // ID snapshot créé
 
   // Lister snapshots historiques
@@ -515,8 +520,8 @@ export interface IStorage {
   }>>;
 
   // Analytics snapshots operations
-  getAnalyticsSnapshots(params?: any): Promise<any[]>;
-  createAnalyticsSnapshot(data: any): Promise<any>;
+  getAnalyticsSnapshots(params?: Record<string, unknown>): Promise<Record<string, unknown>[]>;
+  createAnalyticsSnapshot(data: Record<string, unknown>): Promise<Record<string, unknown>>;
 
   // Benchmarks secteur pour comparaisons
   getSectorBenchmarks(): Promise<{
@@ -639,25 +644,25 @@ export interface IStorage {
   // ========================================
 
   // Supplier Quote Sessions operations - Gestion des sessions de devis sécurisées
-  getSupplierQuoteSessions(aoId?: string, aoLotId?: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any })[]>;
-  getSupplierQuoteSession(id: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any }) | undefined>;
-  getSupplierQuoteSessionByToken(token: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any }) | undefined>;
+  getSupplierQuoteSessions(aoId?: string, aoLotId?: string): Promise<(SupplierQuoteSession & { supplier?: Supplier; aoLot?: AoLot })[]>;
+  getSupplierQuoteSession(id: string): Promise<(SupplierQuoteSession & { supplier?: Supplier; aoLot?: AoLot }) | undefined>;
+  getSupplierQuoteSessionByToken(token: string): Promise<(SupplierQuoteSession & { supplier?: Supplier; aoLot?: AoLot }) | undefined>;
   createSupplierQuoteSession(session: InsertSupplierQuoteSession): Promise<SupplierQuoteSession>;
   updateSupplierQuoteSession(id: string, session: Partial<InsertSupplierQuoteSession>): Promise<SupplierQuoteSession>;
   deleteSupplierQuoteSession(id: string): Promise<void>;
   generateSessionToken(): Promise<string>; // Génère un token unique sécurisé
 
   // AO Lot Suppliers operations - Gestion de la sélection fournisseurs par lot
-  getAoLotSuppliers(aoLotId: string): Promise<(AoLotSupplier & { supplier?: any; selectedByUser?: any })[]>;
-  getAoLotSupplier(id: string): Promise<(AoLotSupplier & { supplier?: any; selectedByUser?: any }) | undefined>;
+  getAoLotSuppliers(aoLotId: string): Promise<(AoLotSupplier & { supplier?: Supplier; selectedByUser?: User })[]>;
+  getAoLotSupplier(id: string): Promise<(AoLotSupplier & { supplier?: Supplier; selectedByUser?: User }) | undefined>;
   createAoLotSupplier(aoLotSupplier: InsertAoLotSupplier): Promise<AoLotSupplier>;
   updateAoLotSupplier(id: string, aoLotSupplier: Partial<InsertAoLotSupplier>): Promise<AoLotSupplier>;
   deleteAoLotSupplier(id: string): Promise<void>;
-  getSuppliersByLot(aoLotId: string): Promise<any[]>; // Récupère les fournisseurs sélectionnés pour un lot
+  getSuppliersByLot(aoLotId: string): Promise<Supplier[]>; // Récupère les fournisseurs sélectionnés pour un lot
 
   // Supplier Documents operations - Gestion des documents fournisseurs
-  getSupplierDocuments(sessionId?: string, supplierId?: string): Promise<(SupplierDocument & { session?: any; validatedByUser?: any })[]>;
-  getSupplierDocument(id: string): Promise<(SupplierDocument & { session?: any; validatedByUser?: any }) | undefined>;
+  getSupplierDocuments(sessionId?: string, supplierId?: string): Promise<(SupplierDocument & { session?: SupplierQuoteSession; validatedByUser?: User })[]>;
+  getSupplierDocument(id: string): Promise<(SupplierDocument & { session?: SupplierQuoteSession; validatedByUser?: User }) | undefined>;
   createSupplierDocument(document: InsertSupplierDocument): Promise<SupplierDocument>;
   updateSupplierDocument(id: string, document: Partial<InsertSupplierDocument>): Promise<SupplierDocument>;
   deleteSupplierDocument(id: string): Promise<void>;
@@ -675,8 +680,8 @@ export interface IStorage {
   updateSyncConfig(config: Partial<InsertSyncConfig>): Promise<SyncConfig>;
 
   // Supplier Quote Analysis operations - Gestion de l'analyse OCR des devis
-  getSupplierQuoteAnalyses(documentId?: string, sessionId?: string): Promise<(SupplierQuoteAnalysis & { document?: any; reviewedByUser?: any })[]>;
-  getSupplierQuoteAnalysis(id: string): Promise<(SupplierQuoteAnalysis & { document?: any; reviewedByUser?: any }) | undefined>;
+  getSupplierQuoteAnalyses(documentId?: string, sessionId?: string): Promise<(SupplierQuoteAnalysis & { document?: SupplierDocument; reviewedByUser?: User })[]>;
+  getSupplierQuoteAnalysis(id: string): Promise<(SupplierQuoteAnalysis & { document?: SupplierDocument; reviewedByUser?: User }) | undefined>;
   createSupplierQuoteAnalysis(analysis: InsertSupplierQuoteAnalysis): Promise<SupplierQuoteAnalysis>;
   updateSupplierQuoteAnalysis(id: string, analysis: Partial<InsertSupplierQuoteAnalysis>): Promise<SupplierQuoteAnalysis>;
   deleteSupplierQuoteAnalysis(id: string): Promise<void>;
@@ -691,15 +696,15 @@ export interface IStorage {
       orderBy?: string; 
       order?: 'asc' | 'desc' 
     }
-  ): Promise<any[]>;
-  getSupplierDocumentsBySession(sessionId: string): Promise<any[]>;
+  ): Promise<SupplierDocument[]>;
+  getSupplierDocumentsBySession(sessionId: string): Promise<SupplierDocument[]>;
   createAnalysisNoteHistory(data: { 
     analysisId: string; 
     notes: string; 
     timestamp: Date;
     isInternal?: boolean;
     createdBy?: string;
-  }): Promise<any>;
+  }): Promise<Record<string, unknown>>;
 
   // Workflow helpers - Méthodes utilitaires pour le workflow fournisseurs
   getSupplierWorkflowStatus(aoId: string): Promise<{
@@ -727,22 +732,22 @@ export interface IStorage {
   // ========================================
 
   // Purchase Orders operations - Gestion des bons de commande fournisseurs
-  getPurchaseOrders(filters?: { supplierId?: string; status?: string }): Promise<any[]>;
-  getPurchaseOrder(id: string): Promise<any | undefined>;
-  createPurchaseOrder(order: any): Promise<any>;
-  updatePurchaseOrder(id: string, order: Partial<any>): Promise<any>;
+  getPurchaseOrders(filters?: { supplierId?: string; status?: string }): Promise<PurchaseOrder[]>;
+  getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined>;
+  createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder>;
+  updatePurchaseOrder(id: string, order: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder>;
 
   // Client Quotes operations - Gestion des devis clients
-  getClientQuotes(filters?: { clientName?: string; status?: string }): Promise<any[]>;
-  getClientQuote(id: string): Promise<any | undefined>;
-  createClientQuote(quote: any): Promise<any>;
-  updateClientQuote(id: string, quote: Partial<any>): Promise<any>;
+  getClientQuotes(filters?: { clientName?: string; status?: string }): Promise<ClientQuote[]>;
+  getClientQuote(id: string): Promise<ClientQuote | undefined>;
+  createClientQuote(quote: InsertClientQuote): Promise<ClientQuote>;
+  updateClientQuote(id: string, quote: Partial<InsertClientQuote>): Promise<ClientQuote>;
 
   // Batigest Export Queue operations - Queue de synchronisation Batigest
-  getBatigestExportsByStatus(status: string, limit?: number): Promise<any[]>;
-  getBatigestExportById(id: string): Promise<any | undefined>;
-  createBatigestExport(exportData: any): Promise<any>;
-  updateBatigestExport(id: string, data: Partial<any>): Promise<any>;
+  getBatigestExportsByStatus(status: string, limit?: number): Promise<BatigestExportQueue[]>;
+  getBatigestExportById(id: string): Promise<BatigestExportQueue | undefined>;
+  createBatigestExport(exportData: InsertBatigestExportQueue): Promise<BatigestExportQueue>;
+  updateBatigestExport(id: string, data: Partial<InsertBatigestExportQueue>): Promise<BatigestExportQueue>;
   getBatigestExportsAll(filters?: {
     status?: string;
     documentType?: string;
@@ -920,6 +925,9 @@ export class DatabaseStorage implements IStorage {
   ];
 
   // User operations
+  // UserRepository methods - MIGRATED TO server/storage/users/UserRepository.ts
+  // These methods are now delegated through StorageFacade
+  // Implementation kept for backward compatibility with DatabaseStorage class
   async getUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
@@ -961,27 +969,13 @@ export class DatabaseStorage implements IStorage {
 
   async upsertUser(userData: UpsertUser): Promise<User> {
     return safeQuery(async () => {
-      try {
-        const [user] = await db
-          .insert(users)
-          .values(userData)
-          .onConflictDoUpdate({
-            target: users.id, // Conflict sur l'ID
-            set: {
-              ...userData,
-              updatedAt: new Date(),
-            },
-          })
-          .returning();
-        return user;
-      } catch (error: any) {
-        // Si erreur de contrainte unique sur email, essayer de mettre à jour par email
-        if (error.code === '23505' && error.constraint?.includes('email')) {
+      return withErrorHandling(
+        async () => {
           const [user] = await db
             .insert(users)
             .values(userData)
             .onConflictDoUpdate({
-              target: users.email, // Conflict sur l'email
+              target: users.id,
               set: {
                 ...userData,
                 updatedAt: new Date(),
@@ -989,9 +983,13 @@ export class DatabaseStorage implements IStorage {
             })
             .returning();
           return user;
+        },
+        {
+          operation: 'upsertUser',
+          service: 'storage-poc',
+          metadata: {}
         }
-        throw error;
-      }
+      );
     }, {
       retries: 2,
       service: 'StoragePOC',
@@ -999,291 +997,6 @@ export class DatabaseStorage implements IStorage {
       logQuery: true
     });
   }
-
-  // AO operations
-  async getAos(): Promise<Ao[]> {
-    return await db.select().from(aos).orderBy(desc(aos.createdAt));
-  }
-
-  async getAOsPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ aos: Array<Ao>, total: number }> {
-    const actualLimit = Number(limit) || 20;
-    const actualOffset = Number(offset) || 0;
-
-    // Construire les conditions de filtrage
-    const conditions = [];
-    
-    if (status) {
-      conditions.push(eq(aos.status, status as any));
-    }
-    
-    if (search && typeof search === 'string') {
-      const searchConditions = [
-        ilike(aos.reference, `%${search}%`),
-        ilike(aos.client, `%${search}%`),
-        ilike(aos.location, `%${search}%`),
-        ilike(aos.intituleOperation, `%${search}%`)
-      ];
-      conditions.push(sql`(${sql.join(searchConditions, sql` OR `)})`);
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-    // Query COUNT pour le total (avec les mêmes filtres)
-    const [countResult] = await db
-      .select({ count: sql<number>`cast(count(*) as int)` })
-      .from(aos)
-      .where(whereClause);
-    
-    const total = countResult?.count || 0;
-
-    // Query principale avec pagination
-    const aosResult = await db
-      .select()
-      .from(aos)
-      .where(whereClause)
-      .orderBy(desc(aos.createdAt))
-      .limit(actualLimit)
-      .offset(actualOffset);
-
-    logger.info('[AOs] AOs paginés retournés', {
-      metadata: {
-        service: 'StoragePOC',
-        operation: 'getAOsPaginated',
-        count: aosResult.length,
-        total,
-        limit: actualLimit,
-        offset: actualOffset,
-        search,
-        status
-      }
-    });
-
-    return { aos: aosResult, total };
-  }
-
-  async getAo(id: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
-    const dbInstance = tx || db;
-    const [ao] = await dbInstance.select().from(aos).where(eq(aos.id, id));
-    return ao;
-  }
-
-  async getAOByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
-    const dbInstance = tx || db;
-    const [ao] = await dbInstance
-      .select()
-      .from(aos)
-      .where(eq(aos.mondayItemId, mondayItemId));
-    return ao;
-  }
-
-  async createAo(ao: InsertAo, tx?: DrizzleTransaction): Promise<Ao> {
-    const dbInstance = tx || db;
-    return safeInsert('aos', async () => {
-      try {
-        const [newAo] = await dbInstance.insert(aos).values(ao).returning();
-        return newAo;
-      } catch (error: any) {
-        // Gestion spécifique des erreurs de contrainte d'unicité PostgreSQL
-        if (error.code === '23505' && error.constraint) {
-          if (error.constraint.includes('reference')) {
-            const duplicateError = new Error(`La référence '${ao.reference}' existe déjà. Veuillez choisir une autre référence.`);
-            (duplicateError as any).code = 'DUPLICATE_REFERENCE';
-            (duplicateError as any).field = 'reference';
-            (duplicateError as any).value = ao.reference;
-            throw duplicateError;
-          }
-          // Autres contraintes d'unicité si nécessaire
-          const duplicateError = new Error(`Cette valeur existe déjà dans la base de données.`);
-          (duplicateError as any).code = 'DUPLICATE_VALUE';
-          throw duplicateError;
-        }
-        
-        // Re-lancer l'erreur si ce n'est pas une contrainte d'unicité
-        throw error;
-      }
-    }, {
-      retries: 2,
-      service: 'StoragePOC',
-      operation: 'createAo'
-    });
-  }
-
-  async updateAo(id: string, ao: Partial<InsertAo>, tx?: DrizzleTransaction): Promise<Ao> {
-    const dbInstance = tx || db;
-    const [updatedAo] = await dbInstance.update(aos)
-      .set({ ...ao, updatedAt: new Date() })
-      .where(eq(aos.id, id))
-      .returning();
-    return updatedAo;
-  }
-
-  async deleteAo(id: string, tx?: DrizzleTransaction): Promise<void> {
-    const dbInstance = tx || db;
-    await dbInstance.delete(aos).where(eq(aos.id, id));
-  }
-
-  // Offer operations (cœur du POC)
-  async getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]> {
-    // Apply filters if provided
-    let baseOffers;
-    if (status) {
-      baseOffers = await db.select().from(offers).where(eq(offers.status, status as any)).orderBy(desc(offers.createdAt));
-    } else {
-      baseOffers = await db.select().from(offers).orderBy(desc(offers.createdAt));
-    }
-
-    // Fetch related data separately to avoid complex joins
-    const result = [];
-    for (const offer of baseOffers) {
-      let responsibleUser = undefined;
-      let ao = undefined;
-
-      if (offer.responsibleUserId) {
-        responsibleUser = await this.getUser(offer.responsibleUserId);
-      }
-      if (offer.aoId) {
-        ao = await this.getAo(offer.aoId);
-      }
-
-      result.push({ ...offer, responsibleUser, ao });
-    }
-
-    return result;
-  }
-
-  async getOffersPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ offers: Array<Offer & { responsibleUser?: User; ao?: Ao }>, total: number }> {
-    const actualLimit = Number(limit) || 20;
-    const actualOffset = Number(offset) || 0;
-
-    // Construire les conditions de filtrage
-    const conditions = [];
-    
-    if (status) {
-      conditions.push(eq(offers.status, status as any));
-    }
-    
-    if (search && typeof search === 'string') {
-      const searchConditions = [
-        ilike(offers.name, `%${search}%`),
-        ilike(offers.client, `%${search}%`),
-        ilike(offers.description, `%${search}%`)
-      ];
-      conditions.push(sql`(${sql.join(searchConditions, sql` OR `)})`);
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-    // Query COUNT pour le total (avec les mêmes filtres)
-    const [countResult] = await db
-      .select({ count: sql<number>`cast(count(*) as int)` })
-      .from(offers)
-      .where(whereClause);
-    
-    const total = countResult?.count || 0;
-
-    // Query principale avec JOINs optimisés
-    const offersWithRelations = await db
-      .select({
-        offer: offers,
-        responsibleUser: users,
-        ao: aos
-      })
-      .from(offers)
-      .leftJoin(users, eq(offers.responsibleUserId, users.id))
-      .leftJoin(aos, eq(offers.aoId, aos.id))
-      .where(whereClause)
-      .orderBy(desc(offers.createdAt))
-      .limit(actualLimit)
-      .offset(actualOffset);
-
-    // Mapper les résultats
-    const result = offersWithRelations.map(row => ({
-      ...row.offer,
-      responsibleUser: row.responsibleUser || undefined,
-      ao: row.ao || undefined
-    }));
-
-    logger.info('[Offers] Offres paginées retournées', {
-      metadata: {
-        service: 'StoragePOC',
-        operation: 'getOffersPaginated',
-        count: result.length,
-        total,
-        limit: actualLimit,
-        offset: actualOffset,
-        search,
-        status
-      }
-    });
-
-    return { offers: result, total };
-  }
-
-  async getCombinedOffersPaginated(search?: string, status?: string, limit?: number, offset?: number): Promise<{ items: Array<(Ao | Offer) & { responsibleUser?: User; ao?: Ao; sourceType: 'ao' | 'offer' }>, total: number }> {
-    try {
-      const actualLimit = Number(limit) || 20;
-      const actualOffset = Number(offset) || 0;
-
-      const searchTerm = search && typeof search === 'string' ? `%${search}%` : null;
-      const statusValue = status && status !== 'tous' ? status : null;
-
-      logger.info('[Offers] Fetching combined AOs and Offers', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getCombinedOffersPaginated',
-          limit: actualLimit,
-          offset: actualOffset,
-          search,
-          status
-        }
-      });
-
-      const aoResults = await db
-        .select({
-          id: aos.id,
-          reference: aos.reference,
-          client: aos.client,
-          location: aos.location,
-          intitule_operation: aos.intituleOperation,
-          montant_estime: aos.montantEstime,
-          menuiserie_type: aos.menuiserieType,
-          status: aos.status,
-          created_at: aos.createdAt,
-          updated_at: aos.updatedAt,
-          departement: aos.departement,
-          date_limite_remise: aos.dateLimiteRemise,
-          source_type: sql<string>`'ao'`.as('source_type'),
-          responsible_user_id: sql<string | null>`NULL`.as('responsible_user_id'),
-          montant_final: sql<number | null>`NULL`.as('montant_final'),
-          taux_marge: sql<number | null>`NULL`.as('taux_marge'),
-          ao_id: sql<string | null>`NULL`.as('ao_id')
-        })
-        .from(aos)
-        .where(
-          and(
-            statusValue ? eq(aos.status, statusValue as any) : undefined,
-            searchTerm
-              ? sql`(
-                ${aos.intituleOperation} ILIKE ${searchTerm} OR
-                ${aos.client} ILIKE ${searchTerm} OR
-                ${aos.reference} ILIKE ${searchTerm}
-              )`
-              : undefined
-          )
-        );
-
-      // Defensive check - ensure aoResults is an array
-      if (!Array.isArray(aoResults)) {
-        logger.error('[Offers] aoResults is not an array', {
-          metadata: {
-            service: 'StoragePOC',
-            operation: 'getCombinedOffersPaginated',
-            aoResultsType: typeof aoResults,
-            aoResults
-          }
-        });
-        throw new Error('AO query did not return an array');
-      }
 
       const offerResults = await db
         .select({
@@ -1308,7 +1021,7 @@ export class DatabaseStorage implements IStorage {
         .from(offers)
         .where(
           and(
-            statusValue ? eq(offers.status, statusValue as any) : undefined,
+            statusValue ? eq(offers.status, statusValue as typeof offerStatusEnum.enumValues[number]) : undefined,
             searchTerm
               ? sql`(
                 ${offers.intituleOperation} ILIKE ${searchTerm} OR
@@ -1329,7 +1042,7 @@ export class DatabaseStorage implements IStorage {
             offerResults
           }
         });
-        throw new Error('Offer query did not return an array');
+        throw new AppError('Offer query did not return an array', 500);
       }
 
       logger.info('[Offers] Query results fetched', {
@@ -1361,9 +1074,24 @@ export class DatabaseStorage implements IStorage {
       });
 
       const items = await Promise.all(
-        combined.map(async (row: any) => {
-          try {
-            const item: any = {
+        combined.map(async (row: { id: string; reference: string | null; client: string | null; location: string | null; intitule_operation: string | null; montant_estime: number | null; menuiserie_type: string | null; status: string | null; created_at: Date | null; updated_at: Date | null; departement: string | null; date_limite_remise: Date | null; source_type: string }) => {
+          return withErrorHandling(
+            async () => {
+              const item: {
+                id: string;
+                reference: string | null;
+                client: string | null;
+                location: string | null;
+                intituleOperation: string | null;
+                montantEstime: number | null;
+                menuiserieType: string | null;
+                status: string | null;
+                createdAt: Date | null;
+                updatedAt: Date | null;
+                departement: string | null;
+                dateLimiteRemise: Date | null;
+                sourceType: string;
+              } = {
               id: row.id,
               reference: row.reference,
               client: row.client,
@@ -1393,15 +1121,14 @@ export class DatabaseStorage implements IStorage {
             }
 
             return item;
-          } catch (mapError) {
-            logger.error('[Offers] Error mapping row to item', {
-              metadata: {
-                service: 'StoragePOC',
-                operation: 'getCombinedOffersPaginated',
-                rowId: row?.id,
-                error: mapError instanceof Error ? mapError.message : String(mapError),
-                stack: mapError instanceof Error ? mapError.stack : undefined
-              }
+          
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
             });
             // Return a minimal item to prevent Promise.all from failing
             return {
@@ -1510,7 +1237,9 @@ export class DatabaseStorage implements IStorage {
       
       // Génération asynchrone pour ne pas bloquer la réponse
       setImmediate(async () => {
-        try {
+        return withErrorHandling(
+    async () => {
+
           // Importer le service Batigest de façon dynamique pour éviter les imports circulaires
           const { batigestService } = await import('./batigestService');
           
@@ -1607,15 +1336,14 @@ export class DatabaseStorage implements IStorage {
               }
             });
           }
-        } catch (error) {
-          logger.error('Erreur génération automatique code chantier', {
-            metadata: {
-              service: 'StoragePOC',
-              operation: 'updateOffer',
-              offerId: id,
-              error: error instanceof Error ? error.message : String(error),
-              stack: error instanceof Error ? error.stack : undefined
-            }
+        
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
           });
           // Ne pas faire échouer la mise à jour de l'offre pour autant
         }
@@ -1635,7 +1363,7 @@ export class DatabaseStorage implements IStorage {
     
     // Filtrage par statut si fourni (DOIT être AVANT orderBy en Drizzle)
     if (status) {
-      query = query.where(eq(projects.status, status as any));
+      query = query.where(eq(projects.status, status as typeof projectStatusEnum.enumValues[number]));
     }
     
     // Tri par date de création (DOIT être APRÈS where en Drizzle)
@@ -1709,7 +1437,7 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
     
     if (status) {
-      conditions.push(eq(projects.status, status as any));
+        conditions.push(eq(projects.status, status as typeof projectStatusEnum.enumValues[number]));
     }
     
     if (search && typeof search === 'string') {
@@ -1975,11 +1703,11 @@ export class DatabaseStorage implements IStorage {
         conditions.push(ilike(suppliers.name, `%${search}%`));
       }
       if (status) {
-        conditions.push(eq(suppliers.status, status as any));
+        conditions.push(eq(suppliers.status, status as string));
       }
       
       if (conditions.length > 0) {
-        query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
+        query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions));
       }
     }
     
@@ -2391,7 +2119,9 @@ export class DatabaseStorage implements IStorage {
   ): Promise<AoContacts | null> {
     const dbInstance = tx || db;
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Vérifier si le lien existe déjà (idempotence via unique index)
       const existing = await dbInstance
         .select()
@@ -2400,7 +2130,7 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(aoContacts.ao_id, params.aoId),
             eq(aoContacts.contact_id, params.contactId),
-            eq(aoContacts.link_type, params.linkType as any)
+            eq(aoContacts.link_type, params.linkType as typeof contactLinkTypeEnum.enumValues[number])
           )
         )
         .limit(1);
@@ -2439,28 +2169,14 @@ export class DatabaseStorage implements IStorage {
       
       return newLink;
       
-    } catch (error) {
-      // Si contrainte unique violée (race condition), retourner null
-      if (error instanceof Error && error.message.includes('unique_ao_contact')) {
-        logger.debug('Contrainte unique AO-Contact violée (race condition)', {
-          service: 'Storage',
-          metadata: {
-            aoId: params.aoId,
-            contactId: params.contactId,
-            linkType: params.linkType
-          }
-        });
-        return null;
-      }
-      
-      logger.error('Erreur linkAoContact', {
-        service: 'Storage',
-        error: error instanceof Error ? error.message : String(error),
-        metadata: {
-          aoId: params.aoId,
-          contactId: params.contactId,
-          linkType: params.linkType
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -2544,7 +2260,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateVisaArchitecte(id: string, visaData: Partial<InsertVisaArchitecte>): Promise<VisaArchitecte> {
     // Build update object filtering out undefined values
-    const updateFields: any = { updatedAt: new Date() };
+    const updateFields: Record<string, unknown> = { updatedAt: new Date() };
     
     if (visaData.projectId !== undefined) updateFields.projectId = visaData.projectId;
     if (visaData.visaType !== undefined) updateFields.visaType = visaData.visaType;
@@ -2624,12 +2340,12 @@ export class DatabaseStorage implements IStorage {
     
     // Validation des valeurs (sécurité)
     if (config.threshold < 0 || config.threshold > 50) {
-      throw new Error('Le seuil doit être entre 0 et 50');
+      throw new AppError('Le seuil doit être entre 0 et 50', 500);
     }
     
     for (const [critere, poids] of Object.entries(config.weights)) {
       if (poids < 0 || poids > 10) {
-        throw new Error(`Le poids pour ${critere} doit être entre 0 et 10`);
+        throw new AppError(`Le poids pour ${critere} doit être entre 0 et 10`, 500);
       }
     }
     
@@ -2711,7 +2427,7 @@ export class DatabaseStorage implements IStorage {
   async acknowledgeTechnicalAlert(id: string, userId: string): Promise<void> {
     const alert = DatabaseStorage.technicalAlerts.get(id);
     if (!alert) {
-      throw new Error(`Alerte technique ${id} introuvable`);
+      throw new AppError(`Alerte technique ${id} introuvable`, 500);
     }
 
     alert.status = 'acknowledged';
@@ -2733,7 +2449,7 @@ export class DatabaseStorage implements IStorage {
   async validateTechnicalAlert(id: string, userId: string): Promise<void> {
     const alert = DatabaseStorage.technicalAlerts.get(id);
     if (!alert) {
-      throw new Error(`Alerte technique ${id} introuvable`);
+      throw new AppError(`Alerte technique ${id} introuvable`, 500);
     }
 
     alert.status = 'validated';
@@ -2757,7 +2473,7 @@ export class DatabaseStorage implements IStorage {
   async bypassTechnicalAlert(id: string, userId: string, until: Date, reason: string): Promise<void> {
     const alert = DatabaseStorage.technicalAlerts.get(id);
     if (!alert) {
-      throw new Error(`Alerte technique ${id} introuvable`);
+      throw new AppError(`Alerte technique ${id} introuvable`, 500);
     }
 
     alert.status = 'bypassed';
@@ -2811,7 +2527,7 @@ export class DatabaseStorage implements IStorage {
     action: string, 
     actorUserId: string | null, 
     note?: string,
-    metadata?: any
+    metadata?: Record<string, unknown>
   ): Promise<TechnicalAlertHistory> {
     const historyId = `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -2893,10 +2609,10 @@ export class DatabaseStorage implements IStorage {
     // Validation basique des règles
     for (const rule of rules) {
       if (!rule.id || typeof rule.id !== 'string') {
-        throw new Error(`Règle invalide: l'ID est obligatoire (règle: ${JSON.stringify(rule)})`);
+        throw new AppError(`Règle invalide: l'ID est obligatoire (règle: ${JSON.stringify(rule, 500)})`);
       }
       if (!rule.message || typeof rule.message !== 'string') {
-        throw new Error(`Règle invalide: le message est obligatoire (règle ID: ${rule.id})`);
+        throw new AppError(`Règle invalide: le message est obligatoire (règle ID: ${rule.id}, 500)`);
       }
     }
 
@@ -2904,7 +2620,7 @@ export class DatabaseStorage implements IStorage {
     const ids = rules.map(r => r.id);
     const uniqueIds = new Set(ids);
     if (ids.length !== uniqueIds.size) {
-      throw new Error(`IDs de règles non uniques détectés dans la configuration`);
+      throw new AppError(`IDs de règles non uniques détectés dans la configuration`, 500);
     }
 
     // Remplacer les règles existantes
@@ -2992,7 +2708,7 @@ export class DatabaseStorage implements IStorage {
   async updateProjectTimeline(id: string, data: Partial<InsertProjectTimeline>): Promise<ProjectTimeline> {
     const existing = DatabaseStorage.projectTimelines.get(id);
     if (!existing) {
-      throw new Error(`Timeline ${id} non trouvée`);
+      throw new AppError(`Timeline ${id} non trouvée`, 500);
     }
 
     const updated: ProjectTimeline = {
@@ -3017,7 +2733,7 @@ export class DatabaseStorage implements IStorage {
   async deleteProjectTimeline(id: string): Promise<void> {
     const existing = DatabaseStorage.projectTimelines.get(id);
     if (!existing) {
-      throw new Error(`Timeline ${id} non trouvée`);
+      throw new AppError(`Timeline ${id} non trouvée`, 500);
     }
 
     DatabaseStorage.projectTimelines.delete(id);
@@ -3128,7 +2844,7 @@ export class DatabaseStorage implements IStorage {
   async updateRule(id: string, data: Partial<InsertDateIntelligenceRule>): Promise<DateIntelligenceRule> {
     const existing = DatabaseStorage.dateIntelligenceRules.get(id);
     if (!existing) {
-      throw new Error(`Règle ${id} non trouvée`);
+      throw new AppError(`Règle ${id} non trouvée`, 500);
     }
 
     const updated: DateIntelligenceRule = {
@@ -3152,7 +2868,7 @@ export class DatabaseStorage implements IStorage {
   async deleteRule(id: string): Promise<void> {
     const existing = DatabaseStorage.dateIntelligenceRules.get(id);
     if (!existing) {
-      throw new Error(`Règle ${id} non trouvée`);
+      throw new AppError(`Règle ${id} non trouvée`, 500);
     }
 
     DatabaseStorage.dateIntelligenceRules.delete(id);
@@ -3241,7 +2957,7 @@ export class DatabaseStorage implements IStorage {
   async updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert> {
     const existing = DatabaseStorage.dateAlerts.get(id);
     if (!existing) {
-      throw new Error(`Alerte ${id} non trouvée`);
+      throw new AppError(`Alerte ${id} non trouvée`, 500);
     }
 
     const updated: DateAlert = {
@@ -3265,7 +2981,7 @@ export class DatabaseStorage implements IStorage {
   async deleteDateAlert(id: string): Promise<void> {
     const existing = DatabaseStorage.dateAlerts.get(id);
     if (!existing) {
-      throw new Error(`Alerte ${id} non trouvée`);
+      throw new AppError(`Alerte ${id} non trouvée`, 500);
     }
 
     DatabaseStorage.dateAlerts.delete(id);
@@ -3281,7 +2997,7 @@ export class DatabaseStorage implements IStorage {
   async acknowledgeAlert(id: string, userId: string): Promise<boolean> {
     const existing = DatabaseStorage.dateAlerts.get(id);
     if (!existing) {
-      throw new Error(`Alerte ${id} non trouvée`);
+      throw new AppError(`Alerte ${id} non trouvée`, 500);
     }
 
     const updated: DateAlert = {
@@ -3308,7 +3024,7 @@ export class DatabaseStorage implements IStorage {
   async resolveAlert(id: string, userId: string, actionTaken?: string): Promise<boolean> {
     const existing = DatabaseStorage.dateAlerts.get(id);
     if (!existing) {
-      throw new Error(`Alerte ${id} non trouvée`);
+      throw new AppError(`Alerte ${id} non trouvée`, 500);
     }
 
     const updated: DateAlert = {
@@ -3416,7 +3132,7 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
     
     if (filters.metricType) {
-      conditions.push(eq(businessMetrics.metricType, filters.metricType as any));
+      conditions.push(eq(businessMetrics.metricType, filters.metricType as 'conversion' | 'delay' | 'revenue' | 'team_load' | 'margin'));
     }
     
     if (filters.periodType) {
@@ -3460,7 +3176,7 @@ export class DatabaseStorage implements IStorage {
       .from(businessMetrics)
       .where(
         and(
-          eq(businessMetrics.metricType, metricType as any),
+          eq(businessMetrics.metricType, metricType as 'conversion' | 'delay' | 'revenue' | 'team_load' | 'margin'),
           gte(businessMetrics.periodStart, period.from),
           lte(businessMetrics.periodEnd, period.to)
         )
@@ -3546,8 +3262,8 @@ export class DatabaseStorage implements IStorage {
     forecast_period: string;
     confidence: number;
     method_used: string;
-    forecast_data: any;
-    params: any;
+    forecast_data: Record<string, unknown>;
+    params: Record<string, unknown>;
   }> = new Map();
 
   async getMonthlyRevenueHistory(range: {
@@ -3559,7 +3275,9 @@ export class DatabaseStorage implements IStorage {
     projects_count: number;
     avg_project_value: number;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Récupération historique revenus mensuel', {
         metadata: {
           service: 'StoragePOC',
@@ -3606,14 +3324,14 @@ export class DatabaseStorage implements IStorage {
         }
       });
       return formattedResults;
-    } catch (error) {
-      logger.error('Erreur getMonthlyRevenueHistory', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getMonthlyRevenueHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -3630,7 +3348,9 @@ export class DatabaseStorage implements IStorage {
     project_type: string;
     complexity: string;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Récupération historique délais projets', {
         metadata: {
           service: 'StoragePOC',
@@ -3687,14 +3407,14 @@ export class DatabaseStorage implements IStorage {
         }
       });
       return formattedResults;
-    } catch (error) {
-      logger.error('Erreur getProjectDelayHistory', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getProjectDelayHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -3710,7 +3430,9 @@ export class DatabaseStorage implements IStorage {
     utilization_rate: number;
     avg_project_duration: number;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Récupération historique charge équipes', {
         metadata: {
           service: 'StoragePOC',
@@ -3785,25 +3507,27 @@ export class DatabaseStorage implements IStorage {
         }
       });
       return formattedResults;
-    } catch (error) {
-      logger.error('Erreur getTeamLoadHistory', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getTeamLoadHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async saveForecastSnapshot(forecast: {
-    forecast_data: any;
+    forecast_data: Record<string, unknown>;
     generated_at: string;
-    params: any;
+    params: Record<string, unknown>;
   }): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const id = `forecast-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       
       // Extraire les métadonnées du forecast pour les champs requis
@@ -3832,14 +3556,14 @@ export class DatabaseStorage implements IStorage {
         }
       });
       return id;
-    } catch (error) {
-      logger.error('Erreur saveForecastSnapshot', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'saveForecastSnapshot',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -3852,7 +3576,9 @@ export class DatabaseStorage implements IStorage {
     confidence: number;
     method_used: string;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const snapshots = Array.from(DatabaseStorage.forecastSnapshots.values())
         .sort((a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime())
         .slice(0, limit)
@@ -3873,21 +3599,23 @@ export class DatabaseStorage implements IStorage {
         }
       });
       return snapshots;
-    } catch (error) {
-      logger.error('Erreur listForecastSnapshots', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'listForecastSnapshots',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
-  async getAnalyticsSnapshots(params?: any): Promise<any[]> {
-    try {
+  async getAnalyticsSnapshots(params?: Record<string, unknown>): Promise<Record<string, unknown>[]> {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Récupération snapshots analytics', {
         metadata: {
           service: 'DatabaseStorage',
@@ -3896,20 +3624,23 @@ export class DatabaseStorage implements IStorage {
         }
       });
       return [];
-    } catch (error) {
-      logger.error('Erreur getAnalyticsSnapshots', {
-        metadata: {
-          service: 'DatabaseStorage',
-          operation: 'getAnalyticsSnapshots',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
-  async createAnalyticsSnapshot(data: any): Promise<any> {
-    try {
+  async createAnalyticsSnapshot(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return withErrorHandling(
+    async () => {
+
       const snapshot = {
         id: `analytics_snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         ...data,
@@ -3923,13 +3654,14 @@ export class DatabaseStorage implements IStorage {
         }
       });
       return snapshot;
-    } catch (error) {
-      logger.error('Erreur createAnalyticsSnapshot', {
-        metadata: {
-          service: 'DatabaseStorage',
-          operation: 'createAnalyticsSnapshot',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -3939,8 +3671,10 @@ export class DatabaseStorage implements IStorage {
   // SUPPLIER QUOTE SESSIONS OPERATIONS - WORKFLOW FOURNISSEURS
   // ========================================
 
-  async getSupplierQuoteSessions(aoId?: string, aoLotId?: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any })[]> {
-    try {
+  async getSupplierQuoteSessions(aoId?: string, aoLotId?: string): Promise<(SupplierQuoteSession & { supplier?: Supplier; aoLot?: AoLot })[]> {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(supplierQuoteSessions);
       
       if (aoId) {
@@ -3953,107 +3687,114 @@ export class DatabaseStorage implements IStorage {
       const sessions = await query;
       logger.info(`Récupération de ${sessions.length} sessions fournisseurs`);
       return sessions;
-    } catch (error) {
-      logger.error('Erreur récupération sessions devis fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierQuoteSessions',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
-  async getSupplierQuoteSession(id: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any }) | undefined> {
-    try {
+  async getSupplierQuoteSession(id: string): Promise<(SupplierQuoteSession & { supplier?: Supplier; aoLot?: AoLot }) | undefined> {
+    return withErrorHandling(
+    async () => {
+
       const [session] = await db.select().from(supplierQuoteSessions).where(eq(supplierQuoteSessions.id, id));
       return session;
-    } catch (error) {
-      logger.error('Erreur récupération session devis fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierQuoteSession',
-          sessionId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
-  async getSupplierQuoteSessionByToken(token: string): Promise<(SupplierQuoteSession & { supplier?: any; aoLot?: any }) | undefined> {
-    try {
+  async getSupplierQuoteSessionByToken(token: string): Promise<(SupplierQuoteSession & { supplier?: Supplier; aoLot?: AoLot }) | undefined> {
+    return withErrorHandling(
+    async () => {
+
       const [session] = await db.select().from(supplierQuoteSessions).where(eq(supplierQuoteSessions.accessToken, token));
       return session;
-    } catch (error) {
-      logger.error('Erreur récupération session par token', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierQuoteSessionByToken',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createSupplierQuoteSession(session: InsertSupplierQuoteSession): Promise<SupplierQuoteSession> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newSession] = await db.insert(supplierQuoteSessions).values(session).returning();
       logger.info(`Session fournisseur créée: ${newSession.id}`);
       return newSession;
-    } catch (error) {
-      logger.error('Erreur création session devis fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createSupplierQuoteSession',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateSupplierQuoteSession(id: string, session: Partial<InsertSupplierQuoteSession>): Promise<SupplierQuoteSession> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [updatedSession] = await db.update(supplierQuoteSessions)
         .set({ ...session, updatedAt: new Date() })
         .where(eq(supplierQuoteSessions.id, id))
         .returning();
       logger.info(`Session fournisseur mise à jour: ${id}`);
       return updatedSession;
-    } catch (error) {
-      logger.error('Erreur mise à jour session devis fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateSupplierQuoteSession',
-          sessionId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteSupplierQuoteSession(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(supplierQuoteSessions).where(eq(supplierQuoteSessions.id, id));
       logger.info(`Session fournisseur supprimée: ${id}`);
-    } catch (error) {
-      logger.error('Erreur suppression session devis fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteSupplierQuoteSession',
-          sessionId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -4073,116 +3814,123 @@ export class DatabaseStorage implements IStorage {
   // AO LOT SUPPLIERS OPERATIONS - SÉLECTION FOURNISSEURS PAR LOT
   // ========================================
 
-  async getAoLotSuppliers(aoLotId: string): Promise<(AoLotSupplier & { supplier?: any; selectedByUser?: any })[]> {
-    try {
+  async getAoLotSuppliers(aoLotId: string): Promise<(AoLotSupplier & { supplier?: Supplier; selectedByUser?: User })[]> {
+    return withErrorHandling(
+    async () => {
+
       const lotSuppliers = await db.select().from(aoLotSuppliers).where(eq(aoLotSuppliers.aoLotId, aoLotId));
       logger.info(`Récupération de ${lotSuppliers.length} fournisseurs pour le lot ${aoLotId}`);
       return lotSuppliers;
-    } catch (error) {
-      logger.error('Erreur récupération fournisseurs lot', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getAoLotSuppliers',
-          aoLotId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
-  async getAoLotSupplier(id: string): Promise<(AoLotSupplier & { supplier?: any; selectedByUser?: any }) | undefined> {
-    try {
+  async getAoLotSupplier(id: string): Promise<(AoLotSupplier & { supplier?: Supplier; selectedByUser?: User }) | undefined> {
+    return withErrorHandling(
+    async () => {
+
       const [lotSupplier] = await db.select().from(aoLotSuppliers).where(eq(aoLotSuppliers.id, id));
       return lotSupplier;
-    } catch (error) {
-      logger.error('Erreur récupération fournisseur lot', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getAoLotSupplier',
-          lotSupplierId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createAoLotSupplier(lotSupplier: InsertAoLotSupplier): Promise<AoLotSupplier> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newLotSupplier] = await db.insert(aoLotSuppliers).values(lotSupplier).returning();
       logger.info(`Association lot-fournisseur créée: ${newLotSupplier.id}`);
       return newLotSupplier;
-    } catch (error) {
-      logger.error('Erreur création association lot-fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createAoLotSupplier',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateAoLotSupplier(id: string, lotSupplier: Partial<InsertAoLotSupplier>): Promise<AoLotSupplier> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [updatedLotSupplier] = await db.update(aoLotSuppliers)
         .set({ ...lotSupplier, updatedAt: new Date() })
         .where(eq(aoLotSuppliers.id, id))
         .returning();
       logger.info(`Association lot-fournisseur mise à jour: ${id}`);
       return updatedLotSupplier;
-    } catch (error) {
-      logger.error('Erreur mise à jour association lot-fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateAoLotSupplier',
-          lotSupplierId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteAoLotSupplier(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(aoLotSuppliers).where(eq(aoLotSuppliers.id, id));
       logger.info(`Association lot-fournisseur supprimée: ${id}`);
-    } catch (error) {
-      logger.error('Erreur suppression association lot-fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteAoLotSupplier',
-          lotSupplierId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
-  async getSuppliersByLot(aoLotId: string): Promise<any[]> {
-    try {
+  async getSuppliersByLot(aoLotId: string): Promise<Supplier[]> {
+    return withErrorHandling(
+    async () => {
+
       // Cette méthode devrait faire une jointure pour récupérer les détails des fournisseurs
       // Pour l'instant, on retourne les associations basiques
       const associations = await this.getAoLotSuppliers(aoLotId);
       return associations;
-    } catch (error) {
-      logger.error('Erreur récupération fournisseurs par lot', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSuppliersByLot',
-          aoLotId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -4192,8 +3940,10 @@ export class DatabaseStorage implements IStorage {
   // SUPPLIER DOCUMENTS OPERATIONS - GESTION DOCUMENTS FOURNISSEURS
   // ========================================
 
-  async getSupplierDocuments(sessionId?: string, supplierId?: string): Promise<(SupplierDocument & { session?: any; validatedByUser?: any })[]> {
-    try {
+  async getSupplierDocuments(sessionId?: string, supplierId?: string): Promise<(SupplierDocument & { session?: SupplierQuoteSession; validatedByUser?: User })[]> {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(supplierDocuments);
       
       if (sessionId) {
@@ -4206,109 +3956,115 @@ export class DatabaseStorage implements IStorage {
       const documents = await query;
       logger.info(`Récupération de ${documents.length} documents fournisseurs`);
       return documents;
-    } catch (error) {
-      logger.error('Erreur récupération documents fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierDocuments',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
-  async getSupplierDocument(id: string): Promise<(SupplierDocument & { session?: any; validatedByUser?: any }) | undefined> {
-    try {
+  async getSupplierDocument(id: string): Promise<(SupplierDocument & { session?: SupplierQuoteSession; validatedByUser?: User }) | undefined> {
+    return withErrorHandling(
+    async () => {
+
       const [document] = await db.select().from(supplierDocuments).where(eq(supplierDocuments.id, id));
       return document;
-    } catch (error) {
-      logger.error('Erreur récupération document fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierDocument',
-          documentId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createSupplierDocument(document: InsertSupplierDocument): Promise<SupplierDocument> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newDocument] = await db.insert(supplierDocuments).values(document).returning();
       logger.info(`Document fournisseur créé: ${newDocument.id}`);
       return newDocument;
-    } catch (error) {
-      logger.error('Erreur création document fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createSupplierDocument',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateSupplierDocument(id: string, document: Partial<InsertSupplierDocument>): Promise<SupplierDocument> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [updatedDocument] = await db.update(supplierDocuments)
         .set({ ...document, updatedAt: new Date() })
         .where(eq(supplierDocuments.id, id))
         .returning();
       logger.info(`Document fournisseur mis à jour: ${id}`);
       return updatedDocument;
-    } catch (error) {
-      logger.error('Erreur mise à jour document fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateSupplierDocument',
-          documentId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteSupplierDocument(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(supplierDocuments).where(eq(supplierDocuments.id, id));
       logger.info(`Document fournisseur supprimé: ${id}`);
-    } catch (error) {
-      logger.error('Erreur suppression document fournisseur', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteSupplierDocument',
-          documentId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getDocumentsBySession(sessionId: string): Promise<SupplierDocument[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const documents = await db.select().from(supplierDocuments).where(eq(supplierDocuments.sessionId, sessionId));
       logger.info(`Récupération de ${documents.length} documents pour la session ${sessionId}`);
       return documents;
-    } catch (error) {
-      logger.error('Erreur récupération documents par session', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getDocumentsBySession',
-          sessionId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -4319,7 +4075,9 @@ export class DatabaseStorage implements IStorage {
   // ========================================
 
   async createDocument(document: InsertDocument): Promise<Document> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newDocument] = await db.insert(documents).values(document).returning();
       logger.info('Document créé', {
         metadata: {
@@ -4331,47 +4089,51 @@ export class DatabaseStorage implements IStorage {
         }
       });
       return newDocument;
-    } catch (error) {
-      logger.error('Erreur création document', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createDocument',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getDocument(id: string): Promise<Document | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [document] = await db.select().from(documents).where(eq(documents.id, id));
       return document;
-    } catch (error) {
-      logger.error('Erreur récupération document', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getDocument',
-          documentId: id,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getDocumentsByEntity(entityType: string, entityId: string): Promise<Document[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(documents);
       
       // Filter by entity type
       if (entityType === 'ao') {
-        query = query.where(eq(documents.aoId, entityId)) as any;
+        query = query.where(eq(documents.aoId, entityId));
       } else if (entityType === 'offer') {
-        query = query.where(eq(documents.offerId, entityId)) as any;
+        query = query.where(eq(documents.offerId, entityId));
       } else if (entityType === 'project') {
-        query = query.where(eq(documents.projectId, entityId)) as any;
+        query = query.where(eq(documents.projectId, entityId));
       }
       
       const docs = await query;
@@ -4385,29 +4147,30 @@ export class DatabaseStorage implements IStorage {
         }
       });
       return docs;
-    } catch (error) {
-      logger.error('Erreur getDocumentsByEntity', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getDocumentsByEntity',
-          entityType,
-          entityId,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateDocument(id: string, document: Partial<InsertDocument>): Promise<Document> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [updatedDocument] = await db.update(documents)
         .set(document)
         .where(eq(documents.id, id))
         .returning();
       
       if (!updatedDocument) {
-        throw new Error(`Document ${id} non trouvé`);
+        throw new AppError(`Document ${id} non trouvé`, 500);
       }
       
       logger.info('Document mis à jour', {
@@ -4419,21 +4182,23 @@ export class DatabaseStorage implements IStorage {
       });
       
       return updatedDocument;
-    } catch (error) {
-      logger.error('Erreur mise à jour document', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateDocument',
-          documentId: id,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteDocument(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(documents).where(eq(documents.id, id));
       logger.info('Document supprimé', {
         metadata: {
@@ -4442,14 +4207,14 @@ export class DatabaseStorage implements IStorage {
           documentId: id
         }
       });
-    } catch (error) {
-      logger.error('Erreur suppression document', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteDocument',
-          documentId: id,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -4460,23 +4225,28 @@ export class DatabaseStorage implements IStorage {
   // ========================================
 
   async getSyncConfig(): Promise<SyncConfig | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [config] = await db.select().from(syncConfig).limit(1);
       return config;
-    } catch (error) {
-      logger.error('Erreur récupération sync config', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSyncConfig',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateSyncConfig(config: Partial<InsertSyncConfig>): Promise<SyncConfig> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const existing = await this.getSyncConfig();
       
       if (!existing) {
@@ -4506,13 +4276,14 @@ export class DatabaseStorage implements IStorage {
       });
 
       return updatedConfig;
-    } catch (error) {
-      logger.error('Erreur mise à jour sync config', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateSyncConfig',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -4522,8 +4293,10 @@ export class DatabaseStorage implements IStorage {
   // SUPPLIER QUOTE ANALYSIS OPERATIONS - ANALYSE OCR DES DEVIS
   // ========================================
 
-  async getSupplierQuoteAnalyses(documentId?: string, sessionId?: string): Promise<(SupplierQuoteAnalysis & { document?: any; reviewedByUser?: any })[]> {
-    try {
+  async getSupplierQuoteAnalyses(documentId?: string, sessionId?: string): Promise<(SupplierQuoteAnalysis & { document?: SupplierDocument; reviewedByUser?: User })[]> {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(supplierQuoteAnalysis);
       
       if (documentId) {
@@ -4536,108 +4309,114 @@ export class DatabaseStorage implements IStorage {
       const analyses = await query;
       logger.info(`Récupération de ${analyses.length} analyses OCR`);
       return analyses;
-    } catch (error) {
-      logger.error('Erreur récupération analyses devis', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierQuoteAnalyses',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
-  async getSupplierQuoteAnalysis(id: string): Promise<(SupplierQuoteAnalysis & { document?: any; reviewedByUser?: any }) | undefined> {
-    try {
+  async getSupplierQuoteAnalysis(id: string): Promise<(SupplierQuoteAnalysis & { document?: SupplierDocument; reviewedByUser?: User }) | undefined> {
+    return withErrorHandling(
+    async () => {
+
       const [analysis] = await db.select().from(supplierQuoteAnalysis).where(eq(supplierQuoteAnalysis.id, id));
       return analysis;
-    } catch (error) {
-      logger.error('Erreur récupération analyse devis', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierQuoteAnalysis',
-          analysisId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createSupplierQuoteAnalysis(analysis: InsertSupplierQuoteAnalysis): Promise<SupplierQuoteAnalysis> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newAnalysis] = await db.insert(supplierQuoteAnalysis).values(analysis).returning();
       logger.info(`Analyse OCR créée: ${newAnalysis.id}`);
       return newAnalysis;
-    } catch (error) {
-      logger.error('Erreur création analyse devis', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createSupplierQuoteAnalysis',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateSupplierQuoteAnalysis(id: string, analysis: Partial<InsertSupplierQuoteAnalysis>): Promise<SupplierQuoteAnalysis> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [updatedAnalysis] = await db.update(supplierQuoteAnalysis)
         .set({ ...analysis, updatedAt: new Date() })
         .where(eq(supplierQuoteAnalysis.id, id))
         .returning();
       logger.info(`Analyse OCR mise à jour: ${id}`);
       return updatedAnalysis;
-    } catch (error) {
-      logger.error('Erreur mise à jour analyse devis', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateSupplierQuoteAnalysis',
-          analysisId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteSupplierQuoteAnalysis(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(supplierQuoteAnalysis).where(eq(supplierQuoteAnalysis.id, id));
       logger.info(`Analyse OCR supprimée: ${id}`);
-    } catch (error) {
-      logger.error('Erreur suppression analyse devis', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteSupplierQuoteAnalysis',
-          analysisId: id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getAnalysisByDocument(documentId: string): Promise<SupplierQuoteAnalysis | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [analysis] = await db.select().from(supplierQuoteAnalysis).where(eq(supplierQuoteAnalysis.documentId, documentId));
       return analysis;
-    } catch (error) {
-      logger.error('Erreur récupération analyse par document', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getAnalysisByDocument',
-          documentId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -4659,12 +4438,14 @@ export class DatabaseStorage implements IStorage {
       orderBy?: string;
       order?: 'asc' | 'desc';
     }
-  ): Promise<any[]> {
+  ): Promise<SupplierQuoteAnalysis[]> {
     logger.warn('[Storage] getSupplierQuoteAnalysesBySession not yet fully implemented', {
       metadata: { sessionId, filters }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Basic implementation - get analyses by session
       const analyses = await db.select()
         .from(supplierQuoteAnalysis)
@@ -4675,15 +4456,14 @@ export class DatabaseStorage implements IStorage {
       // TODO: Phase 6+ - Add proper ordering support
       
       return analyses || [];
-    } catch (error) {
-      logger.error('Erreur getSupplierQuoteAnalysesBySession', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierQuoteAnalysesBySession',
-          sessionId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return []; // Safe default - empty array
     }
@@ -4693,23 +4473,24 @@ export class DatabaseStorage implements IStorage {
    * Get all documents for a specific quote session
    * TODO: Phase 6+ implementation - enhance with document metadata and relationships
    */
-  async getSupplierDocumentsBySession(sessionId: string): Promise<any[]> {
+  async getSupplierDocumentsBySession(sessionId: string): Promise<SupplierDocument[]> {
     logger.warn('[Storage] getSupplierDocumentsBySession stub called - using getDocumentsBySession', {
       metadata: { sessionId }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Delegate to existing method
       return await this.getDocumentsBySession(sessionId);
-    } catch (error) {
-      logger.error('Erreur getSupplierDocumentsBySession', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierDocumentsBySession',
-          sessionId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return []; // Safe default - empty array
     }
@@ -4725,7 +4506,7 @@ export class DatabaseStorage implements IStorage {
     timestamp: Date;
     isInternal?: boolean;
     createdBy?: string;
-  }): Promise<any> {
+  }): Promise<Record<string, unknown>> {
     logger.warn('[Storage] createAnalysisNoteHistory not yet implemented - returning stub', {
       metadata: { analysisId: data.analysisId, notesLength: data.notes.length }
     });
@@ -4759,7 +4540,9 @@ export class DatabaseStorage implements IStorage {
     documentsAnalyzed: number;
     pendingAnalysis: number;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Compter les lots de l'AO
       const lots = await this.getAoLots(aoId);
       const totalLots = lots.length;
@@ -4805,14 +4588,14 @@ export class DatabaseStorage implements IStorage {
 
       logger.info(`Statut workflow AO ${aoId}:`, status);
       return status;
-    } catch (error) {
-      logger.error('Erreur getSupplierWorkflowStatus', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierWorkflowStatus',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -4825,7 +4608,9 @@ export class DatabaseStorage implements IStorage {
     mainQuotePresent: boolean;
     averageQualityScore?: number;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const documents = await this.getDocumentsBySession(sessionId);
       const totalDocuments = documents.length;
 
@@ -4861,14 +4646,14 @@ export class DatabaseStorage implements IStorage {
 
       logger.info(`Résumé documents session ${sessionId}:`, summary);
       return summary;
-    } catch (error) {
-      logger.error('Erreur getSessionDocumentsSummary', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSessionDocumentsSummary',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -4888,7 +4673,7 @@ export class DatabaseStorage implements IStorage {
 
 export class MemStorage implements IStorage {
   // Propriétés requises pour interface IStorage
-  private db: any = null; // Mock database reference
+  private db: unknown = null; // Mock database reference
   private eventBus?: EventBus; // Optional EventBus pour auto-publishing
 
   // INJECTION EVENTBUS - Constructeur optionnel pour tests
@@ -4940,15 +4725,15 @@ export class MemStorage implements IStorage {
   }
 
   async createAo(ao: InsertAo, tx?: DrizzleTransaction): Promise<Ao> {
-    throw new Error("MemStorage: createAo not implemented for POC");
+    throw new AppError("MemStorage: createAo not implemented for POC", 500);
   }
 
   async updateAo(id: string, ao: Partial<InsertAo>, tx?: DrizzleTransaction): Promise<Ao> {
-    throw new Error("MemStorage: updateAo not implemented for POC");
+    throw new AppError("MemStorage: updateAo not implemented for POC", 500);
   }
 
   async deleteAo(id: string, tx?: DrizzleTransaction): Promise<void> {
-    throw new Error("MemStorage: deleteAo not implemented for POC");
+    throw new AppError("MemStorage: deleteAo not implemented for POC", 500);
   }
 
   async getOffers(search?: string, status?: string): Promise<(Offer & { responsibleUser?: User; ao?: Ao })[]> {
@@ -4968,15 +4753,15 @@ export class MemStorage implements IStorage {
   }
 
   async createOffer(offer: InsertOffer): Promise<Offer> {
-    throw new Error("MemStorage: createOffer not implemented for POC");
+    throw new AppError("MemStorage: createOffer not implemented for POC", 500);
   }
 
   async updateOffer(id: string, offer: Partial<InsertOffer>): Promise<Offer> {
-    throw new Error("MemStorage: updateOffer not implemented for POC");
+    throw new AppError("MemStorage: updateOffer not implemented for POC", 500);
   }
 
   async deleteOffer(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteOffer not implemented for POC");
+    throw new AppError("MemStorage: deleteOffer not implemented for POC", 500);
   }
 
   async getProjects(search?: string, status?: string): Promise<(Project & { responsibleUser?: User; offer?: Offer })[]> {
@@ -4996,11 +4781,11 @@ export class MemStorage implements IStorage {
   }
 
   async createProject(project: InsertProject): Promise<Project> {
-    throw new Error("MemStorage: createProject not implemented for POC");
+    throw new AppError("MemStorage: createProject not implemented for POC", 500);
   }
 
   async updateProject(id: string, project: Partial<InsertProject>): Promise<Project> {
-    throw new Error("MemStorage: updateProject not implemented for POC");
+    throw new AppError("MemStorage: updateProject not implemented for POC", 500);
   }
 
   async getProjectTasks(projectId: string): Promise<(ProjectTask & { assignedUser?: User })[]> {
@@ -5012,11 +4797,11 @@ export class MemStorage implements IStorage {
   }
 
   async createProjectTask(task: InsertProjectTask): Promise<ProjectTask> {
-    throw new Error("MemStorage: createProjectTask not implemented for POC");
+    throw new AppError("MemStorage: createProjectTask not implemented for POC", 500);
   }
 
   async updateProjectTask(id: string, task: Partial<InsertProjectTask>): Promise<ProjectTask> {
-    throw new Error("MemStorage: updateProjectTask not implemented for POC");
+    throw new AppError("MemStorage: updateProjectTask not implemented for POC", 500);
   }
 
   // MemStorage pour Suppliers - Implémentation complète pour tests/dev
@@ -5088,7 +4873,7 @@ export class MemStorage implements IStorage {
   async updateSupplier(id: string, supplier: Partial<InsertSupplier>): Promise<Supplier> {
     const existing = this.suppliers.get(id);
     if (!existing) {
-      throw new Error(`Supplier avec ID ${id} introuvable`);
+      throw new AppError(`Supplier avec ID ${id} introuvable`, 500);
     }
     
     const updated: Supplier = {
@@ -5106,7 +4891,7 @@ export class MemStorage implements IStorage {
   async deleteSupplier(id: string): Promise<void> {
     const existing = this.suppliers.get(id);
     if (!existing) {
-      throw new Error(`Supplier avec ID ${id} introuvable`);
+      throw new AppError(`Supplier avec ID ${id} introuvable`, 500);
     }
     
     this.suppliers.delete(id);
@@ -5118,11 +4903,11 @@ export class MemStorage implements IStorage {
   }
 
   async createSupplierRequest(request: InsertSupplierRequest): Promise<SupplierRequest> {
-    throw new Error("MemStorage: createSupplierRequest not implemented for POC");
+    throw new AppError("MemStorage: createSupplierRequest not implemented for POC", 500);
   }
 
   async updateSupplierRequest(id: string, request: Partial<InsertSupplierRequest>): Promise<SupplierRequest> {
-    throw new Error("MemStorage: updateSupplierRequest not implemented for POC");
+    throw new AppError("MemStorage: updateSupplierRequest not implemented for POC", 500);
   }
 
   async getTeamResources(projectId?: string): Promise<(TeamResource & { user?: User })[]> {
@@ -5130,11 +4915,11 @@ export class MemStorage implements IStorage {
   }
 
   async createTeamResource(resource: InsertTeamResource): Promise<TeamResource> {
-    throw new Error("MemStorage: createTeamResource not implemented for POC");
+    throw new AppError("MemStorage: createTeamResource not implemented for POC", 500);
   }
 
   async updateTeamResource(id: string, resource: Partial<InsertTeamResource>): Promise<TeamResource> {
-    throw new Error("MemStorage: updateTeamResource not implemented for POC");
+    throw new AppError("MemStorage: updateTeamResource not implemented for POC", 500);
   }
 
   async getBeWorkload(weekNumber?: number, year?: number): Promise<(BeWorkload & { user?: User })[]> {
@@ -5142,7 +4927,7 @@ export class MemStorage implements IStorage {
   }
 
   async createOrUpdateBeWorkload(workload: InsertBeWorkload): Promise<BeWorkload> {
-    throw new Error("MemStorage: createOrUpdateBeWorkload not implemented for POC");
+    throw new AppError("MemStorage: createOrUpdateBeWorkload not implemented for POC", 500);
   }
 
   async getDashboardStats(): Promise<{
@@ -5165,7 +4950,7 @@ export class MemStorage implements IStorage {
     granularity: 'day' | 'week';
     segment?: string;
   }): Promise<ConsolidatedKpis> {
-    throw new Error("MemStorage: getConsolidatedKpis not implemented for POC");
+    throw new AppError("MemStorage: getConsolidatedKpis not implemented for POC", 500);
   }
 
   async getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]> {
@@ -5177,15 +4962,15 @@ export class MemStorage implements IStorage {
   }
 
   async createChiffrageElement(element: InsertChiffrageElement): Promise<ChiffrageElement> {
-    throw new Error("MemStorage: createChiffrageElement not implemented for POC");
+    throw new AppError("MemStorage: createChiffrageElement not implemented for POC", 500);
   }
 
   async updateChiffrageElement(id: string, element: Partial<InsertChiffrageElement>): Promise<ChiffrageElement> {
-    throw new Error("MemStorage: updateChiffrageElement not implemented for POC");
+    throw new AppError("MemStorage: updateChiffrageElement not implemented for POC", 500);
   }
 
   async deleteChiffrageElement(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteChiffrageElement not implemented for POC");
+    throw new AppError("MemStorage: deleteChiffrageElement not implemented for POC", 500);
   }
 
   async getDpgfDocumentByOffer(offerId: string): Promise<DpgfDocument | null> {
@@ -5193,15 +4978,15 @@ export class MemStorage implements IStorage {
   }
 
   async createDpgfDocument(dpgf: InsertDpgfDocument): Promise<DpgfDocument> {
-    throw new Error("MemStorage: createDpgfDocument not implemented for POC");
+    throw new AppError("MemStorage: createDpgfDocument not implemented for POC", 500);
   }
 
   async updateDpgfDocument(id: string, dpgf: Partial<InsertDpgfDocument>): Promise<DpgfDocument> {
-    throw new Error("MemStorage: updateDpgfDocument not implemented for POC");
+    throw new AppError("MemStorage: updateDpgfDocument not implemented for POC", 500);
   }
 
   async deleteDpgfDocument(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteDpgfDocument not implemented for POC");
+    throw new AppError("MemStorage: deleteDpgfDocument not implemented for POC", 500);
   }
 
   async getAoLots(aoId: string, tx?: DrizzleTransaction): Promise<AoLot[]> {
@@ -5209,15 +4994,15 @@ export class MemStorage implements IStorage {
   }
 
   async createAoLot(lot: InsertAoLot, tx?: DrizzleTransaction): Promise<AoLot> {
-    throw new Error("MemStorage: createAoLot not implemented for POC");
+    throw new AppError("MemStorage: createAoLot not implemented for POC", 500);
   }
 
   async updateAoLot(id: string, lot: Partial<InsertAoLot>): Promise<AoLot> {
-    throw new Error("MemStorage: updateAoLot not implemented for POC");
+    throw new AppError("MemStorage: updateAoLot not implemented for POC", 500);
   }
 
   async deleteAoLot(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteAoLot not implemented for POC");
+    throw new AppError("MemStorage: deleteAoLot not implemented for POC", 500);
   }
 
   async getMaitresOuvrage(): Promise<MaitreOuvrage[]> {
@@ -5229,15 +5014,15 @@ export class MemStorage implements IStorage {
   }
 
   async createMaitreOuvrage(maitreOuvrage: InsertMaitreOuvrage): Promise<MaitreOuvrage> {
-    throw new Error("MemStorage: createMaitreOuvrage not implemented for POC");
+    throw new AppError("MemStorage: createMaitreOuvrage not implemented for POC", 500);
   }
 
   async updateMaitreOuvrage(id: string, maitreOuvrage: Partial<InsertMaitreOuvrage>): Promise<MaitreOuvrage> {
-    throw new Error("MemStorage: updateMaitreOuvrage not implemented for POC");
+    throw new AppError("MemStorage: updateMaitreOuvrage not implemented for POC", 500);
   }
 
   async deleteMaitreOuvrage(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteMaitreOuvrage not implemented for POC");
+    throw new AppError("MemStorage: deleteMaitreOuvrage not implemented for POC", 500);
   }
 
   async getMaitresOeuvre(): Promise<(MaitreOeuvre & { contacts?: ContactMaitreOeuvre[] })[]> {
@@ -5249,15 +5034,15 @@ export class MemStorage implements IStorage {
   }
 
   async createMaitreOeuvre(maitreOeuvre: InsertMaitreOeuvre): Promise<MaitreOeuvre> {
-    throw new Error("MemStorage: createMaitreOeuvre not implemented for POC");
+    throw new AppError("MemStorage: createMaitreOeuvre not implemented for POC", 500);
   }
 
   async updateMaitreOeuvre(id: string, maitreOeuvre: Partial<InsertMaitreOeuvre>): Promise<MaitreOeuvre> {
-    throw new Error("MemStorage: updateMaitreOeuvre not implemented for POC");
+    throw new AppError("MemStorage: updateMaitreOeuvre not implemented for POC", 500);
   }
 
   async deleteMaitreOeuvre(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteMaitreOeuvre not implemented for POC");
+    throw new AppError("MemStorage: deleteMaitreOeuvre not implemented for POC", 500);
   }
 
   // Contact deduplication methods
@@ -5278,7 +5063,7 @@ export class MemStorage implements IStorage {
       adresse: data.adresse || null,
       codePostal: data.codePostal || null,
       ville: data.ville || null,
-      departement: data.departement as any || null,
+      departement: data.departement as typeof departementEnum.enumValues[number] | null || null,
       telephone: data.telephone || null,
       email: data.email || null,
       siteWeb: data.siteWeb || null,
@@ -5324,7 +5109,7 @@ export class MemStorage implements IStorage {
       adresse: data.adresse || null,
       codePostal: data.codePostal || null,
       ville: data.ville || null,
-      departement: data.departement as any || null,
+      departement: data.departement as typeof departementEnum.enumValues[number] | null || null,
       telephone: data.telephone || null,
       email: data.email || null,
       siteWeb: data.siteWeb || null,
@@ -5372,7 +5157,7 @@ export class MemStorage implements IStorage {
       email: data.email || null,
       phone: data.phone || null,
       company: data.company || null,
-      poste: data.poste as any || null,
+      poste: data.poste as string | null || null,
       address: data.address || null,
       notes: 'MemStorage stub',
       isActive: true,
@@ -5403,7 +5188,7 @@ export class MemStorage implements IStorage {
       id: `aocontact_${Date.now()}`,
       ao_id: params.aoId,
       contact_id: params.contactId,
-      link_type: params.linkType as any,
+          link_type: params.linkType as typeof contactLinkTypeEnum.enumValues[number],
       createdAt: new Date()
     };
     
@@ -5415,15 +5200,15 @@ export class MemStorage implements IStorage {
   }
 
   async createContactMaitreOeuvre(contact: InsertContactMaitreOeuvre): Promise<ContactMaitreOeuvre> {
-    throw new Error("MemStorage: createContactMaitreOeuvre not implemented for POC");
+    throw new AppError("MemStorage: createContactMaitreOeuvre not implemented for POC", 500);
   }
 
   async updateContactMaitreOeuvre(id: string, contact: Partial<InsertContactMaitreOeuvre>): Promise<ContactMaitreOeuvre> {
-    throw new Error("MemStorage: updateContactMaitreOeuvre not implemented for POC");
+    throw new AppError("MemStorage: updateContactMaitreOeuvre not implemented for POC", 500);
   }
 
   async deleteContactMaitreOeuvre(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteContactMaitreOeuvre not implemented for POC");
+    throw new AppError("MemStorage: deleteContactMaitreOeuvre not implemented for POC", 500);
   }
 
   async getValidationMilestones(offerId: string): Promise<ValidationMilestone[]> {
@@ -5431,15 +5216,15 @@ export class MemStorage implements IStorage {
   }
 
   async createValidationMilestone(milestone: InsertValidationMilestone): Promise<ValidationMilestone> {
-    throw new Error("MemStorage: createValidationMilestone not implemented for POC");
+    throw new ValidationError('MemStorage: createValidationMilestone not implemented for POC');
   }
 
   async updateValidationMilestone(id: string, milestone: Partial<InsertValidationMilestone>): Promise<ValidationMilestone> {
-    throw new Error("MemStorage: updateValidationMilestone not implemented for POC");
+    throw new ValidationError('MemStorage: updateValidationMilestone not implemented for POC');
   }
 
   async deleteValidationMilestone(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteValidationMilestone not implemented for POC");
+    throw new ValidationError('MemStorage: deleteValidationMilestone not implemented for POC');
   }
 
   async getVisaArchitecte(projectId: string): Promise<VisaArchitecte[]> {
@@ -5447,15 +5232,15 @@ export class MemStorage implements IStorage {
   }
 
   async createVisaArchitecte(visa: InsertVisaArchitecte): Promise<VisaArchitecte> {
-    throw new Error("MemStorage: createVisaArchitecte not implemented for POC");
+    throw new AppError("MemStorage: createVisaArchitecte not implemented for POC", 500);
   }
 
   async updateVisaArchitecte(id: string, visa: Partial<InsertVisaArchitecte>): Promise<VisaArchitecte> {
-    throw new Error("MemStorage: updateVisaArchitecte not implemented for POC");
+    throw new AppError("MemStorage: updateVisaArchitecte not implemented for POC", 500);
   }
 
   async deleteVisaArchitecte(id: string): Promise<void> {
-    throw new Error("MemStorage: deleteVisaArchitecte not implemented for POC");
+    throw new AppError("MemStorage: deleteVisaArchitecte not implemented for POC", 500);
   }
 
   async getOfferById(id: string): Promise<Offer | undefined> {
@@ -5467,11 +5252,11 @@ export class MemStorage implements IStorage {
   }
 
   async getScoringConfig(): Promise<TechnicalScoringConfig> {
-    throw new Error("MemStorage: getScoringConfig not implemented for POC");
+    throw new AppError("MemStorage: getScoringConfig not implemented for POC", 500);
   }
 
   async updateScoringConfig(config: TechnicalScoringConfig): Promise<void> {
-    throw new Error("MemStorage: updateScoringConfig not implemented for POC");
+    throw new AppError("MemStorage: updateScoringConfig not implemented for POC", 500);
   }
 
   // ========================================
@@ -5487,7 +5272,9 @@ export class MemStorage implements IStorage {
     scope_type?: 'global' | 'project' | 'team' | 'period';
     scope_entity_id?: string;
   }): Promise<AlertThreshold[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = this.db
         .select()
         .from(alertThresholds)
@@ -5509,21 +5296,23 @@ export class MemStorage implements IStorage {
       const results = await query.orderBy(alertThresholds.createdAt);
       return results;
       
-    } catch (error) {
-      logger.error('Erreur getActiveThresholds', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getActiveThresholds',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getThresholdById(id: string): Promise<AlertThreshold | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .select()
         .from(alertThresholds)
@@ -5531,21 +5320,23 @@ export class MemStorage implements IStorage {
       
       return result || null;
       
-    } catch (error) {
-      logger.error('Erreur getThresholdById', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getThresholdById',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createThreshold(data: InsertAlertThreshold): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .insert(alertThresholds)
         .values({
@@ -5578,21 +5369,23 @@ export class MemStorage implements IStorage {
       
       return thresholdId;
       
-    } catch (error) {
-      logger.error('Erreur createThreshold', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createThreshold',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateThreshold(id: string, data: UpdateAlertThreshold): Promise<boolean> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Récupérer l'état actuel pour auto-publishing
       const [currentThreshold] = await this.db
         .select()
@@ -5629,21 +5422,23 @@ export class MemStorage implements IStorage {
       
       return !!result;
       
-    } catch (error) {
-      logger.error('Erreur updateThreshold', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateThreshold',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deactivateThreshold(id: string): Promise<boolean> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .update(alertThresholds)
         .set({
@@ -5667,14 +5462,14 @@ export class MemStorage implements IStorage {
       
       return !!result;
       
-    } catch (error) {
-      logger.error('Erreur deactivateThreshold', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deactivateThreshold',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -5686,7 +5481,9 @@ export class MemStorage implements IStorage {
     limit?: number;
     offset?: number;
   }): Promise<{ thresholds: AlertThreshold[]; total: number }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Query principale avec filtres
       let query = this.db.select().from(alertThresholds);
       const conditions = [];
@@ -5717,14 +5514,14 @@ export class MemStorage implements IStorage {
       
       return { thresholds, total: count };
       
-    } catch (error) {
-      logger.error('Erreur listThresholds', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'listThresholds',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -5755,9 +5552,9 @@ export class MemStorage implements IStorage {
       alerts: [], 
       total: 0, 
       summary: { 
-        by_status: {} as any, 
-        by_severity: {} as any, 
-        by_type: {} as any 
+        by_status: {} as Record<AlertStatus, number>, 
+        by_severity: {} as Record<AlertSeverity, number>, 
+        by_type: {} as Record<AlertType, number> 
       } 
     };
   }
@@ -5767,7 +5564,7 @@ export class MemStorage implements IStorage {
     update: UpdateBusinessAlert,
     user_id: string
   ): Promise<BusinessAlert> {
-    throw new Error("MemStorage: updateBusinessAlertStatus not implemented");
+    throw new AppError("MemStorage: updateBusinessAlertStatus not implemented", 500);
   }
 
   async findSimilarAlerts(params: {
@@ -5785,7 +5582,9 @@ export class MemStorage implements IStorage {
 
   // Project Reserves operations - Gestion des réserves projet
   async getProjectReserves(projectId: string): Promise<ProjectReserve[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const results = await this.db
         .select()
         .from(projectReserves)
@@ -5795,21 +5594,23 @@ export class MemStorage implements IStorage {
       logger.info(`Récupération de ${results.length} réserves pour le projet ${projectId}`);
       return results;
       
-    } catch (error) {
-      logger.error('Erreur getProjectReserves', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getProjectReserves',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getProjectReserve(id: string): Promise<ProjectReserve | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .select()
         .from(projectReserves)
@@ -5817,21 +5618,23 @@ export class MemStorage implements IStorage {
       
       return result;
       
-    } catch (error) {
-      logger.error('Erreur getProjectReserve', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getProjectReserve',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createProjectReserve(reserve: InsertProjectReserve): Promise<ProjectReserve> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .insert(projectReserves)
         .values({
@@ -5844,21 +5647,23 @@ export class MemStorage implements IStorage {
       logger.info(`Réserve créée avec ID: ${result.id}`);
       return result;
       
-    } catch (error) {
-      logger.error('Erreur createProjectReserve', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createProjectReserve',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateProjectReserve(id: string, reserve: Partial<InsertProjectReserve>): Promise<ProjectReserve> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .update(projectReserves)
         .set({
@@ -5871,35 +5676,37 @@ export class MemStorage implements IStorage {
       logger.info(`Réserve ${id} mise à jour`);
       return result;
       
-    } catch (error) {
-      logger.error('Erreur updateProjectReserve', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateProjectReserve',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteProjectReserve(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.db
         .delete(projectReserves)
         .where(eq(projectReserves.id, id));
       
       logger.info(`Réserve ${id} supprimée`);
       
-    } catch (error) {
-      logger.error('Erreur deleteProjectReserve', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteProjectReserve',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -5907,7 +5714,9 @@ export class MemStorage implements IStorage {
 
   // SAV Interventions operations - Gestion des interventions SAV
   async getSavInterventions(projectId: string): Promise<SavIntervention[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const results = await this.db
         .select()
         .from(savInterventions)
@@ -5917,21 +5726,23 @@ export class MemStorage implements IStorage {
       logger.info(`Récupération de ${results.length} interventions SAV pour le projet ${projectId}`);
       return results;
       
-    } catch (error) {
-      logger.error('Erreur getSavInterventions', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSavInterventions',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getSavIntervention(id: string): Promise<SavIntervention | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .select()
         .from(savInterventions)
@@ -5939,21 +5750,23 @@ export class MemStorage implements IStorage {
       
       return result;
       
-    } catch (error) {
-      logger.error('Erreur getSavIntervention', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSavIntervention',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createSavIntervention(intervention: InsertSavIntervention): Promise<SavIntervention> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .insert(savInterventions)
         .values({
@@ -5966,21 +5779,23 @@ export class MemStorage implements IStorage {
       logger.info(`Intervention SAV créée avec ID: ${result.id}`);
       return result;
       
-    } catch (error) {
-      logger.error('Erreur createSavIntervention', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createSavIntervention',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateSavIntervention(id: string, intervention: Partial<InsertSavIntervention>): Promise<SavIntervention> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .update(savInterventions)
         .set({
@@ -5993,35 +5808,37 @@ export class MemStorage implements IStorage {
       logger.info(`Intervention SAV ${id} mise à jour`);
       return result;
       
-    } catch (error) {
-      logger.error('Erreur updateSavIntervention', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateSavIntervention',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteSavIntervention(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.db
         .delete(savInterventions)
         .where(eq(savInterventions.id, id));
       
       logger.info(`Intervention SAV ${id} supprimée`);
       
-    } catch (error) {
-      logger.error('Erreur deleteSavIntervention', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteSavIntervention',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -6029,7 +5846,9 @@ export class MemStorage implements IStorage {
 
   // SAV Warranty Claims operations - Gestion des réclamations garantie
   async getSavWarrantyClaims(interventionId: string): Promise<SavWarrantyClaim[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const results = await this.db
         .select()
         .from(savWarrantyClaims)
@@ -6039,21 +5858,23 @@ export class MemStorage implements IStorage {
       logger.info(`Récupération de ${results.length} réclamations garantie pour l'intervention ${interventionId}`);
       return results;
       
-    } catch (error) {
-      logger.error('Erreur getSavWarrantyClaims', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSavWarrantyClaims',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getSavWarrantyClaim(id: string): Promise<SavWarrantyClaim | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .select()
         .from(savWarrantyClaims)
@@ -6061,21 +5882,23 @@ export class MemStorage implements IStorage {
       
       return result;
       
-    } catch (error) {
-      logger.error('Erreur getSavWarrantyClaim', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSavWarrantyClaim',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createSavWarrantyClaim(claim: InsertSavWarrantyClaim): Promise<SavWarrantyClaim> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .insert(savWarrantyClaims)
         .values({
@@ -6088,21 +5911,23 @@ export class MemStorage implements IStorage {
       logger.info(`Réclamation garantie créée avec ID: ${result.id}`);
       return result;
       
-    } catch (error) {
-      logger.error('Erreur createSavWarrantyClaim', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createSavWarrantyClaim',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateSavWarrantyClaim(id: string, claim: Partial<InsertSavWarrantyClaim>): Promise<SavWarrantyClaim> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .update(savWarrantyClaims)
         .set({
@@ -6115,35 +5940,37 @@ export class MemStorage implements IStorage {
       logger.info(`Réclamation garantie ${id} mise à jour`);
       return result;
       
-    } catch (error) {
-      logger.error('Erreur updateSavWarrantyClaim', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateSavWarrantyClaim',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteSavWarrantyClaim(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.db
         .delete(savWarrantyClaims)
         .where(eq(savWarrantyClaims.id, id));
       
       logger.info(`Réclamation garantie ${id} supprimée`);
       
-    } catch (error) {
-      logger.error('Erreur deleteSavWarrantyClaim', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteSavWarrantyClaim',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -6155,11 +5982,13 @@ export class MemStorage implements IStorage {
 
   // Métriques Business operations
   async getMetricsBusiness(entityType?: string, entityId?: string): Promise<MetricsBusiness[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = this.db.select().from(metricsBusiness).orderBy(desc(metricsBusiness.createdAt));
       
       if (entityType) {
-        query = query.where(eq(metricsBusiness.entity_type, entityType as any));
+        query = query.where(eq(metricsBusiness.entity_type, entityType as string));
       }
       if (entityId) {
         query = query.where(eq(metricsBusiness.entity_id, entityId));
@@ -6168,42 +5997,46 @@ export class MemStorage implements IStorage {
       const results = await query;
       logger.info(`Récupération de ${results.length} métriques business`);
       return results;
-    } catch (error) {
-      logger.error('Erreur getMetricsBusiness', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getMetricsBusiness',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getMetricsBusinessById(id: string): Promise<MetricsBusiness | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .select()
         .from(metricsBusiness)
         .where(eq(metricsBusiness.id, id));
       
       return result;
-    } catch (error) {
-      logger.error('Erreur getMetricsBusinessById', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getMetricsBusinessById',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createMetricsBusiness(metric: InsertMetricsBusiness): Promise<MetricsBusiness> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .insert(metricsBusiness)
         .values({
@@ -6215,21 +6048,23 @@ export class MemStorage implements IStorage {
       
       logger.info(`Métrique business créée avec ID: ${result.id}`);
       return result;
-    } catch (error) {
-      logger.error('Erreur createMetricsBusiness', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createMetricsBusiness',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateMetricsBusiness(id: string, metric: Partial<InsertMetricsBusiness>): Promise<MetricsBusiness> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .update(metricsBusiness)
         .set({
@@ -6241,31 +6076,33 @@ export class MemStorage implements IStorage {
       
       logger.info(`Métrique business ${id} mise à jour`);
       return result;
-    } catch (error) {
-      logger.error('Erreur updateMetricsBusiness', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateMetricsBusiness',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteMetricsBusiness(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.db.delete(metricsBusiness).where(eq(metricsBusiness.id, id));
       logger.info(`Métrique business ${id} supprimée`);
-    } catch (error) {
-      logger.error('Erreur deleteMetricsBusiness', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteMetricsBusiness',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -6273,55 +6110,61 @@ export class MemStorage implements IStorage {
 
   // Temps Pose operations
   async getTempsPose(workScope?: string, componentType?: string): Promise<TempsPose[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = this.db.select().from(tempsPose).where(eq(tempsPose.is_active, true));
       
       if (workScope) {
-        query = query.where(eq(tempsPose.work_scope, workScope as any));
+        query = query.where(eq(tempsPose.work_scope, workScope as string));
       }
       if (componentType) {
-        query = query.where(eq(tempsPose.component_type, componentType as any));
+        query = query.where(eq(tempsPose.component_type, componentType as string));
       }
       
       const results = await query;
       logger.info(`Récupération de ${results.length} temps de pose`);
       return results;
-    } catch (error) {
-      logger.error('Erreur getTempsPose', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getTempsPose',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getTempsPoseById(id: string): Promise<TempsPose | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .select()
         .from(tempsPose)
         .where(eq(tempsPose.id, id));
       
       return result;
-    } catch (error) {
-      logger.error('Erreur getTempsPoseById', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getTempsPoseById',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createTempsPose(temps: InsertTempsPose): Promise<TempsPose> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .insert(tempsPose)
         .values({
@@ -6333,21 +6176,23 @@ export class MemStorage implements IStorage {
       
       logger.info(`Temps de pose créé avec ID: ${result.id}`);
       return result;
-    } catch (error) {
-      logger.error('Erreur createTempsPose', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createTempsPose',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateTempsPose(id: string, temps: Partial<InsertTempsPose>): Promise<TempsPose> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .update(tempsPose)
         .set({
@@ -6359,31 +6204,33 @@ export class MemStorage implements IStorage {
       
       logger.info(`Temps de pose ${id} mis à jour`);
       return result;
-    } catch (error) {
-      logger.error('Erreur updateTempsPose', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateTempsPose',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteTempsPose(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.db.delete(tempsPose).where(eq(tempsPose.id, id));
       logger.info(`Temps de pose ${id} supprimé`);
-    } catch (error) {
-      logger.error('Erreur deleteTempsPose', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteTempsPose',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -6391,7 +6238,9 @@ export class MemStorage implements IStorage {
 
   // AO-Contacts liaison operations
   async getAoContacts(aoId: string, tx?: DrizzleTransaction): Promise<AoContacts[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const dbInstance = tx || this.db;
       const results = await dbInstance
         .select()
@@ -6400,21 +6249,23 @@ export class MemStorage implements IStorage {
       
       logger.info(`Récupération de ${results.length} contacts pour AO ${aoId}`);
       return results;
-    } catch (error) {
-      logger.error('Erreur getAoContacts', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getAoContacts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createAoContact(contact: InsertAoContacts, tx?: DrizzleTransaction): Promise<AoContacts> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const dbInstance = tx || this.db;
       const [result] = await dbInstance
         .insert(aoContacts)
@@ -6426,31 +6277,33 @@ export class MemStorage implements IStorage {
       
       logger.info(`Contact AO créé avec ID: ${result.id}`);
       return result;
-    } catch (error) {
-      logger.error('Erreur createAoContact', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createAoContact',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteAoContact(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.db.delete(aoContacts).where(eq(aoContacts.id, id));
       logger.info(`Contact AO ${id} supprimé`);
-    } catch (error) {
-      logger.error('Erreur deleteAoContact', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteAoContact',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -6458,7 +6311,9 @@ export class MemStorage implements IStorage {
 
   // Project-Contacts liaison operations
   async getProjectContacts(projectId: string): Promise<ProjectContacts[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const results = await this.db
         .select()
         .from(projectContacts)
@@ -6466,21 +6321,23 @@ export class MemStorage implements IStorage {
       
       logger.info(`Récupération de ${results.length} contacts pour projet ${projectId}`);
       return results;
-    } catch (error) {
-      logger.error('Erreur getProjectContacts', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getProjectContacts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createProjectContact(contact: InsertProjectContacts): Promise<ProjectContacts> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .insert(projectContacts)
         .values({
@@ -6491,31 +6348,33 @@ export class MemStorage implements IStorage {
       
       logger.info(`Contact projet créé avec ID: ${result.id}`);
       return result;
-    } catch (error) {
-      logger.error('Erreur createProjectContact', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createProjectContact',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteProjectContact(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.db.delete(projectContacts).where(eq(projectContacts.id, id));
       logger.info(`Contact projet ${id} supprimé`);
-    } catch (error) {
-      logger.error('Erreur deleteProjectContact', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteProjectContact',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -6523,7 +6382,9 @@ export class MemStorage implements IStorage {
 
   // Supplier Specializations operations
   async getSupplierSpecializations(supplierId?: string): Promise<SupplierSpecializations[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = this.db.select().from(supplierSpecializations);
       
       if (supplierId) {
@@ -6533,21 +6394,23 @@ export class MemStorage implements IStorage {
       const results = await query;
       logger.info(`Récupération de ${results.length} spécialisations fournisseurs`);
       return results;
-    } catch (error) {
-      logger.error('Erreur getSupplierSpecializations', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSupplierSpecializations',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createSupplierSpecialization(spec: InsertSupplierSpecializations): Promise<SupplierSpecializations> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .insert(supplierSpecializations)
         .values({
@@ -6559,21 +6422,23 @@ export class MemStorage implements IStorage {
       
       logger.info(`Spécialisation fournisseur créée avec ID: ${result.id}`);
       return result;
-    } catch (error) {
-      logger.error('Erreur createSupplierSpecialization', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createSupplierSpecialization',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateSupplierSpecialization(id: string, spec: Partial<InsertSupplierSpecializations>): Promise<SupplierSpecializations> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await this.db
         .update(supplierSpecializations)
         .set({
@@ -6585,31 +6450,33 @@ export class MemStorage implements IStorage {
       
       logger.info(`Spécialisation fournisseur ${id} mise à jour`);
       return result;
-    } catch (error) {
-      logger.error('Erreur updateSupplierSpecialization', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateSupplierSpecialization',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteSupplierSpecialization(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(supplierSpecializations).where(eq(supplierSpecializations.id, id));
       logger.info(`Spécialisation fournisseur ${id} supprimée`);
-    } catch (error) {
-      logger.error('Erreur deleteSupplierSpecialization', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteSupplierSpecialization',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -6632,25 +6499,29 @@ export class MemStorage implements IStorage {
   // ========================================
 
   async enqueueTechnicalAlert(alert: InsertTechnicalAlert): Promise<TechnicalAlert> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newAlert] = await db.insert(technicalAlerts).values(alert).returning();
       logger.info(`Alerte technique créée avec ID: ${newAlert.id}`);
       return newAlert;
-    } catch (error) {
-      logger.error('Erreur enqueueTechnicalAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'enqueueTechnicalAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async listTechnicalAlerts(filter?: TechnicalAlertsFilter): Promise<TechnicalAlert[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(technicalAlerts);
       
       if (filter?.aoId) {
@@ -6665,76 +6536,84 @@ export class MemStorage implements IStorage {
       
       const alerts = await query.orderBy(desc(technicalAlerts.createdAt));
       return alerts;
-    } catch (error) {
-      logger.error('Erreur listTechnicalAlerts', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'listTechnicalAlerts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getTechnicalAlert(id: string): Promise<TechnicalAlert | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [alert] = await db.select().from(technicalAlerts).where(eq(technicalAlerts.id, id));
       return alert || null;
-    } catch (error) {
-      logger.error('Erreur getTechnicalAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getTechnicalAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async acknowledgeTechnicalAlert(id: string, userId: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.update(technicalAlerts)
         .set({ status: 'acknowledged', acknowledgedBy: userId, acknowledgedAt: new Date() })
         .where(eq(technicalAlerts.id, id));
       logger.info(`Alerte technique ${id} acquittée par ${userId}`);
-    } catch (error) {
-      logger.error('Erreur acknowledgeTechnicalAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'acknowledgeTechnicalAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async validateTechnicalAlert(id: string, userId: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.update(technicalAlerts)
         .set({ status: 'resolved', resolvedBy: userId, resolvedAt: new Date() })
         .where(eq(technicalAlerts.id, id));
       logger.info(`Alerte technique ${id} validée par ${userId}`);
-    } catch (error) {
-      logger.error('Erreur validateTechnicalAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'validateTechnicalAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async bypassTechnicalAlert(id: string, userId: string, until: Date, reason: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.update(technicalAlerts)
         .set({ status: 'bypassed', resolvedBy: userId, resolvedAt: new Date() })
         .where(eq(technicalAlerts.id, id));
@@ -6742,21 +6621,23 @@ export class MemStorage implements IStorage {
       // Ajouter entrée historique
       await this.addTechnicalAlertHistory(id, 'bypassed', userId, reason, { until: until.toISOString() });
       logger.info(`Alerte technique ${id} bypassée par ${userId} jusqu'à ${until}`);
-    } catch (error) {
-      logger.error('Erreur bypassTechnicalAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'bypassTechnicalAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getActiveBypassForAo(aoId: string): Promise<{ until: Date; reason: string } | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const bypasses = await db.select()
         .from(technicalAlertHistory)
         .where(and(
@@ -6771,41 +6652,45 @@ export class MemStorage implements IStorage {
         until: new Date(lastBypass.metadata?.until || Date.now()),
         reason: lastBypass.note || 'Aucune raison spécifiée'
       };
-    } catch (error) {
-      logger.error('Erreur getActiveBypassForAo', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getActiveBypassForAo',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
   }
 
   async listTechnicalAlertHistory(alertId: string): Promise<TechnicalAlertHistory[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const history = await db.select()
         .from(technicalAlertHistory)
         .where(eq(technicalAlertHistory.alertId, alertId))
         .orderBy(desc(technicalAlertHistory.createdAt));
       return history;
-    } catch (error) {
-      logger.error('Erreur listTechnicalAlertHistory', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'listTechnicalAlertHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async addTechnicalAlertHistory(alertId: string | null, action: string, actorUserId: string | null, note?: string, metadata?: Record<string, any>): Promise<TechnicalAlertHistory> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [entry] = await db.insert(technicalAlertHistory).values({
         alertId,
         action,
@@ -6814,21 +6699,23 @@ export class MemStorage implements IStorage {
         metadata
       }).returning();
       return entry;
-    } catch (error) {
-      logger.error('Erreur addTechnicalAlertHistory', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'addTechnicalAlertHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async listAoSuppressionHistory(aoId: string): Promise<TechnicalAlertHistory[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const history = await db.select()
         .from(technicalAlertHistory)
         .where(and(
@@ -6837,14 +6724,14 @@ export class MemStorage implements IStorage {
         ))
         .orderBy(desc(technicalAlertHistory.createdAt));
       return history;
-    } catch (error) {
-      logger.error('Erreur listAoSuppressionHistory', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'listAoSuppressionHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -6868,95 +6755,105 @@ export class MemStorage implements IStorage {
   // ========================================
 
   async getProjectTimelines(projectId: string): Promise<ProjectTimeline[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const timelines = await db.select()
         .from(projectTimelines)
         .where(eq(projectTimelines.projectId, projectId))
         .orderBy(projectTimelines.plannedStartDate);
       return timelines;
-    } catch (error) {
-      logger.error('Erreur getProjectTimelines', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getProjectTimelines',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getAllProjectTimelines(): Promise<ProjectTimeline[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const timelines = await db.select()
         .from(projectTimelines)
         .orderBy(desc(projectTimelines.createdAt));
       return timelines;
-    } catch (error) {
-      logger.error('Erreur getAllProjectTimelines', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getAllProjectTimelines',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createProjectTimeline(data: InsertProjectTimeline): Promise<ProjectTimeline> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [timeline] = await db.insert(projectTimelines).values(data).returning();
       logger.info(`Timeline projet créée avec ID: ${timeline.id}`);
       return timeline;
-    } catch (error) {
-      logger.error('Erreur createProjectTimeline', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createProjectTimeline',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateProjectTimeline(id: string, data: Partial<InsertProjectTimeline>): Promise<ProjectTimeline> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [timeline] = await db.update(projectTimelines)
         .set({ ...data, updatedAt: new Date() })
         .where(eq(projectTimelines.id, id))
         .returning();
       logger.info(`Timeline projet ${id} mise à jour`);
       return timeline;
-    } catch (error) {
-      logger.error('Erreur updateProjectTimeline', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateProjectTimeline',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteProjectTimeline(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(projectTimelines).where(eq(projectTimelines.id, id));
       logger.info(`Timeline projet ${id} supprimée`);
-    } catch (error) {
-      logger.error('Erreur deleteProjectTimeline', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteProjectTimeline',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -6967,7 +6864,9 @@ export class MemStorage implements IStorage {
   // ========================================
 
   async getActiveRules(filters?: { phase?: typeof projectStatusEnum.enumValues[number], projectType?: string }): Promise<DateIntelligenceRule[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(dateIntelligenceRules).where(eq(dateIntelligenceRules.isActive, true));
       
       if (filters?.phase) {
@@ -6979,106 +6878,116 @@ export class MemStorage implements IStorage {
       
       const rules = await query.orderBy(desc(dateIntelligenceRules.priority));
       return rules;
-    } catch (error) {
-      logger.error('Erreur getActiveRules', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getActiveRules',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getAllRules(): Promise<DateIntelligenceRule[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const rules = await db.select()
         .from(dateIntelligenceRules)
         .orderBy(desc(dateIntelligenceRules.createdAt));
       return rules;
-    } catch (error) {
-      logger.error('Erreur getAllRules', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getAllRules',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getRule(id: string): Promise<DateIntelligenceRule | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [rule] = await db.select().from(dateIntelligenceRules).where(eq(dateIntelligenceRules.id, id));
       return rule;
-    } catch (error) {
-      logger.error('Erreur getRule', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getRule',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createRule(data: InsertDateIntelligenceRule): Promise<DateIntelligenceRule> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [rule] = await db.insert(dateIntelligenceRules).values(data).returning();
       logger.info(`Règle d'intelligence temporelle créée avec ID: ${rule.id}`);
       return rule;
-    } catch (error) {
-      logger.error('Erreur createRule', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createRule',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateRule(id: string, data: Partial<InsertDateIntelligenceRule>): Promise<DateIntelligenceRule> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [rule] = await db.update(dateIntelligenceRules)
         .set({ ...data, updatedAt: new Date() })
         .where(eq(dateIntelligenceRules.id, id))
         .returning();
       logger.info(`Règle d'intelligence temporelle ${id} mise à jour`);
       return rule;
-    } catch (error) {
-      logger.error('Erreur updateRule', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateRule',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteRule(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(dateIntelligenceRules).where(eq(dateIntelligenceRules.id, id));
       logger.info(`Règle d'intelligence temporelle ${id} supprimée`);
-    } catch (error) {
-      logger.error('Erreur deleteRule', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteRule',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7089,7 +6998,9 @@ export class MemStorage implements IStorage {
   // ========================================
 
   async getDateAlerts(filters?: { entityType?: string, entityId?: string, status?: string }): Promise<DateAlert[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(dateAlerts);
       
       if (filters?.entityType) {
@@ -7104,87 +7015,95 @@ export class MemStorage implements IStorage {
       
       const alerts = await query.orderBy(desc(dateAlerts.createdAt));
       return alerts;
-    } catch (error) {
-      logger.error('Erreur getDateAlerts', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getDateAlerts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getDateAlert(id: string): Promise<DateAlert | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [alert] = await db.select().from(dateAlerts).where(eq(dateAlerts.id, id));
       return alert;
-    } catch (error) {
-      logger.error('Erreur getDateAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getDateAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createDateAlert(data: InsertDateAlert): Promise<DateAlert> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [alert] = await db.insert(dateAlerts).values(data).returning();
       logger.info(`Alerte de date créée avec ID: ${alert.id}`);
       return alert;
-    } catch (error) {
-      logger.error('Erreur createDateAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createDateAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [alert] = await db.update(dateAlerts)
         .set({ ...data, updatedAt: new Date() })
         .where(eq(dateAlerts.id, id))
         .returning();
       logger.info(`Alerte de date ${id} mise à jour`);
       return alert;
-    } catch (error) {
-      logger.error('Erreur updateDateAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateDateAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteDateAlert(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(dateAlerts).where(eq(dateAlerts.id, id));
       logger.info(`Alerte de date ${id} supprimée`);
-    } catch (error) {
-      logger.error('Erreur deleteDateAlert', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteDateAlert',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7195,25 +7114,29 @@ export class MemStorage implements IStorage {
   // ========================================
 
   async createKPISnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [snapshot] = await db.insert(kpiSnapshots).values(data).returning();
       logger.info(`Snapshot KPI créé avec ID: ${snapshot.id}`);
       return snapshot;
-    } catch (error) {
-      logger.error('Erreur createKPISnapshot', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createKPISnapshot',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getKPISnapshots(period: DateRange, limit?: number): Promise<KpiSnapshot[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select()
         .from(kpiSnapshots)
         .where(and(
@@ -7228,59 +7151,65 @@ export class MemStorage implements IStorage {
       
       const snapshots = await query;
       return snapshots;
-    } catch (error) {
-      logger.error('Erreur getKPISnapshots', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getKPISnapshots',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getLatestKPISnapshot(): Promise<KpiSnapshot | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [snapshot] = await db.select()
         .from(kpiSnapshots)
         .orderBy(desc(kpiSnapshots.snapshotDate))
         .limit(1);
       return snapshot || null;
-    } catch (error) {
-      logger.error('Erreur getLatestKPISnapshot', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getLatestKPISnapshot',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createBusinessMetric(data: InsertBusinessMetric): Promise<BusinessMetric> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [metric] = await db.insert(businessMetrics).values(data).returning();
       logger.info(`Métrique business créée avec ID: ${metric.id}`);
       return metric;
-    } catch (error) {
-      logger.error('Erreur createBusinessMetric', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createBusinessMetric',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getBusinessMetrics(filters: MetricFilters): Promise<BusinessMetric[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(businessMetrics);
       
       if (filters.metricType) {
@@ -7298,21 +7227,23 @@ export class MemStorage implements IStorage {
       
       const metrics = await query.orderBy(desc(businessMetrics.createdAt));
       return metrics;
-    } catch (error) {
-      logger.error('Erreur getBusinessMetrics', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getBusinessMetrics',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getMetricTimeSeries(metricType: string, period: DateRange): Promise<BusinessMetric[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const metrics = await db.select()
         .from(businessMetrics)
         .where(and(
@@ -7322,39 +7253,43 @@ export class MemStorage implements IStorage {
         ))
         .orderBy(businessMetrics.periodStart);
       return metrics;
-    } catch (error) {
-      logger.error('Erreur getMetricTimeSeries', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getMetricTimeSeries',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async createPerformanceBenchmark(data: InsertPerformanceBenchmark): Promise<PerformanceBenchmark> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [benchmark] = await db.insert(performanceBenchmarks).values(data).returning();
       logger.info(`Benchmark performance créé avec ID: ${benchmark.id}`);
       return benchmark;
-    } catch (error) {
-      logger.error('Erreur createPerformanceBenchmark', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createPerformanceBenchmark',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async getTopPerformers(metricType: string, limit?: number): Promise<PerformanceBenchmark[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select()
         .from(performanceBenchmarks)
         .where(eq(performanceBenchmarks.metricType, metricType))
@@ -7366,14 +7301,14 @@ export class MemStorage implements IStorage {
       
       const topPerformers = await query;
       return topPerformers;
-    } catch (error) {
-      logger.error('Erreur getTopPerformers', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getTopPerformers',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7389,7 +7324,9 @@ export class MemStorage implements IStorage {
     projects_count: number;
     avg_project_value: number;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Simulation de données pour le POC
       const months = [];
       const start = new Date(range.start_date);
@@ -7405,14 +7342,14 @@ export class MemStorage implements IStorage {
       }
       
       return months;
-    } catch (error) {
-      logger.error('Erreur getMonthlyRevenueHistory', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getMonthlyRevenueHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7426,7 +7363,9 @@ export class MemStorage implements IStorage {
     project_type: string;
     complexity: string;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Simulation de données pour le POC
       const projectDelays = await db.select({
         project_id: projects.id,
@@ -7444,14 +7383,14 @@ export class MemStorage implements IStorage {
       ));
       
       return projectDelays;
-    } catch (error) {
-      logger.error('Erreur getProjectDelayHistory', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getProjectDelayHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7464,7 +7403,9 @@ export class MemStorage implements IStorage {
     utilization_rate: number;
     avg_project_duration: number;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Simulation de données pour le POC
       const months = [];
       const start = new Date(range.start_date);
@@ -7481,33 +7422,35 @@ export class MemStorage implements IStorage {
       }
       
       return months;
-    } catch (error) {
-      logger.error('Erreur getTeamLoadHistory', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getTeamLoadHistory',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async saveForecastSnapshot(forecast: { forecast_data: any; generated_at: string; params: any }): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Pour le POC, utilisation d'une table générique ou storage en mémoire
       const snapshotId = `forecast_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       logger.info(`Snapshot forecast sauvegardé avec ID: ${snapshotId}`);
       return snapshotId;
-    } catch (error) {
-      logger.error('Erreur saveForecastSnapshot', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'saveForecastSnapshot',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7520,7 +7463,9 @@ export class MemStorage implements IStorage {
     confidence: number;
     method_used: string;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Simulation de données pour le POC
       const snapshots = [];
       const count = limit || 10;
@@ -7536,21 +7481,23 @@ export class MemStorage implements IStorage {
       }
       
       return snapshots;
-    } catch (error) {
-      logger.error('Erreur listForecastSnapshots', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'listForecastSnapshots',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
-  async getAnalyticsSnapshots(params?: any): Promise<any[]> {
-    try {
+  async getAnalyticsSnapshots(params?: Record<string, unknown>): Promise<Record<string, unknown>[]> {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Récupération snapshots analytics', {
         metadata: {
           service: 'StoragePOC',
@@ -7559,20 +7506,23 @@ export class MemStorage implements IStorage {
         }
       });
       return [];
-    } catch (error) {
-      logger.error('Erreur getAnalyticsSnapshots', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getAnalyticsSnapshots',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
-  async createAnalyticsSnapshot(data: any): Promise<any> {
-    try {
+  async createAnalyticsSnapshot(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return withErrorHandling(
+    async () => {
+
       const snapshot = {
         id: `analytics_snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         ...data,
@@ -7586,13 +7536,14 @@ export class MemStorage implements IStorage {
         }
       });
       return snapshot;
-    } catch (error) {
-      logger.error('Erreur createAnalyticsSnapshot', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createAnalyticsSnapshot',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7605,7 +7556,9 @@ export class MemStorage implements IStorage {
     quality_benchmark: number;
     efficiency_benchmark: number;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Benchmarks secteur menuiserie (données POC)
       return {
         industry_avg_conversion: 0.35, // 35% taux conversion moyen
@@ -7614,14 +7567,14 @@ export class MemStorage implements IStorage {
         quality_benchmark: 4.2, // 4.2/5 qualité moyenne
         efficiency_benchmark: 0.82 // 82% efficacité moyenne
       };
-    } catch (error) {
-      logger.error('Erreur getSectorBenchmarks', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getSectorBenchmarks',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7633,89 +7586,99 @@ export class MemStorage implements IStorage {
 
   // Equipment Batteries operations (Nb Batterie)
   async getEquipmentBatteries(projectId?: string): Promise<EquipmentBattery[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (projectId) {
         return await db.select().from(equipmentBatteries).where(eq(equipmentBatteries.projectId, projectId));
       }
       return await db.select().from(equipmentBatteries);
-    } catch (error) {
-      logger.error('Erreur getEquipmentBatteries', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getEquipmentBatteries',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
   }
 
   async getEquipmentBattery(id: string): Promise<EquipmentBattery | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [battery] = await db.select().from(equipmentBatteries).where(eq(equipmentBatteries.id, id));
       return battery;
-    } catch (error) {
-      logger.error('Erreur getEquipmentBattery', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getEquipmentBattery',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return undefined;
     }
   }
 
   async createEquipmentBattery(battery: EquipmentBatteryInsert): Promise<EquipmentBattery> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newBattery] = await db.insert(equipmentBatteries).values(battery).returning();
       logger.info('Equipment Battery créée:', newBattery.id);
       return newBattery;
-    } catch (error) {
-      logger.error('Erreur createEquipmentBattery', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createEquipmentBattery',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateEquipmentBattery(id: string, battery: Partial<EquipmentBatteryInsert>): Promise<EquipmentBattery> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [updated] = await db.update(equipmentBatteries).set(battery).where(eq(equipmentBatteries.id, id)).returning();
       logger.info('Equipment Battery mise à jour:', id);
       return updated;
-    } catch (error) {
-      logger.error('Erreur updateEquipmentBattery', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateEquipmentBattery',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteEquipmentBattery(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(equipmentBatteries).where(eq(equipmentBatteries.id, id));
       logger.info('Equipment Battery supprimée:', id);
-    } catch (error) {
-      logger.error('Erreur deleteEquipmentBattery', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteEquipmentBattery',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7723,89 +7686,99 @@ export class MemStorage implements IStorage {
 
   // Margin Targets operations (Objectif Marge H)
   async getMarginTargets(projectId?: string): Promise<MarginTarget[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (projectId) {
         return await db.select().from(marginTargets).where(eq(marginTargets.projectId, projectId));
       }
       return await db.select().from(marginTargets);
-    } catch (error) {
-      logger.error('Erreur getMarginTargets', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getMarginTargets',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
   }
 
   async getMarginTarget(id: string): Promise<MarginTarget | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [target] = await db.select().from(marginTargets).where(eq(marginTargets.id, id));
       return target;
-    } catch (error) {
-      logger.error('Erreur getMarginTarget', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getMarginTarget',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return undefined;
     }
   }
 
   async createMarginTarget(target: MarginTargetInsert): Promise<MarginTarget> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newTarget] = await db.insert(marginTargets).values(target).returning();
       logger.info('Margin Target créé:', newTarget.id);
       return newTarget;
-    } catch (error) {
-      logger.error('Erreur createMarginTarget', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createMarginTarget',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateMarginTarget(id: string, target: Partial<MarginTargetInsert>): Promise<MarginTarget> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [updated] = await db.update(marginTargets).set(target).where(eq(marginTargets.id, id)).returning();
       logger.info('Margin Target mis à jour:', id);
       return updated;
-    } catch (error) {
-      logger.error('Erreur updateMarginTarget', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateMarginTarget',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteMarginTarget(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(marginTargets).where(eq(marginTargets.id, id));
       logger.info('Margin Target supprimé:', id);
-    } catch (error) {
-      logger.error('Erreur deleteMarginTarget', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteMarginTarget',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7813,89 +7786,99 @@ export class MemStorage implements IStorage {
 
   // Project Sub Elements operations (Sous-éléments)
   async getProjectSubElements(projectId?: string): Promise<ProjectSubElement[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (projectId) {
         return await db.select().from(projectSubElements).where(eq(projectSubElements.projectId, projectId));
       }
       return await db.select().from(projectSubElements);
-    } catch (error) {
-      logger.error('Erreur getProjectSubElements', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getProjectSubElements',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
   }
 
   async getProjectSubElement(id: string): Promise<ProjectSubElement | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [element] = await db.select().from(projectSubElements).where(eq(projectSubElements.id, id));
       return element;
-    } catch (error) {
-      logger.error('Erreur getProjectSubElement', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getProjectSubElement',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return undefined;
     }
   }
 
   async createProjectSubElement(element: ProjectSubElementInsert): Promise<ProjectSubElement> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newElement] = await db.insert(projectSubElements).values(element).returning();
       logger.info('Project Sub Element créé:', newElement.id);
       return newElement;
-    } catch (error) {
-      logger.error('Erreur createProjectSubElement', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createProjectSubElement',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateProjectSubElement(id: string, element: Partial<ProjectSubElementInsert>): Promise<ProjectSubElement> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [updated] = await db.update(projectSubElements).set(element).where(eq(projectSubElements.id, id)).returning();
       logger.info('Project Sub Element mis à jour:', id);
       return updated;
-    } catch (error) {
-      logger.error('Erreur updateProjectSubElement', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateProjectSubElement',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteProjectSubElement(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(projectSubElements).where(eq(projectSubElements.id, id));
       logger.info('Project Sub Element supprimé:', id);
-    } catch (error) {
-      logger.error('Erreur deleteProjectSubElement', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteProjectSubElement',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7903,89 +7886,99 @@ export class MemStorage implements IStorage {
 
   // Classification Tags operations (Hashtags)
   async getClassificationTags(category?: string): Promise<ClassificationTag[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (category) {
         return await db.select().from(classificationTags).where(eq(classificationTags.category, category));
       }
       return await db.select().from(classificationTags);
-    } catch (error) {
-      logger.error('Erreur getClassificationTags', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getClassificationTags',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
   }
 
   async getClassificationTag(id: string): Promise<ClassificationTag | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [tag] = await db.select().from(classificationTags).where(eq(classificationTags.id, id));
       return tag;
-    } catch (error) {
-      logger.error('Erreur getClassificationTag', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getClassificationTag',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return undefined;
     }
   }
 
   async createClassificationTag(tag: ClassificationTagInsert): Promise<ClassificationTag> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newTag] = await db.insert(classificationTags).values(tag).returning();
       logger.info('Classification Tag créé:', newTag.id);
       return newTag;
-    } catch (error) {
-      logger.error('Erreur createClassificationTag', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createClassificationTag',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateClassificationTag(id: string, tag: Partial<ClassificationTagInsert>): Promise<ClassificationTag> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [updated] = await db.update(classificationTags).set(tag).where(eq(classificationTags.id, id)).returning();
       logger.info('Classification Tag mis à jour:', id);
       return updated;
-    } catch (error) {
-      logger.error('Erreur updateClassificationTag', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateClassificationTag',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteClassificationTag(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(classificationTags).where(eq(classificationTags.id, id));
       logger.info('Classification Tag supprimé:', id);
-    } catch (error) {
-      logger.error('Erreur deleteClassificationTag', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteClassificationTag',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -7993,7 +7986,9 @@ export class MemStorage implements IStorage {
 
   // Entity Tags operations (Liaison Hashtags)
   async getEntityTags(entityType?: string, entityId?: string): Promise<EntityTag[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(entityTags);
       if (entityType && entityId) {
         query = query.where(and(eq(entityTags.entityType, entityType), eq(entityTags.entityId, entityId)));
@@ -8001,49 +7996,53 @@ export class MemStorage implements IStorage {
         query = query.where(eq(entityTags.entityType, entityType));
       }
       return await query;
-    } catch (error) {
-      logger.error('Erreur getEntityTags', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getEntityTags',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
   }
 
   async createEntityTag(entityTag: EntityTagInsert): Promise<EntityTag> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newEntityTag] = await db.insert(entityTags).values(entityTag).returning();
       logger.info('Entity Tag créé:', newEntityTag.id);
       return newEntityTag;
-    } catch (error) {
-      logger.error('Erreur createEntityTag', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createEntityTag',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteEntityTag(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(entityTags).where(eq(entityTags.id, id));
       logger.info('Entity Tag supprimé:', id);
-    } catch (error) {
-      logger.error('Erreur deleteEntityTag', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteEntityTag',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -8051,89 +8050,99 @@ export class MemStorage implements IStorage {
 
   // Employee Labels operations (Label/Label 1)
   async getEmployeeLabels(category?: string): Promise<EmployeeLabel[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (category) {
         return await db.select().from(employeeLabels).where(eq(employeeLabels.category, category));
       }
       return await db.select().from(employeeLabels);
-    } catch (error) {
-      logger.error('Erreur getEmployeeLabels', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getEmployeeLabels',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
   }
 
   async getEmployeeLabel(id: string): Promise<EmployeeLabel | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [label] = await db.select().from(employeeLabels).where(eq(employeeLabels.id, id));
       return label;
-    } catch (error) {
-      logger.error('Erreur getEmployeeLabel', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getEmployeeLabel',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return undefined;
     }
   }
 
   async createEmployeeLabel(label: EmployeeLabelInsert): Promise<EmployeeLabel> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newLabel] = await db.insert(employeeLabels).values(label).returning();
       logger.info('Employee Label créé:', newLabel.id);
       return newLabel;
-    } catch (error) {
-      logger.error('Erreur createEmployeeLabel', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createEmployeeLabel',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async updateEmployeeLabel(id: string, label: Partial<EmployeeLabelInsert>): Promise<EmployeeLabel> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [updated] = await db.update(employeeLabels).set(label).where(eq(employeeLabels.id, id)).returning();
       logger.info('Employee Label mis à jour:', id);
       return updated;
-    } catch (error) {
-      logger.error('Erreur updateEmployeeLabel', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'updateEmployeeLabel',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteEmployeeLabel(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(employeeLabels).where(eq(employeeLabels.id, id));
       logger.info('Employee Label supprimé:', id);
-    } catch (error) {
-      logger.error('Erreur deleteEmployeeLabel', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteEmployeeLabel',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -8141,54 +8150,60 @@ export class MemStorage implements IStorage {
 
   // Employee Label Assignments operations (Liaison Label/Label 1)
   async getEmployeeLabelAssignments(userId?: string): Promise<EmployeeLabelAssignment[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (userId) {
         return await db.select().from(employeeLabelAssignments).where(eq(employeeLabelAssignments.userId, userId));
       }
       return await db.select().from(employeeLabelAssignments);
-    } catch (error) {
-      logger.error('Erreur getEmployeeLabelAssignments', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'getEmployeeLabelAssignments',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       return [];
     }
   }
 
   async createEmployeeLabelAssignment(assignment: EmployeeLabelAssignmentInsert): Promise<EmployeeLabelAssignment> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [newAssignment] = await db.insert(employeeLabelAssignments).values(assignment).returning();
       logger.info('Employee Label Assignment créé:', newAssignment.id);
       return newAssignment;
-    } catch (error) {
-      logger.error('Erreur createEmployeeLabelAssignment', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createEmployeeLabelAssignment',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async deleteEmployeeLabelAssignment(id: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.delete(employeeLabelAssignments).where(eq(employeeLabelAssignments.id, id));
       logger.info('Employee Label Assignment supprimé:', id);
-    } catch (error) {
-      logger.error('Erreur deleteEmployeeLabelAssignment', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'deleteEmployeeLabelAssignment',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -8196,18 +8211,20 @@ export class MemStorage implements IStorage {
 
   // Bug Reports operations - Système de rapport de bugs
   async createBugReport(bugReport: InsertBugReport): Promise<BugReport> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db.insert(bugReports).values(bugReport).returning();
       logger.info(`Rapport de bug créé avec ID: ${result.id}`);
       return result;
-    } catch (error) {
-      logger.error('Erreur createBugReport', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createBugReport',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -8219,7 +8236,9 @@ export class MemStorage implements IStorage {
 
   // Purchase Orders operations
   async getPurchaseOrders(filters?: { supplierId?: string; status?: string }): Promise<PurchaseOrder[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(purchaseOrders);
       const conditions = [];
       
@@ -8235,50 +8254,74 @@ export class MemStorage implements IStorage {
       }
       
       return await query;
-    } catch (error) {
-      logger.error('Erreur getPurchaseOrders', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, id));
       return result;
-    } catch (error) {
-      logger.error('Erreur getPurchaseOrder', { metadata: { error, id } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db.insert(purchaseOrders).values(order).returning();
       logger.info(`Bon de commande créé: ${result.reference}`);
       return result;
-    } catch (error) {
-      logger.error('Erreur createPurchaseOrder', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async updatePurchaseOrder(id: string, order: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db
         .update(purchaseOrders)
         .set({ ...order, updatedAt: new Date() })
         .where(eq(purchaseOrders.id, id))
         .returning();
       return result;
-    } catch (error) {
-      logger.error('Erreur updatePurchaseOrder', { metadata: { error, id } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   // Client Quotes operations
   async getClientQuotes(filters?: { clientName?: string; status?: string }): Promise<ClientQuote[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let query = db.select().from(clientQuotes);
       const conditions = [];
       
@@ -8294,50 +8337,74 @@ export class MemStorage implements IStorage {
       }
       
       return await query;
-    } catch (error) {
-      logger.error('Erreur getClientQuotes', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async getClientQuote(id: string): Promise<ClientQuote | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db.select().from(clientQuotes).where(eq(clientQuotes.id, id));
       return result;
-    } catch (error) {
-      logger.error('Erreur getClientQuote', { metadata: { error, id } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async createClientQuote(quote: InsertClientQuote): Promise<ClientQuote> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db.insert(clientQuotes).values(quote).returning();
       logger.info(`Devis client créé: ${result.reference}`);
       return result;
-    } catch (error) {
-      logger.error('Erreur createClientQuote', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async updateClientQuote(id: string, quote: Partial<InsertClientQuote>): Promise<ClientQuote> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db
         .update(clientQuotes)
         .set({ ...quote, updatedAt: new Date() })
         .where(eq(clientQuotes.id, id))
         .returning();
       return result;
-    } catch (error) {
-      logger.error('Erreur updateClientQuote', { metadata: { error, id } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   // Batigest Export Queue operations
   async getBatigestExportsByStatus(status: string, limit = 50): Promise<BatigestExportQueue[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const results = await db
         .select()
         .from(batigestExportQueue)
@@ -8345,45 +8412,67 @@ export class MemStorage implements IStorage {
         .orderBy(desc(batigestExportQueue.generatedAt))
         .limit(limit);
       return results;
-    } catch (error) {
-      logger.error('Erreur getBatigestExportsByStatus', { metadata: { error, status } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async getBatigestExportById(id: string): Promise<BatigestExportQueue | undefined> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db.select().from(batigestExportQueue).where(eq(batigestExportQueue.id, id));
       return result;
-    } catch (error) {
-      logger.error('Erreur getBatigestExportById', { metadata: { error, id } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async createBatigestExport(exportData: InsertBatigestExportQueue): Promise<BatigestExportQueue> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db.insert(batigestExportQueue).values(exportData).returning();
       logger.info(`Export Batigest créé: ${result.documentReference} (${result.documentType})`);
       return result;
-    } catch (error) {
-      logger.error('Erreur createBatigestExport', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async updateBatigestExport(id: string, data: Partial<InsertBatigestExportQueue>): Promise<BatigestExportQueue> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db
         .update(batigestExportQueue)
         .set(data)
         .where(eq(batigestExportQueue.id, id))
         .returning();
       return result;
-    } catch (error) {
-      logger.error('Erreur updateBatigestExport', { metadata: { error, id } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async getBatigestExportsAll(filters?: {
@@ -8397,7 +8486,9 @@ export class MemStorage implements IStorage {
     page: number;
     limit: number;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const page = filters?.page || 1;
       const limit = filters?.limit || 20;
       const offset = (page - 1) * limit;
@@ -8433,10 +8524,14 @@ export class MemStorage implements IStorage {
         page,
         limit
       };
-    } catch (error) {
-      logger.error('Erreur getBatigestExportsAll', { metadata: { error, filters } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async getBatigestStats(): Promise<{
@@ -8446,7 +8541,9 @@ export class MemStorage implements IStorage {
     pendingCount: number;
     errorRate: number;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -8500,10 +8597,14 @@ export class MemStorage implements IStorage {
         pendingCount,
         errorRate
       };
-    } catch (error) {
-      logger.error('Erreur getBatigestStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   // ========================================
@@ -8522,7 +8623,9 @@ export class MemStorage implements IStorage {
     totalBudget: number;
     avgBudget: number;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[Storage] getProjectStats - SQL aggregation', { metadata: { filters } });
 
       // Build WHERE conditions
@@ -8582,10 +8685,14 @@ export class MemStorage implements IStorage {
         totalBudget: Number(overallStats?.totalBudget || 0),
         avgBudget: Number(overallStats?.avgBudget || 0)
       };
-    } catch (error) {
-      logger.error('Error in getProjectStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async getOfferStats(filters?: {
@@ -8600,7 +8707,9 @@ export class MemStorage implements IStorage {
     totalAmount: number;
     avgAmount: number;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[Storage] getOfferStats - SQL aggregation', { metadata: { filters } });
 
       // Build WHERE conditions
@@ -8660,10 +8769,14 @@ export class MemStorage implements IStorage {
         totalAmount: Number(overallStats?.totalAmount || 0),
         avgAmount: Number(overallStats?.avgAmount || 0)
       };
-    } catch (error) {
-      logger.error('Error in getOfferStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async getAOStats(filters?: {
@@ -8674,7 +8787,9 @@ export class MemStorage implements IStorage {
     totalCount: number;
     byDepartement: Record<string, number>;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[Storage] getAOStats - SQL aggregation', { metadata: { filters } });
 
       // Build WHERE conditions
@@ -8720,10 +8835,14 @@ export class MemStorage implements IStorage {
         totalCount: Number(overallStats?.totalCount || 0),
         byDepartement
       };
-    } catch (error) {
-      logger.error('Error in getAOStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async getConversionStats(period: {
@@ -8746,7 +8865,9 @@ export class MemStorage implements IStorage {
       byUser?: Record<string, { offers: number; signed: number; rate: number }>;
     };
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[Storage] getConversionStats - SQL aggregation', { metadata: { period, filters } });
 
       const fromDate = new Date(period.from);
@@ -8846,10 +8967,14 @@ export class MemStorage implements IStorage {
           byUser: Object.keys(offerToProjectByUser).length > 0 ? offerToProjectByUser : undefined
         }
       };
-    } catch (error) {
-      logger.error('Error in getConversionStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async getProjectDelayStats(period: {
@@ -8862,7 +8987,9 @@ export class MemStorage implements IStorage {
     criticalDelayed: number;
     byPhase: Record<string, { count: number; avgDelay: number }>;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[Storage] getProjectDelayStats - SQL aggregation', { metadata: { period } });
 
       const fromDate = new Date(period.from);
@@ -8930,10 +9057,14 @@ export class MemStorage implements IStorage {
         criticalDelayed,
         byPhase
       };
-    } catch (error) {
-      logger.error('Error in getProjectDelayStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async getTeamPerformanceStats(period: {
@@ -8947,7 +9078,9 @@ export class MemStorage implements IStorage {
     onTimeCount: number;
     onTimeRate: number;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[Storage] getTeamPerformanceStats - SQL aggregation', { metadata: { period } });
 
       const fromDate = new Date(period.from);
@@ -9023,10 +9156,14 @@ export class MemStorage implements IStorage {
       });
 
       return results.sort((a, b) => b.onTimeRate - a.onTimeRate);
-    } catch (error) {
-      logger.error('Error in getTeamPerformanceStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
     }
+  );
   }
 
   async transaction<T>(
@@ -9042,11 +9179,11 @@ export class MemStorage implements IStorage {
 
   // Sync Config operations - Not implemented in MemStorage
   async getSyncConfig(): Promise<SyncConfig | undefined> {
-    throw new Error("MemStorage: getSyncConfig not implemented");
+    throw new AppError("MemStorage: getSyncConfig not implemented", 500);
   }
 
   async updateSyncConfig(config: Partial<InsertSyncConfig>): Promise<SyncConfig> {
-    throw new Error("MemStorage: updateSyncConfig not implemented");
+    throw new AppError("MemStorage: updateSyncConfig not implemented", 500);
   }
 
 }
@@ -9056,7 +9193,7 @@ export const storage = new DatabaseStorage();
 
 // NUCLEAR FIX: Directly attach SQL aggregation methods to storage instance
 // This bypasses any TypeScript transpilation issues
-console.log('[STORAGE-POC] Checking prototype methods:', {
+logger.info('[STORAGE-POC] Checking prototype methods:', {
   hasGetProjectStats: typeof DatabaseStorage.prototype.getProjectStats,
   hasGetOfferStats: typeof DatabaseStorage.prototype.getOfferStats,
   hasGetConversionStats: typeof DatabaseStorage.prototype.getConversionStats,
@@ -9070,7 +9207,7 @@ console.log('[STORAGE-POC] Checking prototype methods:', {
 (storage as any).getAOStats = DatabaseStorage.prototype.getAOStats;
 (storage as any).getProjectDelayStats = DatabaseStorage.prototype.getProjectDelayStats;
 (storage as any).getTeamPerformanceStats = DatabaseStorage.prototype.getTeamPerformanceStats;
-console.log('[STORAGE-POC] Methods attached. Checking storage instance:', {
+logger.info('[STORAGE-POC] Methods attached. Checking storage instance:', {
   hasGetProjectStats: typeof (storage as any).getProjectStats,
   hasGetOfferStats: typeof (storage as any).getOfferStats,
   hasGetConversionStats: typeof (storage as any).getConversionStats,
@@ -9090,18 +9227,20 @@ if (!storage.createBugReport) {
     }
   });
   storage.createBugReport = async function(bugReport: InsertBugReport): Promise<BugReport> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [result] = await db.insert(bugReports).values(bugReport).returning();
       logger.info(`Rapport de bug créé avec ID: ${result.id}`);
       return result;
-    } catch (error) {
-      logger.error('Erreur createBugReport', {
-        metadata: {
-          service: 'StoragePOC',
-          operation: 'createBugReport',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'getUsers',
+      service: 'storage-poc',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -9115,9 +9254,9 @@ if (!storage.createBugReport) {
 }
 
 // FORCE: Assurer que les méthodes SQL d'agrégation sont disponibles sur l'instance
-console.log('[STORAGE-POC] Module-level code executing - checking SQL aggregation methods...');
+logger.info('[STORAGE-POC] Module-level code executing - checking SQL aggregation methods...');
 const dbStorage = storage as any;
-console.log('[STORAGE-POC] Methods check:', {
+logger.info('[STORAGE-POC] Methods check:', {
   hasGetProjectStats: !!dbStorage.getProjectStats,
   hasGetOfferStats: !!dbStorage.getOfferStats,
   hasGetConversionStats: !!dbStorage.getConversionStats,

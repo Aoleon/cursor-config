@@ -4,6 +4,7 @@
  */
 
 import Decimal from 'decimal.js-light';
+import { withRetry } from './utils/retry-helper';
 
 // ========================================
 // GESTION DES DATES
@@ -306,19 +307,18 @@ export async function retryWithBackoff<T>(
   let lastError: Error;
   let delay = initialDelayMs;
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
+  return withRetry(
+    async () => {
+
       return await fn();
-    } catch (error) {
-      lastError = error as Error;
-      
-      if (attempt === maxRetries) {
-        break;
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, delay));
-      delay = Math.min(delay * backoffMultiplier, maxDelayMs);
+    
+    },
+    {
+      maxRetries: 3,
+      initialDelay: 1000,
+      backoffMultiplier: 2
     }
+  );
   }
   
   throw lastError!;

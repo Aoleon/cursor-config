@@ -1,4 +1,6 @@
 import { mondayService } from './MondayService';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { 
   AOBaseExtractor, 
   LotExtractor, 
@@ -106,7 +108,7 @@ export class MondayDataSplitter {
 
     const itemConfig = config || getBoardConfig(boardId);
     if (!itemConfig) {
-      throw new Error(`No configuration found for board ${boardId}`);
+      throw new AppError(`No configuration found for board ${boardId}`, 500);
     }
 
     const context: SplitterContext = {
@@ -166,7 +168,7 @@ export class MondayDataSplitter {
 
     const itemConfig = config || getBoardConfig(boardId);
     if (!itemConfig) {
-      throw new Error(`No configuration found for board ${boardId}`);
+      throw new AppError(`No configuration found for board ${boardId}`, 500);
     }
 
     const context: SplitterContext = {
@@ -185,7 +187,9 @@ export class MondayDataSplitter {
       diagnostics: []
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // WRAPPER TRANSACTION pour atomicité complète
       // Le rollback est automatique en cas d'erreur
       await storage.transaction(async (tx) => {
@@ -229,7 +233,7 @@ export class MondayDataSplitter {
 
           result.success = false;
           result.diagnostics = context.diagnostics;
-          throw new Error(errorMsg);
+          throw new AppError(errorMsg, 500);
         }
 
         // Vérifier si un AO avec ce mondayItemId existe déjà
@@ -360,236 +364,14 @@ export class MondayDataSplitter {
             if (linkResult.created) {
               result.mastersCreated++;
             }
-          } catch (error: any) {
-            context.diagnostics.push({
-              level: 'error',
-              extractor: 'MasterEntityExtractor',
-              message: `Échec persistance maître d'ouvrage: ${error.message}`,
-              data: { moaData, error: error.stack }
-            });
-          }
-        }
-
-        // Persister maîtres d'œuvre
-        for (const moeData of masters.maitresOeuvre) {
-          try {
-            const moeContactData = this.mapMasterToContactData(moeData, 'maitre_oeuvre');
-            const linkResult = await storage.findOrCreateMaitreOeuvre(moeContactData, tx);
-            
-            logger.info('Maître d\'œuvre traité', {
-              service: 'MondayDataSplitter',
-              metadata: {
-                aoId: currentAO.id,
-                nom: linkResult.contact.nom,
-                id: linkResult.contact.id,
-                created: linkResult.created,
-                found: linkResult.found,
-                confidence: linkResult.confidence
-              }
-            });
-            
-            if (linkResult.created) {
-              result.mastersCreated++;
-            }
-          } catch (error: any) {
-            context.diagnostics.push({
-              level: 'error',
-              extractor: 'MasterEntityExtractor',
-              message: `Échec persistance maître d'œuvre: ${error.message}`,
-              data: { moeData, error: error.stack }
-            });
-          }
-        }
-
-        // ÉTAPE 2: Extraire et PERSISTER contacts individuels avec déduplication
-        const contacts = await this.contactExtractor.extract(context);
-        context.extractedData.contacts = contacts;
-
-        logger.info('Extraction contacts', {
-          service: 'MondayDataSplitter',
-          metadata: {
-            aoId: currentAO.id,
-            contactsFound: contacts.length
-          }
-        });
-
-        for (const contactData of contacts) {
-          try {
-            // Mapper vers IndividualContactData
-            const individualData = this.mapContactToIndividualData(contactData);
-            
-            // Déduplication via storage.findOrCreateContact
-            const contactResult = await storage.findOrCreateContact(individualData, tx);
-            
-            // Linker à l'AO via aoContacts
-            const linkType = contactData.linkType || 'contact_general';
-            const link = await storage.linkAoContact({
-              aoId: currentAO.id,
-              contactId: contactResult.contact.id,
-              linkType
-            }, tx);
-            
-            logger.info('Contact traité', {
-              service: 'MondayDataSplitter',
-              metadata: {
-                aoId: currentAO.id,
-                contactId: contactResult.contact.id,
-                firstName: contactResult.contact.firstName,
-                lastName: contactResult.contact.lastName,
-                email: contactResult.contact.email,
-                created: contactResult.created,
-                found: contactResult.found,
-                confidence: contactResult.confidence,
-                linkType,
-                linkCreated: link !== null
-              }
-            });
-            
-            // Incrémenter compteur seulement si CRÉÉ (pas réutilisé)
-            if (contactResult.created) {
-              result.contactsCreated++;
-            }
-            
-          } catch (error: any) {
-            context.diagnostics.push({
-              level: 'error',
-              extractor: 'ContactExtractor',
-              message: `Échec persistance contact: ${error.message}`,
-              data: { contactData, error: error.stack }
-            });
-          }
-        }
-
-        logger.info('Contacts traités', {
-          service: 'MondayDataSplitter',
-          metadata: {
-            aoId: currentAO.id,
-            totalContacts: contacts.length,
-            contactsCreated: result.contactsCreated
-          }
-        });
-
-        // ÉTAPE 3: Extraction lots
-        logger.info('Étape 3: Extraction lots', {
-          service: 'MondayDataSplitter',
-          metadata: { aoId: currentAO.id }
-        });
-
-        const lots = await this.lotExtractor.extract(context);
-        context.extractedData.lots = lots;
-
-        for (const lotData of lots) {
-          try {
-            const lot = await storage.createAoLot({
-              ...lotData,
-              aoId: currentAO.id
-            }, tx);
-            result.lotsCreated++;
-
-            logger.info('Lot créé', {
-              service: 'MondayDataSplitter',
-              metadata: { lotId: lot.id, aoId: currentAO.id }
-            });
-          } catch (error: any) {
-            context.diagnostics.push({
-              level: 'warning',
-              extractor: 'LotExtractor',
-              message: `Failed to create lot: ${error.message}`,
-              data: { lotData }
-            });
-          }
-        }
-
-        // ÉTAPE 4: Extraction adresse
-        logger.info('Étape 4: Extraction adresse', {
-          service: 'MondayDataSplitter',
-          metadata: { aoId: currentAO.id }
-        });
-
-        const addressData = await this.addressExtractor.extract(context);
-        context.extractedData.addresses = addressData ? [addressData] : [];
-
-        if (addressData) {
-          logger.info('Adresse extraite (non persistée pour l\'instant)', {
-            service: 'MondayDataSplitter',
-            metadata: { aoId: currentAO.id, addressData }
-          });
-        }
-
-        // DRY RUN : Si mode test, forcer rollback de la transaction
-        if (dryRun) {
-          // Capturer les données extraites dans le résultat avant rollback
-          // Normaliser les noms de clés (baseAO → ao, etc.)
-          result.extractedData = {
-            ao: context.extractedData.baseAO,
-            lots: context.extractedData.lots,
-            contacts: context.extractedData.contacts,
-            maitresOuvrage: masters.maitresOuvrage,
-            maitresOeuvre: masters.maitresOeuvre,
-            addresses: context.extractedData.addresses
-          };
-          result.diagnostics = context.diagnostics;
-          result.success = true; // Marqué comme succès même si rollbacké
           
-          logger.info('Mode DRY RUN activé - Rollback transaction (données non sauvegardées)', {
-            service: 'MondayDataSplitter',
-            metadata: {
-              aoExtracted: !!context.extractedData.baseAO,
-              lotsExtracted: context.extractedData.lots?.length || 0,
-              contactsExtracted: context.extractedData.contacts?.length || 0,
-              maitresExtracted: (masters.maitresOuvrage.length + masters.maitresOeuvre.length)
-            }
-          });
-          
-          // Lancer erreur spéciale pour forcer rollback
-          throw new Error('DRY_RUN_ROLLBACK');
-        }
-      }, {
-        retries: 3,
-        timeout: 30000,
-        isolationLevel: 'read committed'
-      });
-
-      // Succès - transaction committée
-      result.success = true;
-      result.diagnostics = context.diagnostics;
-
-      logger.info('Éclatement Monday terminé avec succès', {
-        service: 'MondayDataSplitter',
-        metadata: {
-          aoId: result.aoId,
-          lotsCreated: result.lotsCreated,
-          contactsCreated: result.contactsCreated,
-          mastersCreated: result.mastersCreated
-        }
-      });
-
-      return result;
-
-    } catch (error: any) {
-      // Gestion spéciale du dry-run
-      if (error.message === 'DRY_RUN_ROLLBACK') {
-        logger.info('Dry-run terminé avec succès - Transaction rollbackée', {
-          service: 'MondayDataSplitter',
-          metadata: { mondayItemId, boardId }
-        });
-        
-        // Retourner le résultat capturé avant rollback
-        return result;
-      }
-      
-      // Erreur - transaction automatiquement rollbackée par storage.transaction()
-      logger.error('Erreur lors de l\'éclatement Monday', {
-        service: 'MondayDataSplitter',
-        metadata: { mondayItemId, boardId, error: error.message }
-      });
-
-      result.success = false;
-      result.diagnostics = context.diagnostics;
-      result.diagnostics.push({
-        level: 'error',
-        extractor: 'MondayDataSplitter',
-        message: `Échec éclatement: ${error.message}`,
+    },
+    {
+      operation: 'constructor',
+service: 'MondayDataSplitter',;
+      metadata: {}
+    }
+  );`,
         data: { error: error.stack }
       });
 

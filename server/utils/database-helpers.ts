@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db';
+import { withErrorHandling } from './utils/error-handler';
 import { logger } from './logger';
 import { DatabaseError } from './error-handler';
 import { sql } from 'drizzle-orm';
@@ -189,7 +190,9 @@ export async function withTransaction<T>(
   const startTime = Date.now();
   
   for (let attempt = 0; attempt < retries; attempt++) {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Log transaction start
       logger.debug('Starting database transaction', {
         metadata: {
@@ -235,29 +238,14 @@ export async function withTransaction<T>(
       
       return result;
       
-    } catch (error) {
-      lastError = error as Error;
-      const duration = Date.now() - startTime;
-      
-      // Check if error is retryable
-      const retryable = isRetryableError(error);
-      const isLastAttempt = attempt === retries - 1;
-      
-      if (retryable && !isLastAttempt) {
-        // Calculate exponential backoff delay
-        const delay = retryDelay * Math.pow(2, attempt);
-        
-        logger.warn('Retryable database error, will retry', {
-          metadata: {
-            module: 'DatabaseHelpers',
-            operation: 'withTransaction',
-            attempt: attempt + 1,
-            maxRetries: retries,
-            retryIn: delay,
-            duration,
-            error: lastError.message,
-            errorCode: (lastError as any).code
-          }
+    
+    },
+    {
+      operation: 'serialization_failure',
+      service: 'database-helpers',
+      metadata: {}
+    }
+  );
         });
         
         // Wait before retry
@@ -302,7 +290,9 @@ export async function withSavepoint<T>(
 ): Promise<T> {
   const name = savepointName || `sp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     // Create savepoint
     await parentTx.execute(sql.raw(`SAVEPOINT ${name}`));
     
@@ -330,17 +320,14 @@ export async function withSavepoint<T>(
     
     return result;
     
-  } catch (error) {
-    // Rollback to savepoint on error
-    await parentTx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${name}`));
-    
-    logger.warn('Rolled back to database savepoint', {
-      metadata: {
-        module: 'DatabaseHelpers',
-        operation: 'withSavepoint',
-        savepointName: name,
-        error: error instanceof Error ? error.message : String(error)
-      }
+  
+    },
+    {
+      operation: 'serialization_failure',
+      service: 'database-helpers',
+      metadata: {}
+    }
+  );
     });
     
     throw error;
@@ -362,20 +349,19 @@ export async function withBatchTransaction<T>(
     const results: T[] = [];
     
     for (let i = 0; i < operations.length; i++) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const result = await operations[i](tx);
         results.push(result);
-      } catch (error) {
-        logger.error(`Batch operation ${i + 1}/${operations.length} failed`, error as Error, {
-          metadata: {
-            module: 'DatabaseHelpers',
-            operation: 'withBatchTransaction',
-            operationIndex: i,
-            totalOperations: operations.length
-          }
-        });
-        throw error;
-      }
+      
+    },
+    {
+      operation: 'serialization_failure',
+      service: 'database-helpers',
+      metadata: {}
+    }
+  );
     }
     
     return results;
@@ -386,18 +372,19 @@ export async function withBatchTransaction<T>(
  * Check database connection health
  */
 export async function checkDatabaseHealth(): Promise<boolean> {
-  try {
+  return withErrorHandling(
+    async () => {
+
     await db.execute(sql`SELECT 1`);
     return true;
-  } catch (error) {
-    logger.error('Database health check failed', error as Error, {
-      metadata: {
-        module: 'DatabaseHelpers',
-        operation: 'checkDatabaseHealth'
-      }
-    });
-    return false;
-  }
+  
+    },
+    {
+      operation: 'serialization_failure',
+      service: 'database-helpers',
+      metadata: {}
+    }
+  );
 }
 
 /**

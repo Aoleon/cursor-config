@@ -14,6 +14,8 @@
  */
 
 import type { IStorage } from '../storage-poc';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { insertAoSchema, insertProjectSchema, type InsertAo, type InsertProject } from '@shared/schema';
 import { generateRealisticJLMData, type MondayAoData, type MondayProjectData } from '../utils/mondayDataGenerator';
 import { validateMondayAoData, validateMondayProjectData, validateAndParseMondayDate } from '../utils/mondayValidator';
@@ -139,7 +141,9 @@ export class MondayMigrationService {
       }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Utiliser service final avec données authentiques
       const result = await this.productionFinalService.migrateProductionMondayData();
       
@@ -157,16 +161,16 @@ export class MondayMigrationService {
       
       return result;
       
-    } catch (error) {
-      logger.error('Erreur migration authentique Monday.com', {
-        metadata: {
-          service: 'MondayMigrationService',
-          operation: 'migrateFromRealMondayData',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'SAXIUM',
+      service: 'MondayMigrationService',
+      metadata: {}
+    }
+  );
       });
-      throw new Error(`Migration authentique échouée: ${error instanceof Error ? error.message : String(error)}`);
+      throw new AppError(`Migration authentique échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
   }
 
@@ -190,7 +194,9 @@ export class MondayMigrationService {
       }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Validation avec service final (données authentiques)
       const validationResult = await this.productionFinalService.validateAuthenticDataIntegrity();
       
@@ -208,16 +214,16 @@ export class MondayMigrationService {
       
       return validationResult;
       
-    } catch (error) {
-      logger.error('Erreur validation authentique Monday.com', {
-        metadata: {
-          service: 'MondayMigrationService',
-          operation: 'validateAuthenticMondayDataIntegrity',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'SAXIUM',
+      service: 'MondayMigrationService',
+      metadata: {}
+    }
+  );
       });
-      throw new Error(`Validation authentique échouée: ${error instanceof Error ? error.message : String(error)}`);
+      throw new AppError(`Validation authentique échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
   }
 
@@ -235,7 +241,9 @@ export class MondayMigrationService {
     this.isRunning = true;
     this.resetWarnings(); // Reset warnings avant migration
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Démarrage migration AO_Planning basée sur analyse audit', {
         metadata: {
           service: 'MondayMigrationService',
@@ -276,19 +284,14 @@ export class MondayMigrationService {
             result.migrated++;
             result.details.successful.push(createdAo.id);
             
-          } catch (error) {
-            result.errors++;
-            result.details.failed.push({
-              id: aoData.mondayItemId || 'unknown',
-              error: error instanceof Error ? error.message : String(error)
-            });
-            logger.warn('Erreur migration AO', {
-              metadata: {
-                service: 'MondayMigrationService',
-                operation: 'migrateAosFromAnalysis',
-                mondayItemId: aoData.mondayItemId,
-                error: error instanceof Error ? error.message : String(error)
-              }
+          
+    },
+    {
+      operation: 'SAXIUM',
+service: 'MondayMigrationService',;
+      metadata: {}
+    }
+  );
             });
           }
         }
@@ -346,7 +349,9 @@ export class MondayMigrationService {
     this.isRunning = true;
     this.resetWarnings(); // Reset warnings avant migration
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Démarrage migration CHANTIERS basée sur analyse audit', {
         metadata: {
           service: 'MondayMigrationService',
@@ -387,19 +392,14 @@ export class MondayMigrationService {
             result.migrated++;
             result.details.successful.push(createdProject.id);
             
-          } catch (error) {
-            result.errors++;
-            result.details.failed.push({
-              id: projectData.mondayProjectId || 'unknown',
-              error: error instanceof Error ? error.message : String(error)
-            });
-            logger.warn('Erreur migration Project', {
-              metadata: {
-                service: 'MondayMigrationService',
-                operation: 'migrateChantiersFromAnalysis',
-                mondayProjectId: projectData.mondayProjectId,
-                error: error instanceof Error ? error.message : String(error)
-              }
+          
+    },
+    {
+      operation: 'SAXIUM',
+service: 'MondayMigrationService',;
+      metadata: {}
+    }
+  );
             });
           }
         }

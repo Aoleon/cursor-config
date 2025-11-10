@@ -1,4 +1,5 @@
 import { mondayService, MondayItem, ImportMapping, ImportResult } from './MondayService';
+import { withErrorHandling } from './utils/error-handler';
 import { storage } from '../storage-poc';
 import { logger } from '../utils/logger';
 import { eventBus } from '../eventBus';
@@ -46,7 +47,9 @@ export class MondayImportService {
       createdIds: []
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Démarrage import Monday board vers Projets', {
         service: 'MondayImportService',
         metadata: {
@@ -227,18 +230,14 @@ export class MondayImportService {
               action: wasUpdate ? 'update' : 'create'
             }
           });
-        } catch (error: any) {
-          logger.error('❌ [DEBUG] Error during storage operation', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsProjects',
-              itemId: item.id,
-              itemName: item.name,
-              error: error.message,
-              errorStack: error.stack
-            }
-          });
-          result.errors.push(`Item ${item.id}: ${error.message}`);
+        
+    },
+    {
+      operation: 'coerceDecimalToString',
+service: 'MondayImportService',;
+      metadata: {}
+    }
+  );: ${error.message}`);
           result.success = false;
         }
       }
@@ -277,7 +276,9 @@ export class MondayImportService {
       createdIds: []
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Démarrage import Monday board vers AOs', {
         service: 'MondayImportService',
         metadata: {
@@ -395,7 +396,7 @@ export class MondayImportService {
             type: wasUpdate ? EventType.OFFER_UPDATED : EventType.OFFER_CREATED,
             entity: 'offer',
             entityId: ao.id,
-            message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis Monday.com`,
+message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis Monday.com`,;
             severity: 'success',
             affectedQueryKeys: [['/api/aos']],
             userId: 'monday-import',
@@ -407,18 +408,14 @@ export class MondayImportService {
               action: wasUpdate ? 'update' : 'create'
             }
           });
-        } catch (error: any) {
-          logger.error('❌ [DEBUG] Error during AO storage operation', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsAOs',
-              itemId: item.id,
-              itemName: item.name,
-              error: error.message,
-              errorStack: error.stack
-            }
-          });
-          result.errors.push(`Item ${item.id}: ${error.message}`);
+        
+    },
+    {
+      operation: 'coerceDecimalToString',
+      service: 'MondayImportService',
+      metadata: {}
+    }
+  );: ${error.message}`);
           result.success = false;
         }
       }
@@ -448,7 +445,9 @@ export class MondayImportService {
       createdIds: []
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Démarrage import Monday board vers Fournisseurs', {
         service: 'MondayImportService',
         metadata: {
@@ -551,18 +550,14 @@ export class MondayImportService {
 
           result.importedCount++;
           result.createdIds.push(supplier.id);
-        } catch (error: any) {
-          logger.error('❌ [DEBUG] Error during Supplier storage operation', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsSuppliers',
-              itemId: item.id,
-              itemName: item.name,
-              error: error.message,
-              errorStack: error.stack
-            }
-          });
-          result.errors.push(`Item ${item.id}: ${error.message}`);
+        
+    },
+    {
+      operation: 'coerceDecimalToString',
+service: 'MondayImportService',;
+      metadata: {}
+    }
+  );: ${error.message}`);
           result.success = false;
         }
       }
@@ -780,7 +775,9 @@ export class MondayImportService {
       }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Get item details from Monday.com
       const item = await mondayService.getItem(itemId);
       
@@ -949,11 +946,11 @@ export class MondayImportService {
           type: 'monday:sync:success' as any,
           entity: eventEntity as 'project' | 'offer' | 'supplier',
           entityId: createdId,
-          message: `${entityType} synchronisé depuis Monday.com`,
+message: `${entityType} synchronisé depuis Monday.com`,;
           severity: 'success',
           affectedQueryKeys: [
-            [`/api/${entityType}s`],
-            [`/api/${entityType}s`, createdId]
+[`/api/${entityType}s`],;
+[`/api/${entityType}s`, createdId];
           ],
           userId: 'monday-sync',
           timestamp: new Date().toISOString(),
@@ -975,17 +972,14 @@ export class MondayImportService {
           changeType
         }
       });
-    } catch (error) {
-      logger.error('[MondayImportService] Erreur sync depuis Monday', {
-        service: 'MondayImportService',
-        metadata: {
-          operation: 'syncFromMonday',
-          boardId,
-          itemId,
-          changeType,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'coerceDecimalToString',
+      service: 'MondayImportService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }

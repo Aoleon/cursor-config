@@ -9,6 +9,8 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { logger } from './utils/logger';
 import { 
   dateIntelligenceRules,
   dateAlerts,
@@ -71,7 +73,7 @@ export class DateIntelligenceRepository extends BaseRepository<
    *   phase: 'etude', 
    *   projectType: 'neuf' 
    * });
-   * console.log(`Trouvé ${rules.length} règles actives`);
+   * logger.info(`Trouvé ${rules.length} règles actives`);
    * ```
    */
   async getActiveRules(
@@ -128,7 +130,7 @@ export class DateIntelligenceRepository extends BaseRepository<
    * @example
    * ```typescript
    * const allRules = await repo.getAllRules();
-   * console.log(`Total de ${allRules.length} règles dans le système`);
+   * logger.info(`Total de ${allRules.length} règles dans le système`);
    * ```
    */
   async getAllRules(tx?: DrizzleTransaction): Promise<DateIntelligenceRule[]> {
@@ -156,7 +158,7 @@ export class DateIntelligenceRepository extends BaseRepository<
    * ```typescript
    * const rule = await repo.getRule('550e8400-...');
    * if (rule) {
-   *   console.log(`Règle: ${rule.name}, priorité: ${rule.priority}`);
+   *   logger.info(`Règle: ${rule.name}, priorité: ${rule.priority}`);
    * }
    * ```
    */
@@ -232,7 +234,7 @@ export class DateIntelligenceRepository extends BaseRepository<
 
         const newRule = result[0];
         if (!newRule) {
-          throw new Error('Failed to create date intelligence rule');
+          throw new AppError('Failed to create date intelligence rule', 500);
         }
 
         this.emitEvent('date_intelligence_rule:created', { 
@@ -366,7 +368,7 @@ export class DateIntelligenceRepository extends BaseRepository<
    *   entityType: 'project',
    *   status: 'pending'
    * });
-   * console.log(`${alerts.length} alertes en attente`);
+   * logger.info(`${alerts.length} alertes en attente`);
    * ```
    */
   async getDateAlerts(
@@ -425,7 +427,7 @@ export class DateIntelligenceRepository extends BaseRepository<
    * ```typescript
    * const alert = await repo.getDateAlert('550e8400-...');
    * if (alert) {
-   *   console.log(`Alerte: ${alert.title}, sévérité: ${alert.severity}`);
+   *   logger.info(`Alerte: ${alert.title}, sévérité: ${alert.severity}`);
    * }
    * ```
    */
@@ -501,7 +503,7 @@ export class DateIntelligenceRepository extends BaseRepository<
 
         const newAlert = result[0];
         if (!newAlert) {
-          throw new Error('Failed to create date alert');
+          throw new AppError('Failed to create date alert', 500);
         }
 
         this.emitEvent('date_alert:created', { 
@@ -633,7 +635,7 @@ export class DateIntelligenceRepository extends BaseRepository<
    * ```typescript
    * const success = await repo.acknowledgeAlert('550e8400-...', 'user-123');
    * if (success) {
-   *   console.log('Alerte acquittée avec succès');
+   *   logger.info('Alerte acquittée avec succès');
    * }
    * ```
    */
@@ -707,7 +709,7 @@ export class DateIntelligenceRepository extends BaseRepository<
    *   'Délai prolongé de 5 jours après validation client'
    * );
    * if (success) {
-   *   console.log('Alerte résolue avec succès');
+   *   logger.info('Alerte résolue avec succès');
    * }
    * ```
    */
@@ -773,14 +775,14 @@ export class DateIntelligenceRepository extends BaseRepository<
    * @deprecated Ce repository gère plusieurs entités - utiliser getRule pour DateIntelligenceRule ou getDateAlert pour DateAlert
    */
   async findById(id: string, tx?: DrizzleTransaction): Promise<DateIntelligenceRule | undefined> {
-    throw new Error('Use getRule() or getDateAlert() instead');
+    throw new AppError('Use getRule(, 500) or getDateAlert() instead');
   }
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser getAllRules, getActiveRules, ou getDateAlerts
    */
   async findAll(filters?: any, tx?: DrizzleTransaction): Promise<DateIntelligenceRule[]> {
-    throw new Error('Use getAllRules(), getActiveRules(), or getDateAlerts() instead');
+    throw new AppError('Use getAllRules(, 500), getActiveRules(), or getDateAlerts() instead');
   }
 
   /**
@@ -792,27 +794,27 @@ export class DateIntelligenceRepository extends BaseRepository<
     sort?: any,
     tx?: DrizzleTransaction
   ): Promise<any> {
-    throw new Error('Pagination not implemented for multi-entity repository - use specific methods with filtering');
+    throw new AppError('Pagination not implemented for multi-entity repository - use specific methods with filtering', 500);
   }
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser deleteRule ou deleteDateAlert
    */
   async deleteMany(filters: any, tx?: DrizzleTransaction): Promise<number> {
-    throw new Error('Use deleteRule() or deleteDateAlert() instead');
+    throw new AppError('Use deleteRule(, 500) or deleteDateAlert() instead');
   }
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
    */
   async exists(id: string, tx?: DrizzleTransaction): Promise<boolean> {
-    throw new Error('Use getRule() or getDateAlert() to check existence');
+    throw new AppError('Use getRule(, 500) or getDateAlert() to check existence');
   }
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques avec filtres
    */
   async count(filters?: any, tx?: DrizzleTransaction): Promise<number> {
-    throw new Error('Count not implemented for multi-entity repository');
+    throw new AppError('Count not implemented for multi-entity repository', 500);
   }
 }

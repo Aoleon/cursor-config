@@ -1,4 +1,6 @@
 import { createWorker } from 'tesseract.js';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import sharp from 'sharp';
 // Types pdf-parse importés depuis le fichier de déclaration
 import type pdfParse from 'pdf-parse';
@@ -49,7 +51,9 @@ const initializeModules = async (): Promise<void> => {
     return;
   }
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     isInitializingPdfParse = true;
     logger.info('Initialisation module pdf-parse', {
       metadata: {
@@ -64,7 +68,7 @@ const initializeModules = async (): Promise<void> => {
     
     // Test simple pour vérifier que le module fonctionne
     if (typeof pdfParseModule !== 'function') {
-      throw new Error('pdf-parse module not properly imported');
+      throw new AppError('pdf-parse module not properly imported', 500);
     }
     
     logger.info('Module pdf-parse initialisé avec succès', {
@@ -73,14 +77,14 @@ const initializeModules = async (): Promise<void> => {
         operation: 'initializeModules'
       }
     });
-  } catch (error) {
-    logger.error('Échec initialisation pdf-parse', {
-      metadata: {
-        service: 'OCRService',
-        operation: 'initializeModules',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+  
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
     });
     logger.info('Tentative initialisation fallback pdf-parse', {
       metadata: {
@@ -89,7 +93,9 @@ const initializeModules = async (): Promise<void> => {
       }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Fallback: essayer d'importer différemment
       const { default: pdfParse } = await import('pdf-parse');
       pdfParseModule = pdfParse;
@@ -99,14 +105,14 @@ const initializeModules = async (): Promise<void> => {
           operation: 'initializeModules'
         }
       });
-    } catch (fallbackError) {
-      logger.error('Échec initialisation fallback pdf-parse', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'initializeModules',
-          error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-          stack: fallbackError instanceof Error ? fallbackError.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       // Ne pas lever d'erreur ici, continuer avec OCR uniquement
       pdfParseModule = null;
@@ -450,7 +456,9 @@ export class OCRService {
       return;
     }
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       this.isInitializingTesseract = true;
       logger.info('Initialisation Tesseract worker', {
         metadata: {
@@ -470,17 +478,17 @@ export class OCRService {
           operation: 'initialize'
         }
       });
-    } catch (error) {
-      logger.error('Échec initialisation Tesseract worker', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'initialize',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       this.tesseractWorker = null;
-      throw new Error(`Failed to initialize Tesseract: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new AppError(`Failed to initialize Tesseract: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     } finally {
       this.isInitializingTesseract = false;
     }
@@ -501,7 +509,9 @@ export class OCRService {
    * Génère des patterns adaptatifs basés sur les données contextuelles
    */
   async generateAdaptivePatterns(documentType: 'ao' | 'supplier_quote'): Promise<Record<string, RegExp[]>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Génération patterns adaptatifs', {
         metadata: {
           service: 'OCRService',
@@ -526,14 +536,14 @@ export class OCRService {
       });
       return combinedPatterns;
       
-    } catch (error) {
-      logger.warn('Échec génération patterns adaptatifs', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'generateAdaptivePatterns',
-          documentType: documentType,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       return AO_PATTERNS; // Fallback vers patterns de base
     }
@@ -547,7 +557,9 @@ export class OCRService {
     corrections: FieldCorrection[];
     validationScore: number;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Validation et correction champs', {
         metadata: {
           service: 'OCRService',
@@ -577,15 +589,14 @@ export class OCRService {
         validationScore
       };
       
-    } catch (error) {
-      logger.error('Échec validation/correction', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'validateAndCorrectFields',
-          documentType: documentType,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       return {
         correctedFields: fields,
@@ -603,7 +614,9 @@ export class OCRService {
     completedFieldNames: string[];
     completionScore: number;
   }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Auto-complétion depuis données maître', {
         metadata: {
           service: 'OCRService',
@@ -666,14 +679,14 @@ export class OCRService {
         completionScore
       };
       
-    } catch (error) {
-      logger.error('Échec auto-complétion', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'autoCompleteFromMasterData',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       return {
         completedFields: fields,
@@ -687,7 +700,9 @@ export class OCRService {
    * Auto-complète les contacts maître depuis la base de données
    */
   private async autoCompleteMasterContacts(fields: AOFieldsExtracted, completedFieldNames: string[]): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Chercher les maîtres d'ouvrage existants
       if (fields.maitreOuvrageNom && !fields.maitreOuvrageEmail) {
         const maitresOuvrage = await storage.getMaitresOuvrage();
@@ -731,13 +746,14 @@ export class OCRService {
         }
       }
       
-    } catch (error) {
-      logger.warn('Échec auto-complétion contacts maître', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'autoCompleteMasterContacts',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -883,7 +899,9 @@ export class OCRService {
     sessionId: string,
     aoLotId: string
   ): Promise<SupplierQuoteOCRResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Début analyse devis fournisseur', {
         metadata: {
           service: 'OCRService',
@@ -996,14 +1014,14 @@ export class OCRService {
           });
         }
         
-      } catch (contextualError) {
-        logger.warn('Échec moteur contextuel, poursuite mode standard', {
-          metadata: {
-            service: 'OCRService',
-            operation: 'processSupplierQuote',
-            documentId: documentId,
-            error: contextualError instanceof Error ? contextualError.message : String(contextualError)
-          }
+      
+    },
+    {
+      operation: 'async',
+service: 'ocrService',;
+      metadata: {}
+    }
+  );
         });
         // Continuer avec les champs de base si le moteur contextuel échoue
       }
@@ -1078,7 +1096,9 @@ export class OCRService {
 
   // Méthode principale pour traiter un PDF (AO - existante)
   async processPDF(pdfBuffer: Buffer): Promise<OCRResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Démarrage traitement PDF', {
         metadata: {
           service: 'OCRService',
@@ -1147,13 +1167,14 @@ export class OCRService {
             }
           });
           
-        } catch (contextualError) {
-          logger.warn('Échec moteur contextuel AO, poursuite mode standard', {
-            metadata: {
-              service: 'OCRService',
-              operation: 'processPDF',
-              error: contextualError instanceof Error ? contextualError.message : String(contextualError)
-            }
+        
+    },
+    {
+      operation: 'async',
+service: 'ocrService',;
+      metadata: {}
+    }
+  );
           });
         }
         
@@ -1195,23 +1216,25 @@ export class OCRService {
       // Gestion d'erreur spécifique selon le type d'erreur
       if (error instanceof Error) {
         if (error.message.includes('pdf-parse')) {
-          throw new Error(`Erreur lors du traitement OCR - Module PDF non initialisé: ${error.message}`);
+          throw new AppError(`Erreur lors du traitement OCR - Module PDF non initialisé: ${error.message}`, 500);
         } else if (error.message.includes('Tesseract')) {
-          throw new Error(`Erreur lors du traitement OCR - Échec initialisation Tesseract: ${error.message}`);
+          throw new AppError(`Erreur lors du traitement OCR - Échec initialisation Tesseract: ${error.message}`, 500);
         } else if (error.message.includes('sharp')) {
-          throw new Error(`Erreur lors du traitement OCR - Échec traitement image: ${error.message}`);
+          throw new AppError(`Erreur lors du traitement OCR - Échec traitement image: ${error.message}`, 500);
         } else {
-          throw new Error(`Erreur lors du traitement OCR - Erreur générale: ${error.message}`);
+          throw new AppError(`Erreur lors du traitement OCR - Erreur générale: ${error.message}`, 500);
         }
       } else {
-        throw new Error(`Erreur lors du traitement OCR - Erreur inconnue: ${String(error)}`);
+        throw new AppError(`Erreur lors du traitement OCR - Erreur inconnue: ${String(error, 500)}`);
       }
     }
   }
 
   // Extraction de texte natif depuis PDF
   private async extractNativeText(pdfBuffer: Buffer): Promise<string> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (!pdfParseModule) {
         logger.info('pdf-parse non initialisé, appel initializeModules', {
           metadata: {
@@ -1249,91 +1272,14 @@ export class OCRService {
         }
       });
       return extractedText;
-    } catch (error) {
-      logger.info('Extraction texte natif échouée, fallback OCR', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'extractNativeText',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
-      return '';
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
     }
-  }
-
-  // OCR pour PDFs scannés - Version POC simplifiée
-  private async processWithOCR(pdfBuffer: Buffer): Promise<OCRResult> {
-    try {
-      logger.info('Initialisation Tesseract pour traitement OCR', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'processWithOCR'
-        }
-      });
-      await this.initialize();
-      
-      if (!this.tesseractWorker) {
-        throw new Error('Tesseract worker failed to initialize');
-      }
-      
-      // Pour le POC, on simule l'extraction OCR avec des données de test
-      // Dans un environnement de production, on utiliserait une vraie conversion PDF->Image->OCR
-      logger.info('Mode POC: données OCR simulées pour PDFs scannés', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'processWithOCR'
-        }
-      });
-      
-      // Simuler les données extraites depuis le PDF scanné
-      const fullText = this.getSimulatedOCRText();
-      let processedFields = await this.parseAOFields(fullText);
-      
-      // AMÉLIORATION CONTEXTUELLE - Moteur intelligent pour OCR AO
-      logger.info('Application moteur contextuel pour OCR AO', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'processWithOCR'
-        }
-      });
-      let contextualResult: ContextualOCRResult | undefined;
-      let finalConfidence = 85;
-      
-      try {
-        contextualResult = await contextualOCREngine.enhanceOCRFields(processedFields, 'ao');
-        
-        // Utiliser les champs améliorés par le moteur contextuel
-        const enhancedFields = contextualResult.extractedFields as AOFieldsExtracted;
-        processedFields = { ...processedFields, ...enhancedFields };
-        
-        // Ajout des métadonnées contextuelles
-        processedFields.contextualMetadata = {
-          processingMethod: 'contextual_enhanced',
-          similarAOsFound: contextualResult.mappingResults.filter(m => m.source === 'context_inferred').length,
-          confidenceBoost: contextualResult.contextualScore * 10,
-          autoCompletedFromContext: contextualResult.autoCompletedFields,
-          validationFlags: contextualResult.validationErrors.map(e => e.fieldName)
-        };
-        
-        // Bonus de confiance contextuelle (plus important pour OCR car moins fiable de base)
-        finalConfidence = Math.min(100, 85 + (contextualResult.contextualScore * 15));
-        
-        logger.info('Amélioration contextuelle OCR terminée', {
-          metadata: {
-            service: 'OCRService',
-            operation: 'processWithOCR',
-            contextualScore: contextualResult.contextualScore,
-            finalConfidence: finalConfidence
-          }
-        });
-        
-      } catch (contextualError) {
-        logger.warn('Échec moteur contextuel OCR, poursuite mode standard', {
-          metadata: {
-            service: 'OCRService',
-            operation: 'processWithOCR',
-            error: contextualError instanceof Error ? contextualError.message : String(contextualError)
-          }
+  );
         });
       }
       
@@ -1369,11 +1315,11 @@ export class OCRService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       if (errorMessage.includes('Tesseract')) {
-        throw new Error(`Échec initialisation Tesseract - OCR indisponible: ${errorMessage}`);
+        throw new AppError(`Échec initialisation Tesseract - OCR indisponible: ${errorMessage}`, 500);
       } else if (errorMessage.includes('sharp')) {
-        throw new Error(`Échec preprocessing image pour OCR: ${errorMessage}`);
+        throw new AppError(`Échec preprocessing image pour OCR: ${errorMessage}`, 500);
       } else {
-        throw new Error(`Erreur OCR non spécifiée: ${errorMessage}`);
+        throw new AppError(`Erreur OCR non spécifiée: ${errorMessage}`, 500);
       }
     }
   }
@@ -1500,7 +1446,9 @@ Réponses publiées au plus tard le 22/03/2025
 
   // Préprocessing d'image pour améliorer l'OCR
   private async preprocessImage(imageBuffer: Buffer): Promise<Buffer> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return await sharp(imageBuffer)
         .grayscale()                    // Convertir en niveaux de gris
         .normalize()                    // Normaliser le contraste
@@ -1508,13 +1456,14 @@ Réponses publiées au plus tard le 22/03/2025
         .threshold(128)                 // Binarisation
         .png({ quality: 100 })          // Compression sans perte
         .toBuffer();
-    } catch (error) {
-      logger.warn('Échec preprocessing image, utilisation originale', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'preprocessImage',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       return imageBuffer;
     }
@@ -1923,16 +1872,18 @@ Réponses publiées au plus tard le 22/03/2025
     });
     
     // Évaluation des règles matériaux-couleurs (après tous les champs extraits)
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.evaluateMaterialColorRules(fields, text);
-    } catch (error) {
-      logger.error('Erreur évaluation règles matériaux-couleurs', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'parseAOFields',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
     }
     
@@ -1941,7 +1892,9 @@ Réponses publiées au plus tard le 22/03/2025
     
     // GAP CRITIQUE 1: Publication EventBus avec métadonnées complètes pour les tests d'intégration
     if (technicalScoring?.shouldAlert) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const alertData = {
           aoId: fields.reference || 'unknown',
           aoReference: fields.reference || 'unknown',
@@ -1984,14 +1937,14 @@ Réponses publiées au plus tard le 22/03/2025
             aoReference: fields.reference
           }
         });
-      } catch (error) {
-        logger.error('Erreur publication alerte technique', {
-          metadata: {
-            service: 'OCRService',
-            operation: 'parseAOFields',
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined
-          }
+      
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
         });
       }
     }
@@ -2007,7 +1960,9 @@ Réponses publiées au plus tard le 22/03/2025
     materials: MaterialSpec[] = [],
     specialCriteria: Record<string, boolean> = {}
   ): Promise<string[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const rules = await storage.getMaterialColorRules();
       const triggeredRules: string[] = [];
       
@@ -2044,13 +1999,14 @@ Réponses publiées au plus tard le 22/03/2025
       });
       return triggeredRules;
       
-    } catch (error) {
-      logger.warn('Erreur récupération règles matériaux-couleurs', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'getTriggeredAlertRules',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       // Fallback vers règles par défaut
       return this.getDefaultTriggeredRules(materials, specialCriteria);
@@ -2063,7 +2019,9 @@ Réponses publiées au plus tard le 22/03/2025
     materials: MaterialSpec[],
     specialCriteria: Record<string, boolean>
   ): Promise<boolean> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const materialNames = materials.map(m => m.material);
       let materialMatch = false;
       let specialCriteriaMatch = false;
@@ -2127,15 +2085,14 @@ Réponses publiées au plus tard le 22/03/2025
       
       return finalMatch;
       
-    } catch (error) {
-      logger.error('Erreur évaluation règle alerte', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'evaluateAlertRule',
-          ruleId: rule.id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       return false;
     }
@@ -2185,7 +2142,9 @@ Réponses publiées au plus tard le 22/03/2025
 
   // Convertir les dates en format ISO
   private parseDate(dateStr: string): string {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const cleaned = dateStr.replace(/[^\d\/\-\.]/g, '');
       const parts = cleaned.split(/[\/\-\.]/);
       
@@ -2199,15 +2158,14 @@ Réponses publiées au plus tard le 22/03/2025
         
         return date.toISOString().split('T')[0]; // Format YYYY-MM-DD
       }
-    } catch (error) {
-      logger.warn('Échec parsing date', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'parseDate',
-          dateStr: dateStr
-        }
-      });
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
     }
+  );
     
     return dateStr;
   }
@@ -2248,7 +2206,9 @@ Réponses publiées au plus tard le 22/03/2025
       return undefined;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Convertir les critères au format attendu par le ScoringService
       const criteriaForScoring: SpecialCriteria = {
         batimentPassif: specialCriteria.batimentPassif,
@@ -2302,14 +2262,14 @@ Réponses publiées au plus tard le 22/03/2025
       }
 
       return result;
-    } catch (error) {
-      logger.error('Erreur calcul scoring technique', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'computeTechnicalScoring',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       return undefined;
     }
@@ -2621,7 +2581,9 @@ Réponses publiées au plus tard le 22/03/2025
     processedFields: AOFieldsExtracted,
     fullText: string
   ): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Évaluation règles matériaux-couleurs', {
         metadata: {
           service: 'OCRService',
@@ -2655,14 +2617,14 @@ Réponses publiées au plus tard le 22/03/2025
           // Ne pas publier d'alerte individuelle ici pour éviter les doublons
         }
       }
-    } catch (error) {
-      logger.error('Erreur évaluation règles matériaux-couleurs', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'evaluateMaterialColorRules',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -2683,7 +2645,9 @@ Réponses publiées au plus tard le 22/03/2025
       }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       const materials = fields.materials || [];
       const materialNames = materials.map(m => m.material);
       
@@ -2774,15 +2738,14 @@ Réponses publiées au plus tard le 22/03/2025
       });
       return finalMatch;
       
-    } catch (error) {
-      logger.error('Erreur évaluation règle', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'evaluateRule',
-          ruleId: rule.id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       return false;
     }
@@ -2823,7 +2786,9 @@ Réponses publiées au plus tard le 22/03/2025
    * Traitement OCR pour devis fournisseurs (PDFs scannés)
    */
   private async processSupplierQuoteWithOCR(pdfBuffer: Buffer): Promise<{ extractedText: string; confidence: number }> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Initialisation Tesseract pour devis fournisseur', {
         metadata: {
           service: 'OCRService',
@@ -2833,7 +2798,7 @@ Réponses publiées au plus tard le 22/03/2025
       await this.initialize();
       
       if (!this.tesseractWorker) {
-        throw new Error('Tesseract worker failed to initialize');
+        throw new AppError('Tesseract worker failed to initialize', 500);
       }
       
       // Pour le POC, utiliser des données simulées de devis
@@ -2850,16 +2815,16 @@ Réponses publiées au plus tard le 22/03/2025
         confidence: 85
       };
       
-    } catch (error) {
-      logger.error('Erreur traitement OCR devis', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'processSupplierQuoteWithOCR',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
-      throw new Error(`Échec OCR devis fournisseur: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new AppError(`Échec OCR devis fournisseur: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     }
   }
 
@@ -2954,7 +2919,9 @@ l.bernard@menuiseries-moderne.fr
       processingErrors: []
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Extraction des informations fournisseur
       fields.supplierName = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.supplierName);
       fields.supplierAddress = this.extractFieldValue(text, SUPPLIER_QUOTE_PATTERNS.supplierAddress);
@@ -3042,14 +3009,14 @@ l.bernard@menuiseries-moderne.fr
         }
       });
       
-    } catch (error) {
-      logger.error('Erreur parsing devis', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'parseSupplierQuoteFields',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       fields.processingErrors = fields.processingErrors || [];
       fields.processingErrors.push(`Parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -3243,7 +3210,9 @@ l.bernard@menuiseries-moderne.fr
     completenessScore: number;
     extractionMethod: string;
   }): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Sauvegarde analyse devis', {
         metadata: {
           service: 'OCRService',
@@ -3314,15 +3283,14 @@ l.bernard@menuiseries-moderne.fr
         }
       });
       
-    } catch (error) {
-      logger.error('Erreur sauvegarde analyse devis', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'saveSupplierQuoteAnalysis',
-          documentId: data.documentId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -3337,7 +3305,9 @@ l.bernard@menuiseries-moderne.fr
     aoLotId: string, 
     error: any
   ): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const analysisData = {
         documentId,
         sessionId,
@@ -3368,15 +3338,14 @@ l.bernard@menuiseries-moderne.fr
         }
       });
       
-    } catch (saveError) {
-      logger.error('Erreur sauvegarde erreur analyse', {
-        metadata: {
-          service: 'OCRService',
-          operation: 'saveSupplierQuoteAnalysisError',
-          documentId: documentId,
-          error: saveError instanceof Error ? saveError.message : String(saveError),
-          stack: saveError instanceof Error ? saveError.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'async',
+      service: 'ocrService',
+      metadata: {}
+    }
+  );
       });
     }
   }

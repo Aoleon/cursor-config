@@ -1,4 +1,5 @@
 import type { IStorage } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
 import crypto from "crypto";
 import memoize from "memoizee";
 import { logger } from "../utils/logger";
@@ -12,7 +13,9 @@ import type {
 // SERVICE CACHE INTELLIGENT POUR CONTEXTE IA
 // ========================================
 
-export interface CacheEntry {
+export interface CacheEnreturn withErrorHandling(
+    async () => {
+
   data: AIContextualData;
   createdAt: Date;
   lastAccessedAt: Date;
@@ -108,17 +111,14 @@ export class ContextCacheService {
       await this.recordCacheMiss(cacheKey, Date.now() - startTime);
       return null;
 
-    } catch (error) {
-      logger.error('Erreur récupération cache', {
-        metadata: {
-          service: 'ContextCacheService',
-          operation: 'getContext',
-          cacheKey,
-          entityType,
-          entityId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'operation',
+service: 'ContextCacheService',;
+      metadata: {}
+    }
+  );
       });
       await this.recordCacheMiss(cacheKey, Date.now() - startTime);
       return null;
@@ -152,7 +152,9 @@ export class ContextCacheService {
       tags: this.generateTags(entityType, entityId, data)
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Stockage mémoire
       this.memoryCache.set(cacheKey, entry);
       
@@ -172,15 +174,14 @@ export class ContextCacheService {
       // Nettoyage si nécessaire
       await this.enforeCacheLimits();
 
-    } catch (error) {
-      logger.error('Erreur stockage cache', {
-        metadata: {
-          service: 'ContextCacheService',
-          operation: 'setContext',
-          cacheKey,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -493,17 +494,18 @@ export class ContextCacheService {
     
     // Précharger les contextes identifiés par usage historique
     for (const pattern of frequentPatterns) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         await this.preloadContextForPattern(pattern);
-      } catch (error) {
-        logger.warn('Erreur préchargement', {
-          metadata: {
-            service: 'ContextCacheService',
-            operation: 'preloadFrequentContexts',
-            pattern,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined
-          }
+      
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
         });
       }
     }
@@ -533,7 +535,9 @@ export class ContextCacheService {
     // Précharger les contextes AO/Offres récents (dernières 48h)
     const recentThreshold = new Date(Date.now() - 48 * 60 * 60 * 1000);
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Simuler le préchargement des AO récents
       await this.prewarmEntityType('ao', { 
         dateFilter: recentThreshold, 
@@ -553,14 +557,14 @@ export class ContextCacheService {
         limit: 10 
       });
       
-    } catch (error) {
-      logger.warn('Erreur prewarming heures de pointe', {
-        metadata: {
-          service: 'ContextCacheService',
-          operation: 'prewarmPeakHourContexts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -576,7 +580,9 @@ export class ContextCacheService {
       }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Précharger les contextes fournisseurs actifs
       await this.prewarmEntityType('supplier', { 
         statusFilter: ['actif'],
@@ -589,14 +595,14 @@ export class ContextCacheService {
         limit: 8 
       });
       
-    } catch (error) {
-      logger.warn('Erreur prewarming contextes business', {
-        metadata: {
-          service: 'ContextCacheService',
-          operation: 'prewarmBusinessContexts',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -1158,7 +1164,9 @@ export class ContextCacheService {
   private async executeIntelligentPrewarming(): Promise<void> {
     const startTime = Date.now();
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Analyser si nous sommes en période de pointe
       const isPeakHours = this.isPeakBusinessHours();
       const isScheduledRun = this.shouldRunScheduledPrewarming();
@@ -1212,14 +1220,14 @@ export class ContextCacheService {
       }
     });
       
-    } catch (error) {
-      logger.error('Erreur prewarming intelligent', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'executeIntelligentPrewarming',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
     });
     }
   }
@@ -1354,7 +1362,9 @@ export class ContextCacheService {
     const processedEntityTypes: string[] = [];
 
     for (const entityType of strategy.entityTypes) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Précharger les contextes pour ce type d'entité
         await this.prewarmContextsForEntityType(entityType, {
           maxContexts: strategy.maxContextsPerType,
@@ -1368,15 +1378,14 @@ export class ContextCacheService {
         // Délai entre les types pour éviter la surcharge
         await new Promise(resolve => setTimeout(resolve, 100));
         
-      } catch (error) {
-        logger.error('Erreur prewarming', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'executePrewarmingStrategy',
-        entityType,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+      
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
     });
       }
     }
@@ -1473,7 +1482,7 @@ export class ContextCacheService {
   private schedulePerformanceMonitoring(): void {
     setInterval(() => {
       this.monitorPrewarmingEffectiveness();
-    }, 15 * 60 * 1000); // Toutes les 15 minutes
+}, 15 * 60 * 1000); // Toutes les 15 minutes;
   }
 
   /**
@@ -1651,7 +1660,9 @@ export class ContextCacheService {
       return false;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const startTime = Date.now();
       
       logger.info('Preloading prédictif démarré', {
@@ -1730,16 +1741,14 @@ export class ContextCacheService {
       
       return true;
 
-    } catch (error) {
-      logger.error('Erreur preloading prédictif', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'preloadContextByPrediction',
-        entityType,
-        entityId,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
     });
       this.predictiveStats.failedPredictions++;
       return false;
@@ -1760,7 +1769,9 @@ export class ContextCacheService {
       return;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Intégration heat-map pour optimisation cache', {
       metadata: {
         service: 'ContextCacheService',
@@ -1791,14 +1802,14 @@ export class ContextCacheService {
       }
     });
 
-    } catch (error) {
-      logger.error('Erreur intégration heat-map', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'integrateHeatMapData',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
     });
     }
   }
@@ -1807,7 +1818,9 @@ export class ContextCacheService {
    * LRU éviction améliorée avec scoring prédictif
    */
   async optimizeLRUWithPredictiveScoring(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const currentSize = this.calculateCurrentCacheSize();
       const maxSizeBytes = this.MAX_CACHE_SIZE_MB * 1024 * 1024;
       
@@ -1876,14 +1889,14 @@ export class ContextCacheService {
       }
     });
 
-    } catch (error) {
-      logger.error('Erreur optimisation LRU prédictive', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'optimizeLRUWithPredictiveScoring',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
     });
     }
   }
@@ -1908,7 +1921,9 @@ export class ContextCacheService {
       const batch = hotBatch.slice(i, i + MAX_CONCURRENT);
       
       const preloadPromises = batch.map(async (entity) => {
-        try {
+        return withErrorHandling(
+    async () => {
+
           const priority = this.determinePriorityFromPopularity(entity);
           await this.preloadContextByPrediction(
             entity.entityType,
@@ -1916,16 +1931,14 @@ export class ContextCacheService {
             this.getOptimalConfigForEntity(entity),
             priority
           );
-        } catch (error) {
-          logger.warn('Erreur preloading entité chaude', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'preloadHotEntities',
-        entityType: entity.entityType,
-        entityId: entity.entityId,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+        
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
     });
         }
       });
@@ -2061,7 +2074,9 @@ export class ContextCacheService {
   private async getPredictiveScoreFromEngine(key: string): Promise<number> {
     if (!this.predictiveEngine) return 50; // Score neutre
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [entityType, entityId] = key.split(':');
       
       // Vérifier si entité dans heat-map actuelle
@@ -2086,14 +2101,14 @@ export class ContextCacheService {
       
       return 30; // Score bas si pas dans prédictions
 
-    } catch (error) {
-      logger.warn('Erreur récupération score prédictif', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'getPredictiveScore',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
     });
       return 50; // Score neutre en cas d'erreur
     }
@@ -2229,7 +2244,9 @@ export class ContextCacheService {
    * Exécute un cycle complet de preloading prédictif
    */
   private async runPredictivePreloadingCycle(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Cycle preloading prédictif démarré', {
       metadata: {
         service: 'ContextCacheService',
@@ -2266,14 +2283,14 @@ export class ContextCacheService {
       }
     });
       
-    } catch (error) {
-      logger.error('Erreur cycle preloading prédictif', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'startPredictiveCycles',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'ContextCacheService',
+      metadata: {}
+    }
+  );
     });
     }
   }

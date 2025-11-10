@@ -1,4 +1,6 @@
 import { storage } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
+import { logger } from './utils/logger';
 import type { 
   InsertTempsPose, InsertAo, InsertProject, InsertAoContacts, InsertProjectContacts, 
   InsertMetricsBusiness, InsertSupplierSpecializations
@@ -149,9 +151,9 @@ class DeterministicGenerator {
 export class MondaySeed {
   private generator: DeterministicGenerator;
   private logger = {
-    info: (message: string, data?: any) => console.log(`[MondaySeed] ${message}`, data || ''),
-    warn: (message: string, data?: any) => console.warn(`[MondaySeed] ${message}`, data || ''),
-    error: (message: string, error?: any) => console.error(`[MondaySeed] ${message}`, error || '')
+    info: (message: string, data?: any) => logger.info(`[MondaySeed] ${message}`, data || ''),
+    warn: (message: string, data?: any) => logger.warn($1),
+    error: (message: string, error?: any) => logger.error('Erreur', `[MondaySeed] ${message}`, error || '')
   };
 
   constructor() {
@@ -174,7 +176,9 @@ export class MondaySeed {
     const counts: Record<string, number> = {};
     const errors: string[] = [];
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Ordre par priorité (tempsPose en premier car critique pour planning)
       const entities = [
         { name: 'tempsPose', method: () => this.seedTempsPose() },
@@ -190,38 +194,48 @@ export class MondaySeed {
           const count = await entity.method();
           counts[entity.name] = count;
           this.logger.info(`✅ ${entity.name}: ${count} entrées seedées`);
-        } catch (error) {
-          const errorMsg = `Erreur seeding ${entity.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          this.logger.error(errorMsg, error);
-          errors.push(errorMsg);
-          counts[entity.name] = 0;
-        }
+        
+    },
+    {
+      operation: 'constructor',
+service: 'mondaySeed',;
+      metadata: {}
+    }
+  );
       }
 
       // Seeder les relations après les entités principales
-      try {
+      return withErrorHandling(
+    async () => {
+
         this.logger.info('Seeding relations ao_contacts...');
         const aoContactsCount = await this.seedAoContacts();
         counts['aoContacts'] = aoContactsCount;
         this.logger.info(`✅ aoContacts: ${aoContactsCount} relations seedées`);
-      } catch (error) {
-        const errorMsg = `Erreur seeding aoContacts: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        this.logger.error(errorMsg, error);
-        errors.push(errorMsg);
-        counts['aoContacts'] = 0;
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'mondaySeed',
+      metadata: {}
+    }
+  );
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         this.logger.info('Seeding relations project_contacts...');
         const projectContactsCount = await this.seedProjectContacts();
         counts['projectContacts'] = projectContactsCount;
         this.logger.info(`✅ projectContacts: ${projectContactsCount} relations seedées`);
-      } catch (error) {
-        const errorMsg = `Erreur seeding projectContacts: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        this.logger.error(errorMsg, error);
-        errors.push(errorMsg);
-        counts['projectContacts'] = 0;
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'mondaySeed',
+      metadata: {}
+    }
+  );
 
       const executionTimeMs = Date.now() - startTime;
       const totalEntries = Object.values(counts).reduce((sum, count) => sum + count, 0);
@@ -308,12 +322,19 @@ export class MondaySeed {
         monday_item_id: `monday-temps-${i}`
       };
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.createTempsPose(tempsPoseData);
         seededCount++;
-      } catch (error) {
-        this.logger.warn(`Erreur création temps pose ${i}:`, error);
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'mondaySeed',
+      metadata: {}
+    }
+  );
     }
 
     return seededCount;
@@ -336,7 +357,9 @@ export class MondaySeed {
         const company = this.generator.selectFromArray(CLIENT_COMPANIES, `company-${i}`);
         const city = this.generator.selectFromArray(NORD_CITIES, `city-${i}`);
         
-        try {
+        return withErrorHandling(
+    async () => {
+
           await storage.createMaitreOeuvre({
             name: `${company} ${city}`,
             siret: `${this.generator.numberInRange(10000000000000, 99999999999999, `siret-${i}`)}`,
@@ -344,9 +367,14 @@ export class MondaySeed {
             phone: `03 ${this.generator.numberInRange(20, 29, `phone-${i}`)} ${this.generator.numberInRange(10, 99, `phone2-${i}`)} ${this.generator.numberInRange(10, 99, `phone3-${i}`)}`,
             email: `contact@${company.toLowerCase().replace(/\s+/g, '-')}.fr`
           });
-        } catch (error) {
-          this.logger.warn(`Erreur création maître d'œuvre ${i}:`, error);
-        }
+        
+    },
+    {
+      operation: 'constructor',
+      service: 'mondaySeed',
+      metadata: {}
+    }
+  );
       }
     }
 
@@ -358,7 +386,9 @@ export class MondaySeed {
       const contactData = REAL_CONTACTS[i];
       const maitreOeuvre = maitresOeuvre[i % maitresOeuvre.length];
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.createContactMaitreOeuvre({
           maitreOeuvreId: maitreOeuvre.id,
           firstName: contactData.name.split(' ')[0],
@@ -368,9 +398,14 @@ export class MondaySeed {
           poste: contactData.role as any
         });
         seededCount++;
-      } catch (error) {
-        this.logger.warn(`Erreur création contact ${i}:`, error);
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'mondaySeed',
+      metadata: {}
+    }
+  );
     }
 
     return seededCount;
@@ -421,12 +456,19 @@ export class MondaySeed {
         monday_item_id: `monday-ao-${i}`
       };
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.createAo(aoData);
         seededCount++;
-      } catch (error) {
-        this.logger.warn(`Erreur création AO ${i}:`, error);
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'mondaySeed',
+      metadata: {}
+    }
+  );
     }
 
     return seededCount;
@@ -472,12 +514,19 @@ export class MondaySeed {
         monday_item_id: `monday-proj-${i}`
       };
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.createProject(projectData);
         seededCount++;
-      } catch (error) {
-        this.logger.warn(`Erreur création projet ${i}:`, error);
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'mondaySeed',
+      metadata: {}
+    }
+  );
     }
 
     return seededCount;
@@ -510,12 +559,19 @@ export class MondaySeed {
         calculation_method: "automatic"
       };
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         await storage.createMetricsBusiness(metricData);
         seededCount++;
-      } catch (error) {
-        this.logger.warn(`Erreur création métrique ${i}:`, error);
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'mondaySeed',
+      metadata: {}
+    }
+  );
     }
 
     return seededCount;
@@ -528,7 +584,9 @@ export class MondaySeed {
   private async seedAoContacts(): Promise<number> {
     let seededCount = 0;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const aos = await storage.getAos();
       const maitresOeuvre = await storage.getMaitresOeuvre();
       
@@ -566,14 +624,14 @@ export class MondaySeed {
           try {
             await storage.createAoContact(relationData);
             seededCount++;
-          } catch (error) {
-            // Skip conflits de contraintes unique
-          }
-        }
-      }
-    } catch (error) {
-      this.logger.warn('Erreur seeding ao_contacts:', error);
+          
+    },
+    {
+      operation: 'constructor',
+service: 'mondaySeed',;
+      metadata: {}
     }
+  );
 
     return seededCount;
   }
@@ -585,7 +643,9 @@ export class MondaySeed {
   private async seedProjectContacts(): Promise<number> {
     let seededCount = 0;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const projects = await storage.getProjects();
       const maitresOeuvre = await storage.getMaitresOeuvre();
       
@@ -623,14 +683,14 @@ export class MondaySeed {
           try {
             await storage.createProjectContact(relationData);
             seededCount++;
-          } catch (error) {
-            // Skip conflits de contraintes unique
-          }
-        }
-      }
-    } catch (error) {
-      this.logger.warn('Erreur seeding project_contacts:', error);
+          
+    },
+    {
+      operation: 'constructor',
+service: 'mondaySeed',;
+      metadata: {}
     }
+  );
 
     return seededCount;
   }

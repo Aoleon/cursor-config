@@ -4,6 +4,7 @@
  */
 
 import { logger } from '../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
 
 // ========================================
 // TYPES ET INTERFACES
@@ -354,11 +355,18 @@ export class ErrorCollector {
    */
   private triggerAlerts(event: ErrorEvent): void {
     this.alertCallbacks.forEach(callback => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         callback(event);
-      } catch (error) {
-        logger.error('Erreur lors du déclenchement d\'alerte', error as Error);
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'error-collector',
+      metadata: {}
+    }
+  );
     });
   }
 

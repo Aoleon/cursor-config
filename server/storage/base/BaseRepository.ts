@@ -5,6 +5,7 @@
  */
 
 import type { Logger } from '../../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
 import { logger as rootLogger } from '../../utils/logger';
 import { DatabaseError } from '../../utils/error-handler';
 import { safeQuery, safeInsert, safeUpdate, safeDelete } from '../../utils/safe-query';
@@ -150,7 +151,9 @@ export abstract class BaseRepository<
     operation: string,
     metadata?: Record<string, any>
   ): Promise<R> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       this.logger.debug(`Executing ${operation}`, {
         metadata: {
           module: this.repositoryName,
@@ -172,16 +175,14 @@ export abstract class BaseRepository<
       });
 
       return result;
-    } catch (error) {
-      this.logger.error(`${operation} failed`, error as Error, {
-        metadata: {
-          module: this.repositoryName,
-          operation,
-          ...metadata
-        }
-      });
-      throw error;
+    
+    },
+    {
+      operation: 'create',
+      service: 'BaseRepository',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -279,7 +280,9 @@ export abstract class BaseRepository<
    */
   protected emitEvent(eventName: string, data: any): void {
     if (this.eventBus) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         this.eventBus.emit(eventName, data);
         this.logger.debug(`Event emitted: ${eventName}`, {
           metadata: {
@@ -287,13 +290,14 @@ export abstract class BaseRepository<
             event: eventName
           }
         });
-      } catch (error) {
-        this.logger.warn(`Failed to emit event: ${eventName}`, {
-          metadata: {
-            module: this.repositoryName,
-            event: eventName,
-            error: error instanceof Error ? error.message : String(error)
-          }
+      
+    },
+    {
+      operation: 'create',
+      service: 'BaseRepository',
+      metadata: {}
+    }
+  );
         });
       }
     }

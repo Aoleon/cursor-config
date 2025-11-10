@@ -3,6 +3,7 @@
  * Gère les tentatives automatiques pour services externes instables
  */
 import { logger } from './logger';
+import { withErrorHandling } from './utils/error-handler';
 
 export interface RetryOptions {
   maxAttempts?: number;
@@ -71,7 +72,9 @@ export async function withRetry<T>(
   let lastError: Error;
 
   for (let attempt = 1; attempt <= opts.maxAttempts; attempt++) {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const result = await fn();
       
       if (attempt > 1) {
@@ -86,20 +89,14 @@ export async function withRetry<T>(
       }
       
       return result;
-    } catch (error) {
-      lastError = error as Error;
-      
-      // Dernière tentative - throw immédiatement
-      if (attempt === opts.maxAttempts) {
-        logger.error('All retry attempts failed', lastError, {
-          metadata: {
-            module: 'RetryService',
-            operation: 'withRetry',
-            attempts: attempt
-          }
-        });
-        throw lastError;
-      }
+    
+    },
+    {
+      operation: 'isRetryableError',
+      service: 'retry-service',
+      metadata: {}
+    }
+  );
       
       // Vérifier si l'erreur est retryable
       if (!isRetryableError(lastError, opts.retryableErrors)) {

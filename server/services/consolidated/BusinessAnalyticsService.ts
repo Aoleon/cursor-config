@@ -18,6 +18,8 @@
  */
 
 import type { IStorage, DateRange, MetricFilters } from "../../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { EventBus } from "../../eventBus";
 import type { 
   KpiSnapshot, InsertKpiSnapshot,
@@ -174,7 +176,9 @@ class ConversionCalculator extends BaseCalculator {
     filters?: BusinessFilters,
     disableTrend: boolean = false
   ): Promise<ConversionMetric> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[BusinessAnalyticsService] calculateAOToOfferConversion - Using SQL aggregation', {
         metadata: { period, filters }
       });
@@ -223,14 +227,14 @@ class ConversionCalculator extends BaseCalculator {
         byUser: Object.keys(byUser).length > 0 ? byUser : undefined
       };
 
-    } catch (error) {
-      logger.error('Erreur calcul conversion AO->Offre', {
-        metadata: {
-          service: 'BusinessAnalyticsService',
-          operation: 'calculateAOToOfferConversion',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'metrics',
+      service: 'BusinessAnalyticsService',
+      metadata: {}
+    }
+  );
       });
       return {
         rate: 0,
@@ -246,7 +250,9 @@ class ConversionCalculator extends BaseCalculator {
     filters?: BusinessFilters,
     disableTrend: boolean = false
   ): Promise<ConversionMetric> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[BusinessAnalyticsService] calculateOfferToProjectConversion - Using SQL aggregation', {
         metadata: { period, filters }
       });
@@ -295,14 +301,14 @@ class ConversionCalculator extends BaseCalculator {
         byUser: Object.keys(byUser).length > 0 ? byUser : undefined
       };
 
-    } catch (error) {
-      logger.error('Erreur calcul conversion Offre->Projet', {
-        metadata: {
-          service: 'BusinessAnalyticsService',
-          operation: 'calculateOfferToProjectConversion',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'metrics',
+      service: 'BusinessAnalyticsService',
+      metadata: {}
+    }
+  );
       });
       return {
         rate: 0,
@@ -314,7 +320,9 @@ class ConversionCalculator extends BaseCalculator {
   }
 
   async calculatePipelineConversion(period: DateRange): Promise<PipelineMetric> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [aoToOffer, offerToProject] = await Promise.all([
         this.calculateAOToOfferConversion(period),
         this.calculateOfferToProjectConversion(period)
@@ -334,14 +342,14 @@ class ConversionCalculator extends BaseCalculator {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur calcul pipeline conversion', {
-        metadata: {
-          service: 'BusinessAnalyticsService',
-          operation: 'calculatePipelineConversion',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'metrics',
+      service: 'BusinessAnalyticsService',
+      metadata: {}
+    }
+  );
       });
       return {
         aoToOffer: 0,
@@ -387,7 +395,9 @@ export class BusinessAnalyticsService {
    * Generate comprehensive KPI snapshot for a given period
    */
   async generateKPISnapshot(period: DateRange): Promise<KpiSnapshot> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const [conversions] = await Promise.all([
         this.conversionCalculator.calculatePipelineConversion(period)
       ]);
@@ -431,16 +441,16 @@ export class BusinessAnalyticsService {
 
       return savedSnapshot;
 
-    } catch (error) {
-      logger.error('Erreur génération KPI snapshot', {
-        metadata: {
-          service: 'BusinessAnalyticsService',
-          operation: 'generateKPISnapshot',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'metrics',
+      service: 'BusinessAnalyticsService',
+      metadata: {}
+    }
+  );
       });
-      throw new Error(`Échec génération KPIs: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      throw new AppError(`Échec génération KPIs: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, 500);
     }
   }
 
@@ -457,7 +467,9 @@ export class BusinessAnalyticsService {
       }
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const now = new Date();
       const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
       const period = { from: yesterday, to: now };
@@ -480,14 +492,14 @@ export class BusinessAnalyticsService {
 
       return kpis;
 
-    } catch (error) {
-      logger.error('Erreur calcul KPIs temps réel', {
-        metadata: {
-          service: 'BusinessAnalyticsService',
-          operation: 'getRealtimeKPIs',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'metrics',
+      service: 'BusinessAnalyticsService',
+      metadata: {}
+    }
+  );
       });
       return {
         conversionRate: 0,
@@ -504,7 +516,9 @@ export class BusinessAnalyticsService {
    * Get business metrics (conversion, revenue, performance, pipeline)
    */
   async getBusinessMetrics(params?: any): Promise<any> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const period = params?.period || this.getDefaultPeriod();
       const filters = params?.filters;
 
@@ -564,14 +578,14 @@ export class BusinessAnalyticsService {
           expectedRevenue: offers.reduce((sum, o) => sum + (parseFloat(o.montantFinal || '0') || 0), 0)
         }
       };
-    } catch (error) {
-      logger.error('Error getting business metrics', {
-        metadata: {
-          service: 'BusinessAnalyticsService',
-          operation: 'getBusinessMetrics',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'metrics',
+      service: 'BusinessAnalyticsService',
+      metadata: {}
+    }
+  );
       });
       return {
         revenue: { total: 0, byMonth: {}, byClient: {}, growth: 0 },
@@ -586,7 +600,9 @@ export class BusinessAnalyticsService {
    * Get dashboard statistics
    */
   async getDashboardStats(): Promise<any> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Get real counts from storage
       const aos = await this.storage.getAos();
       const offers = await this.storage.getOffers();
@@ -627,14 +643,14 @@ export class BusinessAnalyticsService {
         averageProjectValue: Math.round(averageProjectValue * 100) / 100,
         teamUtilization
       };
-    } catch (error) {
-      logger.error('Error getting dashboard stats', {
-        metadata: {
-          service: 'BusinessAnalyticsService',
-          operation: 'getDashboardStats',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'metrics',
+      service: 'BusinessAnalyticsService',
+      metadata: {}
+    }
+  );
       });
       return {
         totalAos: 0,
@@ -653,7 +669,9 @@ export class BusinessAnalyticsService {
    * Get pipeline analytics with optional filters
    */
   async getPipelineAnalytics(filters?: any): Promise<any> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Get data from storage
       let aos = await this.storage.getAos();
       let offers = await this.storage.getOffers();
@@ -712,14 +730,14 @@ export class BusinessAnalyticsService {
           overall: aos.length > 0 ? Math.round((projects.length / aos.length) * 10000) / 100 : 0
         }
       };
-    } catch (error) {
-      logger.error('Error getting pipeline analytics', {
-        metadata: {
-          service: 'BusinessAnalyticsService',
-          operation: 'getPipelineAnalytics',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'metrics',
+      service: 'BusinessAnalyticsService',
+      metadata: {}
+    }
+  );
       });
       return {
         aoCount: 0,

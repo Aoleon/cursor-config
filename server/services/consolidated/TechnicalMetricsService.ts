@@ -18,6 +18,7 @@
  */
 
 import type { IStorage } from "../../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
 import { db } from "../../db";
 import { sql, eq, and, desc, gte, lte } from "drizzle-orm";
 import crypto from "crypto";
@@ -275,7 +276,9 @@ export class TechnicalMetricsService {
 
     const timings = this.calculateDetailedTimings(traces);
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.persistPipelineMetrics({
         traceId,
         userId,
@@ -308,15 +311,14 @@ export class TechnicalMetricsService {
         }
       });
 
-    } catch (error) {
-      logger.error('Error persisting trace', {
-        metadata: {
-          service: 'TechnicalMetricsService',
-          operation: 'endPipelineTrace',
-          traceId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'statistics',
+      service: 'TechnicalMetricsService',
+      metadata: {}
+    }
+  );
       });
     }
 
@@ -422,7 +424,9 @@ export class TechnicalMetricsService {
     complexity?: QueryComplexity, 
     windowHours: number = 24
   ): Promise<PercentileStats> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const since = new Date(Date.now() - windowHours * 60 * 60 * 1000);
       
       const columnName = stepName === 'total' ? 'total_duration_ms' : `${stepName}_ms`;
@@ -461,15 +465,14 @@ export class TechnicalMetricsService {
 
       return stats;
 
-    } catch (error) {
-      logger.error('Error calculating percentiles', {
-        metadata: {
-          service: 'TechnicalMetricsService',
-          operation: 'calculatePercentileStats',
-          stepName,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'statistics',
+      service: 'TechnicalMetricsService',
+      metadata: {}
+    }
+  );
       });
       return this.createEmptyPercentileStats();
     }
@@ -479,7 +482,9 @@ export class TechnicalMetricsService {
    * Analyze cache performance
    */
   async analyzeCachePerformance(windowHours: number = 24): Promise<CacheAnalytics> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const since = new Date(Date.now() - windowHours * 60 * 60 * 1000);
 
       const hitRates = await db
@@ -538,14 +543,14 @@ export class TechnicalMetricsService {
 
       return analytics;
 
-    } catch (error) {
-      logger.error('Error analyzing cache', {
-        metadata: {
-          service: 'TechnicalMetricsService',
-          operation: 'analyzeCachePerformance',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'statistics',
+      service: 'TechnicalMetricsService',
+      metadata: {}
+    }
+  );
       });
       return this.createEmptyCacheAnalytics();
     }
@@ -611,15 +616,18 @@ export class TechnicalMetricsService {
   }
 
   private async persistPipelineMetrics(metrics: InsertPipelineMetrics): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.insert(pipelineMetrics).values(metrics);
-    } catch (error) {
-      logger.error('Error persisting pipeline metrics', {
-        metadata: {
-          service: 'TechnicalMetricsService',
-          operation: 'persistPipelineMetrics',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'statistics',
+      service: 'TechnicalMetricsService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -658,7 +666,9 @@ export class TechnicalMetricsService {
   }
 
   private async createPerformanceAlert(alert: any): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.insert(performanceAlerts).values(alert);
       logger.warn('Performance alert created', {
         metadata: {
@@ -668,13 +678,14 @@ export class TechnicalMetricsService {
           severity: alert.severity
         }
       });
-    } catch (error) {
-      logger.error('Error creating performance alert', {
-        metadata: {
-          service: 'TechnicalMetricsService',
-          operation: 'createPerformanceAlert',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'statistics',
+      service: 'TechnicalMetricsService',
+      metadata: {}
+    }
+  );
       });
     }
   }

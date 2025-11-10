@@ -1,4 +1,5 @@
 import { eq, and, sql, gte, lte, count, sum, avg } from "drizzle-orm";
+import { withErrorHandling } from './utils/error-handler';
 import { 
   projects, offers, aos, projectTimelines, users
 } from "@shared/schema";
@@ -76,7 +77,9 @@ export class AnalyticsStorage {
     responsibleUserId?: string;
     departement?: string;
   }): Promise<ProjectStats> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[AnalyticsStorage] getProjectStats - SQL aggregation', { metadata: { filters } });
 
       // Build WHERE conditions
@@ -138,10 +141,14 @@ export class AnalyticsStorage {
         totalBudget: Number(overallStats?.totalBudget || 0),
         avgBudget: Number(overallStats?.avgBudget || 0)
       };
-    } catch (error) {
-      logger.error('Error in getProjectStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getProjectStats',
+      service: 'analytics',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -154,7 +161,9 @@ export class AnalyticsStorage {
     responsibleUserId?: string;
     departement?: string;
   }): Promise<OfferStats> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[AnalyticsStorage] getOfferStats - SQL aggregation', { metadata: { filters } });
 
       // Build WHERE conditions
@@ -216,10 +225,14 @@ export class AnalyticsStorage {
         totalAmount: Number(overallStats?.totalAmount || 0),
         avgAmount: Number(overallStats?.avgAmount || 0)
       };
-    } catch (error) {
-      logger.error('Error in getOfferStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getProjectStats',
+      service: 'analytics',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -230,7 +243,9 @@ export class AnalyticsStorage {
     dateTo?: string;
     departement?: string;
   }): Promise<AOStats> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[AnalyticsStorage] getAOStats - SQL aggregation', { metadata: { filters } });
 
       // Build WHERE conditions
@@ -276,10 +291,14 @@ export class AnalyticsStorage {
         totalCount: Number(overallStats?.totalCount || 0),
         byDepartement
       };
-    } catch (error) {
-      logger.error('Error in getAOStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getProjectStats',
+      service: 'analytics',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -292,7 +311,9 @@ export class AnalyticsStorage {
     userId?: string;
     departement?: string;
   }): Promise<ConversionStats> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[AnalyticsStorage] getConversionStats - SQL aggregation', { metadata: { period, filters } });
 
       const fromDate = new Date(period.from);
@@ -392,10 +413,14 @@ export class AnalyticsStorage {
           byUser: Object.keys(offerToProjectByUser).length > 0 ? offerToProjectByUser : undefined
         }
       };
-    } catch (error) {
-      logger.error('Error in getConversionStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getProjectStats',
+      service: 'analytics',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -405,7 +430,9 @@ export class AnalyticsStorage {
     from: string;
     to: string;
   }): Promise<ProjectDelayStats> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[AnalyticsStorage] getProjectDelayStats - SQL aggregation', { metadata: { period } });
 
       const fromDate = new Date(period.from);
@@ -473,10 +500,14 @@ export class AnalyticsStorage {
         criticalDelayed,
         byPhase
       };
-    } catch (error) {
-      logger.error('Error in getProjectDelayStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getProjectStats',
+      service: 'analytics',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -486,7 +517,9 @@ export class AnalyticsStorage {
     from: string;
     to: string;
   }): Promise<TeamPerformanceStats[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[AnalyticsStorage] getTeamPerformanceStats - SQL aggregation', { metadata: { period } });
 
       const fromDate = new Date(period.from);
@@ -562,10 +595,14 @@ export class AnalyticsStorage {
       });
 
       return results.sort((a, b) => b.onTimeRate - a.onTimeRate);
-    } catch (error) {
-      logger.error('Error in getTeamPerformanceStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getProjectStats',
+      service: 'analytics',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -579,7 +616,9 @@ export class AnalyticsStorage {
     budget: number;
     responsibleUserId: string | null;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[AnalyticsStorage] getDelayedProjects - SQL aggregation with JOIN', { metadata: { severity } });
 
       // Thresholds by severity
@@ -614,10 +653,14 @@ export class AnalyticsStorage {
         delayDays: Number(p.delayDays),
         budget: Number(p.budget || 0)
       }));
-    } catch (error) {
-      logger.error('Error in getDelayedProjects', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getProjectStats',
+      service: 'analytics',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -631,7 +674,9 @@ export class AnalyticsStorage {
     revenue: number;
     projectCount: number;
   }>> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('[AnalyticsStorage] getRevenueByCategoryStats - SQL aggregation', { metadata: { period } });
 
       const fromDate = new Date(period.from);
@@ -660,10 +705,14 @@ export class AnalyticsStorage {
         revenue: Number(stat.revenue || 0),
         projectCount: Number(stat.projectCount || 0)
       }));
-    } catch (error) {
-      logger.error('Error in getRevenueByCategoryStats', { metadata: { error } });
-      throw error;
+    
+    },
+    {
+      operation: 'getProjectStats',
+      service: 'analytics',
+      metadata: {}
     }
+  );
   }
 }
 

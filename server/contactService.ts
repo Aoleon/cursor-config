@@ -1,4 +1,6 @@
 import { db } from "./db";
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { maitresOuvrage, maitresOeuvre, contactsMaitreOeuvre, contacts } from "@shared/schema";
 import { eq, ilike, or, and } from "drizzle-orm";
 import type { 
@@ -340,7 +342,9 @@ export class ContactService {
    * Recherche ou crée un contact selon les données extraites
    */
   async findOrCreateContact(extractedData: ExtractedContactData, tx?: DrizzleTransaction): Promise<ContactLinkResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       if (extractedData.role === 'maitre_ouvrage') {
         // Rechercher un maître d'ouvrage existant
         const existingMatch = await this.findSimilarMaitreOuvrage(extractedData, tx);
@@ -414,19 +418,16 @@ export class ContactService {
         };
       }
       
-      throw new Error(`Type de contact non supporté: ${extractedData.role}`);
+      throw new AppError(`Type de contact non supporté: ${extractedData.role}`, 500);
       
-    } catch (error) {
-      logger.error('Erreur lors de la recherche/création de contact', error as Error, {
-        service: 'ContactService',
-        metadata: {
-          operation: 'findOrCreateContact',
-          role: extractedData.role,
-          nom: extractedData.nom
-        }
-      });
-      throw error;
+    
+    },
+    {
+      operation: 'principal',
+      service: 'contactService',
+      metadata: {}
     }
+  );
   }
   
   /**
@@ -436,20 +437,19 @@ export class ContactService {
     const results: ContactLinkResult[] = [];
     
     for (const contactData of contactsData) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const result = await this.findOrCreateContact(contactData, tx);
         results.push(result);
-      } catch (error) {
-        logger.error('Erreur lors du traitement du contact', error as Error, {
-          service: 'ContactService',
-          metadata: {
-            operation: 'processExtractedContacts',
-            nom: contactData.nom,
-            role: contactData.role
-          }
-        });
-        // Continuer avec les autres contacts même en cas d'erreur
-      }
+      
+    },
+    {
+      operation: 'principal',
+      service: 'contactService',
+      metadata: {}
+    }
+  );
     }
     
     return results;
@@ -587,7 +587,9 @@ export class ContactService {
     data: IndividualContactData,
     tx?: DrizzleTransaction
   ): Promise<IndividualContactResult> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Rechercher contact existant
       const existingMatch = await this.findSimilarContact(data, tx);
       
@@ -623,15 +625,14 @@ export class ContactService {
         reason: 'Nouveau contact créé automatiquement'
       };
       
-    } catch (error) {
-      logger.error('Erreur lors de findOrCreateIndividualContact', {
-        service: 'ContactService',
-        error: error instanceof Error ? error.message : String(error),
-        metadata: {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email
-        }
+    
+    },
+    {
+      operation: 'principal',
+      service: 'contactService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }

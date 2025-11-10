@@ -1,0 +1,43 @@
+#!/usr/bin/expect -f
+# Script expect pour appliquer le schéma Drizzle automatiquement
+
+set timeout 600
+spawn npm run db:push
+
+# Attendre et répondre à tous les prompts interactifs
+expect {
+    "Is * enum created or renamed from another enum?" {
+        # Sélectionner la première option (créer enum) en appuyant sur Entrée
+        send "\r"
+        exp_continue
+    }
+    "Is * table created or renamed from another table?" {
+        # Sélectionner la première option (créer table) en appuyant sur Entrée
+        send "\r"
+        exp_continue
+    }
+    "Push schema changes to database?" {
+        # Confirmer le push
+        send "y\r"
+        exp_continue
+    }
+    "Are you sure you want to push*" {
+        # Confirmer le push
+        send "y\r"
+        exp_continue
+    }
+    -ex "all enum conflicts resolved" {
+        # Continuer après résolution des conflits
+        exp_continue
+    }
+    eof {
+        exit 0
+    }
+    timeout {
+        puts "Timeout waiting for prompt"
+        exit 1
+    }
+}
+
+wait
+

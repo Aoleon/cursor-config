@@ -1,4 +1,5 @@
 import type { IStorage } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
 import { logger } from '../utils/logger';
 
 // ========================================
@@ -278,7 +279,9 @@ export class SafetyGuardsService {
    * Met à jour les métriques système
    */
   private async updateSystemMetrics(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Simulation métriques réalistes pour démo
       // En production : utiliser monitoring système réel
       const baseLoad = 30 + Math.random() * 20; // 30-50% base
@@ -294,14 +297,14 @@ export class SafetyGuardsService {
         lastMeasured: new Date()
       };
 
-    } catch (error) {
-      logger.error('Erreur mise à jour métriques système', {
-        metadata: {
-          service: 'SafetyGuardsService',
-          operation: 'updateSystemMetrics',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'SafetyGuardsService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -310,7 +313,9 @@ export class SafetyGuardsService {
    * Évalue le besoin de throttling
    */
   private async evaluateThrottling(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const { cpuUsage, memoryUsage, responseTime } = this.systemMetrics;
       const { throttleThreshold, maxCpuUsage, maxMemoryUsage } = this.resourceLimits;
 
@@ -335,14 +340,14 @@ export class SafetyGuardsService {
         await this.handleCriticalOverload();
       }
 
-    } catch (error) {
-      logger.error('Erreur évaluation throttling', {
-        metadata: {
-          service: 'SafetyGuardsService',
-          operation: 'evaluateThrottling',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'SafetyGuardsService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -443,7 +448,9 @@ export class SafetyGuardsService {
    * Gestion adaptative des ressources selon charge système
    */
   private async adaptiveResourceManagement(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const { cpuUsage, memoryUsage, responseTime } = this.systemMetrics;
       const adaptationNeeded = this.calculateAdaptationScore();
 
@@ -452,14 +459,14 @@ export class SafetyGuardsService {
         this.safetyStats.adaptiveAdjustments++;
       }
 
-    } catch (error) {
-      logger.error('Erreur gestion adaptative', {
-        metadata: {
-          service: 'SafetyGuardsService',
-          operation: 'adaptiveResourceManagement',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'SafetyGuardsService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -518,7 +525,9 @@ export class SafetyGuardsService {
    * Nettoyage d'urgence des ressources
    */
   private async emergencyResourceCleanup(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Nettoyage d\'urgence ressources', {
         metadata: {
           service: 'SafetyGuardsService',
@@ -547,14 +556,14 @@ export class SafetyGuardsService {
         }
       });
 
-    } catch (error) {
-      logger.error('Erreur nettoyage d\'urgence', {
-        metadata: {
-          service: 'SafetyGuardsService',
-          operation: 'emergencyResourceCleanup',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'SafetyGuardsService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -563,7 +572,9 @@ export class SafetyGuardsService {
    * Évaluation système complète périodique
    */
   private async comprehensiveSystemEvaluation(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const report = {
         systemHealth: this.calculateSystemHealthScore(),
         resourceEfficiency: this.calculateResourceEfficiency(),
@@ -583,14 +594,14 @@ export class SafetyGuardsService {
         });
       }
 
-    } catch (error) {
-      logger.error('Erreur évaluation système', {
-        metadata: {
-          service: 'SafetyGuardsService',
-          operation: 'comprehensiveSystemEvaluation',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'Map',
+      service: 'SafetyGuardsService',
+      metadata: {}
+    }
+  );
       });
     }
   }

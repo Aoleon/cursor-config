@@ -17,6 +17,8 @@
  */
 
 import { mondayIntegrationService } from './MondayIntegrationService';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import type { 
   MondayItem, 
   ImportMapping, 
@@ -138,7 +140,9 @@ export class MondayDataService {
       createdIds: []
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info(`Démarrage import Monday board vers ${targetEntity}s`, {
         service: 'MondayDataService',
         metadata: {
@@ -168,45 +172,20 @@ export class MondayDataService {
               createdId = await this.importItemAsSupplier(item, mapping);
               break;
             default:
-              throw new Error(`Unsupported target entity: ${targetEntity}`);
+              throw new AppError(`Unsupported target entity: ${targetEntity}`, 500);
           }
 
           result.importedCount++;
           result.createdIds.push(createdId);
 
-        } catch (error: any) {
-          result.errors.push(`Item ${item.id}: ${error.message}`);
-          result.success = false;
-        }
-      }
-
-      logger.info('Import Monday terminé', {
-        service: 'MondayDataService',
-        metadata: {
-          operation: 'importFromMonday',
-          targetEntity,
-          importedCount: result.importedCount,
-          errorCount: result.errors.length,
-          correlationId
-        }
-      });
-
-      return result;
-    } catch (error: any) {
-      logger.error('Erreur import Monday', {
-        service: 'MondayDataService',
-        metadata: {
-          operation: 'importFromMonday',
-          targetEntity,
-          error: error.message,
-          correlationId
-        }
-      });
-
-      result.success = false;
-      result.errors.push(error.message);
-      return result;
+        
+    },
+    {
+      operation: 'MondayImportService',
+service: 'MondayDataService',;
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -216,7 +195,7 @@ export class MondayDataService {
     const projectData = this.mapItemToProject(item, mapping);
     
     if (!projectData.name) {
-      throw new Error('nom manquant');
+      throw new AppError('nom manquant', 500);
     }
 
     const project = await this.storage.createProject(projectData);
@@ -257,7 +236,7 @@ export class MondayDataService {
     const aoData = this.mapItemToAO(item, mapping);
     
     if (!aoData.reference) {
-      throw new Error('référence manquante');
+      throw new AppError('référence manquante', 500);
     }
 
     const ao = await this.storage.createAo(aoData);
@@ -298,7 +277,7 @@ export class MondayDataService {
     const supplierData = this.mapItemToSupplier(item, mapping);
     
     if (!supplierData.name) {
-      throw new Error('nom fournisseur manquant');
+      throw new AppError('nom fournisseur manquant', 500);
     }
 
     const supplier = await this.storage.createSupplier(supplierData);
@@ -340,7 +319,9 @@ export class MondayDataService {
       }
     });
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       const item = await mondayIntegrationService.getItem(itemId);
       const entityType = this.determineEntityType(item, boardId);
       
@@ -455,17 +436,14 @@ export class MondayDataService {
           correlationId
         }
       });
-    } catch (error) {
-      logger.error('[MondayDataService] Erreur sync depuis Monday', {
-        service: 'MondayDataService',
-        metadata: {
-          operation: 'syncFromMonday',
-          boardId,
-          itemId,
-          changeType,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'MondayImportService',
+      service: 'MondayDataService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -501,7 +479,7 @@ export class MondayDataService {
     } else if (entityType === 'ao') {
       return this.exportAO(entityId, options);
     } else {
-      throw new Error(`Unsupported entity type for export: ${entityType}`);
+      throw new AppError(`Unsupported entity type for export: ${entityType}`, 500);
     }
   }
 
@@ -949,7 +927,7 @@ export class MondayDataService {
 
     const itemConfig = config || getBoardConfig(boardId);
     if (!itemConfig) {
-      throw new Error(`No configuration found for board ${boardId}`);
+      throw new AppError(`No configuration found for board ${boardId}`, 500);
     }
 
     const context: SplitterContext = {
@@ -1008,7 +986,7 @@ export class MondayDataService {
 
     const itemConfig = config || getBoardConfig(boardId);
     if (!itemConfig) {
-      throw new Error(`No configuration found for board ${boardId}`);
+      throw new AppError(`No configuration found for board ${boardId}`, 500);
     }
 
     const context: SplitterContext = {
@@ -1027,7 +1005,9 @@ export class MondayDataService {
       diagnostics: []
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.storage.transaction(async (tx) => {
         logger.info('Étape 1: Extraction AO de base', {
           service: 'MondayDataService',
@@ -1068,7 +1048,7 @@ export class MondayDataService {
 
           result.success = false;
           result.diagnostics = context.diagnostics;
-          throw new Error(errorMsg);
+          throw new AppError(errorMsg, 500);
         }
 
         const existingAO = await this.storage.getAOByMondayItemId(mondayItemId, tx);
@@ -1152,177 +1132,14 @@ export class MondayDataService {
             if (linkResult.created) {
               result.mastersCreated++;
             }
-          } catch (error: any) {
-            context.diagnostics.push({
-              level: 'error',
-              extractor: 'MasterEntityExtractor',
-              message: `Échec persistance maître d'ouvrage: ${error.message}`,
-              data: { moaData, error: error.stack }
-            });
-          }
-        }
-
-        for (const moeData of masters.maitresOeuvre) {
-          try {
-            const moeContactData = this.mapMasterToContactData(moeData, 'maitre_oeuvre');
-            const linkResult = await this.storage.findOrCreateMaitreOeuvre(moeContactData, tx);
-            
-            if (linkResult.created) {
-              result.mastersCreated++;
-            }
-          } catch (error: any) {
-            context.diagnostics.push({
-              level: 'error',
-              extractor: 'MasterEntityExtractor',
-              message: `Échec persistance maître d'œuvre: ${error.message}`,
-              data: { moeData, error: error.stack }
-            });
-          }
-        }
-
-        logger.info('Étape 2: Extraction contacts', {
-          service: 'MondayDataService',
-          metadata: { operation: 'splitData.step2', aoId: currentAO.id }
-        });
-
-        const contacts = await this.contactExtractor.extract(context);
-        context.extractedData.contacts = contacts;
-
-        for (const contactData of contacts) {
-          try {
-            const individualData = this.mapContactToIndividualData(contactData);
-            const contactResult = await this.storage.findOrCreateContact(individualData, tx);
-            
-            const linkType = contactData.linkType || 'contact_general';
-            await this.storage.linkAoContact({
-              aoId: currentAO.id,
-              contactId: contactResult.contact.id,
-              linkType
-            }, tx);
-            
-            if (contactResult.created) {
-              result.contactsCreated++;
-            }
-          } catch (error: any) {
-            context.diagnostics.push({
-              level: 'error',
-              extractor: 'ContactExtractor',
-              message: `Échec persistance contact: ${error.message}`,
-              data: { contactData, error: error.stack }
-            });
-          }
-        }
-
-        logger.info('Étape 3: Extraction lots', {
-          service: 'MondayDataService',
-          metadata: { operation: 'splitData.step3', aoId: currentAO.id }
-        });
-
-        const lots = await this.lotExtractor.extract(context);
-        context.extractedData.lots = lots;
-
-        for (const lotData of lots) {
-          try {
-            const lot = await this.storage.createAoLot({
-              ...lotData,
-              aoId: currentAO.id
-            }, tx);
-            result.lotsCreated++;
-
-            logger.info('Lot créé', {
-              service: 'MondayDataService',
-              metadata: { operation: 'splitData', lotId: lot.id, aoId: currentAO.id }
-            });
-          } catch (error: any) {
-            context.diagnostics.push({
-              level: 'warning',
-              extractor: 'LotExtractor',
-              message: `Failed to create lot: ${error.message}`,
-              data: { lotData }
-            });
-          }
-        }
-
-        logger.info('Étape 4: Extraction adresse', {
-          service: 'MondayDataService',
-          metadata: { operation: 'splitData.step4', aoId: currentAO.id }
-        });
-
-        const addressData = await this.addressExtractor.extract(context);
-        context.extractedData.addresses = addressData ? [addressData] : [];
-
-        if (dryRun) {
-          result.extractedData = {
-            ao: context.extractedData.baseAO,
-            lots: context.extractedData.lots,
-            contacts: context.extractedData.contacts,
-            maitresOuvrage: masters.maitresOuvrage,
-            maitresOeuvre: masters.maitresOeuvre,
-            addresses: context.extractedData.addresses
-          };
-          result.diagnostics = context.diagnostics;
-          result.success = true;
           
-          logger.info('Mode DRY RUN activé - Rollback transaction', {
-            service: 'MondayDataService',
-            metadata: {
-              operation: 'splitData.dryRun',
-              aoExtracted: !!context.extractedData.baseAO,
-              lotsExtracted: context.extractedData.lots?.length || 0,
-              contactsExtracted: context.extractedData.contacts?.length || 0
-            }
-          });
-          
-          throw new Error('DRY_RUN_ROLLBACK');
-        }
-      }, {
-        retries: 3,
-        timeout: 30000,
-        isolationLevel: 'read committed'
-      });
-
-      result.success = true;
-      result.diagnostics = context.diagnostics;
-
-      logger.info('Éclatement Monday terminé avec succès', {
-        service: 'MondayDataService',
-        metadata: {
-          operation: 'splitData',
-          aoId: result.aoId,
-          lotsCreated: result.lotsCreated,
-          contactsCreated: result.contactsCreated,
-          mastersCreated: result.mastersCreated
-        }
-      });
-
-      return result;
-
-    } catch (error: any) {
-      if (error.message === 'DRY_RUN_ROLLBACK') {
-        logger.info('Dry-run terminé avec succès - Transaction rollbackée', {
-          service: 'MondayDataService',
-          metadata: { operation: 'splitData.dryRun', mondayItemId, boardId }
-        });
-        
-        return result;
-      }
-      
-      logger.error('Erreur lors de l\'éclatement Monday', {
-        service: 'MondayDataService',
-        metadata: { 
-          operation: 'splitData',
-          mondayItemId, 
-          boardId, 
-          error: error.message 
-        }
-      });
-
-      result.success = false;
-      result.diagnostics = context.diagnostics;
-      result.diagnostics.push({
-        level: 'error',
-        extractor: 'MondayDataService',
-        message: `Échec éclatement: ${error.message}`,
+    },
+    {
+      operation: 'MondayImportService',
+service: 'MondayDataService',;
+      metadata: {}
+    }
+  );`,
         data: { error: error.stack }
       });
 

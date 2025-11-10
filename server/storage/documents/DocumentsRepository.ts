@@ -12,6 +12,8 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { logger } from './utils/logger';
 import { 
   supplierDocuments,
   supplierQuoteSessions,
@@ -187,7 +189,7 @@ export class DocumentsRepository extends BaseRepository<
    * ```typescript
    * const doc = await repo.getSupplierDocument('550e8400-...');
    * if (doc) {
-   *   console.log(`Document: ${doc.originalName}, uploadé le ${doc.uploadedAt}`);
+   *   logger.info(`Document: ${doc.originalName}, uploadé le ${doc.uploadedAt}`);
    * }
    * ```
    */
@@ -251,7 +253,7 @@ export class DocumentsRepository extends BaseRepository<
 
         const newDocument = result[0];
         if (!newDocument) {
-          throw new Error('Failed to create supplier document');
+          throw new AppError('Failed to create supplier document', 500);
         }
 
         this.emitEvent('supplier_document:created', { 
@@ -427,7 +429,7 @@ export class DocumentsRepository extends BaseRepository<
    * ```typescript
    * const session = await repo.getSupplierQuoteSession('550e8400-...');
    * if (session) {
-   *   console.log(`Session: ${session.accessToken}, expire le ${session.tokenExpiresAt}`);
+   *   logger.info(`Session: ${session.accessToken}, expire le ${session.tokenExpiresAt}`);
    * }
    * ```
    */
@@ -488,7 +490,7 @@ export class DocumentsRepository extends BaseRepository<
 
         const newSession = result[0];
         if (!newSession) {
-          throw new Error('Failed to create supplier quote session');
+          throw new AppError('Failed to create supplier quote session', 500);
         }
 
         this.emitEvent('supplier_quote_session:created', { 
@@ -610,7 +612,7 @@ export class DocumentsRepository extends BaseRepository<
    * ```typescript
    * const analysis = await repo.getSupplierQuoteAnalysis('550e8400-...');
    * if (analysis) {
-   *   console.log(`Analyse: confidence ${analysis.confidence}%, montant HT ${analysis.totalAmountHT}`);
+   *   logger.info(`Analyse: confidence ${analysis.confidence}%, montant HT ${analysis.totalAmountHT}`);
    * }
    * ```
    */
@@ -674,7 +676,7 @@ export class DocumentsRepository extends BaseRepository<
 
         const newAnalysis = result[0];
         if (!newAnalysis) {
-          throw new Error('Failed to create supplier quote analysis');
+          throw new AppError('Failed to create supplier quote analysis', 500);
         }
 
         this.emitEvent('supplier_quote_analysis:created', { 
@@ -818,7 +820,7 @@ export class DocumentsRepository extends BaseRepository<
    * ```typescript
    * const order = await repo.getPurchaseOrder('550e8400-...');
    * if (order) {
-   *   console.log(`Bon de commande: ${order.reference}, montant TTC ${order.totalTTC}`);
+   *   logger.info(`Bon de commande: ${order.reference}, montant TTC ${order.totalTTC}`);
    * }
    * ```
    */
@@ -882,7 +884,7 @@ export class DocumentsRepository extends BaseRepository<
 
         const newOrder = result[0];
         if (!newOrder) {
-          throw new Error('Failed to create purchase order');
+          throw new AppError('Failed to create purchase order', 500);
         }
 
         this.emitEvent('purchase_order:created', { 
@@ -1024,7 +1026,7 @@ export class DocumentsRepository extends BaseRepository<
    * ```typescript
    * const quote = await repo.getClientQuote('550e8400-...');
    * if (quote) {
-   *   console.log(`Devis: ${quote.reference}, montant TTC ${quote.totalTTC}, marge ${quote.tauxMarge}%`);
+   *   logger.info(`Devis: ${quote.reference}, montant TTC ${quote.totalTTC}, marge ${quote.tauxMarge}%`);
    * }
    * ```
    */
@@ -1091,7 +1093,7 @@ export class DocumentsRepository extends BaseRepository<
 
         const newQuote = result[0];
         if (!newQuote) {
-          throw new Error('Failed to create client quote');
+          throw new AppError('Failed to create client quote', 500);
         }
 
         this.emitEvent('client_quote:created', { 

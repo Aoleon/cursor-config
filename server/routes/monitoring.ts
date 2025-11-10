@@ -4,6 +4,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { withErrorHandling } from './utils/error-handler';
 import { logger } from '../utils/logger';
 import { getErrorCollector } from '../monitoring/error-collector';
 import { getAlertManager } from '../monitoring/alert-manager';
@@ -60,7 +61,9 @@ const requireAuth = (req: Request, res: Response, next: any) => {
  * GET /api/monitoring/health
  */
 router.get('/health', async (req: Request, res: Response) => {
-  try {
+  return withErrorHandling(
+    async () => {
+
     // Vérifier la base de données
     const dbStatus = await checkDatabase();
     
@@ -90,15 +93,14 @@ router.get('/health', async (req: Request, res: Response) => {
     
     res.status(statusCode).json(health);
     
-  } catch (error) {
-    logger.error('Erreur health check', error as Error);
-    
-    res.status(500).json({
-      status: 'critical',
-      score: 0,
-      timestamp: new Date(),
-      error: 'Impossible de vérifier le statut'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -111,7 +113,9 @@ router.get('/health', async (req: Request, res: Response) => {
  * GET /api/monitoring/metrics
  */
 router.get('/metrics', requireAuth, (req: Request, res: Response) => {
-  try {
+  return withErrorHandling(
+    async () => {
+
     const metrics = metricsAggregator.aggregate();
     
     // Enregistrer l'accès aux métriques
@@ -136,12 +140,14 @@ router.get('/metrics', requireAuth, (req: Request, res: Response) => {
       }))
     });
     
-  } catch (error) {
-    logger.error('Erreur récupération métriques', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la récupération des métriques'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -160,18 +166,22 @@ router.get('/metrics/:window', requireAuth, (req: Request, res: Response) => {
     });
   }
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     const metrics = metricsAggregator.getWindowMetrics(window as any);
     res.json({
       success: true,
       ...metrics
     });
-  } catch (error) {
-    logger.error('Erreur récupération métriques fenêtre', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la récupération des métriques'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -190,19 +200,23 @@ router.get('/timeline', requireAuth, (req: Request, res: Response) => {
     });
   }
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     const timeline = metricsAggregator.getTimeline(window as any);
     res.json({
       success: true,
       window,
       data: timeline
     });
-  } catch (error) {
-    logger.error('Erreur récupération timeline', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la récupération de la timeline'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -222,7 +236,9 @@ router.get('/errors', requireAuth, (req: Request, res: Response) => {
     since 
   } = req.query;
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     const options: any = {
       limit: parseInt(limit as string, 10)
     };
@@ -249,12 +265,14 @@ router.get('/errors', requireAuth, (req: Request, res: Response) => {
       }))
     });
     
-  } catch (error) {
-    logger.error('Erreur récupération erreurs', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la récupération des erreurs'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -265,7 +283,9 @@ router.get('/errors', requireAuth, (req: Request, res: Response) => {
 router.get('/errors/:errorId', requireAuth, (req: Request, res: Response) => {
   const { errorId } = req.params;
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     const errors = errorCollector.getErrors({ limit: 1000 });
     const error = errors.find(e => e.id === errorId);
     
@@ -284,12 +304,14 @@ router.get('/errors/:errorId', requireAuth, (req: Request, res: Response) => {
       }
     });
     
-  } catch (error) {
-    logger.error('Erreur récupération détails erreur', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la récupération des détails'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -302,7 +324,9 @@ router.get('/errors/:errorId', requireAuth, (req: Request, res: Response) => {
  * GET /api/monitoring/alerts
  */
 router.get('/alerts', requireAuth, (req: Request, res: Response) => {
-  try {
+  return withErrorHandling(
+    async () => {
+
     const alerts = alertManager.getActiveAlerts();
     
     res.json({
@@ -324,12 +348,14 @@ router.get('/alerts', requireAuth, (req: Request, res: Response) => {
       }))
     });
     
-  } catch (error) {
-    logger.error('Erreur récupération alertes', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la récupération des alertes'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -340,7 +366,9 @@ router.get('/alerts', requireAuth, (req: Request, res: Response) => {
 router.get('/alerts/history', requireAuth, (req: Request, res: Response) => {
   const { severity, limit = '100', since } = req.query;
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     const options: any = {
       limit: parseInt(limit as string, 10)
     };
@@ -356,12 +384,14 @@ router.get('/alerts/history', requireAuth, (req: Request, res: Response) => {
       alerts: history
     });
     
-  } catch (error) {
-    logger.error('Erreur récupération historique alertes', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la récupération de l\'historique'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -373,7 +403,9 @@ router.post('/alerts/:alertId/acknowledge', requireAuth, (req: Request, res: Res
   const { alertId } = req.params;
   const user = (req as any).user || (req as any).session?.user;
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     const success = alertManager.acknowledgeAlert(alertId, user.id || user.email);
     
     if (success) {
@@ -388,12 +420,14 @@ router.post('/alerts/:alertId/acknowledge', requireAuth, (req: Request, res: Res
       });
     }
     
-  } catch (error) {
-    logger.error('Erreur reconnaissance alerte', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la reconnaissance de l\'alerte'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -402,7 +436,9 @@ router.post('/alerts/:alertId/acknowledge', requireAuth, (req: Request, res: Res
  * GET /api/monitoring/alerts/rules
  */
 router.get('/alerts/rules', requireAuth, (req: Request, res: Response) => {
-  try {
+  return withErrorHandling(
+    async () => {
+
     const rules = alertManager.getRules();
     
     res.json({
@@ -420,12 +456,14 @@ router.get('/alerts/rules', requireAuth, (req: Request, res: Response) => {
       }))
     });
     
-  } catch (error) {
-    logger.error('Erreur récupération règles', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la récupération des règles'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -444,7 +482,9 @@ router.put('/alerts/rules/:ruleId', requireAuth, (req: Request, res: Response) =
     });
   }
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     const success = alertManager.setRuleEnabled(ruleId, enabled);
     
     if (success) {
@@ -459,12 +499,14 @@ router.put('/alerts/rules/:ruleId', requireAuth, (req: Request, res: Response) =
       });
     }
     
-  } catch (error) {
-    logger.error('Erreur modification règle', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la modification de la règle'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -477,7 +519,9 @@ router.put('/alerts/rules/:ruleId', requireAuth, (req: Request, res: Response) =
  * POST /api/monitoring/test/notifications
  */
 router.post('/test/notifications', requireAuth, async (req: Request, res: Response) => {
-  try {
+  return withErrorHandling(
+    async () => {
+
     const results = await notifier.testNotifications();
     
     res.json({
@@ -486,12 +530,14 @@ router.post('/test/notifications', requireAuth, async (req: Request, res: Respon
       results
     });
     
-  } catch (error) {
-    logger.error('Erreur test notifications', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors du test des notifications'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -506,7 +552,9 @@ router.post('/test/error', requireAuth, (req: Request, res: Response) => {
     message = 'Test error from monitoring dashboard'
   } = req.body;
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     // Créer une erreur de test
     const testError = new Error(message);
     (testError as any).code = 'TEST_ERROR';
@@ -534,12 +582,14 @@ router.post('/test/error', requireAuth, (req: Request, res: Response) => {
       }
     });
     
-  } catch (error) {
-    logger.error('Erreur génération erreur de test', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la génération de l\'erreur de test'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -558,7 +608,9 @@ router.post('/reset', requireAuth, (req: Request, res: Response) => {
     });
   }
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     metricsAggregator.reset();
     errorCollector.reset();
     alertManager.reset();
@@ -575,12 +627,14 @@ router.post('/reset', requireAuth, (req: Request, res: Response) => {
       message: 'Métriques réinitialisées avec succès'
     });
     
-  } catch (error) {
-    logger.error('Erreur réinitialisation métriques', error as Error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la réinitialisation'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -598,7 +652,9 @@ async function checkDatabase(): Promise<{
 }> {
   const start = Date.now();
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     // Simple requête pour vérifier la connexion
     await db.execute(sql`SELECT 1`);
     
@@ -608,12 +664,14 @@ async function checkDatabase(): Promise<{
       status: responseTime < 100 ? 'healthy' : 'degraded',
       responseTime
     };
-  } catch (error) {
-    logger.error('Database check failed', error as Error);
-    return {
-      status: 'down',
-      error: (error as Error).message
-    };
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  );;
   }
 }
 
@@ -673,7 +731,9 @@ function getCircuitBreakerStatus(): {
  * GET /api/monitoring/cache
  */
 router.get('/cache', requireAuth, async (req: Request, res: Response) => {
-  try {
+  return withErrorHandling(
+    async () => {
+
     const cacheService = getCacheService();
     const stats = await cacheService.getStats();
     
@@ -697,13 +757,14 @@ router.get('/cache', requireAuth, async (req: Request, res: Response) => {
         keys: stats.keys
       }
     });
-  } catch (error) {
-    logger.error('Erreur récupération stats cache', error as Error);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Impossible de récupérer les statistiques du cache'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 
@@ -716,7 +777,9 @@ router.get('/cache', requireAuth, async (req: Request, res: Response) => {
  * GET /api/monitoring/logs?correlationId=xxx&level=error&limit=100
  */
 router.get('/logs', requireAuth, async (req: Request, res: Response) => {
-  try {
+  return withErrorHandling(
+    async () => {
+
     const { correlationId, level, limit = '100' } = req.query;
     
     logger.info('Requête de logs avec filtres', {
@@ -764,13 +827,14 @@ router.get('/logs', requireAuth, async (req: Request, res: Response) => {
       note: 'Pour une implémentation complète avec stockage de logs, intégrer un système de log aggregation comme Elasticsearch, Datadog, ou CloudWatch'
     });
     
-  } catch (error) {
-    logger.error('Erreur récupération logs', error as Error);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Impossible de récupérer les logs'
-    });
+  
+    },
+    {
+      operation: 'Router',
+      service: 'monitoring',
+      metadata: {}
+    }
+  ););
   }
 });
 

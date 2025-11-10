@@ -5,6 +5,7 @@
 // ========================================
 
 import fetch from 'node-fetch';
+import { logger } from './utils/logger';
 
 // Configuration du test
 const BASE_URL = 'http://localhost:5000';
@@ -33,7 +34,7 @@ async function testEndpoint(endpoint: string): Promise<TestResult> {
   const startTime = Date.now();
   
   try {
-    console.log(`Testing ${endpoint}...`);
+    logger.info(`Testing ${endpoint}...`);
     
     // Test basic auth pour simplicité
     const controller = new AbortController();
@@ -95,7 +96,7 @@ async function testEndpoint(endpoint: string): Promise<TestResult> {
 }
 
 async function runAllTests(): Promise<TestResult[]> {
-  console.log('🚀 Démarrage tests runtime analytics endpoints...\n');
+  logger.info('🚀 Démarrage tests runtime analytics endpoints...\n');
   
   // Test séquentiel pour éviter surcharge serveur
   const results: TestResult[] = [];
@@ -109,10 +110,10 @@ async function runAllTests(): Promise<TestResult[]> {
     const timeInfo = `${result.responseTime}ms`;
     const dataInfo = result.hasData ? `(${result.dataShape})` : '(no data)';
     
-    console.log(`${statusIcon} ${endpoint} - ${result.status} - ${timeInfo} ${dataInfo}`);
+    logger.info(`${statusIcon} ${endpoint} - ${result.status} - ${timeInfo} ${dataInfo}`);
     
     if (!result.success && result.error) {
-      console.log(`   Error: ${result.error}`);
+      logger.info(`   Error: ${result.error}`);
     }
     
     // Pause entre tests
@@ -123,74 +124,74 @@ async function runAllTests(): Promise<TestResult[]> {
 }
 
 async function generateReport(results: TestResult[]): Promise<void> {
-  console.log('\n' + '='.repeat(60));
-  console.log('📊 RAPPORT TESTS ANALYTICS ENDPOINTS');
-  console.log('='.repeat(60));
+  logger.info('\n' + '='.repeat(60));
+  logger.info('📊 RAPPORT TESTS ANALYTICS ENDPOINTS');
+  logger.info('='.repeat(60));
   
   const successCount = results.filter(r => r.success).length;
   const totalCount = results.length;
   const successRate = Math.round((successCount / totalCount) * 100);
   
-  console.log(`\n📈 STATUT GLOBAL: ${successCount}/${totalCount} (${successRate}%)`);
+  logger.info(`\n📈 STATUT GLOBAL: ${successCount}/${totalCount} (${successRate}%)`);
   
   // Métriques de performance
   const avgResponseTime = Math.round(
     results.filter(r => r.success).reduce((sum, r) => sum + r.responseTime, 0) / successCount
   );
-  console.log(`⚡ Temps réponse moyen: ${avgResponseTime}ms`);
+  logger.info(`⚡ Temps réponse moyen: ${avgResponseTime}ms`);
   
   // Détails par endpoint
-  console.log('\n📋 DÉTAILS PAR ENDPOINT:');
+  logger.info('\n📋 DÉTAILS PAR ENDPOINT:');
   results.forEach(result => {
     const status = result.success ? '✅ OK' : '❌ FAIL';
     const details = result.success ? 
       `${result.responseTime}ms | ${result.dataShape}` : 
       `Error: ${result.error?.slice(0, 50)}...`;
     
-    console.log(`  ${result.endpoint}: ${status} | ${details}`);
+    logger.info(`  ${result.endpoint}: ${status} | ${details}`);
   });
   
   // Warnings et recommandations
-  console.log('\n⚠️  WARNINGS:');
+  logger.info('\n⚠️  WARNINGS:');
   const failedEndpoints = results.filter(r => !r.success);
   
   if (failedEndpoints.length === 0) {
-    console.log('  ✅ Tous les endpoints fonctionnent correctement');
+    logger.info('  ✅ Tous les endpoints fonctionnent correctement');
   } else {
     failedEndpoints.forEach(result => {
-      console.log(`  ❌ ${result.endpoint}: ${result.error || 'Erreur inconnue'}`);
+      logger.info(`  ❌ ${result.endpoint}: ${result.error || 'Erreur inconnue'}`);
     });
   }
   
   // Validation architecture
-  console.log('\n🏗️  VALIDATION ARCHITECTURE:');
+  logger.info('\n🏗️  VALIDATION ARCHITECTURE:');
   const routingOK = successCount > 0;
   const alertsOK = results.find(r => r.endpoint === '/api/analytics/alerts')?.success;
   const dataStructureOK = results.filter(r => r.success && r.dataShape === 'success_data').length > 0;
   
-  console.log(`  Routing intégration: ${routingOK ? '✅ RÉSOLU' : '❌ ÉCHEC'}`);
-  console.log(`  Alerts stabilité: ${alertsOK ? '✅ RÉSOLU' : '❌ ÉCHEC'}`);
-  console.log(`  Structure données: ${dataStructureOK ? '✅ CONFORME' : '❌ NON-CONFORME'}`);
+  logger.info(`  Routing intégration: ${routingOK ? '✅ RÉSOLU' : '❌ ÉCHEC'}`);
+  logger.info(`  Alerts stabilité: ${alertsOK ? '✅ RÉSOLU' : '❌ ÉCHEC'}`);
+  logger.info(`  Structure données: ${dataStructureOK ? '✅ CONFORME' : '❌ NON-CONFORME'}`);
   
   // Verdict final
-  console.log('\n' + '='.repeat(60));
+  logger.info('\n' + '='.repeat(60));
   if (successRate >= 90) {
-    console.log('🎉 PHASE 3.1.5 - ANALYTICS: ✅ VALIDÉ');
-    console.log('Dashboard Analytics 100% fonctionnel pour validation architect');
+    logger.info('🎉 PHASE 3.1.5 - ANALYTICS: ✅ VALIDÉ');
+    logger.info('Dashboard Analytics 100% fonctionnel pour validation architect');
   } else if (successRate >= 70) {
-    console.log('⚠️  PHASE 3.1.5 - ANALYTICS: 🟡 PARTIEL');
-    console.log('Corrections mineures nécessaires avant validation finale');
+    logger.info('⚠️  PHASE 3.1.5 - ANALYTICS: 🟡 PARTIEL');
+    logger.info('Corrections mineures nécessaires avant validation finale');
   } else {
-    console.log('🚨 PHASE 3.1.5 - ANALYTICS: ❌ ÉCHEC');
-    console.log('Corrections critiques requises');
+    logger.info('🚨 PHASE 3.1.5 - ANALYTICS: ❌ ÉCHEC');
+    logger.info('Corrections critiques requises');
   }
-  console.log('='.repeat(60));
+  logger.info('='.repeat(60));
 }
 
 // Exécution principale
 async function main() {
   try {
-    console.log('Attente démarrage serveur...');
+    logger.info('Attente démarrage serveur...');
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     const results = await runAllTests();
@@ -201,7 +202,7 @@ async function main() {
     process.exit(successRate >= 0.9 ? 0 : 1);
     
   } catch (error) {
-    console.error('❌ Erreur critique tests:', error);
+    logger.error('Erreur', '❌ Erreur critique tests:', error);
     process.exit(1);
   }
 }

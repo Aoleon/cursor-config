@@ -16,6 +16,7 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { 
   projects, 
   projectTasks, 
@@ -195,7 +196,7 @@ export class ProductionRepository extends BaseRepository<
     const normalizedId = this.normalizeId(projectId);
     
     if (!mondayId || mondayId.trim() === '') {
-      throw new Error('Monday ID cannot be empty');
+      throw new AppError('Monday ID cannot be empty', 500);
     }
 
     return this.update(normalizedId, { mondayItemId: mondayId } as Partial<InsertProject>, tx);
@@ -322,7 +323,7 @@ export class ProductionRepository extends BaseRepository<
           .returning();
 
         if (!result || result.length === 0) {
-          throw new Error('Failed to create project task');
+          throw new AppError('Failed to create project task', 500);
         }
 
         return result[0];
@@ -357,7 +358,7 @@ export class ProductionRepository extends BaseRepository<
           .returning();
 
         if (!result || result.length === 0) {
-          throw new Error(`Project task with ID ${normalizedId} not found`);
+          throw new AppError(`Project task with ID ${normalizedId} not found`, 500);
         }
 
         return result[0];
@@ -439,7 +440,7 @@ export class ProductionRepository extends BaseRepository<
           .returning();
 
         if (!result || result.length === 0) {
-          throw new Error('Failed to create project reserve');
+          throw new AppError('Failed to create project reserve', 500);
         }
 
         return result[0];
@@ -474,7 +475,7 @@ export class ProductionRepository extends BaseRepository<
           .returning();
 
         if (!result || result.length === 0) {
-          throw new Error(`Project reserve with ID ${normalizedId} not found`);
+          throw new AppError(`Project reserve with ID ${normalizedId} not found`, 500);
         }
 
         return result[0];
@@ -554,7 +555,7 @@ export class ProductionRepository extends BaseRepository<
           .returning();
 
         if (!result || result.length === 0) {
-          throw new Error('Failed to create project contact');
+          throw new AppError('Failed to create project contact', 500);
         }
 
         return result[0];
@@ -634,7 +635,7 @@ export class ProductionRepository extends BaseRepository<
           .returning();
 
         if (!result || result.length === 0) {
-          throw new Error('Failed to create project timeline');
+          throw new AppError('Failed to create project timeline', 500);
         }
 
         return result[0];
@@ -669,7 +670,7 @@ export class ProductionRepository extends BaseRepository<
           .returning();
 
         if (!result || result.length === 0) {
-          throw new Error(`Project timeline with ID ${normalizedId} not found`);
+          throw new AppError(`Project timeline with ID ${normalizedId} not found`, 500);
         }
 
         return result[0];
@@ -777,7 +778,7 @@ export class ProductionRepository extends BaseRepository<
           .returning();
 
         if (!result || result.length === 0) {
-          throw new Error('Failed to create project sub element');
+          throw new AppError('Failed to create project sub element', 500);
         }
 
         return result[0];
@@ -812,7 +813,7 @@ export class ProductionRepository extends BaseRepository<
           .returning();
 
         if (!result || result.length === 0) {
-          throw new Error(`Project sub element with ID ${normalizedId} not found`);
+          throw new AppError(`Project sub element with ID ${normalizedId} not found`, 500);
         }
 
         return result[0];
@@ -940,7 +941,7 @@ export class ProductionRepository extends BaseRepository<
       async () => {
         const conditions = this.buildWhereConditions(filters);
         if (conditions.length === 0) {
-          throw new Error('Cannot delete all projects without filters - safety check');
+          throw new AppError('Cannot delete all projects without filters - safety check', 500);
         }
 
         const result = await dbToUse

@@ -1,28 +1,36 @@
 import { DateIntelligenceRulesSeeder } from "../seeders/dateIntelligenceRulesSeeder";
+import { withErrorHandling } from './utils/error-handler';
+import { logger } from './utils/logger';
 
 // Script pour réinitialiser les règles avec les valeurs corrigées
 async function resetRules() {
-  console.log("🔄 Réinitialisation des règles métier...");
+  logger.info("🔄 Réinitialisation des règles métier...");
   
-  try {
+  return withErrorHandling(
+    async () => {
+
     await DateIntelligenceRulesSeeder.resetAllRules();
     
-    console.log("✅ Règles réinitialisées avec succès!");
+    logger.info("✅ Règles réinitialisées avec succès!");
     
     // Valider après reset
     const validation = await DateIntelligenceRulesSeeder.validateRulesConsistency();
     
     if (validation.isValid) {
-      console.log("✅ VALIDATION RÉUSSIE - Aucune erreur détectée");
+      logger.info("✅ VALIDATION RÉUSSIE - Aucune erreur détectée");
     } else {
-      console.log("❌ VALIDATION ÉCHOUÉE:", validation.issues);
+      logger.info("❌ VALIDATION ÉCHOUÉE:", validation.issues);
     }
     
     process.exit(0);
-  } catch (error) {
-    console.error("❌ Erreur lors du reset:", error);
-    process.exit(1);
-  }
+  
+    },
+    {
+      operation: 'resetRules',
+      service: 'reset-date-rules',
+      metadata: {}
+    }
+  );
 }
 
 resetRules();

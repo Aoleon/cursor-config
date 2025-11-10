@@ -16,6 +16,8 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import crypto from 'crypto';
 import { logger } from '../../utils/logger';
 import { getCacheService, TTL_CONFIG } from '../CacheService';
@@ -164,7 +166,9 @@ export class MondayIntegrationService {
     
     return executeMonday(
       async () => {
-        try {
+        return withErrorHandling(
+    async () => {
+
           logger.info('Executing Monday.com GraphQL query', {
             service: 'MondayIntegrationService',
             metadata: {
@@ -191,21 +195,18 @@ export class MondayIntegrationService {
                 errors: response.data.errors
               }
             });
-            throw new Error(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors)}`);
+            throw new AppError(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors, 500)}`);
           }
 
           return response.data.data as T;
-        } catch (error: any) {
-          logger.error('Monday.com query error', {
-            service: 'MondayIntegrationService',
-            metadata: {
-              operation: 'executeGraphQL',
-              error: error.message,
-              status: error.response?.status
-            }
-          });
-          throw error;
-        }
+        
+    },
+    {
+      operation: 'MondayService',
+      service: 'MondayIntegrationService',
+      metadata: {}
+    }
+  );
       },
       'GraphQL Query'
     );
@@ -513,7 +514,7 @@ export class MondayIntegrationService {
     const boardData = result.boards?.[0];
 
     if (!boardData) {
-      throw new Error(`Board ${boardId} not found`);
+      throw new AppError(`Board ${boardId} not found`, 500);
     }
 
     const items = await this.getBoardItemsPaginated(boardId);
@@ -551,7 +552,9 @@ export class MondayIntegrationService {
    * Test Monday.com API connection
    */
   async testConnection(): Promise<boolean> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const query = `
         query {
           me {
@@ -574,16 +577,14 @@ export class MondayIntegrationService {
       });
 
       return true;
-    } catch (error) {
-      logger.error('Monday.com connection test failed', {
-        service: 'MondayIntegrationService',
-        metadata: {
-          operation: 'testConnection',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      });
-      return false;
+    
+    },
+    {
+      operation: 'MondayService',
+      service: 'MondayIntegrationService',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -623,7 +624,7 @@ export class MondayIntegrationService {
     const item = result.items?.[0];
 
     if (!item) {
-      throw new Error(`Item ${itemId} not found on Monday.com`);
+      throw new AppError(`Item ${itemId} not found on Monday.com`, 500);
     }
 
     logger.info('Monday.com item retrieved', {
@@ -642,7 +643,9 @@ export class MondayIntegrationService {
    * Extract typed value from Monday column value
    */
   extractColumnValue(columnValue: MondayColumnValue): any {
-    try {
+    return withErrorHandling(
+    async () => {
+
       switch (columnValue.type) {
         case 'status':
           if (columnValue.label) return columnValue.label;
@@ -863,17 +866,14 @@ export class MondayIntegrationService {
           itemId: itemIdentifier
         }
       });
-    } catch (error) {
-      logger.error('Webhook processing error', {
-        service: 'MondayIntegrationService',
-        metadata: {
-          operation: 'handleWebhook',
-          eventId,
-          boardId,
-          itemId: itemIdentifier,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'MondayService',
+service: 'MondayIntegrationService',;
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -896,7 +896,9 @@ export class MondayIntegrationService {
       }
     });
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const boards = await this.getBoardsToAnalyze(boardIds);
       
       const structures = await Promise.all(
@@ -921,14 +923,14 @@ export class MondayIntegrationService {
 
       return result;
 
-    } catch (error) {
-      logger.error('Board analysis error', {
-        service: 'MondayIntegrationService',
-        metadata: {
-          operation: 'analyzeBoards',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'MondayService',
+      service: 'MondayIntegrationService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -962,7 +964,9 @@ export class MondayIntegrationService {
       }
     });
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const columns = await this.getBoardColumns(boardId);
 
       const enrichedColumns: BoardColumnMetadata[] = columns.map(col => ({
@@ -994,14 +998,14 @@ export class MondayIntegrationService {
 
       return structure;
 
-    } catch (error) {
-      logger.error('Board structure analysis error', {
-        service: 'MondayIntegrationService',
-        metadata: {
-          operation: 'getBoardStructure',
-          boardId,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'MondayService',
+      service: 'MondayIntegrationService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }

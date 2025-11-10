@@ -12,6 +12,7 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { aos, type Ao, type InsertAo } from '@shared/schema';
 import type { DrizzleTransaction, PaginationOptions, PaginatedResult, SearchFilters, SortOptions } from '../types';
 import { eq, and, desc, ilike, or, count as drizzleCount, isNull, isNotNull } from 'drizzle-orm';
@@ -78,7 +79,7 @@ export class AoRepository extends BaseRepository<
    */
   async findByMondayId(mondayId: string, tx?: DrizzleTransaction): Promise<Ao | undefined> {
     if (!mondayId || mondayId.trim() === '') {
-      throw new Error('Monday ID cannot be empty');
+      throw new AppError('Monday ID cannot be empty', 500);
     }
 
     const dbToUse = this.getDb(tx);
@@ -234,7 +235,7 @@ export class AoRepository extends BaseRepository<
       async () => {
         const conditions = this.buildWhereConditions(filters);
         if (conditions.length === 0) {
-          throw new Error('deleteMany requires at least one filter condition for safety');
+          throw new AppError('deleteMany requires at least one filter condition for safety', 500);
         }
 
         const result = await dbToUse

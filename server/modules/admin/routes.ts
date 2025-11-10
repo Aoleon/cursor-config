@@ -9,6 +9,7 @@
  */
 
 import { Router } from 'express';
+import { withErrorHandling } from './utils/error-handler';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler, sendSuccess, createError } from '../../middleware/errorHandler';
@@ -66,7 +67,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
   router.get('/api/admin/rules/statistics',
     isAuthenticated,
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         logger.info('[Admin] Récupération statistiques règles métier', {
           metadata: {
             route: '/api/admin/rules/statistics',
@@ -85,16 +88,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
         });
         
         sendSuccess(res, stats);
-      } catch (error: any) {
-        logger.error('[Admin] Erreur statistiques règles', {
-          metadata: { 
-            error: error.message, 
-            stack: error.stack,
-            userId: req.user?.id
-          }
-        });
-        throw createError.database("Erreur lors de la récupération des statistiques");
-      }
+      
+    },
+    {
+      operation: 'Management',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -112,7 +113,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     isAuthenticated,
     rateLimits.general,
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         logger.info('[Admin] Seeding forcé des règles par défaut', {
           metadata: {
             route: '/api/admin/rules/seed',
@@ -143,16 +146,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
           statistics: stats
         }, 200);
         
-      } catch (error: any) {
-        logger.error('[Admin] Erreur seeding règles', {
-          metadata: { 
-            error: error.message, 
-            stack: error.stack,
-            userId: req.user?.id
-          }
-        });
-        throw createError.database("Erreur lors du seeding des règles par défaut");
-      }
+      
+    },
+    {
+      operation: 'Management',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -173,7 +174,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     rateLimits.auth, // Plus restrictif pour opération destructive
     validateBody(resetConfirmationSchema),
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const userId = req.user?.id || 'unknown';
         
         logger.warn('[Admin] RESET COMPLET des règles initié', {
@@ -210,16 +213,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
           resetAt: new Date()
         }, 200);
         
-      } catch (error: any) {
-        logger.error('[Admin] Erreur reset règles', {
-          metadata: { 
-            error: error.message, 
-            stack: error.stack,
-            userId: req.user?.id
-          }
-        });
-        throw createError.database("Erreur lors du reset des règles");
-      }
+      
+    },
+    {
+      operation: 'Management',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -237,7 +238,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
   router.get('/api/admin/rules/validate',
     isAuthenticated,
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         logger.info('[Admin] Validation cohérence règles métier', {
           metadata: {
             route: '/api/admin/rules/validate',
@@ -275,16 +278,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
         
         sendSuccess(res, response, statusCode);
         
-      } catch (error: any) {
-        logger.error('[Admin] Erreur validation règles', {
-          metadata: { 
-            error: error.message, 
-            stack: error.stack,
-            userId: req.user?.id
-          }
-        });
-        throw createError.database("Erreur lors de la validation des règles");
-      }
+      
+    },
+    {
+      operation: 'Management',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -307,7 +308,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
   router.get('/api/admin/intelligence/health',
     isAuthenticated,
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         logger.info('[Admin] Vérification santé système intelligence temporelle', {
           metadata: {
             route: '/api/admin/intelligence/health',
@@ -391,16 +394,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
         
         sendSuccess(res, healthReport, 200);
         
-      } catch (error: any) {
-        logger.error('[Admin] Erreur vérification santé', {
-          metadata: { 
-            error: error.message, 
-            stack: error.stack,
-            userId: req.user?.id
-          }
-        });
-        throw createError.database("Erreur lors de la vérification de santé du système");
-      }
+      
+    },
+    {
+      operation: 'Management',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -418,7 +419,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
   router.get('/api/admin/intelligence/test-integration',
     isAuthenticated,
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         logger.info('[Admin] Démarrage test intégration intelligence temporelle', {
           metadata: {
             route: '/api/admin/intelligence/test-integration',
@@ -457,16 +460,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
             "Test d'intégration partiel - Problèmes détectés"
         });
         
-      } catch (error: any) {
-        logger.error('[Admin] Erreur test intégration', {
-          metadata: { 
-            error: error.message, 
-            stack: error.stack,
-            userId: req.user?.id
-          }
-        });
-        throw createError.database("Erreur lors du test d'intégration");
-      }
+      
+    },
+    {
+      operation: 'Management',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -493,7 +494,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     isAuthenticated,
     validateQuery(rulesFilterSchema),
     asyncHandler(async (req, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { phase, projectType, isActive, priority } = req.query;
         
         logger.info('Récupération règles avec filtres', {
@@ -529,12 +532,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
         };
         
         sendSuccess(res, result);
-      } catch (error: any) {
-        logger.error('Erreur récupération règles', {
-          metadata: { error: error.message, stack: error.stack }
-        });
-        throw createError.database("Erreur lors de la récupération des règles");
-      }
+      
+    },
+    {
+      operation: 'Management',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -554,7 +559,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     rateLimits.creation,
     validateBody(insertDateIntelligenceRuleSchema),
     asyncHandler(async (req: any, res) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         logger.info('Création nouvelle règle', {
           metadata: { name: req.body.name }
         });
@@ -573,16 +580,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
         });
         
         sendSuccess(res, newRule, 201);
-      } catch (error: any) {
-        logger.error('Erreur création règle', {
-          metadata: { error: error.message, stack: error.stack }
-        });
-        
-        // Gestion d'erreurs spécialisées
-        if (error.message?.includes('nom déjà utilisé')) {
-          throw createError.conflict("Une règle avec ce nom existe déjà", {
-            errorType: 'DUPLICATE_RULE_NAME'
-          });
+      
+    },
+    {
+      operation: 'Management',
+      service: 'routes',
+      metadata: {}
+    }
+  ););
         }
         
         throw createError.database("Erreur lors de la création de la règle");
@@ -608,7 +613,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
   router.get('/api/admin/sync-config',
     isAuthenticated,
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         logger.info('[Admin] Récupération configuration synchronisation OneDrive', {
           metadata: {
             route: '/api/admin/sync-config',
@@ -639,16 +646,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
         });
         
         sendSuccess(res, config);
-      } catch (error: any) {
-        logger.error('[Admin] Erreur récupération configuration sync', {
-          metadata: { 
-            error: error.message, 
-            stack: error.stack,
-            userId: req.user?.id
-          }
-        });
-        throw createError.database("Erreur lors de la récupération de la configuration");
-      }
+      
+    },
+    {
+      operation: 'Management',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -668,7 +673,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     isAuthenticated,
     rateLimits.general,
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { isEnabled, cronExpression } = req.body;
         
         logger.info('[Admin] Mise à jour configuration synchronisation OneDrive', {
@@ -721,16 +728,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
           schedulerStatus: syncScheduler?.getStatus() || { isRunning: false, isScheduled: false }
         }, 200);
         
-      } catch (error: any) {
-        logger.error('[Admin] Erreur mise à jour configuration sync', {
-          metadata: { 
-            error: error.message, 
-            stack: error.stack,
-            userId: req.user?.id
-          }
-        });
-        throw createError.database("Erreur lors de la mise à jour de la configuration");
-      }
+      
+    },
+    {
+      operation: 'Management',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 

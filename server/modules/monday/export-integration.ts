@@ -1,4 +1,5 @@
 import { EventBus } from '../../eventBus';
+import { withErrorHandling } from './utils/error-handler';
 import { MondayExportService } from '../../services/MondayExportService';
 import { logger } from '../../utils/logger';
 
@@ -35,7 +36,9 @@ export function setupMondayExport(
       return;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('[MondayExportIntegration] Auto-export projet démarré', {
         service: 'MondayExportIntegration',
         metadata: {
@@ -64,28 +67,14 @@ export function setupMondayExport(
           mondayId
         }
       });
-    } catch (error: any) {
-      logger.error('[MondayExportIntegration] Échec auto-export projet', {
-        service: 'MondayExportIntegration',
-        metadata: {
-          operation: 'autoExportProject',
-          projectId,
-          error: error.message,
-          stack: error.stack
-        }
-      });
-
-      // Émettre événement d'échec
-      eventBus.publish({
-        type: 'monday:export:failed',
-        entity: 'project',
-        entityId: projectId,
-        severity: 'error',
-        timestamp: new Date().toISOString(),
-        payload: { 
-          error: error.message,
-          stack: error.stack
-        }
+    
+    },
+    {
+      operation: 'setupMondayExport',
+      service: 'export-integration',
+      metadata: {}
+    }
+  );
       });
     }
   });
@@ -105,7 +94,9 @@ export function setupMondayExport(
       return;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('[MondayExportIntegration] Auto-export AO démarré', {
         service: 'MondayExportIntegration',
         metadata: {
@@ -134,28 +125,14 @@ export function setupMondayExport(
           mondayId
         }
       });
-    } catch (error: any) {
-      logger.error('[MondayExportIntegration] Échec auto-export AO', {
-        service: 'MondayExportIntegration',
-        metadata: {
-          operation: 'autoExportAO',
-          aoId,
-          error: error.message,
-          stack: error.stack
-        }
-      });
-
-      // Émettre événement d'échec
-      eventBus.publish({
-        type: 'monday:export:failed',
-        entity: 'ao',
-        entityId: aoId,
-        severity: 'error',
-        timestamp: new Date().toISOString(),
-        payload: { 
-          error: error.message,
-          stack: error.stack
-        }
+    
+    },
+    {
+      operation: 'setupMondayExport',
+      service: 'export-integration',
+      metadata: {}
+    }
+  );
       });
     }
   });

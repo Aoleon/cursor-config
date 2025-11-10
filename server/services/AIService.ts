@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import OpenAI from "openai";
 import type { IStorage } from "../storage-poc";
 import { db } from "../db";
@@ -443,7 +445,9 @@ export class AIService {
       request.complexity || 'simple'
     );
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // === ÉTAPE 1: VALIDATION ET NETTOYAGE ===
       this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'validation' });
       
@@ -604,15 +608,14 @@ export class AIService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur génération SQL', {
-        metadata: {
-          service: 'AIService',
-          operation: 'generateSQL',
-          traceId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
       
       // Finaliser le tracing en erreur
@@ -895,7 +898,9 @@ export class AIService {
       : this.gptBreaker;
 
     // Tentative avec le modèle principal avec retry et circuit breaker
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Tentative avec modèle principal et retry robuste', { 
         metadata: {
           service: 'AIService',
@@ -916,7 +921,7 @@ export class AIService {
             } else if (modelSelection.selectedModel === "gpt_5") {
               return await this.executeGPT(request, requestId);
             }
-            throw new Error(`Modèle non supporté: ${modelSelection.selectedModel}`);
+            throw new AppError(`Modèle non supporté: ${modelSelection.selectedModel}`, 500);
           },
           {
             maxRetries: modelConfig.maxRetries,
@@ -960,20 +965,14 @@ export class AIService {
       
       return result;
       
-    } catch (error) {
-      // Extraire les stats de retry si disponibles
-      retryStats = (error as any)?.retryStats;
-      
-      logger.warn('Modèle principal échoué après retry, tentative fallback', { 
-        metadata: {
-          service: 'AIService',
-          operation: 'executeModelQuery',
-          model: modelSelection.selectedModel,
-          error: error instanceof Error ? error.message : String(error),
-          timeout: error instanceof Error && error.message.includes('Timeout'),
-          circuitBreakerOpen: (error as any)?.circuitBreakerOpen,
-          retryStats: retryStats
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
       lastError = error;
     }
@@ -1002,7 +1001,9 @@ export class AIService {
       
       fallbackAttempted = true;
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         const result = await fallbackCircuitBreaker.execute(async () => {
           return await withRetry(
             async () => {
@@ -1011,7 +1012,7 @@ export class AIService {
               } else if (fallbackModel === "gpt_5" && this.openai) {
                 return await this.executeGPT(request, requestId);
               }
-              throw new Error(`Modèle fallback non disponible: ${fallbackModel}`);
+              throw new AppError(`Modèle fallback non disponible: ${fallbackModel}`, 500);
             },
             {
               maxRetries: fallbackConfig.maxRetries,
@@ -1053,20 +1054,14 @@ export class AIService {
         
         return result;
         
-      } catch (fallbackError) {
-        const fallbackRetryStats = (fallbackError as any)?.retryStats;
-        
-        logger.error('Tous les modèles ont échoué après retry', { 
-          metadata: {
-            service: 'AIService',
-            operation: 'executeModelQuery',
-            fallbackModel,
-            error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-            stack: fallbackError instanceof Error ? fallbackError.stack : undefined,
-            circuitBreakerOpen: (fallbackError as any)?.circuitBreakerOpen,
-            retryStats: fallbackRetryStats,
-            totalTime: Date.now() - startTime
-          }
+      
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
         });
         lastError = fallbackError;
       }
@@ -1192,7 +1187,7 @@ export class AIService {
    */
   private async executeGPT(request: AiQueryRequest, requestId: string): Promise<AiQueryResponse> {
     if (!this.openai) {
-      throw new Error("OpenAI client non initialisé - clé API manquante");
+      throw new AppError("OpenAI client non initialisé - clé API manquante", 500);
     }
 
     const startTime = Date.now();
@@ -1265,7 +1260,9 @@ export class AIService {
     }
     
     // Fallback 2: Essayer la base de données
-    try {
+    return withErrorHandling(
+    async () => {
+
       const cached = await db
         .select()
         .from(aiQueryCache)
@@ -1305,13 +1302,14 @@ export class AIService {
       }
 
       return null;
-    } catch (error) {
-      logger.warn('Erreur cache DB, fallback in-memory', {
-        metadata: {
-          service: 'AIService',
-          operation: 'getCachedResponse',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
       
       // Fallback 3: Si DB échoue, vérifier encore le cache in-memory même expiré comme derniere chance
@@ -1349,7 +1347,9 @@ export class AIService {
     }
     
     // Tentative de mise en cache DB (peut échouer gracieusement)
-    try {
+    return withErrorHandling(
+    async () => {
+
       const cacheEntry: InsertAiQueryCache = {
         queryHash,
         query: request.query,
@@ -1381,13 +1381,14 @@ export class AIService {
         }
       });
 
-    } catch (error) {
-      logger.warn('Erreur cache DB, utilisation memory uniquement', {
-        metadata: {
-          service: 'AIService',
-          operation: 'cacheResponse',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
       // Le cache in-memory est déjà sauvé, donc pas d'impact sur l'utilisateur
     }
@@ -1446,7 +1447,9 @@ export class AIService {
     cacheStatus: "hit" | "miss" | "expired" | "invalid",
     errorType?: string
   ): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const responseTime = Date.now() - startTime;
       const costEstimate = this.calculateCostEstimate(modelUsed as any, tokensUsed);
 
@@ -1482,14 +1485,14 @@ export class AIService {
 
       await db.insert(aiQueryLogs).values(queryLog);
 
-    } catch (error) {
-      logger.error('Erreur logging métriques', {
-        metadata: {
-          service: 'AIService',
-          operation: 'logMetrics',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -2108,7 +2111,9 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     entityId: string,
     requestType: 'full' | 'summary' | 'specific' = 'summary'
   ): Promise<AIContextualData | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Configuration par défaut pour la génération de contexte
       const config: ContextGenerationConfig = {
         entityType,
@@ -2186,16 +2191,14 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         return null;
       }
 
-    } catch (error) {
-      logger.error('Erreur génération contexte enrichi', {
-        metadata: {
-          service: 'AIService',
-          operation: 'buildEnrichedContext',
-          entityType,
-          entityId,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
       return null;
     }
@@ -2259,7 +2262,9 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     }
     
     // STRATÉGIE 2: Tenter parsing JSON (mode standard)
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Chercher le premier { et dernier } valides
       const firstBrace = cleanedResponse.indexOf('{');
       const lastBrace = cleanedResponse.lastIndexOf('}');
@@ -2279,13 +2284,14 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         confidence: Math.max(0, Math.min(1, parsed.confidence || 0.5)),
         warnings: Array.isArray(parsed.warnings) ? parsed.warnings : []
       };
-    } catch (error) {
-      logger.warn('Erreur parsing réponse IA - tentative fallback final', {
-        metadata: {
-          service: 'AIService',
-          operation: 'parseAIResponse',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
       
       // STRATÉGIE 3: Fallback - chercher du SQL n'importe où dans la réponse
@@ -2388,7 +2394,9 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
    * Récupère les statistiques d'usage globales
    */
   async getUsageStats(timeRangeDays: number = 30): Promise<AiUsageStats> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const since = new Date(Date.now() - timeRangeDays * 24 * 60 * 60 * 1000);
 
       const stats = await db
@@ -2429,16 +2437,16 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur récupération stats', {
-        metadata: {
-          service: 'AIService',
-          operation: 'getUsageStats',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
-      throw new Error("Impossible de récupérer les statistiques d'usage");
+      throw new AppError("Impossible de récupérer les statistiques d'usage", 500);
     }
   }
 
@@ -2446,7 +2454,9 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
    * Nettoie le cache expiré (à appeler périodiquement)
    */
   async cleanExpiredCache(): Promise<number> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const result = await db
         .delete(aiQueryCache)
         .where(sql`expires_at < NOW()`);
@@ -2459,14 +2469,14 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         }
       });
       return result.rowCount || 0;
-    } catch (error) {
-      logger.error('Erreur nettoyage cache', {
-        metadata: {
-          service: 'AIService',
-          operation: 'cleanExpiredCache',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
       return 0;
     }
@@ -2489,72 +2499,80 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     };
 
     // Test Claude
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.anthropic.messages.create({
         model: DEFAULT_CLAUDE_MODEL,
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Test' }]
       });
       health.claude = true;
-    } catch (error) {
-      logger.warn('Claude health check failed', {
-        metadata: {
-          service: 'AIService',
-          operation: 'healthCheck',
-          check: 'claude',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
     }
 
     // Test GPT
     if (this.openai) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         await this.openai.chat.completions.create({
           model: DEFAULT_GPT_MODEL,
           messages: [{ role: 'user', content: 'Test' }],
           max_completion_tokens: 10
         });
         health.gpt = true;
-      } catch (error) {
-        logger.warn('GPT health check failed', {
-          metadata: {
-            service: 'AIService',
-            operation: 'healthCheck',
-            check: 'gpt',
-            error: error instanceof Error ? error.message : String(error)
-          }
+      
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
         });
       }
     }
 
     // Test base de données
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.select().from(sql`information_schema.tables`).limit(1);
       health.database = true;
-    } catch (error) {
-      logger.warn('Database health check failed', {
-        metadata: {
-          service: 'AIService',
-          operation: 'healthCheck',
-          check: 'database',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
     }
 
     // Test cache (utiliser une requête basique pour éviter les erreurs de schéma)
-    try {
+    return withErrorHandling(
+    async () => {
+
       await db.select().from(sql`information_schema.tables WHERE table_name LIKE 'ai_%'`).limit(1);
       health.cache = true;
-    } catch (error) {
-      logger.warn('Cache health check failed', {
-        metadata: {
-          service: 'AIService',
-          operation: 'healthCheck',
-          check: 'cache',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'token',
+      service: 'AIService',
+      metadata: {}
+    }
+  );
       });
     }
 

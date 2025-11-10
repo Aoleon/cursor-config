@@ -10,6 +10,7 @@
  */
 
 import { Router } from 'express';
+import { withErrorHandling } from './utils/error-handler';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler } from '../../middleware/errorHandler';
@@ -231,7 +232,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         }
       }
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         const ao = await storage.createAo(aoData);
         
         logger.info('[Commercial] AO créé', {
@@ -252,328 +255,16 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         });
         
         sendSuccess(res, ao, 201);
-      } catch (error: any) {
-        if (error.code === 'DUPLICATE_REFERENCE') {
-          throw createError.conflict(error.message, {
-            field: error.field,
-            value: error.value,
-            type: 'DUPLICATE_REFERENCE'
-          });
+      
+    },
+    {
+      operation: 'AOs',
+      service: 'routes',
+      metadata: {}
+    }
+  ); n'existe pas encore. Vérifiez le chemin: OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}`);
         }
-        
-        if (error.code === 'DUPLICATE_VALUE') {
-          throw createError.conflict(error.message, {
-            type: 'DUPLICATE_VALUE'
-          });
-        }
-        
-        throw error;
-      }
-    })
-  );
-
-  // PUT /api/aos/:id - Mettre à jour AO (full update)
-  router.put('/api/aos/:id',
-    isAuthenticated,
-    rateLimits.creation,
-    validateParams(commonParamSchemas.id),
-    validateBody(insertAoSchema.partial()),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Mise à jour AO (PUT)', {
-        metadata: {
-          route: '/api/aos/:id',
-          method: 'PUT',
-          aoId: req.params.id,
-          userId: req.user?.id
-        }
-      });
-      
-      const ao = await storage.updateAo(req.params.id, req.body);
-      
-      eventBus.emit('ao:updated', {
-        aoId: ao.id,
-        userId: req.user?.id
-      });
-      
-      sendSuccess(res, ao);
-    })
-  );
-
-  // PATCH /api/aos/:id - Mettre à jour AO (partial update)
-  router.patch('/api/aos/:id',
-    isAuthenticated,
-    rateLimits.creation,
-    validateParams(commonParamSchemas.id),
-    validateBody(insertAoSchema.partial()),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Mise à jour AO (PATCH)', {
-        metadata: {
-          route: '/api/aos/:id',
-          method: 'PATCH',
-          aoId: req.params.id,
-          userId: req.user?.id
-        }
-      });
-      
-      const ao = await storage.updateAo(req.params.id, req.body);
-      
-      eventBus.emit('ao:updated', {
-        aoId: ao.id,
-        userId: req.user?.id
-      });
-      
-      sendSuccess(res, ao);
-    })
-  );
-
-  // DELETE /api/aos/:id - Supprimer AO
-  router.delete('/api/aos/:id',
-    isAuthenticated,
-    validateParams(commonParamSchemas.id),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Suppression AO', {
-        metadata: {
-          route: '/api/aos/:id',
-          method: 'DELETE',
-          aoId: req.params.id,
-          userId: req.user?.id
-        }
-      });
-      
-      await storage.deleteAo(req.params.id);
-      
-      eventBus.emit('ao:deleted', {
-        aoId: req.params.id,
-        userId: req.user?.id
-      });
-      
-      res.status(204).send();
-    })
-  );
-
-  // ========================================
-  // AO LOTS ROUTES - Gestion des lots d'AO
-  // ========================================
-
-  // GET /api/aos/:aoId/lots - Récupérer les lots d'un AO
-  router.get('/api/aos/:aoId/lots',
-    isAuthenticated,
-    validateParams(commonParamSchemas.aoId),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Récupération lots AO', {
-        metadata: {
-          route: '/api/aos/:aoId/lots',
-          method: 'GET',
-          aoId: req.params.aoId,
-          userId: req.user?.id
-        }
-      });
-      
-      const lots = await storage.getAoLots(req.params.aoId);
-      
-      logger.info('[Commercial] Lots AO récupérés', {
-        metadata: {
-          aoId: req.params.aoId,
-          count: lots.length
-        }
-      });
-      
-      res.json(lots);
-    })
-  );
-
-  // POST /api/aos/:aoId/lots - Créer un lot pour un AO
-  router.post('/api/aos/:aoId/lots',
-    isAuthenticated,
-    validateParams(commonParamSchemas.aoId),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Création lot AO', {
-        metadata: {
-          route: '/api/aos/:aoId/lots',
-          method: 'POST',
-          aoId: req.params.aoId,
-          userId: req.user?.id
-        }
-      });
-      
-      const lot = await storage.createAoLot({
-        ...req.body,
-        aoId: req.params.aoId,
-      });
-      
-      logger.info('[Commercial] Lot AO créé', {
-        metadata: {
-          aoId: req.params.aoId,
-          lotId: lot.id,
-          numero: lot.numero
-        }
-      });
-      
-      eventBus.emit('ao:lot_created', {
-        aoId: req.params.aoId,
-        lotId: lot.id,
-        userId: req.user?.id
-      });
-      
-      res.status(201).json(lot);
-    })
-  );
-
-  // PUT /api/aos/:aoId/lots/:lotId - Mettre à jour un lot
-  router.put('/api/aos/:aoId/lots/:lotId',
-    isAuthenticated,
-    validateParams(aoLotParamsSchema),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Mise à jour lot AO', {
-        metadata: {
-          route: '/api/aos/:aoId/lots/:lotId',
-          method: 'PUT',
-          lotId: req.params.lotId,
-          userId: req.user?.id
-        }
-      });
-      
-      const lot = await storage.updateAoLot(req.params.lotId, req.body);
-      
-      logger.info('[Commercial] Lot AO mis à jour', {
-        metadata: {
-          lotId: req.params.lotId
-        }
-      });
-      
-      eventBus.emit('ao:lot_updated', {
-        lotId: req.params.lotId,
-        userId: req.user?.id
-      });
-      
-      res.json(lot);
-    })
-  );
-
-  // DELETE /api/aos/:aoId/lots/:lotId - Supprimer un lot
-  router.delete('/api/aos/:aoId/lots/:lotId',
-    isAuthenticated,
-    validateParams(aoLotParamsSchema),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Suppression lot AO', {
-        metadata: {
-          route: '/api/aos/:aoId/lots/:lotId',
-          method: 'DELETE',
-          lotId: req.params.lotId,
-          userId: req.user?.id
-        }
-      });
-      
-      await storage.deleteAoLot(req.params.lotId);
-      
-      logger.info('[Commercial] Lot AO supprimé', {
-        metadata: {
-          lotId: req.params.lotId
-        }
-      });
-      
-      eventBus.emit('ao:lot_deleted', {
-        lotId: req.params.lotId,
-        userId: req.user?.id
-      });
-      
-      res.status(204).send();
-    })
-  );
-
-  // ========================================
-  // AO DOCUMENTS ROUTES - Gestion des documents d'AO
-  // ========================================
-
-  // GET /api/aos/:aoId/documents - Lister les documents d'un AO depuis OneDrive
-  router.get('/api/aos/:aoId/documents',
-    isAuthenticated,
-    validateParams(commonParamSchemas.aoId),
-    asyncHandler(async (req: any, res: Response) => {
-      const aoId = req.params.aoId;
-      
-      logger.info('[Commercial] Récupération documents AO depuis OneDrive', {
-        metadata: {
-          route: '/api/aos/:aoId/documents',
-          method: 'GET',
-          aoId,
-          userId: req.user?.id
-        }
-      });
-      
-      const ao = await storage.getAo(aoId);
-      if (!ao) {
-        throw new NotFoundError("AO introuvable");
-      }
-      
-      // Structure de réponse par catégories de documents
-      const documents = {
-        "01-DCE-Cotes-Photos": [],
-        "02-Etudes-fournisseurs": [],
-        "03-Devis-pieces-administratives": []
-      };
-      
-      try {
-        // Import OneDriveService dynamiquement
-        const { oneDriveService } = await import('../../services/OneDriveService');
-        
-        // Chemin OneDrive basé sur la structure JLM : OneDrive-JLM/01 - ETUDES AO/AO-{reference}/
-        const basePath = `OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}`;
-        
-        // Liste les fichiers du dossier AO sur OneDrive
-        const oneDriveItems = await oneDriveService.listItems(basePath);
-        
-        // Organiser les fichiers par catégorie
-        for (const item of oneDriveItems) {
-          if (item.isFolder) {
-            // Si c'est un dossier, lister son contenu
-            const folderPath = `${basePath}/${item.name}`;
-            const folderItems = await oneDriveService.listItems(folderPath);
-            
-            // Mapper les fichiers vers le format attendu par le frontend
-            const mappedFiles = folderItems
-              .filter((file: any) => !file.isFolder)
-              .map((file: any) => ({
-                id: file.id,
-                fileName: file.name,
-                fileSize: file.size || 0,
-                uploadedAt: file.lastModifiedDateTime || file.createdDateTime,
-                folderName: item.name,
-                oneDriveId: file.id,
-                oneDrivePath: `${folderPath}/${file.name}`,
-                webUrl: file.webUrl
-              }));
-            
-            // Associer aux bonnes catégories
-            if (item.name.includes('DCE') || item.name.includes('Photos') || item.name.includes('01')) {
-              documents["01-DCE-Cotes-Photos"].push(...mappedFiles);
-            } else if (item.name.includes('Etudes') || item.name.includes('fournisseurs') || item.name.includes('02')) {
-              documents["02-Etudes-fournisseurs"].push(...mappedFiles);
-            } else if (item.name.includes('Devis') || item.name.includes('administratives') || item.name.includes('03')) {
-              documents["03-Devis-pieces-administratives"].push(...mappedFiles);
-            }
-          }
-        }
-        
-        logger.info('[Commercial] Documents OneDrive récupérés', {
-          metadata: { 
-            aoId, 
-            reference: ao.reference,
-            totalDocs: Object.values(documents).reduce((acc: number, arr: any) => acc + arr.length, 0)
-          }
-        });
-        
-      } catch (error: any) {
-        // Si OneDrive échoue, logger l'erreur et informer l'utilisateur via un message d'erreur explicite
-        logger.error('[Commercial] Erreur récupération OneDrive', error, {
-          metadata: { aoId, reference: ao.reference, error: error.message, basePath: `OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}` }
-        });
-        
-        // Retourner une erreur 503 au lieu d'un objet vide pour que le frontend puisse afficher un message approprié
-        if (error.message?.includes('404') || error.message?.includes('not found')) {
-          throw new NotFoundError(`Le dossier OneDrive pour l'AO ${ao.reference} n'existe pas encore. Vérifiez le chemin: OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}`);
-        }
-        throw new Error(`Impossible d'accéder à OneDrive pour l'AO ${ao.reference}. Détails: ${error.message}`);
+        throw new AppError(`Impossible d'accéder à OneDrive pour l'AO ${ao.reference}. Détails: ${error.message}`, 500);
       }
       
       res.json(documents);
@@ -608,7 +299,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         throw new NotFoundError("AO introuvable");
       }
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Import OneDriveService dynamiquement
         const { oneDriveService } = await import('../../services/OneDriveService');
         
@@ -630,12 +323,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           message: "OneDrive upload endpoint ready", 
           security: "File and folder names have been validated" 
         });
-      } catch (error: any) {
-        logger.error('[Commercial] Erreur préparation upload OneDrive', error, {
-          metadata: { aoId, folderName, fileName }
-        });
-        throw error;
-      }
+      
+    },
+    {
+      operation: 'AOs',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -674,7 +369,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         throw new NotFoundError("AO introuvable");
       }
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Import OneDriveService dynamiquement
         const { oneDriveService } = await import('../../services/OneDriveService');
         
@@ -731,12 +428,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
             uploadedAt: document.uploadedAt
           }
         });
-      } catch (error: any) {
-        logger.error('[Commercial] Erreur upload OneDrive', error, {
-          metadata: { aoId, fileName: file.originalname, folderName }
-        });
-        throw error;
-      }
+      
+    },
+    {
+      operation: 'AOs',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -826,7 +525,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         throw new NotFoundError("AO introuvable");
       }
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Import singleton DocumentSyncService
         const { getDocumentSyncService } = await import('../../services/DocumentSyncService');
         const syncService = getDocumentSyncService();
@@ -874,12 +575,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           documentsDeleted: result.documentsDeleted,
           errors: result.errors
         });
-      } catch (error: any) {
-        logger.error('[Commercial] Erreur synchronisation OneDrive', error, {
-          metadata: { aoId, aoReference: ao.reference }
-        });
-        throw error;
-      }
+      
+    },
+    {
+      operation: 'AOs',
+      service: 'routes',
+      metadata: {}
+    }
+  );
     })
   );
 
@@ -892,7 +595,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     isAuthenticated,
     validateParams(z.object({ aoId: z.string().uuid("ID AO invalide") })),
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { aoId } = req.params;
         
         logger.info('[Commercial] Récupération contacts AO', {
@@ -906,13 +611,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         
         const contacts = await storage.getAoContacts(aoId);
         sendSuccess(res, contacts);
-      } catch (error) {
-        logger.error('[Commercial] Erreur getAoContacts', {
-          metadata: {
-            aoId: req.params.aoId,
-            error: error instanceof Error ? error.message : String(error),
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'AOs',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la récupération des contacts AO");
       }
@@ -925,7 +631,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     rateLimits.creation,
     validateBody(insertAoContactsSchema),
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         logger.info('[Commercial] Création liaison AO-Contact', {
           metadata: {
             route: '/api/ao-contacts',
@@ -946,14 +654,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         });
         
         sendSuccess(res, newContact, "Liaison AO-Contact créée avec succès", 201);
-      } catch (error) {
-        logger.error('[Commercial] Erreur createAoContact', {
-          metadata: {
-            aoId: req.body.aoId,
-            contactId: req.body.contactId,
-            error: error instanceof Error ? error.message : String(error),
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'AOs',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la création de la liaison AO-Contact");
       }
@@ -967,7 +675,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     validateParams(commonParamSchemas.id),
     validateBody(insertAoContactsSchema.partial()),
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id } = req.params;
         
         logger.info('[Commercial] Mise à jour liaison AO-Contact', {
@@ -987,13 +697,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         });
         
         sendSuccess(res, updatedContact, "Liaison AO-Contact mise à jour avec succès");
-      } catch (error) {
-        logger.error('[Commercial] Erreur updateAoContact', {
-          metadata: {
-            id: req.params.id,
-            error: error instanceof Error ? error.message : String(error),
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'AOs',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la mise à jour de la liaison AO-Contact");
       }
@@ -1006,7 +717,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     rateLimits.general,
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id } = req.params;
         
         logger.info('[Commercial] Suppression liaison AO-Contact', {
@@ -1026,13 +739,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         });
         
         sendSuccess(res, null, "Liaison AO-Contact supprimée avec succès");
-      } catch (error) {
-        logger.error('[Commercial] Erreur deleteAoContact', {
-          metadata: {
-            id: req.params.id,
-            error: error instanceof Error ? error.message : String(error),
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'AOs',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database("Erreur lors de la suppression de la liaison AO-Contact");
       }
@@ -1049,7 +763,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     validateParams(z.object({ id: z.string().uuid() })),
     validateQuery(comparisonQuerySchema),
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id: aoLotId } = req.params;
         const { includeRawOcr, sortBy, sortOrder, status } = req.query;
         
@@ -1148,12 +864,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
             };
             
             suppliersData.push(supplierComparison);
-          } catch (sessionError) {
-            logger.error('[Commercial] Erreur traitement session', {
-              metadata: {
-                sessionId: session.id,
-                error: sessionError instanceof Error ? sessionError.message : String(sessionError)
-              }
+          
+    },
+    {
+      operation: 'AOs',
+service: 'routes',;
+      metadata: {}
+    }
+  );
             });
           }
         }
@@ -1242,7 +960,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     validateParams(z.object({ id: z.string().uuid() })),
     validateBody(selectSupplierSchema),
     asyncHandler(async (req: any, res: Response) => {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const { id: aoLotId } = req.params;
         const { supplierId, analysisId, selectionReason, notes } = req.body;
         const userId = req.session.user?.id;
@@ -1315,14 +1035,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           selectionDate: new Date(),
           selectedBy: userId
         }, 'Fournisseur sélectionné avec succès');
-      } catch (error) {
-        logger.error('[Commercial] Erreur sélection fournisseur', {
-          metadata: {
-            aoLotId: req.params.id,
-            supplierId: req.body.supplierId,
-            error: error instanceof Error ? error.message : String(error),
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'AOs',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw error;
       }
@@ -2169,6 +1889,123 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
       ]
     }
   });
+
+  // ========================================
+  // AO LOTS COMPARISON ROUTES
+  // Migrated from routes-poc.ts (Phase 2: Critical)
+  // ========================================
+
+  /**
+   * GET /api/ao-lots/:id/comparison
+   * Récupérer les données de comparaison pour un lot d'AO
+   */
+  router.get('/api/ao-lots/:id/comparison',
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      return withErrorHandling(
+        async () => {
+          const { id: aoLotId } = req.params;
+          
+          // Récupérer tous les lots pour trouver celui avec l'id correspondant
+          // Note: getAoLots prend un aoId, donc on doit récupérer tous les lots et filtrer
+          // Pour l'instant, on utilise une approche simplifiée
+          const allAOs = await storage.getAos();
+          let lot: any = null;
+          
+          // Chercher le lot dans tous les AOs
+          for (const ao of allAOs) {
+            const lots = await storage.getAoLots(ao.id);
+            const foundLot = lots.find(l => l.id === aoLotId);
+            if (foundLot) {
+              lot = foundLot;
+              break;
+            }
+          }
+          
+          if (!lot) {
+            throw createError.notFound('Lot d\'AO non trouvé');
+          }
+          
+          // Récupérer les fournisseurs du lot
+          const lotSuppliers = await storage.getAoLotSuppliers(aoLotId);
+          
+          // Récupérer les analyses de devis
+          const analyses = await Promise.all(
+            lotSuppliers.map(async (ls) => {
+              const analysis = await storage.getSupplierQuoteAnalyses(ls.supplierId, aoLotId);
+              return analysis.length > 0 ? analysis[0] : null;
+            })
+          );
+          
+          const comparisonData = {
+            lot,
+            suppliers: lotSuppliers.map((ls, index) => ({
+              ...ls,
+              analysis: analyses[index]
+            }))
+          };
+          
+          sendSuccess(res, comparisonData);
+        },
+        {
+          operation: 'getLotComparison',
+          service: 'CommercialRoutes',
+          metadata: { aoLotId: req.params.id }
+        }
+      );
+    })
+  );
+
+  /**
+   * POST /api/ao-lots/:id/select-supplier
+   * Sélectionner un fournisseur pour un lot
+   */
+  router.post('/api/ao-lots/:id/select-supplier',
+    isAuthenticated,
+    validateBody(z.object({
+      supplierId: z.string().uuid(),
+      analysisId: z.string().uuid().optional()
+    })),
+    asyncHandler(async (req: Request, res: Response) => {
+      return withErrorHandling(
+        async () => {
+          const { id: aoLotId } = req.params;
+          const { supplierId, analysisId } = req.body;
+          const userId = req.user!.id;
+          
+          // Mettre à jour le lot avec le fournisseur sélectionné
+          await storage.updateAoLot(aoLotId, {
+            selectedSupplierId: supplierId,
+            selectedAt: new Date()
+          });
+          
+          // Logger la sélection
+          logger.info('Supplier Selection - Fournisseur sélectionné', {
+            metadata: {
+              aoLotId,
+              supplierId,
+              analysisId,
+              selectedBy: userId,
+              timestamp: new Date()
+            }
+          });
+          
+          sendSuccess(res, {
+            aoLotId,
+            selectedSupplierId: supplierId,
+            selectedAnalysisId: analysisId,
+            selectionDate: new Date(),
+            selectedBy: userId
+          }, 'Fournisseur sélectionné avec succès');
+        },
+        {
+          operation: 'selectSupplier',
+          service: 'CommercialRoutes',
+          metadata: { aoLotId: req.params.id, supplierId: req.body.supplierId }
+        }
+      );
+    })
+  );
 
   return router;
 }

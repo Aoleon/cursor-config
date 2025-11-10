@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { withErrorHandling } from './utils/error-handler';
 import { Request, Response, NextFunction } from 'express';
 import { mondayConfig } from '../config';
 import { logger } from '../utils/logger';
@@ -72,17 +73,19 @@ export function verifyMondaySignature(
   });
   
   // Parse JSON body pour le handler
-  try {
+  return withErrorHandling(
+    async () => {
+
     req.body = JSON.parse(rawBody.toString());
     next();
-  } catch (error) {
-    logger.error('[Monday Webhook] JSON invalide', {
-      metadata: {
-        module: 'MondayWebhook',
-        operation: 'verifySignature',
-        correlationId,
-        error: error instanceof Error ? error.message : String(error)
-      }
+  
+    },
+    {
+      operation: 'verifyMondaySignature',
+      service: 'monday-webhook',
+      metadata: {}
+    }
+  );
     });
     return res.status(400).json({ error: 'Invalid JSON' });
   }

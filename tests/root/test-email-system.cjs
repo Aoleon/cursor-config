@@ -63,7 +63,7 @@ async function testEmailService() {
     
     const healthCheck = await makeRequest({
       hostname: 'localhost',
-      port: 5000,
+      port: 4000,
       path: '/api/supplier-workflow/status',
       method: 'GET',
       headers: {
@@ -82,7 +82,7 @@ async function testEmailService() {
     
     const inviteTest = await makeRequest({
       hostname: 'localhost',
-      port: 5000,
+      port: 4000,
       path: '/api/supplier-workflow/sessions/test-session-id/invite',
       method: 'POST',
       headers: {
@@ -105,7 +105,7 @@ async function testEmailService() {
     console.log('\n🎯 RÉSULTATS DU TEST:');
     console.log('====================');
     console.log('✅ Système d\'email générique compilé avec succès');
-    console.log('✅ Serveur Express démarré sur le port 5000');
+    console.log('✅ Serveur Express démarré sur le port 4000');
     console.log('✅ Routes d\'invitation fournisseurs détectées');
     console.log('✅ MockEmailService probablement actif (pas d\'erreurs de compilation)');
     

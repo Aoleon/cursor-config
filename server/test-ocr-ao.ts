@@ -1,10 +1,12 @@
 import { processAODocument } from './ocrService';
+import { AppError } from './utils/error-handler';
+import { logger } from './utils/logger';
 import * as path from 'path';
 import * as fs from 'fs';
 
 async function testOCRAndCreateAO() {
-  console.log('🔍 Test OCR et création d\'AO automatique');
-  console.log('=========================================');
+  logger.info('🔍 Test OCR et création d\'AO automatique');
+  logger.info('=========================================');
   
   // PDF à analyser
   const pdfFiles = [
@@ -14,10 +16,10 @@ async function testOCRAndCreateAO() {
   
   for (const pdfFile of pdfFiles) {
     const fileName = path.basename(pdfFile);
-    console.log(`\n📄 Analyse du fichier: ${fileName}`);
+    logger.info(`\n📄 Analyse du fichier: ${fileName}`);
     
     if (!fs.existsSync(pdfFile)) {
-      console.error(`❌ Fichier non trouvé: ${pdfFile}`);
+      logger.error('Erreur', `❌ Fichier non trouvé: ${pdfFile}`);
       continue;
     }
     
@@ -26,32 +28,32 @@ async function testOCRAndCreateAO() {
       const pdfBuffer = fs.readFileSync(pdfFile);
       
       // Analyser avec OCR
-      console.log('⏳ Extraction OCR en cours...');
+      logger.info('⏳ Extraction OCR en cours...');
       const extractedData = await processAODocument(pdfBuffer);
       
-      console.log('\n✅ Données extraites:');
-      console.log('------------------');
-      console.log('Référence:', extractedData.reference || 'Non détectée');
-      console.log('Client:', extractedData.client || 'Non détecté');
-      console.log('Intitulé:', extractedData.intituleOperation || 'Non détecté');
-      console.log('Localisation:', extractedData.location || 'Non détectée');
-      console.log('Date limite:', extractedData.dateLimiteRemise || 'Non détectée');
-      console.log('Type de marché:', extractedData.typeMarche || 'Non détecté');
-      console.log('Maître d\'ouvrage:', extractedData.maitreOuvrage?.nom || 'Non détecté');
-      console.log('Maître d\'œuvre:', extractedData.maitreOeuvre?.nom || 'Non détecté');
+      logger.info('\n✅ Données extraites:');
+      logger.info('------------------');
+      logger.info('Référence:', extractedData.reference || 'Non détectée');
+      logger.info('Client:', extractedData.client || 'Non détecté');
+      logger.info('Intitulé:', extractedData.intituleOperation || 'Non détecté');
+      logger.info('Localisation:', extractedData.location || 'Non détectée');
+      logger.info('Date limite:', extractedData.dateLimiteRemise || 'Non détectée');
+      logger.info('Type de marché:', extractedData.typeMarche || 'Non détecté');
+      logger.info('Maître d\'ouvrage:', extractedData.maitreOuvrage?.nom || 'Non détecté');
+      logger.info('Maître d\'œuvre:', extractedData.maitreOeuvre?.nom || 'Non détecté');
       
       if (extractedData.lots && extractedData.lots.length > 0) {
-        console.log('\n📦 Lots détectés:', extractedData.lots.length);
+        logger.info('\n📦 Lots détectés:', extractedData.lots.length);
         extractedData.lots.forEach((lot: any, index: number) => {
-          console.log(`  Lot ${index + 1}: ${lot.numero} - ${lot.designation}`);
+          logger.info(`  Lot ${index + 1}: ${lot.numero} - ${lot.designation}`);
           if (lot.montantEstime) {
-            console.log(`    Montant: ${lot.montantEstime}€`);
+            logger.info(`    Montant: ${lot.montantEstime}€`);
           }
         });
       }
       
       // Créer l'AO via l'API
-      console.log('\n💾 Création de l\'AO via API...');
+      logger.info('\n💾 Création de l\'AO via API...');
       
       const aoData = {
         reference: extractedData.reference || `AO-OCR-${Date.now()}`,
@@ -84,15 +86,15 @@ async function testOCRAndCreateAO() {
       
       if (!response.ok) {
         const error = await response.text();
-        throw new Error(`Erreur API: ${error}`);
+        throw new AppError(`Erreur API: ${error}`, 500);
       }
       
       const createdAo = await response.json();
-      console.log(`✅ AO créé avec ID: ${createdAo.id}`);
+      logger.info(`✅ AO créé avec ID: ${createdAo.id}`);
       
       // Créer les lots si détectés
       if (extractedData.lots && extractedData.lots.length > 0) {
-        console.log('\n📦 Création des lots...');
+        logger.info('\n📦 Création des lots...');
         for (const lot of extractedData.lots) {
           const lotData = {
             numero: lot.numero || `Lot ${extractedData.lots.indexOf(lot) + 1}`,
@@ -112,23 +114,23 @@ async function testOCRAndCreateAO() {
           });
           
           if (lotResponse.ok) {
-            console.log(`  ✅ Lot créé: ${lotData.numero} - ${lotData.designation}`);
+            logger.info(`  ✅ Lot créé: ${lotData.numero} - ${lotData.designation}`);
           } else {
-            console.log(`  ❌ Erreur création lot: ${lotData.numero}`);
+            logger.info(`  ❌ Erreur création lot: ${lotData.numero}`);
           }
         }
       }
       
-      console.log(`\n🎉 AO "${aoData.reference}" créé avec succès!`);
-      console.log(`   URL: http://localhost:5000/offers#ao-${createdAo.id}`);
+      logger.info(`\n🎉 AO "${aoData.reference}" créé avec succès!`);
+      logger.info(`   URL: http://localhost:5000/offers#ao-${createdAo.id}`);
       
     } catch (error: any) {
-      console.error(`❌ Erreur lors du traitement: ${error.message}`);
+      logger.error('Erreur', `❌ Erreur lors du traitement: ${error.message}`);
     }
   }
   
-  console.log('\n=========================================');
-  console.log('✅ Test OCR terminé');
+  logger.info('\n=========================================');
+  logger.info('✅ Test OCR terminé');
 }
 
 // Exécuter le test

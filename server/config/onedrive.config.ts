@@ -1,3 +1,5 @@
+import { logger } from './utils/logger';
+import { withErrorHandling } from './utils/error-handler';
 /**
  * ROBUST-2: OneDrive Taxonomy Configuration
  * 
@@ -53,12 +55,19 @@ export function getOneDriveTaxonomy(): OneDriveTaxonomyConfig {
   const customConfig = process.env.ONEDRIVE_TAXONOMY_CONFIG;
   
   if (customConfig) {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const parsed = JSON.parse(customConfig);
       return { ...DEFAULT_ONEDRIVE_TAXONOMY, ...parsed };
-    } catch (error) {
-      console.warn('[OneDrive Config] Invalid ONEDRIVE_TAXONOMY_CONFIG, using defaults', error);
+    
+    },
+    {
+      operation: 'GED',
+      service: 'onedrive.config',
+      metadata: {}
     }
+  );
   }
   
   return DEFAULT_ONEDRIVE_TAXONOMY;

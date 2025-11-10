@@ -3,15 +3,16 @@
  */
 
 import { MondayService } from '../services/MondayService';
+import { logger } from './utils/logger';
 
 async function analyzeUniqueValues() {
   const service = new MondayService();
   const boardId = '5296947311';
   
-  console.log('🔍 Analyse valeurs uniques board Projects\n');
+  logger.info('🔍 Analyse valeurs uniques board Projects\n');
   
   const items = await service.getBoardItemsPaginated(boardId);
-  console.log(`📦 Total items: ${items.length}\n`);
+  logger.info(`📦 Total items: ${items.length}\n`);
   
   const uniqueValues = new Map<string, Set<any>>();
   
@@ -43,22 +44,22 @@ async function analyzeUniqueValues() {
   }
   
   // Afficher résultats
-  console.log('📊 VALEURS UNIQUES PAR COLONNE:\n');
+  logger.info('📊 VALEURS UNIQUES PAR COLONNE:\n');
   for (const columnId of importantColumns) {
     const values = uniqueValues.get(columnId);
     if (values && values.size > 0) {
-      console.log(`[${columnId}]:`);
+      logger.info(`[${columnId}]:`);
       const sorted = Array.from(values).sort();
       sorted.slice(0, 20).forEach(v => {
         const parsed = JSON.parse(v);
-        console.log(`  - ${parsed}`);
+        logger.info(`  - ${parsed}`);
       });
       if (sorted.length > 20) {
-        console.log(`  ... et ${sorted.length - 20} autres`);
+        logger.info(`  ... et ${sorted.length - 20} autres`);
       }
-      console.log(`  Total: ${values.size} valeurs\n`);
+      logger.info(`  Total: ${values.size} valeurs\n`);
     } else {
-      console.log(`[${columnId}]: (vide)\n`);
+      logger.info(`[${columnId}]: (vide)\n`);
     }
   }
 }

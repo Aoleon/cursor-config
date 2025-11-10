@@ -1,4 +1,6 @@
 import { Response } from "express";
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { randomUUID } from "crypto";
 import path from "path";
 import { logger } from './utils/logger';
@@ -17,20 +19,20 @@ export type AllowedOfferFolder = typeof ALLOWED_OFFER_FOLDERS[number];
 // Security: File name sanitization functions
 export function sanitizeFileName(fileName: string): string {
   if (!fileName || typeof fileName !== 'string') {
-    throw new Error('File name is required and must be a string');
+    throw new AppError('File name is required and must be a string', 500);
   }
 
   // SECURITY: Immediately reject path traversal attempts - don't sanitize, reject!
   if (fileName.includes('../') || fileName.includes('..\\') || 
       fileName.includes('/') || fileName.includes('\\') ||
       fileName.includes('..') || fileName.startsWith('.')) {
-    throw new Error('Path traversal attempts are not allowed in file names');
+    throw new AppError('Path traversal attempts are not allowed in file names', 500);
   }
 
   // Extract file extension first to preserve it during length limiting
   const lastDotIndex = fileName.lastIndexOf('.');
   if (lastDotIndex === -1) {
-    throw new Error('File must have an extension');
+    throw new AppError('File must have an extension', 500);
   }
 
   const extension = fileName.substring(lastDotIndex).toLowerCase();
@@ -39,7 +41,7 @@ export function sanitizeFileName(fileName: string): string {
   // Validate extension first
   const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.gif', '.txt', '.zip'];
   if (!allowedExtensions.includes(extension)) {
-    throw new Error(`File extension not allowed. Allowed extensions: ${allowedExtensions.join(', ')}`);
+    throw new AppError(`File extension not allowed. Allowed extensions: ${allowedExtensions.join(', ', 500)}`);
   }
 
   // Sanitize the filename part (without extension)
@@ -52,7 +54,7 @@ export function sanitizeFileName(fileName: string): string {
 
   // Ensure we have a valid name after sanitization
   if (!sanitized || sanitized === '' || sanitized === '-') {
-    throw new Error('File name cannot be empty after sanitization');
+    throw new AppError('File name cannot be empty after sanitization', 500);
   }
 
   // Limit length of filename (without extension) to prevent extremely long filenames
@@ -65,18 +67,18 @@ export function sanitizeFileName(fileName: string): string {
 
 export function validateOfferFolder(folderName: string): AllowedOfferFolder {
   if (!folderName || typeof folderName !== 'string') {
-    throw new Error('Folder name is required and must be a string');
+    throw new AppError('Folder name is required and must be a string', 500);
   }
 
   // Trim and check for empty/whitespace-only strings
   const trimmedFolder = folderName.trim();
   if (!trimmedFolder) {
-    throw new Error('Invalid folder name. Allowed folders: ' + ALLOWED_OFFER_FOLDERS.join(', '));
+    throw new AppError('Invalid folder name. Allowed folders: ' + ALLOWED_OFFER_FOLDERS.join(', ', 500));
   }
 
   // Check against whitelist
   if (!ALLOWED_OFFER_FOLDERS.includes(trimmedFolder as AllowedOfferFolder)) {
-    throw new Error(`Invalid folder name. Allowed folders: ${ALLOWED_OFFER_FOLDERS.join(', ')}`);
+    throw new AppError(`Invalid folder name. Allowed folders: ${ALLOWED_OFFER_FOLDERS.join(', ', 500)}`);
   }
 
   return trimmedFolder as AllowedOfferFolder;
@@ -106,9 +108,9 @@ export class ObjectStorageService {
       )
     );
     if (paths.length === 0) {
-      throw new Error(
+      throw new AppError(
         "PUBLIC_OBJECT_SEARCH_PATHS not set. Create a bucket in 'Object Storage' " +
-          "tool and set PUBLIC_OBJECT_SEARCH_PATHS env var (comma-separated paths)."
+          "tool and set PUBLIC_OBJECT_SEARCH_PATHS env var (comma-separated paths, 500)."
       );
     }
     return paths;
@@ -118,17 +120,19 @@ export class ObjectStorageService {
   getPrivateObjectDir(): string {
     const dir = process.env.PRIVATE_OBJECT_DIR || "";
     if (!dir) {
-      throw new Error(
+      throw new AppError(
         "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
           "tool and set PRIVATE_OBJECT_DIR env var."
-      );
+      , 500);
     }
     return dir;
   }
 
   // Downloads an object from storage via Replit sidecar
   async downloadObject(objectPath: string, res: Response) {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('ObjectStorage - Downloading object', { metadata: { objectPath } });
       // Use Replit's sidecar to get the file
       const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/get-object`, {
@@ -165,10 +169,14 @@ export class ObjectStorageService {
       }
       
       res.end();
-    } catch (error) {
-      logger.error('ObjectStorage - Error downloading file', error as Error);
-      if (!res.headersSent) {
-        res.status(500).json({ error: "Error downloading file" });
+    
+    },
+    {
+      operation: 'sanitizeFileName',
+      service: 'objectStorage',
+      metadata: {}
+    }
+  ););
       }
     }
   }
@@ -177,10 +185,10 @@ export class ObjectStorageService {
   async getObjectEntityUploadURL(): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
     if (!privateObjectDir) {
-      throw new Error(
+      throw new AppError(
         "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
           "tool and set PRIVATE_OBJECT_DIR env var."
-      );
+      , 500);
     }
 
     const objectId = randomUUID();
@@ -199,7 +207,9 @@ export class ObjectStorageService {
 
   // Checks if an object exists in storage
   async objectExists(objectPath: string): Promise<boolean> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.debug('ObjectStorage - Checking if object exists', { metadata: { objectPath } });
       const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/object-exists`, {
         method: "POST",
@@ -217,10 +227,14 @@ export class ObjectStorageService {
       const data = await response.json();
       logger.debug('ObjectStorage - Object exists result', { metadata: { objectPath, exists: data.exists } });
       return data.exists === true;
-    } catch (error) {
-      logger.error('ObjectStorage - Error checking object existence', error as Error, { metadata: { objectPath } });
-      return false;
+    
+    },
+    {
+      operation: 'sanitizeFileName',
+      service: 'objectStorage',
+      metadata: {}
     }
+  );
   }
 
   normalizeObjectEntityPath(rawPath: string): string {
@@ -257,7 +271,9 @@ export class ObjectStorageService {
       const keepFilePath = `${basePath}/${folder}/.gitkeep`;
       const { bucketName, objectName } = parseObjectPath(keepFilePath);
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Upload empty file to create folder structure
         const uploadUrl = await signObjectURL({
           bucketName,
@@ -277,9 +293,14 @@ export class ObjectStorageService {
             'x-goog-meta-auto-generated': 'true'
           }
         });
-      } catch (error) {
-        logger.error('ObjectStorage - Error creating folder', error as Error, { metadata: { folder } });
-      }
+      
+    },
+    {
+      operation: 'sanitizeFileName',
+      service: 'objectStorage',
+      metadata: {}
+    }
+  );
     }
     
     return { basePath, folders };
@@ -295,7 +316,7 @@ export class ObjectStorageService {
     
     // SECURITY: Validate offer ID format (should be UUID-like)
     if (!offerId || typeof offerId !== 'string' || offerId.length < 10) {
-      throw new Error('Invalid offer ID format');
+      throw new AppError('Invalid offer ID format', 500);
     }
 
     const privateObjectDir = this.getPrivateObjectDir();
@@ -329,7 +350,7 @@ export class ObjectStorageService {
     
     // SECURITY: Validate session ID format
     if (!sessionId || typeof sessionId !== 'string' || sessionId.length < 10) {
-      throw new Error('Invalid session ID format');
+      throw new AppError('Invalid session ID format', 500);
     }
 
     const privateObjectDir = this.getPrivateObjectDir();
@@ -370,7 +391,7 @@ export class ObjectStorageService {
     });
 
     if (!uploadResponse.ok) {
-      throw new Error(`Failed to upload file: ${uploadResponse.status} ${uploadResponse.statusText}`);
+      throw new AppError(`Failed to upload file: ${uploadResponse.status} ${uploadResponse.statusText}`, 500);
     }
 
     logger.info('ObjectStorage - Supplier document uploaded successfully', { metadata: { filePath } });
@@ -391,7 +412,7 @@ function parseObjectPath(path: string): {
   }
   const pathParts = path.split("/");
   if (pathParts.length < 3) {
-    throw new Error("Invalid path: must contain at least a bucket name");
+    throw new AppError("Invalid path: must contain at least a bucket name", 500);
   }
 
   const bucketName = pathParts[1];
@@ -431,10 +452,10 @@ async function signObjectURL({
     }
   );
   if (!response.ok) {
-    throw new Error(
+    throw new AppError(
       `Failed to sign object URL, errorcode: ${response.status}, ` +
         `make sure you're running on Replit`
-    );
+    , 500);
   }
 
   const { signed_url: signedURL } = await response.json();

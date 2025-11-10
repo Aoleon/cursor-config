@@ -4,6 +4,7 @@
  */
 
 import { Logger } from '../../../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
 import { PdfGeneratorService } from '../../../services/pdfGeneratorService';
 import { PlaceholderResolver } from './PlaceholderResolver';
 import { ImageIntegrator } from './ImageIntegrator';
@@ -146,7 +147,9 @@ export class PDFTemplateEngine {
       }
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Validate template
       if (this.config.validationStrict) {
         const validation = await this.validator.validate(template);
@@ -201,10 +204,14 @@ export class PDFTemplateEngine {
       });
 
       return compiled;
-    } catch (error) {
-      logger.error('Template compilation failed', error as Error, { templateId });
-      throw error;
+    
+    },
+    {
+      operation: 'Logger',
+      service: 'PDFTemplateEngine',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -262,7 +269,9 @@ export class PDFTemplateEngine {
       imagesFailed: []
     };
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Get or compile template
       const template = typeof options.template === 'string' 
         ? { id: 'inline', name: 'inline', type: 'handlebars' as const, content: options.template }
@@ -338,19 +347,14 @@ export class PDFTemplateEngine {
         pdf: pdfBuffer,
         metadata: renderMetadata
       };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      logger.error('Template rendering failed', error as Error, { options });
-
-      // Try fallback template if error recovery is enabled
-      if (this.config.errorRecovery && options.fallbackTemplate) {
-        logger.info('Attempting fallback template');
-        return this.render({
-          ...options,
-          template: options.fallbackTemplate,
-          fallbackTemplate: undefined // Prevent infinite recursion
-        });
+    
+    },
+    {
+      operation: 'Logger',
+      service: 'PDFTemplateEngine',
+      metadata: {}
+    }
+  ););
       }
 
       return {

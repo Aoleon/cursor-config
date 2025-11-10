@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { withErrorHandling } from './utils/error-handler';
 import type { 
   RealtimeEvent, EventFilter, EventType, 
   BusinessAlertCreatedPayload, BusinessAlertAcknowledgedPayload, 
@@ -42,7 +43,9 @@ export class EventBus extends EventEmitter {
    * Publier un événement vers tous les abonnés avec invalidation cache automatique
    */
   public publish(event: RealtimeEvent): void {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // PROTECTION: Valider l'événement avant publication
       if (!event || typeof event !== 'object') {
         log(`EventBus: Event invalide ignoré (not an object)`);
@@ -71,14 +74,14 @@ export class EventBus extends EventEmitter {
       this.emit('event', validatedEvent);
       
       log(`EventBus: Published event ${validatedEvent.type} for ${validatedEvent.entity}:${validatedEvent.entityId}`);
-    } catch (error) {
-      logger.error('Erreur publication événement', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'publish',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -92,16 +95,18 @@ export class EventBus extends EventEmitter {
     // Créer un handler filtré
     const filteredHandler = (event: RealtimeEvent) => {
       if (!filter || this.matchesFilter(event, filter)) {
-        try {
+        return withErrorHandling(
+    async () => {
+
           handler(event);
-        } catch (error) {
-          logger.error('Erreur dans event handler', {
-            metadata: {
-              module: 'EventBus',
-              operation: 'subscribe.filteredHandler',
-              error: error instanceof Error ? error.message : String(error),
-              stack: error instanceof Error ? error.stack : undefined
-            }
+        
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
           });
         }
       }
@@ -240,7 +245,9 @@ export class EventBus extends EventEmitter {
   private async processAutomaticCacheInvalidation(event: RealtimeEvent): Promise<void> {
     if (!this.contextCacheService) return;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const startTime = Date.now();
       
       // Mapping des événements vers les types d'entités et actions
@@ -257,16 +264,14 @@ export class EventBus extends EventEmitter {
         const duration = Date.now() - startTime;
         log(`[EventBus] Invalidation cache auto: ${invalidationMapping.entityType}:${invalidationMapping.entityId} en ${duration}ms`);
       }
-    } catch (error) {
-      logger.error('Erreur invalidation cache automatique', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'processAutomaticCacheInvalidation',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          eventType: event?.type,
-          entityId: event?.entityId
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -695,8 +700,8 @@ export class EventBus extends EventEmitter {
       affectedQueryKeys: [
         ['/api/validation-milestones'],
         ['/api/validation-milestones', params.entityType, params.entityId],
-        [`/api/${params.entityType}s`],
-        [`/api/${params.entityType}s`, params.entityId],
+[`/api/${params.entityType}s`],;
+[`/api/${params.entityType}s`, params.entityId],;
         ['/api/dashboard/kpis'],
       ],
       projectId: params.entityType === 'project' ? params.entityId : undefined,
@@ -767,7 +772,7 @@ export class EventBus extends EventEmitter {
       entityId: params.aoReference,
       severity: 'warning',
       title: '🚨 Alerte Technique Détectée',
-      message: `Score technique élevé (${params.score}) détecté pour AO ${params.aoReference}. Critères: ${params.triggeredCriteria.join(', ')}`,
+message: `Score technique élevé (${params.score}) détecté pour AO ${params.aoReference}. Critères: ${params.triggeredCriteria.join(', ')}`,;
       affectedQueryKeys: [
         ['/api/aos'],
         ['/api/aos', params.aoId || ''],
@@ -891,7 +896,7 @@ export class EventBus extends EventEmitter {
       entity: 'system',
       entityId: params.cacheKey,
       severity: params.action === 'miss' ? 'info' : 'success',
-      message: `Cache ${params.action} pour ${params.entityType}:${params.entityId} (${params.executionTimeMs}ms)`,
+message: `Cache ${params.action} pour ${params.entityType}:${params.entityId} (${params.executionTimeMs}ms)`,;
       affectedQueryKeys: [
         ['/api/analytics/cache-metrics'],
         ['/api/system/performance']
@@ -924,7 +929,7 @@ export class EventBus extends EventEmitter {
       entityId: 'prewarming-system',
       severity: 'success',
       title: '🔥 Cache Prewarming Exécuté',
-      message: `${params.contextCount} contextes préchargés en ${params.executionTimeMs}ms (${params.entityTypes.join(', ')})`,
+message: `${params.contextCount} contextes préchargés en ${params.executionTimeMs}ms (${params.entityTypes.join(', ')})`,;
       affectedQueryKeys: [
         ['/api/analytics/cache-metrics'],
         ['/api/system/performance'],
@@ -958,7 +963,7 @@ export class EventBus extends EventEmitter {
       entityId: params.optimizationType,
       severity: 'success',
       title: '🚀 Optimisation Performance Détectée',
-      message: `Amélioration ${params.optimizationType}: +${params.improvementPercent.toFixed(1)}% (${params.beforeValue} → ${params.afterValue})`,
+message: `Amélioration ${params.optimizationType}: +${params.improvementPercent.toFixed(1)}% (${params.beforeValue} → ${params.afterValue})`,;
       affectedQueryKeys: [
         ['/api/analytics/performance'],
         ['/api/system/health'],
@@ -997,7 +1002,7 @@ export class EventBus extends EventEmitter {
       entityId: params.timelineId,
       severity: 'success',
       title: '🧮 Timeline Intelligence Calculée',
-      message: `Timeline intelligente générée: ${params.phasesCount} phases, ${params.totalDuration} jours (${params.constraintsApplied} contraintes appliquées)`,
+message: `Timeline intelligente générée: ${params.phasesCount} phases, ${params.totalDuration} jours (${params.constraintsApplied} contraintes appliquées)`,;
       affectedQueryKeys: [
         ['/api/projects', params.projectId, 'calculate-timeline'],
         ['/api/projects', params.projectId],
@@ -1036,7 +1041,7 @@ export class EventBus extends EventEmitter {
       entity: 'date_intelligence',
       entityId: `cascade_${params.projectId}_${Date.now()}`,
       severity,
-      title: `${impactIcon} Recalcul Cascade Effectué`,
+title: `${impactIcon} Recalcul Cascade Effectué`,;
       message: `${params.affectedPhasesCount} phases recalculées depuis ${params.triggeredByPhase} (impact: ${params.totalImpactDays > 0 ? '+' : ''}${params.totalImpactDays} jours)`,
       affectedQueryKeys: [
         ['/api/projects', params.projectId, 'recalculate-from', params.triggeredByPhase],
@@ -1074,7 +1079,7 @@ export class EventBus extends EventEmitter {
       entityId: params.ruleId,
       severity: 'info',
       title: '📝 Règle Métier Appliquée',
-      message: `Règle "${params.ruleName}" appliquée sur phase ${params.phase} (confiance: ${Math.round(params.confidence * 100)}%)`,
+message: `Règle "${params.ruleName}" appliquée sur phase ${params.phase} (confiance: ${Math.round(params.confidence * 100)}%)`,;
       affectedQueryKeys: [
         ['/api/intelligence-rules'],
         ['/api/projects', params.projectId],
@@ -1116,7 +1121,7 @@ export class EventBus extends EventEmitter {
       entity: 'date_intelligence',
       entityId: params.alertId,
       severity: params.severity === 'error' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
-      title: `${severityIcon[params.severity]} Alerte Intelligence Temporelle`,
+title: `${severityIcon[params.severity]} Alerte Intelligence Temporelle`,;
       message: `Nouvelle alerte: ${params.alertTitle}`,
       affectedQueryKeys: [
         ['/api/date-alerts'],
@@ -1151,10 +1156,10 @@ export class EventBus extends EventEmitter {
     const event = createRealtimeEvent({
       type: EventTypeEnum.DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED,
       entity: 'date_intelligence',
-      entityId: `issue_${params.projectId}_${Date.now()}`,
+entityId: `issue_${params.projectId}_${Date.now()}`,;
       severity: params.severity === 'error' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
       title: '🛠️ Problème de Planification',
-      message: `${params.issueType}: ${params.description} (${params.affectedPhases.length} phases affectées)`,
+message: `${params.issueType}: ${params.description} (${params.affectedPhases.length} phases affectées)`,;
       affectedQueryKeys: [
         ['/api/projects', params.projectId],
         ['/api/date-alerts'],
@@ -1205,7 +1210,7 @@ export class EventBus extends EventEmitter {
       entity: params.entity as any,
       entityId: params.entityId,
       severity: params.severity === 'critical' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
-      title: `${severityIcon[params.severity]} Alerte Détectée`,
+title: `${severityIcon[params.severity]} Alerte Détectée`,;
       message: params.message,
       affectedQueryKeys: [
         ['/api/date-alerts'],
@@ -1395,11 +1400,11 @@ export class EventBus extends EventEmitter {
       entityId: params.opportunityId,
       severity: 'info',
       title: '💡 Opportunité d\'Optimisation',
-      message: `${params.opportunityType} possible. Gain estimé: ${params.estimatedGainDays} jour(s). Faisabilité: ${params.feasibility}.`,
+message: `${params.opportunityType} possible. Gain estimé: ${params.estimatedGainDays} jour(s). Faisabilité: ${params.feasibility}.`,;
       affectedQueryKeys: [
         ['/api/date-alerts'],
         ['/api/dashboard/optimizations'],
-        [`/api/${params.entityType}s`, params.entityId]
+[`/api/${params.entityType}s`, params.entityId];
       ],
       metadata: {
         opportunityType: params.opportunityType,
@@ -1431,8 +1436,8 @@ export class EventBus extends EventEmitter {
       entity: 'date_intelligence',
       entityId: params.riskId,
       severity: severityMap[params.riskLevel],
-      title: `${riskIcons[params.riskLevel]} Risque de Retard - ${params.phase}`,
-      message: `Risque ${params.riskLevel} détecté pour la phase ${params.phase}. ${params.riskFactors.length} facteur(s) identifié(s).`,
+title: `${riskIcons[params.riskLevel]} Risque de Retard - ${params.phase}`,;
+message: `Risque ${params.riskLevel} détecté pour la phase ${params.phase}. ${params.riskFactors.length} facteur(s) identifié(s).`,;
       affectedQueryKeys: [
         ['/api/date-alerts'],
         ['/api/projects', params.projectId],
@@ -1473,11 +1478,11 @@ export class EventBus extends EventEmitter {
       entity: 'date_intelligence',
       entityId: params.deadlineId,
       severity,
-      title: `${urgencyIcon} Échéance Critique - ${params.entityReference}`,
-      message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.preparationStatus}. ${params.requiredActions.length} action(s) requise(s).`,
+title: `${urgencyIcon} Échéance Critique - ${params.entityReference}`,;
+message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.preparationStatus}. ${params.requiredActions.length} action(s) requise(s).`,;
       affectedQueryKeys: [
         ['/api/date-alerts'],
-        [`/api/${params.entityType}s`, params.entityId],
+[`/api/${params.entityType}s`, params.entityId],;
         ['/api/dashboard/deadlines']
       ],
       metadata: {
@@ -1502,7 +1507,9 @@ export class EventBus extends EventEmitter {
   // === BUSINESS ALERTS PUBLISHERS ===
 
   async publishBusinessAlertCreated(payload: BusinessAlertCreatedPayload): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const event = createRealtimeEvent({
         type: EventTypeEnum.BUSINESS_ALERT_CREATED,
         entity: 'business_alert',
@@ -1536,23 +1543,23 @@ export class EventBus extends EventEmitter {
       
       log(`EventBus: Événement business alert created publié - alert_id: ${payload.alert_id}, type: ${payload.alert_type}, severity: ${payload.severity}`);
       
-    } catch (error) {
-      logger.error('Erreur publication alerte business created', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'publishBusinessAlertCreated',
-          alertId: payload?.alert_id,
-          alertType: payload?.alert_type,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async publishBusinessAlertAcknowledged(payload: BusinessAlertAcknowledgedPayload): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const event = createRealtimeEvent({
         type: EventTypeEnum.BUSINESS_ALERT_ACKNOWLEDGED,
         entity: 'business_alert',
@@ -1580,22 +1587,23 @@ export class EventBus extends EventEmitter {
       
       log(`EventBus: Alerte accusée réception - alert_id: ${payload.alert_id}, by: ${payload.acknowledged_by}`);
       
-    } catch (error) {
-      logger.error('Erreur publication alerte acknowledged', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'publishBusinessAlertAcknowledged',
-          alertId: payload?.alert_id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async publishBusinessAlertResolved(payload: BusinessAlertResolvedPayload): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const event = createRealtimeEvent({
         type: EventTypeEnum.BUSINESS_ALERT_RESOLVED,
         entity: 'business_alert',
@@ -1625,22 +1633,23 @@ export class EventBus extends EventEmitter {
       
       log(`EventBus: Alerte résolue - alert_id: ${payload.alert_id}, by: ${payload.resolved_by}, duration: ${payload.resolution_duration_minutes || 'N/A'} min`);
       
-    } catch (error) {
-      logger.error('Erreur publication alerte resolved', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'publishBusinessAlertResolved',
-          alertId: payload?.alert_id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async publishBusinessAlertDismissed(payload: BusinessAlertDismissedPayload): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const event = createRealtimeEvent({
         type: EventTypeEnum.BUSINESS_ALERT_DISMISSED,
         entity: 'business_alert',
@@ -1668,22 +1677,23 @@ export class EventBus extends EventEmitter {
       
       log(`EventBus: Alerte ignorée - alert_id: ${payload.alert_id}, by: ${payload.dismissed_by}`);
       
-    } catch (error) {
-      logger.error('Erreur publication alerte dismissed', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'publishBusinessAlertDismissed',
-          alertId: payload?.alert_id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async publishBusinessAlertAssigned(payload: BusinessAlertAssignedPayload): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const event = createRealtimeEvent({
         type: EventTypeEnum.BUSINESS_ALERT_ASSIGNED,
         entity: 'business_alert',
@@ -1710,16 +1720,14 @@ export class EventBus extends EventEmitter {
       
       log(`EventBus: Alerte assignée - alert_id: ${payload.alert_id}, to: ${payload.assigned_to}, by: ${payload.assigned_by}`);
       
-    } catch (error) {
-      logger.error('Erreur publication alerte assigned', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'publishBusinessAlertAssigned',
-          alertId: payload?.alert_id,
-          assignedTo: payload?.assigned_to,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -1728,7 +1736,9 @@ export class EventBus extends EventEmitter {
   // === THRESHOLDS PUBLISHERS ===
 
   async publishAlertThresholdCreated(payload: AlertThresholdCreatedPayload): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const event = createRealtimeEvent({
         type: EventTypeEnum.ALERT_THRESHOLD_CREATED,
         entity: 'alert_threshold',
@@ -1759,23 +1769,23 @@ export class EventBus extends EventEmitter {
       
       log(`EventBus: Seuil alerte créé - threshold_id: ${payload.threshold_id}, key: ${payload.threshold_key}, by: ${payload.created_by}`);
       
-    } catch (error) {
-      logger.error('Erreur publication threshold created', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'publishAlertThresholdCreated',
-          thresholdId: payload?.threshold_id,
-          thresholdKey: payload?.threshold_key,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async publishAlertThresholdUpdated(payload: AlertThresholdUpdatedPayload): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const event = createRealtimeEvent({
         type: EventTypeEnum.ALERT_THRESHOLD_UPDATED,
         entity: 'alert_threshold',
@@ -1803,22 +1813,23 @@ export class EventBus extends EventEmitter {
       
       log(`EventBus: Seuil alerte mis à jour - threshold_id: ${payload.threshold_id}, by: ${payload.updated_by}, changes: ${Object.keys(payload.changes).join(', ')}`);
       
-    } catch (error) {
-      logger.error('Erreur publication threshold updated', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'publishAlertThresholdUpdated',
-          thresholdId: payload?.threshold_id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
   }
 
   async publishAlertThresholdDeactivated(payload: AlertThresholdDeactivatedPayload): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const event = createRealtimeEvent({
         type: EventTypeEnum.ALERT_THRESHOLD_DEACTIVATED,
         entity: 'alert_threshold',
@@ -1843,15 +1854,14 @@ export class EventBus extends EventEmitter {
       
       log(`EventBus: Seuil alerte désactivé - threshold_id: ${payload.threshold_id}, by: ${payload.deactivated_by}`);
       
-    } catch (error) {
-      logger.error('Erreur publication threshold deactivated', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'publishAlertThresholdDeactivated',
-          thresholdId: payload?.threshold_id,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -1860,7 +1870,9 @@ export class EventBus extends EventEmitter {
   // === HELPERS DÉCLENCHEURS ÉVALUATION ===
 
   async publishPredictiveSnapshotSaved(payload: PredictiveSnapshotSavedPayload): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const event = createRealtimeEvent({
         type: EventTypeEnum.PREDICTIVE_SNAPSHOT_SAVED,
         entity: 'system',
@@ -1887,16 +1899,14 @@ export class EventBus extends EventEmitter {
         log(`EventBus: Snapshot prédictif sauvegardé - déclenchement évaluation seuils - type: ${payload.calculation_type}, values_count: ${Object.keys(payload.values).length}`);
       }
       
-    } catch (error) {
-      logger.error('Erreur publication predictive snapshot', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'publishPredictiveSnapshotSaved',
-          snapshotId: payload?.snapshot_id,
-          calculationType: payload?.calculation_type,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -2129,7 +2139,9 @@ export class EventBus extends EventEmitter {
   private async executeBusinessHoursPreloading(): Promise<void> {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const startTime = Date.now();
       logger.info('Exécution preloading business hours', {
         metadata: {
@@ -2160,15 +2172,14 @@ export class EventBus extends EventEmitter {
           }
           
           return success;
-        } catch (error) {
-          logger.warn('Erreur preloading business hours', {
-            metadata: {
-              module: 'EventBus',
-              operation: 'executeBusinessHoursPreloading',
-              entityType: prediction.entityType,
-              entityId: prediction.entityId,
-              error: error instanceof Error ? error.message : String(error)
-            }
+        
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
           });
           this.backgroundStats.failedBackgroundTasks++;
           return false;
@@ -2215,7 +2226,9 @@ export class EventBus extends EventEmitter {
   private async executeWeekendWarming(): Promise<void> {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const startTime = Date.now();
       logger.info('Exécution weekend warming', {
         metadata: {
@@ -2246,15 +2259,14 @@ export class EventBus extends EventEmitter {
           }
           
           return success;
-        } catch (error) {
-          logger.warn('Erreur weekend warming entity', {
-            metadata: {
-              module: 'EventBus',
-              operation: 'weekendWarming',
-              entityType: entity.entityType,
-              entityId: entity.entityId,
-              error: error instanceof Error ? error.message : String(error)
-            }
+        
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
           });
           this.backgroundStats.failedBackgroundTasks++;
           return false;
@@ -2300,7 +2312,9 @@ export class EventBus extends EventEmitter {
   private async executePeakHoursOptimization(): Promise<void> {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Optimisation peak hours', {
         metadata: {
           module: 'EventBus',
@@ -2325,13 +2339,14 @@ export class EventBus extends EventEmitter {
           );
           
           this.backgroundStats.totalTriggeredPreloads++;
-        } catch (error) {
-          logger.warn('Erreur peak hours preloading', {
-            metadata: {
-              module: 'EventBus',
-              operation: 'peakHoursOptimization',
-              error: error instanceof Error ? error.message : String(error)
-            }
+        
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
           });
           this.backgroundStats.failedBackgroundTasks++;
         }
@@ -2359,7 +2374,9 @@ export class EventBus extends EventEmitter {
   private async executeNightlyMaintenance(): Promise<void> {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Maintenance nocturne', {
         metadata: {
           module: 'EventBus',
@@ -2386,13 +2403,14 @@ export class EventBus extends EventEmitter {
             undefined,
             'low' // Priorité basse maintenance nocturne
           );
-        } catch (error) {
-          logger.warn('Erreur preload maintenance nocturne', {
-            metadata: {
-              module: 'EventBus',
-              operation: 'nightlyMaintenance',
-              error: error instanceof Error ? error.message : String(error)
-            }
+        
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
           });
         }
       }
@@ -2427,7 +2445,9 @@ export class EventBus extends EventEmitter {
   private async triggerAOWorkflowPreloading(event: RealtimeEvent): Promise<void> {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Déclencheur AO workflow preloading', {
         metadata: {
           module: 'EventBus',
@@ -2449,21 +2469,21 @@ export class EventBus extends EventEmitter {
           try {
             await this.contextCacheService!.preloadContextByPrediction(
               prediction.type,
-              `PREDICTED_${event.entityId}_${prediction.type}`,
+`PREDICTED_${event.entityId}_${prediction.type}`,;
               undefined,
               prediction.priority as any
             );
             
             this.backgroundStats.eventTriggeredPreloads++;
             this.backgroundStats.totalTriggeredPreloads++;
-          } catch (error) {
-            logger.warn('Erreur preload AO workflow', {
-              metadata: {
-                module: 'EventBus',
-                operation: 'triggerAOWorkflowPreloading',
-                predictionType: prediction.type,
-                error: error instanceof Error ? error.message : String(error)
-              }
+          
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
             });
             this.backgroundStats.failedBackgroundTasks++;
           }
@@ -2489,7 +2509,9 @@ export class EventBus extends EventEmitter {
   private async triggerOfferToProjectPreloading(event: RealtimeEvent): Promise<void> {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Déclencheur Offre→Projet preloading', {
         metadata: {
           module: 'EventBus',
@@ -2511,21 +2533,21 @@ export class EventBus extends EventEmitter {
           try {
             await this.contextCacheService!.preloadContextByPrediction(
               prediction.type,
-              `PREDICTED_${event.entityId}_${prediction.type}`,
+`PREDICTED_${event.entityId}_${prediction.type}`,;
               undefined,
               prediction.priority as any
             );
             
             this.backgroundStats.eventTriggeredPreloads++;
             this.backgroundStats.totalTriggeredPreloads++;
-          } catch (error) {
-            logger.warn('Erreur preload offre→projet', {
-              metadata: {
-                module: 'EventBus',
-                operation: 'triggerOfferToProjectPreloading',
-                predictionType: prediction.type,
-                error: error instanceof Error ? error.message : String(error)
-              }
+          
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
             });
             this.backgroundStats.failedBackgroundTasks++;
           }
@@ -2551,7 +2573,9 @@ export class EventBus extends EventEmitter {
   private async triggerProjectWorkflowPreloading(event: RealtimeEvent): Promise<void> {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Déclencheur Projet workflow preloading', {
         metadata: {
           module: 'EventBus',
@@ -2571,21 +2595,21 @@ export class EventBus extends EventEmitter {
           try {
             await this.contextCacheService!.preloadContextByPrediction(
               prediction.type,
-              `PREDICTED_${event.entityId}_${prediction.type}`,
+`PREDICTED_${event.entityId}_${prediction.type}`,;
               undefined,
               prediction.priority as any
             );
             
             this.backgroundStats.eventTriggeredPreloads++;
             this.backgroundStats.totalTriggeredPreloads++;
-          } catch (error) {
-            logger.warn('Erreur preload projet workflow', {
-              metadata: {
-                module: 'EventBus',
-                operation: 'triggerProjectWorkflowPreloading',
-                predictionType: prediction.type,
-                error: error instanceof Error ? error.message : String(error)
-              }
+          
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
             });
             this.backgroundStats.failedBackgroundTasks++;
           }
@@ -2611,7 +2635,9 @@ export class EventBus extends EventEmitter {
   private async triggerTaskRelatedPreloading(event: RealtimeEvent): Promise<void> {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService || !event.projectId) return;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Déclencheur Tâche preloading', {
         metadata: {
           module: 'EventBus',
@@ -2634,7 +2660,7 @@ export class EventBus extends EventEmitter {
         setTimeout(async () => {
           await this.contextCacheService!.preloadContextByPrediction(
             'team',
-            `TEAM_${event.projectId}`,
+`TEAM_${event.projectId}`,;
             undefined,
             'low'
           );
@@ -2644,14 +2670,14 @@ export class EventBus extends EventEmitter {
       this.backgroundStats.eventTriggeredPreloads += 2;
       this.backgroundStats.totalTriggeredPreloads += 2;
 
-    } catch (error) {
-      logger.error('Erreur déclencheur tâche', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'triggerTaskRelatedPreloading',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
       });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2663,7 +2689,9 @@ export class EventBus extends EventEmitter {
   private async triggerAnalyticsDashboardPreloading(event: RealtimeEvent): Promise<void> {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Déclencheur Analytics dashboard preloading', {
         metadata: {
           module: 'EventBus',
@@ -2690,14 +2718,14 @@ export class EventBus extends EventEmitter {
             
             this.backgroundStats.eventTriggeredPreloads++;
             this.backgroundStats.totalTriggeredPreloads++;
-          } catch (error) {
-            logger.warn('Erreur preload analytics dashboard', {
-              metadata: {
-                module: 'EventBus',
-                operation: 'triggerAnalyticsDashboardPreloading',
-                contextType: context.type,
-                error: error instanceof Error ? error.message : String(error)
-              }
+          
+    },
+    {
+      operation: 'constructor',
+      service: 'eventBus',
+      metadata: {}
+    }
+  );
             });
             this.backgroundStats.failedBackgroundTasks++;
           }

@@ -1,4 +1,5 @@
 import { storage } from '../storage-poc';
+import { withErrorHandling } from './utils/error-handler';
 import type { 
   Ao, Project, 
   AOFieldsExtracted, 
@@ -123,7 +124,9 @@ export class ContextualOCREngine {
    * Initialise le contexte en chargeant les données existantes
    */
   async initializeContext(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Loading contextual data', {
         metadata: {
           service: 'ContextualOCREngine',
@@ -170,14 +173,14 @@ export class ContextualOCREngine {
         }
       });
 
-    } catch (error) {
-      logger.error('Failed to initialize context', {
-        metadata: {
-          service: 'ContextualOCREngine',
-          operation: 'initializeContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ContextualOCREngine',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -674,13 +677,13 @@ export class ContextualOCREngine {
 
     // Patterns spécialisés selon le type
     switch (fields.menuiserieType) {
-      case 'fenetre':
+case 'fenetre':;
         this.enhanceMenuiserieExterieure(fields, mappingResults);
         break;
-      case 'porte':
+case 'porte':;
         this.enhanceMenuiseriePortes(fields, mappingResults);
         break;
-      case 'volet':
+case 'volet':;
         this.enhanceMenuiserieVolets(fields, mappingResults);
         break;
     }

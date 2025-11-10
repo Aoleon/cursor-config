@@ -4,6 +4,8 @@
  */
 
 import { Logger } from '../../../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { parseAmountSafely, formatMontantEuros, parseDateSafely, formatDateFR } from '../../../utils/shared-utils';
 import _ from 'lodash';
 import type {
@@ -126,7 +128,9 @@ export class PlaceholderResolver {
     const resolvedData: Record<string, any> = {};
 
     for (const placeholder of placeholders) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const value = await this.resolvePlaceholder(placeholder, data, customFormatters);
         
         if (value !== undefined) {
@@ -144,14 +148,14 @@ export class PlaceholderResolver {
           resolved.push({ placeholder, value: defaultValue });
           _.set(resolvedData, placeholder.path, defaultValue);
         }
-      } catch (error) {
-        logger.error('Error resolving placeholder', error as Error, {
-          placeholder: placeholder.raw
-        });
-        
-        if (placeholder.isRequired) {
-          missing.push(placeholder);
-        }
+      
+    },
+    {
+      operation: 'Logger',
+      service: 'PlaceholderResolver',
+      metadata: {}
+    }
+  );
       }
     }
 
@@ -170,7 +174,7 @@ export class PlaceholderResolver {
     const formatterMatch = this.formatterRegex.exec(content);
     
     if (!formatterMatch) {
-      throw new Error(`Invalid placeholder format: ${content}`);
+      throw new AppError(`Invalid placeholder format: ${content}`, 500);
     }
 
     const path = formatterMatch[1];

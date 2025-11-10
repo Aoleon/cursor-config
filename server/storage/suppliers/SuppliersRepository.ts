@@ -17,6 +17,7 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { 
   suppliers,
   supplierRequests,
@@ -302,7 +303,7 @@ export class SuppliersRepository extends BaseRepository<
       async () => {
         const conditions = this.buildWhereConditions(filters);
         if (conditions.length === 0) {
-          throw new Error('deleteMany requires at least one filter condition for safety');
+          throw new AppError('deleteMany requires at least one filter condition for safety', 500);
         }
 
         const result = await dbToUse
@@ -442,7 +443,7 @@ export class SuppliersRepository extends BaseRepository<
           .returning();
 
         if (!result[0]) {
-          throw new Error(`SupplierRequest with ID ${normalizedId} not found`);
+          throw new AppError(`SupplierRequest with ID ${normalizedId} not found`, 500);
         }
 
         return result[0];
@@ -539,7 +540,7 @@ export class SuppliersRepository extends BaseRepository<
           .returning();
 
         if (!result[0]) {
-          throw new Error(`SupplierSpecialization with ID ${normalizedId} not found`);
+          throw new AppError(`SupplierSpecialization with ID ${normalizedId} not found`, 500);
         }
 
         return result[0];
@@ -566,7 +567,7 @@ export class SuppliersRepository extends BaseRepository<
           .where(eq(supplierSpecializations.id, normalizedId));
 
         if (result.rowCount === 0) {
-          throw new Error(`SupplierSpecialization with ID ${normalizedId} not found`);
+          throw new AppError(`SupplierSpecialization with ID ${normalizedId} not found`, 500);
         }
       },
       'deleteSpecialization',
@@ -661,7 +662,7 @@ export class SuppliersRepository extends BaseRepository<
     tx?: DrizzleTransaction
   ): Promise<SupplierQuoteSession | undefined> {
     if (!token || token.trim() === '') {
-      throw new Error('Access token cannot be empty');
+      throw new AppError('Access token cannot be empty', 500);
     }
 
     const dbToUse = this.getDb(tx);
@@ -733,7 +734,7 @@ export class SuppliersRepository extends BaseRepository<
           .returning();
 
         if (!result[0]) {
-          throw new Error(`SupplierQuoteSession with ID ${normalizedId} not found`);
+          throw new AppError(`SupplierQuoteSession with ID ${normalizedId} not found`, 500);
         }
 
         return result[0];
@@ -760,7 +761,7 @@ export class SuppliersRepository extends BaseRepository<
           .where(eq(supplierQuoteSessions.id, normalizedId));
 
         if (result.rowCount === 0) {
-          throw new Error(`SupplierQuoteSession with ID ${normalizedId} not found`);
+          throw new AppError(`SupplierQuoteSession with ID ${normalizedId} not found`, 500);
         }
       },
       'deleteQuoteSession',
@@ -928,7 +929,7 @@ export class SuppliersRepository extends BaseRepository<
           .returning();
 
         if (!result[0]) {
-          throw new Error(`SupplierDocument with ID ${normalizedId} not found`);
+          throw new AppError(`SupplierDocument with ID ${normalizedId} not found`, 500);
         }
 
         return result[0];
@@ -955,7 +956,7 @@ export class SuppliersRepository extends BaseRepository<
           .where(eq(supplierDocuments.id, normalizedId));
 
         if (result.rowCount === 0) {
-          throw new Error(`SupplierDocument with ID ${normalizedId} not found`);
+          throw new AppError(`SupplierDocument with ID ${normalizedId} not found`, 500);
         }
       },
       'deleteDocument',
@@ -1090,7 +1091,7 @@ export class SuppliersRepository extends BaseRepository<
           .returning();
 
         if (!result[0]) {
-          throw new Error(`SupplierQuoteAnalysis with ID ${normalizedId} not found`);
+          throw new AppError(`SupplierQuoteAnalysis with ID ${normalizedId} not found`, 500);
         }
 
         return result[0];
@@ -1117,7 +1118,7 @@ export class SuppliersRepository extends BaseRepository<
           .where(eq(supplierQuoteAnalysis.id, normalizedId));
 
         if (result.rowCount === 0) {
-          throw new Error(`SupplierQuoteAnalysis with ID ${normalizedId} not found`);
+          throw new AppError(`SupplierQuoteAnalysis with ID ${normalizedId} not found`, 500);
         }
       },
       'deleteQuoteAnalysis',

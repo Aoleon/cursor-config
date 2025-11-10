@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { withErrorHandling } from './utils/error-handler';
 import { z } from "zod";
 import { getAIService } from "../services/AIService";
 import { storage } from "../storage";
@@ -489,7 +490,9 @@ router.post("/context-batch", asyncHandler(async (req, res) => {
   const aiService = getAIService(storage as IStorage);
 
   const batchPromises = entities.map(async (entity) => {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const contextData = await aiService.buildEnrichedContext(
         entity.entityType as any,
         entity.entityId,
@@ -503,12 +506,14 @@ router.post("/context-batch", asyncHandler(async (req, res) => {
         data: contextData,
         tokensEstimate: contextData?.tokenEstimate || 0
       };
-    } catch (error) {
-      logger.warn("Erreur génération contexte batch", { 
-        entityType: entity.entityType, 
-        entityId: entity.entityId,
-        error: error instanceof Error ? error.message : String(error)
-      });
+    
+    },
+    {
+      operation: 'Router',
+      service: 'ai-service',
+      metadata: {}
+    }
+  ););
       return {
         entityType: entity.entityType,
         entityId: entity.entityId,

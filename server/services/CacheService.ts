@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
 import type { EventBus } from '../eventBus';
 import { RedisCacheAdapter } from './RedisCacheAdapter';
 
@@ -190,7 +191,9 @@ export class CacheService {
    * Get value from cache
    */
   async get<T>(key: string): Promise<T | null> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const value = await this.adapter.get<T>(key);
       
       if (value !== null) {
@@ -216,14 +219,14 @@ export class CacheService {
       }
 
       return value;
-    } catch (error) {
-      logger.error('[CacheService] Erreur get cache', {
-        metadata: {
-          service: 'CacheService',
-          operation: 'get',
-          key,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'tokens',
+      service: 'CacheService',
+      metadata: {}
+    }
+  );
       });
       this.misses++;
       return null;
@@ -234,7 +237,9 @@ export class CacheService {
    * Set value in cache with TTL
    */
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.adapter.set(key, value, ttlSeconds);
       
       logger.debug('[CacheService] Valeur mise en cache', {
@@ -245,14 +250,14 @@ export class CacheService {
           ttlSeconds
         }
       });
-    } catch (error) {
-      logger.error('[CacheService] Erreur set cache', {
-        metadata: {
-          service: 'CacheService',
-          operation: 'set',
-          key,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'tokens',
+      service: 'CacheService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -261,7 +266,9 @@ export class CacheService {
    * Invalidate specific cache key
    */
   async invalidate(key: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.adapter.del(key);
       
       logger.info('[CacheService] Clé invalidée', {
@@ -271,14 +278,14 @@ export class CacheService {
           key
         }
       });
-    } catch (error) {
-      logger.error('[CacheService] Erreur invalidation cache', {
-        metadata: {
-          service: 'CacheService',
-          operation: 'invalidate',
-          key,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'tokens',
+      service: 'CacheService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -287,7 +294,9 @@ export class CacheService {
    * Invalidate all keys matching pattern
    */
   async invalidatePattern(pattern: string): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const keys = await this.adapter.keys();
       const regex = new RegExp(pattern.replace(/\*/g, '.*'));
       
@@ -305,14 +314,14 @@ export class CacheService {
           invalidatedCount: matchingKeys.length
         }
       });
-    } catch (error) {
-      logger.error('[CacheService] Erreur invalidation pattern', {
-        metadata: {
-          service: 'CacheService',
-          operation: 'invalidatePattern',
-          pattern,
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'tokens',
+      service: 'CacheService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -321,7 +330,9 @@ export class CacheService {
    * Flush all cache
    */
   async flush(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.adapter.flush();
       this.hits = 0;
       this.misses = 0;
@@ -332,13 +343,14 @@ export class CacheService {
           operation: 'flush'
         }
       });
-    } catch (error) {
-      logger.error('[CacheService] Erreur flush cache', {
-        metadata: {
-          service: 'CacheService',
-          operation: 'flush',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'tokens',
+      service: 'CacheService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -347,7 +359,9 @@ export class CacheService {
    * Get cache statistics
    */
   async getStats(): Promise<CacheStats> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const size = await this.adapter.size();
       const keys = await this.adapter.keys();
       const total = this.hits + this.misses;
@@ -360,13 +374,14 @@ export class CacheService {
         size,
         keys
       };
-    } catch (error) {
-      logger.error('[CacheService] Erreur récupération stats', {
-        metadata: {
-          service: 'CacheService',
-          operation: 'getStats',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'tokens',
+      service: 'CacheService',
+      metadata: {}
+    }
+  );
       });
       
       return {
@@ -499,7 +514,9 @@ export function createCacheAdapter(): ICacheAdapter {
   const redisUrl = process.env.REDIS_URL;
 
   if (redisUrl) {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('[CacheService] Creating RedisCacheAdapter', {
         metadata: {
           service: 'CacheService',
@@ -509,13 +526,14 @@ export function createCacheAdapter(): ICacheAdapter {
         }
       });
       return new RedisCacheAdapter(redisUrl);
-    } catch (error) {
-      logger.error('[CacheService] Failed to create RedisCacheAdapter, falling back to Memory', {
-        metadata: {
-          service: 'CacheService',
-          operation: 'createCacheAdapter',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'tokens',
+      service: 'CacheService',
+      metadata: {}
+    }
+  );
       });
     }
   }

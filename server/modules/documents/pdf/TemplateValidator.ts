@@ -4,6 +4,7 @@
  */
 
 import { Logger } from '../../../utils/logger';
+import { withErrorHandling } from './utils/error-handler';
 import { PlaceholderResolver } from './PlaceholderResolver';
 import { ImageIntegrator } from './ImageIntegrator';
 import type {
@@ -42,7 +43,9 @@ export class TemplateValidator {
 
     const startTime = Date.now();
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Basic validation
       this.validateBasicStructure(template, errors);
 
@@ -92,14 +95,14 @@ export class TemplateValidator {
         suggestions,
         metadata
       };
-    } catch (error) {
-      logger.error('Template validation failed', error as Error, {
-        templateId: template.id
-      });
-
-      errors.push({
-        type: 'syntax',
-        message: `Validation failed: ${error}`,
+    
+    },
+    {
+      operation: 'Logger',
+      service: 'TemplateValidator',
+      metadata: {}
+    }
+  );`,
         severity: 'critical'
       });
 
@@ -146,7 +149,7 @@ export class TemplateValidator {
     if (template.content.length > this.maxTemplateSize) {
       errors.push({
         type: 'structure',
-        message: `Template size exceeds maximum (${this.maxTemplateSize} bytes)`,
+message: `Template size exceeds maximum (${this.maxTemplateSize} bytes)`,;
         severity: 'error'
       });
     }
@@ -174,7 +177,7 @@ export class TemplateValidator {
         type: 'syntax',
         message: 'Unclosed brackets detected',
         severity: 'error',
-        context: `Open: ${openBrackets}, Close: ${closeBrackets}`
+context: `Open: ${openBrackets}, Close: ${closeBrackets}`;
       });
     }
 
@@ -190,7 +193,7 @@ export class TemplateValidator {
         type: 'syntax',
         message: 'Unclosed conditional blocks',
         severity: 'error',
-        context: `if: ${ifCount}, /if: ${endIfCount}`
+context: `if: ${ifCount}, /if: ${endIfCount}`;
       });
     }
 
@@ -401,7 +404,7 @@ export class TemplateValidator {
     const estimatedMemory = this.estimateMemoryUsage(template);
 
     // Check render time
-    if (estimatedTime > 10000) { // 10 seconds
+if (estimatedTime > 10000) { // 10 seconds;
       warnings.push({
         type: 'performance',
         message: `Estimated render time is high: ${estimatedTime}ms`,

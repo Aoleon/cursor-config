@@ -1,4 +1,5 @@
 import type { IStorage } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
 import { db } from "../db";
 import { eq, and, desc, sql, or, inArray, isNotNull, gte, lte } from "drizzle-orm";
 import { logger } from '../utils/logger';
@@ -146,7 +147,9 @@ export class ContextBuilderService {
     const startTime = Date.now();
     this.queryMetrics = this.initializeMetrics();
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Génération contexte enrichi', {
         metadata: {
           service: 'ContextBuilderService',
@@ -165,14 +168,14 @@ export class ContextBuilderService {
       // Système classique si tiéré désactivé ou configuration basique
       return await this.buildClassicContext(config);
 
-    } catch (error) {
-      logger.error('Erreur génération contexte', {
-        metadata: {
-          service: 'ContextBuilderService',
-          operation: 'generateEnrichedContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ContextBuilderService',
+      metadata: {}
+    }
+  );
       });
       return this.buildErrorResult('unknown', 'Erreur interne lors de la génération', error);
     }
@@ -185,7 +188,9 @@ export class ContextBuilderService {
     const startTime = Date.now();
     let traceId: string | undefined;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Mode TIÉRÉ activé', {
         metadata: {
           service: 'ContextBuilderService',
@@ -256,13 +261,14 @@ export class ContextBuilderService {
             }
           });
 
-        } catch (error) {
-          logger.warn('Échec détection tier, fallback COMPREHENSIVE', {
-            metadata: {
-              service: 'ContextBuilderService',
-              operation: 'generateTieredContext',
-              error: error instanceof Error ? error.message : String(error),
-              context: { fallbackTier: 'COMPREHENSIVE' }
+        
+    },
+    {
+      operation: 'constructor',
+service: 'ContextBuilderService',;
+      metadata: {}
+    }
+  );
             }
           });
           
@@ -493,22 +499,22 @@ export class ContextBuilderService {
 
     // Récupération des données principales selon le type d'entité
     switch (config.entityType) {
-      case 'ao':
+case 'ao':;
         await this.buildAOContext(contextData, config);
         break;
-      case 'offer':
+case 'offer':;
         await this.buildOfferContext(contextData, config);
         break;
-      case 'project':
+case 'project':;
         await this.buildProjectContext(contextData, config);
         break;
-      case 'supplier':
+case 'supplier':;
         await this.buildSupplierContext(contextData, config);
         break;
-      case 'team':
+case 'team':;
         await this.buildTeamContext(contextData, config);
         break;
-      case 'client':
+case 'client':;
         await this.buildClientContext(contextData, config);
         break;
     }
@@ -524,7 +530,9 @@ export class ContextBuilderService {
    * Construit le contexte pour un Appel d'Offres (OPTIMISÉ POUR INDEX)
    */
   private async buildAOContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const startTime = Date.now();
       logger.info('Construction contexte AO optimisée', {
         metadata: {
@@ -695,14 +703,14 @@ export class ContextBuilderService {
         qualityStandards: []
       };
 
-    } catch (error) {
-      logger.error('Erreur construction contexte AO', {
-        metadata: {
-          service: 'ContextBuilderService',
-          operation: 'buildAoContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ContextBuilderService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -712,7 +720,9 @@ export class ContextBuilderService {
    * Construit le contexte pour une Offre (OPTIMISÉ POUR INDEX)
    */
   private async buildOfferContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const startTime = Date.now();
       logger.info('Construction contexte Offre optimisée', {
         metadata: {
@@ -851,14 +861,14 @@ export class ContextBuilderService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur construction contexte Offre', {
-        metadata: {
-          service: 'ContextBuilderService',
-          operation: 'buildOfferContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ContextBuilderService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -868,7 +878,9 @@ export class ContextBuilderService {
    * Construit le contexte pour un Projet
    */
   private async buildProjectContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Données principales projet
       const [projectData] = await db
         .select()
@@ -996,14 +1008,14 @@ export class ContextBuilderService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur construction contexte Projet', {
-        metadata: {
-          service: 'ContextBuilderService',
-          operation: 'buildProjectContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ContextBuilderService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -1013,7 +1025,9 @@ export class ContextBuilderService {
    * Construit le contexte pour un Fournisseur
    */
   private async buildSupplierContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Données principales fournisseur
       const [supplierData] = await db
         .select()
@@ -1112,14 +1126,14 @@ export class ContextBuilderService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur construction contexte Fournisseur', {
-        metadata: {
-          service: 'ContextBuilderService',
-          operation: 'buildSupplierContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ContextBuilderService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -1129,7 +1143,9 @@ export class ContextBuilderService {
    * Construit le contexte pour une Équipe
    */
   private async buildTeamContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Données principales équipe
       const [teamData] = await db
         .select()
@@ -1214,14 +1230,14 @@ export class ContextBuilderService {
         }
       };
 
-    } catch (error) {
-      logger.error('Erreur construction contexte Équipe', {
-        metadata: {
-          service: 'ContextBuilderService',
-          operation: 'buildTeamContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ContextBuilderService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -1904,22 +1920,22 @@ export class ContextBuilderService {
     
     // 3. Construction selon type d'entité avec limitations
     switch (config.entityType) {
-      case 'ao':
+case 'ao':;
         await this.buildAOContextLimited(contextData, limitedConfig, profile);
         break;
-      case 'offer':
+case 'offer':;
         await this.buildOfferContextLimited(contextData, limitedConfig, profile);
         break;
-      case 'project':
+case 'project':;
         await this.buildProjectContextLimited(contextData, limitedConfig, profile);
         break;
-      case 'supplier':
+case 'supplier':;
         await this.buildSupplierContextLimited(contextData, limitedConfig, profile);
         break;
-      case 'team':
+case 'team':;
         await this.buildTeamContextLimited(contextData, limitedConfig, profile);
         break;
-      case 'client':
+case 'client':;
         await this.buildClientContextLimited(contextData, limitedConfig, profile);
         break;
     }
@@ -2011,7 +2027,9 @@ export class ContextBuilderService {
     // Version limitée de buildAOContext selon tier
     const startTime = Date.now();
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Requête AO principale (toujours incluse)
       const [aoResults] = await Promise.all([
         db.select({
@@ -2100,14 +2118,14 @@ export class ContextBuilderService {
 
       this.queryMetrics.executionTimeMs += Date.now() - startTime;
 
-    } catch (error) {
-      logger.error('Erreur construction AO limitée', {
-        metadata: {
-          service: 'ContextBuilderService',
-          operation: 'buildLimitedAoContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'ContextBuilderService',
+      metadata: {}
+    }
+  );
       });
     }
   }
@@ -2415,14 +2433,14 @@ export class ContextBuilderService {
     
     // Insights selon tier
     switch (profile.tier) {
-      case 'minimal':
+case 'minimal':;
         insights.push(`Statut: ${contextData.businessContext?.currentPhase || 'Inconnu'}`);
         if (contextData.businessContext?.financials?.estimatedAmount) {
           insights.push(`Montant: ${contextData.businessContext.financials.estimatedAmount.toLocaleString('fr-FR')} €`);
         }
         break;
         
-      case 'standard':
+case 'standard':;
         insights.push(`Phase: ${contextData.businessContext?.currentPhase || 'Inconnu'}`);
         insights.push(`Priorité: ${contextData.businessContext?.projectClassification?.priority || 'Normale'}`);
         if (contextData.relationalContext?.mainActors?.client) {
@@ -2430,7 +2448,7 @@ export class ContextBuilderService {
         }
         break;
         
-      case 'comprehensive':
+case 'comprehensive':;
         // Insights complets comme dans le système original
         return await this.generateKeyInsights(contextData, {} as ContextGenerationConfig);
     }

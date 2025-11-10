@@ -17,6 +17,8 @@
  */
 
 import XLSX from 'xlsx';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import * as path from 'path';
 import * as fs from 'fs';
 import type { IStorage } from '../storage-poc';
@@ -138,7 +140,9 @@ export class MondayProductionFinalService {
     
     this.resetWarnings();
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Chargement données authentiques depuis exports Excel
       const authenticData = await this.loadAuthenticMondayData();
       
@@ -202,17 +206,17 @@ export class MondayProductionFinalService {
       
       return result;
       
-    } catch (error) {
-      logger.error('Erreur critique migration', {
-        metadata: {
-          service: 'MondayProductionFinalService',
-          operation: 'migrateProductionMondayData',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          context: { migrationStep: 'error' }
+    
+    },
+    {
+      operation: 'xlsx',
+      service: 'MondayProductionFinalService',
+      metadata: {}
+    }
+  );
         }
       });
-      throw new Error(`Migration production finale échouée: ${error instanceof Error ? error.message : String(error)}`);
+      throw new AppError(`Migration production finale échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
   }
 
@@ -234,13 +238,15 @@ export class MondayProductionFinalService {
     
     // Vérification existence fichiers
     if (!fs.existsSync(aoFilePath)) {
-      throw new Error(`Fichier AO_Planning introuvable: ${aoFilePath}`);
+      throw new AppError(`Fichier AO_Planning introuvable: ${aoFilePath}`, 500);
     }
     if (!fs.existsSync(chantiersFilePath)) {
-      throw new Error(`Fichier CHANTIERS introuvable: ${chantiersFilePath}`);
+      throw new AppError(`Fichier CHANTIERS introuvable: ${chantiersFilePath}`, 500);
     }
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Lecture fichiers Excel authentiques
       const aoData = await this.readAuthenticAOPlanningFile(aoFilePath);
       const projectData = await this.readAuthenticChantiersFile(chantiersFilePath);
@@ -270,17 +276,17 @@ export class MondayProductionFinalService {
         }
       };
       
-    } catch (error) {
-      logger.error('Erreur lecture exports Excel', {
-        metadata: {
-          service: 'MondayProductionFinalService',
-          operation: 'loadAuthenticMondayData',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          context: { migrationStep: 'excel_read_error' }
+    
+    },
+    {
+      operation: 'xlsx',
+      service: 'MondayProductionFinalService',
+      metadata: {}
+    }
+  );
         }
       });
-      throw new Error(`Impossible de lire exports authentiques: ${error instanceof Error ? error.message : String(error)}`);
+      throw new AppError(`Impossible de lire exports authentiques: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
   }
 
@@ -329,7 +335,9 @@ export class MondayProductionFinalService {
         continue;
       }
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         const aoData = this.extractAoDataFromExcelRow(row, i);
         if (aoData) {
           aos.push(aoData);
@@ -337,14 +345,14 @@ export class MondayProductionFinalService {
         } else {
           skippedCount++;
         }
-      } catch (error) {
-        logger.warn('Erreur ligne AO', {
-          metadata: {
-            service: 'MondayProductionFinalService',
-            operation: 'readAuthenticAOPlanningFile',
-            lineIndex: i,
-            error: error instanceof Error ? error.message : String(error),
-            context: { fileType: 'ao_planning', step: 'row_processing_error' }
+      
+    },
+    {
+      operation: 'xlsx',
+      service: 'MondayProductionFinalService',
+      metadata: {}
+    }
+  );
           }
         });
         skippedCount++;
@@ -408,7 +416,9 @@ export class MondayProductionFinalService {
         continue;
       }
       
-      try {
+      return withErrorHandling(
+    async () => {
+
         const projectData = this.extractProjectDataFromExcelRow(row, i);
         if (projectData) {
           projects.push(projectData);
@@ -416,14 +426,14 @@ export class MondayProductionFinalService {
         } else {
           skippedCount++;
         }
-      } catch (error) {
-        logger.warn('Erreur ligne projet', {
-          metadata: {
-            service: 'MondayProductionFinalService',
-            operation: 'readAuthenticChantiersFile',
-            lineIndex: i,
-            error: error instanceof Error ? error.message : String(error),
-            context: { fileType: 'chantiers', step: 'row_processing_error' }
+      
+    },
+    {
+      operation: 'xlsx',
+      service: 'MondayProductionFinalService',
+      metadata: {}
+    }
+  );
           }
         });
         skippedCount++;
@@ -538,7 +548,9 @@ export class MondayProductionFinalService {
     const results: BatchResult[] = [];
     
     for (const [index, ao] of aoData.entries()) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Validation avec parser dates français
         const validatedAo = this.validateAndTransformAoData(ao);
         
@@ -567,28 +579,14 @@ export class MondayProductionFinalService {
           });
         }
         
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        logger.error('Erreur migration AO', {
-          metadata: {
-            service: 'MondayProductionFinalService',
-            operation: 'migrateAuthenticAOs',
-            lineIndex: index + 1,
-            mondayItemId: ao.mondayItemId,
-            error: errorMsg,
-            stack: error instanceof Error ? error.stack : undefined,
-            context: { migrationStep: 'ao_migration_error' }
-          }
-        });
-        
-        results.push({
-          index,
-          success: false,
-          error: errorMsg,
-          data: ao,
-          mondayId: ao.mondayItemId,
-          sourceRow: ao
-        });
+      
+    },
+    {
+      operation: 'xlsx',
+      service: 'MondayProductionFinalService',
+      metadata: {}
+    }
+  ););
       }
     }
     
@@ -612,7 +610,9 @@ export class MondayProductionFinalService {
     const results: BatchResult[] = [];
     
     for (const [index, project] of projectData.entries()) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         // Validation avec mapping workflow Saxium
         const validatedProject = this.validateAndTransformProjectData(project);
         
@@ -641,28 +641,14 @@ export class MondayProductionFinalService {
           });
         }
         
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        logger.error('Erreur migration projet', {
-          metadata: {
-            service: 'MondayProductionFinalService',
-            operation: 'migrateAuthenticProjects',
-            lineIndex: index + 1,
-            mondayProjectId: project.mondayProjectId,
-            error: errorMsg,
-            stack: error instanceof Error ? error.stack : undefined,
-            context: { migrationStep: 'project_migration_error' }
-          }
-        });
-        
-        results.push({
-          index,
-          success: false,
-          error: errorMsg,
-          data: project,
-          mondayId: project.mondayProjectId,
-          sourceRow: project
-        });
+      
+    },
+    {
+      operation: 'xlsx',
+      service: 'MondayProductionFinalService',
+      metadata: {}
+    }
+  ););
       }
     }
     
@@ -733,7 +719,9 @@ export class MondayProductionFinalService {
    * VALIDATION ET TRANSFORMATION (RÉUTILISE LOGIQUE EXISTANTE)
    */
   private validateAndTransformAoData(aoData: MondayAoData): InsertAo {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Validation Monday.com
       const validated = validateMondayAoData(aoData);
       
@@ -760,132 +748,14 @@ export class MondayProductionFinalService {
       
       return saxiumAo;
       
-    } catch (error) {
-      throw new Error(`Validation AO authentique échouée (${aoData.mondayItemId}): ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  private validateAndTransformProjectData(projectData: MondayProjectData): InsertProject {
-    try {
-      // Validation Monday.com
-      const validated = validateMondayProjectData(projectData);
-      
-      // CORRECTION FINALE ERREUR DATES PROJETS - APPLICATION LOGIQUE AOS QUI MARCHE
-      // Calculer dates sûres avec gestion d'erreur robuste IDENTIQUE aux AOs
-      const defaultStartDate = new Date();
-      const defaultEndDate = this.calculateDefaultEndDate();
-      
-      // CORRECTION CRITIQUE: APPLIQUER safeToISOString à TOUS LES CHAMPS TIMESTAMP
-      // Selon schéma projects: 13+ champs timestamp doivent être traités
-      const safeStartDate = this.safeToISOString(defaultStartDate);
-      const safeEndDate = this.safeToISOString(defaultEndDate);
-      
-      // Transformation vers Saxium avec mapping dates CORRECT selon schéma
-      const saxiumProject: InsertProject = {
-        name: validated.name,
-        mondayProjectId: validated.mondayProjectId,
-        clientName: validated.clientName,
-        client: validated.clientName, // CORRECTION: Garantir client non-null comme AOs
-        location: validated.geographicZone || 'ZONE_INCONNUE', // CORRECTION: Mapping location requis
-        geographicZone: validated.geographicZone,
-        region: 'Hauts-de-France', // JLM = Nord France
-        status: this.mapProjectStatus(validated.workflowStage),
-        projectSubtype: validated.projectSubtype,
-        buildingCount: validated.buildingCount,
-        description: `Migration authentique Monday.com - ${validated.mondayProjectId}`,
-        priority: 'normal',
-        progressPercentage: 0,
-        
-        // FIX CRITIQUE: APPLIQUER safeToISOString à TOUS les champs timestamp pour éliminer "value.toISOString is not a function"
-        // Champs dates de base (OBLIGATOIRES avec safeToISOString)
-        startDate: safeStartDate,
-        endDate: safeEndDate,
-        
-        // TOUS les autres champs timestamp de la table projects (traités avec safeToISOString)
-        dateOS: this.safeToISOString(null), // Date Ordre de Service
-        dateLimiteRemise: this.safeToISOString(null), // Date limite remise originale AO
-        dateLivraisonPrevue: this.safeToISOString(null), // Date livraison contractuelle
-        demarragePrevu: this.safeToISOString(null), // Date démarrage prévue
-        dateLivraisonReelle: this.safeToISOString(null), // Date livraison réelle
-        finEtudesValidatedAt: this.safeToISOString(null), // Validation fin études
-        dateDebutChantier: this.safeToISOString(null), // Date réelle début chantier
-        dateFinChantier: this.safeToISOString(null), // Date réelle fin chantier
-        lastOptimizedAt: this.safeToISOString(null), // Dernière optimisation
-        startDatePlanned: this.safeToISOString(defaultStartDate), // Date début plannifiée
-        endDatePlanned: this.safeToISOString(defaultEndDate) // Date fin plannifiée
-      };
-      
-      return saxiumProject;
-      
-    } catch (error) {
-      throw new Error(`Validation Project authentique échouée (${projectData.mondayProjectId}): ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  /**
-   * UTILITAIRES MAPPING (RÉUTILISE LOGIQUE VALIDÉE)
-   */
-  private mapOperationalStatus(mondayStatus: MondayAoData['operationalStatus']): string {
-    const mapping = {
-      'A RELANCER': 'a_relancer',
-      'AO EN COURS': 'en_cours',
-      'GAGNE': 'gagne',
-      'PERDU': 'perdu',
-      'ABANDONNE': 'abandonne'
-    };
-    return mapping[mondayStatus] || 'en_cours';
-  }
-
-  private mapProjectStatus(mondayStage: MondayProjectData['workflowStage']): string {
-    const mapping = {
-      'NOUVEAUX': 'passation',
-      'En cours': 'etude',
-      'ETUDE': 'etude',
-      'VISA': 'visa_architecte',
-      'PLANIFICATION': 'planification',
-      'APPROVISIONNEMENT': 'approvisionnement',
-      'CHANTIER': 'chantier',
-      'SAV': 'sav'
-    };
-    return mapping[mondayStage] || 'etude';
-  }
-
-  private parseMondayDateSafely(dateStr: string): string | null {
-    const result = validateAndParseMondayDate(dateStr);
-    if (result.warning) {
-      this.warnings.push(result.warning);
-    }
-    return result.parsed;
-  }
-
-  private inferDepartementFromCity(city: string): string {
-    const pasDeCalaisZones = ['BOULOGNE', 'ETAPLES', 'BERCK', 'DESVRES', 'FRUGES', 'BETHUNE', 'CALAIS'];
-    const nordZones = ['DUNKERQUE', 'GRANDE-SYNTHE'];
     
-    if (pasDeCalaisZones.some(zone => city.includes(zone))) return '62';
-    if (nordZones.some(zone => city.includes(zone))) return '59';
-    return '62'; // Par défaut Pas-de-Calais (siège JLM)
-  }
-
-  private calculateDefaultEndDate(): Date {
-    try {
-      const date = new Date();
-      date.setMonth(date.getMonth() + 3);
-      return date;
-    } catch (error) {
-      // Fallback en cas d'erreur de date
-      logger.warn('Erreur calcul date fin par défaut, utilisation fallback', {
-        metadata: {
-          service: 'MondayProductionFinalService',
-          operation: 'mapMondayWorkflowStage',
-          workflowStage,
-          context: { calculationStep: 'default_end_date_error' }
-        }
-      });
-      const fallbackDate = new Date();
-      fallbackDate.setFullYear(fallbackDate.getFullYear() + 1); // +1 an par défaut
-      return fallbackDate;
+    },
+    {
+      operation: 'xlsx',
+      service: 'MondayProductionFinalService',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -915,7 +785,9 @@ export class MondayProductionFinalService {
     }
     
     // Fallback : essayer de créer Date
-    try {
+    return withErrorHandling(
+    async () => {
+
       const date = new Date(value);
       if (isNaN(date.getTime())) return null;
       return date.toISOString();
@@ -1010,56 +882,17 @@ export class MondayProductionFinalService {
         try {
           validateMondayAoData(ao);
           validLines++;
-        } catch (error) {
-          totalErrors++;
-        }
-      }
-      
-      // Valider projets
-      for (const project of authenticData.projects) {
-        try {
-          validateMondayProjectData(project);
-          validLines++;
-        } catch (error) {
-          totalErrors++;
-        }
-      }
-      
-      const totalLines = authenticData.aos.length + authenticData.projects.length;
-      
-      logger.info('Validation terminée', {
-        metadata: {
-          service: 'MondayProductionFinalService',
-          operation: 'validateAuthenticData',
-          validLines,
-          totalLines,
-          totalErrors,
-          warningsCount: this.warnings.length,
-          context: { validationMode: 'dry_run', step: 'complete' }
+        
+    },
+    {
+      operation: 'xlsx',
+service: 'MondayProductionFinalService',;
+      metadata: {}
+    }
+  );
         }
       });
-      
-      return {
-        success: totalErrors === 0,
-        totalFiles: 2,
-        totalLines,
-        validLines,
-        errors: totalErrors,
-        warnings: this.warnings.length,
-        filesProcessed: [authenticData.metadata.aoSourceFile, authenticData.metadata.projectSourceFile]
-      };
-      
-    } catch (error) {
-      logger.error('Erreur validation authentique', {
-        metadata: {
-          service: 'MondayProductionFinalService',
-          operation: 'validateAuthenticData',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          context: { validationMode: 'dry_run', step: 'error' }
-        }
-      });
-      throw new Error(`Validation authentique échouée: ${error instanceof Error ? error.message : String(error)}`);
+      throw new AppError(`Validation authentique échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
   }
 }

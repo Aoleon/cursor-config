@@ -4,6 +4,8 @@
  */
 
 import sgMail from '@sendgrid/mail';
+import { withErrorHandling } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { logger } from '../utils/logger';
 import { Alert } from './alert-manager';
 
@@ -81,24 +83,19 @@ export class Notifier {
     const channels = this.determineChannels(alert);
     
     for (const channel of channels) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const result = await this.sendViaChannel(channel, alert);
         results.push(result);
-      } catch (error) {
-        logger.error(`Échec de notification via ${channel}`, error as Error, {
-          metadata: {
-            service: 'Notifier',
-            alertId: alert.id,
-            channel
-          }
-        });
-        
-        results.push({
-          success: false,
-          channel,
-          timestamp: new Date(),
-          error: (error as Error).message
-        });
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'notifier',
+      metadata: {}
+    }
+  ););
       }
     }
     
@@ -155,7 +152,7 @@ export class Notifier {
    */
   async sendEmail(alert: Alert): Promise<void> {
     if (!this.emailEnabled || this.alertEmailRecipients.length === 0) {
-      throw new Error('Email non configuré ou pas de destinataires');
+      throw new AppError('Email non configuré ou pas de destinataires', 500);
     }
     
     const template = this.formatEmailTemplate(alert);
@@ -168,7 +165,9 @@ export class Notifier {
       text: this.stripHtml(template.body)
     };
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       await sgMail.send(msg);
       
       logger.info('Alerte email envoyée', {
@@ -178,15 +177,14 @@ export class Notifier {
           recipients: this.alertEmailRecipients.length
         }
       });
-    } catch (error) {
-      logger.error('Échec envoi email', error as Error, {
-        metadata: {
-          service: 'Notifier',
-          alertId: alert.id
-        }
-      });
-      throw error;
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'notifier',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -194,12 +192,14 @@ export class Notifier {
    */
   async sendToSlack(alert: Alert): Promise<void> {
     if (!this.slackEnabled || !this.webhookUrl) {
-      throw new Error('Slack non configuré');
+      throw new AppError('Slack non configuré', 500);
     }
     
     const payload = this.formatSlackMessage(alert);
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       const response = await fetch(this.webhookUrl, {
         method: 'POST',
         headers: {
@@ -209,7 +209,7 @@ export class Notifier {
       });
       
       if (!response.ok) {
-        throw new Error(`Slack webhook error: ${response.status}`);
+        throw new AppError(`Slack webhook error: ${response.status}`, 500);
       }
       
       logger.info('Alerte Slack envoyée', {
@@ -218,15 +218,14 @@ export class Notifier {
           alertId: alert.id
         }
       });
-    } catch (error) {
-      logger.error('Échec envoi Slack', error as Error, {
-        metadata: {
-          service: 'Notifier',
-          alertId: alert.id
-        }
-      });
-      throw error;
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'notifier',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -236,7 +235,7 @@ export class Notifier {
     const webhookUrl = process.env.ALERT_WEBHOOK_URL;
     
     if (!webhookUrl) {
-      throw new Error('Webhook non configuré');
+      throw new AppError('Webhook non configuré', 500);
     }
     
     const payload = {
@@ -250,7 +249,9 @@ export class Notifier {
       details: alert.details
     };
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -262,7 +263,7 @@ export class Notifier {
       });
       
       if (!response.ok) {
-        throw new Error(`Webhook error: ${response.status}`);
+        throw new AppError(`Webhook error: ${response.status}`, 500);
       }
       
       logger.info('Alerte webhook envoyée', {
@@ -272,15 +273,14 @@ export class Notifier {
           url: webhookUrl
         }
       });
-    } catch (error) {
-      logger.error('Échec envoi webhook', error as Error, {
-        metadata: {
-          service: 'Notifier',
-          alertId: alert.id
-        }
-      });
-      throw error;
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'notifier',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -303,13 +303,13 @@ export class Notifier {
     
     // Log selon la sévérité
     switch (alert.severity) {
-      case 'critical':
+case 'critical':;
         logger.fatal(message, undefined, context);
         break;
-      case 'high':
+case 'high':;
         logger.error(message, undefined, context);
         break;
-      case 'medium':
+case 'medium':;
         logger.warn(message, context);
         break;
       default:
@@ -550,32 +550,53 @@ export class Notifier {
     
     // Test email
     if (this.emailEnabled) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         await this.sendEmail(testAlert);
         results.email = true;
-      } catch (error) {
-        logger.error('Test email échoué', error as Error);
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'notifier',
+      metadata: {}
+    }
+  );
     }
     
     // Test Slack
     if (this.slackEnabled) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         await this.sendToSlack(testAlert);
         results.slack = true;
-      } catch (error) {
-        logger.error('Test Slack échoué', error as Error);
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'notifier',
+      metadata: {}
+    }
+  );
     }
     
     // Test webhook
     if (process.env.ALERT_WEBHOOK_URL) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         await this.sendToWebhook(testAlert);
         results.webhook = true;
-      } catch (error) {
-        logger.error('Test webhook échoué', error as Error);
-      }
+      
+    },
+    {
+      operation: 'constructor',
+      service: 'notifier',
+      metadata: {}
+    }
+  );
     }
     
     logger.info('Tests de notification terminés', {

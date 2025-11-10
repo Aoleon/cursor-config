@@ -1,6 +1,7 @@
 // Simple ACL management for Replit Object Storage
 
 import { logger } from './utils/logger';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 
 const ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
 
@@ -100,7 +101,7 @@ function createObjectAccessGroup(
     // case "SUBSCRIBER":
     //   return new SubscriberAccessGroup(group.id);
     default:
-      throw new Error(`Unknown access group type: ${group.type}`);
+      throw new AppError(`Unknown access group type: ${group.type}`, 500);
   }
 }
 

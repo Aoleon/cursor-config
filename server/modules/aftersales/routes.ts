@@ -11,6 +11,7 @@
  */
 
 import { Router } from 'express';
+import { withErrorHandling } from './utils/error-handler';
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler, createError, sendSuccess } from '../../middleware/errorHandler';
@@ -66,7 +67,9 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         const reserves = await storage.getProjectReserves(projectId);
         
         logger.info('[AfterSales] Réserves projet récupérées', {
@@ -80,16 +83,14 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         });
 
         sendSuccess(res, reserves);
-      } catch (error) {
-        logger.error('[AfterSales] Erreur récupération réserves projet', {
-          metadata: {
-            route: '/api/reserves/:projectId',
-            method: 'GET',
-            projectId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'SAV',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database('Erreur lors de la récupération des réserves');
       }
@@ -113,7 +114,9 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         const newReserve = await storage.createProjectReserve(reserveData);
         
         logger.info('[AfterSales] Réserve projet créée', {
@@ -127,16 +130,14 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         });
 
         sendSuccess(res, newReserve, 201);
-      } catch (error) {
-        logger.error('[AfterSales] Erreur création réserve projet', {
-          metadata: {
-            route: '/api/reserves',
-            method: 'POST',
-            projectId: reserveData.projectId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'SAV',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database('Erreur lors de la création de la réserve');
       }
@@ -164,7 +165,9 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         const interventions = await storage.getSavInterventions(projectId);
         
         logger.info('[AfterSales] Interventions SAV récupérées', {
@@ -178,16 +181,14 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         });
 
         sendSuccess(res, interventions);
-      } catch (error) {
-        logger.error('[AfterSales] Erreur récupération interventions SAV', {
-          metadata: {
-            route: '/api/sav-interventions/:projectId',
-            method: 'GET',
-            projectId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'SAV',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database('Erreur lors de la récupération des interventions SAV');
       }
@@ -211,7 +212,9 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         const newIntervention = await storage.createSavIntervention(interventionData);
         
         logger.info('[AfterSales] Intervention SAV créée', {
@@ -225,16 +228,14 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         });
 
         sendSuccess(res, newIntervention, 201);
-      } catch (error) {
-        logger.error('[AfterSales] Erreur création intervention SAV', {
-          metadata: {
-            route: '/api/sav-interventions',
-            method: 'POST',
-            projectId: interventionData.projectId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'SAV',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database('Erreur lors de la création de l\'intervention SAV');
       }
@@ -262,7 +263,9 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         }
       });
 
-      try {
+      return withErrorHandling(
+    async () => {
+
         const claims = await storage.getSavWarrantyClaims(interventionId);
         
         logger.info('[AfterSales] Réclamations garantie récupérées', {
@@ -276,16 +279,14 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         });
 
         sendSuccess(res, claims);
-      } catch (error) {
-        logger.error('[AfterSales] Erreur récupération réclamations garantie', {
-          metadata: {
-            route: '/api/warranty-claims/:interventionId',
-            method: 'GET',
-            interventionId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-          }
+      
+    },
+    {
+      operation: 'SAV',
+      service: 'routes',
+      metadata: {}
+    }
+  );
         });
         throw createError.database('Erreur lors de la récupération des réclamations garantie');
       }

@@ -1,4 +1,5 @@
 import cron from 'node-cron';
+import { withErrorHandling } from './utils/error-handler';
 import { logger } from '../utils/logger';
 import type { IStorage } from '../storage-poc';
 import { DocumentSyncService } from './DocumentSyncService';
@@ -16,7 +17,9 @@ export class SyncScheduler {
   }
 
   async start(): Promise<void> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       let config = await this.storage.getSyncConfig();
       
       if (!config) {
@@ -58,13 +61,14 @@ export class SyncScheduler {
       await this.storage.updateSyncConfig({
         nextSyncAt: this.getNextRun()
       });
-    } catch (error) {
-      logger.error('[SyncScheduler] Erreur démarrage scheduler', {
-        metadata: {
-          service: 'SyncScheduler',
-          operation: 'start',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'SyncScheduler',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -106,7 +110,9 @@ export class SyncScheduler {
     this.isRunning = true;
     const startTime = Date.now();
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       await this.storage.updateSyncConfig({
         lastSyncStatus: 'running',
         lastSyncAt: new Date()
@@ -144,20 +150,14 @@ export class SyncScheduler {
               documentsUpdated: result.documentsUpdated
             }
           });
-        } catch (error: any) {
-          errors.push({
-            type: 'unknown',
-            message: `AO ${ao.reference}: ${error.message}`,
-            originalError: error
-          });
-          logger.warn('[SyncScheduler] Erreur synchronisation AO', {
-            metadata: {
-              aoId: ao.id,
-              aoReference: ao.reference,
-              error: error.message
-            }
-          });
-        }
+        
+    },
+    {
+      operation: 'constructor',
+service: 'SyncScheduler',;
+      metadata: {}
+    }
+  );
       }
 
       const duration = Date.now() - startTime;
@@ -217,7 +217,9 @@ export class SyncScheduler {
   private getNextRun(): Date | null {
     if (!this.cronJob) return null;
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const now = new Date();
       const cronExpression = (this.cronJob as any).options?.scheduled ? 
         (this.cronJob as any).options.expression : null;
@@ -226,13 +228,14 @@ export class SyncScheduler {
 
       const nextDate = new Date(now.getTime() + 6 * 60 * 60 * 1000);
       return nextDate;
-    } catch (error) {
-      logger.error('[SyncScheduler] Erreur calcul prochaine exécution', {
-        metadata: {
-          service: 'SyncScheduler',
-          operation: 'getNextRun',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'SyncScheduler',
+      metadata: {}
+    }
+  );
       });
       return null;
     }

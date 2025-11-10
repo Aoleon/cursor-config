@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { withErrorHandling } from '../../utils/error-handler';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { mondayService } from '../../services/MondayService';
@@ -6,8 +7,11 @@ import { mondayImportService } from '../../services/MondayImportService';
 import { mondayExportService } from '../../services/MondayExportService';
 import { mondayWebhookService } from '../../services/MondayWebhookService';
 import { syncAuditService } from '../../services/SyncAuditService';
+import { MondayProductionFinalService } from '../../services/MondayProductionFinalService';
 import { isAuthenticated } from '../../replitAuth';
-import { asyncHandler } from '../../utils/error-handler';
+import { asyncHandler } from '../../middleware/errorHandler';
+import { sendSuccess, createError } from '../../middleware/errorHandler';
+import { validateQuery } from '../../middleware/validation';
 import { logger } from '../../utils/logger';
 import { getCorrelationId } from '../../middleware/correlation';
 import { verifyMondaySignature } from '../../middleware/monday-webhook';
@@ -17,6 +21,39 @@ import type { SplitterContext, MondaySplitterConfig } from '../../services/monda
 import { MondayDataSplitter } from '../../services/MondayDataSplitter';
 import { getBoardConfig } from '../../services/monday/defaultMappings';
 import { storage } from '../../storage-poc';
+import type { IStorage } from '../../storage-poc';
+
+// ========================================
+// MIGRATION DASHBOARD ROUTES
+// Migrated from routes-poc.ts (Phase 2: Critical)
+// ========================================
+
+/**
+ * Helper function to calculate Monday.com users count
+ */
+async function calculateMondayUsersCount(storage: IStorage): Promise<number> {
+  return withErrorHandling(
+    async () => {
+      const allUsers = await storage.getUsers();
+      const usersWithMondayData = allUsers.filter(user => 
+        user.mondayPersonnelId || 
+        user.departmentType || 
+        (user.competencies && user.competencies.length > 0) ||
+        user.vehicleAssigned ||
+        user.certificationExpiry
+      );
+      return usersWithMondayData.length;
+    },
+    {
+      operation: 'calculateMondayUsersCount',
+      service: 'MondayRoutes',
+      metadata: {}
+    }
+  );
+}
+
+// Service de migration Monday.com pour les métriques
+const mondayProductionService = new MondayProductionFinalService(storage);
 
 const router = Router();
 
@@ -629,12 +666,12 @@ router.get('/api/monday/sync-status',
 
     // Filter by entityType if provided (e.g., 'project', 'ao')
     if (entityType) {
-      statuses = statuses.filter(s => s.entityType === entityType);
+      statuses = statuses.filter((s: { entityType?: string }) => s.entityType === entityType);
     }
 
     // Filter by entityIds (optimization pour pagination)
     const ids = (entityIds as string).split(',').filter(id => id.trim());
-    statuses = statuses.filter(s => ids.includes(s.entityId));
+    statuses = statuses.filter((s: { entityId: string }) => ids.includes(s.entityId));
     
     logger.info('Statuts synchronisation filtrés (OPTIMISÉ)', {
       service: 'MondayRoutes',
@@ -776,15 +813,15 @@ router.post('/api/monday/re-extract-aos',
       
       try {
         // Récupérer les items Monday UN PAR UN
-        const mondayItems: any[] = [];
+        const mondayItems: unknown[] = [];
         for (const itemId of itemIds) {
           try {
             const item = await mondayService.getItem(itemId);
             if (item) mondayItems.push(item);
-          } catch (itemError: any) {
-            logger.warn(`Item ${itemId} non trouvé dans Monday`, {
+          } catch (itemError) {
+            logger.warn(`Erreur récupération item ${itemId}`, {
               service: 'MondayRoutes',
-              metadata: { itemId, error: itemError.message }
+              metadata: { error: itemError instanceof Error ? itemError.message : String(itemError) }
             });
           }
         }
@@ -801,11 +838,12 @@ router.post('/api/monday/re-extract-aos',
         // Extraire et mettre à jour chaque AO
         for (const mondayItem of mondayItems) {
           try {
-            const boardId = mondayItem.board.id;
-            const itemId = mondayItem.id;
+            const item = mondayItem as { board: { id: string }; id: string };
+            const boardId = item.board.id;
+            const itemId = item.id;
             
             // Trouver l'AO correspondant
-            const existingAO = batch.find((ao: any) => ao.mondayItemId === itemId);
+            const existingAO = batch.find((ao: { mondayItemId?: string | null }) => ao.mondayItemId === itemId);
             
             if (!existingAO) {
               logger.warn(`AO non trouvé pour item ${itemId}`, {
@@ -820,7 +858,7 @@ router.post('/api/monday/re-extract-aos',
             // + créer/mettre à jour les contacts, lots, maîtres, etc.
             // IMPORTANT: On passe mondayItem (déjà fetché) au lieu de itemId pour éviter double fetch
             const splitter = new MondayDataSplitter();
-            const result = await splitter.splitItem(mondayItem, boardId, storage, undefined, false);
+            const result = await splitter.splitItem(item, boardId, storage as IStorage, undefined, false);
             
             if (!result.success) {
               logger.warn(`Extraction a échoué pour item ${itemId}`, {
@@ -844,27 +882,25 @@ router.post('/api/monday/re-extract-aos',
                 mastersCreated: result.mastersCreated
               }
             });
-            
-          } catch (itemError: any) {
+          } catch (itemError) {
             errorCount++;
-            const errorMsg = itemError.message || String(itemError);
-            errors.push({ itemId: mondayItem.id, error: errorMsg });
-            logger.error(`Erreur ré-extraction item ${mondayItem.id}`, {
+            const itemId = (mondayItem as { id?: string })?.id || 'unknown';
+            logger.error(`Erreur traitement item ${itemId}`, {
               service: 'MondayRoutes',
-              metadata: { error: errorMsg }
+              metadata: { error: itemError instanceof Error ? itemError.message : String(itemError) }
             });
+            errors.push({ itemId, error: itemError instanceof Error ? itemError.message : String(itemError) });
           }
         }
-        
-      } catch (batchError: any) {
+      } catch (batchError) {
         errorCount += batch.length;
         logger.error(`Erreur traitement lot ${Math.floor(i / BATCH_SIZE) + 1}`, {
           service: 'MondayRoutes',
-          metadata: { error: batchError.message }
+          metadata: { error: batchError instanceof Error ? batchError.message : String(batchError) }
         });
-        batch.forEach((ao: any) => {
+        batch.forEach((ao: { mondayItemId?: string | null }) => {
           if (ao.mondayItemId) {
-            errors.push({ itemId: ao.mondayItemId, error: batchError.message });
+            errors.push({ itemId: ao.mondayItemId, error: batchError instanceof Error ? batchError.message : String(batchError) });
           }
         });
       }
@@ -930,7 +966,9 @@ router.post('/api/monday/sync-ao-fields',
     
     // Cas 1: Synchroniser un seul AO
     if (aoId) {
-      try {
+      return withErrorHandling(
+    async () => {
+
         const mondayId = await mondayExportService.syncAONewFields(aoId);
         
         if (!mondayId) {
@@ -950,15 +988,14 @@ router.post('/api/monday/sync-ao-fields',
           data: { aoId, mondayId },
           message: `Nouveaux champs synchronisés pour AO ${aoId}`
         });
-      } catch (error: any) {
-        logger.error('Erreur synchronisation champs AO', {
-          service: 'MondayRoutes',
-          metadata: { aoId, error: error.message }
-        });
-        
-        return res.status(500).json({
-          success: false,
-          error: `Erreur synchronisation: ${error.message}`
+      
+    },
+    {
+      operation: 'Router',
+      service: 'routes',
+      metadata: {}
+    }
+  );`
         });
       }
     }
@@ -1001,15 +1038,13 @@ router.post('/api/monday/sync-ao-fields',
         } else {
           skippedCount++;
         }
-        
-      } catch (error: any) {
+      } catch (aoError) {
         errorCount++;
-        const errorMsg = error.message || String(error);
-        errors.push({ aoId: ao.id, error: errorMsg });
         logger.error(`Erreur synchronisation AO ${ao.id}`, {
           service: 'MondayRoutes',
-          metadata: { aoId: ao.id, error: errorMsg }
+          metadata: { error: aoError instanceof Error ? aoError.message : String(aoError) }
         });
+        errors.push({ aoId: ao.id, error: aoError instanceof Error ? aoError.message : String(aoError) });
       }
       
       // Petite pause pour éviter rate limiting (100ms entre chaque AO)
@@ -1030,12 +1065,371 @@ router.post('/api/monday/sync-ao-fields',
     
     res.json({
       success: true,
-      message: `Synchronisation terminée: ${successCount} succès, ${errorCount} erreurs, ${skippedCount} ignorés`,
+message: `Synchronisation terminée: ${successCount} succès, ${errorCount} erreurs, ${skippedCount} ignorés`,;
       stats,
       errors: errors.length > 10 ? errors.slice(0, 10) : errors,
       totalErrors: errors.length
     });
   })
 );
+
+/**
+ * GET /api/monday/migration-stats
+ * Retourne les métriques de migration Monday.com pour le dashboard
+ */
+router.get('/api/monday/migration-stats', 
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      return withErrorHandling(
+        async () => {
+          // OPTIMISATION: Récupérer les statistiques de migration avec pagination
+          const aosData = await storage.getAos();
+          const { projects: projectsData } = await storage.getProjectsPaginated(undefined, undefined, 1000, 0);
+          
+          // Filtrer les données Monday.com (avec mondayItemId ou mondayProjectId)
+          const mondayAOs = aosData.filter(ao => ao.mondayItemId);
+          const mondayProjects = projectsData.filter(project => project.mondayProjectId);
+          
+          // Calculer les métriques
+          const totalMondayRecords = mondayAOs.length + mondayProjects.length;
+          const migratedAOs = mondayAOs.length;
+          const migratedProjects = mondayProjects.length;
+          
+          // Calculer le taux de succès basé sur les données valides
+          const validAOs = mondayAOs.filter(ao => ao.client && ao.city);
+          const validProjects = mondayProjects.filter(project => project.name && project.client);
+          const migrationSuccessRate = totalMondayRecords > 0 
+            ? Math.round(((validAOs.length + validProjects.length) / totalMondayRecords) * 100)
+            : 0;
+          
+          // Dernière date de migration (plus récente entre AOs et projets)
+          const aoCreatedDates = mondayAOs.map(ao => new Date(ao.createdAt || 0));
+          const projectCreatedDates = mondayProjects.map(project => new Date(project.createdAt || 0));
+          const allDates = [...aoCreatedDates, ...projectCreatedDates];
+          const lastMigrationDate = allDates.length > 0 
+            ? new Date(Math.max(...allDates.map(d => d.getTime())))
+            : new Date();
+
+          const migrationStats = {
+            totalMondayRecords,
+            migratedAOs,
+            migratedProjects,
+            migratedUsers: await calculateMondayUsersCount(storage),
+            migrationSuccessRate,
+            lastMigrationDate: lastMigrationDate.toISOString(),
+            
+            // Métriques détaillées pour les graphiques
+            breakdown: {
+              aos: {
+                total: migratedAOs,
+                byCategory: {
+                  MEXT: mondayAOs.filter(ao => ao.aoCategory === 'MEXT').length,
+                  MINT: mondayAOs.filter(ao => ao.aoCategory === 'MINT').length,
+                  HALL: mondayAOs.filter(ao => ao.aoCategory === 'HALL').length,
+                  SERRURERIE: mondayAOs.filter(ao => ao.aoCategory === 'SERRURERIE').length
+                },
+                byStatus: {
+                  en_cours: mondayAOs.filter(ao => ao.operationalStatus === 'en_cours').length,
+                  gagne: mondayAOs.filter(ao => ao.operationalStatus === 'gagne').length,
+                  perdu: mondayAOs.filter(ao => ao.operationalStatus === 'perdu').length
+                }
+              },
+              projects: {
+                total: migratedProjects,
+                byStatus: {
+                  etude: mondayProjects.filter(p => p.status === 'etude').length,
+                  planification: mondayProjects.filter(p => p.status === 'planification').length,
+                  chantier: mondayProjects.filter(p => p.status === 'chantier').length
+                },
+                byRegion: {
+                  'Hauts-de-France': mondayProjects.filter(p => p.region === 'Hauts-de-France').length
+                }
+              }
+            }
+          };
+
+          sendSuccess(res, migrationStats);
+        },
+        {
+          operation: 'getMigrationStats',
+          service: 'MondayRoutes',
+          metadata: {}
+        }
+      );
+    })
+  );
+
+/**
+ * GET /api/monday/all-data
+ * Retourne toutes les données Monday.com migrées pour exploration
+ */
+router.get('/api/monday/all-data',
+    isAuthenticated,
+    validateQuery(z.object({
+      type: z.enum(['aos', 'projects', 'personnel', 'all']).optional().default('all'),
+      limit: z.coerce.number().min(1).max(500).optional().default(50),
+      offset: z.coerce.number().min(0).optional().default(0),
+      search: z.string().optional()
+    })),
+    asyncHandler(async (req: Request, res: Response) => {
+      return withErrorHandling(
+        async () => {
+          const { type, limit, offset, search } = req.query;
+          
+          const mondayData: {
+            aos: unknown[];
+            projects: unknown[];
+            users: unknown[];
+            personnel?: unknown[];
+            aosMeta?: { total: number; limit: unknown; offset: unknown; hasMore: boolean };
+            projectsMeta?: { total: number; limit: unknown; offset: unknown; hasMore: boolean };
+            personnelMeta?: { total: number; limit: unknown; offset: unknown; hasMore: boolean };
+          } = { aos: [], projects: [], users: [] };
+          
+          if (type === 'aos' || type === 'all') {
+            let aosData = await storage.getAos();
+            // Filtrer seulement les AOs Monday.com
+            aosData = aosData.filter(ao => ao.mondayItemId);
+            
+            // Appliquer recherche si fournie
+            if (search && typeof search === 'string') {
+              aosData = aosData.filter(ao => 
+                ao.client?.toLowerCase().includes(search.toLowerCase()) ||
+                ao.city?.toLowerCase().includes(search.toLowerCase()) ||
+                ao.reference?.toLowerCase().includes(search.toLowerCase())
+              );
+            }
+            
+            // Pagination
+            const totalAOs = aosData.length;
+            aosData = aosData.slice(offset as number, (offset as number) + (limit as number));
+            
+            mondayData.aos = aosData.map(ao => ({
+              id: ao.id,
+              mondayItemId: ao.mondayItemId,
+              reference: ao.reference,
+              clientName: ao.client,
+              city: ao.city,
+              aoCategory: ao.aoCategory,
+              operationalStatus: ao.operationalStatus,
+              projectSize: ao.projectSize,
+              specificLocation: ao.specificLocation,
+              estimatedDelay: ao.estimatedDelay,
+              clientRecurrency: ao.clientRecurrency,
+              migrationStatus: 'migré',
+              createdAt: ao.createdAt
+            }));
+            
+            mondayData.aosMeta = {
+              total: totalAOs,
+              limit,
+              offset,
+              hasMore: (offset as number) + (limit as number) < totalAOs
+            };
+          }
+          
+          if (type === 'projects' || type === 'all') {
+            let projectsData = await storage.getProjects();
+            // Filtrer seulement les projets Monday.com
+            projectsData = projectsData.filter(project => project.mondayProjectId);
+            
+            // Appliquer recherche si fournie
+            if (search && typeof search === 'string') {
+              projectsData = projectsData.filter(project => 
+                project.name?.toLowerCase().includes(search.toLowerCase()) ||
+                project.client?.toLowerCase().includes(search.toLowerCase()) ||
+                project.location?.toLowerCase().includes(search.toLowerCase())
+              );
+            }
+            
+            // Pagination
+            const totalProjects = projectsData.length;
+            projectsData = projectsData.slice(offset as number, (offset as number) + (limit as number));
+            
+            mondayData.projects = projectsData.map(project => ({
+              id: project.id,
+              mondayProjectId: project.mondayProjectId,
+              name: project.name,
+              clientName: project.client,
+              status: project.status,
+              projectSubtype: project.projectSubtype,
+              geographicZone: project.location,
+              buildingCount: project.buildingCount,
+              migrationStatus: 'migré',
+              createdAt: project.createdAt
+            }));
+            
+            mondayData.projectsMeta = {
+              total: totalProjects,
+              limit,
+              offset,
+              hasMore: (offset as number) + (limit as number) < totalProjects
+            };
+          }
+          
+          // MODULE RH CORRECTION CRITIQUE - Ajouter vraies données personnel Monday.com
+          if (type === 'personnel' || type === 'all') {
+            let usersData = await storage.getUsers();
+            // Filtrer seulement les utilisateurs avec données Monday.com
+            usersData = usersData.filter(user => 
+              user.mondayPersonnelId || 
+              user.departmentType || 
+              (user.competencies && user.competencies.length > 0) ||
+              user.vehicleAssigned ||
+              user.certificationExpiry
+            );
+            
+            // Appliquer recherche si fournie
+            if (search && typeof search === 'string') {
+              usersData = usersData.filter(user => 
+                user.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+                user.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+                user.departmentType?.toLowerCase().includes(search.toLowerCase()) ||
+                user.competencies?.some(comp => comp.toLowerCase().includes(search.toLowerCase()))
+              );
+            }
+            
+            // Pagination
+            const totalUsers = usersData.length;
+            usersData = usersData.slice(offset as number, (offset as number) + (limit as number));
+            
+            mondayData.personnel = usersData.map(user => ({
+              id: user.id,
+              mondayPersonnelId: user.mondayPersonnelId,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              departmentType: user.departmentType,
+              competencies: user.competencies || [],
+              vehicleAssigned: user.vehicleAssigned,
+              certificationExpiry: user.certificationExpiry,
+              migrationStatus: 'migré',
+              createdAt: user.createdAt
+            }));
+            
+            mondayData.personnelMeta = {
+              total: totalUsers,
+              limit,
+              offset,
+              hasMore: (offset as number) + (limit as number) < totalUsers
+            };
+          } else {
+            mondayData.personnel = [];
+          }
+          
+          sendSuccess(res, mondayData);
+        },
+        {
+          operation: 'getAllData',
+          service: 'MondayRoutes',
+          metadata: {}
+        }
+      );
+    })
+  );
+
+/**
+ * GET /api/monday/validation
+ * Retourne les erreurs de validation pour le dashboard de suivi
+ */
+router.get('/api/monday/validation',
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      return withErrorHandling(
+        async () => {
+          const aosData = await storage.getAos();
+          const projectsData = await storage.getProjects();
+          const usersData = await storage.getUsers();
+          
+          const mondayAOs = aosData.filter(ao => ao.mondayItemId);
+          const mondayProjects = projectsData.filter(project => project.mondayProjectId);
+          const mondayUsers = usersData.filter(user => user.mondayPersonnelId);
+          
+          const validationErrors = {
+            aos: mondayAOs.filter(ao => !ao.client || !ao.city).map(ao => ({
+              id: ao.id,
+              mondayItemId: ao.mondayItemId,
+              reference: ao.reference,
+              issues: [
+                ...(!ao.client ? ['Client manquant'] : []),
+                ...(!ao.city ? ['Ville manquante'] : [])
+              ]
+            })),
+            projects: mondayProjects.filter(project => !project.name || !project.client).map(project => ({
+              id: project.id,
+              mondayProjectId: project.mondayProjectId,
+              issues: [
+                ...(!project.name ? ['Nom du projet manquant'] : []),
+                ...(!project.client ? ['Client manquant'] : [])
+              ]
+            })),
+            users: mondayUsers.filter(user => !user.email || !user.firstName || !user.lastName).map(user => ({
+              id: user.id,
+              mondayPersonnelId: user.mondayPersonnelId,
+              issues: [
+                ...(!user.email ? ['Email manquant'] : []),
+                ...(!user.firstName ? ['Prénom manquant'] : []),
+                ...(!user.lastName ? ['Nom manquant'] : [])
+              ]
+            }))
+          };
+          
+          const summary = {
+            totalErrors: validationErrors.aos.length + validationErrors.projects.length + validationErrors.users.length,
+            byType: {
+              aos: validationErrors.aos.length,
+              projects: validationErrors.projects.length,
+              users: validationErrors.users.length
+            }
+          };
+          
+          sendSuccess(res, { summary, errors: validationErrors });
+        },
+        {
+          operation: 'getValidation',
+          service: 'MondayRoutes',
+          metadata: {}
+        }
+      );
+    })
+  );
+
+/**
+ * GET /api/monday/logs
+ * Retourne les logs de migration Monday.com
+ */
+router.get('/api/monday/logs',
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      return withErrorHandling(
+        async () => {
+          // Pour l'instant, retourner des logs simplifiés basés sur les données existantes
+          const aosData = await storage.getAos();
+          const projectsData = await storage.getProjects();
+          
+          const mondayAOs = aosData.filter(ao => ao.mondayItemId);
+          const mondayProjects = projectsData.filter(project => project.mondayProjectId);
+          
+          const logs = [
+            {
+              timestamp: new Date().toISOString(),
+              level: 'info',
+message: `Migration Monday.com - ${mondayAOs.length} AOs et ${mondayProjects.length} projets migrés`,;
+              context: {
+                totalAOs: mondayAOs.length,
+                totalProjects: mondayProjects.length
+              }
+            }
+          ];
+          
+          sendSuccess(res, { logs, count: logs.length });
+        },
+        {
+          operation: 'getLogs',
+          service: 'MondayRoutes',
+          metadata: {}
+        }
+      );
+    })
+  );
 
 export default router;

@@ -4,6 +4,8 @@
  */
 
 import { subWeeks, subMonths, subYears } from 'date-fns';
+import { formatDateFR } from './utils/shared-utils';
+import { withErrorHandling } from './utils/error-handler';
 import { logger } from './utils/logger';
 
 /**
@@ -14,7 +16,9 @@ import { logger } from './utils/logger';
 export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): Date | undefined {
   if (!dateLimiteRemise) return undefined;
 
-  try {
+  return withErrorHandling(
+    async () => {
+
     const dateLimite = typeof dateLimiteRemise === 'string' ? new Date(dateLimiteRemise) : dateLimiteRemise;
     
     if (isNaN(dateLimite.getTime())) {
@@ -28,16 +32,20 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
 
     logger.debug('DateUtils - Date remise calculée', { 
       metadata: { 
-        dateLimite: dateLimite.toLocaleDateString('fr-FR'), 
-        dateRemise: dateRemise.toLocaleDateString('fr-FR') 
+        dateLimite: dateLimite.formatDateFR(new Date()), 
+        dateRemise: dateRemise.formatDateFR(new Date()) 
       } 
     });
     
     return dateRemise;
-  } catch (error) {
-    logger.error('DateUtils - Erreur calcul date de remise', error as Error);
-    return undefined;
-  }
+  
+    },
+    {
+      operation: 'e',
+      service: 'dateUtils',
+      metadata: {}
+    }
+  );
 }
 
 /**
@@ -47,7 +55,9 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
 export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null, delaiJours: number = 30): Date | undefined {
   if (!dateSortieAO) return undefined;
 
-  try {
+  return withErrorHandling(
+    async () => {
+
     const dateSortie = typeof dateSortieAO === 'string' ? new Date(dateSortieAO) : dateSortieAO;
     
     if (isNaN(dateSortie.getTime())) {
@@ -61,17 +71,21 @@ export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null,
 
     logger.debug('DateUtils - Date limite calculée', { 
       metadata: { 
-        dateSortie: dateSortie.toLocaleDateString('fr-FR'), 
-        dateLimite: dateLimite.toLocaleDateString('fr-FR'),
+        dateSortie: dateSortie.formatDateFR(new Date()), 
+        dateLimite: dateLimite.formatDateFR(new Date()),
         delaiJours 
       } 
     });
     
     return dateLimite;
-  } catch (error) {
-    logger.error('DateUtils - Erreur calcul date limite de remise', error as Error);
-    return undefined;
-  }
+  
+    },
+    {
+      operation: 'e',
+      service: 'dateUtils',
+      metadata: {}
+    }
+  );
 }
 
 /**
@@ -102,31 +116,55 @@ export function calculerDatesImportantes(
 
   // Date limite de remise
   if (dateLimiteRemise) {
-    try {
+    return withErrorHandling(
+    async () => {
+
       dates.dateLimiteRemise = typeof dateLimiteRemise === 'string' ? new Date(dateLimiteRemise) : dateLimiteRemise;
       
       // Calculer automatiquement la date de remise (J-15)
       dates.dateRemiseCalculee = calculerDateRemiseJ15(dates.dateLimiteRemise);
-    } catch (error) {
-      logger.warn('DateUtils - Erreur parsing date limite', { metadata: { error: String(error) } });
+    
+    },
+    {
+      operation: 'e',
+      service: 'dateUtils',
+      metadata: {}
+    }
+  ); });
     }
   }
 
   // Date de démarrage des travaux
   if (demarragePrevu) {
-    try {
+    return withErrorHandling(
+    async () => {
+
       dates.demarragePrevu = typeof demarragePrevu === 'string' ? new Date(demarragePrevu) : demarragePrevu;
-    } catch (error) {
-      logger.warn('DateUtils - Erreur parsing date démarrage', { metadata: { error: String(error) } });
+    
+    },
+    {
+      operation: 'e',
+      service: 'dateUtils',
+      metadata: {}
+    }
+  ); });
     }
   }
 
   // Date de livraison prévue
   if (dateLivraisonPrevue) {
-    try {
+    return withErrorHandling(
+    async () => {
+
       dates.dateLivraisonPrevue = typeof dateLivraisonPrevue === 'string' ? new Date(dateLivraisonPrevue) : dateLivraisonPrevue;
-    } catch (error) {
-      logger.warn('DateUtils - Erreur parsing date livraison', { metadata: { error: String(error) } });
+    
+    },
+    {
+      operation: 'e',
+      service: 'dateUtils',
+      metadata: {}
+    }
+  ); });
     }
   }
 
@@ -142,7 +180,9 @@ export function calculerDatesImportantes(
 export function formaterDateFR(date?: Date | string | null, options: Intl.DateTimeFormatOptions = {}): string {
   if (!date) return '';
 
-  try {
+  return withErrorHandling(
+    async () => {
+
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(dateObj.getTime())) return '';
 
@@ -155,8 +195,14 @@ export function formaterDateFR(date?: Date | string | null, options: Intl.DateTi
     };
 
     return dateObj.toLocaleDateString('fr-FR', defaultOptions);
-  } catch (error) {
-    logger.warn('DateUtils - Erreur formatage date', { metadata: { error: String(error) } });
+  
+    },
+    {
+      operation: 'e',
+      service: 'dateUtils',
+      metadata: {}
+    }
+  ); });
     return '';
   }
 }
@@ -170,7 +216,9 @@ export function formaterDateFR(date?: Date | string | null, options: Intl.DateTi
 export function calculerNombreJours(dateDebut?: Date | string | null, dateFin?: Date | string | null): number | null {
   if (!dateDebut || !dateFin) return null;
 
-  try {
+  return withErrorHandling(
+    async () => {
+
     const debut = typeof dateDebut === 'string' ? new Date(dateDebut) : dateDebut;
     const fin = typeof dateFin === 'string' ? new Date(dateFin) : dateFin;
 
@@ -180,8 +228,14 @@ export function calculerNombreJours(dateDebut?: Date | string | null, dateFin?: 
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     return diffDays;
-  } catch (error) {
-    logger.warn('DateUtils - Erreur calcul nombre de jours', { metadata: { error: String(error) } });
+  
+    },
+    {
+      operation: 'e',
+      service: 'dateUtils',
+      metadata: {}
+    }
+  ); });
     return null;
   }
 }

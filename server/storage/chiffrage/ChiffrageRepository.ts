@@ -10,6 +10,8 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { logger } from './utils/logger';
 import { 
   chiffrageElements, 
   dpgfDocuments, 
@@ -66,7 +68,7 @@ export class ChiffrageRepository extends BaseRepository<
    * @example
    * ```typescript
    * const elements = await repo.getChiffrageElementsByOffer('550e8400-...');
-   * console.log(`Trouvé ${elements.length} éléments de chiffrage`);
+   * logger.info(`Trouvé ${elements.length} éléments de chiffrage`);
    * ```
    */
   async getChiffrageElementsByOffer(
@@ -100,7 +102,7 @@ export class ChiffrageRepository extends BaseRepository<
    * @example
    * ```typescript
    * const elements = await repo.getChiffrageElementsByLot('550e8400-...');
-   * console.log(`Trouvé ${elements.length} éléments pour le lot`);
+   * logger.info(`Trouvé ${elements.length} éléments pour le lot`);
    * ```
    */
   async getChiffrageElementsByLot(
@@ -159,7 +161,7 @@ export class ChiffrageRepository extends BaseRepository<
 
         const newElement = result[0];
         if (!newElement) {
-          throw new Error('Failed to create chiffrage element');
+          throw new AppError('Failed to create chiffrage element', 500);
         }
 
         this.emitEvent('chiffrage_element:created', { 
@@ -288,7 +290,7 @@ export class ChiffrageRepository extends BaseRepository<
    * ```typescript
    * const dpgf = await repo.getDpgfDocumentByOffer('550e8400-...');
    * if (dpgf) {
-   *   console.log(`DPGF version ${dpgf.version}, total HT: ${dpgf.totalHT}`);
+   *   logger.info(`DPGF version ${dpgf.version}, total HT: ${dpgf.totalHT}`);
    * }
    * ```
    */
@@ -350,7 +352,7 @@ export class ChiffrageRepository extends BaseRepository<
 
         const newDpgf = result[0];
         if (!newDpgf) {
-          throw new Error('Failed to create DPGF document');
+          throw new AppError('Failed to create DPGF document', 500);
         }
 
         this.emitEvent('dpgf_document:created', { 
@@ -480,7 +482,7 @@ export class ChiffrageRepository extends BaseRepository<
    * @example
    * ```typescript
    * const milestones = await repo.getValidationMilestones('550e8400-...');
-   * console.log(`Trouvé ${milestones.length} jalons de validation`);
+   * logger.info(`Trouvé ${milestones.length} jalons de validation`);
    * ```
    */
   async getValidationMilestones(
@@ -535,7 +537,7 @@ export class ChiffrageRepository extends BaseRepository<
 
         const newMilestone = result[0];
         if (!newMilestone) {
-          throw new Error('Failed to create validation milestone');
+          throw new ValidationError('Failed to create validation milestone');
         }
 
         this.emitEvent('validation_milestone:created', { 
@@ -665,14 +667,14 @@ export class ChiffrageRepository extends BaseRepository<
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
    */
   async findById(id: string, tx?: DrizzleTransaction): Promise<ChiffrageElement | undefined> {
-    throw new Error('Use getChiffrageElementsByOffer, getDpgfDocumentByOffer, or getValidationMilestones instead');
+    throw new ValidationError('Use getChiffrageElementsByOffer, getDpgfDocumentByOffer, or getValidationMilestones instead');
   }
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
    */
   async findAll(filters?: any, tx?: DrizzleTransaction): Promise<ChiffrageElement[]> {
-    throw new Error('Use getChiffrageElementsByOffer, getDpgfDocumentByOffer, or getValidationMilestones instead');
+    throw new ValidationError('Use getChiffrageElementsByOffer, getDpgfDocumentByOffer, or getValidationMilestones instead');
   }
 
   /**
@@ -684,27 +686,27 @@ export class ChiffrageRepository extends BaseRepository<
     sort?: any,
     tx?: DrizzleTransaction
   ): Promise<any> {
-    throw new Error('Use getChiffrageElementsByOffer, getDpgfDocumentByOffer, or getValidationMilestones instead');
+    throw new ValidationError('Use getChiffrageElementsByOffer, getDpgfDocumentByOffer, or getValidationMilestones instead');
   }
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
    */
   async deleteMany(filters: any, tx?: DrizzleTransaction): Promise<number> {
-    throw new Error('Use deleteChiffrageElement, deleteDpgfDocument, or deleteValidationMilestone instead');
+    throw new ValidationError('Use deleteChiffrageElement, deleteDpgfDocument, or deleteValidationMilestone instead');
   }
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
    */
   async exists(id: string, tx?: DrizzleTransaction): Promise<boolean> {
-    throw new Error('Use specific existence checks for each entity type');
+    throw new AppError('Use specific existence checks for each entity type', 500);
   }
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
    */
   async count(filters?: any, tx?: DrizzleTransaction): Promise<number> {
-    throw new Error('Count not implemented for multi-entity repository');
+    throw new AppError('Count not implemented for multi-entity repository', 500);
   }
 }

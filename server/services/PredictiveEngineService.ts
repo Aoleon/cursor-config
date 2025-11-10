@@ -1,4 +1,5 @@
 import type { IStorage, DateRange, MetricFilters } from "../storage-poc";
+import { withErrorHandling } from './utils/error-handler';
 import { getSafetyGuardsService } from "./SafetyGuardsService";
 import type { 
   Project, ProjectStatus, User, Offer
@@ -179,7 +180,9 @@ export interface SectorBenchmark {
 // ========================================
 
 // Types pour Heat-Map entités
-export interface EntityAccessEntry {
+export interface EntityAccessEnreturn withErrorHandling(
+    async () => {
+
   entityType: 'ao' | 'offer' | 'project' | 'user' | 'document';
   entityId: string;
   accessCount: number;
@@ -421,14 +424,14 @@ export class PredictiveEngineService {
     });
       return results;
 
-    } catch (error) {
-      logger.error('Erreur calcul forecast revenue', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'forecastRevenue',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+service: 'PredictiveEngineService',;
+      metadata: {}
+    }
+  );
     });
       return [];
     }
@@ -452,7 +455,9 @@ export class PredictiveEngineService {
       return cached;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Détection risques projets', {
       metadata: {
         service: 'PredictiveEngineService',
@@ -523,14 +528,14 @@ export class PredictiveEngineService {
     });
       return results;
 
-    } catch (error) {
-      logger.error('Erreur détection risques', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'detectProjectRisks',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
       return [];
     }
@@ -554,7 +559,9 @@ export class PredictiveEngineService {
       return cached;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Génération recommandations business', {
       metadata: {
         service: 'PredictiveEngineService',
@@ -615,14 +622,14 @@ export class PredictiveEngineService {
     });
       return filteredRecs;
 
-    } catch (error) {
-      logger.error('Erreur génération recommandations', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'generateBusinessRecommendations',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
       return [];
     }
@@ -1005,7 +1012,9 @@ export class PredictiveEngineService {
    * Récupère KPIs actuels via AnalyticsService
    */
   private async getCurrentKPIs(period: DateRange): Promise<any> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // OPTIMISATION: Use pagination to get counts instead of loading all data
       const [offersResult, projectsResult] = await Promise.all([
         this.storage.getOffersPaginated(undefined, undefined, 1, 0),
@@ -1026,14 +1035,14 @@ export class PredictiveEngineService {
         margin_percentage: 20,
         team_efficiency: 75
       };
-    } catch (error) {
-      logger.error('Erreur récupération KPIs', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'getCurrentKPIs',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
       // Fallback avec valeurs par défaut
       return {
@@ -1049,16 +1058,18 @@ export class PredictiveEngineService {
    * Récupère benchmarks secteur
    */
   private async getSectorBenchmarks(): Promise<any> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return await this.storage.getSectorBenchmarks();
-    } catch (error) {
-      logger.error('Erreur récupération benchmarks', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'getIndustryBenchmarks',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
       // Fallback avec benchmarks standards du secteur
       return {
@@ -1143,7 +1154,9 @@ export class PredictiveEngineService {
   private async generatePlanningRecommendations(context: BusinessContext): Promise<BusinessRecommendation[]> {
     const recommendations: BusinessRecommendation[] = [];
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       const teamLoad = await this.storage.getTeamLoadHistory({
         start_date: subMonths(new Date(), 1).toISOString().split('T')[0],
         end_date: new Date().toISOString().split('T')[0]
@@ -1172,14 +1185,14 @@ export class PredictiveEngineService {
           generated_date: new Date().toISOString()
         });
       }
-    } catch (error) {
-      logger.error('Erreur recommandations planning', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'generatePlanningRecommendations',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
     }
 
@@ -1469,16 +1482,18 @@ export class PredictiveEngineService {
    * Récupère données historiques revenues mensuels via storage
    */
   private async getMonthlyRevenueHistory(params: { start_date: string; end_date: string }): Promise<MonthlyRevenueData[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return await this.storage.getMonthlyRevenueHistory(params);
-    } catch (error) {
-      logger.error('Erreur récupération historique revenues', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'getMonthlyRevenueHistory',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
       return [];
     }
@@ -1488,16 +1503,18 @@ export class PredictiveEngineService {
    * Récupère données historiques délais projets via storage
    */
   private async getProjectDelayHistory(params: { start_date: string; end_date: string }): Promise<any[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       return await this.storage.getProjectDelayHistory(params);
-    } catch (error) {
-      logger.error('Erreur récupération historique délais', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'getProjectDelayHistory',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
       return [];
     }
@@ -1539,7 +1556,9 @@ export class PredictiveEngineService {
       return cached;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Génération heat-map entités', {
       metadata: {
         service: 'PredictiveEngineService',
@@ -1608,14 +1627,14 @@ export class PredictiveEngineService {
     });
       return heatMap;
 
-    } catch (error) {
-      logger.error('Erreur génération heat-map', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'generateEntityHeatMap',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
       
       // Fallback heat-map vide
@@ -1638,7 +1657,9 @@ export class PredictiveEngineService {
     userId?: string,
     currentContext?: { entityType: string; entityId: string; workflow?: string }
   ): Promise<AccessPrediction[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Prédiction accès entités', {
       metadata: {
         service: 'PredictiveEngineService',
@@ -1687,14 +1708,14 @@ export class PredictiveEngineService {
     });
       return filteredPredictions;
 
-    } catch (error) {
-      logger.error('Erreur prédiction accès', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'predictNextEntityAccess',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
       return [];
     }
@@ -1715,7 +1736,9 @@ export class PredictiveEngineService {
       return;
     }
 
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Programmation tâches preloading', {
       metadata: {
         service: 'PredictiveEngineService',
@@ -1782,14 +1805,14 @@ export class PredictiveEngineService {
       }
     });
 
-    } catch (error) {
-      logger.error('Erreur programmation tâches preloading', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'schedulePreloadTasks',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
     }
   }
@@ -2637,7 +2660,9 @@ export class PredictiveEngineService {
   private async predictFromHeatMap(now: number): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       const heatMap = await this.generateEntityHeatMap();
       
       // Préloader entités avec tendance croissante
@@ -2662,14 +2687,14 @@ export class PredictiveEngineService {
           }
         }
       }
-    } catch (error) {
-      logger.error('Erreur prédiction heat-map', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'predictFromHeatMap',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
     }
     
@@ -2761,7 +2786,9 @@ export class PredictiveEngineService {
     
     this.currentPreloadingLoad++;
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Déplacer vers tâches actives
       this.preloadingSchedule.activeTasks.push(task);
       this.preloadingSchedule.scheduledTasks = this.preloadingSchedule.scheduledTasks
@@ -2799,15 +2826,14 @@ export class PredictiveEngineService {
       }
     });
       
-    } catch (error) {
-      logger.error('Erreur preloading', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'executePreloadTask',
-        taskId: task.id,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
       
       // Marquer comme échouée
@@ -2879,11 +2905,13 @@ export class PredictiveEngineService {
     const now = Date.now();
     
     // Éviter updates trop fréquentes
-    if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum
+if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
       return;
     }
     
-    try {
+    return withErrorHandling(
+    async () => {
+
       logger.info('Mise à jour patterns BTP', {
       metadata: {
         service: 'PredictiveEngineService',
@@ -2902,14 +2930,14 @@ export class PredictiveEngineService {
       }
     });
       
-    } catch (error) {
-      logger.error('Erreur mise à jour patterns BTP', {
-      metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'updateBTPPatterns',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
     });
     }
   }
@@ -2957,7 +2985,9 @@ export class PredictiveEngineService {
    * Analyse des risques - alias pour detectProjectRisks pour compatibilité routes
    */
   async analyzeRisks(params?: any): Promise<any[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const riskParams: RiskQueryParams = {
         risk_level: params?.riskLevel || 'all',
         project_types: params?.projectTypes,
@@ -2967,13 +2997,14 @@ export class PredictiveEngineService {
       };
 
       return await this.detectProjectRisks(riskParams);
-    } catch (error) {
-      logger.error('Erreur analyzeRisks', {
-        metadata: {
-          service: 'PredictiveEngineService',
-          operation: 'analyzeRisks',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -2983,7 +3014,9 @@ export class PredictiveEngineService {
    * Sauvegarde un snapshot d'analyse
    */
   async saveSnapshot(data: any): Promise<any> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       const snapshot = {
         id: `snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: data.type || 'full',
@@ -3005,13 +3038,14 @@ export class PredictiveEngineService {
       });
 
       return snapshot;
-    } catch (error) {
-      logger.error('Erreur saveSnapshot', {
-        metadata: {
-          service: 'PredictiveEngineService',
-          operation: 'saveSnapshot',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }
@@ -3021,7 +3055,9 @@ export class PredictiveEngineService {
    * Récupère les snapshots d'analyse
    */
   async getSnapshots(params?: any): Promise<any[]> {
-    try {
+    return withErrorHandling(
+    async () => {
+
       // Pour l'instant, retourner un tableau vide
       // À implémenter avec storage si nécessaire
       logger.info('Récupération snapshots', {
@@ -3033,13 +3069,14 @@ export class PredictiveEngineService {
       });
 
       return [];
-    } catch (error) {
-      logger.error('Erreur getSnapshots', {
-        metadata: {
-          service: 'PredictiveEngineService',
-          operation: 'getSnapshots',
-          error: error instanceof Error ? error.message : String(error)
-        }
+    
+    },
+    {
+      operation: 'voir',
+      service: 'PredictiveEngineService',
+      metadata: {}
+    }
+  );
       });
       throw error;
     }

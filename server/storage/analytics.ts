@@ -1,5 +1,5 @@
-import { eq, and, sql, gte, lte, count, sum, avg } from "drizzle-orm";
-import { withErrorHandling } from './utils/error-handler';
+import { eq, and, sql, gte, lte, count, sum, avg, type SQL } from "drizzle-orm";
+import { withErrorHandling } from '../utils/error-handler';
 import { 
   projects, offers, aos, projectTimelines, users
 } from "@shared/schema";
@@ -83,7 +83,7 @@ export class AnalyticsStorage {
       logger.debug('[AnalyticsStorage] getProjectStats - SQL aggregation', { metadata: { filters } });
 
       // Build WHERE conditions
-      const conditions: any[] = [];
+      const conditions: SQL[] = [];
       if (filters?.dateFrom) {
         conditions.push(gte(projects.createdAt, new Date(filters.dateFrom)));
       }
@@ -91,13 +91,13 @@ export class AnalyticsStorage {
         conditions.push(lte(projects.createdAt, new Date(filters.dateTo)));
       }
       if (filters?.status) {
-        conditions.push(eq(projects.status, filters.status as any));
+        conditions.push(eq(projects.status, filters.status as typeof projects.status.enumValues[number]));
       }
       if (filters?.responsibleUserId) {
         conditions.push(eq(projects.responsibleUserId, filters.responsibleUserId));
       }
       if (filters?.departement) {
-        conditions.push(eq(projects.departement, filters.departement as any));
+        conditions.push(eq(projects.departement, filters.departement));
       }
 
       // Query 1: Overall stats
@@ -167,7 +167,7 @@ export class AnalyticsStorage {
       logger.debug('[AnalyticsStorage] getOfferStats - SQL aggregation', { metadata: { filters } });
 
       // Build WHERE conditions
-      const conditions: any[] = [];
+      const conditions: SQL[] = [];
       if (filters?.dateFrom) {
         conditions.push(gte(offers.createdAt, new Date(filters.dateFrom)));
       }
@@ -175,7 +175,7 @@ export class AnalyticsStorage {
         conditions.push(lte(offers.createdAt, new Date(filters.dateTo)));
       }
       if (filters?.status) {
-        conditions.push(eq(offers.status, filters.status as any));
+        conditions.push(eq(offers.status, filters.status as typeof offers.status.enumValues[number]));
       }
       if (filters?.responsibleUserId) {
         conditions.push(eq(offers.responsibleUserId, filters.responsibleUserId));
@@ -249,7 +249,7 @@ export class AnalyticsStorage {
       logger.debug('[AnalyticsStorage] getAOStats - SQL aggregation', { metadata: { filters } });
 
       // Build WHERE conditions
-      const conditions: any[] = [];
+      const conditions: SQL[] = [];
       if (filters?.dateFrom) {
         conditions.push(gte(aos.createdAt, new Date(filters.dateFrom)));
       }
@@ -257,7 +257,7 @@ export class AnalyticsStorage {
         conditions.push(lte(aos.createdAt, new Date(filters.dateTo)));
       }
       if (filters?.departement) {
-        conditions.push(eq(aos.departement, filters.departement as any));
+        conditions.push(eq(aos.departement, filters.departement));
       }
 
       // Query 1: Overall stats

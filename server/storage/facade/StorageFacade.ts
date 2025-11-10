@@ -9,7 +9,7 @@
  */
 
 import type { IStorage, DatabaseStorage as DatabaseStorageType, DrizzleTransaction } from '../../storage-poc';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../../utils/error-handler';
 import { DatabaseStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
 import { eventBus } from '../../eventBus';
@@ -26,7 +26,8 @@ import { UserRepository } from '../users/UserRepository';
 import { ConfigurationRepository } from '../configuration/ConfigurationRepository';
 import { ContactsRepository } from '../contacts/ContactsRepository';
 import { SavRepository } from '../sav/SavRepository';
-import type { Offer, InsertOffer, Ao, InsertAo, User, UpsertUser, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert, SupplierDocument, InsertSupplierDocument, SupplierQuoteSession, InsertSupplierQuoteSession, SupplierQuoteAnalysis, InsertSupplierQuoteAnalysis, PurchaseOrder, InsertPurchaseOrder, ClientQuote, InsertClientQuote, TeamResource, InsertTeamResource, BeWorkload, InsertBeWorkload, EmployeeLabel, EmployeeLabelInsert, EmployeeLabelAssignment, EmployeeLabelAssignmentInsert, EquipmentBattery, EquipmentBatteryInsert, MarginTarget, MarginTargetInsert, AoContacts, InsertAoContacts, ProjectContacts, InsertProjectContacts, SavIntervention, InsertSavIntervention } from '@shared/schema';
+import { analyticsStorage } from '../analytics';
+import type { Offer, InsertOffer, Ao, InsertAo, Project, InsertProject, User, UpsertUser, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert, SupplierDocument, InsertSupplierDocument, SupplierQuoteSession, InsertSupplierQuoteSession, SupplierQuoteAnalysis, InsertSupplierQuoteAnalysis, PurchaseOrder, InsertPurchaseOrder, ClientQuote, InsertClientQuote, TeamResource, InsertTeamResource, BeWorkload, InsertBeWorkload, EmployeeLabel, EmployeeLabelInsert, EmployeeLabelAssignment, EmployeeLabelAssignmentInsert, EquipmentBattery, EquipmentBatteryInsert, MarginTarget, MarginTargetInsert, AoContacts, InsertAoContacts, ProjectContacts, InsertProjectContacts, SavIntervention, InsertSavIntervention } from '@shared/schema';
 
 /**
  * Facade de storage qui unifie l'accès aux données
@@ -1400,6 +1401,27 @@ export class StorageFacade {
     }
   }
 
+  /**
+   * Récupère un projet par Monday Item ID
+   * Utilise ProductionRepository avec fallback sur legacy
+   */
+  async getProjectByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Project | undefined> {
+    try {
+      const project = await this.productionRepository.findByMondayId(mondayItemId, tx);
+      if (project) {
+        this.facadeLogger.info('Projet récupéré par Monday ID via ProductionRepository', {
+          metadata: { mondayItemId, projectId: project.id, module: 'StorageFacade', operation: 'getProjectByMondayItemId' }
+        });
+      }
+      return project;
+    } catch (error) {
+      this.facadeLogger.warn('ProductionRepository.findByMondayId failed, falling back to legacy', {
+        metadata: { error, mondayItemId, module: 'StorageFacade', operation: 'getProjectByMondayItemId' }
+      });
+      return await this.legacyStorage.getProjectByMondayItemId(mondayItemId, tx);
+    }
+  }
+
   get getProjectsByOffer() { return this.legacyStorage.getProjectsByOffer.bind(this.legacyStorage); }
 
   /**
@@ -1443,8 +1465,43 @@ export class StorageFacade {
       return await this.legacyStorage.updateProject(id, project);
     }
   }
-  get updateProjectMondayId() { return this.legacyStorage.updateProjectMondayId.bind(this.legacyStorage); }
-  get updateAOMondayId() { return this.legacyStorage.updateAOMondayId.bind(this.legacyStorage); }
+
+  /**
+   * Met à jour le Monday ID d'un projet
+   * Utilise ProductionRepository avec fallback sur legacy
+   */
+  async updateProjectMondayId(projectId: string, mondayId: string): Promise<void> {
+    try {
+      await this.productionRepository.updateMondayId(projectId, mondayId);
+      this.facadeLogger.info('Monday ID projet mis à jour via ProductionRepository', {
+        metadata: { projectId, mondayId, module: 'StorageFacade', operation: 'updateProjectMondayId' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('ProductionRepository.updateMondayId failed, falling back to legacy', {
+        metadata: { error, projectId, mondayId, module: 'StorageFacade', operation: 'updateProjectMondayId' }
+      });
+      await this.legacyStorage.updateProjectMondayId(projectId, mondayId);
+    }
+  }
+
+  /**
+   * Met à jour le Monday ID d'un AO
+   * Utilise AoRepository avec fallback sur legacy
+   */
+  async updateAOMondayId(aoId: string, mondayId: string): Promise<void> {
+    try {
+      await this.aoRepository.updateMondayId(aoId, mondayId);
+      this.facadeLogger.info('Monday ID AO mis à jour via AoRepository', {
+        metadata: { aoId, mondayId, module: 'StorageFacade', operation: 'updateAOMondayId' }
+      });
+    } catch (error) {
+      this.facadeLogger.warn('AoRepository.updateMondayId failed, falling back to legacy', {
+        metadata: { error, aoId, mondayId, module: 'StorageFacade', operation: 'updateAOMondayId' }
+      });
+      await this.legacyStorage.updateAOMondayId(aoId, mondayId);
+    }
+  }
+
   get getProjectsToExport() { return this.legacyStorage.getProjectsToExport.bind(this.legacyStorage); }
   get getAOsToExport() { return this.legacyStorage.getAOsToExport.bind(this.legacyStorage); }
 
@@ -1501,6 +1558,27 @@ export class StorageFacade {
         metadata: { module: 'StorageFacade', operation: 'getSupplier', id, error: error instanceof Error ? error.message : 'Unknown' }
       });
       return await this.legacyStorage.getSupplier(id);
+    }
+  }
+
+  /**
+   * Récupère un fournisseur par Monday Item ID
+   * Utilise SuppliersRepository avec fallback sur legacy
+   */
+  async getSupplierByMondayItemId(mondayItemId: string, tx?: DrizzleTransaction): Promise<Supplier | undefined> {
+    try {
+      const supplier = await this.suppliersRepository.findByMondayId(mondayItemId, tx);
+      if (supplier) {
+        this.facadeLogger.info('Fournisseur récupéré par Monday ID via SuppliersRepository', {
+          metadata: { mondayItemId, supplierId: supplier.id, module: 'StorageFacade', operation: 'getSupplierByMondayItemId' }
+        });
+      }
+      return supplier;
+    } catch (error) {
+      this.facadeLogger.warn('SuppliersRepository.findByMondayId failed, falling back to legacy', {
+        metadata: { error, mondayItemId, module: 'StorageFacade', operation: 'getSupplierByMondayItemId' }
+      });
+      return await this.legacyStorage.getSupplierByMondayItemId(mondayItemId, tx);
     }
   }
 
@@ -2248,6 +2326,25 @@ export class StorageFacade {
     }
   }
 
+  /**
+   * Récupère les documents d'une session spécifique
+   * Utilise DocumentsRepository avec fallback sur legacy
+   */
+  async getDocumentsBySession(sessionId: string): Promise<SupplierDocument[]> {
+    try {
+      const documents = await this.documentsRepository.getSupplierDocuments(sessionId);
+      this.facadeLogger.info('Documents de session récupérés via DocumentsRepository', {
+        metadata: { sessionId, count: documents.length, module: 'StorageFacade', operation: 'getDocumentsBySession' }
+      });
+      return documents;
+    } catch (error) {
+      this.facadeLogger.warn('DocumentsRepository.getSupplierDocuments failed, falling back to legacy', {
+        metadata: { error, sessionId, module: 'StorageFacade', operation: 'getDocumentsBySession' }
+      });
+      return await this.legacyStorage.getDocumentsBySession(sessionId);
+    }
+  }
+
   // SUPPLIER QUOTE SESSIONS - 5 MÉTHODES
 
   /**
@@ -2567,7 +2664,102 @@ export class StorageFacade {
     }
   }
 
-  // Analytics operations
+  // Analytics operations - Déléguées vers AnalyticsStorage
+  async getProjectStats(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+    responsibleUserId?: string;
+    departement?: string;
+  }) {
+    try {
+      return await analyticsStorage.getProjectStats(filters);
+    } catch (error) {
+      this.facadeLogger.warn('AnalyticsStorage.getProjectStats failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'getProjectStats' }
+      });
+      return await this.legacyStorage.getProjectStats(filters);
+    }
+  }
+
+  async getOfferStats(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+    responsibleUserId?: string;
+    departement?: string;
+  }) {
+    try {
+      return await analyticsStorage.getOfferStats(filters);
+    } catch (error) {
+      this.facadeLogger.warn('AnalyticsStorage.getOfferStats failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'getOfferStats' }
+      });
+      return await this.legacyStorage.getOfferStats(filters);
+    }
+  }
+
+  async getAOStats(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    departement?: string;
+  }) {
+    try {
+      return await analyticsStorage.getAOStats(filters);
+    } catch (error) {
+      this.facadeLogger.warn('AnalyticsStorage.getAOStats failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'getAOStats' }
+      });
+      return await this.legacyStorage.getAOStats(filters);
+    }
+  }
+
+  async getConversionStats(period: {
+    from: string;
+    to: string;
+  }, filters?: {
+    userId?: string;
+    departement?: string;
+  }) {
+    try {
+      return await analyticsStorage.getConversionStats(period, filters);
+    } catch (error) {
+      this.facadeLogger.warn('AnalyticsStorage.getConversionStats failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'getConversionStats' }
+      });
+      return await this.legacyStorage.getConversionStats(period, filters);
+    }
+  }
+
+  async getProjectDelayStats(period: {
+    from: string;
+    to: string;
+  }) {
+    try {
+      return await analyticsStorage.getProjectDelayStats(period);
+    } catch (error) {
+      this.facadeLogger.warn('AnalyticsStorage.getProjectDelayStats failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'getProjectDelayStats' }
+      });
+      return await this.legacyStorage.getProjectDelayStats(period);
+    }
+  }
+
+  async getTeamPerformanceStats(period: {
+    from: string;
+    to: string;
+  }) {
+    try {
+      return await analyticsStorage.getTeamPerformanceStats(period);
+    } catch (error) {
+      this.facadeLogger.warn('AnalyticsStorage.getTeamPerformanceStats failed, falling back to legacy', {
+        metadata: { error, module: 'StorageFacade', operation: 'getTeamPerformanceStats' }
+      });
+      return await this.legacyStorage.getTeamPerformanceStats(period);
+    }
+  }
+
+  // Autres méthodes analytics (non migrées encore)
   get createKPISnapshot() { return this.legacyStorage.createKPISnapshot.bind(this.legacyStorage); }
   get getKPISnapshots() { return this.legacyStorage.getKPISnapshots.bind(this.legacyStorage); }
   get getLatestKPISnapshot() { return this.legacyStorage.getLatestKPISnapshot.bind(this.legacyStorage); }

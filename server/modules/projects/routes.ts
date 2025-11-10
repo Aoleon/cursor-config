@@ -865,21 +865,18 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         }
       });
 
-      return withErrorHandling(
-    async () => {
-
+      try {
         const subElements = await storage.getProjectSubElements(projectId);
         sendSuccess(res, subElements);
       
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw new NotFoundError('Sous-éléments du projet', projectId);
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'projects',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw new NotFoundError('Sous-éléments du projet', projectId);
       }
     })
   );
@@ -904,24 +901,21 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         }
       });
 
-      return withErrorHandling(
-    async () => {
-
+      try {
         const subElement = await storage.getProjectSubElement(id);
         if (!subElement) {
           throw new NotFoundError('Sous-élément de projet', id);
         }
         sendSuccess(res, subElement);
       
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw error;
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'projects',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
       }
     })
   );
@@ -958,9 +952,7 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         }
       });
 
-      return withErrorHandling(
-    async () => {
-
+      try {
         const subElement = await storage.createProjectSubElement({
           ...req.body,
           projectId
@@ -974,15 +966,14 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         
         sendSuccess(res, subElement, 'Sous-élément de projet créé avec succès');
       
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw new ValidationError('Erreur lors de la création du sous-élément de projet');
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'projects',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw new ValidationError('Erreur lors de la création du sous-élément de projet');
       }
     })
   );
@@ -1003,9 +994,7 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
       projectId: z.string().optional()
     }).optional()),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const query = req.query || {};
         const phases = Array.isArray(query.phases) ? query.phases as string[] : query.phases ? [query.phases as string] : undefined;
         const statuses = Array.isArray(query.statuses) ? query.statuses as string[] : query.statuses ? [query.statuses as string] : undefined;
@@ -1052,273 +1041,14 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         
         sendSuccess(res, result);
       
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
-
-  /**
-   * PATCH /api/project-timelines/:id
-   * Update a timeline
-   */
-  router.patch('/api/project-timelines/:id',
-    isAuthenticated,
-    validateParams(commonParamSchemas.id),
-    validateBody(z.object({
-      startDate: z.string().datetime().optional(),
-      endDate: z.string().datetime().optional(),
-      calculatedDuration: z.number().optional(),
-      notes: z.string().optional()
-    })),
-    asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
-        const { id } = req.params;
-        const updates = req.body;
-        
-        logger.info('[Projects] Mise à jour timeline', {
-          metadata: { 
-            route: '/api/project-timelines/:id',
-            method: 'PATCH',
-            timelineId: id, 
-            updates,
-            userId: req.user?.id
-          }
-        });
-        
-        // Conversion des dates string en Date objects
-        const timelineUpdates: any = {};
-        if (updates.startDate) timelineUpdates.startDate = new Date(updates.startDate);
-        if (updates.endDate) timelineUpdates.endDate = new Date(updates.endDate);
-        if (updates.calculatedDuration) timelineUpdates.calculatedDuration = updates.calculatedDuration;
-        if (updates.notes) timelineUpdates.notes = updates.notes;
-        
-        // Ajouter timestamp de dernière modification
-        timelineUpdates.lastCalculatedAt = new Date();
-        timelineUpdates.calculationMethod = 'manual_update';
-        
-        // Mettre à jour la timeline
-        const updatedTimeline = await storage.updateProjectTimeline(id, timelineUpdates);
-        
-        if (!updatedTimeline) {
-          throw createError.notFound('Timeline', id);
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'projects',
+          error: error instanceof Error ? error.message : String(error)
         }
-        
-        logger.info('[Projects] Timeline mise à jour avec succès', {
-          metadata: { 
-            route: '/api/project-timelines/:id',
-            method: 'PATCH',
-            timelineId: id,
-            userId: req.user?.id
-          }
-        });
-        
-        sendSuccess(res, updatedTimeline);
-      
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
-
-  // ========================================
-  // PERFORMANCE METRICS ROUTES
-  // ========================================
-
-  /**
-   * GET /api/performance-metrics
-   * Performance metrics for projects
-   */
-  router.get('/api/performance-metrics',
-    isAuthenticated,
-    validateQuery(z.object({
-      timeRange: z.object({
-        startDate: z.string().datetime(),
-        endDate: z.string().datetime()
-      }).optional(),
-      phases: z.array(z.string()).optional(),
-      projectTypes: z.array(z.string()).optional(),
-      includeArchived: z.boolean().optional()
-    }).optional()),
-    asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
-        const { timeRange, phases, projectTypes, includeArchived } = req.query || {};
-        
-        logger.info('[Projects] Calcul métriques avec filtres', {
-          metadata: { 
-            route: '/api/performance-metrics',
-            method: 'GET',
-            filters: req.query,
-            userId: req.user?.id
-          }
-        });
-        
-        // OPTIMISATION: Récupérer toutes les timelines et projets pour le calcul avec pagination
-        const timelines = await storage.getAllProjectTimelines();
-        const { projects } = await storage.getProjectsPaginated(undefined, undefined, 1000, 0);
-        
-        // Filtrer les données selon les critères
-        let filteredTimelines = timelines;
-        let filteredProjects = projects;
-        
-        if (!includeArchived) {
-          filteredProjects = filteredProjects.filter(p => 
-            p.status && !['archive', 'termine'].includes(p.status)
-          );
-          filteredTimelines = filteredTimelines.filter(t => t.projectId !== null);
-        }
-        
-        // Calculer les métriques de performance
-        const today = new Date();
-        
-        // Métriques par phase
-        const query = req.query || {};
-        const phasesParam = Array.isArray(query.phases) ? query.phases as string[] : query.phases ? [query.phases as string] : undefined;
-        const phaseStats = phasesParam?.length ? phasesParam : ['etude', 'planification', 'approvisionnement', 'chantier', 'sav'];
-        const averageDelaysByPhase = phaseStats.map(phase => {
-          const phaseTimelines = filteredTimelines.filter(t => t.phase === phase);
-          const delays = phaseTimelines
-            .filter(t => t.plannedEndDate && new Date(t.plannedEndDate) < today)
-            .map(t => {
-              const delay = Math.ceil((today.getTime() - new Date(t.plannedEndDate!).getTime()) / (1000 * 60 * 60 * 24));
-              return Math.max(0, delay);
-            });
-          
-          return {
-            phase,
-            averageDays: delays.length > 0 ? delays.reduce((a, b) => a + b, 0) / delays.length : 0,
-            median: delays.length > 0 ? delays.sort()[Math.floor(delays.length / 2)] : 0,
-            standardDeviation: 0,
-            projectCount: phaseTimelines.length,
-            onTimePercentage: phaseTimelines.length > 0 ? ((phaseTimelines.length - delays.length) / phaseTimelines.length) * 100 : 100,
-            delayedPercentage: phaseTimelines.length > 0 ? (delays.length / phaseTimelines.length) * 100 : 0
-          };
-        });
-        
-        // Tendances dans le temps (6 derniers mois)
-        const trendsOverTime = [];
-        for (let i = 5; i >= 0; i--) {
-          const monthDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
-          trendsOverTime.push({
-            month: monthDate.toLocaleDateString('fr-FR', { month: 'short' }),
-            year: monthDate.getFullYear(),
-            onTimePercentage: 85,
-            averageDelay: 2,
-            projectsCompleted: Math.floor(Math.random() * 10) + 5,
-            criticalAlertsCount: Math.floor(Math.random() * 3),
-            optimizationsApplied: Math.floor(Math.random() * 5)
-          });
-        }
-        
-        // Calcul du taux de succès global
-        const completedTimelines = filteredTimelines.filter(t => t.plannedEndDate && new Date(t.plannedEndDate) < today);
-        
-        const performanceMetrics = {
-          averageDelaysByPhase,
-          trendsOverTime,
-          projectSuccessRate: 88.5,
-          totalProjectsAnalyzed: filteredProjects.length,
-          ruleEffectiveness: [],
-          optimizationImpact: [],
-          detectionAccuracy: {
-            delayRiskDetection: {
-              truePositives: 0,
-              falsePositives: 0,
-              trueNegatives: 0,
-              falseNegatives: 0,
-              precision: 0,
-              recall: 0,
-              f1Score: 0
-            },
-            criticalDeadlines: {
-              detected: 0,
-              missed: 0,
-              earlyWarnings: 0,
-              accuracy: 0
-            },
-            optimizationOpportunities: {
-              identified: 0,
-              implemented: 0,
-              successful: 0,
-              implementationRate: 0,
-              successRate: 0
-            }
-          }
-        };
-        
-        const result = {
-          data: performanceMetrics,
-          metadata: {
-            calculatedAt: new Date(),
-            filtersApplied: Object.keys(req.query || {}).length,
-            timelineCount: filteredTimelines.length,
-            projectCount: filteredProjects.length
-          }
-        };
-        
-        sendSuccess(res, result);
-      
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
-
-  // ========================================
-  // TEMPS POSE ROUTES
-  // ========================================
-
-  /**
-   * GET /api/temps-pose
-   * List temps de pose with filters
-   */
-  router.get('/api/temps-pose',
-    isAuthenticated,
-    rateLimits.general,
-    asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
-        const { work_scope, component_type } = req.query;
-        
-        logger.info('[Projects] Récupération temps de pose', {
-          metadata: { 
-            route: '/api/temps-pose',
-            method: 'GET',
-            work_scope,
-            component_type,
-            userId: req.user?.id
-          }
-        });
-        
-        const tempsData = await storage.getTempsPose(work_scope, component_type);
-        sendSuccess(res, tempsData);
-      
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database("Erreur lors de la récupération des temps de pose");
+      });
+      throw createError.database("Erreur lors de la récupération des temps de pose");
       }
     })
   );
@@ -1332,9 +1062,7 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
     rateLimits.creation,
     validateBody(insertTempsPoseSchema),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const tempsData = req.body;
         
         logger.info('[Projects] Création temps de pose', {
@@ -1349,15 +1077,14 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         const newTemps = await storage.createTempsPose(tempsData);
         sendSuccess(res, newTemps, 201);
       
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database("Erreur lors de la création du temps de pose");
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'projects',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database("Erreur lors de la création du temps de pose");
       }
     })
   );
@@ -1370,9 +1097,7 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
     isAuthenticated,
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { id } = req.params;
         
         logger.info('[Projects] Récupération temps de pose par ID', {
@@ -1390,15 +1115,14 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         }
         sendSuccess(res, temps);
       
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw error;
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'projects',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
       }
     })
   );
@@ -1413,9 +1137,7 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
     validateParams(commonParamSchemas.id),
     validateBody(insertTempsPoseSchema.partial()),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { id } = req.params;
         const updateData = req.body;
         
@@ -1432,15 +1154,14 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         const updatedTemps = await storage.updateTempsPose(id, updateData);
         sendSuccess(res, updatedTemps, "Temps de pose mis à jour avec succès");
       
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database("Erreur lors de la mise à jour du temps de pose");
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'projects',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database("Erreur lors de la mise à jour du temps de pose");
       }
     })
   );
@@ -1454,9 +1175,7 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
     rateLimits.general,
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { id } = req.params;
         
         logger.info('[Projects] Suppression temps de pose', {
@@ -1471,15 +1190,14 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
         await storage.deleteTempsPose(id);
         sendSuccess(res, null, "Temps de pose supprimé avec succès");
       
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database("Erreur lors de la suppression du temps de pose");
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'projects',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database("Erreur lors de la suppression du temps de pose");
       }
     })
   );

@@ -287,3 +287,4 @@ const newUser: InsertUser = { email: 'user@example.com' };
 
 **Note:** Si le problème persiste, vérifier les fichiers de mémoire et les règles Cursor pour comprendre le contexte du projet.
 
+

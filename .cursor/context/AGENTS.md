@@ -1,12 +1,16 @@
 # AGENTS.md - Instructions pour Cursor AI
 
-**Référence:** [Cursor Rules Documentation](https://docs.cursor.com/context/rules)
+**Référence:** [Cursor Rules Documentation](https://docs.cursor.com/context/rules)  
+**Version:** 2.0.0  
+**Dernière mise à jour:** 2025-01-29
 
-Ce fichier fournit des instructions simples et directes pour guider Cursor AI dans le projet Saxium.
+Ce fichier fournit des instructions complètes et optimisées pour guider Cursor AI dans le projet Saxium, intégrant les meilleures pratiques de développement, déploiement et DevOps.
 
 ## 🎯 Contexte du Projet
 
 Saxium est une application full-stack de gestion de projets pour **JLM Menuiserie** (BTP/Menuiserie française). Stack: React 19 + TypeScript, Express 5, PostgreSQL (Drizzle ORM), IA multi-modèles (Claude Sonnet 4 + GPT-5).
+
+**Architecture:** Migration progressive vers modules (`server/modules/*`), services métier (`server/services/*`), types partagés (`shared/schema.ts`)
 
 ## 🏆 Philosophie de Qualité
 
@@ -175,27 +179,148 @@ Saxium est une application full-stack de gestion de projets pour **JLM Menuiseri
 
 ### Créer une Nouvelle Route
 
+**Étapes:**
 1. Vérifier si module existe dans `server/modules/`
 2. Si oui, ajouter route dans `server/modules/[module]/routes.ts`
 3. Si non, créer nouveau module ou ajouter dans module approprié
 4. Utiliser `asyncHandler`, `validateBody`, `logger`
-5. Tester la route
+5. Ajouter rate limiting si nécessaire
+6. Tester la route
+7. Vérifier couverture de code
+
+**Pattern:**
+```typescript
+import { asyncHandler } from '../utils/error-handler';
+import { validateBody } from '../middleware/validation';
+import { logger } from '../utils/logger';
+import { rateLimits } from '../middleware/rate-limit';
+import { z } from 'zod';
+
+const schema = z.object({
+  field: z.string().min(1)
+});
+
+router.post('/api/route',
+  rateLimits.general, // Rate limiting
+  validateBody(schema), // Validation
+  asyncHandler(async (req, res) => {
+    logger.info('[Module] Action', {
+      metadata: { userId: req.user?.id }
+    });
+    
+    const result = await service.method(req.body);
+    res.json({ success: true, data: result });
+  })
+);
+```
 
 ### Modifier un Service
 
+**Étapes:**
 1. Lire `server/utils/README-UTILS.md`
 2. Vérifier si service existe dans `server/services/`
 3. Utiliser `logger` au lieu de `console.log`
 4. Utiliser `withErrorHandling` pour gestion d'erreurs
-5. Tester le service
+5. Ajouter métriques de performance si nécessaire
+6. Tester le service
+7. Vérifier impact sur performance
+
+**Pattern:**
+```typescript
+import { logger } from '../utils/logger';
+import { withErrorHandling } from '../utils/error-handler';
+
+async method(params: Params): Promise<Result> {
+  const endTimer = logger.time('method');
+  
+  return withErrorHandling(
+    async () => {
+      logger.debug('[Service] Début méthode', {
+        metadata: { params }
+      });
+      
+      const result = await this.storage.method(params);
+      
+      endTimer(); // Log automatique du temps
+      
+      logger.info('[Service] Méthode réussie', {
+        metadata: { resultId: result.id }
+      });
+      
+      return result;
+    },
+    {
+      operation: 'method',
+      service: 'ServiceName',
+      metadata: { params }
+    }
+  );
+}
+```
 
 ### Ajouter une Fonctionnalité IA
 
+**Étapes:**
 1. Vérifier services IA existants dans `server/services/`
 2. Utiliser `getAIService()` pour obtenir instance
 3. Toujours fournir `userRole` pour RBAC
 4. Utiliser `SQLEngineService` pour SQL sécurisé
-5. Tester avec différents rôles utilisateur
+5. Implémenter cache intelligent
+6. Ajouter circuit breaker si nécessaire
+7. Tester avec différents rôles utilisateur
+8. Monitorer coûts et latence
+
+**Pattern:**
+```typescript
+import { getAIService } from '../services/AIService';
+import { SQLEngineService } from '../services/SQLEngineService';
+import { getContextCacheService } from '../services/ContextCacheService';
+
+const aiService = getAIService(storage);
+const cacheService = getContextCacheService(storage);
+const sqlEngine = new SQLEngineService(
+  aiService,
+  rbacService,
+  businessContextService,
+  eventBus,
+  storage
+);
+
+// Avec cache
+const cacheKey = generateCacheKey(query, userRole);
+const cached = await cacheService.get(cacheKey);
+if (cached) return cached;
+
+const result = await sqlEngine.executeNaturalLanguageQuery({
+  naturalLanguageQuery: query,
+  userId: user.id,
+  userRole: user.role
+});
+
+await cacheService.set(cacheKey, result, { ttl: 86400 });
+```
+
+### Déployer une Modification
+
+**Étapes:**
+1. Vérifier tests passent localement
+2. Vérifier types TypeScript (`npm run check`)
+3. Vérifier couverture de code
+4. Commit et push
+5. Vérifier CI/CD passe
+6. Tester en staging (si disponible)
+7. Déployer en production
+8. Monitorer après déploiement
+
+**Checklist:**
+- [ ] Tests passent localement
+- [ ] Types TypeScript OK
+- [ ] Couverture de code maintenue
+- [ ] CI/CD passe
+- [ ] Variables d'environnement vérifiées
+- [ ] Backup base de données (si majeur)
+- [ ] Plan de rollback préparé
+- [ ] Monitoring activé
 
 ## 📝 Conventions de Code
 
@@ -205,18 +330,341 @@ Saxium est une application full-stack de gestion de projets pour **JLM Menuiseri
 - **Composants:** `PascalCase` (ex: `OfferCard`)
 - **Hooks:** `camelCase` avec préfixe `use` (ex: `useOffer`)
 - **Types:** `PascalCase` (ex: `User`, `InsertUser`)
+- **Modules:** `kebab-case` (ex: `auth`, `documents`)
+- **Fichiers:** `kebab-case` pour routes, `PascalCase` pour composants
 
 ### Imports
 ```typescript
 // 1. Imports externes
 import { z } from 'zod';
+import { Router } from 'express';
 
 // 2. Imports partagés
-import type { User } from '@shared/schema';
+import type { User, InsertUser } from '@shared/schema';
 
-// 3. Imports internes
+// 3. Imports internes (utils d'abord)
 import { logger } from '../utils/logger';
 import { asyncHandler } from '../utils/error-handler';
+import { validateBody } from '../middleware/validation';
+
+// 4. Imports services/modules
+import { getAIService } from '../services/AIService';
+import { createAuthRouter } from '../modules/auth';
+```
+
+### Structure de Fichiers
+
+**Backend (Module):**
+```
+server/modules/[module]/
+├── routes.ts          # Routes du module
+├── services.ts        # Services spécifiques (optionnel)
+├── types.ts           # Types spécifiques
+└── index.ts           # Exports publics
+```
+
+**Backend (Service):**
+```
+server/services/
+└── [Service]Service.ts  # Service métier
+```
+
+**Frontend (Composant):**
+```
+client/src/
+├── components/
+│   ├── ui/            # Composants UI réutilisables
+│   └── [Component].tsx # Composants métier
+├── hooks/
+│   └── use[Hook].ts   # Hooks React
+└── pages/
+    └── [Page].tsx      # Pages
+```
+
+### Documentation Inline
+
+**TOUJOURS:**
+- ✅ Documenter fonctions complexes (> 20 lignes)
+- ✅ Documenter types/interfaces publiques
+- ✅ Documenter "pourquoi" pas "quoi"
+- ✅ Exemples d'utilisation pour APIs publiques
+
+**Pattern:**
+```typescript
+/**
+ * Calcule la durée d'une phase de projet en fonction du contexte
+ * 
+ * @param phase - Phase du projet (etude, planification, etc.)
+ * @param context - Contexte du projet (type, complexité, surface, etc.)
+ * @param activeRules - Règles métier actives pour ce projet
+ * @returns Durée calculée avec confiance et facteurs appliqués
+ * 
+ * @example
+ * ```typescript
+ * const duration = await calculatePhaseDuration(
+ *   'etude',
+ *   { type: 'fenetre', complexity: 'moyen', surface: 50 },
+ *   activeRules
+ * );
+ * ```
+ */
+async calculatePhaseDuration(
+  phase: ProjectStatus,
+  context: ProjectContext,
+  activeRules: DateIntelligenceRule[]
+): Promise<PhaseDurationResult> {
+  // ...
+}
+```
+
+## 🚀 CI/CD et Déploiement
+
+### Pipeline CI/CD Actuel
+
+**GitHub Actions:** `.github/workflows/ci.yml`
+
+**Étapes automatiques:**
+1. ✅ Type checking TypeScript (`npm run check`)
+2. ✅ Tests unitaires backend (Vitest)
+3. ✅ Tests de régression Monday.com
+4. ✅ Génération couverture de code
+5. ✅ Upload artifacts (coverage reports)
+
+**TOUJOURS:**
+- ✅ Vérifier que les tests passent avant commit
+- ✅ Utiliser `npm ci` (pas `npm install`) en CI
+- ✅ Vérifier couverture de code après modifications
+- ✅ Tester localement avant push
+
+**NE JAMAIS:**
+- ❌ Pousser code qui casse les tests CI
+- ❌ Ignorer les warnings TypeScript
+- ❌ Commiter sans vérifier localement
+
+### Déploiement
+
+**Environnements:**
+- **Development:** Local avec Docker Compose (`npm run dev:nhost`)
+- **Production:** VPS OVH avec Docker (`docker-compose.production.yml`)
+
+**Workflow de Déploiement:**
+
+1. **Pré-déploiement:**
+   ```bash
+   # Vérifier tests
+   npm run test
+   
+   # Vérifier types
+   npm run check
+   
+   # Build production
+   npm run build
+   ```
+
+2. **Déploiement Production:**
+   ```bash
+   # Sur serveur VPS
+   git pull origin main
+   npm ci
+   npm run build
+   docker-compose -f docker-compose.production.yml up -d --build
+   ```
+
+3. **Post-déploiement:**
+   - Vérifier logs: `docker-compose -f docker-compose.production.yml logs -f`
+   - Vérifier santé application
+   - Monitorer métriques
+
+**TOUJOURS:**
+- ✅ Faire backup base de données avant déploiement majeur
+- ✅ Tester en staging avant production
+- ✅ Vérifier variables d'environnement
+- ✅ Monitorer après déploiement
+- ✅ Avoir plan de rollback
+
+**NE JAMAIS:**
+- ❌ Déployer sans tests
+- ❌ Déployer vendredi soir
+- ❌ Ignorer les erreurs de build
+- ❌ Modifier production directement
+
+### Infrastructure as Code (IaC)
+
+**Docker Compose:**
+- `docker-compose.yml` - Développement local
+- `docker-compose.production.yml` - Production
+
+**TOUJOURS:**
+- ✅ Versionner configurations Docker
+- ✅ Utiliser variables d'environnement pour secrets
+- ✅ Documenter changements infrastructure
+- ✅ Tester configurations localement
+
+**Référence:** `@docs/NHOST_DEPLOYMENT.md` - Guide déploiement complet
+
+## 📊 Monitoring et Observabilité
+
+### Logging Structuré
+
+**TOUJOURS:**
+- ✅ Utiliser `logger` de `server/utils/logger.ts` (jamais `console.log`)
+- ✅ Inclure correlation IDs pour traçabilité
+- ✅ Logger avec métadonnées structurées
+- ✅ Niveaux appropriés (info, warn, error, fatal)
+
+**Pattern:**
+```typescript
+import { logger } from '../utils/logger';
+
+logger.info('Opération réussie', {
+  metadata: {
+    module: 'ModuleName',
+    operation: 'operationName',
+    userId: req.user?.id,
+    entityId: entity.id,
+    correlationId: req.correlationId
+  }
+});
+```
+
+### Métriques
+
+**Métriques à Monitorer:**
+- ✅ Latence API (objectif < 100ms)
+- ✅ Latence chatbot (objectif < 3s)
+- ✅ Taux d'erreur
+- ✅ Cache hit rate
+- ✅ Utilisation mémoire/CPU
+- ✅ Requêtes DB lentes (> 1s)
+
+**TOUJOURS:**
+- ✅ Logger métriques performance
+- ✅ Alerter sur dégradation
+- ✅ Monitorer services externes (IA, APIs tierces)
+
+### Alertes
+
+**Alertes Critiques:**
+- ❌ Taux d'erreur > 5%
+- ❌ Latence API > 500ms
+- ❌ Circuit breakers ouverts
+- ❌ Base de données inaccessible
+- ❌ Services IA indisponibles
+
+**TOUJOURS:**
+- ✅ Configurer alertes pour métriques critiques
+- ✅ Avoir plan d'action pour chaque alerte
+- ✅ Documenter procédures d'incident
+
+## 🔒 Sécurité et Conformité
+
+### Authentification et Autorisation
+
+**TOUJOURS:**
+- ✅ Utiliser Microsoft OAuth en production
+- ✅ Vérifier RBAC sur toutes les routes sensibles
+- ✅ Valider permissions avant opérations
+- ✅ Logger tentatives d'accès non autorisées
+
+**NE JAMAIS:**
+- ❌ Exposer endpoints sans authentification
+- ❌ Faire confiance aux données client
+- ❌ Stocker secrets en clair
+- ❌ Logger données sensibles
+
+### Protection des Données
+
+**TOUJOURS:**
+- ✅ Valider toutes les entrées (Zod)
+- ✅ Sanitizer requêtes SQL (Drizzle ORM uniquement)
+- ✅ Protéger contre injections (SQL, XSS)
+- ✅ Utiliser HTTPS en production
+- ✅ Chiffrer données sensibles
+
+**NE JAMAIS:**
+- ❌ Exécuter SQL brut
+- ❌ Faire confiance aux entrées utilisateur
+- ❌ Exposer données sensibles dans logs
+- ❌ Transmettre secrets en clair
+
+### Rate Limiting
+
+**TOUJOURS:**
+- ✅ Appliquer rate limiting global
+- ✅ Rate limiting par route pour endpoints sensibles
+- ✅ Logger tentatives de rate limit
+- ✅ Configurer limites appropriées
+
+**Pattern:**
+```typescript
+// Global
+app.use(rateLimits.general); // 100 req/h
+
+// Par route
+router.post('/api/sensitive',
+  rateLimits.processing, // 10 req/h
+  asyncHandler(async (req, res) => {
+    // ...
+  })
+);
+```
+
+### Conformité
+
+**Standards:**
+- ✅ Respect normes BTP françaises (RT2012, PMR, BBC)
+- ✅ Gestion calendriers BTP (congés, saisonnalité)
+- ✅ Traçabilité complète des actions
+- ✅ Protection données personnelles (RGPD)
+
+## 🤖 MLOps et Services IA
+
+### Gestion des Modèles IA
+
+**Services IA:**
+- `AIService` - Sélection automatique modèle (Claude/GPT)
+- `ChatbotOrchestrationService` - Pipeline complet
+- `SQLEngineService` - Text-to-SQL sécurisé
+- `BusinessContextService` - Contexte métier enrichi
+
+**TOUJOURS:**
+- ✅ Utiliser `getAIService()` pour obtenir instance (singleton)
+- ✅ Toujours fournir `userRole` pour RBAC
+- ✅ Utiliser cache intelligent (24h pour requêtes IA)
+- ✅ Monitorer coûts et latence
+- ✅ Circuit breakers pour appels IA
+
+**NE JAMAIS:**
+- ❌ Créer nouvelles instances de services IA
+- ❌ Appeler APIs IA sans timeout
+- ❌ Ignorer erreurs services IA
+- ❌ Exécuter SQL brut (toujours via SQLEngineService)
+
+### Cache et Performance IA
+
+**TOUJOURS:**
+- ✅ Utiliser cache pour requêtes similaires
+- ✅ Invalider cache lors modifications données
+- ✅ Monitorer cache hit rate
+- ✅ Optimiser prompts pour réduire tokens
+
+**Pattern:**
+```typescript
+// Vérification cache
+const cacheKey = generateCacheKey(query, userRole);
+const cached = await cacheService.get(cacheKey);
+if (cached) return cached;
+
+// Génération avec timeout
+const result = await Promise.race([
+  aiService.generate(query),
+  new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Timeout')), 30000)
+  )
+]);
+
+// Mise en cache
+await cacheService.set(cacheKey, result, { ttl: 86400 });
 ```
 
 ## ⚠️ Points d'Attention Actuels
@@ -236,14 +684,225 @@ import { asyncHandler } from '../utils/error-handler';
 - Couverture frontend: objectif 80% (actuel ~78% 🔄)
 - Corriger tests flaky E2E
 
+### Déploiement
+- Automatiser pipeline CI/CD complet
+- Ajouter tests E2E dans CI
+- Automatiser déploiement production (optionnel)
+
 ## 🔗 Références Rapides
 
+### Documentation Projet
 - **Règles détaillées:** `.cursor/rules/`
 - **Documentation projet:** Fichiers `*.md` à la racine
 - **Documentation technique:** `docs/`
 - **Utilitaires:** `server/utils/README-UTILS.md`
 
+### Déploiement
+- **Guide déploiement:** `@docs/NHOST_DEPLOYMENT.md`
+- **CI/CD:** `.github/workflows/ci.yml`
+- **Docker:** `docker-compose.yml`, `docker-compose.production.yml`
+
+### Monitoring
+- **Logging:** `server/utils/logger.ts`
+- **Métriques:** Services avec logging structuré
+- **Alertes:** Circuit breakers, rate limiting
+
+### Sécurité
+- **Auth:** `server/modules/auth/`
+- **RBAC:** `server/services/RBACService.ts`
+- **Validation:** `server/middleware/validation.ts`
+
+## 🎯 Optimisation du Comportement de l'Agent
+
+**Référence:** `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation complètes
+
+### Stratégies d'Optimisation
+
+**Avant de Commencer une Tâche:**
+1. ✅ Lire `activeContext.md` pour connaître l'état actuel
+2. ✅ Lire `projectbrief.md` pour comprendre le périmètre
+3. ✅ Lire `systemPatterns.md` pour comprendre l'architecture
+4. ✅ Vérifier fichiers de référence pertinents avec `@`
+5. ✅ Comprendre le contexte avant de modifier
+6. ✅ Chercher code similaire existant (`codebase_search`)
+
+**Pendant le Développement:**
+1. ✅ Utiliser patterns établis (ne pas réinventer)
+2. ✅ Réutiliser code existant (DRY principle)
+3. ✅ Suivre conventions de code du projet
+4. ✅ Tester au fur et à mesure
+5. ✅ Logger avec contexte structuré
+
+**Après le Développement:**
+1. ✅ Vérifier tests passent
+2. ✅ Vérifier couverture de code
+3. ✅ Vérifier types TypeScript
+4. ✅ Mettre à jour documentation si nécessaire
+5. ✅ Vérifier pas de régression
+
+### Utilisation Optimale du Contexte
+
+**Quand utiliser @ :**
+- ✅ Pour inclure fichiers spécifiques pertinents
+- ✅ Pour inclure dossiers entiers si nécessaire
+- ✅ Pour référencer symboles spécifiques
+- ✅ Pour comprendre patterns existants
+- ✅ Pour éviter duplication
+
+**Exemples:**
+```
+@projectbrief.md - Pour comprendre les objectifs
+@activeContext.md - Pour connaître l'état actuel
+@server/utils/README-UTILS.md - Pour patterns backend
+@server/modules/auth/routes.ts - Pour exemple de route modulaire
+@.cursor/rules/quality-principles.md - Pour principes de qualité
+```
+
+**NE JAMAIS:**
+- ❌ Inclure fichiers non pertinents
+- ❌ Dupliquer code existant
+- ❌ Ignorer patterns établis
+- ❌ Modifier sans comprendre le contexte
+
+### Recherche et Exploration
+
+**Avant de Modifier:**
+1. ✅ Chercher code similaire existant
+2. ✅ Vérifier si fonctionnalité existe déjà
+3. ✅ Comprendre dépendances
+4. ✅ Identifier impacts potentiels
+
+**Outils de Recherche:**
+- ✅ `codebase_search` pour recherche sémantique
+- ✅ `grep` pour recherche exacte
+- ✅ `glob_file_search` pour trouver fichiers
+- ✅ `read_file` pour lire fichiers pertinents
+
+**Pattern:**
+```typescript
+// 1. Chercher code similaire
+codebase_search("How does X work?", target_directories)
+
+// 2. Lire fichiers pertinents
+read_file("server/modules/auth/routes.ts")
+
+// 3. Comprendre patterns
+read_file("server/utils/README-UTILS.md")
+
+// 4. Appliquer patterns
+// ...
+```
+
+### Gestion des Erreurs et Debugging
+
+**TOUJOURS:**
+- ✅ Lire messages d'erreur complets
+- ✅ Vérifier logs structurés
+- ✅ Utiliser correlation IDs pour traçabilité
+- ✅ Tester cas limites
+- ✅ Vérifier validation des entrées
+
+**NE JAMAIS:**
+- ❌ Ignorer erreurs potentielles
+- ❌ Supprimer code sans comprendre pourquoi
+- ❌ Modifier sans tester
+- ❌ Ignorer warnings TypeScript
+
+### Amélioration Continue
+
+**TOUJOURS:**
+- ✅ Refactoriser code dupliqué
+- ✅ Améliorer patterns existants
+- ✅ Documenter décisions techniques
+- ✅ Optimiser performance si nécessaire
+- ✅ Réduire dette technique
+
+**Pattern:**
+```typescript
+// Avant: Code dupliqué
+function method1() {
+  // ... logique A
+  // ... logique B
+}
+
+function method2() {
+  // ... logique A (dupliqué)
+  // ... logique C
+}
+
+// Après: Code réutilisable
+function sharedLogicA() {
+  // ... logique A
+}
+
+function method1() {
+  sharedLogicA();
+  // ... logique B
+}
+
+function method2() {
+  sharedLogicA();
+  // ... logique C
+}
+```
+
+## 📚 Ressources et Références
+
+### Documentation Essentielle
+
+**Fichiers de Contexte:**
+- `projectbrief.md` - Objectifs et périmètre
+- `productContext.md` - Expérience utilisateur
+- `activeContext.md` - Focus actuel et prochaines étapes
+- `systemPatterns.md` - Patterns architecturaux
+- `techContext.md` - Stack technique
+- `progress.md` - État du projet
+
+**Règles Détaillées:**
+- `.cursor/rules/core.md` - Règles fondamentales
+- `.cursor/rules/quality-principles.md` - Principes de qualité
+- `.cursor/rules/code-quality.md` - Standards qualité code
+- `.cursor/rules/backend.md` - Patterns backend
+- `.cursor/rules/frontend.md` - Patterns frontend
+- `.cursor/rules/workflows.md` - Workflows détaillés
+- `.cursor/rules/agent-optimization.md` - **NOUVEAU** Stratégies d'optimisation agent
+- `.cursor/rules/context-usage.md` - Utilisation optimale du contexte
+
+**Documentation Technique:**
+- `server/utils/README-UTILS.md` - Utilitaires backend
+- `server/modules/README.md` - Architecture modulaire
+- `docs/` - Documentation technique détaillée
+- `docs/NHOST_DEPLOYMENT.md` - Guide déploiement
+
+### Quick Reference
+
+**Créer une route API:**
+1. `@.cursor/rules/core.md`
+2. `@.cursor/rules/backend.md`
+3. `@.cursor/rules/workflows.md`
+4. `@server/modules/auth/routes.ts` (exemple)
+
+**Créer un composant React:**
+1. `@.cursor/rules/core.md`
+2. `@.cursor/rules/frontend.md`
+3. `@.cursor/rules/workflows.md`
+4. `@client/src/components/ui/button.tsx` (exemple)
+
+**Modifier un service IA:**
+1. `@.cursor/rules/core.md`
+2. `@.cursor/rules/ai-services.md`
+3. `@server/services/AIService.ts`
+4. `@server/services/ChatbotOrchestrationService.ts`
+
+**Déployer:**
+1. `@docs/NHOST_DEPLOYMENT.md`
+2. `.github/workflows/ci.yml`
+3. `docker-compose.production.yml`
+
 ---
 
 **Note:** Ce fichier est une alternative simple aux règles structurées. Pour plus de détails, voir `.cursor/rules/`.
+
+**Version:** 2.0.0  
+**Dernière mise à jour:** 2025-01-29
 

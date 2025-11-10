@@ -459,3 +459,4 @@ describe('Service', () => {
 
 **Note:** Ces patterns sont réutilisables et testés. Utiliser comme référence pour maintenir la cohérence du code.
 
+

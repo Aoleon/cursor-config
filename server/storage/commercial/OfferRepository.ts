@@ -14,7 +14,7 @@ import { BaseRepository } from '../base/BaseRepository';
 import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { offers, aos, users, type Offer, type InsertOffer } from '@shared/schema';
 import type { DrizzleTransaction, PaginationOptions, PaginatedResult, SearchFilters, SortOptions } from '../types';
-import { eq, and, desc, ilike, or, count as drizzleCount } from 'drizzle-orm';
+import { eq, and, desc, ilike, or, count as drizzleCount, type SQL } from 'drizzle-orm';
 import { safeQuery } from '../../utils/safe-query';
 
 /**
@@ -131,7 +131,7 @@ export class OfferRepository extends BaseRepository<
         // Appliquer le tri
         if (sort?.field) {
           const direction = sort.direction === 'asc' ? 'asc' : 'desc';
-          const sortField = (offers as any)[sort.field];
+          const sortField = (offers as Record<string, unknown>)[sort.field];
           if (sortField) {
             dataQuery = dataQuery.orderBy(direction === 'asc' ? sortField : desc(sortField)) as typeof dataQuery;
           }
@@ -253,14 +253,14 @@ export class OfferRepository extends BaseRepository<
    * @param filters - Filtres à appliquer
    * @returns Tableau de conditions Drizzle
    */
-  private buildWhereConditions(filters?: OfferFilters): any[] {
+  private buildWhereConditions(filters?: OfferFilters): SQL[] {
     if (!filters) return [];
 
-    const conditions: any[] = [];
+    const conditions: SQL[] = [];
 
     // Filtre par statut
     if (filters.status) {
-      conditions.push(eq(offers.status, filters.status as any));
+      conditions.push(eq(offers.status, filters.status as typeof offers.status.enumValues[number]));
     }
 
     // Filtre par utilisateur responsable
@@ -275,7 +275,7 @@ export class OfferRepository extends BaseRepository<
 
     // Filtre par type de menuiserie
     if (filters.menuiserieType) {
-      conditions.push(eq(offers.menuiserieType, filters.menuiserieType as any));
+      conditions.push(eq(offers.menuiserieType, filters.menuiserieType as typeof offers.menuiserieType.enumValues[number]));
     }
 
     // Recherche textuelle (reference, client, location)

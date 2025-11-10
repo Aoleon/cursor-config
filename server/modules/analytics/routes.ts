@@ -655,9 +655,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       includeP95P99: z.string().default('true').transform(val => val === 'true' || val === '1')
     }).optional()),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const query = req.query || {};
         const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
         const complexity = query.complexity as 'simple' | 'complex' | 'expert' | undefined;
@@ -689,13 +687,13 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         });
         
       
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('Erreur getPipelineMetrics', {
+          metadata: {
+            service: 'analytics',
+            operation: 'getPipelineMetrics',
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw createError.database('Erreur lors de la récupération des métriques pipeline');
       }
@@ -713,9 +711,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       breakdown: z.enum(['complexity', 'user', 'time']).default('complexity')
     }).optional()),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const query = req.query || {};
         const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
         const breakdown = (query.breakdown as 'complexity' | 'user' | 'time') || 'complexity';
@@ -743,15 +739,14 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         });
         
       
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database('Erreur lors de l\'analyse des métriques cache');
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'analytics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database('Erreur lors de l\'analyse des métriques cache');
       }
     })
   );
@@ -768,9 +763,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       includeAlerts: z.string().default('true').transform(val => val === 'true' || val === '1')
     }).optional()),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const query = req.query || {};
         const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
         const includeTrends = query.includeTrends === 'true' || query.includeTrends === true;
@@ -801,15 +794,14 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         });
         
       
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database('Erreur lors de la vérification de conformité SLO');
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'analytics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database('Erreur lors de la vérification de conformité SLO');
       }
     })
   );
@@ -825,9 +817,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       threshold: z.coerce.number().min(0.1).max(10).default(2.0)
     }).optional()),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const query = req.query || {};
         const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
         const threshold = typeof query.threshold === 'string' ? parseFloat(query.threshold) : (query.threshold as number) || 2.0;
@@ -853,15 +843,14 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         });
         
       
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database('Erreur lors de l\'identification des goulots d\'étranglement');
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'analytics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database('Erreur lors de l\'identification des goulots d\'étranglement');
       }
     })
   );
@@ -870,9 +859,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.get('/api/ai-performance/real-time-stats',
     isAuthenticated,
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         logger.info('Stats temps réel', {
           metadata: {
             route: '/api/ai-performance/real-time-stats',
@@ -890,15 +877,14 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         });
         
       
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database('Erreur lors de la récupération des statistiques temps réel');
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'analytics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database('Erreur lors de la récupération des statistiques temps réel');
       }
     })
   );
@@ -912,9 +898,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
     isAuthenticated,
     rateLimits.general,
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { entity_type, entity_id } = req.query;
         
         logger.info('Récupération métriques business', {
@@ -930,15 +914,14 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         const metrics = await storage.getMetricsBusiness(entity_type, entity_id);
         sendSuccess(res, metrics);
       
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database("Erreur lors de la récupération des métriques business");
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'analytics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database("Erreur lors de la récupération des métriques business");
       }
     })
   );
@@ -949,9 +932,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
     rateLimits.general,
     validateBody(insertMetricsBusinessSchema),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const metricData = req.body;
         
         logger.info('Création métrique business', {
@@ -966,15 +947,14 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         const newMetric = await storage.createMetricsBusiness(metricData);
         sendSuccess(res, newMetric, 201);
       
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database("Erreur lors de la création de la métrique business");
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'analytics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database("Erreur lors de la création de la métrique business");
       }
     })
   );
@@ -984,9 +964,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
     isAuthenticated,
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { id } = req.params;
         
         logger.info('Récupération métrique business par ID', {
@@ -1003,16 +981,16 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
           throw createError.notFound("Métrique business non trouvée");
         }
         sendSuccess(res, metric);
-      
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('Erreur getMetricsBusinessById', {
+          metadata: {
+            service: 'analytics',
+            operation: 'getMetricsBusinessById',
+            id,
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
-        throw error;
+        throw createError.notFound("Métrique business non trouvée");
       }
     })
   );
@@ -1024,9 +1002,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
     validateParams(commonParamSchemas.id),
     validateBody(insertMetricsBusinessSchema.partial()),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { id } = req.params;
         const updateData = req.body;
         
@@ -1042,15 +1018,14 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         const updatedMetric = await storage.updateMetricsBusiness(id, updateData);
         sendSuccess(res, updatedMetric);
       
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database("Erreur lors de la mise à jour de la métrique business");
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'analytics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database("Erreur lors de la mise à jour de la métrique business");
       }
     })
   );
@@ -1061,9 +1036,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
     rateLimits.general,
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { id } = req.params;
         
         logger.info('Suppression métrique business', {
@@ -1078,15 +1051,14 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         await storage.deleteMetricsBusiness(id);
         sendSuccess(res, null);
       
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-        throw createError.database("Erreur lors de la suppression de la métrique business");
+        } catch (error) {
+      logger.error('Erreur', {
+        metadata: {
+          service: 'analytics',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw createError.database("Erreur lors de la suppression de la métrique business");
       }
     })
   );

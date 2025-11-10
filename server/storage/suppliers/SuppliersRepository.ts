@@ -17,7 +17,7 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../../utils/error-handler';
 import { 
   suppliers,
   supplierRequests,
@@ -45,7 +45,7 @@ import {
   type InsertSupplierQuoteAnalysis
 } from '@shared/schema';
 import type { DrizzleTransaction, PaginationOptions, PaginatedResult, SearchFilters, SortOptions } from '../types';
-import { eq, and, desc, ilike, or, count as drizzleCount, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, desc, ilike, or, count as drizzleCount, isNull, isNotNull, type SQL } from 'drizzle-orm';
 
 /**
  * Filtres spécifiques aux Suppliers
@@ -162,6 +162,36 @@ export class SuppliersRepository extends BaseRepository<
   }
 
   /**
+   * Trouve un fournisseur par son Monday ID
+   * Méthode spécifique pour l'intégration Monday.com
+   * 
+   * @param mondayId - ID Monday.com du fournisseur
+   * @param tx - Transaction optionnelle
+   * @returns Le fournisseur correspondant ou undefined
+   */
+  async findByMondayId(mondayId: string, tx?: DrizzleTransaction): Promise<Supplier | undefined> {
+    if (!mondayId || mondayId.trim() === '') {
+      throw new AppError('Monday ID cannot be empty', 500);
+    }
+
+    const dbToUse = this.getDb(tx);
+
+    return this.executeQuery(
+      async () => {
+        const result = await dbToUse
+          .select()
+          .from(this.table)
+          .where(eq(suppliers.mondayItemId, mondayId))
+          .limit(1);
+
+        return result[0];
+      },
+      'findByMondayId',
+      { mondayId }
+    );
+  }
+
+  /**
    * Trouve tous les fournisseurs avec filtres optionnels
    * 
    * @param filters - Filtres de recherche
@@ -220,7 +250,7 @@ export class SuppliersRepository extends BaseRepository<
 
         if (sort?.field) {
           const direction = sort.direction === 'asc' ? 'asc' : 'desc';
-          const sortField = (suppliers as any)[sort.field];
+          const sortField = (suppliers as Record<string, unknown>)[sort.field];
           if (sortField) {
             dataQuery = dataQuery.orderBy(direction === 'asc' ? sortField : desc(sortField)) as typeof dataQuery;
           }
@@ -320,10 +350,10 @@ export class SuppliersRepository extends BaseRepository<
   /**
    * Construit les conditions WHERE pour le filtrage des fournisseurs
    */
-  protected buildWhereConditions(filters?: SupplierFilters): any[] {
+  protected buildWhereConditions(filters?: SupplierFilters): SQL[] {
     if (!filters) return [];
 
-    const conditions: any[] = [];
+    const conditions: SQL[] = [];
 
     if (filters.search) {
       conditions.push(
@@ -336,11 +366,11 @@ export class SuppliersRepository extends BaseRepository<
     }
 
     if (filters.status) {
-      conditions.push(eq(suppliers.status, filters.status as any));
+      conditions.push(eq(suppliers.status, filters.status as typeof suppliers.status.enumValues[number]));
     }
 
     if (filters.specialization) {
-      conditions.push(ilike(suppliers.specialties as any, `%${filters.specialization}%`));
+      conditions.push(ilike(suppliers.specialties, `%${filters.specialization}%`));
     }
 
     return conditions;
@@ -367,7 +397,7 @@ export class SuppliersRepository extends BaseRepository<
       async () => {
         let query = dbToUse.select().from(supplierRequests);
 
-        const conditions: any[] = [];
+        const conditions: SQL[] = [];
         if (filters?.offerId) {
           conditions.push(eq(supplierRequests.offerId, filters.offerId));
         }
@@ -598,7 +628,7 @@ export class SuppliersRepository extends BaseRepository<
       async () => {
         let query = dbToUse.select().from(supplierQuoteSessions);
 
-        const conditions: any[] = [];
+        const conditions: SQL[] = [];
         if (aoId) {
           const normalizedAoId = this.normalizeId(aoId);
           conditions.push(eq(supplierQuoteSessions.aoId, normalizedAoId));
@@ -825,7 +855,7 @@ export class SuppliersRepository extends BaseRepository<
       async () => {
         let query = dbToUse.select().from(supplierDocuments);
 
-        const conditions: any[] = [];
+        const conditions: SQL[] = [];
         if (sessionId) {
           const normalizedSessionId = this.normalizeId(sessionId);
           conditions.push(eq(supplierDocuments.sessionId, normalizedSessionId));
@@ -987,7 +1017,7 @@ export class SuppliersRepository extends BaseRepository<
       async () => {
         let query = dbToUse.select().from(supplierQuoteAnalysis);
 
-        const conditions: any[] = [];
+        const conditions: SQL[] = [];
         if (documentId) {
           const normalizedDocId = this.normalizeId(documentId);
           conditions.push(eq(supplierQuoteAnalysis.documentId, normalizedDocId));
@@ -1193,8 +1223,8 @@ export class SuppliersRepository extends BaseRepository<
           )
           .where(eq(supplierQuoteSessions.aoId, normalizedAoId));
 
-        const analyzedDocuments = analyses.filter((a: any) => a.supplier_quote_analysis.status === 'completed').length;
-        const pendingAnalysis = analyses.filter((a: any) => a.supplier_quote_analysis.status === 'pending').length;
+        const analyzedDocuments = analyses.filter((a) => a.supplier_quote_analysis.status === 'completed').length;
+        const pendingAnalysis = analyses.filter((a) => a.supplier_quote_analysis.status === 'pending').length;
 
         // Construire les détails des sessions
         const sessionDetails = await Promise.all(

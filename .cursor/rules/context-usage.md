@@ -175,11 +175,13 @@
 - 5-10 fichiers pertinents maximum
 - Fichiers directement liés à la tâche
 - Fichiers de référence (projectbrief.md, etc.)
+- Hiérarchiser par priorité (fichiers modifiés > exemples > documentation)
 
 **❌ INCORRECT:**
-- 20+ fichiers inclus
+- 20+ fichiers inclus (surcharge contextuelle)
 - Fichiers non pertinents
 - Tous les fichiers du projet
+- Duplication de contexte déjà présent
 
 ### 2. Hiérarchiser le Contexte
 
@@ -202,6 +204,49 @@
 - Trouver exemple similaire existant
 - Référencer avec @
 - Suivre le pattern établi
+
+### 5. Recherche Proactive Avant Modification
+
+**TOUJOURS:**
+- ✅ Chercher code similaire existant (`codebase_search`)
+- ✅ Vérifier si fonctionnalité existe déjà (`grep`)
+- ✅ Comprendre dépendances (`read_file`)
+- ✅ Identifier impacts potentiels
+
+**Pattern:**
+```typescript
+// 1. Recherche sémantique pour comprendre
+codebase_search("How does X work?", target_directories)
+
+// 2. Recherche exacte pour trouver occurrences
+grep("pattern", path)
+
+// 3. Lecture ciblée pour comprendre patterns
+read_file("path/to/example.ts")
+```
+
+### 6. Auto-Amélioration Continue
+
+**TOUJOURS:**
+- ✅ Analyser résultats des actions précédentes
+- ✅ Identifier patterns qui fonctionnent bien
+- ✅ Améliorer patterns qui ne fonctionnent pas
+- ✅ Documenter apprentissages
+- ✅ Réutiliser solutions efficaces
+
+**Pattern:**
+```
+Avant action:
+1. Analyser contexte
+2. Identifier patterns similaires
+3. Appliquer pattern optimal
+
+Après action:
+1. Évaluer résultat
+2. Identifier améliorations
+3. Documenter apprentissage
+4. Réutiliser pour actions futures
+```
 
 ## 🔗 Références Rapides
 
@@ -227,7 +272,101 @@
 - `@server/storage-poc.ts`
 - `@server/utils/database-helpers.ts`
 
+## 🚀 Techniques Avancées
+
+### 1. Analyse Contextuelle Multi-Niveaux
+
+**Niveau 1: Contexte Immédiat** (Priorité Maximale)
+- Fichiers directement modifiés
+- Fichiers de référence (exemples, patterns)
+
+**Niveau 2: Contexte Projet** (Priorité Moyenne)
+- Documentation projet (projectbrief.md, activeContext.md)
+- Patterns architecturaux (systemPatterns.md)
+
+**Niveau 3: Contexte Règles** (Priorité Basse)
+- Règles Cursor (.cursor/rules/)
+- Conventions du projet
+
+**Pattern:**
+```
+@file-to-modify.ts          # Niveau 1 - Priorité maximale
+@example-pattern.ts         # Niveau 1 - Priorité maximale
+@projectbrief.md            # Niveau 2 - Priorité moyenne
+@activeContext.md           # Niveau 2 - Priorité moyenne
+@.cursor/rules/core.md      # Niveau 3 - Priorité basse
+```
+
+### 2. Recherche Sémantique Stratégique
+
+**Quand Utiliser:**
+- ✅ Comprendre un concept complexe
+- ✅ Trouver code similaire existant
+- ✅ Identifier patterns architecturaux
+- ✅ Explorer dépendances
+
+**Comment Utiliser:**
+```typescript
+// Question complète et spécifique
+codebase_search("How does authentication work with Microsoft OAuth?", ["server/modules/auth"])
+
+// Question sur patterns
+codebase_search("What are the patterns for error handling in routes?", ["server/modules"])
+
+// Question sur architecture
+codebase_search("How are services structured and initialized?", ["server/services"])
+```
+
+### 3. Validation Proactive
+
+**Avant Modification:**
+- ✅ Vérifier si fonctionnalité existe déjà
+- ✅ Comprendre dépendances
+- ✅ Identifier impacts potentiels
+- ✅ Vérifier conventions du projet
+
+**Pendant Modification:**
+- ✅ Suivre patterns établis
+- ✅ Respecter conventions de code
+- ✅ Valider avec tests
+- ✅ Logger avec contexte structuré
+
+**Après Modification:**
+- ✅ Vérifier tests passent
+- ✅ Vérifier couverture de code
+- ✅ Vérifier types TypeScript
+- ✅ Vérifier pas de régression
+
+## 📊 Optimisation du Comportement
+
+### Checklist Optimisation
+
+**Avant de Commencer:**
+- [ ] Lire `activeContext.md` pour connaître l'état actuel
+- [ ] Lire `projectbrief.md` pour comprendre le périmètre
+- [ ] Lire `systemPatterns.md` pour comprendre l'architecture
+- [ ] Chercher code similaire existant
+- [ ] Identifier patterns établis à suivre
+
+**Pendant le Développement:**
+- [ ] Utiliser patterns établis (ne pas réinventer)
+- [ ] Réutiliser code existant (DRY principle)
+- [ ] Suivre conventions de code du projet
+- [ ] Tester au fur et à mesure
+- [ ] Logger avec contexte structuré
+
+**Après le Développement:**
+- [ ] Vérifier tests passent
+- [ ] Vérifier couverture de code
+- [ ] Vérifier types TypeScript
+- [ ] Mettre à jour documentation si nécessaire
+- [ ] Vérifier pas de régression
+- [ ] Documenter apprentissages
+
 ---
 
-**Note:** Utiliser le contexte de manière ciblée améliore la pertinence des suggestions de l'IA.
+**Note:** Utiliser le contexte de manière ciblée et hiérarchisée améliore significativement la pertinence des suggestions de l'IA.
+
+**Référence:** `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation complètes
+
 

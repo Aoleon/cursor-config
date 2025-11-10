@@ -520,3 +520,4 @@ export function CreateOfferModal({ open, onClose }: { open: boolean; onClose: ()
 
 **Note:** Ces exemples sont basés sur le code réel du projet. Utiliser comme référence pour maintenir la cohérence.
 
+

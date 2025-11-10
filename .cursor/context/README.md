@@ -69,3 +69,4 @@ Les fichiers réels sont dans `.cursor/context/` pour une organisation claire, m
 
 **Note:** Les liens symboliques sont créés automatiquement lors de la réorganisation du projet.
 
+

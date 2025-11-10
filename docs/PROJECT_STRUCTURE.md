@@ -267,3 +267,4 @@ jlm-app/
 
 **Note:** Cette structure est conçue pour être claire, précise et maintenable.
 
+

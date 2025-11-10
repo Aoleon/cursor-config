@@ -356,3 +356,4 @@ await this.performanceMetrics.recordMetric({
 
 **Note:** Ces optimisations sont appliquées progressivement. Vérifier `activeContext.md` pour l'état actuel.
 
+

@@ -9,7 +9,7 @@ import { withErrorHandling } from './utils/error-handler';
 import { BusinessContextService } from "./services/BusinessContextService";
 import { RBACService } from "./services/RBACService";
 import { EventBus } from "./eventBus";
-import { MemStorage } from "./storage-poc";
+import { DatabaseStorage } from "./storage-poc";
 import { logger } from "./utils/logger";
 
 async function testBusinessContextEnrichment() {
@@ -20,7 +20,7 @@ async function testBusinessContextEnrichment() {
     async () => {
 
     // Initialisation des services
-    const storage = new MemStorage();
+    const storage = new DatabaseStorage();
     const eventBus = new EventBus();
     const rbacService = new RBACService(db, storage, eventBus);
     const businessContextService = new BusinessContextService(storage, rbacService, eventBus);

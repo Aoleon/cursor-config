@@ -157,3 +157,4 @@ Saxium doit être **parfait** et un **exemple en matière de qualité**. Chaque 
 
 **Note:** Ce manifeste guide toutes les décisions techniques. Toujours privilégier robustesse, maintenabilité et performance.
 
+

@@ -242,3 +242,4 @@ JLM Menuiserie est une entreprise avec une **forte expertise métier** et des é
 
 **Note:** Ce document décrit l'expérience utilisateur cible et les objectifs de design. Il guide les décisions UX/UI.
 
+

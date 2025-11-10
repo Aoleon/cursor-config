@@ -633,9 +633,6 @@ export class ContactService {
       metadata: {}
     }
   );
-      });
-      throw error;
-    }
   }
 }
 

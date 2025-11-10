@@ -346,3 +346,4 @@ const { data, isLoading } = useQuery({
 
 **Note:** Ce journal documente les décisions importantes du projet. Mettre à jour lors de nouvelles décisions significatives.
 
+

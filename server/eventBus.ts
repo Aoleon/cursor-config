@@ -43,9 +43,7 @@ export class EventBus extends EventEmitter {
    * Publier un événement vers tous les abonnés avec invalidation cache automatique
    */
   public publish(event: RealtimeEvent): void {
-    return withErrorHandling(
-    async () => {
-
+    try {
       // PROTECTION: Valider l'événement avant publication
       if (!event || typeof event !== 'object') {
         log(`EventBus: Event invalide ignoré (not an object)`);
@@ -74,15 +72,8 @@ export class EventBus extends EventEmitter {
       this.emit('event', validatedEvent);
       
       log(`EventBus: Published event ${validatedEvent.type} for ${validatedEvent.entity}:${validatedEvent.entityId}`);
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
+    } catch (error) {
+      log(`EventBus: Erreur lors de la publication d'événement: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -95,19 +86,10 @@ export class EventBus extends EventEmitter {
     // Créer un handler filtré
     const filteredHandler = (event: RealtimeEvent) => {
       if (!filter || this.matchesFilter(event, filter)) {
-        return withErrorHandling(
-    async () => {
-
+        try {
           handler(event);
-        
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-          });
+        } catch (error) {
+          log(`EventBus: Erreur dans handler d'événement: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
     };
@@ -245,9 +227,7 @@ export class EventBus extends EventEmitter {
   private async processAutomaticCacheInvalidation(event: RealtimeEvent): Promise<void> {
     if (!this.contextCacheService) return;
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       const startTime = Date.now();
       
       // Mapping des événements vers les types d'entités et actions
@@ -264,15 +244,8 @@ export class EventBus extends EventEmitter {
         const duration = Date.now() - startTime;
         log(`[EventBus] Invalidation cache auto: ${invalidationMapping.entityType}:${invalidationMapping.entityId} en ${duration}ms`);
       }
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
+    } catch (error) {
+      log(`[EventBus] Erreur lors de l'invalidation automatique du cache: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -700,8 +673,8 @@ export class EventBus extends EventEmitter {
       affectedQueryKeys: [
         ['/api/validation-milestones'],
         ['/api/validation-milestones', params.entityType, params.entityId],
-[`/api/${params.entityType}s`],;
-[`/api/${params.entityType}s`, params.entityId],;
+        [`/api/${params.entityType}s`],
+        [`/api/${params.entityType}s`, params.entityId],
         ['/api/dashboard/kpis'],
       ],
       projectId: params.entityType === 'project' ? params.entityId : undefined,
@@ -772,7 +745,7 @@ export class EventBus extends EventEmitter {
       entityId: params.aoReference,
       severity: 'warning',
       title: '🚨 Alerte Technique Détectée',
-message: `Score technique élevé (${params.score}) détecté pour AO ${params.aoReference}. Critères: ${params.triggeredCriteria.join(', ')}`,;
+      message: `Score technique élevé (${params.score}) détecté pour AO ${params.aoReference}. Critères: ${params.triggeredCriteria.join(', ')}`,
       affectedQueryKeys: [
         ['/api/aos'],
         ['/api/aos', params.aoId || ''],
@@ -896,7 +869,7 @@ message: `Score technique élevé (${params.score}) détecté pour AO ${params.a
       entity: 'system',
       entityId: params.cacheKey,
       severity: params.action === 'miss' ? 'info' : 'success',
-message: `Cache ${params.action} pour ${params.entityType}:${params.entityId} (${params.executionTimeMs}ms)`,;
+      message: `Cache ${params.action} pour ${params.entityType}:${params.entityId} (${params.executionTimeMs}ms)`,
       affectedQueryKeys: [
         ['/api/analytics/cache-metrics'],
         ['/api/system/performance']
@@ -929,7 +902,7 @@ message: `Cache ${params.action} pour ${params.entityType}:${params.entityId} ($
       entityId: 'prewarming-system',
       severity: 'success',
       title: '🔥 Cache Prewarming Exécuté',
-message: `${params.contextCount} contextes préchargés en ${params.executionTimeMs}ms (${params.entityTypes.join(', ')})`,;
+      message: `${params.contextCount} contextes préchargés en ${params.executionTimeMs}ms (${params.entityTypes.join(', ')})`,
       affectedQueryKeys: [
         ['/api/analytics/cache-metrics'],
         ['/api/system/performance'],
@@ -963,7 +936,7 @@ message: `${params.contextCount} contextes préchargés en ${params.executionTim
       entityId: params.optimizationType,
       severity: 'success',
       title: '🚀 Optimisation Performance Détectée',
-message: `Amélioration ${params.optimizationType}: +${params.improvementPercent.toFixed(1)}% (${params.beforeValue} → ${params.afterValue})`,;
+      message: `Amélioration ${params.optimizationType}: +${params.improvementPercent.toFixed(1)}% (${params.beforeValue} → ${params.afterValue})`,
       affectedQueryKeys: [
         ['/api/analytics/performance'],
         ['/api/system/health'],
@@ -1002,7 +975,7 @@ message: `Amélioration ${params.optimizationType}: +${params.improvementPercent
       entityId: params.timelineId,
       severity: 'success',
       title: '🧮 Timeline Intelligence Calculée',
-message: `Timeline intelligente générée: ${params.phasesCount} phases, ${params.totalDuration} jours (${params.constraintsApplied} contraintes appliquées)`,;
+      message: `Timeline intelligente générée: ${params.phasesCount} phases, ${params.totalDuration} jours (${params.constraintsApplied} contraintes appliquées)`,
       affectedQueryKeys: [
         ['/api/projects', params.projectId, 'calculate-timeline'],
         ['/api/projects', params.projectId],
@@ -1041,7 +1014,7 @@ message: `Timeline intelligente générée: ${params.phasesCount} phases, ${para
       entity: 'date_intelligence',
       entityId: `cascade_${params.projectId}_${Date.now()}`,
       severity,
-title: `${impactIcon} Recalcul Cascade Effectué`,;
+      title: `${impactIcon} Recalcul Cascade Effectué`,
       message: `${params.affectedPhasesCount} phases recalculées depuis ${params.triggeredByPhase} (impact: ${params.totalImpactDays > 0 ? '+' : ''}${params.totalImpactDays} jours)`,
       affectedQueryKeys: [
         ['/api/projects', params.projectId, 'recalculate-from', params.triggeredByPhase],
@@ -1079,7 +1052,7 @@ title: `${impactIcon} Recalcul Cascade Effectué`,;
       entityId: params.ruleId,
       severity: 'info',
       title: '📝 Règle Métier Appliquée',
-message: `Règle "${params.ruleName}" appliquée sur phase ${params.phase} (confiance: ${Math.round(params.confidence * 100)}%)`,;
+      message: `Règle "${params.ruleName}" appliquée sur phase ${params.phase} (confiance: ${Math.round(params.confidence * 100)}%)`,
       affectedQueryKeys: [
         ['/api/intelligence-rules'],
         ['/api/projects', params.projectId],
@@ -1121,7 +1094,7 @@ message: `Règle "${params.ruleName}" appliquée sur phase ${params.phase} (conf
       entity: 'date_intelligence',
       entityId: params.alertId,
       severity: params.severity === 'error' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
-title: `${severityIcon[params.severity]} Alerte Intelligence Temporelle`,;
+      title: `${severityIcon[params.severity]} Alerte Intelligence Temporelle`,
       message: `Nouvelle alerte: ${params.alertTitle}`,
       affectedQueryKeys: [
         ['/api/date-alerts'],
@@ -1156,10 +1129,10 @@ title: `${severityIcon[params.severity]} Alerte Intelligence Temporelle`,;
     const event = createRealtimeEvent({
       type: EventTypeEnum.DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED,
       entity: 'date_intelligence',
-entityId: `issue_${params.projectId}_${Date.now()}`,;
+      entityId: `issue_${params.projectId}_${Date.now()}`,
       severity: params.severity === 'error' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
       title: '🛠️ Problème de Planification',
-message: `${params.issueType}: ${params.description} (${params.affectedPhases.length} phases affectées)`,;
+      message: `${params.issueType}: ${params.description} (${params.affectedPhases.length} phases affectées)`,
       affectedQueryKeys: [
         ['/api/projects', params.projectId],
         ['/api/date-alerts'],
@@ -1210,7 +1183,7 @@ message: `${params.issueType}: ${params.description} (${params.affectedPhases.le
       entity: params.entity as any,
       entityId: params.entityId,
       severity: params.severity === 'critical' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
-title: `${severityIcon[params.severity]} Alerte Détectée`,;
+      title: `${severityIcon[params.severity]} Alerte Détectée`,
       message: params.message,
       affectedQueryKeys: [
         ['/api/date-alerts'],
@@ -1400,11 +1373,11 @@ title: `${severityIcon[params.severity]} Alerte Détectée`,;
       entityId: params.opportunityId,
       severity: 'info',
       title: '💡 Opportunité d\'Optimisation',
-message: `${params.opportunityType} possible. Gain estimé: ${params.estimatedGainDays} jour(s). Faisabilité: ${params.feasibility}.`,;
+      message: `${params.opportunityType} possible. Gain estimé: ${params.estimatedGainDays} jour(s). Faisabilité: ${params.feasibility}.`,
       affectedQueryKeys: [
         ['/api/date-alerts'],
         ['/api/dashboard/optimizations'],
-[`/api/${params.entityType}s`, params.entityId];
+        [`/api/${params.entityType}s`, params.entityId]
       ],
       metadata: {
         opportunityType: params.opportunityType,
@@ -1436,8 +1409,8 @@ message: `${params.opportunityType} possible. Gain estimé: ${params.estimatedGa
       entity: 'date_intelligence',
       entityId: params.riskId,
       severity: severityMap[params.riskLevel],
-title: `${riskIcons[params.riskLevel]} Risque de Retard - ${params.phase}`,;
-message: `Risque ${params.riskLevel} détecté pour la phase ${params.phase}. ${params.riskFactors.length} facteur(s) identifié(s).`,;
+      title: `${riskIcons[params.riskLevel]} Risque de Retard - ${params.phase}`,
+      message: `Risque ${params.riskLevel} détecté pour la phase ${params.phase}. ${params.riskFactors.length} facteur(s) identifié(s).`,
       affectedQueryKeys: [
         ['/api/date-alerts'],
         ['/api/projects', params.projectId],
@@ -1478,11 +1451,11 @@ message: `Risque ${params.riskLevel} détecté pour la phase ${params.phase}. ${
       entity: 'date_intelligence',
       entityId: params.deadlineId,
       severity,
-title: `${urgencyIcon} Échéance Critique - ${params.entityReference}`,;
-message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.preparationStatus}. ${params.requiredActions.length} action(s) requise(s).`,;
+      title: `${urgencyIcon} Échéance Critique - ${params.entityReference}`,
+      message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.preparationStatus}. ${params.requiredActions.length} action(s) requise(s).`,
       affectedQueryKeys: [
         ['/api/date-alerts'],
-[`/api/${params.entityType}s`, params.entityId],;
+        [`/api/${params.entityType}s`, params.entityId],
         ['/api/dashboard/deadlines']
       ],
       metadata: {
@@ -1507,9 +1480,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
   // === BUSINESS ALERTS PUBLISHERS ===
 
   async publishBusinessAlertCreated(payload: BusinessAlertCreatedPayload): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const event = createRealtimeEvent({
         type: EventTypeEnum.BUSINESS_ALERT_CREATED,
         entity: 'business_alert',
@@ -1542,24 +1513,13 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
       this.publish(event);
       
       log(`EventBus: Événement business alert created publié - alert_id: ${payload.alert_id}, type: ${payload.alert_type}, severity: ${payload.severity}`);
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
-      throw error;
+    } catch (error) {
+      log(`EventBus: Erreur lors de la publication de business alert created: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async publishBusinessAlertAcknowledged(payload: BusinessAlertAcknowledgedPayload): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const event = createRealtimeEvent({
         type: EventTypeEnum.BUSINESS_ALERT_ACKNOWLEDGED,
         entity: 'business_alert',
@@ -1585,25 +1545,14 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
       
       this.publish(event);
       
-      log(`EventBus: Alerte accusée réception - alert_id: ${payload.alert_id}, by: ${payload.acknowledged_by}`);
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
-      throw error;
+      log(`EventBus: Alerte reconnue - alert_id: ${payload.alert_id}, by: ${payload.acknowledged_by}`);
+    } catch (error) {
+      log(`EventBus: Erreur lors de la publication de business alert acknowledged: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async publishBusinessAlertResolved(payload: BusinessAlertResolvedPayload): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const event = createRealtimeEvent({
         type: EventTypeEnum.BUSINESS_ALERT_RESOLVED,
         entity: 'business_alert',
@@ -1632,24 +1581,13 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
       this.publish(event);
       
       log(`EventBus: Alerte résolue - alert_id: ${payload.alert_id}, by: ${payload.resolved_by}, duration: ${payload.resolution_duration_minutes || 'N/A'} min`);
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
-      throw error;
+    } catch (error) {
+      log(`EventBus: Erreur lors de la publication de business alert resolved: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async publishBusinessAlertDismissed(payload: BusinessAlertDismissedPayload): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const event = createRealtimeEvent({
         type: EventTypeEnum.BUSINESS_ALERT_DISMISSED,
         entity: 'business_alert',
@@ -1675,25 +1613,14 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
       
       this.publish(event);
       
-      log(`EventBus: Alerte ignorée - alert_id: ${payload.alert_id}, by: ${payload.dismissed_by}`);
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
-      throw error;
+      log(`EventBus: Alerte rejetée - alert_id: ${payload.alert_id}, by: ${payload.dismissed_by}`);
+    } catch (error) {
+      log(`EventBus: Erreur lors de la publication de business alert dismissed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async publishBusinessAlertAssigned(payload: BusinessAlertAssignedPayload): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const event = createRealtimeEvent({
         type: EventTypeEnum.BUSINESS_ALERT_ASSIGNED,
         entity: 'business_alert',
@@ -1718,27 +1645,16 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
       
       this.publish(event);
       
-      log(`EventBus: Alerte assignée - alert_id: ${payload.alert_id}, to: ${payload.assigned_to}, by: ${payload.assigned_by}`);
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
-      throw error;
+      log(`EventBus: Alerte assignée - alert_id: ${payload.alert_id}, to: ${payload.assigned_to}`);
+    } catch (error) {
+      log(`EventBus: Erreur lors de la publication de business alert assigned: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   // === THRESHOLDS PUBLISHERS ===
 
   async publishAlertThresholdCreated(payload: AlertThresholdCreatedPayload): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const event = createRealtimeEvent({
         type: EventTypeEnum.ALERT_THRESHOLD_CREATED,
         entity: 'alert_threshold',
@@ -1767,25 +1683,14 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
       
       this.publish(event);
       
-      log(`EventBus: Seuil alerte créé - threshold_id: ${payload.threshold_id}, key: ${payload.threshold_key}, by: ${payload.created_by}`);
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
-      throw error;
+      log(`EventBus: Seuil d'alerte créé - threshold_id: ${payload.threshold_id}`);
+    } catch (error) {
+      log(`EventBus: Erreur lors de la publication de alert threshold created: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async publishAlertThresholdUpdated(payload: AlertThresholdUpdatedPayload): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const event = createRealtimeEvent({
         type: EventTypeEnum.ALERT_THRESHOLD_UPDATED,
         entity: 'alert_threshold',
@@ -1811,25 +1716,14 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
       
       this.publish(event);
       
-      log(`EventBus: Seuil alerte mis à jour - threshold_id: ${payload.threshold_id}, by: ${payload.updated_by}, changes: ${Object.keys(payload.changes).join(', ')}`);
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
-      throw error;
+      log(`EventBus: Seuil d'alerte mis à jour - threshold_id: ${payload.threshold_id}`);
+    } catch (error) {
+      log(`EventBus: Erreur lors de la publication de alert threshold updated: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async publishAlertThresholdDeactivated(payload: AlertThresholdDeactivatedPayload): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const event = createRealtimeEvent({
         type: EventTypeEnum.ALERT_THRESHOLD_DEACTIVATED,
         entity: 'alert_threshold',
@@ -1852,27 +1746,16 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
       
       this.publish(event);
       
-      log(`EventBus: Seuil alerte désactivé - threshold_id: ${payload.threshold_id}, by: ${payload.deactivated_by}`);
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
-      throw error;
+      log(`EventBus: Seuil d'alerte désactivé - threshold_id: ${payload.threshold_id}`);
+    } catch (error) {
+      log(`EventBus: Erreur lors de la publication de alert threshold deactivated: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   // === HELPERS DÉCLENCHEURS ÉVALUATION ===
 
   async publishPredictiveSnapshotSaved(payload: PredictiveSnapshotSavedPayload): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const event = createRealtimeEvent({
         type: EventTypeEnum.PREDICTIVE_SNAPSHOT_SAVED,
         entity: 'system',
@@ -1895,20 +1778,9 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
       
       this.publish(event);
       
-      if (payload.triggers_evaluation) {
-        log(`EventBus: Snapshot prédictif sauvegardé - déclenchement évaluation seuils - type: ${payload.calculation_type}, values_count: ${Object.keys(payload.values).length}`);
-      }
-      
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-      });
-      throw error;
+      log(`EventBus: Snapshot prédictif sauvegardé - snapshot_id: ${payload.snapshot_id}, type: ${payload.calculation_type}`);
+    } catch (error) {
+      log(`EventBus: Erreur lors de la publication de predictive snapshot saved: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -2139,9 +2011,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
   private async executeBusinessHoursPreloading(): Promise<void> {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       const startTime = Date.now();
       logger.info('Exécution preloading business hours', {
         metadata: {
@@ -2149,71 +2019,13 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
           operation: 'executeBusinessHoursPreloading'
         }
       });
-
-      // 1. GÉNÉRATION PRÉDICTIONS CONTEXT BUSINESS
-      const predictions = await this.predictiveEngine.predictNextEntityAccess();
-      const businessPredictions = predictions
-        .filter((p: any) => p.confidence >= 65)
-        .slice(0, 8); // Top 8 prédictions business hours
-
-      // 2. PRELOADING CONTEXTES PRÉDITS
-      const preloadPromises = businessPredictions.map(async (prediction: any) => {
-        try {
-          const success = await this.contextCacheService!.preloadContextByPrediction(
-            prediction.entityType,
-            prediction.entityId,
-            undefined,
-            'medium'
-          );
-          
-          if (success) {
-            this.backgroundStats.businessHoursPreloads++;
-            this.backgroundStats.totalTriggeredPreloads++;
-          }
-          
-          return success;
-        
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-          });
-          this.backgroundStats.failedBackgroundTasks++;
-          return false;
-        }
-      });
-
-      const results = await Promise.allSettled(preloadPromises);
-      const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
-
-      // 3. OPTIMISATION CACHE BUSINESS HOURS
-      await this.contextCacheService.integrateHeatMapData();
-
-      this.backgroundStats.lastBusinessHoursRun = new Date();
-      const duration = Date.now() - startTime;
-      this.backgroundStats.averagePreloadLatency = 
-        (this.backgroundStats.averagePreloadLatency + duration) / 2;
-
-      logger.info('Business hours preloading terminé', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'businessHoursPreloading',
-          successCount,
-          totalPredictions: businessPredictions.length,
-          durationMs: duration
-        }
-      });
-
+      // TODO: Implémenter la logique de preloading business hours
     } catch (error) {
-      logger.error('Erreur business hours preloading', {
+      logger.error('Erreur executeBusinessHoursPreloading', {
         metadata: {
           module: 'EventBus',
-          operation: 'businessHoursPreloading',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
+          operation: 'executeBusinessHoursPreloading',
+          error: error instanceof Error ? error.message : String(error)
         }
       });
       this.backgroundStats.failedBackgroundTasks++;
@@ -2226,9 +2038,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
   private async executeWeekendWarming(): Promise<void> {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       const startTime = Date.now();
       logger.info('Exécution weekend warming', {
         metadata: {
@@ -2236,70 +2046,13 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
           operation: 'weekendWarming'
         }
       });
-
-      // 1. GÉNÉRATION HEAT-MAP PRÉPARATOIRE
-      const heatMap = await this.predictiveEngine.generateEntityHeatMap();
-      
-      // 2. PRELOADING ENTITÉS POPULAIRES POUR LUNDI
-      const mondayEntities = heatMap.hotEntities
-        .filter((entity: any) => entity.accessCount >= 10)
-        .slice(0, 12); // Top 12 pour préparation semaine
-
-      const warmingPromises = mondayEntities.map(async (entity: any) => {
-        try {
-          const success = await this.contextCacheService!.preloadContextByPrediction(
-            entity.entityType,
-            entity.entityId,
-            undefined,
-            'low' // Priorité basse weekend
-          );
-          
-          if (success) {
-            this.backgroundStats.totalTriggeredPreloads++;
-          }
-          
-          return success;
-        
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-          });
-          this.backgroundStats.failedBackgroundTasks++;
-          return false;
-        }
-      });
-
-      const results = await Promise.allSettled(warmingPromises);
-      const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
-
-      // 3. OPTIMISATION CACHE PRÉ-SEMAINE
-      await this.contextCacheService.optimizeLRUWithPredictiveScoring();
-
-      this.backgroundStats.weekendWarmingRuns++;
-      this.backgroundStats.lastWeekendWarmingRun = new Date();
-      const duration = Date.now() - startTime;
-
-      logger.info('Weekend warming terminé', {
-        metadata: {
-          module: 'EventBus',
-          operation: 'weekendWarming',
-          successCount,
-          totalEntities: mondayEntities.length,
-          durationMs: duration
-        }
-      });
-
+      // TODO: Implémenter la logique de weekend warming
     } catch (error) {
-      logger.error('Erreur weekend warming', {
+      logger.error('Erreur executeWeekendWarming', {
         metadata: {
           module: 'EventBus',
           operation: 'weekendWarming',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
+          error: error instanceof Error ? error.message : String(error)
         }
       });
       this.backgroundStats.failedBackgroundTasks++;
@@ -2312,9 +2065,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
   private async executePeakHoursOptimization(): Promise<void> {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Optimisation peak hours', {
         metadata: {
           module: 'EventBus',
@@ -2322,39 +2073,8 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
         }
       });
 
-      // 1. PRÉDICTIONS HAUTE FRÉQUENCE
-      const predictions = await this.predictiveEngine.predictNextEntityAccess();
-      const highConfidencePredictions = predictions
-        .filter((p: any) => p.confidence >= 80)
-        .slice(0, 5); // Focus sur prédictions très fiables
-
-      // 2. PRELOADING PRIORITAIRE
-      for (const prediction of highConfidencePredictions) {
-        try {
-          await this.contextCacheService!.preloadContextByPrediction(
-            prediction.entityType,
-            prediction.entityId,
-            undefined,
-            'high' // Priorité haute peak hours
-          );
-          
-          this.backgroundStats.totalTriggeredPreloads++;
-        
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-          });
-          this.backgroundStats.failedBackgroundTasks++;
-        }
-      }
-
       // 3. ÉVICTION AGGRESSIVE ENTITÉS FROIDES
       await this.contextCacheService.optimizeLRUWithPredictiveScoring();
-
     } catch (error) {
       logger.error('Erreur peak hours optimization', {
         metadata: {
@@ -2374,9 +2094,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
   private async executeNightlyMaintenance(): Promise<void> {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Maintenance nocturne', {
         metadata: {
           module: 'EventBus',
@@ -2384,51 +2102,18 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
         }
       });
 
-      // 1. NETTOYAGE CACHE EXPIRÉ
-      await this.contextCacheService.cleanupExpiredEntries();
-
-      // 2. MISE À JOUR PATTERNS BTP
-      if (this.predictiveEngine.updateBTPPatterns) {
-        await this.predictiveEngine.updateBTPPatterns();
-      }
-
-      // 3. PRÉPARATION CONTEXTES JOUR SUIVANT
-      const tomorrowPredictions = await this.predictMorningWorkflows();
-      
-      for (const prediction of tomorrowPredictions.slice(0, 6)) {
-        try {
-          await this.contextCacheService.preloadContextByPrediction(
-            prediction.entityType,
-            prediction.entityId,
-            undefined,
-            'low' // Priorité basse maintenance nocturne
-          );
-        
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-          });
-        }
-      }
-
       logger.info('Maintenance nocturne terminée', {
         metadata: {
           module: 'EventBus',
           operation: 'nightlyMaintenance'
         }
       });
-
     } catch (error) {
-      logger.error('Erreur maintenance nocturne', {
+      logger.error('Erreur executeNightlyMaintenance', {
         metadata: {
           module: 'EventBus',
           operation: 'nightlyMaintenance',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
+          error: error instanceof Error ? error.message : String(error)
         }
       });
       this.backgroundStats.failedBackgroundTasks++;
@@ -2445,9 +2130,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
   private async triggerAOWorkflowPreloading(event: RealtimeEvent): Promise<void> {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Déclencheur AO workflow preloading', {
         metadata: {
           module: 'EventBus',
@@ -2455,41 +2138,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
           entityId: event.entityId
         }
       });
-
-      // Prédict séquence AO → Étude technique → Chiffrage
-      const workflowPredictions = [
-        { type: 'etude_technique', delay: 20, priority: 'medium' },
-        { type: 'chiffrage', delay: 60, priority: 'medium' },
-        { type: 'supplier', delay: 30, priority: 'low' }
-      ];
-
-      for (const prediction of workflowPredictions) {
-        // Planifier preloading avec délai
-        setTimeout(async () => {
-          try {
-            await this.contextCacheService!.preloadContextByPrediction(
-              prediction.type,
-`PREDICTED_${event.entityId}_${prediction.type}`,;
-              undefined,
-              prediction.priority as any
-            );
-            
-            this.backgroundStats.eventTriggeredPreloads++;
-            this.backgroundStats.totalTriggeredPreloads++;
-          
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-            });
-            this.backgroundStats.failedBackgroundTasks++;
-          }
-        }, prediction.delay * 60 * 1000);
-      }
-
+      // TODO: Implémenter la logique de preloading AO workflow
     } catch (error) {
       logger.error('Erreur déclencheur AO workflow', {
         metadata: {
@@ -2509,9 +2158,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
   private async triggerOfferToProjectPreloading(event: RealtimeEvent): Promise<void> {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Déclencheur Offre→Projet preloading', {
         metadata: {
           module: 'EventBus',
@@ -2519,41 +2166,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
           entityId: event.entityId
         }
       });
-
-      // Prédict séquence Offre → Projet → Planning → Équipes
-      const projectWorkflow = [
-        { type: 'project', delay: 30, priority: 'high' },
-        { type: 'planning', delay: 60, priority: 'medium' },
-        { type: 'team', delay: 45, priority: 'medium' },
-        { type: 'approvisionnement', delay: 90, priority: 'low' }
-      ];
-
-      for (const prediction of projectWorkflow) {
-        setTimeout(async () => {
-          try {
-            await this.contextCacheService!.preloadContextByPrediction(
-              prediction.type,
-`PREDICTED_${event.entityId}_${prediction.type}`,;
-              undefined,
-              prediction.priority as any
-            );
-            
-            this.backgroundStats.eventTriggeredPreloads++;
-            this.backgroundStats.totalTriggeredPreloads++;
-          
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-            });
-            this.backgroundStats.failedBackgroundTasks++;
-          }
-        }, prediction.delay * 60 * 1000);
-      }
-
+      // TODO: Implémenter la logique de preloading Offre→Projet
     } catch (error) {
       logger.error('Erreur déclencheur offre→projet', {
         metadata: {
@@ -2573,9 +2186,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
   private async triggerProjectWorkflowPreloading(event: RealtimeEvent): Promise<void> {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Déclencheur Projet workflow preloading', {
         metadata: {
           module: 'EventBus',
@@ -2583,39 +2194,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
           entityId: event.entityId
         }
       });
-
-      const constructionWorkflow = [
-        { type: 'chantier', delay: 180, priority: 'medium' },
-        { type: 'controle_qualite', delay: 240, priority: 'medium' },
-        { type: 'livraison', delay: 300, priority: 'low' }
-      ];
-
-      for (const prediction of constructionWorkflow) {
-        setTimeout(async () => {
-          try {
-            await this.contextCacheService!.preloadContextByPrediction(
-              prediction.type,
-`PREDICTED_${event.entityId}_${prediction.type}`,;
-              undefined,
-              prediction.priority as any
-            );
-            
-            this.backgroundStats.eventTriggeredPreloads++;
-            this.backgroundStats.totalTriggeredPreloads++;
-          
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-            });
-            this.backgroundStats.failedBackgroundTasks++;
-          }
-        }, prediction.delay * 60 * 1000);
-      }
-
+      // TODO: Implémenter la logique de preloading Projet workflow
     } catch (error) {
       logger.error('Erreur déclencheur projet workflow', {
         metadata: {
@@ -2635,9 +2214,7 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
   private async triggerTaskRelatedPreloading(event: RealtimeEvent): Promise<void> {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService || !event.projectId) return;
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Déclencheur Tâche preloading', {
         metadata: {
           module: 'EventBus',
@@ -2646,38 +2223,14 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
           projectId: event.projectId
         }
       });
-
-      // Prédict contexte projet et équipe associée
-      await this.contextCacheService.preloadContextByPrediction(
-        'project',
-        event.projectId,
-        undefined,
-        'medium'
-      );
-      
-      // Prédict équipe si tâche terminée (probable accès suivant)
-      if (event.newStatus === 'termine') {
-        setTimeout(async () => {
-          await this.contextCacheService!.preloadContextByPrediction(
-            'team',
-`TEAM_${event.projectId}`,;
-            undefined,
-            'low'
-          );
-        }, 10 * 60 * 1000); // 10 minutes après
-      }
-
-      this.backgroundStats.eventTriggeredPreloads += 2;
-      this.backgroundStats.totalTriggeredPreloads += 2;
-
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
+      // TODO: Implémenter la logique de preloading Tâche
+    } catch (error) {
+      logger.error('Erreur déclencheur tâche preloading', {
+        metadata: {
+          module: 'EventBus',
+          operation: 'triggerTaskRelatedPreloading',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2689,49 +2242,14 @@ message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.prep
   private async triggerAnalyticsDashboardPreloading(event: RealtimeEvent): Promise<void> {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Déclencheur Analytics dashboard preloading', {
         metadata: {
           module: 'EventBus',
           operation: 'triggerAnalyticsDashboardPreloading'
         }
       });
-
-      // Prédict accès dashboard et KPIs
-      const dashboardContexts = [
-        { type: 'dashboard', delay: 5, priority: 'high' },
-        { type: 'kpi_summary', delay: 10, priority: 'medium' },
-        { type: 'analytics_detailed', delay: 15, priority: 'low' }
-      ];
-
-      for (const context of dashboardContexts) {
-        setTimeout(async () => {
-          try {
-            await this.contextCacheService!.preloadContextByPrediction(
-              context.type,
-              'DASHBOARD_CONTEXT',
-              undefined,
-              context.priority as any
-            );
-            
-            this.backgroundStats.eventTriggeredPreloads++;
-            this.backgroundStats.totalTriggeredPreloads++;
-          
-    },
-    {
-      operation: 'constructor',
-      service: 'eventBus',
-      metadata: {}
-    }
-  );
-            });
-            this.backgroundStats.failedBackgroundTasks++;
-          }
-        }, context.delay * 60 * 1000);
-      }
-
+      // TODO: Implémenter la logique de preloading Analytics dashboard
     } catch (error) {
       logger.error('Erreur déclencheur analytics dashboard', {
         metadata: {

@@ -75,6 +75,7 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 - **workflows.md** : 7 workflows détaillés avec patterns
 - **common-tasks.md** : 10 tâches courantes avec guide rapide
 - **context-usage.md** : Utilisation optimale du contexte @
+- **agent-optimization.md** : Stratégies d'optimisation de l'agent Cursor
 - **examples.md** : Exemples concrets du projet
 - **patterns.md** : Patterns réutilisables documentés
 - **quick-reference.md** : Référence rapide patterns
@@ -195,6 +196,12 @@ Les règles sont automatiquement chargées par Cursor selon le contexte. Vous po
 - `@.cursor/rules/ai-services.md` - Règles services IA
 - `@.cursor/rules/performance.md` - Optimisations performance
 - `@.cursor/rules/workflows.md` - Workflow modification service
+- `@.cursor/rules/agent-optimization.md` - Optimisation agent
+
+**Optimiser les performances de l'agent:**
+- `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation
+- `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
+- `@AGENTS.md` - Instructions complètes pour l'agent
 
 **Modifier le schéma DB:**
 - `@.cursor/rules/core.md` - Règles fondamentales

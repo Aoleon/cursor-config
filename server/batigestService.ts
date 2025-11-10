@@ -531,8 +531,7 @@ export class BatigestService {
       service: 'batigestService',
       metadata: {}
     }
-  );;
-    }
+  );
   }
 
   /**
@@ -735,10 +734,11 @@ export class BatigestService {
    */
   private async getNextChantierSequence(): Promise<number> {
     const sql = (await import('mssql')).default;
+    const year = new Date().getFullYear();
     const query = `
       SELECT ISNULL(MAX(CAST(RIGHT(CODE_CHANTIER, 4) AS INT)), 0) + 1 as NEXT_SEQUENCE
       FROM CHANTIERS
-      WHERE CODE_CHANTIER LIKE 'CHT-${new Date().getFullYear()}-%'
+      WHERE CODE_CHANTIER LIKE 'CHT-${year}-%'
     `;
     
     const request = this.pool!.request();

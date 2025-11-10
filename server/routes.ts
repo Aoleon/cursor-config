@@ -184,26 +184,22 @@ export async function registerRoutes(app: Express) {
   
   await cacheService.warmupCache([
     async () => {
-      return withErrorHandling(
-    async () => {
-
-        await mondayService.getBoards(50);
-        logger.info('[CacheService] Monday boards préchargés', {
-          metadata: {
-            module: 'Routes',
-            operation: 'warmupCache'
-          }
-        });
-      
-    },
-    {
-      operation: 'registerRoutes',
-      service: 'routes',
-      metadata: {}
-    }
-  );
-        });
-      }
+      await withErrorHandling(
+        async () => {
+          await mondayService.getBoards(50);
+          logger.info('[CacheService] Monday boards préchargés', {
+            metadata: {
+              module: 'Routes',
+              operation: 'warmupCache'
+            }
+          });
+        },
+        {
+          operation: 'registerRoutes',
+          service: 'routes',
+          metadata: {}
+        }
+      );
     }
   ]);
   

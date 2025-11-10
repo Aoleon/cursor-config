@@ -310,3 +310,4 @@ import { createService } from './service';
 - **Types:** `types.ts` dans module
 - **Index:** `index.ts` pour exports
 
+

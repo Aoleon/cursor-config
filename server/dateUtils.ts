@@ -130,8 +130,7 @@ export function calculerDatesImportantes(
       service: 'dateUtils',
       metadata: {}
     }
-  ); });
-    }
+  );
   }
 
   // Date de démarrage des travaux
@@ -147,8 +146,7 @@ export function calculerDatesImportantes(
       service: 'dateUtils',
       metadata: {}
     }
-  ); });
-    }
+  );
   }
 
   // Date de livraison prévue
@@ -164,8 +162,7 @@ export function calculerDatesImportantes(
       service: 'dateUtils',
       metadata: {}
     }
-  ); });
-    }
+  );
   }
 
   return dates;

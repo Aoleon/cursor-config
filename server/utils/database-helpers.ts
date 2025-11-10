@@ -190,9 +190,7 @@ export async function withTransaction<T>(
   const startTime = Date.now();
   
   for (let attempt = 0; attempt < retries; attempt++) {
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Log transaction start
       logger.debug('Starting database transaction', {
         metadata: {
@@ -237,15 +235,23 @@ export async function withTransaction<T>(
       });
       
       return result;
+    } catch (error: any) {
+      lastError = error;
       
-    
-    },
-    {
-      operation: 'serialization_failure',
-      service: 'database-helpers',
-      metadata: {}
-    }
-  );
+      // Check if error is retryable
+      const retryable = error?.code === '40001' || error?.code === '40P01'; // Serialization failure or deadlock
+      
+      if (retryable && attempt < retries - 1) {
+        const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
+        logger.warn('Database transaction failed, retrying', {
+          metadata: {
+            module: 'DatabaseHelpers',
+            operation: 'withTransaction',
+            attempt: attempt + 1,
+            maxRetries: retries,
+            errorCode: error?.code,
+            delay
+          }
         });
         
         // Wait before retry
@@ -290,9 +296,7 @@ export async function withSavepoint<T>(
 ): Promise<T> {
   const name = savepointName || `sp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
-  return withErrorHandling(
-    async () => {
-
+  try {
     // Create savepoint
     await parentTx.execute(sql.raw(`SAVEPOINT ${name}`));
     
@@ -319,15 +323,17 @@ export async function withSavepoint<T>(
     });
     
     return result;
+  } catch (error) {
+    // Rollback to savepoint on error
+    await parentTx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${name}`));
     
-  
-    },
-    {
-      operation: 'serialization_failure',
-      service: 'database-helpers',
-      metadata: {}
-    }
-  );
+    logger.error('Database savepoint rolled back', {
+      metadata: {
+        module: 'DatabaseHelpers',
+        operation: 'withSavepoint',
+        savepointName: name,
+        error: error instanceof Error ? error.message : String(error)
+      }
     });
     
     throw error;

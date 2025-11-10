@@ -12,10 +12,10 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../../utils/error-handler';
 import { aos, type Ao, type InsertAo } from '@shared/schema';
 import type { DrizzleTransaction, PaginationOptions, PaginatedResult, SearchFilters, SortOptions } from '../types';
-import { eq, and, desc, ilike, or, count as drizzleCount, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, desc, ilike, or, count as drizzleCount, isNull, isNotNull, type SQL } from 'drizzle-orm';
 import { safeQuery } from '../../utils/safe-query';
 
 /**
@@ -163,7 +163,7 @@ export class AoRepository extends BaseRepository<
         // Appliquer le tri
         if (sort?.field) {
           const direction = sort.direction === 'asc' ? 'asc' : 'desc';
-          const sortField = (aos as any)[sort.field];
+          const sortField = (aos as Record<string, unknown>)[sort.field];
           if (sortField) {
             dataQuery = dataQuery.orderBy(direction === 'asc' ? sortField : desc(sortField)) as typeof dataQuery;
           }
@@ -280,6 +280,25 @@ export class AoRepository extends BaseRepository<
   }
 
   /**
+   * Met à jour le Monday ID d'un AO
+   * Méthode spécifique pour l'intégration Monday.com
+   * 
+   * @param aoId - ID de l'AO
+   * @param mondayId - ID Monday.com à assigner
+   * @param tx - Transaction optionnelle
+   * @returns L'AO mis à jour
+   */
+  async updateMondayId(aoId: string, mondayId: string, tx?: DrizzleTransaction): Promise<Ao> {
+    const normalizedId = this.normalizeId(aoId);
+    
+    if (!mondayId || mondayId.trim() === '') {
+      throw new AppError('Monday ID cannot be empty', 500);
+    }
+
+    return this.update(normalizedId, { mondayItemId: mondayId } as Partial<InsertAo>, tx);
+  }
+
+  /**
    * Trouve tous les AOs qui n'ont pas encore été exportés vers Monday.com
    * Utile pour la synchronisation
    * 
@@ -310,14 +329,14 @@ export class AoRepository extends BaseRepository<
    * @param filters - Filtres à appliquer
    * @returns Tableau de conditions Drizzle
    */
-  private buildWhereConditions(filters?: AoFilters): any[] {
+  private buildWhereConditions(filters?: AoFilters): SQL[] {
     if (!filters) return [];
 
-    const conditions: any[] = [];
+    const conditions: SQL[] = [];
 
     // Filtre par statut
     if (filters.status) {
-      conditions.push(eq(aos.status, filters.status as any));
+      conditions.push(eq(aos.status, filters.status as typeof aos.status.enumValues[number]));
     }
 
     // Note: AOs n'ont pas de champ responsibleUserId dans la base de données
@@ -325,12 +344,12 @@ export class AoRepository extends BaseRepository<
 
     // Filtre par type de menuiserie
     if (filters.menuiserieType) {
-      conditions.push(eq(aos.menuiserieType, filters.menuiserieType as any));
+      conditions.push(eq(aos.menuiserieType, filters.menuiserieType as typeof aos.menuiserieType.enumValues[number]));
     }
 
     // Filtre par source
     if (filters.source) {
-      conditions.push(eq(aos.source, filters.source as any));
+      conditions.push(eq(aos.source, filters.source as typeof aos.source.enumValues[number]));
     }
 
     // Filtre par présence/absence de Monday ID

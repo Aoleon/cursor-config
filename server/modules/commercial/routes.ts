@@ -232,9 +232,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         }
       }
       
-      return withErrorHandling(
-    async () => {
-
+      try {
         const ao = await storage.createAo(aoData);
         
         logger.info('[Commercial] AO créé', {
@@ -255,19 +253,16 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         });
         
         sendSuccess(res, ao, 201);
-      
-    },
-    {
-      operation: 'AOs',
-      service: 'routes',
-      metadata: {}
-    }
-  ); n'existe pas encore. Vérifiez le chemin: OneDrive-JLM/01 - ETUDES AO/AO-${ao.reference}`);
-        }
-        throw new AppError(`Impossible d'accéder à OneDrive pour l'AO ${ao.reference}. Détails: ${error.message}`, 500);
+      } catch (error) {
+        logger.error('Erreur createAO', {
+          metadata: {
+            service: 'commercial',
+            operation: 'createAO',
+            error: error instanceof Error ? error.message : String(error)
+          }
+        });
+        throw error;
       }
-      
-      res.json(documents);
     })
   );
 
@@ -595,9 +590,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     isAuthenticated,
     validateParams(z.object({ aoId: z.string().uuid("ID AO invalide") })),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { aoId } = req.params;
         
         logger.info('[Commercial] Récupération contacts AO', {
@@ -611,14 +604,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         
         const contacts = await storage.getAoContacts(aoId);
         sendSuccess(res, contacts);
-      
-    },
-    {
-      operation: 'AOs',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('Erreur getAoContacts', {
+          metadata: {
+            service: 'commercial',
+            operation: 'getAoContacts',
+            aoId: req.params?.aoId,
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw createError.database("Erreur lors de la récupération des contacts AO");
       }
@@ -631,9 +624,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     rateLimits.creation,
     validateBody(insertAoContactsSchema),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         logger.info('[Commercial] Création liaison AO-Contact', {
           metadata: {
             route: '/api/ao-contacts',
@@ -654,14 +645,13 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         });
         
         sendSuccess(res, newContact, "Liaison AO-Contact créée avec succès", 201);
-      
-    },
-    {
-      operation: 'AOs',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('[Commercial] Erreur lors de la création de la liaison AO-Contact', {
+          metadata: {
+            route: '/api/ao-contacts',
+            method: 'POST',
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw createError.database("Erreur lors de la création de la liaison AO-Contact");
       }
@@ -675,9 +665,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     validateParams(commonParamSchemas.id),
     validateBody(insertAoContactsSchema.partial()),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { id } = req.params;
         
         logger.info('[Commercial] Mise à jour liaison AO-Contact', {
@@ -697,14 +685,13 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         });
         
         sendSuccess(res, updatedContact, "Liaison AO-Contact mise à jour avec succès");
-      
-    },
-    {
-      operation: 'AOs',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('[Commercial] Erreur lors de la mise à jour de la liaison AO-Contact', {
+          metadata: {
+            route: '/api/ao-contacts/:id',
+            method: 'PATCH',
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw createError.database("Erreur lors de la mise à jour de la liaison AO-Contact");
       }
@@ -717,9 +704,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     rateLimits.general,
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { id } = req.params;
         
         logger.info('[Commercial] Suppression liaison AO-Contact', {
@@ -739,14 +724,13 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         });
         
         sendSuccess(res, null, "Liaison AO-Contact supprimée avec succès");
-      
-    },
-    {
-      operation: 'AOs',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('[Commercial] Erreur lors de la suppression de la liaison AO-Contact', {
+          metadata: {
+            route: '/api/ao-contacts/:id',
+            method: 'DELETE',
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw createError.database("Erreur lors de la suppression de la liaison AO-Contact");
       }
@@ -763,9 +747,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     validateParams(z.object({ id: z.string().uuid() })),
     validateQuery(comparisonQuerySchema),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { id: aoLotId } = req.params;
         const { includeRawOcr, sortBy, sortOrder, status } = req.query;
         
@@ -864,14 +846,12 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
             };
             
             suppliersData.push(supplierComparison);
-          
-    },
-    {
-      operation: 'AOs',
-service: 'routes',;
-      metadata: {}
-    }
-  );
+          } catch (error) {
+            logger.warn('[Commercial] Erreur lors du traitement d\'une session', {
+              metadata: {
+                sessionId: session.id,
+                error: error instanceof Error ? error.message : String(error)
+              }
             });
           }
         }
@@ -960,9 +940,7 @@ service: 'routes',;
     validateParams(z.object({ id: z.string().uuid() })),
     validateBody(selectSupplierSchema),
     asyncHandler(async (req: any, res: Response) => {
-      return withErrorHandling(
-    async () => {
-
+      try {
         const { id: aoLotId } = req.params;
         const { supplierId, analysisId, selectionReason, notes } = req.body;
         const userId = req.session.user?.id;
@@ -1035,14 +1013,13 @@ service: 'routes',;
           selectionDate: new Date(),
           selectedBy: userId
         }, 'Fournisseur sélectionné avec succès');
-      
-    },
-    {
-      operation: 'AOs',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('[Commercial] Erreur lors de la sélection du fournisseur', {
+          metadata: {
+            route: '/api/ao-lots/:id/select-supplier',
+            method: 'POST',
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw error;
       }

@@ -339,19 +339,17 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         }
       });
 
-      return withErrorHandling(
-    async () => {
-
+      try {
         const updatedSpec = await storage.updateSupplierSpecialization(id, req.body);
         sendSuccess(res, updatedSpec);
-      
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('Erreur updateSupplierSpecialization', {
+          metadata: {
+            service: 'suppliers',
+            operation: 'updateSupplierSpecialization',
+            id,
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw createError.database("Erreur lors de la mise à jour de la spécialisation fournisseur");
       }
@@ -375,19 +373,17 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         }
       });
 
-      return withErrorHandling(
-    async () => {
-
+      try {
         await storage.deleteSupplierSpecialization(id);
         sendSuccess(res, null);
-      
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('Erreur deleteSupplierSpecialization', {
+          metadata: {
+            service: 'suppliers',
+            operation: 'deleteSupplierSpecialization',
+            id,
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw createError.database("Erreur lors de la suppression de la spécialisation fournisseur");
       }
@@ -787,9 +783,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         }
       });
 
-      return withErrorHandling(
-    async () => {
-
+      try {
         // Verify session exists
         const session = await storage.getSupplierQuoteSession(sessionId);
         if (!session) {
@@ -859,15 +853,14 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         };
         
         sendSuccess(res, result);
-        
-      
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('Erreur getSupplierQuoteAnalyses', {
+          metadata: {
+            service: 'suppliers',
+            operation: 'getSupplierQuoteAnalyses',
+            sessionId,
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw error;
       }
@@ -897,9 +890,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         }
       });
 
-      return withErrorHandling(
-    async () => {
-
+      try {
         // Get the analysis
         const analysis = await storage.getSupplierQuoteAnalysis(analysisId);
         if (!analysis) {
@@ -935,15 +926,14 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
           reviewedAt: new Date(),
           corrections: corrections || null
         });
-        
-      
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('Erreur approveQuoteAnalysis', {
+          metadata: {
+            service: 'suppliers',
+            operation: 'approveQuoteAnalysis',
+            analysisId,
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw error;
       }
@@ -970,9 +960,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         }
       });
 
-      return withErrorHandling(
-    async () => {
-
+      try {
         // Get the analysis
         const analysis = await storage.getSupplierQuoteAnalysis(analysisId);
         if (!analysis) {
@@ -1004,15 +992,14 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
           updatedBy: userId,
           updatedAt: new Date()
         });
-        
-      
-    },
-    {
-      operation: 'management',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('Erreur updateQuoteAnalysisNotes', {
+          metadata: {
+            service: 'suppliers',
+            operation: 'updateQuoteAnalysisNotes',
+            analysisId,
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         throw error;
       }

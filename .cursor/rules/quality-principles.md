@@ -567,3 +567,4 @@ export class OfferService {
 
 **Note:** Ces principes guident toutes les décisions techniques. Toujours privilégier robustesse, performance et maintenabilité.
 
+

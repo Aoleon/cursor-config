@@ -360,3 +360,4 @@ import type { Offer } from '@shared/schema';
 - **Hooks:** `use-[hook-name].ts` dans `hooks/`
 - **Types:** `[types].ts` dans `types/`
 
+

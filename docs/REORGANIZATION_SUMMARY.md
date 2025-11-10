@@ -178,3 +178,4 @@ Les fichiers suivants sont conservés à la racine pour un accès rapide :
 
 **Note:** Cette réorganisation améliore la clarté et la maintenabilité du projet.
 
+

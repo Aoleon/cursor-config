@@ -259,9 +259,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           metadata: { reference: orderData.reference }
         });
 
-        return withErrorHandling(
-    async () => {
-
+        try {
           // Charger le template purchase-order
           const templatePath = 'templates/purchase-order.html';
           const templateContent = await loadTemplate(templatePath);
@@ -281,14 +279,16 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               if (supplier) {
                 supplierName = supplier.nom;
               }
-            
-    },
-    {
-      operation: 'documents',
-service: 'routes',;
-      metadata: {}
-    }
-  );
+            } catch (error) {
+              logger.warn('Erreur lors de la récupération du fournisseur', {
+                metadata: {
+                  service: 'batigest',
+                  operation: 'getSupplierById',
+                  supplierId: orderData.supplierId,
+                  error: error instanceof Error ? error.message : String(error)
+                }
+              });
+            }
           }
 
           // Calculer les totaux
@@ -466,9 +466,7 @@ service: 'routes',;
           metadata: { reference: quoteData.reference }
         });
 
-        return withErrorHandling(
-    async () => {
-
+        try {
           // Charger le template client-quote
           const templatePath = 'templates/client-quote.html';
           const templateContent = await loadTemplate(templatePath);
@@ -571,15 +569,13 @@ service: 'routes',;
           res.setHeader('Content-Disposition', `inline; filename="DV_${quoteData.reference}.pdf"`);
           res.send(result.pdf);
           return;
-
-        
-    },
-    {
-      operation: 'documents',
-      service: 'routes',
-      metadata: {}
-    }
-  );
+        } catch (error) {
+          logger.error('[Batigest] Erreur génération PDF preview', error as Error, {
+            reference: quoteData.reference
+          });
+          throw new ValidationError('Impossible de générer le PDF: ' + 
+            (error instanceof Error ? error.message : 'Erreur inconnue'));
+        }
       }
 
       // ========================================

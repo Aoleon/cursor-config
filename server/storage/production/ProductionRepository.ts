@@ -16,7 +16,7 @@
  */
 
 import { BaseRepository } from '../base/BaseRepository';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../../utils/error-handler';
 import { 
   projects, 
   projectTasks, 
@@ -40,7 +40,7 @@ import {
   type ProjectSubElementInsert
 } from '@shared/schema';
 import type { DrizzleTransaction, PaginationOptions, PaginatedResult, SearchFilters, SortOptions } from '../types';
-import { eq, and, desc, ilike, or, count as drizzleCount, isNull, isNotNull, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, ilike, or, count as drizzleCount, isNull, isNotNull, gte, lte, type SQL } from 'drizzle-orm';
 
 /**
  * Filtres spécifiques aux Projects
@@ -154,7 +154,7 @@ export class ProductionRepository extends BaseRepository<
 
         if (sort?.field) {
           const direction = sort.direction === 'asc' ? 'asc' : 'desc';
-          const sortField = (projects as any)[sort.field];
+          const sortField = (projects as Record<string, unknown>)[sort.field];
           if (sortField) {
             dataQuery = dataQuery.orderBy(direction === 'asc' ? sortField : desc(sortField)) as typeof dataQuery;
           }
@@ -180,6 +180,36 @@ export class ProductionRepository extends BaseRepository<
       },
       'findPaginated',
       { filters, limit, offset }
+    );
+  }
+
+  /**
+   * Trouve un projet par son Monday ID
+   * Méthode spécifique pour l'intégration Monday.com
+   * 
+   * @param mondayId - ID Monday.com du projet
+   * @param tx - Transaction optionnelle
+   * @returns Le projet correspondant ou undefined
+   */
+  async findByMondayId(mondayId: string, tx?: DrizzleTransaction): Promise<Project | undefined> {
+    if (!mondayId || mondayId.trim() === '') {
+      throw new AppError('Monday ID cannot be empty', 500);
+    }
+
+    const dbToUse = this.getDb(tx);
+
+    return this.executeQuery(
+      async () => {
+        const result = await dbToUse
+          .select()
+          .from(this.table)
+          .where(eq(projects.mondayItemId, mondayId))
+          .limit(1);
+
+        return result[0];
+      },
+      'findByMondayId',
+      { mondayId }
     );
   }
 
@@ -857,13 +887,13 @@ export class ProductionRepository extends BaseRepository<
    * @param filters - Filtres à appliquer
    * @returns Array de conditions Drizzle
    */
-  protected buildWhereConditions(filters?: ProjectFilters): any[] {
+  protected buildWhereConditions(filters?: ProjectFilters): SQL[] {
     if (!filters) return [];
 
-    const conditions: any[] = [];
+    const conditions: SQL[] = [];
 
     if (filters.status) {
-      conditions.push(eq(projects.status, filters.status as any));
+      conditions.push(eq(projects.status, filters.status as typeof projects.status.enumValues[number]));
     }
 
     if (filters.responsibleUserId) {

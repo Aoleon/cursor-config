@@ -8,3 +8,4 @@ cd "$(dirname "$0")/.."
 # Pour l'enum audit_result, on sélectionne la première option (créer enum)
 echo "" | npm run db:push
 
+

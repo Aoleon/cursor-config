@@ -29,7 +29,8 @@
     "migrate:phase2-critical": "tsx scripts/migrate-phase2-critical.ts",
     "test:auto-debug": "tsx scripts/auto-test-debug.ts",
     "test:auto-fix": "tsx scripts/auto-test-debug.ts && npm run check",
-    "reorganize": "tsx scripts/reorganize-project.ts"
+    "reorganize": "tsx scripts/reorganize-project.ts",
+    "cleanup:root": "tsx scripts/cleanup-root.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.67.0",

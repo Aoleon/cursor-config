@@ -121,41 +121,55 @@ async function executeWithRecovery(operation: () => Promise<Result>): Promise<Re
 }
 ```
 
-### 4. Apprentissage Continu
+### 4. Apprentissage Continu avec Reflexion
 
-**Principe:** L'agent doit apprendre de ses actions et améliorer ses performances de manière autonome.
+**Principe:** L'agent doit apprendre de ses actions et améliorer ses performances de manière autonome avec réflexion verbale.
 
 **TOUJOURS:**
 - ✅ Analyser les résultats des actions précédentes
+- ✅ Réfléchir verbalement sur ce qui a fonctionné et ce qui n'a pas fonctionné
 - ✅ Identifier les patterns de succès
 - ✅ Identifier les patterns d'échec
 - ✅ Adapter les stratégies en fonction des résultats
+- ✅ Consolider les connaissances en workflows réutilisables
 - ✅ Documenter les apprentissages
 
 **Pattern:**
 ```typescript
-// Après chaque action
-async function learnFromAction(action: Action, result: Result) {
+// Après chaque action avec réflexion
+async function learnFromActionWithReflection(action: Action, result: Result) {
   // 1. Analyser le résultat
   const analysis = analyzeResult(result);
   
-  // 2. Identifier patterns
+  // 2. Réfléchir sur l'action
+  const reflection = await reflectOnAction(action, result);
+  
+  // 3. Identifier patterns
   if (analysis.success) {
     // Pattern de succès
-    await recordSuccessPattern(action, result);
+    await recordSuccessPattern(action, result, reflection);
   } else {
     // Pattern d'échec
-    await recordFailurePattern(action, result);
+    await recordFailurePattern(action, result, reflection);
   }
   
-  // 3. Adapter stratégies
-  const adaptedStrategy = adaptStrategy(analysis);
+  // 4. Adapter stratégies
+  const adaptedStrategy = adaptStrategy(analysis, reflection);
   await updateStrategy(adaptedStrategy);
   
-  // 4. Documenter apprentissage
-  await documentLearning(action, result, analysis);
+  // 5. Consolider si plusieurs succès similaires
+  const similarSuccesses = await findSimilarSuccesses(action);
+  if (similarSuccesses.length >= 3) {
+    const consolidated = await consolidateKnowledge(similarSuccesses);
+    await documentConsolidatedWorkflow(consolidated);
+  }
+  
+  // 6. Documenter apprentissage
+  await documentLearning(action, result, analysis, reflection);
 }
 ```
+
+**Référence:** `@.cursor/rules/advanced-learning.md` - Stratégies d'apprentissage avancées
 
 ### 5. Détection et Correction Automatique des Problèmes
 
@@ -691,6 +705,7 @@ async function validateMultiLevel(code: string): Promise<ValidationResult> {
 
 ### Documentation Essentielle
 - `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation
+- `@.cursor/rules/advanced-learning.md` - **NOUVEAU** Stratégies d'apprentissage avancées
 - `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 - `@.cursor/rules/workflows.md` - Workflows détaillés
 - `@.cursor/rules/troubleshooting.md` - Guide résolution problèmes

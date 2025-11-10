@@ -716,7 +716,9 @@ await cacheService.set(cacheKey, result, { ttl: 86400 });
 
 **Référence:** `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation complètes  
 **Référence:** `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes pour runs plus longs  
-**Référence:** `@.cursor/rules/auto-detection.md` - **NOUVEAU** Détection automatique des anti-patterns
+**Référence:** `@.cursor/rules/auto-detection.md` - Détection automatique des anti-patterns  
+**Référence:** `@.cursor/rules/advanced-learning.md` - **NOUVEAU** Stratégies d'apprentissage avancées (Reflexion, ICE)  
+**Référence:** `@.cursor/rules/context-search.md` - **NOUVEAU** Recherche contextuelle avancée
 
 ### Stratégies d'Optimisation
 
@@ -790,17 +792,43 @@ await cacheService.set(cacheKey, result, { ttl: 86400 });
 
 **Pattern:**
 ```typescript
-// 1. Chercher code similaire
-codebase_search("How does X work?", target_directories)
+// 1. Chercher code similaire (recherche hiérarchique)
+// Niveau 1: Recherche générale
+const general = await codebase_search("How does X work?", ["server"]);
 
-// 2. Lire fichiers pertinents
-read_file("server/modules/auth/routes.ts")
+// Niveau 2: Recherche ciblée sur patterns
+const patterns = await codebase_search("What are the patterns for X?", ["server"]);
 
-// 3. Comprendre patterns
-read_file("server/utils/README-UTILS.md")
+// Niveau 3: Recherche exacte
+const exact = await grep("pattern", "server");
 
-// 4. Appliquer patterns
-// ...
+// Niveau 4: Lecture ciblée
+const files = identifyRelevantFiles(general, patterns, exact);
+const contents = await Promise.all(files.map(f => read_file(f)));
+```
+
+**Référence:** `@.cursor/rules/context-search.md` - Recherche contextuelle avancée
+
+**Pattern Complet:**
+```typescript
+// 1. Chercher code similaire (recherche hiérarchique)
+// Niveau 1: Recherche générale
+const general = await codebase_search("How does X work?", ["server"]);
+
+// Niveau 2: Recherche ciblée sur patterns
+const patterns = await codebase_search("What are the patterns for X?", ["server"]);
+
+// Niveau 3: Recherche exacte
+const exact = await grep("pattern", "server");
+
+// Niveau 4: Lecture ciblée
+const files = identifyRelevantFiles(general, patterns, exact);
+const contents = await Promise.all(files.map(f => read_file(f)));
+
+// 5. Comprendre patterns
+read_file("server/utils/README-UTILS.md");
+
+// 6. Appliquer patterns
 ```
 
 ### Gestion des Erreurs et Debugging
@@ -975,7 +1003,9 @@ await updateStrategy(adaptedStrategy);
 - `.cursor/rules/workflows.md` - Workflows détaillés
 - `.cursor/rules/agent-optimization.md` - Stratégies d'optimisation agent
 - `.cursor/rules/autonomous-workflows.md` - Workflows autonomes pour runs plus longs
-- `.cursor/rules/auto-detection.md` - **NOUVEAU** Détection automatique des anti-patterns
+- `.cursor/rules/auto-detection.md` - Détection automatique des anti-patterns
+- `.cursor/rules/advanced-learning.md` - **NOUVEAU** Stratégies d'apprentissage avancées (Reflexion, ICE)
+- `.cursor/rules/context-search.md` - **NOUVEAU** Recherche contextuelle avancée
 - `.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 
 **Documentation Technique:**

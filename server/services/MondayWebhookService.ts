@@ -3,11 +3,12 @@ import { withErrorHandling } from './utils/error-handler';
 import { logger } from '../utils/logger';
 import { mondayImportService } from './MondayImportService';
 import { eventBus } from '../eventBus';
+import type { EventType } from '@shared/events';
 
 export class MondayWebhookService {
   private eventIdCache = new Set<string>();
   
-  async processWebhook(payload: any): Promise<void> {
+  async processWebhook(payload: unknown): Promise<void> {
     const { event } = payload;
     const eventId = event?.eventId || event?.id;
     
@@ -92,7 +93,7 @@ export class MondayWebhookService {
       // EventBus notification
       eventBus.publish({
         id: crypto.randomUUID(),
-        type: 'monday:webhook:received' as any,
+        type: 'monday:webhook:received' as unknown as EventType,
         entity: 'system',
         entityId: itemIdentifier,
         message: `Webhook Monday traité pour item ${itemIdentifier}`,

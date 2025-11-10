@@ -16,7 +16,7 @@ export interface BoardColumnMetadata {
   id: string;
   title: string;
   type: string;
-  settings?: any;
+  settings?: Record<string, unknown>;
   description?: string;
 }
 
@@ -251,7 +251,7 @@ export class MondaySchemaAnalyzer {
   /**
    * Parse settings JSON des colonnes Monday
    */
-  private parseSettings(settingsStr: string): any {
+  private parseSettings(settingsStr: string): Record<string, unknown> {
     try {
       return JSON.parse(settingsStr);
     } catch {

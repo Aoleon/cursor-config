@@ -46,9 +46,7 @@ export class PdfGeneratorService {
    * Initialise le service PDF (démarre Puppeteer et compile le template)
    */
   static async initialize(): Promise<void> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Démarrage de Puppeteer avec configuration optimisée
       if (!this.browser) {
         this.browser = await puppeteer.launch({
@@ -92,14 +90,13 @@ export class PdfGeneratorService {
           }
         });
       }
-    
-    },
-    {
-      operation: 'PDF',
-      service: 'pdfGeneratorService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[PDFGeneratorService] Erreur lors de l\'initialisation', {
+        metadata: {
+          service: 'PDFGeneratorService',
+          operation: 'initialize',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       throw new AppError(`Failed to initialize PDF generator: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     }
@@ -120,9 +117,7 @@ export class PdfGeneratorService {
 
     let page: Page | null = null;
     
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Création d'une nouvelle page
       page = await this.browser.newPage();
       
@@ -186,32 +181,27 @@ export class PdfGeneratorService {
         mimeType: "application/pdf",
         size: pdfBuffer.length
       };
-
-    
-    },
-    {
-      operation: 'PDF',
-      service: 'pdfGeneratorService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[PDFGeneratorService] Erreur lors de la génération du PDF', {
+        metadata: {
+          service: 'PDFGeneratorService',
+          operation: 'generateDpgfPdf',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       throw new AppError(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     } finally {
       // Nettoyage de la page
       if (page) {
-        return withErrorHandling(
-    async () => {
-
+        try {
           await page.close();
-        
-    },
-    {
-      operation: 'PDF',
-      service: 'pdfGeneratorService',
-      metadata: {}
-    }
-  );
+        } catch (error) {
+          logger.warn('[PDFGeneratorService] Erreur lors de la fermeture de la page', {
+            metadata: {
+              service: 'PDFGeneratorService',
+              operation: 'generateDpgfPdf',
+              error: error instanceof Error ? error.message : String(error)
+            }
           });
         }
       }
@@ -228,9 +218,7 @@ export class PdfGeneratorService {
       throw new AppError("Template not initialized", 500);
     }
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       const html = this.template(data);
       logger.info('DPGF preview HTML generated successfully', {
         metadata: {
@@ -239,14 +227,13 @@ export class PdfGeneratorService {
         }
       });
       return html;
-    
-    },
-    {
-      operation: 'PDF',
-      service: 'pdfGeneratorService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[PDFGeneratorService] Erreur lors de la génération de la prévisualisation', {
+        metadata: {
+          service: 'PDFGeneratorService',
+          operation: 'generateDpgfPreview',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       throw new AppError(`Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     }

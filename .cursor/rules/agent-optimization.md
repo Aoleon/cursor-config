@@ -77,6 +77,29 @@ glob_file_search("**/*pattern*.ts")
 read_file("path/to/file.ts")
 ```
 
+**Recherche Hiérarchique:**
+```typescript
+// Recherche hiérarchique du général au spécifique
+async function hierarchicalSearch(topic: string) {
+  // Niveau 1: Recherche générale
+  const general = await codebase_search(`How does ${topic} work?`, ["server"]);
+  
+  // Niveau 2: Recherche ciblée
+  const patterns = await codebase_search(`What are the patterns for ${topic}?`, ["server"]);
+  
+  // Niveau 3: Recherche exacte
+  const exact = await grep(extractPattern(topic), "server");
+  
+  // Niveau 4: Lecture ciblée
+  const files = identifyRelevantFiles(general, patterns, exact);
+  const contents = await Promise.all(files.map(f => read_file(f)));
+  
+  return { general, patterns, exact, contents };
+}
+```
+
+**Référence:** `@.cursor/rules/context-search.md` - Recherche contextuelle avancée
+
 ### 4. Refactoring Automatisé Intelligent
 
 **Principe:** Identifier et refactoriser automatiquement le code dupliqué et les anti-patterns.
@@ -551,7 +574,54 @@ const adaptedStrategy = adaptStrategy(analysis);
 await updateStrategy(adaptedStrategy);
 ```
 
-**Référence:** `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes complets
+### 5. Reflexion (Réflexion Verbale)
+
+**Principe:** Réfléchir verbalement sur les actions et ajuster le comportement.
+
+**Pattern:**
+```typescript
+// Après chaque action importante
+async function reflectOnAction(action: Action, result: Result): Promise<Reflection> {
+  // 1. Analyser résultat
+  const analysis = analyzeResult(result);
+  
+  // 2. Identifier succès et échecs
+  const successes = identifySuccesses(action, result);
+  const failures = identifyFailures(action, result);
+  
+  // 3. Identifier améliorations
+  const improvements = identifyImprovements(action, result, analysis);
+  
+  // 4. Adapter stratégies
+  const adaptedStrategy = adaptStrategy(action, successes, failures, improvements);
+  
+  // 5. Documenter réflexion
+  await documentReflection({ action, result, analysis, adaptedStrategy });
+  
+  return { analysis, successes, failures, improvements, adaptedStrategy };
+}
+```
+
+### 6. Stratégie ICE (Investigate-Consolidate-Exploit)
+
+**Principe:** Explorer, consolider et exploiter les workflows efficaces.
+
+**Pattern:**
+```typescript
+// Phase 1: Investigate - Explorer différentes approches
+const approaches = await investigateApproaches(task);
+
+// Phase 2: Consolidate - Consolider connaissances en workflows
+const workflow = await consolidateKnowledge(successfulApproaches);
+
+// Phase 3: Exploit - Exploiter workflows consolidés
+const result = await exploitWorkflow(workflow, task);
+```
+
+**Référence:** `@.cursor/rules/advanced-learning.md` - Stratégies d'apprentissage avancées complètes
+
+**Référence:** `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes complets  
+**Référence:** `@.cursor/rules/advanced-learning.md` - **NOUVEAU** Stratégies d'apprentissage avancées
 
 ## 🔗 Références
 

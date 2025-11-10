@@ -221,8 +221,8 @@ service: 'SyncScheduler',;
     async () => {
 
       const now = new Date();
-      const cronExpression = (this.cronJob as any).options?.scheduled ? 
-        (this.cronJob as any).options.expression : null;
+      const cronJobOptions = (this.cronJob as unknown as { options?: { scheduled?: boolean; expression?: string } })?.options;
+      const cronExpression = cronJobOptions?.scheduled ? cronJobOptions.expression : null;
       
       if (!cronExpression) return null;
 

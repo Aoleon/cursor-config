@@ -224,7 +224,7 @@ export class SafetyGuardsService {
   /**
    * Enregistre un échec d'opération
    */
-  recordOperationFailure(componentName: string, error: any): void {
+  recordOperationFailure(componentName: string, error: unknown): void {
     const breaker = this.circuitBreakers.get(componentName);
     if (!breaker) return;
 
@@ -720,7 +720,7 @@ export class SafetyGuardsService {
   /**
    * Rapport complet safety guards
    */
-  getSafetyReport(): any {
+  getSafetyReport(): Record<string, unknown> {
     return {
       systemMetrics: { ...this.systemMetrics },
       resourceLimits: { ...this.resourceLimits },

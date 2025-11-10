@@ -318,9 +318,7 @@ export async function setupAuth(app: Express) {
   });
   
   passport.deserializeUser(async (serializedUser: any, cb) => {
-    return withErrorHandling(
-    async () => {
-
+    try {
       logger.info('Désérialisation utilisateur session', {
         metadata: {
           module: 'ReplitAuth',
@@ -384,14 +382,13 @@ export async function setupAuth(app: Express) {
       
       // Pour les autres types d'auth
       cb(null, dbUser);
-    
-    },
-    {
-      operation: 'if',
-      service: 'replitAuth',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[ReplitAuth] Erreur lors de la désérialisation utilisateur', {
+        metadata: {
+          module: 'ReplitAuth',
+          operation: 'deserializeUser',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       cb(error, null);
     }
@@ -446,9 +443,7 @@ export async function setupAuth(app: Express) {
       });
     }
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Créer un utilisateur test pour la session
       const testUser = {
         id: 'test-user-e2e-session',
@@ -495,14 +490,13 @@ export async function setupAuth(app: Express) {
           user: testUser
         });
       });
-    
-    },
-    {
-      operation: 'if',
-      service: 'replitAuth',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[ReplitAuth] Erreur lors de l\'authentification test E2E', {
+        metadata: {
+          module: 'ReplitAuth',
+          operation: 'testLogin',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       res.status(500).json({
         success: false,

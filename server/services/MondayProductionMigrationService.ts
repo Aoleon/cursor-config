@@ -56,7 +56,7 @@ export interface MigrationBatchResult {
 export interface BatchResult {
   index: number;
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   mondayId: string;
 }
@@ -859,7 +859,7 @@ export class MondayProductionMigrationService {
     return choices[0];
   }
 
-  private weightedRandomFromArray<T extends { weight: number }>(items: (T & { status?: any, stage?: any })[]): any {
+  private weightedRandomFromArray<T extends { weight: number }>(items: (T & { status?: unknown, stage?: unknown })[]): T {
     const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
     const randomNum = Math.random() * totalWeight;
     

@@ -399,7 +399,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
     async () => {
 
       const prompt = `
-Tu es un expert en analyse de documents techniques de menuiserie et d'appels d'offres.;
+Tu es un expert en analyse de documents techniques de menuiserie et d'appels d'offres.
 
 Analyse le contenu suivant et extrais tous les lots de menuiserie avec leurs spécifications techniques détaillées.
 
@@ -409,8 +409,8 @@ Contenu:
 ${content.substring(0, 15000)}
 ---
 
-Extrais et structure TOUS les lots de menuiserie trouvés au format JSON strict.;
-Pour chaque lot identifié, extrais le maximum d'informations techniques disponibles.;
+Extrais et structure TOUS les lots de menuiserie trouvés au format JSON strict.
+Pour chaque lot identifié, extrais le maximum d'informations techniques disponibles.
 
 Format de réponse attendu:
 {

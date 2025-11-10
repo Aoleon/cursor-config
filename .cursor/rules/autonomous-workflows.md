@@ -508,9 +508,13 @@ async function autoCorrectProblems(
 - [ ] Identifier dépendances
 - [ ] Planifier ordre d'exécution
 - [ ] Préparer stratégies de récupération
+- [ ] Détecter anti-patterns dans fichiers cibles
+- [ ] Préparer corrections automatiques
 
 ### Pendant le Run Autonome
 
+- [ ] Détecter anti-patterns avant chaque modification
+- [ ] Corriger anti-patterns automatiquement
 - [ ] Valider chaque étape avant de continuer
 - [ ] Détecter et corriger erreurs automatiquement
 - [ ] Documenter actions importantes
@@ -519,11 +523,169 @@ async function autoCorrectProblems(
 
 ### Après le Run Autonome
 
+- [ ] Détecter anti-patterns dans code modifié
+- [ ] Corriger anti-patterns automatiquement
 - [ ] Valider toutes les modifications
 - [ ] Vérifier tests passent
 - [ ] Vérifier types TypeScript
+- [ ] Vérifier pas de régression
 - [ ] Documenter apprentissages
 - [ ] Identifier améliorations futures
+
+## 🛠️ Détection et Correction Automatique Avancée
+
+### 1. Détection Proactive des Problèmes
+
+**Avant Modification:**
+```typescript
+async function prepareFileForModification(filePath: string): Promise<string> {
+  // 1. Lire fichier
+  const code = await read_file(filePath);
+  
+  // 2. Détecter anti-patterns
+  const antiPatterns = await detectAntiPatterns(code);
+  
+  // 3. Détecter problèmes potentiels
+  const potentialIssues = await detectPotentialIssues(code);
+  
+  // 4. Corriger automatiquement
+  let fixedCode = code;
+  for (const issue of [...antiPatterns, ...potentialIssues]) {
+    if (issue.canAutoFix) {
+      fixedCode = await autoFix(fixedCode, issue);
+    }
+  }
+  
+  // 5. Valider corrections
+  const validation = await validateCode(fixedCode);
+  if (validation.success) {
+    return fixedCode;
+  }
+  
+  // 6. Re-corriger si nécessaire
+  return await prepareFileForModification(filePath);
+}
+```
+
+### 2. Validation Continue Pendant Modification
+
+**Pattern:**
+```typescript
+async function modifyWithValidation(
+  code: string,
+  modification: Modification
+): Promise<string> {
+  // 1. Appliquer modification
+  let modifiedCode = applyModification(code, modification);
+  
+  // 2. Valider immédiatement
+  let validation = await validateModification(modifiedCode);
+  
+  // 3. Boucle de correction jusqu'à validation réussie
+  let attempts = 0;
+  while (!validation.success && attempts < 3) {
+    // Détecter problèmes
+    const issues = await detectIssues(modifiedCode);
+    
+    // Corriger automatiquement
+    modifiedCode = await autoFix(modifiedCode, issues);
+    
+    // Re-valider
+    validation = await validateModification(modifiedCode);
+    attempts++;
+  }
+  
+  if (!validation.success) {
+    // Documenter problèmes non auto-corrigeables
+    await documentIssues(modifiedCode, validation.errors);
+  }
+  
+  return modifiedCode;
+}
+```
+
+### 3. Détection de Code Dupliqué Intelligent
+
+**Pattern:**
+```typescript
+async function detectAndRefactorDuplication(code: string): Promise<string> {
+  // 1. Identifier code dupliqué
+  const duplications = await detectDuplications(code);
+  
+  // 2. Analyser patterns de duplication
+  const patterns = analyzeDuplicationPatterns(duplications);
+  
+  // 3. Extraire logique commune
+  for (const pattern of patterns) {
+    if (pattern.canExtract) {
+      code = await extractCommonLogic(code, pattern);
+    }
+  }
+  
+  // 4. Valider refactoring
+  const validation = await validateCode(code);
+  if (!validation.success) {
+    // Re-corriger si nécessaire
+    return await detectAndRefactorDuplication(code);
+  }
+  
+  return code;
+}
+```
+
+### 4. Optimisation Automatique des Imports
+
+**Pattern:**
+```typescript
+async function optimizeImports(code: string): Promise<string> {
+  // 1. Détecter imports inutilisés
+  const unusedImports = await detectUnusedImports(code);
+  
+  // 2. Détecter imports manquants
+  const missingImports = await detectMissingImports(code);
+  
+  // 3. Organiser imports selon conventions
+  const organizedImports = organizeImports(code, {
+    remove: unusedImports,
+    add: missingImports
+  });
+  
+  return organizedImports;
+}
+```
+
+### 5. Validation Multi-Niveaux
+
+**Pattern:**
+```typescript
+async function validateMultiLevel(code: string): Promise<ValidationResult> {
+  // Niveau 1: Syntaxe TypeScript
+  const syntaxValidation = await validateTypeScript(code);
+  if (!syntaxValidation.success) {
+    return syntaxValidation;
+  }
+  
+  // Niveau 2: Conventions du projet
+  const conventionValidation = await validateConventions(code);
+  if (!conventionValidation.success) {
+    return conventionValidation;
+  }
+  
+  // Niveau 3: Patterns du projet
+  const patternValidation = await validatePatterns(code);
+  if (!patternValidation.success) {
+    return patternValidation;
+  }
+  
+  // Niveau 4: Tests
+  const testValidation = await validateTests(code);
+  if (!testValidation.success) {
+    return testValidation;
+  }
+  
+  return { success: true };
+}
+```
 
 ## 🔗 Références
 

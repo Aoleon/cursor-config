@@ -303,18 +303,76 @@ describe('Component', () => {
 - [ ] Lire `activeContext.md` pour connaître l'état actuel
 - [ ] Lire `projectbrief.md` pour comprendre le périmètre
 - [ ] Vérifier fichiers de référence pertinents
+- [ ] Détecter anti-patterns dans fichiers cibles
+- [ ] Corriger anti-patterns automatiquement
+- [ ] Chercher code similaire existant (`codebase_search`)
 
 ### Pendant le Développement
 - [ ] Suivre patterns établis
 - [ ] Utiliser utilitaires partagés
+- [ ] Détecter anti-patterns en temps réel
+- [ ] Corriger anti-patterns automatiquement
 - [ ] Logger avec contexte structuré
 - [ ] Gérer erreurs avec types appropriés
+- [ ] Valider modifications après chaque étape
 
 ### Après le Développement
+- [ ] Détecter anti-patterns dans code modifié
+- [ ] Corriger anti-patterns automatiquement
+- [ ] Valider types TypeScript
+- [ ] Valider conventions du projet
 - [ ] Tester la fonctionnalité
 - [ ] Vérifier couverture de code
-- [ ] Mettre à jour documentation si nécessaire
 - [ ] Vérifier pas de régression
+- [ ] Mettre à jour documentation si nécessaire
+- [ ] Documenter apprentissages
+
+## 🔍 Détection Automatique Intégrée
+
+### Workflow avec Détection Automatique
+
+**Pattern pour Tous les Workflows:**
+```typescript
+async function executeWorkflowWithAutoDetection(
+  workflow: Workflow,
+  targetFiles: string[]
+): Promise<WorkflowResult> {
+  // 1. Préparer fichiers (détecter et corriger anti-patterns)
+  const preparedFiles = await Promise.all(
+    targetFiles.map(file => prepareFileForModification(file))
+  );
+  
+  // 2. Exécuter workflow
+  const results = await executeWorkflow(workflow, preparedFiles);
+  
+  // 3. Valider résultats
+  for (const result of results) {
+    // Détecter problèmes dans résultat
+    const issues = await detectIssues(result.code);
+    
+    // Corriger automatiquement
+    if (issues.length > 0) {
+      result.code = await autoFix(result.code, issues);
+      
+      // Re-valider
+      const validation = await validateCode(result.code);
+      if (!validation.success) {
+        // Documenter problèmes non auto-corrigeables
+        await documentIssues(result.code, validation.errors);
+      }
+    }
+  }
+  
+  // 4. Vérifier cohérence globale
+  const globalValidation = await validateGlobalConsistency(results);
+  if (!globalValidation.success) {
+    // Corriger incohérences
+    return await fixInconsistencies(results, globalValidation);
+  }
+  
+  return { success: true, results };
+}
+```
 
 ---
 

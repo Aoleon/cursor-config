@@ -1,6 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { withErrorHandling } from './utils/error-handler';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import { getCacheService, TTL_CONFIG } from './CacheService';
 import { getCorrelationId } from '../middleware/correlation';

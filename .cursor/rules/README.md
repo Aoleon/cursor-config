@@ -77,6 +77,7 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 - **context-usage.md** : Utilisation optimale du contexte @
 - **agent-optimization.md** : Stratégies d'optimisation de l'agent Cursor
 - **autonomous-workflows.md** : **NOUVEAU** Workflows autonomes pour runs plus longs
+- **auto-detection.md** : **NOUVEAU** Détection automatique des anti-patterns
 - **examples.md** : Exemples concrets du projet
 - **patterns.md** : Patterns réutilisables documentés
 - **quick-reference.md** : Référence rapide patterns
@@ -201,7 +202,8 @@ Les règles sont automatiquement chargées par Cursor selon le contexte. Vous po
 
 **Optimiser les performances de l'agent:**
 - `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation
-- `@.cursor/rules/autonomous-workflows.md` - **NOUVEAU** Workflows autonomes
+- `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes
+- `@.cursor/rules/auto-detection.md` - **NOUVEAU** Détection automatique anti-patterns
 - `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 - `@AGENTS.md` - Instructions complètes pour l'agent
 

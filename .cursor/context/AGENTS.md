@@ -715,7 +715,8 @@ await cacheService.set(cacheKey, result, { ttl: 86400 });
 ## 🎯 Optimisation du Comportement de l'Agent
 
 **Référence:** `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation complètes  
-**Référence:** `@.cursor/rules/autonomous-workflows.md` - **NOUVEAU** Workflows autonomes pour runs plus longs
+**Référence:** `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes pour runs plus longs  
+**Référence:** `@.cursor/rules/auto-detection.md` - **NOUVEAU** Détection automatique des anti-patterns
 
 ### Stratégies d'Optimisation
 
@@ -726,20 +727,28 @@ await cacheService.set(cacheKey, result, { ttl: 86400 });
 4. ✅ Vérifier fichiers de référence pertinents avec `@`
 5. ✅ Comprendre le contexte avant de modifier
 6. ✅ Chercher code similaire existant (`codebase_search`)
+7. ✅ Détecter anti-patterns dans fichiers cibles
+8. ✅ Corriger anti-patterns automatiquement
 
 **Pendant le Développement:**
 1. ✅ Utiliser patterns établis (ne pas réinventer)
 2. ✅ Réutiliser code existant (DRY principle)
 3. ✅ Suivre conventions de code du projet
-4. ✅ Tester au fur et à mesure
-5. ✅ Logger avec contexte structuré
+4. ✅ Détecter et corriger anti-patterns en temps réel
+5. ✅ Valider modifications après chaque étape
+6. ✅ Tester au fur et à mesure
+7. ✅ Logger avec contexte structuré
 
 **Après le Développement:**
-1. ✅ Vérifier tests passent
-2. ✅ Vérifier couverture de code
-3. ✅ Vérifier types TypeScript
-4. ✅ Mettre à jour documentation si nécessaire
-5. ✅ Vérifier pas de régression
+1. ✅ Détecter anti-patterns dans code modifié
+2. ✅ Corriger anti-patterns automatiquement
+3. ✅ Valider types TypeScript
+4. ✅ Valider conventions du projet
+5. ✅ Vérifier tests passent
+6. ✅ Vérifier couverture de code
+7. ✅ Vérifier pas de régression
+8. ✅ Mettre à jour documentation si nécessaire
+9. ✅ Documenter apprentissages
 
 ### Utilisation Optimale du Contexte
 
@@ -942,7 +951,8 @@ const adaptedStrategy = adaptStrategy(analysis);
 await updateStrategy(adaptedStrategy);
 ```
 
-**Référence:** `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes complets
+**Référence:** `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes complets  
+**Référence:** `@.cursor/rules/auto-detection.md` - Détection automatique des anti-patterns
 
 ## 📚 Ressources et Références
 
@@ -964,7 +974,8 @@ await updateStrategy(adaptedStrategy);
 - `.cursor/rules/frontend.md` - Patterns frontend
 - `.cursor/rules/workflows.md` - Workflows détaillés
 - `.cursor/rules/agent-optimization.md` - Stratégies d'optimisation agent
-- `.cursor/rules/autonomous-workflows.md` - **NOUVEAU** Workflows autonomes pour runs plus longs
+- `.cursor/rules/autonomous-workflows.md` - Workflows autonomes pour runs plus longs
+- `.cursor/rules/auto-detection.md` - **NOUVEAU** Détection automatique des anti-patterns
 - `.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 
 **Documentation Technique:**

@@ -198,9 +198,7 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const claims = tokens.claims();
       if (!claims) {
         logger.error('Claims OIDC manquants', {
@@ -268,14 +266,13 @@ export async function setupAuth(app: Express) {
       });
       
       verified(null, user);
-    
-    },
-    {
-      operation: 'if',
-      service: 'replitAuth',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[ReplitAuth] Erreur lors de la vérification OIDC', {
+        metadata: {
+          module: 'ReplitAuth',
+          operation: 'verifyOIDC',
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       verified(error, null);
     }

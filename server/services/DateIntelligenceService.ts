@@ -113,7 +113,7 @@ export interface CalculationContext {
   currentPhase: ProjectStatus;
   existingTimelines: ProjectTimeline[];
   constraints: PlanningConstraint[];
-  historicalData?: any[];
+  historicalData?: unknown[];
 }
 
 // ========================================

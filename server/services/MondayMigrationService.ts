@@ -16,7 +16,7 @@
 import type { IStorage } from '../storage-poc';
 import { withErrorHandling } from './utils/error-handler';
 import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
-import { insertAoSchema, insertProjectSchema, type InsertAo, type InsertProject } from '@shared/schema';
+import { insertAoSchema, insertProjectSchema, menuiserieTypeEnum, type InsertAo, type InsertProject } from '@shared/schema';
 import { generateRealisticJLMData, type MondayAoData, type MondayProjectData } from '../utils/mondayDataGenerator';
 import { validateMondayAoData, validateMondayProjectData, validateAndParseMondayDate } from '../utils/mondayValidator';
 import { ZodError } from 'zod';
@@ -580,7 +580,7 @@ service: 'MondayMigrationService',;
       endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // +3 mois par défaut
       mondayProjectId: validatedMondayData.mondayProjectId,
       // Extensions Monday.com
-      menuiserieType: validatedMondayData.projectSubtype?.toLowerCase() as any,
+      menuiserieType: validatedMondayData.projectSubtype?.toLowerCase() as unknown as typeof menuiserieTypeEnum.enumValues[number] | undefined,
       buildingCount: validatedMondayData.buildingCount
     };
 

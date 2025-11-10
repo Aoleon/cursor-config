@@ -35,9 +35,7 @@ export class RBACService {
     role: string, 
     tableName?: string
   ): Promise<UserPermissionsResponse> {
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Récupérer les permissions pour le rôle
       let permissionsQuery = db
         .select()
@@ -103,15 +101,15 @@ export class RBACService {
         contexts: userContexts,
         lastUpdated: new Date()
       };
-
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'RBACService',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[RBACService] Erreur lors de la récupération des permissions utilisateur', {
+        metadata: {
+          operation: 'getUserPermissions',
+          service: 'RBACService',
+          userId,
+          role,
+          error: error instanceof Error ? error.message : String(error)
+        }
       });
       throw new DatabaseError('Erreur lors de la récupération des permissions utilisateur', error as Error);
     }

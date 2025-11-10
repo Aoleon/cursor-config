@@ -390,7 +390,7 @@ export class CacheService {
     this.eventBus = eventBus;
 
     // Monday.com board updates
-    eventBus.on('monday:board:updated', async (data: any) => {
+    eventBus.on('monday:board:updated', async (data: unknown) => {
       const { boardId } = data;
       await this.invalidatePattern(`monday:board:${boardId}:*`);
       await this.invalidatePattern('monday:boards:*');

@@ -665,7 +665,7 @@ export class TechnicalMetricsService {
     }
   }
 
-  private async createPerformanceAlert(alert: any): Promise<void> {
+  private async createPerformanceAlert(alert: unknown): Promise<void> {
     return withErrorHandling(
     async () => {
 

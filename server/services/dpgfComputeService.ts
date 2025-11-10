@@ -317,7 +317,7 @@ export class DpgfComputeService {
   /**
    * Sérialise les données DPGF pour stockage (conversion Decimal -> string)
    */
-  static serializeForStorage(data: DpgfGroupedData): any {
+  static serializeForStorage(data: DpgfGroupedData): Record<string, unknown> {
     return {
       lots: data.lots.map(lot => ({
         lotNumber: lot.lotNumber,

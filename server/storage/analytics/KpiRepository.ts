@@ -1,5 +1,4 @@
 import { db } from '../../db';
-import { withErrorHandling } from './utils/error-handler';
 import { sql } from 'drizzle-orm';
 import type { ConsolidatedKpis } from '../../storage-poc';
 import { logger } from '../../utils/logger';
@@ -167,9 +166,7 @@ export class KpiRepository {
       }
     });
 
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Single optimized query with CTEs
       // Note: Using literal SQL for INTERVAL to avoid type inference issues
       const intervalValue = granularity === 'week' ? "'1 week'" : "'1 day'";
@@ -466,15 +463,12 @@ export class KpiRepository {
       });
 
       return kpiResult;
-
-    
-    },
-    {
-      operation: 'approach',
-      service: 'KpiRepository',
-      metadata: {}
-    }
-  );
+    } catch (error) {
+      logger.error('[KPI] Erreur lors de la récupération des KPIs consolidés', {
+        metadata: {
+          operation: 'getConsolidatedKpis',
+          service: 'KpiRepository',
+          error: error instanceof Error ? error.message : String(error)
         }
       });
       throw error;

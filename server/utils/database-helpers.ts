@@ -4,7 +4,6 @@
  */
 
 import { db } from '../db';
-import { withErrorHandling } from './utils/error-handler';
 import { logger } from './logger';
 import { DatabaseError } from './error-handler';
 import { sql } from 'drizzle-orm';

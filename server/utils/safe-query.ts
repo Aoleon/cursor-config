@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { logger } from './logger';
-import { DatabaseError, withErrorHandling } from './error-handler';
+import { DatabaseError } from './error-handler';
 import { isRetryableError, getDatabaseErrorMessage } from './database-helpers';
 import { sql } from 'drizzle-orm';
 
@@ -46,9 +46,7 @@ export async function safeQuery<T>(
   const startTime = Date.now();
   
   for (let attempt = 0; attempt < retries; attempt++) {
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Log query start if requested
       if (logQuery) {
         logger.debug('Executing database query', {
@@ -89,18 +87,33 @@ export async function safeQuery<T>(
       }
       
       return result;
+    } catch (error: any) {
+      lastError = error;
       
-    
-    },
-    {
-      operation: 'now',
-      service: 'safe-query',
-      metadata: {}
-    }
-  );
+      // Check if error is retryable
+      const retryable = error?.code === '40001' || error?.code === '40P01'; // Serialization failure or deadlock
+      
+      if (retryable && attempt < retries - 1) {
+        const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
+        logger.warn('Database query failed, retrying', {
+          service,
+          metadata: {
+            operation,
+            attempt: attempt + 1,
+            maxRetries: retries,
+            errorCode: error?.code,
+            delay
+          }
+        });
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
       
       // Log final failure with Postgres error details
       const pgError: any = lastError;
+      const duration = Date.now() - startTime;
       logger.error('Database query failed permanently', lastError, {
         service,
         metadata: {
@@ -148,9 +161,7 @@ export async function safeBatch<T>(
   
   const startTime = Date.now();
   
-  return withErrorHandling(
-    async () => {
-
+  try {
     logger.debug('Executing batch queries', {
       service,
       metadata: {
@@ -181,15 +192,17 @@ export async function safeBatch<T>(
     });
     
     return results;
-    
-  
-    },
-    {
-      operation: 'now',
-      service: 'safe-query',
-      metadata: {}
-    }
-  );
+  } catch (error) {
+    logger.error('Batch queries failed', {
+      service,
+      metadata: {
+        operation,
+        queryCount: queries.length,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    });
+    throw error;
+  }
 }
 
 /**
@@ -209,14 +222,23 @@ export async function executeWithMetrics<T>(
   },
   queryFn: () => Promise<T>
 ): Promise<T> {
-  return withErrorHandling(
-    () => safeQuery(queryFn, {
+  try {
+    return await safeQuery(queryFn, {
       service: context.service,
       operation: context.operation,
       logQuery: true
-    }),
-    context
-  );
+    });
+  } catch (error) {
+    logger.error('Query execution failed', {
+      service: context.service,
+      metadata: {
+        operation: context.operation,
+        ...context.metadata,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    });
+    throw error;
+  }
 }
 
 /**
@@ -233,19 +255,17 @@ export async function safeGetOne<T>(
   entityName: string = 'Record',
   options: SafeQueryOptions = {}
 ): Promise<T | null> {
-  return withErrorHandling(
-    async () => {
-
+  try {
     const result = await safeQuery(queryFn, options);
     return result ?? null;
-  
-    },
-    {
-      operation: 'now',
-      service: 'safe-query',
-      metadata: {}
-    }
-  );
+  } catch (error) {
+    logger.error(`Error getting ${entityName}`, {
+      metadata: {
+        service: 'SafeQuery',
+        operation: 'safeGetOne',
+        entityName,
+        error: error instanceof Error ? error.message : String(error)
+      }
     });
     return null;
   }
@@ -263,18 +283,15 @@ export async function safeCount(
   queryFn: () => Promise<number>,
   options: SafeQueryOptions = {}
 ): Promise<number> {
-  return withErrorHandling(
-    async () => {
-
+  try {
     return await safeQuery(queryFn, options);
-  
-    },
-    {
-      operation: 'now',
-      service: 'safe-query',
-      metadata: {}
-    }
-  );
+  } catch (error) {
+    logger.error('Error counting records', {
+      metadata: {
+        service: 'SafeQuery',
+        operation: 'safeCount',
+        error: error instanceof Error ? error.message : String(error)
+      }
     });
     return 0;
   }
@@ -292,22 +309,19 @@ export async function safeExists(
   queryFn: () => Promise<boolean | { exists: boolean }>,
   options: SafeQueryOptions = {}
 ): Promise<boolean> {
-  return withErrorHandling(
-    async () => {
-
+  try {
     const result = await safeQuery(queryFn, options);
     if (typeof result === 'boolean') {
       return result;
     }
     return result?.exists ?? false;
-  
-    },
-    {
-      operation: 'now',
-      service: 'safe-query',
-      metadata: {}
-    }
-  );
+  } catch (error) {
+    logger.error('Error checking existence', {
+      metadata: {
+        service: 'SafeQuery',
+        operation: 'safeExists',
+        error: error instanceof Error ? error.message : String(error)
+      }
     });
     return false;
   }
@@ -318,9 +332,7 @@ export async function safeExists(
  * Used to verify database connectivity
  */
 export async function healthCheck(): Promise<boolean> {
-  return withErrorHandling(
-    async () => {
-
+  try {
     await safeQuery(
       () => db.execute(sql`SELECT 1 as health`),
       {
@@ -331,14 +343,16 @@ export async function healthCheck(): Promise<boolean> {
       }
     );
     return true;
-  
-    },
-    {
-      operation: 'now',
-      service: 'safe-query',
-      metadata: {}
-    }
-  );
+  } catch (error) {
+    logger.error('Health check failed', {
+      metadata: {
+        service: 'SafeQuery',
+        operation: 'healthCheck',
+        error: error instanceof Error ? error.message : String(error)
+      }
+    });
+    return false;
+  }
 }
 
 /**
@@ -349,24 +363,22 @@ export async function safeInsert<T>(
   insertFn: () => Promise<T>,
   options: SafeQueryOptions = {}
 ): Promise<T> {
-  return withErrorHandling(
-    async () => {
-
+  try {
     return await safeQuery(insertFn, {
       ...options,
       service: options.service || 'SafeInsert',
       operation: options.operation || `insert_${tableName}`
     });
-  
-    },
-    {
-      operation: 'now',
-      service: 'safe-query',
-      metadata: {}
-    }
-  );
-  
-  return result;
+  } catch (error) {
+    logger.error('Error inserting record', {
+      metadata: {
+        service: 'SafeInsert',
+        operation: `insert_${tableName}`,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    });
+    throw error;
+  }
 }
 
 /**

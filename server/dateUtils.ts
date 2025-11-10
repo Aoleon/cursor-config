@@ -199,9 +199,7 @@ export function formaterDateFR(date?: Date | string | null, options: Intl.DateTi
       service: 'dateUtils',
       metadata: {}
     }
-  ); });
-    return '';
-  }
+  );
 }
 
 /**
@@ -232,9 +230,7 @@ export function calculerNombreJours(dateDebut?: Date | string | null, dateFin?: 
       service: 'dateUtils',
       metadata: {}
     }
-  ); });
-    return null;
-  }
+  );
 }
 
 /**

@@ -134,6 +134,68 @@ function method2() {
 - ✅ Éviter patterns qui échouent
 - ✅ Documenter apprentissages
 
+### 6. Détection Automatique des Anti-Patterns
+
+**Principe:** Détecter et corriger automatiquement les anti-patterns courants du projet.
+
+**Anti-Patterns à Détecter Automatiquement:**
+- ✅ `console.log`/`console.error` → Remplacer par `logger`
+- ✅ `throw new Error()` → Remplacer par erreurs typées
+- ✅ Types `any` → Remplacer par types stricts
+- ✅ Routes sans `asyncHandler` → Ajouter `asyncHandler`
+- ✅ Try-catch avec logging manuel → Utiliser `withErrorHandling`
+- ✅ Retry manuel → Utiliser `withRetry`
+- ✅ Vérifications null/undefined manuelles → Utiliser `assertExists`
+- ✅ Code dupliqué → Extraire en fonctions/services
+
+**Pattern de Détection:**
+```typescript
+// 1. Détecter anti-patterns avant modification
+const antiPatterns = await detectAntiPatterns(code);
+
+// 2. Trier par priorité
+const sortedPatterns = sortByPriority(antiPatterns);
+
+// 3. Corriger automatiquement
+let fixedCode = code;
+for (const pattern of sortedPatterns) {
+  if (pattern.canAutoFix) {
+    fixedCode = await autoFixAntiPattern(fixedCode, pattern);
+  } else {
+    await documentAntiPattern(pattern);
+  }
+}
+
+// 4. Valider corrections
+const validation = await validateCode(fixedCode);
+if (!validation.success) {
+  return await detectAndFixIssues(fixedCode);
+}
+```
+
+**Détection Proactive:**
+```typescript
+// Avant chaque modification
+async function prepareCodeForModification(filePath: string): Promise<string> {
+  const code = await read_file(filePath);
+  
+  // 1. Détecter anti-patterns
+  const issues = await detectAntiPatterns(code);
+  
+  // 2. Corriger automatiquement
+  const fixedCode = await autoFixIssues(code, issues);
+  
+  // 3. Valider
+  const validation = await validateCode(fixedCode);
+  if (validation.success) {
+    return fixedCode;
+  }
+  
+  // 4. Re-corriger si nécessaire
+  return await prepareCodeForModification(filePath);
+}
+```
+
 ## 🔍 Techniques Avancées
 
 ### 1. Analyse Contextuelle Multi-Niveaux
@@ -266,29 +328,237 @@ codebase_search("How is this type used correctly?", target_directories)
 - [ ] Lire `activeContext.md` pour connaître l'état actuel
 - [ ] Lire `projectbrief.md` pour comprendre le périmètre
 - [ ] Lire `systemPatterns.md` pour comprendre l'architecture
-- [ ] Chercher code similaire existant
+- [ ] Chercher code similaire existant (`codebase_search`)
 - [ ] Identifier patterns établis à suivre
+- [ ] Détecter anti-patterns dans fichiers à modifier
+- [ ] Corriger anti-patterns automatiquement
 
 ### Pendant le Développement
 - [ ] Utiliser patterns établis (ne pas réinventer)
 - [ ] Réutiliser code existant (DRY principle)
 - [ ] Suivre conventions de code du projet
+- [ ] Détecter et corriger anti-patterns en temps réel
 - [ ] Tester au fur et à mesure
 - [ ] Logger avec contexte structuré
+- [ ] Valider modifications après chaque étape
 
 ### Après le Développement
+- [ ] Détecter anti-patterns dans code modifié
+- [ ] Corriger anti-patterns automatiquement
 - [ ] Vérifier tests passent
 - [ ] Vérifier couverture de code
 - [ ] Vérifier types TypeScript
-- [ ] Mettre à jour documentation si nécessaire
 - [ ] Vérifier pas de régression
+- [ ] Mettre à jour documentation si nécessaire
 - [ ] Documenter apprentissages
+
+## 🔍 Détection Automatique des Problèmes Courants
+
+### Problèmes à Détecter et Corriger Automatiquement
+
+**1. console.log/console.error**
+```typescript
+// ❌ Détecté
+console.log('Message');
+console.error('Erreur', error);
+
+// ✅ Auto-corrigé
+import { logger } from '../utils/logger';
+logger.info('Message', { metadata: { context: 'value' } });
+logger.error('Erreur', error, { metadata: { operation: 'op' } });
+```
+
+**2. throw new Error()**
+```typescript
+// ❌ Détecté
+throw new Error('Message');
+
+// ✅ Auto-corrigé
+import { ValidationError, NotFoundError } from '../utils/error-handler';
+throw new ValidationError('Message'); // ou NotFoundError selon contexte
+```
+
+**3. Types `any`**
+```typescript
+// ❌ Détecté
+function process(data: any): any { }
+
+// ✅ Auto-corrigé
+import type { User, InsertUser } from '@shared/schema';
+function process(data: InsertUser): User { }
+```
+
+**4. Routes sans asyncHandler**
+```typescript
+// ❌ Détecté
+router.post('/api/route', async (req, res) => {
+  try {
+    // ...
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur' });
+  }
+});
+
+// ✅ Auto-corrigé
+import { asyncHandler } from '../utils/error-handler';
+router.post('/api/route', asyncHandler(async (req, res) => {
+  // Pas besoin de try-catch
+}));
+```
+
+**5. Try-catch avec logging manuel**
+```typescript
+// ❌ Détecté
+try {
+  const result = await operation();
+  console.log('Succès');
+  return result;
+} catch (error) {
+  console.error('Erreur', error);
+  throw error;
+}
+
+// ✅ Auto-corrigé
+import { withErrorHandling } from '../utils/error-handler';
+return withErrorHandling(
+  async () => {
+    const result = await operation();
+    logger.info('Succès', { metadata: { resultId: result.id } });
+    return result;
+  },
+  { operation: 'operation', service: 'ServiceName' }
+);
+```
+
+**6. Code dupliqué**
+```typescript
+// ❌ Détecté
+function method1() {
+  // logique A (dupliquée)
+  // logique B
+}
+function method2() {
+  // logique A (dupliquée)
+  // logique C
+}
+
+// ✅ Auto-corrigé
+function sharedLogicA() {
+  // logique A (réutilisable)
+}
+function method1() {
+  sharedLogicA();
+  // logique B
+}
+function method2() {
+  sharedLogicA();
+  // logique C
+}
+```
+
+## 🚀 Autonomie et Runs Longs
+
+### Stratégies pour Runs Autonomes Plus Longs
+
+**Principe:** L'agent doit être capable de travailler de manière autonome sur des runs plus longs sans intervention humaine.
+
+**TOUJOURS:**
+- ✅ Planifier les tâches complexes en sous-tâches
+- ✅ Valider chaque étape avant de continuer
+- ✅ Détecter et corriger les erreurs automatiquement
+- ✅ Documenter les actions importantes
+- ✅ Adapter les stratégies selon les résultats
+
+### 1. Planification Autonome
+
+**Pattern:**
+```typescript
+// 1. Analyser tâche complète
+const task = analyzeTask(userRequest);
+
+// 2. Décomposer en sous-tâches
+const subtasks = decomposeTask(task);
+
+// 3. Planifier exécution
+const plan = planExecution(subtasks);
+
+// 4. Exécuter avec validation
+for (const subtask of plan) {
+  const result = await executeSubtask(subtask);
+  validateResult(result);
+  if (!result.success) {
+    await autoCorrect(result);
+  }
+}
+```
+
+### 2. Validation et Auto-Correction Continue
+
+**Pattern:**
+```typescript
+// Après chaque modification
+const validation = await validateModification(modifiedCode);
+if (!validation.success) {
+  const correctedCode = await autoCorrect(modifiedCode, validation.errors);
+  const revalidation = await validateModification(correctedCode);
+  if (!revalidation.success) {
+    await documentIssue(correctedCode, revalidation.errors);
+  }
+}
+```
+
+### 3. Gestion d'Erreurs Autonome
+
+**Pattern:**
+```typescript
+async function executeWithRecovery(operation: () => Promise<Result>): Promise<Result> {
+  let attempts = 0;
+  while (attempts < 3) {
+    try {
+      const result = await operation();
+      if (validateResult(result)) {
+        return result;
+      }
+      await applyCorrection(result);
+      attempts++;
+    } catch (error) {
+      const correction = analyzeError(error);
+      if (correction.canAutoCorrect) {
+        await applyCorrection(correction);
+        attempts++;
+      } else {
+        await documentError(error);
+        throw error;
+      }
+    }
+  }
+  throw new Error('Max attempts reached');
+}
+```
+
+### 4. Apprentissage Continu
+
+**Pattern:**
+```typescript
+// Après chaque action
+const analysis = analyzeResult(result);
+if (analysis.success) {
+  await recordSuccessPattern(action, result);
+} else {
+  await recordFailurePattern(action, result);
+}
+const adaptedStrategy = adaptStrategy(analysis);
+await updateStrategy(adaptedStrategy);
+```
+
+**Référence:** `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes complets
 
 ## 🔗 Références
 
 ### Documentation Essentielle
 - `@AGENTS.md` - Instructions complètes pour l'agent
 - `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
+- `@.cursor/rules/autonomous-workflows.md` - **NOUVEAU** Workflows autonomes
 - `@.cursor/rules/common-tasks.md` - Tâches courantes
 - `@.cursor/rules/quick-reference.md` - Référence rapide
 
@@ -305,5 +575,5 @@ codebase_search("How is this type used correctly?", target_directories)
 
 ---
 
-**Note:** Ces stratégies d'optimisation améliorent significativement les performances de l'agent Cursor AI pour le projet Saxium.
+**Note:** Ces stratégies d'optimisation améliorent significativement les performances et l'autonomie de l'agent Cursor AI pour le projet Saxium.
 

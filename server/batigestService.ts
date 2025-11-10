@@ -724,9 +724,7 @@ export class BatigestService {
       service: 'batigestService',
       metadata: {}
     }
-  );`
-      };
-    }
+  );
   }
 
   /**

@@ -4,7 +4,7 @@
  */
 
 import { logger } from '../utils/logger';
-import { withErrorHandling } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
 
 // ========================================
 // TYPES ET INTERFACES

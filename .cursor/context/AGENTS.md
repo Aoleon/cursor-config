@@ -714,7 +714,8 @@ await cacheService.set(cacheKey, result, { ttl: 86400 });
 
 ## 🎯 Optimisation du Comportement de l'Agent
 
-**Référence:** `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation complètes
+**Référence:** `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation complètes  
+**Référence:** `@.cursor/rules/autonomous-workflows.md` - **NOUVEAU** Workflows autonomes pour runs plus longs
 
 ### Stratégies d'Optimisation
 
@@ -846,6 +847,103 @@ function method2() {
 }
 ```
 
+## 🚀 Autonomie et Runs Longs
+
+### Stratégies pour Runs Autonomes Plus Longs
+
+**Principe:** L'agent doit être capable de travailler de manière autonome sur des runs plus longs sans intervention humaine.
+
+**TOUJOURS:**
+- ✅ Planifier les tâches complexes en sous-tâches
+- ✅ Valider chaque étape avant de continuer
+- ✅ Détecter et corriger les erreurs automatiquement
+- ✅ Documenter les actions importantes
+- ✅ Adapter les stratégies selon les résultats
+
+### 1. Planification Autonome
+
+**Pattern:**
+```typescript
+// 1. Analyser tâche complète
+const task = analyzeTask(userRequest);
+
+// 2. Décomposer en sous-tâches
+const subtasks = decomposeTask(task);
+
+// 3. Planifier exécution
+const plan = planExecution(subtasks);
+
+// 4. Exécuter avec validation à chaque étape
+for (const subtask of plan) {
+  const result = await executeSubtask(subtask);
+  validateResult(result);
+  if (!result.success) {
+    await autoCorrect(result);
+  }
+}
+```
+
+### 2. Validation et Auto-Correction Continue
+
+**Pattern:**
+```typescript
+// Après chaque modification
+const validation = await validateModification(modifiedCode);
+if (!validation.success) {
+  const correctedCode = await autoCorrect(modifiedCode, validation.errors);
+  const revalidation = await validateModification(correctedCode);
+  if (!revalidation.success) {
+    await documentIssue(correctedCode, revalidation.errors);
+  }
+}
+```
+
+### 3. Gestion d'Erreurs Autonome
+
+**Pattern:**
+```typescript
+async function executeWithRecovery(operation: () => Promise<Result>): Promise<Result> {
+  let attempts = 0;
+  while (attempts < 3) {
+    try {
+      const result = await operation();
+      if (validateResult(result)) {
+        return result;
+      }
+      await applyCorrection(result);
+      attempts++;
+    } catch (error) {
+      const correction = analyzeError(error);
+      if (correction.canAutoCorrect) {
+        await applyCorrection(correction);
+        attempts++;
+      } else {
+        await documentError(error);
+        throw error;
+      }
+    }
+  }
+  throw new Error('Max attempts reached');
+}
+```
+
+### 4. Apprentissage Continu
+
+**Pattern:**
+```typescript
+// Après chaque action
+const analysis = analyzeResult(result);
+if (analysis.success) {
+  await recordSuccessPattern(action, result);
+} else {
+  await recordFailurePattern(action, result);
+}
+const adaptedStrategy = adaptStrategy(analysis);
+await updateStrategy(adaptedStrategy);
+```
+
+**Référence:** `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes complets
+
 ## 📚 Ressources et Références
 
 ### Documentation Essentielle
@@ -865,7 +963,8 @@ function method2() {
 - `.cursor/rules/backend.md` - Patterns backend
 - `.cursor/rules/frontend.md` - Patterns frontend
 - `.cursor/rules/workflows.md` - Workflows détaillés
-- `.cursor/rules/agent-optimization.md` - **NOUVEAU** Stratégies d'optimisation agent
+- `.cursor/rules/agent-optimization.md` - Stratégies d'optimisation agent
+- `.cursor/rules/autonomous-workflows.md` - **NOUVEAU** Workflows autonomes pour runs plus longs
 - `.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 
 **Documentation Technique:**

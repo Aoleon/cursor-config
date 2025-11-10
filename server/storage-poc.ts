@@ -3206,7 +3206,7 @@ export const storage: IStorage = new DatabaseStorage();
 
 // FORCE: Assurer que les méthodes SQL d'agrégation sont disponibles sur l'instance
 logger.info('[STORAGE-POC] Module-level code executing - checking SQL aggregation methods...');
-const dbStorage = storage as any;
+const dbStorage = storage as unknown as Record<string, unknown>;
 logger.info('[STORAGE-POC] Methods check:', {
   hasGetProjectStats: !!dbStorage.getProjectStats,
   hasGetOfferStats: !!dbStorage.getOfferStats,
@@ -3233,7 +3233,7 @@ if (!dbStorage.getProjectStats || !dbStorage.getOfferStats || !dbStorage.getConv
   });
   
   // Bind all SQL aggregation methods from DatabaseStorage prototype
-  const proto = DatabaseStorage.prototype as any;
+  const proto = DatabaseStorage.prototype as unknown as Record<string, unknown>;
   if (proto.getProjectStats) dbStorage.getProjectStats = proto.getProjectStats.bind(storage);
   if (proto.getOfferStats) dbStorage.getOfferStats = proto.getOfferStats.bind(storage);
   if (proto.getConversionStats) dbStorage.getConversionStats = proto.getConversionStats.bind(storage);

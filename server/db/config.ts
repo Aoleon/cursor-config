@@ -100,7 +100,6 @@ class ConnectionManager extends EventEmitter {
       metadata: {}
     }
   );
-    });
 
     // Connection lifecycle events
     this.pool.on('connect', (client: PoolClient) => {
@@ -240,11 +239,20 @@ class ConnectionManager extends EventEmitter {
       if (this.pool) {
         try {
           await this.pool.end();
-        
+        } catch (error) {
+          logger.error('Error closing pool', {
+            metadata: {
+              module: 'DatabaseConfig',
+              operation: 'disconnect',
+              error: error instanceof Error ? error.message : String(error)
+            }
+          });
+        }
+      }
     },
     {
-      operation: 'now',
-service: 'config',;
+      operation: 'disconnect',
+      service: 'config',
       metadata: {}
     }
   );
@@ -261,13 +269,20 @@ service: 'config',;
     const client = await this.pool.connect();
     return withErrorHandling(
     async () => {
-
-      await client.query('SELECT 1');
-      this.connectionStats.successfulQueries++;
-      this.connectionStats.lastSuccess = new Date();
-    } finally {
-      client.release();
+      try {
+        await client.query('SELECT 1');
+        this.connectionStats.successfulQueries++;
+        this.connectionStats.lastSuccess = new Date();
+      } finally {
+        client.release();
+      }
+    },
+    {
+      operation: 'testConnection',
+      service: 'config',
+      metadata: {}
     }
+  );
   }
 
   /**
@@ -287,14 +302,13 @@ service: 'config',;
 
       try {
         await this.testConnection();
-      
-    },
-    {
-      operation: 'now',
-service: 'config',;
-      metadata: {}
-    }
-  );
+      } catch (error) {
+        logger.error('Health check failed', {
+          metadata: {
+            module: 'DatabaseConfig',
+            operation: 'healthCheck',
+            error: error instanceof Error ? error.message : String(error)
+          }
         });
         
         if (this.isCriticalError(error as Error)) {

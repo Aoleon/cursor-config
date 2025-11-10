@@ -16,6 +16,15 @@ expect {
         send "\r"
         exp_continue
     }
+    "Is * column in * table created or renamed from another column?" {
+        # Sélectionner la première option (créer colonne) en appuyant sur Entrée
+        send "\r"
+        exp_continue
+    }
+    -ex "all table conflicts resolved" {
+        # Continuer après résolution des conflits de tables
+        exp_continue
+    }
     "Push schema changes to database?" {
         # Confirmer le push
         send "y\r"

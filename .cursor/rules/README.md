@@ -64,6 +64,8 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 ├── auto-refactoring.md # Auto-refactoring intelligent (P1)
 ├── code-sentiment-analysis.md # Analyse de sentiment du code (P1)
 ├── auto-test-generation.md # Génération automatique de tests (P1)
+├── tool-call-limit-workaround.md # Contournement limite 1000 tool calls (P1 - détails)
+├── cursor-limits-workaround.md # Système unifié de contournement toutes limites Cursor (P1 - IMPÉRATIF)
 ├── multi-agent-coordination.md # Coordination multi-agents (P2)
 └── reinforcement-learning.md # Apprentissage par renforcement (P2)
 ├── context-detection.md  # Détection automatique du contexte
@@ -179,6 +181,8 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 - **auto-refactoring.md** : Auto-refactoring intelligent (élimination duplication, application patterns, simplification)
 - **code-sentiment-analysis.md** : Analyse de sentiment du code (score qualité, détection code smells, recommandations)
 - **auto-test-generation.md** : Génération automatique de tests (tests unitaires, régression, performance, couverture)
+- **tool-call-limit-workaround.md** : Contournement limite 1000 tool calls (surveillance, checkpointing automatique, continuation intelligente, optimisation agressive)
+- **cursor-limits-workaround.md** : Système unifié de contournement toutes limites Cursor (surveillance multi-limites, contournements coordonnés, optimisation globale, validation)
 - **multi-agent-coordination.md** : Coordination multi-agents (orchestration, communication, collaboration)
 - **reinforcement-learning.md** : Apprentissage par renforcement (récompenses/pénalités, ajustement stratégies)
 

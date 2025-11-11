@@ -93,6 +93,8 @@ Ces règles sont importantes mais spécifiques à un domaine. Elles sont chargé
 - `auto-refactoring.md` - Auto-refactoring intelligent (élimination duplication, patterns)
 - `code-sentiment-analysis.md` - Analyse de sentiment du code (score qualité, code smells)
 - `auto-test-generation.md` - Génération automatique de tests (tests unitaires, régression, performance)
+- `tool-call-limit-workaround.md` - Contournement limite 1000 tool calls (checkpointing, continuation)
+- `cursor-limits-workaround.md` - Système unifié de contournement toutes limites Cursor (tool calls, contexte, MCP, fichiers, quotas) (IMPÉRATIF)
 
 **Quand charger:**
 - Automatiquement si modification dans le domaine correspondant
@@ -196,6 +198,11 @@ Ces règles optimisent le comportement de l'agent mais ne sont pas essentielles 
 - Tâche avec risques potentiels → Charger `predictive-problem-detection.md` (prédiction problèmes)
 - Tâche avec code dupliqué → Charger `auto-refactoring.md` (auto-refactoring)
 - Tâche nécessitant tests → Charger `auto-test-generation.md` (génération tests)
+- Tool calls > 800 → Charger `cursor-limits-workaround.md` (système unifié) (IMPÉRATIF)
+- Contexte > 80% → Charger `cursor-limits-workaround.md` (système unifié) (IMPÉRATIF)
+- MCP Tools > 32 → Charger `cursor-limits-workaround.md` (système unifié) (IMPÉRATIF)
+- Fichiers > 50KB → Charger `cursor-limits-workaround.md` (système unifié) (IMPÉRATIF)
+- Quotas mensuels < 50 → Charger `cursor-limits-workaround.md` (système unifié) (IMPÉRATIF)
 - Tâche récurrente → Charger `learning-memory.md` + `workflow-consolidation.md`
 - Tâche avec problèmes de performance → Charger `auto-performance-detection.md`
 - Contexte saturé → Charger `context-optimization.md` (IMPÉRATIF)

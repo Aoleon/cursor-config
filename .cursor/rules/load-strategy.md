@@ -153,6 +153,8 @@ Documentation de la stratégie de chargement optimisée des règles Cursor pour 
 - P1: `auto-refactoring.md` (si code dupliqué) (1)
 - P1: `code-sentiment-analysis.md` (si évaluation qualité) (1)
 - P1: `auto-test-generation.md` (si génération tests) (1)
+- P1: `tool-call-limit-workaround.md` (si tool calls > 800) (détails) (1)
+- P1: `cursor-limits-workaround.md` (si approche de toute limite Cursor) (IMPÉRATIF) (1)
 - P1: `similar-code-detection.md` (si création/modification) (1)
 - P1: `learning-memory.md` (si tâche récurrente) (1)
 - P1: `preventive-validation.md` (IMPÉRATIF avant modification) (1)

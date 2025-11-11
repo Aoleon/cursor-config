@@ -600,7 +600,31 @@ router.post('/api/users',
 
 **Référence:** `@.cursor/rules/senior-architect-oversight.md` - Workflow d'itération architecturale avec validation continue
 
-### 26. Décomposition des Tâches (IMPÉRATIF)
+### 26. Contournement Système Unifié des Limites Cursor (IMPÉRATIF)
+
+**IMPÉRATIF:** L'agent DOIT surveiller et contourner automatiquement toutes les limites de Cursor (tool calls, contexte, MCP, fichiers, quotas) avec optimisation globale.
+
+**TOUJOURS:**
+- ✅ Surveiller toutes les limites simultanément (tool calls, contexte, MCP, fichiers, quotas)
+- ✅ Détecter approche de chaque limite
+- ✅ Prioriser contournements selon criticité
+- ✅ Appliquer contournements coordonnés
+- ✅ Optimiser globalement pour éviter conflits
+- ✅ Valider que contournements fonctionnent
+
+**Limites surveillées:**
+- Tool calls (< 1000) - Checkpointing automatique
+- Contexte tokens (< 200k/1M) - Max Mode, compression
+- Outils MCP (< 40) - Désactivation non essentiels
+- Taille fichiers (< 50KB) - Approche deux étapes
+- Édition multi-fichiers - Division en modules
+- Quotas mensuels - Mode économie, sélection modèle
+- Performance grands projets - `.cursorignore`, segmentation
+
+**Référence:** `@.cursor/rules/cursor-limits-workaround.md` - Système unifié de contournement (IMPÉRATIF)  
+**Référence:** `@.cursor/rules/tool-call-limit-workaround.md` - Contournement limite 1000 tool calls (détails)
+
+## 27. Décomposition des Tâches (IMPÉRATIF)
 
 **IMPÉRATIF:** Décomposer automatiquement les tâches complexes en sous-tâches gérables selon les recommandations officielles de Cursor, avec critères de taille optimale, pensée séquentielle, Background Agent et listes structurées.
 

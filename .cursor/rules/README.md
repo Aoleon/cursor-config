@@ -14,6 +14,7 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 ├── core.md               # Règles fondamentales (P0 - toujours appliquées)
 ├── quality-principles.md # Principes de qualité (P0 - toujours appliquées)
 ├── code-quality.md       # Standards qualité code (P0 - toujours appliquées)
+├── request-timeout-prevention.md # Prévention des abandons de requêtes (P0 - IMPÉRATIF)
 ├── backend.md            # Règles spécifiques backend (P1)
 ├── frontend.md           # Règles spécifiques frontend (P1)
 ├── ai-services.md        # Règles services IA (P1)
@@ -29,6 +30,7 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 ├── client-consultant-oversight.md # Supervision consultant client (P1 - IMPÉRATIF)
 ├── migration-refactoring-manager.md # Gestionnaire migration/refactoring (P1 - IMPÉRATIF)
 ├── tech-debt-manager.md # Gestionnaire dette technique (P1 - IMPÉRATIF)
+├── update-manager.md # Gestionnaire de mises à jour (P1 - IMPÉRATIF)
 ├── hard-coding-specialist.md # Spécialiste hard coding (P1 - IMPÉRATIF)
 ├── todo-completion.md    # Completion des todos (P1 - IMPÉRATIF)
 ├── iterative-perfection.md # Itération automatique jusqu'à perfection (P1 - IMPÉRATIF)
@@ -242,6 +244,13 @@ Cette matrice clarifie les responsabilités principales et secondaires de chaque
 - Planification consolidation services
 - Collaboration avec Migration Manager et Hard Coding Specialist
 
+**Update Manager:**
+- Détection automatique mises à jour exclusive
+- Analyse risques et breaking changes
+- Planification structurée par phases
+- Validation sécurisée après mise à jour
+- Collaboration avec Dependency Intelligence et Architecte Sénior
+
 **Hard Coding Specialist:**
 - Réduction radicale erreurs exclusive
 - Automatisation tâches complexes
@@ -279,6 +288,13 @@ Cette matrice clarifie les responsabilités principales et secondaires de chaque
 - ✅ Planification consolidation services
 - ✅ Réduction fichiers monolithiques
 - ✅ Détection anti-patterns et code smells
+
+**Update Manager:**
+- ✅ Modification de package.json ou dépendances
+- ✅ Demande explicite de vérification de mises à jour
+- ✅ Détection automatique mises à jour disponibles
+- ✅ Analyse risques et breaking changes
+- ✅ Planification et exécution mises à jour structurées
 
 **Hard Coding Specialist:**
 - ✅ Tâche complexe nécessitant hard coding

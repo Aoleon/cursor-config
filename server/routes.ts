@@ -181,9 +181,8 @@ export async function registerRoutes(app: Express) {
             metadata: {
               module: 'Routes',
               operation: 'warmupCache'
-            
-        
-      });
+            }
+          });
         },
         {
           operation: 'registerRoutes',

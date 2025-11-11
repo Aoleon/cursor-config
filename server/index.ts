@@ -233,8 +233,7 @@ app.use((req, res, next) => {
         metadata: {
           module: 'ExpressApp',
           operation: 'integratePredictiveEngine'
-        
-        
+        }
       });
       await eventBus.integratePredictiveEngine(predictiveEngineService);
       logger.info('Intégration PredictiveEngine terminée', {

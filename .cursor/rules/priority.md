@@ -18,6 +18,7 @@ Ces règles sont fondamentales et doivent toujours être appliquées, quel que s
 - `core.md` - Règles fondamentales du projet
 - `quality-principles.md` - Philosophie de qualité (robustesse, performance, maintenabilité)
 - `code-quality.md` - Standards stricts de qualité code
+- `request-timeout-prevention.md` - Prévention des abandons de requêtes (IMPÉRATIF - éviter "User aborted request")
 
 **Contenu:**
 - Contexte du projet
@@ -59,6 +60,7 @@ Ces règles sont importantes mais spécifiques à un domaine. Elles sont chargé
 - `client-consultant-oversight.md` - Supervision consultant client (IMPÉRATIF - validation cahier des charges, audit, objectifs business, problématiques de base)
 - `migration-refactoring-manager.md` - Gestionnaire migration/refactoring (IMPÉRATIF - supervision migration modulaire, détection régressions, validation cohérence)
 - `tech-debt-manager.md` - Gestionnaire dette technique (IMPÉRATIF - identification services dupliqués, planification consolidation, réduction monolithiques)
+- `update-manager.md` - Gestionnaire de mises à jour (IMPÉRATIF - détection automatique mises à jour, analyse risques, planification structurée, validation sécurisée)
 - `hard-coding-specialist.md` - Spécialiste hard coding (IMPÉRATIF - réduction radicale erreurs, automatisation tâches complexes, approche créative innovante)
 - `todo-completion.md` - Completion des todos (IMPÉRATIF - éviter interruptions)
 - `iterative-perfection.md` - Itération automatique jusqu'à perfection (IMPÉRATIF - éviter arrêt prématuré)
@@ -150,7 +152,7 @@ Ces règles optimisent le comportement de l'agent mais ne sont pas essentielles 
 
 **Tâche Complexe / Run Autonome:**
 - P0: `core.md`, `quality-principles.md`, `code-quality.md`
-- P1: Selon domaine (backend/frontend/IA) + `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `migration-refactoring-manager.md` (IMPÉRATIF si migration/refactoring) + `tech-debt-manager.md` (IMPÉRATIF si dette technique) + `hard-coding-specialist.md` (IMPÉRATIF si tâche complexe nécessitant hard coding) + `todo-completion.md` (IMPÉRATIF) + `iterative-perfection.md` (IMPÉRATIF) + `persistent-execution.md` (IMPÉRATIF - éviter arrêts prématurés, runs longs) + `advanced-iteration-and-role-coordination.md` (IMPÉRATIF - maximiser autonomie, durée, qualité) + `task-decomposition.md` (IMPÉRATIF - décomposition avec critères de taille, pensée séquentielle, Background Agent, listes structurées) + `similar-code-detection.md` + `learning-memory.md` + `preventive-validation.md` + `auto-performance-detection.md` + `context-optimization.md` + `workflow-consolidation.md` + `dependency-intelligence.md` + `intelligent-model-selection.md` + `search-cache.md` + `parallel-execution.md` + `batch-processing.md` + `error-recovery.md` + `conflict-detection.md` + `bug-prevention.md`
+- P1: Selon domaine (backend/frontend/IA) + `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `migration-refactoring-manager.md` (IMPÉRATIF si migration/refactoring) + `tech-debt-manager.md` (IMPÉRATIF si dette technique) + `update-manager.md` (IMPÉRATIF si modification package.json ou dépendances) + `hard-coding-specialist.md` (IMPÉRATIF si tâche complexe nécessitant hard coding) + `todo-completion.md` (IMPÉRATIF) + `iterative-perfection.md` (IMPÉRATIF) + `persistent-execution.md` (IMPÉRATIF - éviter arrêts prématurés, runs longs) + `advanced-iteration-and-role-coordination.md` (IMPÉRATIF - maximiser autonomie, durée, qualité) + `task-decomposition.md` (IMPÉRATIF - décomposition avec critères de taille, pensée séquentielle, Background Agent, listes structurées) + `similar-code-detection.md` + `learning-memory.md` + `preventive-validation.md` + `auto-performance-detection.md` + `context-optimization.md` + `workflow-consolidation.md` + `dependency-intelligence.md` + `intelligent-model-selection.md` + `search-cache.md` + `parallel-execution.md` + `batch-processing.md` + `error-recovery.md` + `conflict-detection.md` + `bug-prevention.md`
 - P2: `pre-task-evaluation.md`, `autonomous-workflows.md`, `agent-optimization.md`
 
 ## 🔄 Stratégie de Chargement Optimisée
@@ -188,6 +190,8 @@ Ces règles optimisent le comportement de l'agent mais ne sont pas essentielles 
 - Tâche complexe ou run autonome → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `hard-coding-specialist.md` (IMPÉRATIF si tâche complexe nécessitant hard coding) + `task-decomposition.md` (IMPÉRATIF - décomposition avec critères de taille, pensée séquentielle, Background Agent, listes structurées) + `intelligent-task-detection.md` (détection automatique complexité)
 - Tâche de migration/refactoring → Charger `migration-refactoring-manager.md` (IMPÉRATIF)
 - Tâche de consolidation/dette technique → Charger `tech-debt-manager.md` (IMPÉRATIF)
+- Modification de package.json ou tâche liée aux dépendances → Charger `update-manager.md` (IMPÉRATIF - détection automatique mises à jour, analyse risques)
+- Demande explicite de vérification de mises à jour → Charger `update-manager.md` (IMPÉRATIF)
 - Tâche avec plusieurs todos → Charger `todo-completion.md` (IMPÉRATIF) + `task-decomposition.md` (IMPÉRATIF - génération listes structurées avec dépendances)
 - Tâche nécessitant itération → Charger `iterative-perfection.md` (IMPÉRATIF)
 - Tâche de création/modification → Charger `similar-code-detection.md` + `preventive-validation.md` + `dependency-intelligence.md` + `auto-documentation.md` (si documentation nécessaire)

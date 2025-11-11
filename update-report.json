@@ -1,0 +1,28 @@
+{
+  "timestamp": 1762873418310,
+  "total": 1,
+  "patch": [
+    {
+      "name": "bufferutil",
+      "current": "unknown",
+      "wanted": "4.0.9",
+      "latest": "4.0.9",
+      "type": "PATCH",
+      "location": "unknown",
+      "dependent": "qYmHP"
+    }
+  ],
+  "minor": [],
+  "major": [],
+  "packages": [
+    {
+      "name": "bufferutil",
+      "current": "unknown",
+      "wanted": "4.0.9",
+      "latest": "4.0.9",
+      "type": "PATCH",
+      "location": "unknown",
+      "dependent": "qYmHP"
+    }
+  ]
+}

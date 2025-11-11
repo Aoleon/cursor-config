@@ -371,7 +371,7 @@ export class EventBus extends EventEmitter {
     alertId: string;
     action: 'acknowledged' | 'validated' | 'bypassed';
     userId?: string;
-    metadata?: Record<st, unknown>unknown>;
+    metadata?: Record<string, unknown>;
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.TECHNICAL_ALERT,
@@ -737,7 +737,7 @@ export class EventBus extends EventEmitter {
     triggeredCriteria: string[];
     aoId?: string;
     userId?: string;
-    metadata?: Recor, unknown>unknown>unknown>;
+    metadata?: Record<string, unknown>;
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.TECHNICAL_ALERT,
@@ -1223,7 +1223,7 @@ export class EventBus extends EventEmitter {
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED,
-      entity: params.entas unknown, unknown,
+      entity: params.entity,
       entityId: params.entityId,
       severity: 'info',
       title: '✅ Alerte Accusée Réception',
@@ -1263,7 +1263,7 @@ export class EventBus extends EventEmitter {
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_RESOLVED,
-      entity: paramsas unknown, as unknown,
+      entity: params.entity,
       entityId: params.entityId,
       severity: 'success',
       title: '🎉 Alerte Résolue',
@@ -1301,7 +1301,7 @@ export class EventBus extends EventEmitter {
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.SYSTEM_MAINTENANCE, // Utiliser le type système existant pour escalade
-      entity: paas unknown,tas unknown unknown,
+      entity: params.entity,
       entityId: params.entityId,
       severity: 'error',
       title: '🚨 ESCALADE CRITIQUE',
@@ -1856,7 +1856,7 @@ export class EventBus extends EventEmitter {
   /**
    * Configure l'intégration avec PredictiveEngine pour déclencheurs automatiques
    */
-  public integratePredictiveEngine(predictiveEn: unknown)unknown): void {
+  public integratePredictiveEngine(predictiveEngine: unknown): void {
     this.predictiveEngine = predictiveEngine;
     
     logger.info('Intégration PredictiveEngine activée', {

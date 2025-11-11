@@ -362,8 +362,8 @@ export class ErrorCollector {
         {
           operation: 'triggerAlerts',
           service: 'error-collector',
-          metadata: {
-      });
+          metadata: {}
+        });
     });
   }
 

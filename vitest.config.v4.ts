@@ -3,8 +3,12 @@ import { defineConfig } from 'vitest/config'
 import { resolve } from 'path'
 
 /**
- * Configuration Vitest pour Tests Phase 2.5
+ * Configuration Vitest 4.0 pour Tests Phase 2.5
  * Suite exhaustive intelligence temporelle menuiserie française
+ * 
+ * MIGRATION VITEST 4.0:
+ * - deps.inline → deps.optimizer.web.include
+ * - verbose → tree (pour affichage arborescent)
  */
 
 export default defineConfig({
@@ -118,3 +122,4 @@ export default defineConfig({
     target: 'node18'
   }
 })
+

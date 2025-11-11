@@ -176,7 +176,7 @@
     "ws": "^8.18.3",
     "xlsx": "^0.18.5",
     "zod": "^4.1.12",
-    "zod-validation-error": "^5.0.0"
+    "zod-validation-error": "^4.0.2"
   },
   "devDependencies": {
     "@replit/vite-plugin-cartographer": "^0.4.3",

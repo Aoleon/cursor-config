@@ -288,7 +288,7 @@ export function databaseErrorHandler(
           message: userMessage,
           statusCode,
           // Include request ID for support reference
-          requestId: (as unknown)unknown).id || Date.now().toString(36)
+          requestId: (req as unknown as { id?: string })?.id || Date.now().toString(36)
         }
       });
     }

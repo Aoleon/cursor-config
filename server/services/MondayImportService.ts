@@ -56,8 +56,8 @@ export class MondayImportService {
           operation: 'importBoardAsProjects',
           boardId,
           mappingCount: mapping.columnMappings.length
-        }
-      });
+
+            });
 
       const boardData = await mondayService.getBoardData(boardId);
       const items = boardData.items;
@@ -74,8 +74,8 @@ export class MondayImportService {
               itemId: item.id,
               itemName: item.name,
               projectData
-            }
-          });
+
+                });
           
           // Remove undefined values before validation
           const cleanedData = this.removeUndefined(projectData);
@@ -87,13 +87,13 @@ export class MondayImportService {
               operation: 'importBoardAsProjects',
               itemId: item.id,
               cleanedData
-            }
-          });
+
+                });
           
           // Validate data with Zod schema
           const validation = insertProjectSchema.safeParse(cleanedData);
           if (!validation.success) {
-            const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+            const errors = validation.error.issues.map(i => `$) {i.path.join('.')}: ${i.message}`).join(', ');
             logger.error('❌ [DEBUG] Validation Zod échouée', {
               service: 'MondayImportService',
               metadata: {
@@ -102,8 +102,8 @@ export class MondayImportService {
                 errors,
                 cleanedData,
                 validationIssues: validation.error.issues
-              }
-            });
+
+                  });
             result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
             continue;
           }
@@ -115,8 +115,8 @@ export class MondayImportService {
               operation: 'importBoardAsProjects',
               itemId: item.id,
               validatedData: validation.data
-            }
-          });
+
+                });
 
           // Check if project already exists with this mondayItemId (upsert strategy)
           logger.info('🔍 [DEBUG] Checking for existing project', {
@@ -125,8 +125,8 @@ export class MondayImportService {
               operation: 'importBoardAsProjects',
               itemId: item.id,
               mondayItemId: item.id
-            }
-          });
+
+                });
           
           const existingProject = await storage.getProjectByMondayItemId(item.id);
           
@@ -136,8 +136,7 @@ export class MondayImportService {
               operation: 'importBoardAsProjects',
               itemId: item.id,
               existingProject: existingProject ? { id: existingProject.id, name: existingProject.name } : null
-            }
-          });
+            });
 
           // Convert decimal fields back to string for Postgres (Zod transforms them to number)
           const dataForStorage = this.removeUndefined({
@@ -146,11 +145,11 @@ export class MondayImportService {
               ? validation.data.montantEstime.toString() 
               : validation.data.montantEstime,
             montantFinal: typeof (validation.data as unknown).montantFinal === 'number'
-              ? (validation.das unknown)unknown).montantFinal.toString()
+              ? (validation.das unknown).montantFinal.toString()
               : (validatias unknown) as unknown).montantFinal,
-            budget: typeof (valias unknown)das unknunknown)unknown).budget === 'number'
-              ? (as unknown)ias unknunknown)unknown any).budget.toString()
-             as unknown)ias unknunknown)unknowna as any).budget
+            budget: typeof (valias unknown)das unknown).budget === 'number'
+              ? (as unknown)ias unknown)unknown any).budget.toString()
+             as unknown)ias unknown)unknowna as any).budget
           });
           
           logger.info('🔍 [DEBUG] Data for storage', {
@@ -159,8 +158,8 @@ export class MondayImportService {
               operation: 'importBoardAsProjects',
               itemId: item.id,
               dataForStorage
-            }
-          });
+
+                });
 
           let project;
           let wasUpdate = false;
@@ -173,9 +172,9 @@ export class MondayImportService {
                 operation: 'importBoardAsProjects',
                 projectId: existingProject.id,
                 itemId: item.id
-              }
-            });
-            project = await storage.updateProject(existingProas unknown),as unknunknown)unknownorage as any);
+
+                  });
+            project = await storage.updateProject(existingProas unknown),as unknown)unknownorage as any);
             wasUpdate = true;
             logger.info('Projet mis à jour depuis Monday', {
               service: 'MondayImportService',
@@ -184,8 +183,8 @@ export class MondayImportService {
                 projectId: project.id,
                 mondayItemId: item.id,
                 action: 'update'
-              }
-            });
+
+                  });
           } else {
             // Create new project
             logger.info('🔍 [DEBUG] Creating new project', {
@@ -193,10 +192,10 @@ export class MondayImportService {
               metadata: {
                 operation: 'importBoardAsProjects',
                 itemId: item.id
-              }
-            });
+
+                  });
             
-            project = await storage.cas unknown)oas unknunknown)unknownorStorage as any);
+            project = await storage.cas unknown)oas unknown)unknownorStorage as any);
             
             logger.info('✅ [DEBUG] Projet créé depuis Monday', {
               service: 'MondayImportService',
@@ -205,8 +204,8 @@ export class MondayImportService {
                 projectId: project.id,
                 mondayItemId: item.id,
                 action: 'create'
-              }
-            });
+
+                  });
           }
           
           result.importedCount++;
@@ -228,16 +227,14 @@ export class MondayImportService {
               mondayItemId: item.id,
               boardId,
               action: wasUpdate ? 'update' : 'create'
-            }
-          });
+        }
+                  );
         
     },
     {
       operation: 'coerceDecimalToString',
-service: 'MondayImportService',;
-      metadata: {}
-    }
-  );: ${error.message}`);
+service: 'MondayImportService',
+      metadata: { } });
           result.success = false;
         }
       }
@@ -248,8 +245,8 @@ service: 'MondayImportService',;
           operation: 'importBoardAsProjects',
           importedCount: result.importedCount,
           errorCount: result.errors.length
-        }
-      });
+
+            });
 
       return result;
 unknown)unknownatch (e: unknown)any) {
@@ -258,8 +255,8 @@ unknown)unknownatch (e: unknown)any) {
         metadata: {
           operation: 'importBoardAsProjects',
           error: error.message
-        }
-      });
+
+            });
 
       throw error;
     }
@@ -284,8 +281,8 @@ unknown)unknownatch (e: unknown)any) {
         metadata: {
           operation: 'importBoardAsAOs',
           boardId
-        }
-      });
+
+            });
 
       const boardData = await mondayService.getBoardData(boardId);
       const items = boardData.items;
@@ -301,8 +298,8 @@ unknown)unknownatch (e: unknown)any) {
               itemId: item.id,
               itemName: item.name,
               aoData
-            }
-          });
+
+                });
           
           // Remove undefined values before validation
           const cleanedData = this.removeUndefined(aoData);
@@ -313,13 +310,13 @@ unknown)unknownatch (e: unknown)any) {
               operation: 'importBoardAsAOs',
               itemId: item.id,
               cleanedData
-            }
-          });
+
+                });
           
           // Validate data with Zod schema
           const validation = insertAoSchema.safeParse(cleanedData);
           if (!validation.success) {
-            const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+            const errors = validation.error.issues.map(i => `$) {i.path.join('.')}: ${i.message}`).join(', ');
             logger.error('❌ [DEBUG] AO Validation Zod échouée', {
               service: 'MondayImportService',
               metadata: {
@@ -328,8 +325,8 @@ unknown)unknownatch (e: unknown)any) {
                 errors,
                 cleanedData,
                 validationIssues: validation.error.issues
-              }
-            });
+
+                  });
             result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
             continue;
           }
@@ -340,8 +337,8 @@ unknown)unknownatch (e: unknown)any) {
               operation: 'importBoardAsAOs',
               itemId: item.id,
               validatedData: validation.data
-            }
-          });
+
+                });
 
           // Check if AO already exists with this mondayItemId (upsert strategy)
           const existingAo = await storage.getAOByMondayItemId(item.id);
@@ -369,8 +366,8 @@ unknown)unknownatch (e: unknown)any) {
                 aoId: ao.id,
                 mondayItemId: item.id,
                 action: 'update'
-              }
-            });
+
+                  });
           } else {
             // Create new AO
        as unknown) as unknown)unknownt storage.createAo(dataForStorage as any);
@@ -381,8 +378,8 @@ unknown)unknownatch (e: unknown)any) {
                 aoId: ao.id,
                 mondayItemId: item.id,
                 action: 'create'
-              }
-            });
+
+                  });
           }
 
           result.importedCount++;
@@ -404,16 +401,14 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
               mondayItemId: item.id,
               boardId,
               action: wasUpdate ? 'update' : 'create'
-            }
-          });
+        }
+                  );
         
     },
     {
       operation: 'coerceDecimalToString',
       service: 'MondayImportService',
-      metadata: {}
-    }
-  );: ${error.message}`);
+      metadata: { } });
           result.success = false;
         }
       unknown)unknown  return result;
@@ -423,8 +418,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
         metadata: {
           operation: 'importBoardAsAOs',
           error: error.message
-        }
-      });
+
+            });
 
       throw error;
     }
@@ -449,8 +444,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
         metadata: {
           operation: 'importBoardAsSuppliers',
           boardId
-        }
-      });
+
+            });
 
       const boardData = await mondayService.getBoardData(boardId);
       const items = boardData.items;
@@ -466,8 +461,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
               itemId: item.id,
               itemName: item.name,
               supplierData
-            }
-          });
+
+                });
           
           // Remove undefined values before validation
           const cleanedData = this.removeUndefined(supplierData);
@@ -478,13 +473,13 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
               operation: 'importBoardAsSuppliers',
               itemId: item.id,
               cleanedData
-            }
-          });
+
+                });
           
           // Validate data with Zod schema
           const validation = insertSupplierSchema.safeParse(cleanedData);
           if (!validation.success) {
-            const errors = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+            const errors = validation.error.issues.map(i => `$) {i.path.join('.')}: ${i.message}`).join(', ');
             logger.error('❌ [DEBUG] Supplier Validation Zod échouée', {
               service: 'MondayImportService',
               metadata: {
@@ -493,8 +488,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
                 errors,
                 cleanedData,
                 validationIssues: validation.error.issues
-              }
-            });
+
+                  });
             result.errors.push(`Item ${item.id}: Validation failed - ${errors}`);
             continue;
           }
@@ -505,8 +500,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
               operation: 'importBoardAsSuppliers',
               itemId: item.id,
               validatedData: validation.data
-            }
-          });
+
+                });
 
           // Check if Supplier already exists with this mondayItemId (upsert strategy)
           const existingSupplier = await storage.getSupplierByMondayItemId(item.id);
@@ -519,7 +514,7 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
           
           if (existingSupplier) {
             // Update existing Supplier
-            supplier = await storageas unknown)unknown)unknownnownr(existingSupplier.id, dataForStorage as any);
+            supplier = await storageas unknown)unknownnownr(existingSupplier.id, dataForStorage as any);
             wasUpdate = true;
             logger.info('Fournisseur mis à jour depuis Monday', {
               service: 'MondayImportService',
@@ -528,11 +523,11 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
                 supplierId: supplier.id,
                 mondayItemId: item.id,
                 action: 'update'
-              }
-            });
+
+                  });
           } else {
             // Create new Supplier
-           as unknown)unknown)unknownnownait storage.createSupplier(dataForStorage as any);
+           as unknown)unknownnownait storage.createSupplier(dataForStorage as any);
             logger.info('Fournisseur créé depuis Monday', {
               service: 'MondayImportService',
               metadata: {
@@ -540,8 +535,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
                 supplierId: supplier.id,
                 mondayItemId: item.id,
                 action: 'create'
-              }
-            });
+
+                  });
           }
 
           result.importedCount++;
@@ -550,10 +545,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
     },
     {
       operation: 'coerceDecimalToString',
-service: 'MondayImportService',;
-      metadata: {}
-    }
-  );: ${error.message}`);
+service: 'MondayImportService',
+      metadata: { } });
           result.success = false;
     unknown)unknown     }
 
@@ -564,8 +557,8 @@ service: 'MondayImportService',;
         metadata: {
           operation: 'importBoardAsSuppliers',
           error: error.message
-        }
-      });
+
+            });
 
       throw error;
     }
@@ -680,8 +673,8 @@ service: 'MondayImportService',;
         boardName: boardData.board.name,
         itemCount: boardData.items.length,
         columnCount: boardData.columns.length
-      }
-    });
+
+          });
 
     return {
       boardName: boardData.board.name,
@@ -767,8 +760,8 @@ service: 'MondayImportService',;
         boardId,
         itemId,
         changeType
-      }
-    });
+
+          });
     
     return withErrorHandling(
     async () => {
@@ -790,8 +783,8 @@ service: 'MondayImportService',;
               operation: 'syncFromMonday',
               itemId,
               changeType: 'delete'
-            }
-          });
+
+                });
         } else if (entityType === 'ao') {
           logger.info('[MondayImportService] AO suppression détectée', {
             service: 'MondayImportService',
@@ -799,8 +792,8 @@ service: 'MondayImportService',;
               operation: 'syncFromMonday',
               itemId,
               changeType: 'delete'
-            }
-          });
+
+                });
         }
         return;
       }
@@ -845,8 +838,8 @@ service: 'MondayImportService',;
                   saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
                   mondayUpdatedAt: mondayTime.toISOString(),
                   strategy: 'Monday-priority (override)'
-                }
-              });
+
+                    });
               
               // Emit conflict event for audit
               eventBus.emit('monday:sync:conflict', {
@@ -905,8 +898,8 @@ service: 'MondayImportService',;
                   saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
                   mondayUpdatedAt: mondayTime.toISOString(),
                   strategy: 'Monday-priority (override)'
-                }
-              });
+
+                    });
               
               // Emit conflict event for audit
               eventBus.emit('monday:sync:conflict', {
@@ -953,8 +946,8 @@ message: `${entityType} synchronisé depuis Monday.com`,;
             mondayId: itemId,
             boardId,
             changeType
-          }
-        });
+        }
+                );
       }
       
       logger.info('[MondayImportService] Sync terminée avec succès', {
@@ -965,17 +958,15 @@ message: `${entityType} synchronisé depuis Monday.com`,;
           entityId: createdId,
           mondayId: itemId,
           changeType
-        }
-      });
+
+            });
     
     },
     {
       operation: 'coerceDecimalToString',
       service: 'MondayImportService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -1002,4 +993,4 @@ message: `${entityType} synchronisé depuis Monday.com`,;
   }
 }
 
-export const mondayImportService = new MondayImportService();
+export const mondayImportService = mondaydataService();

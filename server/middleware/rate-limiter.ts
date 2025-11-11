@@ -34,23 +34,21 @@ const generateKey = (req: AuthenticatedRequest): string | undefined => {
   const userEmail = req.user?.email || req.user?.claims?.email || (req.session as any)?.user?.email;
   
   if (userId) {
-    logger.debug('[RateLimiter] Key generated for user', {
-      metadata: {
+    logger.debug('[RateLimiter] Key generated for user', { metadata: {
         userId,
         userEmail,
         path: req.originalUrl,
         ip: req.ip
-      }
-    });
+        }
+            });
     return `user:${userId}`;
   }
   
-  logger.debug('[RateLimiter] Using IP-based rate limiting', {
-    metadata: {
+  logger.debug('[RateLimiter] Using IP-based rate limiting', { metadata: {
       ip: req.ip,
       path: req.originalUrl
-    }
-  });
+        }
+            });
   // Let express-rate-limit handle IP normalization (IPv4/IPv6 compatible)
   return undefined;
 };
@@ -66,16 +64,15 @@ const rateLimitHandler = (req: AuthenticatedRequest, res: Response): void => {
   monitorRateLimit(req.originalUrl, userId, userEmail);
   
   // Log the rate limit event
-  logger.warn('[RateLimiter] Rate limit exceeded', {
-    metadata: {
+  logger.warn('[RateLimiter] Rate limit exceeded', { metadata: {
       path: req.originalUrl,
       method: req.method,
       userId,
       userEmail,
       ip: req.ip,
       userAgent: req.get('user-agent')
-    }
-  });
+        }
+            });
   
   const retryAfter = res.getHeader('Retry-After');
   const rateLimitRemaining = res.getHeader('X-RateLimit-Remaining');
@@ -88,8 +85,7 @@ const rateLimitHandler = (req: AuthenticatedRequest, res: Response): void => {
     rateLimit: {
       remaining: rateLimitRemaining,
       reset: rateLimitReset
-    }
-  });
+    });
 };
 
 /**
@@ -109,8 +105,7 @@ export const rateLimits = {
       // Skip rate limiting for admin users
       const userRole = req.user?.role || (req.session as any)?.user?.role;
       return userRole === 'admin' || userRole === 'super_admin';
-    }
-  }),
+    }),
 
   // Authentication endpoints: 5 attempts per 15 minutes
   auth: rateLimit({
@@ -147,8 +142,7 @@ export const rateLimits = {
       // Skip for admin users
       const userRole = req.user?.role || (req.session as any)?.user?.role;
       return userRole === 'admin' || userRole === 'super_admin';
-    }
-  }),
+    }),
 
   // Supplier portal: 30 requests per minute
   supplier: rateLimit({

@@ -20,8 +20,8 @@ import { insertAoSchema, insertProjectSchema, menuiserieTypeEnum, type InsertAo,
 import { generateRealisticJLMData, type MondayAoData, type MondayProjectData } from '../utils/mondayDataGenerator';
 import { validateMondayAoData, validateMondayProjectData, validateAndParseMondayDate } from '../utils/mondayValidator';
 import { ZodError } from 'zod';
-import { MondayProductionMigrationService, type ProductionMigrationResult } from './MondayProductionMigrationService';
-import { MondayProductionFinalService, type ProductionFinalMigrationResult } from './MondayProductionFinalService';
+import { MondayMigrationService } from './consolidated/MondayMigrationService';
+import { MondayMigrationService } from './consolidated/MondayMigrationService';
 import { logger } from '../utils/logger';
 
 // ========================================
@@ -114,8 +114,8 @@ export class MondayMigrationService {
   private productionFinalService: MondayProductionFinalService;
 
   constructor(private storage: IStorage) {
-    this.productionService = new MondayProductionMigrationService(storage);
-    this.productionFinalService = new MondayProductionFinalService(storage);
+    this.productionService = mondaymigrationService(storage);
+    this.productionFinalService = mondaymigrationService(storage);
   }
 
   // ========================================
@@ -128,18 +128,16 @@ export class MondayMigrationService {
    * Migre 1911 lignes authentic depuis AO_Planning + CHANTIERS
    */
   async migrateFromRealMondayData(): Promise<ProductionFinalMigrationResult> {
-    logger.info('SOLUTION FINALE: Utilisation données authentiques Monday.com', {
-      metadata: {
+    logger.info('SOLUTION FINALE: Utilisation données authentiques Monday.com', { metadata: {
         service: 'MondayMigrationService',
-        operation: 'migrateFromRealMondayData'
-      }
-    });
-    logger.info('RÉSOUT problème architect: exports Excel réels au lieu de synthétiques', {
-      metadata: {
+        operation: 'migrateFromRealMondayData' 
+              }
+            });
+    logger.info('RÉSOUT problème architect: exports Excel réels au lieu de synthétiques', { metadata: {
         service: 'MondayMigrationService',
-        operation: 'migrateFromRealMondayData'
-      }
-    });
+        operation: 'migrateFromRealMondayData' 
+              }
+            });
     
     return withErrorHandling(
     async () => {
@@ -147,8 +145,7 @@ export class MondayMigrationService {
       // Utiliser service final avec données authentiques
       const result = await this.productionFinalService.migrateProductionMondayData();
       
-      logger.info('Migration authentique terminée', {
-        metadata: {
+      logger.info('Migration authentique terminée', { metadata: {
           service: 'MondayMigrationService',
           operation: 'migrateFromRealMondayData',
           totalMigrated: result.totalMigrated,
@@ -156,20 +153,14 @@ export class MondayMigrationService {
           sources: result.filesProcessed,
           aosCount: result.aos.migrated,
           projectsCount: result.projects.migrated
-        }
       });
-      
       return result;
-      
-    
     },
     {
       operation: 'SAXIUM',
       service: 'MondayMigrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new AppError(`Migration authentique échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
   }
@@ -187,21 +178,16 @@ export class MondayMigrationService {
     warnings: number;
     filesProcessed: string[];
   }> {
-    logger.info('Validation authentique dry-run - exports Excel Monday.com réels', {
-      metadata: {
+    logger.info('Validation authentique dry-run - exports Excel Monday.com réels', { metadata: {
         service: 'MondayMigrationService',
-        operation: 'validateAuthenticMondayDataIntegrity'
-      }
-    });
-    
+        operation: 'validateAuthenticMondayDataIntegrity' 
+              }
+            });
     return withErrorHandling(
     async () => {
-
       // Validation avec service final (données authentiques)
       const validationResult = await this.productionFinalService.validateAuthenticDataIntegrity();
-      
-      logger.info('Validation terminée', {
-        metadata: {
+      logger.info('Validation terminée', { metadata: {
           service: 'MondayMigrationService',
           operation: 'validateAuthenticMondayDataIntegrity',
           validLines: validationResult.validLines,
@@ -209,7 +195,6 @@ export class MondayMigrationService {
           filesProcessed: validationResult.filesProcessed,
           errors: validationResult.errors,
           warnings: validationResult.warnings
-        }
       });
       
       return validationResult;
@@ -220,9 +205,7 @@ export class MondayMigrationService {
       operation: 'SAXIUM',
       service: 'MondayMigrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new AppError(`Validation authentique échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
   }
@@ -244,17 +227,13 @@ export class MondayMigrationService {
     return withErrorHandling(
     async () => {
 
-      logger.info('Démarrage migration AO_Planning basée sur analyse audit', {
-        metadata: {
+      logger.info('Démarrage migration AO_Planning basée sur analyse audit', { metadata: {
           service: 'MondayMigrationService',
           operation: 'migrateAosFromAnalysis',
           count
-        }
       });
-
       // Générer données réalistes basées sur patterns Monday.com analysés
       const mondayAoData = generateRealisticJLMData(count, 'aos');
-      
       const result: MigrationResult = {
         source: 'audit_analysis',
         entityType: 'aos',
@@ -267,71 +246,56 @@ export class MondayMigrationService {
           failed: []
         }
       };
-
       // Migration par batch pour optimiser les performances
       const batchSize = 50;
       for (let i = 0; i < mondayAoData.length; i += batchSize) {
         const batch = mondayAoData.slice(i, i + batchSize);
-        
         for (const aoData of batch) {
           try {
             // Validation Monday.com → Saxium
             const validatedData = this.validateAndTransformAoData(aoData);
-            
             // Insertion via storage interface (Database Safety)
             const createdAo = await this.storage.createAo(validatedData);
-            
             result.migrated++;
             result.details.successful.push(createdAo.id);
-            
-          
     },
     {
       operation: 'SAXIUM',
-service: 'MondayMigrationService',;
+service: 'MondayMigrationService',
       metadata: {}
-    }
-  );
-            });
+    } );
           }
         }
-
         // Log progression
-        logger.info('AO Progress', {
-          metadata: {
+        logger.info('AO Progress', { metadata: {
             service: 'MondayMigrationService',
             operation: 'migrateAosFromAnalysis',
             progress: Math.min(i + batchSize, mondayAoData.length),
-            total: mondayAoData.length
-          }
-        });
+            total: mondayAoData.length 
+              }
+            });
       }
-
       result.duration = Date.now() - startTime;
       this.migrationHistory.push(result);
-
-      logger.info('AO_Planning terminée', {
-        metadata: {
+      logger.info('AO_Planning terminée', { metadata: {
           service: 'MondayMigrationService',
           operation: 'migrateAosFromAnalysis',
           migrated: result.migrated,
           errors: result.errors,
-          duration: result.duration
-        }
-      });
+          duration: result.duration 
+              }
+            });
       
       // Log warnings de parsing dates
       if (this.warnings.length > 0) {
-        logger.info('Warnings dates (non bloquants)', {
-          metadata: {
+        logger.info('Warnings dates (non bloquants)', { metadata: {
             service: 'MondayMigrationService',
             operation: 'migrateAosFromAnalysis',
             warningsCount: this.warnings.length,
-            warnings: this.warnings.slice(0, 5)
-          }
-        });
+            warnings: this.warnings.slice(0, 5) 
+              }
+            });
       }
-      
       return result;
 
     } finally {
@@ -352,17 +316,13 @@ service: 'MondayMigrationService',;
     return withErrorHandling(
     async () => {
 
-      logger.info('Démarrage migration CHANTIERS basée sur analyse audit', {
-        metadata: {
+      logger.info('Démarrage migration CHANTIERS basée sur analyse audit', { metadata: {
           service: 'MondayMigrationService',
           operation: 'migrateChantiersFromAnalysis',
           count
-        }
       });
-
       // Générer données réalistes basées sur patterns Monday.com analysés
       const mondayProjectData = generateRealisticJLMData(count, 'projects');
-      
       const result: MigrationResult = {
         source: 'audit_analysis',
         entityType: 'projects',
@@ -375,58 +335,45 @@ service: 'MondayMigrationService',;
           failed: []
         }
       };
-
       // Migration par batch pour optimiser les performances
       const batchSize = 50;
       for (let i = 0; i < mondayProjectData.length; i += batchSize) {
         const batch = mondayProjectData.slice(i, i + batchSize);
-        
         for (const projectData of batch) {
           try {
             // Validation Monday.com → Saxium
             const validatedData = this.validateAndTransformProjectData(projectData);
-            
             // Insertion via storage interface (Database Safety)
             const createdProject = await this.storage.createProject(validatedData);
-            
             result.migrated++;
             result.details.successful.push(createdProject.id);
-            
-          
     },
     {
       operation: 'SAXIUM',
-service: 'MondayMigrationService',;
+service: 'MondayMigrationService',
       metadata: {}
-    }
-  );
-            });
+    } );
           }
         }
-
         // Log progression
-        logger.info('Projects Progress', {
-          metadata: {
+        logger.info('Projects Progress', { metadata: {
             service: 'MondayMigrationService',
             operation: 'migrateChantiersFromAnalysis',
             progress: Math.min(i + batchSize, mondayProjectData.length),
-            total: mondayProjectData.length
-          }
-        });
+            total: mondayProjectData.length 
+              }
+            });
       }
-
       result.duration = Date.now() - startTime;
       this.migrationHistory.push(result);
-
-      logger.info('CHANTIERS terminée', {
-        metadata: {
+      logger.info('CHANTIERS terminée', { metadata: {
           service: 'MondayMigrationService',
           operation: 'migrateChantiersFromAnalysis',
           migrated: result.migrated,
           errors: result.errors,
-          duration: result.duration
-        }
-      });
+          duration: result.duration 
+              }
+            });
       
       return result;
 
@@ -439,19 +386,16 @@ service: 'MondayMigrationService',;
    * Validation post-migration avec contrôles d'intégrité
    */
   async validateMigration(): Promise<ValidationReport> {
-    logger.info('Validation post-migration en cours', {
-      metadata: {
+    logger.info('Validation post-migration en cours', { metadata: {
         service: 'MondayMigrationService',
-        operation: 'validateMigration'
-      }
-    });
-
+        operation: 'validateMigration' 
+              }
+            });
     // Compter les entités migrées
     const [aos, projects] = await Promise.all([
       this.storage.getAos(),
       this.storage.getProjects()
     ]);
-
     const report: ValidationReport = {
       aosCount: aos.length,
       projectsCount: projects.length,
@@ -464,7 +408,6 @@ service: 'MondayMigrationService',;
       warnings: [],
       errors: []
     };
-
     // Contrôle enum values
     const invalidEnums = aos.filter(ao => 
       ao.aoCategory && !['MEXT', 'MINT', 'HALL', 'SERRURERIE', 'AUTRE'].includes(ao.aoCategory)
@@ -473,7 +416,6 @@ service: 'MondayMigrationService',;
       report.integrityChecks.enumsValid = false;
       report.errors.push(`${invalidEnums.length} AOs avec catégories invalides`);
     }
-
     // Contrôle unicité Monday.com IDs
     const mondayIds = aos.map(ao => ao.mondayItemId).filter(Boolean);
     const uniqueMondayIds = new Set(mondayIds);
@@ -501,18 +443,15 @@ service: 'MondayMigrationService',;
       report.warnings.push('Moins de 70% des clients sont normalisés selon patterns JLM');
     }
 
-    logger.info('Validation terminée', {
-      metadata: {
+    logger.info('Validation terminée', { metadata: {
         service: 'MondayMigrationService',
         operation: 'validateMigration',
         errors: report.errors.length,
-        warnings: report.warnings.length
-      }
-    });
-    
+        warnings: report.warnings.length 
+              }
+            });
     return report;
   }
-
   /**
    * Statut actuel de la migration
    */
@@ -599,13 +538,12 @@ service: 'MondayMigrationService',;
     if (!result.parsed) {
       if (result.warning) {
         this.warnings.push(`Date parsing warning: ${result.warning}`);
-        logger.warn('Date parsing warning', {
-          metadata: {
+        logger.warn('Date parsing warning', { metadata: {
             service: 'MondayMigrationService',
             operation: 'parseEstimatedDelayWithWarnings',
-            warning: result.warning
-          }
-        });
+            warning: result.warning 
+              }
+            });
       }
       // Continuer avec null au lieu d'échouer (specs JLM)
       return undefined;

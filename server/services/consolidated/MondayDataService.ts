@@ -115,8 +115,9 @@ export class MondayDataService {
 
     logger.info('MondayDataService initialized', {
       service: 'MondayDataService',
-      metadata: { operation: 'constructor' }
-    });
+      metadata: { operation: 'constructor' 
+
+          });
   }
 
   // ========================================
@@ -151,8 +152,8 @@ export class MondayDataService {
           targetEntity,
           mappingCount: mapping.columnMappings.length,
           correlationId
-        }
-      });
+
+            });
 
       const boardData = await mondayIntegrationService.getBoardData(boardId);
       const items = boardData.items;
@@ -182,10 +183,8 @@ export class MondayDataService {
     },
     {
       operation: 'MondayImportService',
-service: 'MondayDataService',;
-      metadata: {}
-    }
-  );
+service: 'MondayDataService',
+      metadata: { } });
   }
 
   /**
@@ -214,8 +213,8 @@ service: 'MondayDataService',;
         source: 'monday.com',
         mondayItemId: item.id,
         boardId: mapping.mondayBoardId
-      }
-    });
+        }
+            );
 
     logger.info('Projet créé depuis Monday', {
       service: 'MondayDataService',
@@ -223,8 +222,8 @@ service: 'MondayDataService',;
         operation: 'importItemAsProject',
         projectId: project.id,
         mondayItemId: item.id
-      }
-    });
+
+          });
 
     return project.id;
   }
@@ -255,8 +254,8 @@ service: 'MondayDataService',;
         source: 'monday.com',
         mondayItemId: item.id,
         boardId
-      }
-    });
+        }
+            );
 
     logger.info('AO créé depuis Monday', {
       service: 'MondayDataService',
@@ -264,8 +263,8 @@ service: 'MondayDataService',;
         operation: 'importItemAsAO',
         aoId: ao.id,
         mondayItemId: item.id
-      }
-    });
+
+          });
 
     return ao.id;
   }
@@ -288,8 +287,8 @@ service: 'MondayDataService',;
         operation: 'importItemAsSupplier',
         supplierId: supplier.id,
         mondayItemId: item.id
-      }
-    });
+
+          });
 
     return supplier.id;
   }
@@ -316,10 +315,10 @@ service: 'MondayDataService',;
         itemId,
         changeType,
         correlationId
-      }
-    });
+
+          });
     
-    return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
       const item = await mondayIntegrationService.getItem(itemId);
@@ -333,8 +332,8 @@ service: 'MondayDataService',;
             itemId,
             entityType,
             changeType: 'delete'
-          }
-        });
+
+              });
         return;
       }
       
@@ -421,8 +420,8 @@ service: 'MondayDataService',;
             mondayId: itemId,
             boardId,
             changeType
-          }
-        });
+        }
+                );
       }
       
       logger.info('[MondayDataService] Sync terminée avec succès', {
@@ -434,17 +433,15 @@ service: 'MondayDataService',;
           mondayId: itemId,
           changeType,
           correlationId
-        }
-      });
+
+            });
     
     },
     {
       operation: 'MondayImportService',
       service: 'MondayDataService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -471,8 +468,8 @@ service: 'MondayDataService',;
         entityType,
         entityId,
         correlationId
-      }
-    });
+
+          });
 
     if (entityType === 'project') {
       return this.exportProject(entityId, options);
@@ -500,8 +497,8 @@ service: 'MondayDataService',;
           operation: 'exportProject',
           projectId,
           correlationId
-        }
-      });
+
+            });
       throw error;
     }
 
@@ -513,8 +510,8 @@ service: 'MondayDataService',;
           projectId,
           mondayId: project.mondayId,
           correlationId
-        }
-      });
+
+            });
       return project.mondayId;
     }
     
@@ -557,8 +554,8 @@ service: 'MondayDataService',;
             projectId,
             projectName: project.name,
             correlationId
-          }
-        });
+
+              });
 
         const result = await mondayIntegrationService.executeGraphQL(mutation, {
           boardId: options.boardId || process.env.MONDAY_PROJECTS_BOARD_ID || '123456',
@@ -584,8 +581,8 @@ service: 'MondayDataService',;
           projectId,
           correlationId,
           error: error.message
-        }
-      });
+
+            });
       throw error;
     }
 
@@ -598,8 +595,8 @@ service: 'MondayDataService',;
         projectId,
         mondayId: mondayItem.id,
         correlationId
-      }
-    });
+
+          });
     
     return mondayItem.id;
   }
@@ -621,8 +618,8 @@ service: 'MondayDataService',;
           operation: 'exportAO',
           aoId,
           correlationId
-        }
-      });
+
+            });
       throw error;
     }
 
@@ -634,8 +631,8 @@ service: 'MondayDataService',;
           aoId,
           mondayId: ao.mondayId,
           correlationId
-        }
-      });
+
+            });
       
       if (options.syncNewFields) {
         await this.syncAONewFields(aoId);
@@ -652,7 +649,7 @@ service: 'MondayDataService',;
       }
     `;
     
-    const columnValues: Record<st, unknown>unknown> = {};
+    const columnValues: Record<st, unknown> = {};
     
     if (ao.status) {
       columnValues.status = { label: ao.status };
@@ -687,8 +684,8 @@ service: 'MondayDataService',;
             aoId,
             aoReference: ao.reference,
             correlationId
-          }
-        });
+
+              });
 
         const result = await mondayIntegrationService.executeGraphQL(mutation, {
           boardId: options.boardId || process.env.MONDAY_AOS_BOARD_ID || '789012',
@@ -714,8 +711,8 @@ service: 'MondayDataService',;
           aoId,
           correlationId,
           error: error.message
-        }
-      });
+
+            });
       throw error;
     }
 
@@ -728,8 +725,8 @@ service: 'MondayDataService',;
         aoId,
         mondayId: mondayItem.id,
         correlationId
-      }
-    });
+
+          });
     
     return mondayItem.id;
   }
@@ -753,8 +750,8 @@ service: 'MondayDataService',;
         itemId,
         columnsCount: Object.keys(columnValues).length,
         correlationId
-      }
-    });
+
+          });
 
     const mutation = `
       mutation ChangeMultipleColumnValues($boardId: ID!, $itemId: ID!, $columnValues: JSON!) {
@@ -791,8 +788,8 @@ service: 'MondayDataService',;
           itemId,
           correlationId,
           error: error.message
-        }
-      });
+
+            });
       throw error;
     }
 
@@ -805,8 +802,8 @@ service: 'MondayDataService',;
         mondayId: result.id,
         columnsUpdated: Object.keys(columnValues),
         correlationId
-      }
-    });
+
+          });
     
     return result.id;
   }
@@ -827,16 +824,17 @@ service: 'MondayDataService',;
         operation: 'syncAONewFields',
         aoId,
         correlationId
-      }
-    });
+
+          });
 
     const ao = await this.storage.getAo(aoId);
     
     if (!ao) {
       logger.warn('[MondayDataService] AO non trouvé', {
         service: 'MondayDataService',
-        metadata: { operation: 'syncAONewFields', aoId, correlationId }
-      });
+        metadata: { operation: 'syncAONewFields', aoId, correlationId 
+
+            });
       return null;
     }
 
@@ -848,12 +846,12 @@ service: 'MondayDataService',;
           aoId,
           reference: ao.reference,
           correlationId
-        }
-      });
+
+            });
       return null;
     }
 
-    const columnValues: R, unknown>unknown>unknown any> = {};
+    const columnValues: Record<string, unknown> = {};
     
     if (ao.dateLivraisonPrevue) {
       columnValues.date_mkpcfgja = ao.dateLivraisonPrevue.toISOString().split('T')[0];
@@ -875,8 +873,8 @@ service: 'MondayDataService',;
           aoId,
           mondayId: ao.mondayId,
           correlationId
-        }
-      });
+
+            });
       return ao.mondayId;
     }
 
@@ -890,8 +888,8 @@ service: 'MondayDataService',;
         mondayId: ao.mondayId,
         syncedFields: Object.keys(columnValues),
         correlationId
-      }
-    });
+
+          });
     
     return ao.mondayId;
   }
@@ -920,8 +918,9 @@ service: 'MondayDataService',;
   }> {
     logger.info('Analyse Monday item pour opportunités éclatement', {
       service: 'MondayDataService',
-      metadata: { operation: 'analyzeItem', mondayItemId, boardId }
-    });
+      metadata: { operation: 'analyzeItem', mondayItemId, boardId 
+
+          });
 
     const mondayItem = await mondayIntegrationService.getItem(mondayItemId);
 
@@ -977,8 +976,8 @@ service: 'MondayDataService',;
         boardId, 
         preFetched: !isId,
         dryRun
-      }
-    });
+
+          });
 
     const mondayItem = isId 
       ? await mondayIntegrationService.getItem(mondayItemOrId) 
@@ -1011,8 +1010,9 @@ service: 'MondayDataService',;
       await this.storage.transaction(async (tx) => {
         logger.info('Étape 1: Extraction AO de base', {
           service: 'MondayDataService',
-          metadata: { operation: 'splitData.step1', mondayItemId }
-        });
+          metadata: { operation: 'splitData.step1', mondayItemId 
+
+              });
 
         const aoData = await this.aoBaseExtractor.extract(context);
         context.extractedData.baseAO = aoData;
@@ -1036,15 +1036,14 @@ service: 'MondayDataService',;
               mondayItemId,
               missingFields: missingRequiredFields,
               extractedData: aoData
-            }
-          });
+
+                });
 
           context.diagnostics.push({
             level: 'error',
             extractor: 'AOBaseExtractor',
             message: errorMsg,
-            data: { missingFields: missingRequiredFields }
-          });
+            data: { missingFields: missingRequiredFields });
 
           result.success = false;
           result.diagnostics = context.diagnostics;
@@ -1080,15 +1079,14 @@ service: 'MondayDataService',;
               aoId: existingAO.id, 
               mondayItemId,
               reference: currentAO.reference
-            }
-          });
+
+                });
           
           context.diagnostics.push({
             level: 'info',
             extractor: 'AOBaseExtractor',
             message: `AO déjà importé (mondayItemId=${mondayItemId}), mise à jour avec données Monday`,
-            data: { aoId: existingAO.id, reference: currentAO.reference, updated: true }
-          });
+            data: { aoId: existingAO.id, reference: currentAO.reference, updated: true });
         } else {
           const cleanedAoData = this.cleanEnumFields(aoData);
           
@@ -1111,14 +1109,15 @@ service: 'MondayDataService',;
               aoId: currentAO.id, 
               mondayItemId,
               reference: currentAO.reference
-            }
-          });
+
+                });
         }
 
         logger.info('Étape 1.5: Extraction maîtres d\'ouvrage/œuvre', {
           service: 'MondayDataService',
-          metadata: { operation: 'splitData.step1.5', aoId: currentAO.id }
-        });
+          metadata: { operation: 'splitData.step1.5', aoId: currentAO.id 
+
+              });
 
         const masters = await this.masterEntityExtractor.extract(context);
         context.extractedData.maitresOuvrage = masters.maitresOuvrage;
@@ -1136,12 +1135,9 @@ service: 'MondayDataService',;
     },
     {
       operation: 'MondayImportService',
-service: 'MondayDataService',;
-      metadata: {}
-    }
-  );`,
-        data: { error: error.stack }
-      });
+service: 'MondayDataService',
+      metadata: { } });
+        data: { error: error.stack });
 
       throw error;
     }
@@ -1177,8 +1173,7 @@ service: 'MondayDataService',;
         }
         if (!cm.saxiumField) {
           errors.push(`columnMappings[${index}]: saxiumField is required`);
-        }
-      });
+        });
 
       if (mapping.columnMappings.length === 0) {
         warnings.push('No column mappings defined - using item name only');
@@ -1218,8 +1213,8 @@ service: 'MondayDataService',;
                 operation: 'transformItem',
                 field: columnMapping.saxiumField,
                 warning: dateResult.warning
-              }
-            });
+
+                  });
           }
           transformed[columnMapping.saxiumField] = dateResult.parsed;
         } else {
@@ -1250,8 +1245,8 @@ service: 'MondayDataService',;
         boardName: boardData.board.name,
         itemCount: boardData.items.length,
         columnCount: boardData.columns.length
-      }
-    });
+
+          });
 
     return {
       boardName: boardData.board.name,
@@ -1450,8 +1445,8 @@ service: 'MondayDataService',;
           saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
           mondayUpdatedAt: mondayTime.toISOString(),
           strategy: 'Monday-priority (override)'
-        }
-      });
+
+            });
       
       eventBus.emit('monday:sync:conflict', {
         entityType,
@@ -1484,7 +1479,7 @@ service: 'MondayDataService',;
     };
   }
 
-  private mapContactToIndividualData(contact: unknown)unknown): IndividualContactData {
+  private mapContactToIndividualData(contact: unknown): IndividualContactData {
     const fullName = contactData.name || '';
     const nameParts = fullName.trim().split(/\s+/);
     const firstName = nameParts[0] || '';
@@ -1503,7 +1498,7 @@ service: 'MondayDataService',;
     };
   }
 
-  private clunknowunknownumFie: unknown)unknown)any): any {
+  private clunknowunknownumFie: unknown)any): any {
     const cleaned = { ...data };
     
     if (typeof cleaned.operationalStatus === 'number') {

@@ -88,14 +88,12 @@ export class ContextTierService implements ContextTierServiceInterface {
       fallbackCount: 0
     };
 
-    logger.info('Service initialisé avec configuration BTP/Menuiserie', {
-      metadata: {
+    logger.info('Service initialisé avec configuration BTP/Menuiserie', { metadata: {
         service: 'ContextTierService',
-        operation: 'constructor'
-      }
-    });
+        operation: 'constructor' 
+              }
+            });
   }
-
   // ========================================
   // DÉTECTION INTELLIGENTE DU TIER
   // ========================================
@@ -113,41 +111,31 @@ export class ContextTierService implements ContextTierServiceInterface {
     return withErrorHandling(
     async () => {
 
-      logger.info('Détection tier pour requête', {
-        metadata: {
+      logger.info('Détection tier pour requête', { metadata: {
           service: 'ContextTierService',
           operation: 'detectContextTier',
           query: query.substring(0, 100),
           entityType
-        }
       });
-
       // 1. Analyse linguistique de la requête
       const queryAnalysis = this.analyzeQuery(query);
-      
       // 2. Évaluation du contexte utilisateur
       const userAnalysis = this.analyzeUserContext(userContext);
-      
       // 3. Évaluation des facteurs business
       const businessFactors = await this.analyzeBusinessFactors(entityType, query);
-      
       // 4. Score de complexité composite
       const complexityScore = this.calculateComplexityScore(
         queryAnalysis, 
         userAnalysis, 
         businessFactors
       );
-      
       // 5. Détermination du tier avec confidence
       const { tier, confidence } = this.determineTier(complexityScore, queryAnalysis);
-      
       // 6. Génération du profil recommandé
       const context = userContext as Record<string, unknown>;
       const userRole = (typeof context.role === 'string' ? context.role : 'user') || 'user';
       const recommendedProfile = this.getContextProfile(tier, entityType, userRole);
-      
       const detectionTime = Date.now() - startTime;
-      
       const result: ContextTierDetectionResult = {
         detectedTier: tier,
         confidence,
@@ -160,39 +148,29 @@ export class ContextTierService implements ContextTierServiceInterface {
         estimatedBuildTime: recommendedProfile.targetBuildTimeMs,
         potentialTokenSaving: this.calculateTokenSaving(tier)
       };
-
       // Mise à jour métriques
       this.updateMetrics(tier, detectionTime);
-      
-      logger.info('Tier détecté', {
-        metadata: {
+      logger.info('Tier détecté', { metadata: {
           service: 'ContextTierService',
           operation: 'detectContextTier',
           tier,
           confidence: confidence.toFixed(2),
           detectionTimeMs: detectionTime,
-          entityType
-        }
-      });
-      
+          entityType 
+              }
+            });
       return result;
-
-    
     },
     {
       operation: 'simples',
       service: 'ContextTierService',
       metadata: {}
-    }
-  );
-      });
-      
+    } );
       // Fallback vers tier COMPREHENSIVE en cas d'erreur
       const context = userContext as Record<string, unknown>;
       const userRole = (typeof context.role === 'string' ? context.role : 'user') || 'user';
       const fallbackProfile = this.getContextProfile('comprehensive', entityType, userRole);
       this.performanceMetrics.fallbackCount++;
-      
       return {
         detectedTier: 'comprehensive',
         confidence: 0.5,
@@ -349,8 +327,7 @@ export class ContextTierService implements ContextTierServiceInterface {
     btpEntities.forEach(entity => {
       if (query.includes(entity)) {
         entities.push(entity);
-      }
-    });
+      });
     
     return entities;
   }
@@ -365,8 +342,7 @@ export class ContextTierService implements ContextTierServiceInterface {
       const matches = query.match(pattern);
       if (matches) {
         relations.push(...matches.map(m => m.trim()));
-      }
-    });
+      });
     
     return relations;
   }
@@ -381,8 +357,7 @@ export class ContextTierService implements ContextTierServiceInterface {
       const matches = query.match(pattern);
       if (matches) {
         temporal.push(...matches.map(m => m.trim()));
-      }
-    });
+      });
     
     return temporal;
   }
@@ -406,7 +381,7 @@ export class ContextTierService implements ContextTierServiceInterface {
   /**
    * Détermine niveau d'expertise utilisateur
    */
-  private determineExpertiseLevel(userCon: unknown)unknown): 'junior' | 'standard' | 'expert' {
+  private determineExpertiseLevel(userCon: unknown): 'junior' | 'standard' | 'expert' {
     const role = userContext.role || '';
     const permissions = userContext.permissions || [];
     
@@ -743,20 +718,16 @@ export class ContextTierService implements ContextTierServiceInterface {
   ): Promise<AIContextualData> {
     
     const startTime = Date.now();
-    logger.info('Compression contexte selon profil', {
-      metadata: {
+    logger.info('Compression contexte selon profil', { metadata: {
         service: 'ContextTierService',
         operation: 'compressContextByPriority',
         tier: profile.tier,
-        entityType: fullContext.entityType
-      }
-    });
-    
+        entityType: fullContext.entityType 
+              }
+            });
     const compressedContext = { ...fullContext };
-    
     // 1. Préservation données critiques
     await this.preserveCriticalData(compressedContext, profile);
-    
     // 2. Compression selon stratégie
     switch (profile.compressionStrategy) {
 case 'priority_based':;
@@ -769,26 +740,21 @@ case 'relevance_based':;
         await this.compressByRelevance(compressedContext, profile);
         break;
     }
-    
     // 3. Limitation tokens et estimation finale
     await this.enforceTokenLimits(compressedContext, profile);
     
     const compressionTime = Date.now() - startTime;
-    logger.info('Compression terminée', {
-      metadata: {
+    logger.info('Compression terminée', { metadata: {
         service: 'ContextTierService',
         operation: 'compressContextByPriority',
         tier: profile.tier,
-        compressionTimeMs: compressionTime
-      }
-    });
-    
+        compressionTimeMs: compressionTime 
+              }
+            });
     // Mise à jour métriques compression
     compressedContext.generationMetrics.executionTimeMs += compressionTime;
-    
     return compressedContext;
   }
-
   /**
    * Préserve les données critiques métier
    */
@@ -914,7 +880,7 @@ case 'relevance_based':;
     
     // Filtrage données temporelles selon seuil
     if (context.temporalContext?.alerts) {
-      context.temporalContext.alerts = context.temporalContext.alerts.filter(alert => {
+      context.temporalContext.alerts = context.temporalContext.alerts.filter(alert  => {
         // Garder alertes récentes ou critiques
         return alert.severity === 'critical' || !alert.daysToDeadline || alert.daysToDeadline <= maxDays;
       });
@@ -994,8 +960,7 @@ case 'relevance_based':;
       essentialTerms.forEach(term => {
         if (context.frenchTerminology[term]) {
           filteredTerminology[term] = context.frenchTerminology[term];
-        }
-      });
+        });
       
       context.frenchTerminology = filteredTerminology;
     }
@@ -1022,41 +987,33 @@ case 'relevance_based':;
     profile: ContextTierProfile
   ): boolean {
     
-    logger.info('Validation sécurité contexte minimal', {
-      metadata: {
+    logger.info('Validation sécurité contexte minimal', { metadata: {
         service: 'ContextTierService',
         operation: 'validateMinimalContext',
         tier: profile.tier,
-        entityType: context.entityType
-      }
-    });
-    
+        entityType: context.entityType 
+              }
+            });
     // Vérifications critiques
     const validations = [
       // Entité identifiée
       context.entityType && context.entityId,
-      
       // Contexte business minimum
       context.businessContext?.currentPhase,
-      
       // Terminologie française essentielle
       context.frenchTerminology && Object.keys(context.frenchTerminology).length > 0,
-      
       // Données critiques business
       profile.criticalBusinessData.length > 0
     ];
-    
     const isValid = validations.every(v => v);
-    
     if (!isValid) {
-      logger.warn('Échec validation contexte minimal', {
-        metadata: {
+      logger.warn('Échec validation contexte minimal', { metadata: {
           service: 'ContextTierService',
           operation: 'validateMinimalContext',
           tier: profile.tier,
-          entityType: context.entityType
-        }
-      });
+          entityType: context.entityType 
+              }
+            });
     }
     
     return isValid;

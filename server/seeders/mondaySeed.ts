@@ -199,9 +199,9 @@ export class MondaySeed {
     {
       operation: 'constructor',
 service: 'mondaySeed',;
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
       }
 
       // Seeder les relations après les entités principales
@@ -217,9 +217,8 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
       service: 'mondaySeed',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
 
       return withErrorHandling(
     async () => {
@@ -233,9 +232,8 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
       service: 'mondaySeed',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
 
       const executionTimeMs = Date.now() - startTime;
       const totalEntries = Object.values(counts).reduce((sum, count) => sum + count, 0);
@@ -277,7 +275,7 @@ service: 'mondaySeed',;
 
     // Vérifier les entrées existantes pour éviter doublons
     const existingTempsPose = await storage.getTempsPose();
-    const existingMap = new Map(existingTempsPose.map(tp => [`${tp.work_scope}-${tp.component_type}`, tp]));
+    const existingMap = new Map(existingTempsPose.map(tp => [`${tp.work_scope}-$) {tp.component_type}`, tp]));
 
     // Générer les données complètes (25 prédéfinies + 15 générées)
     const allTasks = [...TEMPS_POSE_TASKS];
@@ -332,9 +330,8 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
       service: 'mondaySeed',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
 
     return seededCount;
@@ -357,7 +354,7 @@ service: 'mondaySeed',;
         const company = this.generator.selectFromArray(CLIENT_COMPANIES, `company-${i}`);
         const city = this.generator.selectFromArray(NORD_CITIES, `city-${i}`);
         
-        return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
           await storage.createMaitreOeuvre({
@@ -372,9 +369,9 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
       service: 'mondaySeed',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
       }
     }
 
@@ -386,7 +383,7 @@ service: 'mondaySeed',;
       const contactData = REAL_CONTACTS[i];
       const maitreOeuvre = maitresOeuvre[i % maitresOeuvre.length];
       
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         await storage.createContactMaitreOeuvre({
@@ -403,9 +400,9 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
       service: 'mondaySeed',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
     }
 
     return seededCount;
@@ -466,9 +463,8 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
       service: 'mondaySeed',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
 
     return seededCount;
@@ -524,9 +520,8 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
       service: 'mondaySeed',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
 
     return seededCount;
@@ -559,7 +554,7 @@ service: 'mondaySeed',;
         calculation_method: "automatic"
       };
 
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         await storage.createMetricsBusiness(metricData);
@@ -569,9 +564,8 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
       service: 'mondaySeed',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
 
     return seededCount;
@@ -629,9 +623,9 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
 service: 'mondaySeed',;
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
 
     return seededCount;
   }
@@ -688,9 +682,9 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
 service: 'mondaySeed',;
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
 
     return seededCount;
   }

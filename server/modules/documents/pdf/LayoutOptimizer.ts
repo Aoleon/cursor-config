@@ -108,9 +108,9 @@ export class LayoutOptimizer {
     {
       operation: 'Logger',
       service: 'LayoutOptimizer',
-      metadata: {}
-    }
-  );`, 500);
+      metadata: {
+                                                                                }
+                                                                              });
     }
   }
 

@@ -179,8 +179,7 @@ async function testBusinessContextEnrichment() {
       }
       if (ctx.business_rules) {
         logger.info(`   Règles métier: ${ctx.business_rules.length}`);
-      }
-    });
+      });
 
     logger.info("\n" + "=".repeat(60));
     logger.info("✅ Tous les tests ont réussi !");
@@ -193,9 +192,7 @@ async function testBusinessContextEnrichment() {
       operation: 'testBusinessContextEnrichment',
       service: 'test-business-context-enrichment',
       metadata: {}
-    }
-  );
-    });
+    } );
     process.exit(1);
   }
 }

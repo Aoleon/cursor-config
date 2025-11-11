@@ -87,8 +87,7 @@ class MondayService {
         'Authorization': this.apiKey,
         'Content-Type': 'application/json',
         'API-Version': '2024-01'
-      }
-    });
+      });
   }
 
   private async executeQuery<T = unknown>(query: string, variables?: unknown): Promise<T> {
@@ -106,8 +105,8 @@ class MondayService {
               operation: 'executeQuery',
               queryLength: query.length,
               hasVariables: !!variables
-            }
-          });
+
+                });
 
           // Ajouter correlation ID dans headers si disponible
           const response = await this.client.post('', {
@@ -116,8 +115,7 @@ class MondayService {
           }, {
             headers: {
               ...(correlationId && { 'X-Correlation-ID': correlationId })
-            }
-          });
+            });
 
           if (response.data.errors) {
             logger.error('Erreurs GraphQL Monday.com', {
@@ -125,8 +123,8 @@ class MondayService {
               metadata: {
                 operation: 'executeQuery',
                 errors: response.data.errors
-              }
-            });
+
+                  });
             throw new AppError(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors, 500)}`);
           }
 
@@ -136,9 +134,7 @@ class MondayService {
     {
       operation: 'dropdown',
       service: 'MondayService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
       },
       'GraphQL Query'
     );
@@ -156,8 +152,8 @@ class MondayService {
           operation: 'getBoards',
           cacheHit: true,
           count: cached.length
-        }
-      });
+
+            });
       return cached;
     }
 
@@ -185,8 +181,8 @@ class MondayService {
         operation: 'getBoards',
         count: boards.length,
         cacheTTL: TTL_CONFIG.MONDAY_BOARDS_LIST
-      }
-    });
+
+          });
 
     return boards;
   }
@@ -216,8 +212,8 @@ class MondayService {
         operation: 'getBoardColumns',
         boardId,
         columnCount: columns.length
-      }
-    });
+
+          });
 
     return columns;
   }
@@ -265,8 +261,8 @@ class MondayService {
         operation: 'getBoardItems',
         boardId,
         itemCount: items.length
-      }
-    });
+
+          });
 
     return items;
   }
@@ -287,8 +283,8 @@ class MondayService {
         operation: 'getBoardItemsPaginated',
         boardId,
         limit
-      }
-    });
+
+          });
 
     while (hasMore) {
       const query = `
@@ -344,8 +340,8 @@ class MondayService {
             operation: 'getBoardItemsPaginated',
             boardId,
             pageCount
-          }
-        });
+
+              });
         break;
       }
 
@@ -366,8 +362,8 @@ class MondayService {
           totalSoFar: allItems.length,
           hasMore,
           nextCursor: cursor ? cursor.substring(0, 20) + '...' : null
-        }
-      });
+
+            });
 
       // Sécurité: éviter boucle infinie
       if (pageCount > 100) {
@@ -378,8 +374,8 @@ class MondayService {
             boardId,
             pageCount,
             totalItems: allItems.length
-          }
-        });
+
+              });
         break;
       }
     }
@@ -391,8 +387,8 @@ class MondayService {
         boardId,
         totalItems: allItems.length,
         totalPages: pageCount
-      }
-    });
+
+          });
 
     return allItems;
   }
@@ -409,8 +405,8 @@ class MondayService {
           operation: 'getBoardData',
           boardId,
           cacheHit: true
-        }
-      });
+
+            });
       return cached;
     }
 
@@ -469,8 +465,8 @@ class MondayService {
         columnCount: response.columns.length,
         itemCount: response.items.length,
         cacheTTL: TTL_CONFIG.MONDAY_BOARD_DETAIL
-      }
-    });
+
+          });
 
     return response;
   }
@@ -497,8 +493,8 @@ class MondayService {
           operation: 'testConnection',
           userId: result.me?.id,
           userName: result.me?.name
-        }
-      });
+
+            });
 
       return true;
     
@@ -506,9 +502,7 @@ class MondayService {
     {
       operation: 'dropdown',
       service: 'MondayService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
   }
 
   async getItem(itemId: string): Promise<MondayItem> {
@@ -554,8 +548,8 @@ class MondayService {
         operation: 'getItem',
         itemId,
         itemName: item.name
-      }
-    });
+
+          });
 
     return item;
   }
@@ -577,8 +571,8 @@ class MondayService {
               text: columnValue.text,
               value: columnValue.value,
               index: columnValue.index
-            }
-          });
+
+                });
           
           // Utiliser label direct du fragment StatusValue si disponible
           if (columnValue.label) return columnValue.label;
@@ -591,8 +585,8 @@ class MondayService {
                 parsed,
                 label: parsed.label,
                 index: parsed.index
-              }
-            });
+
+                  });
             return parsed.label || parsed.index || null;
           }
           return null;
@@ -700,4 +694,4 @@ class MondayService {
 
 // Export class and singleton instance
 export { MondayService };
-export const mondayService = new MondayService();
+export const mondayService = mondayintegrationService();

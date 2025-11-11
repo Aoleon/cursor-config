@@ -37,6 +37,7 @@ import { getBusinessAnalyticsService } from '../../services/consolidated/Busines
 import { PredictiveEngineService } from '../../services/PredictiveEngineService';
 import { getTechnicalMetricsService } from '../../services/consolidated/TechnicalMetricsService';
 import { getCacheService, TTL_CONFIG } from '../../services/CacheService';
+import { prevuVsReelService } from '../../services/PrevuVsReelService';
 import type {
   AnalyticsFiltersRequest,
   AnalyticsQueryParams,
@@ -94,31 +95,35 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.get('/api/analytics/kpis',
     isAuthenticated,
     validateQuery(analyticsFiltersSchema.optional()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const filters: AnalyticsFiltersRequest = req.query;
       const cacheService = getCacheService();
       const cacheKey = cacheService.buildKey('analytics', 'kpis', { userId: req.user?.id, filters });
       
       const cached = await cacheService.get<any>(cacheKey);
       if (cached) {
-        logger.debug('[Analytics] KPIs récupérés depuis cache', {
-          metadata: {
+        logger.debug('[Analytics] KPIs récupérés depuis cache', { metadata: {
             route: '/api/analytics/kpis',
             cacheHit: true,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         return sendSuccess(res, cached);
       }
       
-      logger.info('[Analytics] Récupération KPIs', {
-        metadata: {
+      logger.info('[Analytics] Récupération KPIs', { metadata: {
           route: '/api/analytics/kpis',
           method: 'GET',
           filters,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const kpis = await analyticsService.getRealtimeKPIs(filters);
       
@@ -135,8 +140,9 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       await cacheService.set(cacheKey, dashboard, TTL_CONFIG.ANALYTICS_KPI);
 
       sendSuccess(res, dashboard);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // METRICS ROUTES
@@ -146,31 +152,35 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.get('/api/analytics/metrics',
     isAuthenticated,
     validateQuery(metricQuerySchema.optional()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const params: AnalyticsQueryParams = req.query;
       const cacheService = getCacheService();
       const cacheKey = cacheService.buildKey('analytics', 'metrics', { userId: req.user?.id, params });
       
       const cached = await cacheService.get<{ metrics: any }>(cacheKey);
       if (cached) {
-        logger.debug('[Analytics] Métriques récupérées depuis cache', {
-          metadata: {
+        logger.debug('[Analytics] Métriques récupérées depuis cache', { metadata: {
             route: '/api/analytics/metrics',
             cacheHit: true,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         return sendSuccess(res, cached);
       }
       
-      logger.info('[Analytics] Récupération métriques business', {
-        metadata: {
+      logger.info('[Analytics] Récupération métriques business', { metadata: {
           route: '/api/analytics/metrics',
           method: 'GET',
           params,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const metrics = await analyticsService.getBusinessMetrics({
         ...params,
@@ -182,8 +192,9 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       await cacheService.set(cacheKey, response, TTL_CONFIG.ANALYTICS_METRICS);
 
       sendSuccess(res, response);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // DASHBOARD ROUTES
@@ -192,36 +203,42 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   // Get dashboard stats
   router.get('/api/dashboard/stats',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Analytics] Récupération stats dashboard', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Analytics] Récupération stats dashboard', { metadata: {
           route: '/api/dashboard/stats',
           method: 'GET',
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const stats = await analyticsService.getDashboardStats();
       sendSuccess(res, stats);
-    })
-  );
+          }
+        })
+      );
 
   // Get dashboard KPIs
   router.get('/api/dashboard/kpis',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Analytics] Récupération KPIs dashboard', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Analytics] Récupération KPIs dashboard', { metadata: {
           route: '/api/dashboard/kpis',
           method: 'GET',
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const kpis = await analyticsService.getDashboardKPIs();
       sendSuccess(res, kpis);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // PIPELINE ANALYTICS ROUTES
@@ -231,22 +248,25 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.get('/api/analytics/pipeline',
     isAuthenticated,
     validateQuery(analyticsFiltersSchema.optional()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const filters: AnalyticsFiltersRequest = req.query;
       
-      logger.info('[Analytics] Récupération analytics pipeline', {
-        metadata: {
+      logger.info('[Analytics] Récupération analytics pipeline', { metadata: {
           route: '/api/analytics/pipeline',
           method: 'GET',
           filters,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const pipeline = await analyticsService.getPipelineAnalytics(filters);
       sendSuccess(res, pipeline);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // PREDICTIVE ANALYTICS ROUTES
@@ -256,22 +276,25 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.get('/api/predictive/revenue',
     isAuthenticated,
     validateQuery(analyticsQuerySchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const params: AnalyticsQueryParams = req.query;
       
-      logger.info('[Analytics] Récupération prédictions revenus', {
-        metadata: {
+      logger.info('[Analytics] Récupération prédictions revenus', { metadata: {
           route: '/api/predictive/revenue',
           method: 'GET',
           params,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const forecast = await predictiveService.forecastRevenue(params);
       sendSuccess(res, forecast);
-    })
-  );
+          }
+        })
+      );
 
   // Get risk predictions
   router.get('/api/predictive/risks',
@@ -280,18 +303,20 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       projectId: z.string().uuid().optional(),
       threshold: z.coerce.number().min(0).max(100).optional()
     })),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { projectId, threshold } = req.query;
       
-      logger.info('[Analytics] Récupération prédictions risques', {
-        metadata: {
+      logger.info('[Analytics] Récupération prédictions risques', { metadata: {
           route: '/api/predictive/risks',
           method: 'GET',
           projectId,
           threshold,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const risks = await predictiveService.analyzeRisks({
         projectId,
@@ -299,29 +324,33 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, risks);
-    })
-  );
+          }
+        })
+      );
 
   // Get AI recommendations
   router.get('/api/predictive/recommendations',
     isAuthenticated,
     validateQuery(businessContextSchema.optional()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const context = req.query;
       
-      logger.info('[Analytics] Récupération recommandations IA', {
-        metadata: {
+      logger.info('[Analytics] Récupération recommandations IA', { metadata: {
           route: '/api/predictive/recommendations',
           method: 'GET',
           context,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const recommendations = await predictiveService.generateRecommendations(context);
       sendSuccess(res, recommendations);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // SNAPSHOT ROUTES
@@ -335,19 +364,21 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       limit: z.coerce.number().min(1).max(50).optional().default(10),
       offset: z.coerce.number().min(0).optional().default(0)
     })),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { type, limit, offset } = req.query;
       
-      logger.info('[Analytics] Récupération snapshots', {
-        metadata: {
+      logger.info('[Analytics] Récupération snapshots', { metadata: {
           route: '/api/analytics/snapshots',
           method: 'GET',
           type,
           limit,
           offset,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const snapshots = await storage.getAnalyticsSnapshots({
         type,
@@ -356,24 +387,27 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendPaginatedSuccess(res, snapshots.data, snapshots.total);
-    })
-  );
+          }
+        })
+      );
 
   // Save analytics snapshot
   router.post('/api/analytics/snapshot',
     isAuthenticated,
     validateBody(snapshotRequestSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const snapshotData = req.body;
       
-      logger.info('[Analytics] Sauvegarde snapshot', {
-        metadata: {
+      logger.info('[Analytics] Sauvegarde snapshot', { metadata: {
           route: '/api/analytics/snapshot',
           method: 'POST',
           type: snapshotData.forecast_type,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const snapshot = await storage.createAnalyticsSnapshot({
         ...snapshotData,
@@ -387,24 +421,27 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, snapshot, 201);
-    })
-  );
+          }
+        })
+      );
 
   // Save predictive snapshot
   router.post('/api/predictive/snapshots',
     isAuthenticated,
     validateBody(snapshotRequestSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { forecast_type, data, params, notes } = req.body;
       
-      logger.info('[Analytics] Sauvegarde snapshot prédictif', {
-        metadata: {
+      logger.info('[Analytics] Sauvegarde snapshot prédictif', { metadata: {
           route: '/api/predictive/snapshots',
           method: 'POST',
           type: forecast_type,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const snapshot = await predictiveService.saveSnapshot({
         type: forecast_type,
@@ -415,8 +452,9 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, snapshot, 201);
-    })
-  );
+          }
+        })
+      );
 
   // Get predictive snapshots
   router.get('/api/predictive/snapshots',
@@ -426,17 +464,19 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       limit: z.coerce.number().min(1).max(50).optional().default(10),
       offset: z.coerce.number().min(0).optional().default(0)
     })),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { type, limit, offset } = req.query;
       
-      logger.info('[Analytics] Récupération snapshots prédictifs', {
-        metadata: {
+      logger.info('[Analytics] Récupération snapshots prédictifs', { metadata: {
           route: '/api/predictive/snapshots',
           method: 'GET',
           type,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const snapshots = await predictiveService.getSnapshots({
         type,
@@ -445,8 +485,9 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendPaginatedSuccess(res, snapshots.data, snapshots.total);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // BENCHMARK ROUTES
@@ -456,22 +497,25 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.get('/api/analytics/benchmarks',
     isAuthenticated,
     validateQuery(benchmarkQuerySchema.optional()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const params = req.query;
       
-      logger.info('[Analytics] Récupération benchmarks', {
-        metadata: {
+      logger.info('[Analytics] Récupération benchmarks', { metadata: {
           route: '/api/analytics/benchmarks',
           method: 'GET',
           params,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const benchmarks = await analyticsService.getBenchmarks(params);
       sendSuccess(res, benchmarks);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // REAL-TIME ANALYTICS ROUTES
@@ -480,36 +524,41 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   // Get real-time metrics
   router.get('/api/analytics/realtime',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const cacheService = getCacheService();
       const cacheKey = cacheService.buildKey('analytics', 'realtime', { userId: req.user?.id });
       
       const cached = await cacheService.get<any>(cacheKey);
       if (cached) {
-        logger.debug('[Analytics] Métriques temps réel récupérées depuis cache', {
-          metadata: {
+        logger.debug('[Analytics] Métriques temps réel récupérées depuis cache', { metadata: {
             route: '/api/analytics/realtime',
             cacheHit: true,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         return sendSuccess(res, cached);
       }
 
-      logger.info('[Analytics] Récupération métriques temps réel', {
-        metadata: {
+      logger.info('[Analytics] Récupération métriques temps réel', { metadata: {
           route: '/api/analytics/realtime',
           method: 'GET',
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const metrics = await analyticsService.getRealtimeMetrics();
       await cacheService.set(cacheKey, metrics, TTL_CONFIG.ANALYTICS_REALTIME);
 
       sendSuccess(res, metrics);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // ALERTS ROUTES
@@ -519,37 +568,42 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.get('/api/analytics/alerts',
     isAuthenticated,
     validateQuery(alertsQuerySchema.optional()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const query = req.query;
       
-      logger.info('[Analytics] Récupération alertes business', {
-        metadata: {
+      logger.info('[Analytics] Récupération alertes business', { metadata: {
           route: '/api/analytics/alerts',
           method: 'GET',
           query,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const alerts = await storage.getBusinessAlerts(query);
       sendSuccess(res, alerts);
-    })
-  );
+          }
+        })
+      );
 
   // Create alert threshold
   router.post('/api/analytics/alerts/thresholds',
     isAuthenticated,
     validateBody(insertAlertThresholdSchema),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Analytics] Création seuil alerte', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Analytics] Création seuil alerte', { metadata: {
           route: '/api/analytics/alerts/thresholds',
           method: 'POST',
           metric: req.body.metric,
           threshold: req.body.threshold,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const threshold = await storage.createAlertThreshold({
         ...req.body,
@@ -557,29 +611,33 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, threshold, 201);
-    })
-  );
+          }
+        })
+      );
 
   // Update alert threshold
   router.patch('/api/analytics/alerts/thresholds/:id',
     isAuthenticated,
     validateBody(updateAlertThresholdSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { id } = req.params;
       
-      logger.info('[Analytics] Mise à jour seuil alerte', {
-        metadata: {
+      logger.info('[Analytics] Mise à jour seuil alerte', { metadata: {
           route: '/api/analytics/alerts/thresholds/:id',
           method: 'PATCH',
           thresholdId: id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const threshold = await storage.updateAlertThreshold(id, req.body);
       sendSuccess(res, threshold);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // BOTTLENECK ANALYSIS ROUTES
@@ -588,19 +646,22 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   // Get bottlenecks
   router.get('/api/analytics/bottlenecks',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Analytics] Récupération goulots étranglement', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Analytics] Récupération goulots étranglement', { metadata: {
           route: '/api/analytics/bottlenecks',
           method: 'GET',
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const bottlenecks = await analyticsService.analyzeBottlenecks();
       sendSuccess(res, bottlenecks);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // EXPORT ROUTES
@@ -611,18 +672,20 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
     isAuthenticated,
     rateLimits.processing,
     validateBody(exportRequestSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const exportRequest: ExportRequest = req.body;
       
-      logger.info('[Analytics] Export données analytics', {
-        metadata: {
+      logger.info('[Analytics] Export données analytics', { metadata: {
           route: '/api/analytics/export',
           method: 'POST',
           format: exportRequest.format,
           type: exportRequest.type,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       const result = await analyticsService.exportData(exportRequest);
       
@@ -634,9 +697,9 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         res.json(result.data);
       } else {
         res.send(result.data);
-      }
-    })
-  );
+                        }
+
+                      }));
 
   // ========================================
   // AI PERFORMANCE ROUTES
@@ -654,7 +717,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       userId: z.string().optional(),
       includeP95P99: z.string().default('true').transform(val => val === 'true' || val === '1')
     }).optional()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const query = req.query || {};
         const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
@@ -662,14 +725,16 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         const userId = query.userId as string | undefined;
         const includeP95P99 = query.includeP95P99 === 'true' || query.includeP95P99 === true;
         
-        logger.info('Récupération métriques pipeline avec filtres', {
-          metadata: { 
+        logger.info('Récupération métriques pipeline avec filtres', { metadata: { 
             route: '/api/ai-performance/pipeline-metrics',
             method: 'GET',
             filters: req.query,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const metrics = await performanceService.getPipelineMetrics({
           timeRange,
@@ -683,22 +748,23 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
           metadata: {
             calculatedAt: new Date(),
             filtersApplied: Object.keys(req.query || {}).length
-          }
-        });
-        
-      
+              })
+
+            );
       } catch (error) {
-        logger.error('Erreur getPipelineMetrics', {
-          metadata: {
+        logger.error('Erreur getPipelineMetrics', { metadata: {
             service: 'analytics',
             operation: 'getPipelineMetrics',
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+
+            })
+
+
+          );
         throw createError.database('Erreur lors de la récupération des métriques pipeline');
-      }
-    })
-  );
+                        }
+
+                      }));
 
   // GET /api/ai-performance/cache-analytics - Analytics cache hit/miss par complexité
   router.get('/api/ai-performance/cache-analytics', 
@@ -710,20 +776,22 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       }).optional(),
       breakdown: z.enum(['complexity', 'user', 'time']).default('complexity')
     }).optional()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const query = req.query || {};
         const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
         const breakdown = (query.breakdown as 'complexity' | 'user' | 'time') || 'complexity';
         
-        logger.info('Analytics cache avec breakdown', {
-          metadata: { 
+        logger.info('Analytics cache avec breakdown', { metadata: { 
             route: '/api/ai-performance/cache-analytics',
             method: 'GET',
             breakdown,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const cacheAnalytics = await performanceService.getCacheAnalytics({
           timeRange,
@@ -735,21 +803,22 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
           metadata: {
             breakdown,
             calculatedAt: new Date()
-          }
-        });
-        
-      
-        } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
-          service: 'analytics',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
-      throw createError.database('Erreur lors de l\'analyse des métriques cache');
-      }
-    })
-  );
+              })
+
+            );
+      } catch (error) {
+        logger.error('Erreur', { metadata: {
+            service: 'analytics',
+            error: error instanceof Error ? error.message : String(error)
+
+            })
+
+
+          );
+        throw createError.database('Erreur lors de l\'analyse des métriques cache');
+                        }
+
+                      }));
 
   // GET /api/ai-performance/slo-compliance - Conformité SLO et alertes
   router.get('/api/ai-performance/slo-compliance',
@@ -762,20 +831,22 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       includeTrends: z.string().default('true').transform(val => val === 'true' || val === '1'),
       includeAlerts: z.string().default('true').transform(val => val === 'true' || val === '1')
     }).optional()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const query = req.query || {};
         const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
         const includeTrends = query.includeTrends === 'true' || query.includeTrends === true;
         const includeAlerts = query.includeAlerts === 'true' || query.includeAlerts === true;
         
-        logger.info('SLO compliance check', {
-          metadata: {
+        logger.info('SLO compliance check', { metadata: {
             route: '/api/ai-performance/slo-compliance',
             method: 'GET',
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const sloMetrics = await performanceService.getSLOCompliance({
           timeRange,
@@ -792,19 +863,19 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
           },
           calculatedAt: new Date()
         });
-        
-      
-        } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
-          service: 'analytics',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
-      throw createError.database('Erreur lors de la vérification de conformité SLO');
-      }
-    })
-  );
+      } catch (error) {
+        logger.error('Erreur', { metadata: {
+            service: 'analytics',
+            error: error instanceof Error ? error.message : String(error)
+
+            })
+
+
+          );
+        throw createError.database('Erreur lors de la vérification de conformité SLO');
+                        }
+
+                      }));
 
   // GET /api/ai-performance/bottlenecks - Identification goulots d'étranglement
   router.get('/api/ai-performance/bottlenecks',
@@ -816,20 +887,22 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       }).optional(),
       threshold: z.coerce.number().min(0.1).max(10).default(2.0)
     }).optional()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const query = req.query || {};
         const timeRange = query.timeRange as { startDate: string; endDate: string } | undefined;
         const threshold = typeof query.threshold === 'string' ? parseFloat(query.threshold) : (query.threshold as number) || 2.0;
         
-        logger.info('Analyse goulots avec seuil', {
-          metadata: { 
+        logger.info('Analyse goulots avec seuil', { metadata: { 
             route: '/api/ai-performance/bottlenecks',
             method: 'GET',
             threshold,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const bottlenecks = await performanceService.identifyBottlenecks({
           timeRange,
@@ -840,33 +913,38 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
           ...bottlenecks,
           thresholdUsed: threshold,
           analysisDate: new Date()
-        });
+
+              });
         
       
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           service: 'analytics',
           error: error instanceof Error ? error.message : String(error)
-        }
-      });
+
+            })
+
+
+          );
       throw createError.database('Erreur lors de l\'identification des goulots d\'étranglement');
-      }
-    })
-  );
+                        }
+
+                      }));
 
   // GET /api/ai-performance/real-time-stats - Statistiques temps réel
   router.get('/api/ai-performance/real-time-stats',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
-        logger.info('Stats temps réel', {
-          metadata: {
+        logger.info('Stats temps réel', { metadata: {
             route: '/api/ai-performance/real-time-stats',
             method: 'GET',
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const realtimeStats = await performanceService.getRealTimeStats();
         
@@ -874,20 +952,21 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
           ...realtimeStats,
           timestamp: new Date(),
           refreshInterval: 30
-        });
-        
-      
-        } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
-          service: 'analytics',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
-      throw createError.database('Erreur lors de la récupération des statistiques temps réel');
-      }
-    })
-  );
+
+              });
+      } catch (error) {
+        logger.error('Erreur', { metadata: {
+            service: 'analytics',
+            error: error instanceof Error ? error.message : String(error)
+
+            })
+
+
+          );
+        throw createError.database('Erreur lors de la récupération des statistiques temps réel');
+                        }
+
+                      }));
 
   // ========================================
   // BUSINESS METRICS ROUTES
@@ -897,84 +976,94 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
   router.get('/api/metrics-business',
     isAuthenticated,
     rateLimits.general,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const { entity_type, entity_id } = req.query;
         
-        logger.info('Récupération métriques business', {
-          metadata: {
+        logger.info('Récupération métriques business', { metadata: {
             route: '/api/metrics-business',
             method: 'GET',
             entity_type,
             entity_id,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const metrics = await storage.getMetricsBusiness(entity_type, entity_id);
         sendSuccess(res, metrics);
       
-        } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
-          service: 'analytics',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
-      throw createError.database("Erreur lors de la récupération des métriques business");
-      }
-    })
-  );
+      } catch (error) {
+        logger.error('Erreur', { metadata: {
+            service: 'analytics',
+            error: error instanceof Error ? error.message : String(error)
+
+            })
+
+
+          );
+        throw createError.database("Erreur lors de la récupération des métriques business");
+                        }
+
+                      }));
 
   // POST /api/metrics-business - Créer nouvelle métrique business
   router.post('/api/metrics-business',
     isAuthenticated,
     rateLimits.general,
     validateBody(insertMetricsBusinessSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const metricData = req.body;
         
-        logger.info('Création métrique business', {
-          metadata: {
+        logger.info('Création métrique business', { metadata: {
             route: '/api/metrics-business',
             method: 'POST',
             metric_type: metricData.metric_type,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const newMetric = await storage.createMetricsBusiness(metricData);
         sendSuccess(res, newMetric, 201);
       
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           service: 'analytics',
           error: error instanceof Error ? error.message : String(error)
-        }
-      });
+
+            })
+
+
+          );
       throw createError.database("Erreur lors de la création de la métrique business");
-      }
-    })
-  );
+                        }
+
+                      }));
 
   // GET /api/metrics-business/:id - Récupérer métrique business par ID
   router.get('/api/metrics-business/:id',
     isAuthenticated,
     validateParams(commonParamSchemas.id),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const { id } = req.params;
         
-        logger.info('Récupération métrique business par ID', {
-          metadata: {
+        logger.info('Récupération métrique business par ID', { metadata: {
             route: '/api/metrics-business/:id',
             method: 'GET',
             id,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const metric = await storage.getMetricsBusinessById(id);
         if (!metric) {
@@ -982,18 +1071,20 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         }
         sendSuccess(res, metric);
       } catch (error) {
-        logger.error('Erreur getMetricsBusinessById', {
-          metadata: {
+        logger.error('Erreur getMetricsBusinessById', { metadata: {
             service: 'analytics',
             operation: 'getMetricsBusinessById',
             id,
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+
+            })
+
+
+          );
         throw createError.notFound("Métrique business non trouvée");
-      }
-    })
-  );
+                        }
+
+                      }));
 
   // PUT /api/metrics-business/:id - Mettre à jour métrique business
   router.put('/api/metrics-business/:id',
@@ -1001,70 +1092,77 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
     rateLimits.general,
     validateParams(commonParamSchemas.id),
     validateBody(insertMetricsBusinessSchema.partial()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const { id } = req.params;
         const updateData = req.body;
         
-        logger.info('Mise à jour métrique business', {
-          metadata: {
+        logger.info('Mise à jour métrique business', { metadata: {
             route: '/api/metrics-business/:id',
             method: 'PUT',
             id,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const updatedMetric = await storage.updateMetricsBusiness(id, updateData);
         sendSuccess(res, updatedMetric);
       
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           service: 'analytics',
           error: error instanceof Error ? error.message : String(error)
-        }
-      });
+
+            })
+
+
+          );
       throw createError.database("Erreur lors de la mise à jour de la métrique business");
-      }
-    })
-  );
+                        }
+
+                      }));
 
   // DELETE /api/metrics-business/:id - Supprimer métrique business
   router.delete('/api/metrics-business/:id',
     isAuthenticated,
     rateLimits.general,
     validateParams(commonParamSchemas.id),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const { id } = req.params;
         
-        logger.info('Suppression métrique business', {
-          metadata: {
+        logger.info('Suppression métrique business', { metadata: {
             route: '/api/metrics-business/:id',
             method: 'DELETE',
             id,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         await storage.deleteMetricsBusiness(id);
         sendSuccess(res, null);
       
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           service: 'analytics',
           error: error instanceof Error ? error.message : String(error)
-        }
-      });
-      throw createError.database("Erreur lors de la suppression de la métrique business");
-      }
-    })
-  );
 
-  logger.info('[AnalyticsModule] Routes initialisées', {
-    metadata: {
+            })
+
+
+          );
+      throw createError.database("Erreur lors de la suppression de la métrique business");
+                        }
+
+                      }));
+
+  logger.info('[AnalyticsModule] Routes initialisées', { metadata: {
       module: 'AnalyticsModule',
       routes: [
         '/api/analytics/kpis',
@@ -1091,8 +1189,67 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
         'PUT /api/metrics-business/:id',
         'DELETE /api/metrics-business/:id'
       ]
-    }
-  });
+    
+            })
+
+    
+          );
+
+  // ========================================
+  // PRÉVU VS RÉEL ROUTES (Fonctionnalité 8)
+  // ========================================
+
+  // GET /api/analytics/projects/:id/prevu-vs-reel
+  router.get('/api/analytics/projects/:id/prevu-vs-reel',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: Request, res: Response) => {
+      const projectId = req.params.id;
+      const comparison = await prevuVsReelService.compareProject(projectId);
+      return sendSuccess(res, comparison);
+          }
+        })
+      );
+
+  // GET /api/analytics/prevu-vs-reel/global
+  router.get('/api/analytics/prevu-vs-reel/global',
+    isAuthenticated,
+    rateLimits.general,
+    validateQuery(z.object({
+      projectIds: z.array(z.string().uuid()).optional(),
+      dateFrom: z.string().datetime().optional(),
+      dateTo: z.string().datetime().optional()
+    })),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { projectIds, dateFrom, dateTo } = req.query;
+      
+      // Si projectIds fourni, comparer ces projets
+      if (projectIds && Array.isArray(projectIds)) {
+        const comparisons = await Promise.all(
+          (projectIds as string[]).map(id => prevuVsReelService.compareProject(id))
+        );
+        return sendSuccess(res, { comparisons 
+       
+       
+       });
+      }
+      
+      // Sinon, récupérer tous les projets actifs
+      const projects = await storage.getProjects();
+      const comparisons = await Promise.all(
+        projects.map(p => prevuVsReelService.compareProject(p.id))
+      );
+      
+      return sendSuccess(res, { 
+        comparisons,
+        summary: {
+          totalProjects: comparisons.length,
+          averageVariance: {
+            dates: comparisons.reduce((sum, c) => sum + (c.dates.variance.endDays || 0), 0) / comparisons.length,
+            budget: comparisons.reduce((sum, c) => sum + c.budget.variancePercent, 0) / comparisons.length,
+            hours: comparisons.reduce((sum, c) => sum + c.hours.variancePercent, 0) / comparisons.length
+                }));
 
   return router;
 }

@@ -112,14 +112,13 @@ export function validate(
           details: {
             source,
             message: validationError.message,
-            issues: error.issues.map(issue => ({
+            issues: error.issues.map(issue  => ({
               field: issue.path.join('.'),
               message: issue.message,
               code: issue.code,
               received: 'received' in issue ? (issue as any).received : 'undefined'
             }))
-          }
-        });
+          });
       }
       next(error);
     }
@@ -265,7 +264,7 @@ export function validateRequest(validations: {
       return res.status(400).json({
         success: false,
         error: 'Erreurs de validation',
-        details: errors.map(err => ({
+        details: errors.map(err  => ({
           source: err.source,
           issues: err.issues.map((issue: any) => ({
             field: issue.path.join('.'),
@@ -309,8 +308,7 @@ export function validateFileUpload(
         details: {
           field: fieldName,
           message: `Le fichier ${fieldName} est requis`
-        }
-      });
+        });
     }
 
     // Si pas de fichier et pas requis, continuer
@@ -332,8 +330,7 @@ export function validateFileUpload(
             maxSize: opts.maxSize,
             actualSize: f.size,
             message: `Le fichier ${f.originalname} dépasse la taille limite de ${opts.maxSize} bytes`
-          }
-        });
+          });
       }
 
       // Vérifier le type MIME
@@ -346,8 +343,7 @@ export function validateFileUpload(
             allowedTypes: opts.allowedMimeTypes,
             actualType: f.mimetype,
             message: `Le type ${f.mimetype} n'est pas autorisé pour ${f.originalname}`
-          }
-        });
+          });
       }
     }
 

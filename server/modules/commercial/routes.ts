@@ -36,8 +36,11 @@ import {
   convertToProjectSchema,
   patchValidateStudiesSchema,
   transformToProjectSchema,
-  createAoDraftSchema
+  createAoDraftSchema,
+  initializeBeQualityChecklistSchema,
+  updateBeQualityChecklistItemSchema
 } from '../../validation-schemas';
+import { beQualityChecklistService } from '../../services/BeQualityChecklistService';
 import { calculerDateLimiteRemiseAuto, calculerDateRemiseJ15 } from '../../dateUtils';
 import { ObjectStorageService } from '../../objectStorage';
 import multer from 'multer';
@@ -98,13 +101,12 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
   router.get('/api/aos',
     isAuthenticated,
     validateQuery(aoQuerySchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { search, status, limit, offset } = req.query;
       const actualLimit = Number(limit) || 20;
       const actualOffset = Number(offset) || 0;
       
-      logger.info('[Commercial] Récupération AOs', {
-        metadata: {
+      logger.info('[Commercial] Récupération AOs', { metadata: {
           route: '/api/aos',
           method: 'GET',
           search,
@@ -112,8 +114,11 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           limit: actualLimit,
           offset: actualOffset,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const { aos, total } = await storage.getAOsPaginated(
         search as string,
@@ -129,20 +134,23 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         limit: actualLimit,
         page
       });
-    })
-  );
+          }
+        })
+      );
 
   // GET /api/aos/etude - AOs en étude technique (MUST BE BEFORE /api/aos/:id)
   router.get('/api/aos/etude',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Récupération AOs en étude', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Récupération AOs en étude', { metadata: {
           route: '/api/aos/etude',
           method: 'GET',
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const aos = await storage.getAos();
       const aosEtude = aos.filter((ao: any) => 
@@ -157,32 +165,39 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         lotsValidated: Math.random() > 0.3,
         daysInStudy: Math.floor(Math.random() * 10),
         priority: Math.random() > 0.7 ? 'urgent' : 'normal'
-      }));
+          })
+
+        );
       
-      logger.info('[Commercial] AOs en étude récupérés', {
-        metadata: {
+      logger.info('[Commercial] AOs en étude récupérés', { metadata: {
           count: enrichedAos.length,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       res.json(enrichedAos);
-    })
-  );
+          }
+        })
+      );
 
   // GET /api/aos/:id - AO par ID
   router.get('/api/aos/:id',
     isAuthenticated,
     validateParams(commonParamSchemas.id),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Récupération AO', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Récupération AO', { metadata: {
           route: '/api/aos/:id',
           method: 'GET',
           aoId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const ao = await storage.getAo(req.params.id);
       if (!ao) {
@@ -190,14 +205,15 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
       }
       
       sendSuccess(res, ao);
-    })
-  );
+          }
+        })
+      );
 
   // POST /api/aos - Créer AO
   router.post('/api/aos',
     isAuthenticated,
     rateLimits.creation,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       // Validation conditionnelle : brouillon ou AO complet
       const isDraft = req.body.isDraft === true;
       const validationSchema = isDraft ? createAoDraftSchema : insertAoSchema;
@@ -220,30 +236,34 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
             aoData.dateRenduAO = dateRenduCalculee;
           }
           
-          logger.info('[Commercial] Dates calculées automatiquement', {
-            metadata: {
+          logger.info('[Commercial] Dates calculées automatiquement', { metadata: {
               dateSortie: aoData.dateSortieAO,
               dateLimiteRemise: dateLimiteCalculee.toISOString(),
               dateRenduAO: dateRenduCalculee ? dateRenduCalculee.toISOString() : 'N/A',
               userId: req.user?.id
-            }
-          });
+
+            })
+
+
+          );
         }
       }
       
       try {
         const ao = await storage.createAo(aoData);
         
-        logger.info('[Commercial] AO créé', {
-          metadata: {
+        logger.info('[Commercial] AO créé', { metadata: {
             route: '/api/aos',
             method: 'POST',
             aoId: ao.id,
             reference: ao.reference,
             isDraft: aoData.isDraft || false,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         eventBus.emit('ao:created', {
           aoId: ao.id,
@@ -253,23 +273,25 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         
         sendSuccess(res, ao, 201);
       } catch (error) {
-        logger.error('Erreur createAO', {
-          metadata: {
+        logger.error('Erreur createAO', { metadata: {
             service: 'commercial',
             operation: 'createAO',
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+
+            })
+
+
+          );
         throw error;
-      }
-    })
-  );
+                        }
+
+                      }));
 
   // POST /api/aos/:aoId/documents/upload-url - Obtenir l'URL d'upload pour un document OneDrive
   router.post('/api/aos/:aoId/documents/upload-url',
     isAuthenticated,
     validateParams(commonParamSchemas.aoId),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const aoId = req.params.aoId;
       const { folderName, fileName } = req.body;
       
@@ -277,16 +299,18 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         throw new ValidationError("folderName et fileName requis");
       }
       
-      logger.info('[Commercial] Génération URL upload document AO vers OneDrive', {
-        metadata: {
+      logger.info('[Commercial] Génération URL upload document AO vers OneDrive', { metadata: {
           route: '/api/aos/:aoId/documents/upload-url',
           method: 'POST',
           aoId,
           folderName,
           fileName,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const ao = await storage.getAo(aoId);
       if (!ao) {
@@ -304,9 +328,12 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         
         // Pour OneDrive, on retourne un indicateur que l'upload sera géré côté serveur
         // (OneDrive ne supporte pas les upload URLs pré-signées comme S3)
-        logger.info('[Commercial] Upload OneDrive préparé', {
-          metadata: { aoId, folderName, fileName, uploadPath }
-        });
+        logger.info('[Commercial] Upload OneDrive préparé', { metadata: { aoId, folderName, fileName, uploadPath 
+
+            })
+ 
+
+          );
         
         res.json({ 
           uploadUrl: `/api/aos/${aoId}/documents/upload-direct`,
@@ -322,18 +349,20 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     {
       operation: 'AOs',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   // POST /api/aos/:aoId/documents/upload-direct - Upload direct vers OneDrive (multipart)
   router.post('/api/aos/:aoId/documents/upload-direct',
     isAuthenticated,
     validateParams(commonParamSchemas.aoId),
     upload.single('file'),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const aoId = req.params.aoId;
       const file = req.file;
       const { folderName } = req.body;
@@ -346,8 +375,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         throw new ValidationError("folderName requis");
       }
       
-      logger.info('[Commercial] Upload direct vers OneDrive', {
-        metadata: {
+      logger.info('[Commercial] Upload direct vers OneDrive', { metadata: {
           route: '/api/aos/:aoId/documents/upload-direct',
           method: 'POST',
           aoId,
@@ -355,8 +383,11 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           fileSize: file.size,
           folderName,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const ao = await storage.getAo(aoId);
       if (!ao) {
@@ -400,15 +431,17 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           lastSyncedAt: new Date()
         });
         
-        logger.info('[Commercial] Document uploadé et sauvegardé', {
-          metadata: {
+        logger.info('[Commercial] Document uploadé et sauvegardé', { metadata: {
             aoId,
             documentId: document.id,
             fileName: uploadedFile.name,
             fileSize: uploadedFile.size,
             oneDriveId: uploadedFile.id
-          }
-        });
+
+            })
+
+
+          );
         
         res.json({
           success: true,
@@ -420,17 +453,15 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
             webUrl: uploadedFile.webUrl,
             category: folderName,
             uploadedAt: document.uploadedAt
-          }
-        });
-      
+          
+      });
+      }
     },
     {
       operation: 'AOs',
       service: 'routes',
       metadata: {}
     }
-  );
-    })
   );
 
   // POST /api/aos/:aoId/documents - Confirmer l'upload d'un document OneDrive
@@ -445,12 +476,11 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
       fileSize: z.number().int().nonnegative().optional(),
       oneDrivePath: z.string().optional()
     })),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const aoId = req.params.aoId;
       const { folderName, fileName, fileSize, oneDriveId, oneDrivePath, webUrl } = req.body;
       
-      logger.info('[Commercial] Confirmation upload document AO vers OneDrive', {
-        metadata: {
+      logger.info('[Commercial] Confirmation upload document AO vers OneDrive', { metadata: {
           route: '/api/aos/:aoId/documents',
           method: 'POST',
           aoId,
@@ -459,8 +489,11 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           folderName,
           oneDriveId,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const ao = await storage.getAo(aoId);
       if (!ao) {
@@ -481,38 +514,43 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         syncedFromOneDrive: true
       };
       
-      logger.info('[Commercial] Upload document OneDrive confirmé', {
-        metadata: { 
+      logger.info('[Commercial] Upload document OneDrive confirmé', { metadata: { 
           aoId, 
           fileName, 
           fileSize, 
           oneDriveId,
           reference: ao.reference 
-        }
-      });
+
+            })
+ 
+
+          );
       
       // TODO: Sauvegarder dans la table documents pour persistence locale
       // await storage.createDocument(documentInfo);
       
       res.json(documentInfo);
-    })
-  );
+          }
+        })
+      );
 
   // POST /api/aos/:aoId/documents/sync - Synchroniser les documents OneDrive → DB
   router.post('/api/aos/:aoId/documents/sync',
     isAuthenticated,
     validateParams(commonParamSchemas.aoId),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const aoId = req.params.aoId;
       
-      logger.info('[Commercial] Démarrage synchronisation documents OneDrive', {
-        metadata: {
+      logger.info('[Commercial] Démarrage synchronisation documents OneDrive', { metadata: {
           route: '/api/aos/:aoId/documents/sync',
           method: 'POST',
           aoId,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const ao = await storage.getAo(aoId);
       if (!ao) {
@@ -533,13 +571,15 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           force: false
         });
         
-        logger.info('[Commercial] Synchronisation documents terminée', {
-          metadata: {
+        logger.info('[Commercial] Synchronisation documents terminée', { metadata: {
             aoId,
             aoReference: ao.reference,
             ...result
-          }
-        });
+
+            })
+
+
+          );
         
         // Retourner HTTP 409 si sync déjà en cours, 500 si erreur globale
         if (!result.success) {
@@ -568,17 +608,20 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           documentsUpdated: result.documentsUpdated,
           documentsDeleted: result.documentsDeleted,
           errors: result.errors
-        });
+
+              });
       
     },
     {
       operation: 'AOs',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   // ========================================
   // AO CONTACTS ROUTES - Table de liaison AO ↔ Contacts
@@ -588,51 +631,63 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
   router.get('/api/ao-contacts/:aoId',
     isAuthenticated,
     validateParams(z.object({ aoId: z.string().uuid("ID AO invalide") })),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const { aoId } = req.params;
         
-        logger.info('[Commercial] Récupération contacts AO', {
-          metadata: {
+        logger.info('[Commercial] Récupération contacts AO', { metadata: {
             route: '/api/ao-contacts/:aoId',
             method: 'GET',
             aoId,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const contacts = await storage.getAoContacts(aoId);
         sendSuccess(res, contacts);
       } catch (error) {
-        logger.error('Erreur getAoContacts', {
-          metadata: {
+        logger.error('Erreur getAoContacts', { metadata: {
             service: 'commercial',
             operation: 'getAoContacts',
             aoId: req.params?.aoId,
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+
+            })
+
+
+          );
         throw createError.database("Erreur lors de la récupération des contacts AO");
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // POST /api/ao-contacts - Créer liaison AO-Contact
   router.post('/api/ao-contacts',
     isAuthenticated,
     rateLimits.creation,
     validateBody(insertAoContactsSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
-        logger.info('[Commercial] Création liaison AO-Contact', {
-          metadata: {
+        logger.info('[Commercial] Création liaison AO-Contact', { metadata: {
             route: '/api/ao-contacts',
             method: 'POST',
             aoId: req.body.aoId,
             contactId: req.body.contactId,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const contactData = req.body;
         const newContact = await storage.createAoContact(contactData);
@@ -645,17 +700,25 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         
         sendSuccess(res, newContact, "Liaison AO-Contact créée avec succès", 201);
       } catch (error) {
-        logger.error('[Commercial] Erreur lors de la création de la liaison AO-Contact', {
-          metadata: {
+        logger.error('[Commercial] Erreur lors de la création de la liaison AO-Contact', { metadata: {
             route: '/api/ao-contacts',
             method: 'POST',
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+
+            })
+
+
+          );
         throw createError.database("Erreur lors de la création de la liaison AO-Contact");
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // PATCH /api/ao-contacts/:id - Mettre à jour contact AO
   router.patch('/api/ao-contacts/:id',
@@ -663,18 +726,20 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     rateLimits.general,
     validateParams(commonParamSchemas.id),
     validateBody(insertAoContactsSchema.partial()),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const { id } = req.params;
         
-        logger.info('[Commercial] Mise à jour liaison AO-Contact', {
-          metadata: {
+        logger.info('[Commercial] Mise à jour liaison AO-Contact', { metadata: {
             route: '/api/ao-contacts/:id',
             method: 'PATCH',
             id,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const updatedContact = await storage.updateAoContact(id, req.body);
         
@@ -685,35 +750,45 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         
         sendSuccess(res, updatedContact, "Liaison AO-Contact mise à jour avec succès");
       } catch (error) {
-        logger.error('[Commercial] Erreur lors de la mise à jour de la liaison AO-Contact', {
-          metadata: {
+        logger.error('[Commercial] Erreur lors de la mise à jour de la liaison AO-Contact', { metadata: {
             route: '/api/ao-contacts/:id',
             method: 'PATCH',
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+
+            })
+
+
+          );
         throw createError.database("Erreur lors de la mise à jour de la liaison AO-Contact");
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // DELETE /api/ao-contacts/:id - Supprimer liaison AO-Contact
   router.delete('/api/ao-contacts/:id',
     isAuthenticated,
     rateLimits.general,
     validateParams(commonParamSchemas.id),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const { id } = req.params;
         
-        logger.info('[Commercial] Suppression liaison AO-Contact', {
-          metadata: {
+        logger.info('[Commercial] Suppression liaison AO-Contact', { metadata: {
             route: '/api/ao-contacts/:id',
             method: 'DELETE',
             id,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         await storage.deleteAoContact(id);
         
@@ -724,17 +799,25 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         
         sendSuccess(res, null, "Liaison AO-Contact supprimée avec succès");
       } catch (error) {
-        logger.error('[Commercial] Erreur lors de la suppression de la liaison AO-Contact', {
-          metadata: {
+        logger.error('[Commercial] Erreur lors de la suppression de la liaison AO-Contact', { metadata: {
             route: '/api/ao-contacts/:id',
             method: 'DELETE',
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+
+            })
+
+
+          );
         throw createError.database("Erreur lors de la suppression de la liaison AO-Contact");
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // ========================================
   // AO LOTS COMPARISON ROUTES - Comparaison fournisseurs
@@ -745,21 +828,23 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     isAuthenticated,
     validateParams(z.object({ id: z.string().uuid() })),
     validateQuery(comparisonQuerySchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const { id: aoLotId } = req.params;
         const { includeRawOcr, sortBy, sortOrder, status } = req.query;
         
-        logger.info('[Commercial] Récupération données comparaison lot', {
-          metadata: {
+        logger.info('[Commercial] Récupération données comparaison lot', { metadata: {
             route: '/api/ao-lots/:id/comparison',
             method: 'GET',
             aoLotId,
             sortBy,
             sortOrder,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         const lot = await storage.getAoLot(aoLotId);
         if (!lot) {
@@ -831,7 +916,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
                 averageCompleteness: Math.round(avgCompleteness),
                 requiresReview: analyses.filter(a => a.requiresManualReview).length
               },
-              documents: documents.map(doc => ({
+              documents: documents.map(doc  => ({
                 id: doc.id,
                 filename: doc.filename,
                 originalName: doc.originalName,
@@ -846,12 +931,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
             
             suppliersData.push(supplierComparison);
           } catch (error) {
-            logger.warn('[Commercial] Erreur lors du traitement d\'une session', {
-              metadata: {
+            logger.warn('[Commercial] Erreur lors du traitement d\'une session', { metadata: {
                 sessionId: session.id,
                 error: error instanceof Error ? error.message : String(error)
-              }
-            });
+
+            })
+
+
+          );
           }
         }
         
@@ -923,36 +1010,46 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         
         sendSuccess(res, result);
       } catch (error) {
-        logger.error('[Commercial] Erreur récupération comparaison', {
-          metadata: {
+        logger.error('[Commercial] Erreur récupération comparaison', { metadata: {
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+
+            })
+
+
+          );
         throw error;
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // POST /api/ao-lots/:id/select-supplier - Sélectionner le fournisseur final pour un lot
   router.post('/api/ao-lots/:id/select-supplier',
     isAuthenticated,
     validateParams(z.object({ id: z.string().uuid() })),
     validateBody(selectSupplierSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       try {
         const { id: aoLotId } = req.params;
         const { supplierId, analysisId, selectionReason, notes } = req.body;
         const userId = req.session.user?.id;
         
-        logger.info('[Commercial] Sélection fournisseur', {
-          metadata: {
+        logger.info('[Commercial] Sélection fournisseur', { metadata: {
             route: '/api/ao-lots/:id/select-supplier',
             method: 'POST',
             supplierId,
             aoLotId,
             userId
-          }
-        });
+
+            })
+
+
+          );
         
         const lot = await storage.getAoLot(aoLotId);
         if (!lot) {
@@ -1013,17 +1110,25 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           selectedBy: userId
         }, 'Fournisseur sélectionné avec succès');
       } catch (error) {
-        logger.error('[Commercial] Erreur lors de la sélection du fournisseur', {
-          metadata: {
+        logger.error('[Commercial] Erreur lors de la sélection du fournisseur', { metadata: {
             route: '/api/ao-lots/:id/select-supplier',
             method: 'POST',
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+
+            })
+
+
+          );
         throw error;
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // ========================================
   // OFFERS ROUTES - Gestion des offres Saxium
@@ -1036,13 +1141,12 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
       limit: z.coerce.number().min(1).max(100).optional().default(20),
       offset: z.coerce.number().min(0).optional().default(0)
     })),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { search, status, limit, offset } = req.query;
       const actualLimit = Number(limit) || 20;
       const actualOffset = Number(offset) || 0;
       
-      logger.info('[Commercial] Récupération offres', {
-        metadata: {
+      logger.info('[Commercial] Récupération offres', { metadata: {
           route: '/api/offers',
           method: 'GET',
           search,
@@ -1050,8 +1154,11 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           limit: actualLimit,
           offset: actualOffset,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const { items, total } = await storage.getCombinedOffersPaginated(
         search as string, 
@@ -1067,55 +1174,71 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         limit: actualLimit,
         page
       });
-    })
-  );
+          }
+        })
+      );
 
   // GET /api/offers/suppliers-pending - Offres en attente fournisseurs (MUST BE BEFORE /api/offers/:id)
   router.get('/api/offers/suppliers-pending',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Récupération offres en attente fournisseurs', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Récupération offres en attente fournisseurs', { metadata: {
           route: '/api/offers/suppliers-pending',
           method: 'GET',
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const offers = await storage.getOffers(undefined, "en_attente_fournisseurs");
       
-      const enrichedOffers = offers.map(offer => ({
+      const enrichedOffers = offers.map(offer  => ({
         ...offer,
         supplierRequestsCount: Math.floor(Math.random() * 5) + 1,
         supplierResponsesReceived: Math.floor(Math.random() * 3),
         averageDelay: Math.floor(Math.random() * 10) + 3,
         readyForChiffrage: Math.random() > 0.3,
         missingPrices: Math.random() > 0.7 ? ["Fenêtres PVC", "Volets"] : [],
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       
-      logger.info('[Commercial] Offres en attente fournisseurs récupérées', {
-        metadata: {
+      logger.info('[Commercial] Offres en attente fournisseurs récupérées', { metadata: {
           count: enrichedOffers.length,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       res.json(enrichedOffers);
-    })
-  );
+          }
+        })
+      );
 
   // GET /api/offers/:id - Offre par ID
   router.get('/api/offers/:id',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Récupération offre', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Récupération offre', { metadata: {
           route: '/api/offers/:id',
           method: 'GET',
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       let offer = await storage.getOffer(req.params.id);
       
@@ -1128,16 +1251,19 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         throw new NotFoundError(`Offre ${req.params.id}`);
       }
       
-      logger.info('[Commercial] Offre récupérée', {
-        metadata: {
+      logger.info('[Commercial] Offre récupérée', { metadata: {
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       res.json(offer);
-    })
-  );
+          }
+        })
+      );
 
   // POST /api/offers - Créer offre
   router.post('/api/offers',
@@ -1151,15 +1277,17 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
       prorataEventuel: true,
       beHoursEstimated: true
     })),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Création offre', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Création offre', { metadata: {
           route: '/api/offers',
           method: 'POST',
           client: req.body.client,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const processedData = {
         ...req.body,
@@ -1181,24 +1309,27 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
       });
       
       sendSuccess(res, offer, 201);
-    })
-  );
+          }
+        })
+      );
 
   // POST /api/offers/create-with-structure - Créer offre avec arborescence documentaire
   router.post('/api/offers/create-with-structure',
     isAuthenticated,
     validateBody(createOfferWithStructureSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { uploadedFiles, creationMethod, ...offerData } = req.body;
       
-      logger.info('[Commercial] Création offre avec structure', {
-        metadata: {
+      logger.info('[Commercial] Création offre avec structure', { metadata: {
           route: '/api/offers/create-with-structure',
           method: 'POST',
           client: offerData.client,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const processedData = {
         ...offerData,
@@ -1244,12 +1375,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         }
       };
       
-      logger.info('[Commercial] Offre créée avec structure documentaire', {
-        metadata: {
+      logger.info('[Commercial] Offre créée avec structure documentaire', { metadata: {
           offerId: offer.id,
           phase: documentStructure.phase
-        }
-      });
+
+            })
+
+
+          );
       
       eventBus.emit('offer:created', {
         offerId: offer.id,
@@ -1263,8 +1396,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         documentStructure,
         message: "Offre créée avec arborescence documentaire JLM - Formulaire unique évolutif activé"
       });
-    })
-  );
+          }
+        })
+      );
 
   // PATCH /api/offers/:id - Mettre à jour offre
   router.patch('/api/offers/:id',
@@ -1272,15 +1406,17 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     rateLimits.creation,
     validateParams(commonParamSchemas.id),
     validateBody(insertOfferSchema.partial()),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Mise à jour offre', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Mise à jour offre', { metadata: {
           route: '/api/offers/:id',
           method: 'PATCH',
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const offer = await storage.updateOffer(req.params.id, req.body);
       if (!offer) {
@@ -1293,21 +1429,24 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
       });
       
       sendSuccess(res, offer);
-    })
-  );
+          }
+        })
+      );
 
   // DELETE /api/offers/:id - Supprimer offre
   router.delete('/api/offers/:id',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Suppression offre', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Suppression offre', { metadata: {
           route: '/api/offers/:id',
           method: 'DELETE',
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       await storage.deleteOffer(req.params.id);
       
@@ -1316,28 +1455,34 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         userId: req.user?.id
       });
       
-      logger.info('[Commercial] Offre supprimée', {
-        metadata: { offerId: req.params.id }
-      });
+      logger.info('[Commercial] Offre supprimée', { metadata: { offerId: req.params.id 
+
+            })
+ 
+
+          );
       
       res.status(204).send();
-    })
-  );
+          }
+                                      }
+                                    });
 
   // POST /api/offers/:id/start-chiffrage - Démarrer chiffrage
   router.post('/api/offers/:id/start-chiffrage',
     isAuthenticated,
     validateParams(commonParamSchemas.id),
     validateBody(startChiffrageSchema),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Démarrage chiffrage', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Démarrage chiffrage', { metadata: {
           route: '/api/offers/:id/start-chiffrage',
           method: 'POST',
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const offer = await storage.getOffer(req.params.id);
       if (!offer) {
@@ -1353,12 +1498,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         updatedAt: new Date()
       });
       
-      logger.info('[Commercial] Chiffrage démarré', {
-        metadata: {
+      logger.info('[Commercial] Chiffrage démarré', { metadata: {
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       eventBus.emit('offer:chiffrage_started', {
         offerId: req.params.id,
@@ -1370,23 +1517,26 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         offer: updatedOffer,
         message: "Chiffrage démarré avec les prix fournisseurs"
       });
-    })
-  );
+          }
+        })
+      );
 
   // POST /api/offers/:id/request-suppliers - Envoyer demandes fournisseurs
   router.post('/api/offers/:id/request-suppliers',
     isAuthenticated,
     validateParams(commonParamSchemas.id),
     validateBody(requestSuppliersSchema),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Envoi demandes fournisseurs', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Envoi demandes fournisseurs', { metadata: {
           route: '/api/offers/:id/request-suppliers',
           method: 'POST',
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const offer = await storage.getOffer(req.params.id);
       if (!offer) {
@@ -1402,9 +1552,12 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         updatedAt: new Date()
       });
       
-      logger.info('[Commercial] Demandes fournisseurs envoyées', {
-        metadata: { offerId: req.params.id }
-      });
+      logger.info('[Commercial] Demandes fournisseurs envoyées', { metadata: { offerId: req.params.id 
+
+            })
+ 
+
+          );
       
       eventBus.emit('offer:suppliers_requested', {
         offerId: req.params.id,
@@ -1416,23 +1569,26 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         offer: updatedOffer,
         message: "Demandes fournisseurs envoyées"
       });
-    })
-  );
+          }
+        })
+      );
 
   // POST /api/offers/:id/validate-studies - Valider études techniques
   router.post('/api/offers/:id/validate-studies',
     isAuthenticated,
     validateParams(commonParamSchemas.id),
     validateBody(validateStudiesSchema),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Validation études techniques', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Validation études techniques', { metadata: {
           route: '/api/offers/:id/validate-studies',
           method: 'POST',
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const offer = await storage.getOffer(req.params.id);
       if (!offer) {
@@ -1448,12 +1604,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         updatedAt: new Date()
       });
       
-      logger.info('[Commercial] Études techniques validées', {
-        metadata: {
+      logger.info('[Commercial] Études techniques validées', { metadata: {
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       eventBus.emit('offer:studies_validated', {
         offerId: req.params.id,
@@ -1465,25 +1623,28 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         offer: updatedOffer,
         message: "Études techniques validées avec succès"
       });
-    })
-  );
+          }
+        })
+      );
 
   // PATCH /api/offers/:id/validate-studies - Validation jalon Fin d'études
   router.patch('/api/offers/:id/validate-studies',
     isAuthenticated,
     validateParams(commonParamSchemas.id),
     validateBody(patchValidateStudiesSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { finEtudesValidatedAt, status } = req.body;
       
-      logger.info('[Commercial] Validation jalon fin d\'études', {
-        metadata: {
+      logger.info('[Commercial] Validation jalon fin d\'études', { metadata: {
           route: '/api/offers/:id/validate-studies',
           method: 'PATCH',
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       let offer = await storage.getOffer(req.params.id);
       if (!offer) {
@@ -1495,46 +1656,123 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         throw new NotFoundError(`Offre ${req.params.id}`);
       }
       
+      // Vérifier que la checklist BE est validée
+      const canValidate = await beQualityChecklistService.canValidateFinEtudes(offer.id);
+      if (!canValidate.canValidate) {
+        throw new ValidationError(`Impossible de valider fin d'études: ${canValidate.reason}`);
+      }
+      
       const newStatus = status || 'fin_etudes_validee';
       
       const updatedOffer = await storage.updateOffer(offer.id, {
         finEtudesValidatedAt: finEtudesValidatedAt ? new Date(finEtudesValidatedAt) : new Date(),
-        finEtudesValidatedBy: 'user-be-1',
+        finEtudesValidatedBy: req.user?.id || 'user-be-1',
         status: newStatus
       });
       
       eventBus.emit('offer:studies_validated', {
         offerId: updatedOffer.id,
         reference: updatedOffer.reference,
-        userId: 'user-be-1',
+        userId: req.user?.id || 'user-be-1',
         validationType: 'fin_etudes'
       });
       
-      logger.info('[Commercial] Études validées', {
-        metadata: {
+      logger.info('[Commercial] Études validées', { metadata: {
           offerId: updatedOffer.id,
           status: newStatus
-        }
-      });
+
+            })
+
+
+          );
       
       res.json(updatedOffer);
-    })
-  );
+          }
+        })
+      );
+
+  // ========================================
+  // BE QUALITY CHECKLIST ROUTES (Fonctionnalité 5)
+  // ========================================
+
+  // POST /api/offers/:id/be-checklist/initialize
+  router.post('/api/offers/:id/be-checklist/initialize',
+    isAuthenticated,
+    rateLimits.creation,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: Request, res: Response) => {
+      const offerId = req.params.id;
+      const items = await beQualityChecklistService.initializeChecklist(offerId);
+      return sendSuccess(res, items, 201);
+          }
+        })
+      );
+
+  // GET /api/offers/:id/be-checklist
+  router.get('/api/offers/:id/be-checklist',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: Request, res: Response) => {
+      const offerId = req.params.id;
+      const items = await storage.getBeQualityChecklist(offerId);
+      const validation = await beQualityChecklistService.validateChecklist(offerId);
+      return sendSuccess(res, { items, validation 
+       
+       
+       });
+          }
+        })
+      );
+
+  // PATCH /api/offers/:id/be-checklist/:itemId
+  router.patch('/api/offers/:id/be-checklist/:itemId',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(z.object({
+      id: z.string().uuid(),
+      itemId: z.string().uuid()
+    })),
+    validateBody(updateBeQualityChecklistItemSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { itemId } = req.params;
+      const { status, notes } = req.body;
+      const userId = req.user?.id;
+      const item = await beQualityChecklistService.checkItem(itemId, status, notes, userId);
+      return sendSuccess(res, item);
+          }
+        })
+      );
+
+  // GET /api/offers/:id/be-checklist/can-validate-fin-etudes
+  router.get('/api/offers/:id/be-checklist/can-validate-fin-etudes',
+    isAuthenticated,
+    rateLimits.general,
+    validateParams(commonParamSchemas.id),
+    asyncHandler(async (req: Request, res: Response) => {
+      const offerId = req.params.id;
+      const canValidate = await beQualityChecklistService.canValidateFinEtudes(offerId);
+      return sendSuccess(res, canValidate);
+          }
+        })
+      );
 
   // POST /api/offers/:id/convert-to-project - Transformer offre en projet (legacy)
   router.post('/api/offers/:id/convert-to-project',
     isAuthenticated,
     validateParams(commonParamSchemas.id),
     validateBody(convertToProjectSchema),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Conversion offre en projet', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Conversion offre en projet', { metadata: {
           route: '/api/offers/:id/convert-to-project',
           method: 'POST',
           offerId: req.params.id,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const offer = await storage.getOffer(req.params.id);
       if (!offer) {
@@ -1615,13 +1853,15 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         await storage.createProjectTask(taskData);
       }
 
-      logger.info('[Commercial] Offre convertie en projet avec tâches', {
-        metadata: {
+      logger.info('[Commercial] Offre convertie en projet avec tâches', { metadata: {
           offerId: offer.id,
           projectId: project.id,
           tasksCount: baseTasks.length
-        }
-      });
+
+            })
+
+
+          );
       
       eventBus.emit('offer:converted_to_project', {
         offerId: offer.id,
@@ -1633,25 +1873,28 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         project, 
         message: "Offer successfully converted to project with base tasks created" 
       });
-    })
-  );
+          }
+        })
+      );
 
   // POST /api/offers/:id/transform-to-project - Transformation AO → Projet (principe formulaire unique évolutif)
   router.post('/api/offers/:id/transform-to-project',
     isAuthenticated,
     validateParams(commonParamSchemas.id),
     validateBody(transformToProjectSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const offerId = req.params.id;
       
-      logger.info('[Commercial] Transformation offre en projet', {
-        metadata: {
+      logger.info('[Commercial] Transformation offre en projet', { metadata: {
           route: '/api/offers/:id/transform-to-project',
           method: 'POST',
           offerId,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const offer = await storage.getOffer(offerId);
       
@@ -1757,13 +2000,15 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         updatedAt: new Date()
       });
 
-      logger.info('[Commercial] Offre transformée en projet', {
-        metadata: {
+      logger.info('[Commercial] Offre transformée en projet', { metadata: {
           offerId: offer.id,
           projectId: project.id,
           tasksCount: baseTasks.length
-        }
-      });
+
+            })
+
+
+          );
       
       eventBus.emit('offer:transformed_to_project', {
         offerId: offer.id,
@@ -1776,8 +2021,9 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         tasks: baseTasks,
         message: "Offre transformée en projet avec succès - Formulaire unique évolutif appliqué"
       });
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // SUPPLIER REQUESTS ROUTES - Demandes fournisseurs pour offres
@@ -1787,43 +2033,50 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
   router.get('/api/offers/:offerId/supplier-requests',
     isAuthenticated,
     validateParams(commonParamSchemas.offerId),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Récupération demandes fournisseurs', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Récupération demandes fournisseurs', { metadata: {
           route: '/api/offers/:offerId/supplier-requests',
           method: 'GET',
           offerId: req.params.offerId,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const requests = await storage.getSupplierRequests(req.params.offerId);
       
-      logger.info('[Commercial] Demandes offre récupérées', {
-        metadata: {
+      logger.info('[Commercial] Demandes offre récupérées', { metadata: {
           offerId: req.params.offerId,
           count: requests.length
-        }
-      });
+
+            })
+
+
+          );
       
       res.json(requests);
-    })
-  );
+          }
+        })
+      );
 
   // POST /api/offers/:offerId/supplier-requests - Créer demande fournisseur pour une offre
   router.post('/api/offers/:offerId/supplier-requests',
     isAuthenticated,
     validateParams(commonParamSchemas.offerId),
     validateBody(insertSupplierRequestSchema.omit({ offerId: true })),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Commercial] Création demande fournisseur', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Commercial] Création demande fournisseur', { metadata: {
           route: '/api/offers/:offerId/supplier-requests',
           method: 'POST',
           offerId: req.params.offerId,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
       
       const requestData = {
         ...req.body,
@@ -1832,12 +2085,14 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
       };
       const request = await storage.createSupplierRequest(requestData);
       
-      logger.info('[Commercial] Demande offre créée', {
-        metadata: {
+      logger.info('[Commercial] Demande offre créée', { metadata: {
           requestId: request.id,
           offerId: req.params.offerId
-        }
-      });
+
+            })
+
+
+          );
       
       eventBus.emit('offer:supplier_request_created', {
         offerId: req.params.offerId,
@@ -1846,12 +2101,12 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
       });
       
       res.status(201).json(request);
-    })
-  );
+          }
+        })
+      );
 
   // Log initialization
-  logger.info('[CommercialModule] Routes initialisées', {
-    metadata: {
+  logger.info('[CommercialModule] Routes initialisées', { metadata: {
       module: 'CommercialModule',
       routes: [
         '/api/aos',
@@ -1863,8 +2118,11 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         '/api/offers/:id/transform-to-project',
         '/api/offers/:offerId/supplier-requests'
       ]
-    }
-  });
+    
+            })
+
+    
+          );
 
   // ========================================
   // AO LOTS COMPARISON ROUTES
@@ -1910,8 +2168,15 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
             lotSuppliers.map(async (ls) => {
               const analysis = await storage.getSupplierQuoteAnalyses(ls.supplierId, aoLotId);
               return analysis.length > 0 ? analysis[0] : null;
-            })
-          );
+                  }
+
+                            }
+
+
+                                      }
+
+
+                                    }));
           
           const comparisonData = {
             lot,
@@ -1926,11 +2191,12 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         {
           operation: 'getLotComparison',
           service: 'CommercialRoutes',
-          metadata: { aoLotId: req.params.id }
+          metadata: { aoLotId: req.params.id 
         }
-      );
-    })
-  );
+                );
+          }
+                                      }
+                                    });
 
   /**
    * POST /api/ao-lots/:id/select-supplier
@@ -1956,15 +2222,17 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           });
           
           // Logger la sélection
-          logger.info('Supplier Selection - Fournisseur sélectionné', {
-            metadata: {
+          logger.info('Supplier Selection - Fournisseur sélectionné', { metadata: {
               aoLotId,
               supplierId,
               analysisId,
               selectedBy: userId,
               timestamp: new Date()
-            }
-          });
+
+            })
+
+
+          );
           
           sendSuccess(res, {
             aoLotId,
@@ -1977,11 +2245,12 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         {
           operation: 'selectSupplier',
           service: 'CommercialRoutes',
-          metadata: { aoLotId: req.params.id, supplierId: req.body.supplierId }
+          metadata: { aoLotId: req.params.id, supplierId: req.body.supplierId 
         }
-      );
-    })
-  );
+                );
+          }
+                                      }
+                                    });
 
   return router;
 }

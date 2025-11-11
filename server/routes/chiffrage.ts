@@ -35,17 +35,27 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     
     logger.info('[Chiffrage] Récupération éléments chiffrage', { 
       userId: (req.user as any)?.id,
-      metadata: { offerId }
-    });
+      metadata: { offerId 
+        }
+            );
     
     const elements = await storage.getChiffrageElementsByOffer(offerId);
     
-    logger.info('[Chiffrage] Éléments récupérés', { 
-      metadata: { offerId, count: elements.length }
-    });
+    logger.info('[Chiffrage] Éléments récupérés', { metadata: { offerId, count: elements.length 
+
+        }
+                });
     
     res.json(elements);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Créer un nouvel élément de chiffrage
   app.post("/api/offers/:offerId/chiffrage-elements", isAuthenticated, asyncHandler(async (req, res) => {
@@ -53,8 +63,9 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     
     logger.info('[Chiffrage] Création élément chiffrage', { 
       userId: (req.user as any)?.id,
-      metadata: { offerId }
-    });
+      metadata: { offerId 
+        }
+            );
     
     // Validation des données
     const validationResult = insertChiffrageElementSchema.safeParse({
@@ -68,12 +79,20 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
 
     const element = await storage.createChiffrageElement(validationResult.data);
     
-    logger.info('[Chiffrage] Élément créé', { 
-      metadata: { offerId, elementId: element.id }
-    });
+    logger.info('[Chiffrage] Élément créé', { metadata: { offerId, elementId: element.id 
+        }
+            });
     
     res.status(201).json(element);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Mettre à jour un élément de chiffrage
   app.put("/api/offers/:offerId/chiffrage-elements/:elementId", isAuthenticated, asyncHandler(async (req, res) => {
@@ -81,8 +100,9 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     
     logger.info('[Chiffrage] Modification élément chiffrage', { 
       userId: (req.user as any)?.id,
-      metadata: { offerId, elementId }
-    });
+      metadata: { offerId, elementId 
+        }
+            );
     
     // Validation des données (sans offerId car déjà défini)
     const validationResult = insertChiffrageElementSchema.partial().safeParse(req.body);
@@ -93,12 +113,20 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
 
     const element = await storage.updateChiffrageElement(elementId, validationResult.data);
     
-    logger.info('[Chiffrage] Élément modifié', { 
-      metadata: { offerId, elementId }
-    });
+    logger.info('[Chiffrage] Élément modifié', { metadata: { offerId, elementId 
+        }
+                });
     
     res.json(element);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Supprimer un élément de chiffrage
   app.delete("/api/offers/:offerId/chiffrage-elements/:elementId", isAuthenticated, asyncHandler(async (req, res) => {
@@ -106,17 +134,27 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     
     logger.info('[Chiffrage] Suppression élément chiffrage', { 
       userId: (req.user as any)?.id,
-      metadata: { offerId, elementId }
-    });
+      metadata: { offerId, elementId 
+        }
+            );
     
     await storage.deleteChiffrageElement(elementId);
     
-    logger.info('[Chiffrage] Élément supprimé', { 
-      metadata: { offerId, elementId }
-    });
+    logger.info('[Chiffrage] Élément supprimé', { metadata: { offerId, elementId 
+
+        }
+                });
     
     res.status(204).send();
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Récupérer le DPGF d'une offre
   app.get("/api/offers/:offerId/dpgf", isAuthenticated, asyncHandler(async (req, res) => {
@@ -138,7 +176,15 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     });
     
     res.json(dpgf);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Générer un DPGF à partir des éléments de chiffrage avec PDF
   app.post("/api/offers/:offerId/dpgf/generate", isAuthenticated, asyncHandler(async (req, res) => {
@@ -189,7 +235,9 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const serializedData = DpgfComputeService.serializeForStorage(dpgfData);
 
     // Génération du PDF
-    logger.info('[Chiffrage] Génération PDF DPGF', { metadata: { offerId } });
+    logger.info('[Chiffrage] Génération PDF DPGF', { metadata: { offerId 
+        }
+            });
     const pdfResult = await PdfGeneratorService.generateDpgfPdf(dpgfData);
     
     // Vérifier s'il existe déjà un DPGF pour cette offre
@@ -238,7 +286,15 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
       pdfFilename: pdfResult.filename,
       pdfSize: pdfResult.size
     });
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Prévisualisation HTML du DPGF
   app.get("/api/offers/:offerId/dpgf/preview", isAuthenticated, asyncHandler(async (req, res) => {
@@ -285,11 +341,21 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     // Générer le HTML de prévisualisation
     const htmlPreview = await PdfGeneratorService.generateDpgfPreview(dpgfData);
 
-    logger.info('[Chiffrage] Prévisualisation générée', { metadata: { offerId } });
+    logger.info('[Chiffrage] Prévisualisation générée', { metadata: { offerId 
+        }
+            });
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(htmlPreview);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Téléchargement du PDF DPGF
   app.get("/api/offers/:offerId/dpgf/download", isAuthenticated, asyncHandler(async (req, res) => {
@@ -350,7 +416,15 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     
     // Envoi du PDF
     res.send(pdfResult.buffer);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Valider la fin d'études d'une offre
   app.post("/api/offers/:offerId/validate-studies", isAuthenticated, asyncHandler(async (req, res) => {
@@ -391,7 +465,15 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     });
 
     res.json(offer);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Transformer une offre validée en projet
   app.post("/api/offers/:offerId/convert-to-project", isAuthenticated, asyncHandler(async (req, res) => {
@@ -470,5 +552,13 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     });
 
     res.status(201).json(project);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 }

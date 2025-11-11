@@ -27,7 +27,12 @@ vi.mock('../../utils/logger', () => ({
     error: vi.fn(),
     debug: vi.fn()
   }
-}));
+            }
+
+                      }
+
+
+                    }));
 
 vi.mock('../../services/CacheService', () => ({
   getCacheService: vi.fn(() => ({
@@ -40,21 +45,41 @@ vi.mock('../../services/CacheService', () => ({
     MONDAY_BOARDS_LIST: 600,
     MONDAY_BOARD_DETAIL: 300
   }
-}));
+            }
+
+                      }
+
+
+                    }));
 
 vi.mock('../../middleware/correlation', () => ({
   getCorrelationId: vi.fn(() => 'test-correlation-id')
-}));
+            }
+
+                      }
+
+
+                    }));
 
 vi.mock('../../services/resilience', () => ({
   executeMonday: vi.fn((fn) => fn())
-}));
+            }
+
+                      }
+
+
+                    }));
 
 vi.mock('../../eventBus', () => ({
   eventBus: {
     publish: vi.fn()
   }
-}));
+            }
+
+                      }
+
+
+                    }));
 
 // Mock axios
 const mockAxios = {
@@ -64,7 +89,12 @@ const mockAxios = {
 };
 vi.mock('axios', () => ({
   default: mockAxios
-}));
+            }
+
+                      }
+
+
+                    }));
 
 describe('MondayIntegrationService', () => {
   let service: MondayIntegrationService;
@@ -115,8 +145,15 @@ describe('MondayIntegrationService', () => {
           headers: expect.objectContaining({
             'X-Correlation-ID': 'test-correlation-id'
           })
-        })
-      );
+              }
+
+                        }
+
+
+                                  }
+
+
+                                }));
       expect(result).toEqual({ boards: [{ id: '123', name: 'Test Board' }] });
     });
 
@@ -169,8 +206,7 @@ describe('MondayIntegrationService', () => {
       mockPost.mockResolvedValue({
         data: {
           data: { boards: mockBoards }
-        }
-      });
+        } );
 
       const result = await service.getBoards();
 
@@ -183,8 +219,7 @@ describe('MondayIntegrationService', () => {
       mockPost.mockResolvedValue({
         data: {
           data: { boards: [] }
-        }
-      });
+        } );
 
       await service.getBoards(100);
 
@@ -223,8 +258,7 @@ describe('MondayIntegrationService', () => {
           data: {
             boards: [{ columns: mockColumns }]
           }
-        }
-      });
+        } );
 
       const result = await service.getBoardColumns('123');
 
@@ -237,8 +271,7 @@ describe('MondayIntegrationService', () => {
       mockPost.mockResolvedValue({
         data: {
           data: { boards: [] }
-        }
-      });
+        } );
 
       const result = await service.getBoardColumns('999');
 
@@ -279,8 +312,7 @@ describe('MondayIntegrationService', () => {
               }
             }]
           }
-        }
-      });
+        } );
 
       const result = await service.getBoardItems('123');
 
@@ -318,8 +350,15 @@ describe('MondayIntegrationService', () => {
           entity: 'system',
           entityId: 'item-456',
           severity: 'info'
-        })
-      );
+              }
+
+                        }
+
+
+                                  }
+
+
+                                }));
     });
 
     it('should handle duplicate webhook events (idempotence)', async () => {
@@ -398,8 +437,7 @@ describe('MondayIntegrationService', () => {
           data: {
             boards: [{ columns: mockColumns }]
           }
-        }
-      });
+        } );
 
       const result = await service.getBoardStructure('123', 'Test Board');
 
@@ -434,8 +472,7 @@ describe('MondayIntegrationService', () => {
             data: {
               boards: [{ columns: mockColumns }]
             }
-          }
-        });
+          } );
 
       const result = await service.analyzeBoards();
 
@@ -623,8 +660,7 @@ describe('MondayIntegrationService', () => {
               email: 'test@example.com'
             }
           }
-        }
-      });
+        } );
 
       const result = await service.testConnection();
       expect(result).toBe(true);

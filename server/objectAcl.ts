@@ -115,7 +115,10 @@ export async function setObjectAclPolicy(
 ): Promise<void> {
   // For POC, we'll store ACL info in our database rather than object metadata
   // This could be expanded to use Replit's metadata system later
-  logger.debug('ObjectAcl - Setting ACL policy', { metadata: { objectPath, aclPolicy } });
+  logger.debug('ObjectAcl - Setting ACL policy', { metadata: { objectPath, aclPolicy 
+
+        }
+            });
 }
 
 // Gets the ACL policy from the object metadata (simplified for POC).

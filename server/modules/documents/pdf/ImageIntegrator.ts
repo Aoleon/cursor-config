@@ -143,7 +143,7 @@ export class ImageIntegrator {
     const processed: Record<string, ProcessedImage> = {};
 
     for (const reference of references) {
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         const processedImage = await this.processImage(reference, providedImages);
@@ -154,9 +154,9 @@ export class ImageIntegrator {
     {
       operation: 'Logger',
       service: 'ImageIntegrator',
-      metadata: {}
-    }
-  ); catch (fallbackError) {
+      metadata: {
+                                                                                }
+                                                                              });
             failed.push(reference);
           }
         } else {
@@ -241,7 +241,7 @@ case 'signature':;
     if (!identifier.includes('.')) {
       for (const ext of this.supportedFormats) {
         const fullPath = `${path}.${ext}`;
-        return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
           await this.objectStorage.headObject(fullPath);
@@ -270,9 +270,9 @@ case 'signature':;
     {
       operation: 'Logger',
 service: 'ImageIntegrator',;
-      metadata: {}
-    }
-  );`,
+      metadata: {
+                                                                                }
+                                                                              });
         width: metadata?.width || 0,
         height: metadata?.height || 0,
         format: metadata?.format || 'png',

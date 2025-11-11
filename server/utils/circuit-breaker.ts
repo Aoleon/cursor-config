@@ -99,15 +99,14 @@ export class CircuitBreaker {
       (error as any).circuitBreakerName = this.name;
       (error as any).nextRetryTime = this.getNextRetryTime();
       
-      logger.warn('Circuit breaker rejected request', {
-        metadata: {
+      logger.warn('Circuit breaker rejected request', { metadata: {
           service: 'CircuitBreaker',
           operation: 'execute',
           circuitName: this.name,
           state: this.state,
           consecutiveFailures: this.consecutiveFailures
         }
-      });
+            });
       
       throw error;
     }
@@ -146,9 +145,8 @@ export class CircuitBreaker {
     {
       operation: 'circuit',
       service: 'circuit-breaker',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     
     // Si fermé et trop d'échecs dans la fenêtre, ouvrir
     if (this.state === 'closed') {
@@ -208,15 +206,14 @@ export class CircuitBreaker {
     this.consecutiveFailures = 0;
     this.halfOpenRequests = 0;
     
-    logger.info('Circuit breaker closed', {
-      metadata: {
+    logger.info('Circuit breaker closed', { metadata: {
         service: 'CircuitBreaker',
         operation: 'transitionToClosed',
         circuitName: this.name,
         previousState,
         stats: this.getStats()
-      }
-    });
+        }
+            });
     
     if (this.onClose) {
       this.onClose(this.name);
@@ -231,16 +228,15 @@ export class CircuitBreaker {
     this.state = 'open';
     this.halfOpenRequests = 0;
     
-    logger.warn('Circuit breaker opened', {
-      metadata: {
+    logger.warn('Circuit breaker opened', { metadata: {
         service: 'CircuitBreaker',
         operation: 'transitionToOpen',
         circuitName: this.name,
         previousState,
         consecutiveFailures: this.consecutiveFailures,
         stats: this.getStats()
-      }
-    });
+        }
+            });
     
     if (this.onOpen) {
       this.onOpen(this.name);
@@ -257,15 +253,14 @@ export class CircuitBreaker {
     this.consecutiveFailures = 0;
     this.halfOpenRequests = 0;
     
-    logger.info('Circuit breaker half-open', {
-      metadata: {
+    logger.info('Circuit breaker half-open', { metadata: {
         service: 'CircuitBreaker',
         operation: 'transitionToHalfOpen',
         circuitName: this.name,
         previousState,
         stats: this.getStats()
-      }
-    });
+        }
+            });
     
     if (this.onHalfOpen) {
       this.onHalfOpen(this.name);
@@ -303,13 +298,12 @@ export class CircuitBreaker {
     this.errorTimestamps = [];
     this.halfOpenRequests = 0;
     
-    logger.info('Circuit breaker reset', {
-      metadata: {
+    logger.info('Circuit breaker reset', { metadata: {
         service: 'CircuitBreaker',
         operation: 'reset',
         circuitName: this.name
-      }
-    });
+        }
+            });
   }
   
   /**
@@ -356,13 +350,12 @@ export class CircuitBreakerManager {
       breaker = new CircuitBreaker(name, options);
       this.breakers.set(name, breaker);
       
-      logger.info('Circuit breaker created', {
-        metadata: {
+      logger.info('Circuit breaker created', { metadata: {
           service: 'CircuitBreakerManager',
           operation: 'getBreaker',
           circuitName: name
         }
-      });
+            });
     }
     
     return breaker;
@@ -396,13 +389,12 @@ export class CircuitBreakerManager {
       breaker.reset();
     }
     
-    logger.info('All circuit breakers reset', {
-      metadata: {
+    logger.info('All circuit breakers reset', { metadata: {
         service: 'CircuitBreakerManager',
         operation: 'resetAll',
         count: this.breakers.size
-      }
-    });
+        }
+            });
   }
   
   /**

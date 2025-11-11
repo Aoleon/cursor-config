@@ -1,6 +1,6 @@
 import { EventBus } from '../../eventBus';
 import { withErrorHandling } from './utils/error-handler';
-import { MondayExportService } from '../../services/MondayExportService';
+import { MondayDataService } from './consolidated/MondayDataService';
 import { logger } from '../../utils/logger';
 
 /**
@@ -18,8 +18,8 @@ export function setupMondayExport(
     metadata: {
       operation: 'setup',
       events: ['project:created', 'ao:created']
-    }
-  });
+
+        });
 
   // Auto-export sur création de projet
   eventBus.on('project:created', async (event: any) => {
@@ -31,8 +31,8 @@ export function setupMondayExport(
         metadata: {
           operation: 'project:created',
           event
-        }
-      });
+
+            });
       return;
     }
 
@@ -44,8 +44,8 @@ export function setupMondayExport(
         metadata: {
           operation: 'autoExportProject',
           projectId
-        }
-      });
+
+            });
 
       const mondayId = await exportService.exportProject(projectId);
       
@@ -56,8 +56,7 @@ export function setupMondayExport(
         entityId: projectId,
         severity: 'info',
         timestamp: new Date().toISOString(),
-        payload: { mondayId }
-      });
+        payload: { mondayId });
 
       logger.info('[MondayExportIntegration] Auto-export projet réussi', {
         service: 'MondayExportIntegration',
@@ -65,19 +64,16 @@ export function setupMondayExport(
           operation: 'autoExportProject',
           projectId,
           mondayId
-        }
-      });
+
+            });
     
     },
     {
       operation: 'setupMondayExport',
       service: 'export-integration',
       metadata: {}
-    }
-  );
-      });
-    }
-  });
+    } );
+    });
 
   // Auto-export sur création d'AO
   eventBus.on('ao:created', async (event: any) => {
@@ -89,8 +85,8 @@ export function setupMondayExport(
         metadata: {
           operation: 'ao:created',
           event
-        }
-      });
+
+            });
       return;
     }
 
@@ -102,8 +98,8 @@ export function setupMondayExport(
         metadata: {
           operation: 'autoExportAO',
           aoId
-        }
-      });
+
+            });
 
       const mondayId = await exportService.exportAO(aoId);
       
@@ -114,8 +110,7 @@ export function setupMondayExport(
         entityId: aoId,
         severity: 'info',
         timestamp: new Date().toISOString(),
-        payload: { mondayId }
-      });
+        payload: { mondayId });
 
       logger.info('[MondayExportIntegration] Auto-export AO réussi', {
         service: 'MondayExportIntegration',
@@ -123,25 +118,22 @@ export function setupMondayExport(
           operation: 'autoExportAO',
           aoId,
           mondayId
-        }
-      });
+
+            });
     
     },
     {
       operation: 'setupMondayExport',
       service: 'export-integration',
       metadata: {}
-    }
-  );
-      });
-    }
-  });
+    } );
+    });
 
   logger.info('[MondayExportIntegration] Export automatique configuré avec succès', {
     service: 'MondayExportIntegration',
     metadata: {
       operation: 'setup',
       listenersCount: 2
-    }
-  });
+
+        });
 }

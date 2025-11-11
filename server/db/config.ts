@@ -54,12 +54,10 @@ class ConnectionManager extends EventEmitter {
   private initializePool(): void {
     if (!process.env.DATABASE_URL) {
       const error = new Error('DATABASE_URL must be set. Did you forget to provision a database?');
-      logger.fatal('Database configuration error', error, {
-        metadata: {
+      logger.fatal('Database configuration error', error, { metadata: {
           module: 'DatabaseConfig',
           operation: 'initializePool'
-        }
-      });
+              });
       throw error;
     }
 
@@ -83,35 +81,33 @@ class ConnectionManager extends EventEmitter {
       this.isConnected = true;
       this.connectionStats.lastSuccess = new Date();
       
-      logger.info('Database pool initialized successfully', {
-        metadata: {
+      logger.info('Database pool initialized successfully', { metadata: {
           module: 'DatabaseConfig',
           operation: 'initializePool',
           poolSize: 25,
           minConnections: 5
         }
-      });
+            });
 
     
     },
     {
       operation: 'now',
       service: 'config',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
 
     // Connection lifecycle events
     this.pool.on('connect', (client: PoolClient) => {
       this.connectionStats.totalConnections++;
       
-      logger.debug('New pool connection established', {
-        metadata: {
+      logger.debug('New pool connection established', { metadata: {
           module: 'DatabaseConfig',
           operation: 'poolConnect',
           totalConnections: this.connectionStats.totalConnections
         }
-      });
+            });
       
       this.emit('connect', client);
     });
@@ -119,22 +115,20 @@ class ConnectionManager extends EventEmitter {
     this.pool.on('acquire', (client: PoolClient) => {
       // Debug level - too verbose for production
       if (process.env.NODE_ENV === 'development') {
-        logger.debug('Connection acquired from pool', {
-          metadata: {
+        logger.debug('Connection acquired from pool', { metadata: {
             module: 'DatabaseConfig',
             operation: 'poolAcquire'
-          }
-        });
-      }
-    });
+        }
+            });
+                                                                              }
+                                                                            });
 
     this.pool.on('remove', (client: PoolClient) => {
-      logger.debug('Connection removed from pool', {
-        metadata: {
+      logger.debug('Connection removed from pool', { metadata: {
           module: 'DatabaseConfig',
           operation: 'poolRemove'
         }
-      });
+            });
     });
   }
 
@@ -165,12 +159,11 @@ class ConnectionManager extends EventEmitter {
     this.isConnected = false;
     this.connectionStats.lastError = new Date();
     
-    logger.error('Failed to initialize database pool', error as Error, {
-      metadata: {
+    logger.error('Failed to initialize database pool', error as Error, { metadata: {
         module: 'DatabaseConfig',
         operation: 'initializePool'
-      }
-    });
+                                }
+                              });
 
     // Schedule reconnection attempt
     this.handleReconnection();
@@ -187,13 +180,11 @@ class ConnectionManager extends EventEmitter {
 
     // Check max attempts
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      logger.fatal('Maximum reconnection attempts reached', undefined, {
-        metadata: {
+      logger.fatal('Maximum reconnection attempts reached', undefined, { metadata: {
           module: 'DatabaseConfig',
           operation: 'handleReconnection',
           attempts: this.reconnectAttempts
-        }
-      });
+              });
       
       this.emit('maxReconnectAttemptsReached');
       return;
@@ -205,14 +196,13 @@ class ConnectionManager extends EventEmitter {
       this.maxReconnectDelay
     );
 
-    logger.info('Scheduling database reconnection', {
-      metadata: {
+    logger.info('Scheduling database reconnection', { metadata: {
         module: 'DatabaseConfig',
         operation: 'handleReconnection',
         attempt: this.reconnectAttempts + 1,
         delayMs: delay
-      }
-    });
+        }
+            });
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectAttempts++;
@@ -224,13 +214,12 @@ class ConnectionManager extends EventEmitter {
    * Attempt to reconnect to the database
    */
   private async reconnect(): Promise<void> {
-    logger.info('Attempting database reconnection', {
-      metadata: {
+    logger.info('Attempting database reconnection', { metadata: {
         module: 'DatabaseConfig',
         operation: 'reconnect',
         attempt: this.reconnectAttempts
-      }
-    });
+        }
+            });
 
     return withErrorHandling(
     async () => {
@@ -240,22 +229,21 @@ class ConnectionManager extends EventEmitter {
         try {
           await this.pool.end();
         } catch (error) {
-          logger.error('Error closing pool', {
-            metadata: {
+          logger.error('Error closing pool', { metadata: {
               module: 'DatabaseConfig',
               operation: 'disconnect',
               error: error instanceof Error ? error.message : String(error)
-            }
-          });
+
+      });
         }
       }
     },
     {
       operation: 'disconnect',
       service: 'config',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -280,9 +268,8 @@ class ConnectionManager extends EventEmitter {
     {
       operation: 'testConnection',
       service: 'config',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
   }
 
   /**
@@ -303,13 +290,12 @@ class ConnectionManager extends EventEmitter {
       try {
         await this.testConnection();
       } catch (error) {
-        logger.error('Health check failed', {
-          metadata: {
+        logger.error('Health check failed', { metadata: {
             module: 'DatabaseConfig',
             operation: 'healthCheck',
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+        }
+            });
         
         if (this.isCriticalError(error as Error)) {
           this.isConnected = false;
@@ -324,13 +310,12 @@ class ConnectionManager extends EventEmitter {
    */
   private setupProcessHandlers(): void {
     const gracefulShutdown = async (signal: string) => {
-      logger.info('Received shutdown signal, closing database pool', {
-        metadata: {
+      logger.info('Received shutdown signal, closing database pool', { metadata: {
           module: 'DatabaseConfig',
           operation: 'gracefulShutdown',
           signal
-        }
-      });
+                                }
+                              });
 
       await this.close();
       process.exit(0);
@@ -341,23 +326,19 @@ class ConnectionManager extends EventEmitter {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-      logger.fatal('Uncaught exception in database config', error, {
-        metadata: {
+      logger.fatal('Uncaught exception in database config', error, { metadata: {
           module: 'DatabaseConfig',
           operation: 'uncaughtException'
-        }
-      });
+              });
     });
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason, promise) => {
-      logger.fatal('Unhandled promise rejection in database config', reason as Error, {
-        metadata: {
+      logger.fatal('Unhandled promise rejection in database config', reason as Error, { metadata: {
           module: 'DatabaseConfig',
           operation: 'unhandledRejection',
           promise: String(promise)
-        }
-      });
+              });
     });
   }
 
@@ -416,31 +397,29 @@ class ConnectionManager extends EventEmitter {
 
     // Close pool
     if (this.pool) {
-      logger.info('Closing database pool', {
-        metadata: {
+      logger.info('Closing database pool', { metadata: {
           module: 'DatabaseConfig',
           operation: 'close'
         }
-      });
+            });
 
       return withErrorHandling(
     async () => {
 
         await this.pool.end();
-        logger.info('Database pool closed successfully', {
-          metadata: {
+        logger.info('Database pool closed successfully', { metadata: {
             module: 'DatabaseConfig',
             operation: 'close'
-          }
-        });
+
+      });
       
     },
     {
       operation: 'now',
       service: 'config',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
 
       this.pool = null;
       this.isConnected = false;

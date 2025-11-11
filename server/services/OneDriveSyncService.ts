@@ -54,23 +54,18 @@ export class OneDriveSyncService {
 
       const basePath = options.basePath || this.DEFAULT_AO_PATH;
       
-      logger.info('Starting OneDrive synchronization', {
-        metadata: { basePath, recursive: options.recursive, userId: options.userId }
+      logger.info('Starting OneDrive synchronization', { metadata: { basePath, recursive: options.recursive, userId: options.userId 
       });
-
       // Scanner le dossier OneDrive
       const files = await this.scanFolder(basePath, options.recursive || false);
       result.filesScanned = files.length;
-
-      logger.info('Files scanned from OneDrive', {
-        metadata: { count: files.length, path: basePath }
-      });
-
+      logger.info('Files scanned from OneDrive', { metadata: { count: files.length, path: basePath  
+              }
+            });
       // Importer ou mettre à jour chaque fichier
       for (const file of files) {
         try {
           const imported = await this.importFile(file, options.userId);
-          
           if (imported === 'imported') {
             result.filesImported++;
           } else if (imported === 'updated') {
@@ -78,30 +73,24 @@ export class OneDriveSyncService {
           } else {
             result.filesSkipped++;
           }
-        
     },
     {
       operation: 'constructor',
-service: 'OneDriveSyncService',;
-      metadata: {}
-    }
-  );: ${(error as Error).message}`);
+service: 'OneDriveSyncService',
+      metadata: { } });
         }
       }
-
       result.success = result.errors.length === 0;
       result.duration = Date.now() - startTime;
-
-      logger.info('OneDrive synchronization completed', {
-        metadata: {
+      logger.info('OneDrive synchronization completed', { metadata: {
           filesScanned: result.filesScanned,
           filesImported: result.filesImported,
           filesUpdated: result.filesUpdated,
           filesSkipped: result.filesSkipped,
           errors: result.errors.length,
-          duration: result.duration
-        }
-      });
+          duration: result.duration 
+              }
+            });
 
       // Émettre un événement de synchronisation
       if (this.eventBus) {
@@ -152,10 +141,8 @@ service: 'OneDriveSyncService',;
     },
     {
       operation: 'constructor',
-service: 'OneDriveSyncService',;
-      metadata: {}
-    }
-  );
+service: 'OneDriveSyncService',
+      metadata: { } });
   }
 
   /**
@@ -194,9 +181,7 @@ service: 'OneDriveSyncService',;
           updatedAt: new Date()
         });
 
-        logger.info('Document updated from OneDrive', {
-          metadata: { documentId: existingDoc.id, fileName: file.name }
-        });
+        logger.info('Document updated from OneDrive', { metadata: { documentId: existingDoc.id, fileName: file.name 
 
         return 'updated';
       } else {
@@ -216,9 +201,7 @@ service: 'OneDriveSyncService',;
           lastSyncedAt: new Date()
         });
 
-        logger.info('Document imported from OneDrive', {
-          metadata: { documentId: newDoc.id, fileName: file.name }
-        });
+        logger.info('Document imported from OneDrive', { metadata: { documentId: newDoc.id, fileName: file.name 
 
         // Émettre un événement de création de document
         if (this.eventBus) {
@@ -236,9 +219,7 @@ service: 'OneDriveSyncService',;
     {
       operation: 'constructor',
       service: 'OneDriveSyncService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
   }
 
   /**
@@ -291,14 +272,13 @@ service: 'OneDriveSyncService',;
           // Créer le lien document-AO
           // Note: Cela nécessiterait une méthode dans le storage pour créer des documentLinks
           // Pour l'instant, on logue juste l'association potentielle
-          logger.info('Potential document-AO link found', {
-            metadata: {
+          logger.info('Potential document-AO link found', { metadata: {
               documentId: doc.id,
               aoId: matchedAO.id,
               fileName: doc.name,
-              aoReference: matchedAO.reference
-            }
-          });
+              aoReference: matchedAO.reference 
+              }
+            });
           linkedCount++;
         }
       }
@@ -309,9 +289,7 @@ service: 'OneDriveSyncService',;
     {
       operation: 'constructor',
       service: 'OneDriveSyncService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
   }
 
   /**

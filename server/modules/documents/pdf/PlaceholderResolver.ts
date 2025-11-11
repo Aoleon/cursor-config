@@ -75,8 +75,7 @@ export class PlaceholderResolver {
           column: this.getColumnNumber(template, match.index),
           index: match.index,
           length: match[0].length
-        }
-      });
+        });
     }
 
     logger.debug('Extracted conditionals', { count: conditionals.length });
@@ -103,8 +102,7 @@ export class PlaceholderResolver {
           column: this.getColumnNumber(template, match.index),
           index: match.index,
           length: match[0].length
-        }
-      });
+        });
     }
 
     logger.debug('Extracted loops', { count: loops.length });
@@ -128,7 +126,7 @@ export class PlaceholderResolver {
     const resolvedData: Record<string, any> = {};
 
     for (const placeholder of placeholders) {
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         const value = await this.resolvePlaceholder(placeholder, data, customFormatters);
@@ -153,9 +151,9 @@ export class PlaceholderResolver {
     {
       operation: 'Logger',
       service: 'PlaceholderResolver',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
       }
     }
 

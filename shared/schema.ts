@@ -248,6 +248,77 @@ export const calculationMethodEnum = pgEnum("calculation_method", [
   "external"      // Import système externe (Batigest, etc.)
 ]);
 
+// ========================================
+// ENUMS POUR FONCTIONNALITÉS 3-4-5-6-7-8
+// ========================================
+
+// Types de feedback terrain
+export const feedbackTypeEnum = pgEnum("feedback_type", [
+  "erreur_plan",           // Erreur dans les plans
+  "oublis",                // Éléments oubliés (nuancier, grilles)
+  "retour_prix",           // Retour sur prix réel vs estimé
+  "probleme_technique",    // Problème technique découvert
+  "amelioration"           // Suggestion d'amélioration
+]);
+
+// Statuts des feedbacks terrain
+export const feedbackStatusEnum = pgEnum("feedback_status", [
+  "nouveau",               // Nouveau feedback
+  "en_cours",              // BE en train de traiter
+  "resolu",                // Résolu
+  "ignore"                 // Ignoré (avec raison)
+]);
+
+// Types de demandes SAV
+export const savDemandeTypeEnum = pgEnum("sav_demande_type", [
+  "garantie",              // Sous garantie
+  "hors_garantie",         // Hors garantie
+  "reserve"                // Réserves réception
+]);
+
+// Sources des demandes SAV
+export const savSourceEnum = pgEnum("sav_source", [
+  "email",                 // Email sav@jlmmenuiserie.fr
+  "kaliti",                // Kaliti
+  "telephone",             // Téléphone
+  "chantier"               // Chantier
+]);
+
+// Statuts des demandes SAV
+export const savStatusEnum = pgEnum("sav_status", [
+  "nouvelle",              // Nouvelle demande
+  "en_analyse",            // En analyse
+  "materiel_necessaire",  // Matériel nécessaire
+  "materiel_commande",     // Matériel commandé
+  "materiel_livre",        // Matériel livré
+  "rdv_planifie",          // RDV planifié
+  "en_intervention",       // En intervention
+  "quitus_recu",           // Quitus reçu
+  "reserve_levee",         // Réserve levée
+  "termine"                // Terminé
+]);
+
+// Types d'items checklist BE
+export const beChecklistItemEnum = pgEnum("be_checklist_item", [
+  "nuancier",              // Nuancier complet
+  "grilles",               // Grilles définies
+  "plans_complets",        // Plans complets et détaillés
+  "couleur_produit",       // Couleur/produit validé
+  "quantitatif",           // Quantitatif vérifié
+  "prix_fournisseurs",     // Prix fournisseurs reçus
+  "dpgf_genere",           // DPGF généré
+  "documents_admin"        // Documents administratifs complets
+]);
+
+// Types de tâches pour suivi temps
+export const taskTypeEnum = pgEnum("task_type", [
+  "be",                    // Bureau d'études
+  "admin",                 // Administratif (Ludivine)
+  "terrain",               // Terrain (pose)
+  "chiffrage",             // Chiffrage
+  "commercial"             // Commercial
+]);
+
 // Types de contraintes planning
 export const planningConstraintEnum = pgEnum("planning_constraint", [
   "resource_availability",  // Disponibilité équipe
@@ -479,15 +550,15 @@ export const savInterventionTypeEnum = pgEnum("sav_intervention_type", [
   "emergency"          // Intervention d'urgence
 ]);
 
-// Statuts workflow des interventions SAV
-export const savStatusEnum = pgEnum("sav_status", [
-  "requested",         // Demandée
-  "scheduled",         // Planifiée
-  "in_progress",       // En cours
-  "completed",         // Terminée
-  "cancelled",         // Annulée
-  "follow_up_required" // Suivi requis
-]);
+// Statuts workflow des interventions SAV (déjà déclaré ligne 288)
+// export const savStatusEnum = pgEnum("sav_status", [
+//   "requested",         // Demandée
+//   "scheduled",         // Planifiée
+//   "in_progress",       // En cours
+//   "completed",         // Terminée
+//   "cancelled",         // Annulée
+//   "follow_up_required" // Suivi requis
+// ]);
 
 // Types de garanties applicables
 export const warrantyTypeEnum = pgEnum("warranty_type", [
@@ -672,7 +743,7 @@ export const suppliers = pgTable("suppliers", {
   status: supplierStatusEnum("status").default("actif"),
   
   // Extension Phase 1 : Capacités et performances
-  capacities: jsonb("capacities").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Types menuiserie + délais
+  capacities: jsonb("capacities").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`), // Types menuiserie + délais
   avgResponseTime: integer("avg_response_time").default(0), // Temps de réponse moyen en heures
   
   paymentTerms: integer("payment_terms").default(30),
@@ -951,7 +1022,7 @@ export const aoLotSuppliers = pgTable("ao_lot_suppliers", {
   // Sélection et critères
   selectedAt: timestamp("selected_at").defaultNow(), // Date de sélection du fournisseur pour ce lot
   selectedBy: varchar("selected_by").references(() => users.id), // Utilisateur qui a sélectionné
-  selectionCriteria: jsonb("selection_criteria").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Critères de sélection
+  selectionCriteria: jsonb("selection_criteria").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`), // Critères de sélection
   
   // Priorité et préférences
   priority: integer("priority").default(1), // Ordre de priorité du fournisseur pour ce lot
@@ -1038,19 +1109,19 @@ export const supplierQuoteAnalysis = pgTable("supplier_quote_analysis", {
   confidence: decimal("confidence", { precision: 5, scale: 2 }), // Score de confiance 0-100
   
   // Données extraites - Prix et quantités
-  extractedPrices: jsonb("extracted_prices").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Prix détectés
+  extractedPrices: jsonb("extracted_prices").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`), // Prix détectés
   totalAmountHT: decimal("total_amount_ht", { precision: 10, scale: 2 }), // Montant HT détecté
   totalAmountTTC: decimal("total_amount_ttc", { precision: 10, scale: 2 }), // Montant TTC détecté
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }), // Taux TVA détecté
   currency: varchar("currency").default("EUR"), // Devise
   
   // Données extraites - Informations fournisseur
-  supplierInfo: jsonb("supplier_info").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Infos fournisseur extraites
+  supplierInfo: jsonb("supplier_info").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`), // Infos fournisseur extraites
   
   // Données extraites - Produits et services
-  lineItems: jsonb("line_items").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Lignes de devis détectées
-  materials: jsonb("materials").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Matériaux détectés
-  laborCosts: jsonb("labor_costs").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Coûts main d'oeuvre
+  lineItems: jsonb("line_items").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`), // Lignes de devis détectées
+  materials: jsonb("materials").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`), // Matériaux détectés
+  laborCosts: jsonb("labor_costs").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`), // Coûts main d'oeuvre
   
   // Données extraites - Délais et conditions
   deliveryDelay: integer("delivery_delay"), // Délai de livraison (jours)
@@ -1059,8 +1130,8 @@ export const supplierQuoteAnalysis = pgTable("supplier_quote_analysis", {
   
   // Données brutes et métadonnées
   rawOcrText: text("raw_ocr_text"), // Texte brut extrait par OCR
-  extractedData: jsonb("extracted_data").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Toutes données extraites
-  errorDetails: jsonb("error_details").$type<Record<string, any>>(), // Détails erreurs si échec
+  extractedData: jsonb("extracted_data").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`), // Toutes données extraites
+  errorDetails: jsonb("error_details").$type<Record<string, unknown>>(), // Détails erreurs si échec
   
   // Révision manuelle
   requiresManualReview: boolean("requires_manual_review").default(false),
@@ -1391,7 +1462,7 @@ export const aoLots = pgTable("ao_lots", {
   supplierChosenId: varchar("supplier_chosen_id").references(() => suppliers.id), // Fournisseur sélectionné pour ce lot
   unitPrice: decimal("unit_price", { precision: 12, scale: 2 }), // Prix unitaire négocié
   totalPrice: decimal("total_price", { precision: 12, scale: 2 }), // Prix total calculé
-  supplierQuotes: jsonb("supplier_quotes").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Devis fournisseurs reçus
+  supplierQuotes: jsonb("supplier_quotes").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`), // Devis fournisseurs reçus
   
   // Extension Phase 1 : Validations workflow
   technicalValidation: boolean("technical_validation").default(false), // Validation technique effectuée
@@ -2112,6 +2183,118 @@ export const projectPriorities = pgTable("project_priorities", {
 });
 
 // ========================================
+// TABLES FONCTIONNALITÉS 3-4-5-6-7-8
+// ========================================
+
+// Table des feedbacks terrain → BE
+export const projectFeedbackTerrain = pgTable("project_feedback_terrain", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  offerId: varchar("offer_id").references(() => offers.id, { onDelete: "set null" }), // Si feedback sur offre
+  reportedBy: varchar("reported_by").notNull().references(() => users.id), // France ou équipe terrain
+  feedbackType: feedbackTypeEnum("feedback_type").notNull(),
+  severity: priorityLevelEnum("severity").default("normale"), // tres_faible, faible, normale, elevee, critique
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  photos: jsonb("photos").$type<string[]>().default(sql`'[]'::jsonb`), // URLs photos
+  impact: text("impact"), // Impact sur projet (coût, délai)
+  status: feedbackStatusEnum("status").default("nouveau"),
+  assignedTo: varchar("assigned_to").references(() => users.id), // BE assigné
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolutionNotes: text("resolution_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectIdx: index("project_feedback_terrain_project_idx").on(table.projectId),
+    offerIdx: index("project_feedback_terrain_offer_idx").on(table.offerId),
+    statusIdx: index("project_feedback_terrain_status_idx").on(table.status),
+    feedbackTypeIdx: index("project_feedback_terrain_type_idx").on(table.feedbackType),
+    reportedByIdx: index("project_feedback_terrain_reported_by_idx").on(table.reportedBy),
+    assignedToIdx: index("project_feedback_terrain_assigned_to_idx").on(table.assignedTo),
+  };
+});
+
+// Table des demandes SAV
+export const savDemandes = pgTable("sav_demandes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  reference: varchar("reference").notNull().unique(), // Format : SAV-YYYY-MM-XXXX
+  demandeType: savDemandeTypeEnum("demande_type").notNull(),
+  source: savSourceEnum("source").notNull(),
+  description: text("description").notNull(),
+  photos: jsonb("photos").$type<string[]>().default(sql`'[]'::jsonb`),
+  status: savStatusEnum("status").default("nouvelle"),
+  materielNecessaire: boolean("materiel_necessaire").default(false),
+  materielId: varchar("materiel_id"), // Référence matériel si nécessaire
+  dateLivraisonPrevue: timestamp("date_livraison_prevue"),
+  dateLivraisonReelle: timestamp("date_livraison_reelle"),
+  rdvPlanifie: timestamp("rdv_planifie"),
+  rdvEffectue: timestamp("rdv_effectue"),
+  quitusRecu: boolean("quitus_recu").default(false),
+  quitusDate: timestamp("quitus_date"),
+  reserveLevee: boolean("reserve_levee").default(false),
+  createdBy: varchar("created_by").references(() => users.id),
+  assignedTo: varchar("assigned_to").references(() => users.id), // France ou Ludivine
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectIdx: index("sav_demandes_project_idx").on(table.projectId),
+    statusIdx: index("sav_demandes_status_idx").on(table.status),
+    referenceIdx: index("sav_demandes_reference_idx").on(table.reference),
+    createdByIdx: index("sav_demandes_created_by_idx").on(table.createdBy),
+    assignedToIdx: index("sav_demandes_assigned_to_idx").on(table.assignedTo),
+  };
+});
+
+// Table de checklist qualité BE
+export const beQualityChecklist = pgTable("be_quality_checklist", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  offerId: varchar("offer_id").notNull().references(() => offers.id, { onDelete: "cascade" }),
+  itemType: beChecklistItemEnum("item_type").notNull(),
+  isCritical: boolean("is_critical").default(false), // Bloquant si non coché
+  status: checklistStatusEnum("status").default("non_controle"), // Utilise enum existant
+  checkedBy: varchar("checked_by").references(() => users.id),
+  checkedAt: timestamp("checked_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    offerIdx: index("be_quality_checklist_offer_idx").on(table.offerId),
+    itemTypeIdx: index("be_quality_checklist_item_type_idx").on(table.itemType),
+    isCriticalIdx: index("be_quality_checklist_is_critical_idx").on(table.isCritical),
+    statusIdx: index("be_quality_checklist_status_idx").on(table.status),
+  };
+});
+
+// Table de suivi temps back-office
+export const timeTracking = pgTable("time_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  offerId: varchar("offer_id").references(() => offers.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  taskType: taskTypeEnum("task_type").notNull(),
+  hours: decimal("hours", { precision: 8, scale: 2 }).notNull(),
+  date: timestamp("date").notNull(),
+  description: text("description"),
+  hourlyRate: decimal("hourly_rate", { precision: 8, scale: 2 }), // Taux horaire
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    projectIdx: index("time_tracking_project_idx").on(table.projectId),
+    offerIdx: index("time_tracking_offer_idx").on(table.offerId),
+    userIdIdx: index("time_tracking_user_idx").on(table.userId),
+    dateIdx: index("time_tracking_date_idx").on(table.date),
+    taskTypeIdx: index("time_tracking_task_type_idx").on(table.taskType),
+    projectUserDateIdx: index("time_tracking_project_user_date_idx").on(table.projectId, table.userId, table.date),
+  };
+});
+
+// ========================================
 // TABLES PHASE 3 - SYSTÈME DE CHECKLIST ADMINISTRATIVE AUTOMATISÉE
 // ========================================
 
@@ -2714,7 +2897,7 @@ export interface CriticalAlert {
   isActive: boolean;
   isDismissed: boolean;
   severity: 'high' | 'medium' | 'low';
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Type pour la configuration des poids de priorité (utilise le schéma Zod défini plus loin)
@@ -3439,7 +3622,7 @@ export const documents = pgTable("documents", {
   
   // Tags pour recherche et organisation
   tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`), // Tags libres
-  metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`), // Métadonnées flexibles
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`), // Métadonnées flexibles
   
   // Informations utilisateur
   uploadedBy: varchar("uploaded_by").references(() => users.id).notNull(),
@@ -3493,7 +3676,7 @@ export const documentLinks = pgTable("document_links", {
   lotId: varchar("lot_id").references(() => aoLots.id),
   
   // Métadonnées spécifiques au lien
-  linkMetadata: jsonb("link_metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  linkMetadata: jsonb("link_metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
   isPrimary: boolean("is_primary").default(false), // Lien principal pour cet espace
   displayOrder: integer("display_order").default(0), // Ordre d'affichage
   
@@ -3528,7 +3711,7 @@ export const documentCollections = pgTable("document_collections", {
   
   // Paramètres de la collection
   isSystemCollection: boolean("is_system_collection").default(false), // Collections créées automatiquement
-  settings: jsonb("settings").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  settings: jsonb("settings").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
   
   createdBy: varchar("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -3811,7 +3994,7 @@ export const beQualityControls = pgTable("be_quality_controls", {
   warningMessage: text("warning_message"),
   
   // Données de contrôle (JSON flexible)
-  controlData: jsonb("control_data").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  controlData: jsonb("control_data").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
   
   // Override manuel si nécessaire
   manualOverride: boolean("manual_override").default(false),
@@ -5335,7 +5518,7 @@ export const accessValidationRequestSchema = z.object({
   action: z.enum(["read", "write", "delete", "create", "export"]),
   columns: z.array(z.string()).optional(),
   recordId: z.string().optional(),
-  contextValues: z.record(z.string(), z.any()).optional(),
+  contextValue: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Schema pour requête d'audit
@@ -5364,7 +5547,7 @@ export const createContextSchema = z.object({
   sqlCondition: z.string().min(10),
   requiredParameters: z.array(z.string()).default([]),
   appliesTo: z.array(z.string()).default([]),
-  examples: z.record(z.string(), z.any()).optional(),
+  examples: z.record(z.string(), z.unknown()).optional(),
 });
 
 // ========================================
@@ -5577,7 +5760,7 @@ export type PermissionCheckResult = {
   denialReason?: string;
   allowedColumns?: string[];
   deniedColumns?: string[];
-  conditions?: any;
+  conditions?: unknown;
   contextRequired?: string;
   auditRequired?: boolean;
 };
@@ -5634,7 +5817,7 @@ export interface AiQueryResponse {
   error?: {
     type: "validation_error" | "model_error" | "rate_limit" | "timeout" | "unknown";
     message: string;
-    details?: any;
+    deta: unknown;unknown;
     fallbackAttempted: boolean;
   };
 }
@@ -5687,15 +5870,15 @@ export const sqlValidationRequestSchema = z.object({
   sql: z.string()
     .min(1, "Le SQL ne peut pas être vide")
     .max(50000, "Le SQL ne peut pas dépasser 50000 caractères"),
-  parameters: z.array(z.any()).optional()
+  parameters: z.record(z.string(), z.unknown()).optional()
 });
 
 // Types pour les réponses du moteur SQL
 export interface SQLQueryResult {
   success: boolean;
   sql?: string;
-  parameters?: any[];
-  results?: any[];
+  parameters?: unknown[];
+  results?: unknown[];
   executionTime?: number;
   rbacFiltersApplied?: string[];
   confidence?: number;
@@ -5703,7 +5886,7 @@ export interface SQLQueryResult {
   error?: {
     type: "validation" | "security" | "rbac" | "execution" | "parsing" | "timeout";
     message: string;
-    details?: any;
+    data?: unknown;
   };
   metadata?: {
     tablesAccessed: string[];
@@ -5753,7 +5936,6 @@ export interface MenuiserieMaterial {
   };
   suppliers: string[];
   seasonal_constraints?: string[];
-  technical_specs: Record<string, any>;
 }
 
 export interface MenuiserieProcess {
@@ -5849,8 +6031,8 @@ export interface RBACContext {
     offers: "own" | "team" | "all";
     financial_data: boolean;
     sensitive_data: boolean;
+    [key: string]: unknown; // Variables pour filtres dynamiques
   };
-  context_variables: Record<string, any>; // Variables pour filtres dynamiques
 }
 
 // Interface principale du contexte métier
@@ -5937,7 +6119,7 @@ export interface BusinessContextResponse {
   error?: {
     type: "validation" | "rbac" | "cache" | "domain_knowledge" | "unknown";
     message: string;
-    details?: any;
+    details?: unknown;
   };
 }
 
@@ -5953,8 +6135,8 @@ export interface ContextEnrichmentResponse {
   };
   error?: {
     type: "validation" | "enrichment" | "domain_matching" | "unknown";
-    message: string;
-    details?: any;
+    message?: string;
+    data?: unknown;
   };
 }
 
@@ -5965,8 +6147,8 @@ export interface AdaptiveLearningResponse {
   optimization_suggestions?: string[];
   error?: {
     type: "validation" | "learning" | "persistence" | "unknown";
-    message: string;
-    details?: any;
+    message?: string;
+    data?: unknown;
   };
 }
 
@@ -6326,7 +6508,7 @@ export const savInterventions = pgTable("sav_interventions", {
   // Durées et matériaux
   estimatedDuration: integer("estimated_duration").notNull(), // Heures estimées
   actualDuration: integer("actual_duration"), // Heures réelles (nullable)
-  materials: jsonb("materials").$type<Record<string, any>[]>().default(sql`'[]'::jsonb`), // Matériaux utilisés
+  materials: jsonb("materials").$type<Record<string, unknown>[]>().default(sql`'[]'::jsonb`), // Matériaux utilisés
   
   // Coût et satisfaction
   cost: decimal("cost", { precision: 10, scale: 2 }).default("0.00"),
@@ -6446,6 +6628,22 @@ export type SavWarrantyClaim = typeof savWarrantyClaims.$inferSelect;
 export type InsertSavWarrantyClaim = z.infer<typeof insertSavWarrantyClaimSchema>;
 
 // ========================================
+// TYPES FONCTIONNALITÉS 3-4-5-6-7-8
+// ========================================
+
+export type ProjectFeedbackTerrain = typeof projectFeedbackTerrain.$inferSelect;
+export type InsertProjectFeedbackTerrain = typeof projectFeedbackTerrain.$inferInsert;
+
+export type SavDemande = typeof savDemandes.$inferSelect;
+export type InsertSavDemande = typeof savDemandes.$inferInsert;
+
+export type BeQualityChecklistItem = typeof beQualityChecklist.$inferSelect;
+export type InsertBeQualityChecklistItem = typeof beQualityChecklist.$inferInsert;
+
+export type TimeTracking = typeof timeTracking.$inferSelect;
+export type InsertTimeTracking = typeof timeTracking.$inferInsert;
+
+// ========================================
 // SCHEMAS ZOD POUR VALIDATION DES ENDPOINTS CHATBOT
 // ========================================
 
@@ -6560,7 +6758,7 @@ export interface ChatbotQueryResponse {
   query: string;
   explanation: string;
   sql?: string; // Masqué selon les permissions
-  results: any[];
+  warnings?: string[];
   suggestions: string[];
   confidence: number;
   execution_time_ms: number;
@@ -6634,8 +6832,8 @@ export interface ChatbotValidateResponse {
   restricted_columns: string[];
   error?: {
     type: "validation" | "security" | "rbac" | "ai_error";
-    message: string;
-    details: any;
+    message?: string;
+    data?: unknown;
   };
 }
 
@@ -7112,13 +7310,13 @@ export const createAuditEventSchema = z.object({
   action: z.string().optional(),
   entityType: z.string().optional(),
   entityId: z.string().optional(),
-  payload: z.any().optional(),
-  response: z.any().optional(),
-  errorDetails: z.any().optional(),
+  payload: z.unknown().optional(),
+  response: z.unknown().optional(),
+  contextValues: z.record(z.string(), z.unknown()).optional(),
   executionTimeMs: z.number().optional(),
   responseSize: z.number().optional(),
   tags: z.array(z.string()).optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Schéma pour création d'alerte de sécurité (API)
@@ -7138,7 +7336,6 @@ export const createSecurityAlertSchema = z.object({
   entityId: z.string().optional(),
   sourceComponent: z.string().optional(),
   ruleId: z.string().optional(),
-  triggerData: z.any().optional(),
   detectionMethod: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),
   thresholdValue: z.number().optional(),
@@ -7146,7 +7343,7 @@ export const createSecurityAlertSchema = z.object({
   assignedToUserId: z.string().optional(),
   correlationId: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // ========================================
@@ -7185,15 +7382,12 @@ export interface AuditEvent {
   entityId?: string;
   result: 'success' | 'error' | 'blocked' | 'timeout' | 'partial';
   severity?: 'low' | 'medium' | 'high' | 'critical';
-  payload?: any;
-  response?: any;
-  errorDetails?: any;
+  payload?: unknown;
   metadata?: {
     ip?: string;
     userAgent?: string;
     executionTimeMs?: number;
-    responseSize?: number;
-    [key: string]: any;
+    sessionId?: string;
   };
   tags?: string[];
   timestamp?: Date;
@@ -7215,8 +7409,7 @@ export interface SecurityAlertEvent {
   entityId?: string;
   sourceComponent?: string;
   detectionMethod?: string;
-  confidence?: number;
-  metadata?: Record<string, any>;
+  confidenceNumber?: number;
   timestamp?: Date;
 }
 
@@ -7580,13 +7773,13 @@ export const employeeDocumentsRelations = relations(employeeDocuments, ({ one })
 export const proposeActionSchema = z.object({
   type: z.enum(["create", "update", "delete", "business_action"]),
   entity: z.enum(["offer", "project", "ao", "contact", "task", "supplier", "team_member", "document", "validation", "milestone"]),
-  operation: z.string().min(1).max(100),
-  parameters: z.record(z.string(), z.any()),
+  operation: z.string().min(1).max(50),
+  parameters: z.record(z.string(), z.unknown()).optional(),
   targetEntityId: z.string().optional(),
   riskLevel: z.enum(["low", "medium", "high"]).optional(),
   confirmationRequired: z.boolean().default(true),
-  expirationMinutes: z.number().min(1).max(1440).default(30), // 1 minute à 24 heures
-  metadata: z.record(z.string(), z.any()).optional(),
+  expirationMinutes: z.number().min(1).max(1440).default(60), // 1 minute à 24 heures
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Schéma pour exécuter une action
@@ -7787,9 +7980,9 @@ export type UpdateConfirmationRequest = z.infer<typeof updateConfirmationSchema>
 // Interface pour définition d'action
 export interface ActionDefinition {
   type: 'create' | 'update' | 'delete' | 'business_action';
-  entity: string;
-  operation: string;
-  parameters: Record<string, any>;
+  entityType: string;
+  entityName: string;
+  entityId: string;
   targetEntityId?: string;
   confirmation_required: boolean;
   risk_level: 'low' | 'medium' | 'high';
@@ -7808,14 +8001,14 @@ export interface ActionExecutionResult {
   executionTime?: number;
   warnings?: string[];
   sideEffects?: {
-    entity: string;
-    action: string;
-    details: any;
+    entitiesAffected: string[];
+    relatedEntities: string[];
+    cascadingEffects: string[];
   }[];
   error?: {
-    type: 'validation' | 'permission' | 'execution' | 'rollback';
-    message: string;
-    details?: any;
+    type: 'validation' | 'permission' | 'execution' | 'timeout' | 'unknown';
+    message?: string;
+    data?: unknown;
   };
 }
 
@@ -7829,9 +8022,9 @@ export interface ProposeActionResponse {
   estimatedTime?: number;
   warnings?: string[];
   error?: {
-    type: 'validation' | 'permission' | 'security' | 'business_rule';
-    message: string;
-    details?: any;
+    type: 'validation' | 'permission' | 'security' | 'timeout' | 'unknown';
+    message?: string;
+    data?: unknown;
   };
 }
 
@@ -7841,9 +8034,9 @@ export interface ExecuteActionResponse {
   actionId: string;
   executionTime?: number;
   error?: {
-    type: 'confirmation' | 'permission' | 'execution' | 'timeout';
-    message: string;
-    details?: any;
+    type: 'confirmation' | 'permission' | 'execution' | 'timeout' | 'unknown';
+    message?: string;
+    data?: unknown;
   };
 }
 
@@ -7853,9 +8046,9 @@ export interface ActionHistoryResponse {
   total: number;
   hasMore: boolean;
   error?: {
-    type: 'validation' | 'permission' | 'query';
-    message: string;
-    details?: any;
+    type: 'validation' | 'permission' | 'execution' | 'unknown';
+    message?: string;
+    data?: unknown;
   };
 }
 
@@ -8039,7 +8232,7 @@ export interface SupplierQuoteFields {
   // Matériaux et spécifications techniques
   materials?: MaterialSpec[];
   colors?: ColorSpec[];
-  technicalSpecs?: Record<string, any>;
+  technicalSpecs?: Record<string, unknown>;
   
   // Certifications et normes
   certifications?: string[];
@@ -8191,23 +8384,25 @@ export interface TechnicalContext {
   
   // Performances techniques
   performance: {
-    thermal?: { uw?: number; aev?: string; };
-    acoustic?: Record<string, any>;
-    security?: Record<string, any>;
-    durability?: Record<string, any>;
+    thermal?: { 
+      uw?: number;
+      aev?: string;
+      other?: Record<string, string>;
+    };
+    acoustic?: Record<string, unknown>;
   };
   
   // Normes et conformité
   standards: {
-    dtu: string[];
-    nf: string[];
-    ce: string[];
-    other: string[];
+    dt?: string[];
+    nf?: string[];
+    ce?: string[];
+    other?: string[];
   };
   
   // Contraintes techniques
   constraints: {
-    dimensional: Record<string, any>;
+    structural: string[];
     installation: string[];
     environmental: string[];
   };
@@ -8427,9 +8622,9 @@ export interface ContextGenerationResult {
   success: boolean;
   data?: AIContextualData;
   error?: {
-    type: 'validation' | 'database' | 'timeout' | 'cache' | 'unknown';
-    message: string;
-    details?: any;
+    type: 'validation' | 'database' | 'timeout' | 'unknown';
+    message?: string;
+    data?: unknown;
   };
   
   performance: {
@@ -8550,7 +8745,7 @@ export interface ContextTierServiceInterface {
   // Classification intelligente requête
   detectContextTier(
     query: string,
-    userContext: any,
+    userContext: unknown,
     entityType: AIContextualData['entityType']
   ): Promise<ContextTierDetectionResult>;
   
@@ -9535,7 +9730,7 @@ export const batigestExportQueue = pgTable("batigest_export_queue", {
   exportData: jsonb("export_data").notNull().$type<{
     xml?: string;
     csv?: string;
-    metadata: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }>(),
   
   // Fichiers générés

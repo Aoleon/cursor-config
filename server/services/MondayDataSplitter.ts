@@ -100,8 +100,9 @@ export class MondayDataSplitter {
   }> {
     logger.info('Analyse Monday item pour opportunités éclatement', {
       service: 'MondayDataSplitter',
-      metadata: { mondayItemId, boardId }
-    });
+      metadata: { mondayItemId, boardId 
+
+          });
 
     const mondayItem = await mondayService.getItem(mondayItemId);
 
@@ -158,8 +159,9 @@ export class MondayDataSplitter {
     
     logger.info('Démarrage éclatement Monday item', {
       service: 'MondayDataSplitter',
-      metadata: { mondayItemId, boardId, preFetched: !isId }
-    });
+      metadata: { mondayItemId, boardId, preFetched: !isId 
+
+          });
 
     const mondayItem = isId 
       ? await mondayService.getItem(mondayItemOrId) 
@@ -195,8 +197,9 @@ export class MondayDataSplitter {
         // ÉTAPE 1 : Extraire et créer/récupérer l'AO de base
         logger.info('Étape 1: Extraction AO de base', {
           service: 'MondayDataSplitter',
-          metadata: { mondayItemId }
-        });
+          metadata: { mondayItemId 
+
+              });
 
         const aoData = await this.aoBaseExtractor.extract(context);
         context.extractedData.baseAO = aoData;
@@ -220,15 +223,14 @@ export class MondayDataSplitter {
               mondayItemId,
               missingFields: missingRequiredFields,
               extractedData: aoData
-            }
-          });
+
+                });
 
           context.diagnostics.push({
             level: 'error',
             extractor: 'AOBaseExtractor',
             message: errorMsg,
-            data: { missingFields: missingRequiredFields }
-          });
+            data: { missingFields: missingRequiredFields });
 
           result.success = false;
           result.diagnostics = context.diagnostics;
@@ -282,15 +284,14 @@ export class MondayDataSplitter {
               reference: currentAO.reference,
               client: aoDataWithDefaults.client,
               montant: aoDataWithDefaults.montantEstime
-            }
-          });
+
+                });
           
           context.diagnostics.push({
             level: 'info',
             extractor: 'AOBaseExtractor',
             message: `AO déjà importé (mondayItemId=${mondayItemId}), mise à jour avec données Monday`,
-            data: { aoId: existingAO.id, reference: currentAO.reference, updated: true }
-          });
+            data: { aoId: existingAO.id, reference: currentAO.reference, updated: true });
         } else {
           // Créer un nouvel AO
           // IMPORTANT: Filtrer les valeurs enum invalides (nombres au lieu de strings)
@@ -328,15 +329,16 @@ export class MondayDataSplitter {
               aoId: currentAO.id, 
               mondayItemId,
               reference: currentAO.reference
-            }
-          });
+
+                });
         }
 
         // ÉTAPE 1.5: Extraire et PERSISTER maîtres ouvrage/œuvre avec findOrCreate
         logger.info('Étape 1.5: Extraction maîtres d\'ouvrage/œuvre', {
           service: 'MondayDataSplitter',
-          metadata: { aoId: currentAO.id }
-        });
+          metadata: { aoId: currentAO.id 
+
+              });
 
         const masters = await this.masterEntityExtractor.extract(context);
         context.extractedData.maitresOuvrage = masters.maitresOuvrage;
@@ -357,8 +359,8 @@ export class MondayDataSplitter {
                 created: linkResult.created,
                 found: linkResult.found,
                 confidence: linkResult.confidence
-              }
-            });
+
+                  });
             
             if (linkResult.created) {
               result.mastersCreated++;
@@ -367,16 +369,13 @@ export class MondayDataSplitter {
     },
     {
       operation: 'constructor',
-service: 'MondayDataSplitter',;
-      metadata: {}
-    }
-  );`,
-        data: { error: error.stack }
-      });
+service: 'MondayDataSplitter',
+      metadata: { } });
+        data: { error: error.stack });
 
       throw error;
     }
   }
 }
 
-export const mondayDataSplitter = new MondayDataSplitter();
+export const mondayDataSplitter = mondaydataService();

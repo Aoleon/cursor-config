@@ -2,11 +2,11 @@
  * Script pour analyser les valeurs uniques du board Projects Monday.com
  */
 
-import { MondayService } from '../services/MondayService';
+import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
 import { logger } from './utils/logger';
 
 async function analyzeUniqueValues() {
-  const service = new MondayService();
+  const service = mondayintegrationService();
   const boardId = '5296947311';
   
   logger.info('🔍 Analyse valeurs uniques board Projects\n');

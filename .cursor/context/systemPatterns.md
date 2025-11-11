@@ -567,3 +567,5 @@ server/modules/[module]/
 **Note:** Ce document décrit les patterns architecturaux et techniques utilisés dans le projet. Il guide les décisions de design et l'évolution du code.
 
 
+
+

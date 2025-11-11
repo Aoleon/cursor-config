@@ -156,15 +156,14 @@ export class KpiRepository {
     const individualCapacity = 35 * weeksBetween;
     const granularity = params.granularity;
 
-    logger.info('[KPI] Fetching consolidated KPIs', {
-      metadata: {
+    logger.info('[KPI] Fetching consolidated KPIs', { metadata: {
         from: params.from,
         to: params.to,
         granularity,
         weeksBetween,
         daysBetween
-      }
-    });
+        }
+            });
 
     try {
       // Single optimized query with CTEs
@@ -458,19 +457,16 @@ export class KpiRepository {
             targetMs: PERFORMANCE_BASELINE.OPTIMIZED_TARGET_MS,
             status: executionTimeMs <= PERFORMANCE_BASELINE.OPTIMIZED_TARGET_MS ? 'on_target' : 
                     executionTimeMs <= PERFORMANCE_BASELINE.WARNING_THRESHOLD_MS ? 'acceptable' : 'degraded'
-          }
-        }
-      });
+          });
 
       return kpiResult;
     } catch (error) {
-      logger.error('[KPI] Erreur lors de la récupération des KPIs consolidés', {
-        metadata: {
+      logger.error('[KPI] Erreur lors de la récupération des KPIs consolidés', { metadata: {
           operation: 'getConsolidatedKpis',
           service: 'KpiRepository',
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }

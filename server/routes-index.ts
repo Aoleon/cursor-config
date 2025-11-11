@@ -34,13 +34,12 @@ import { AuditService } from './services/AuditService';
 import monitoringRouter from './routes/monitoring';
 
 export async function registerModularRoutes(app: Express): Promise<void> {
-  logger.info('Initialisation des routes modulaires', {
-    metadata: {
+  logger.info('Initialisation des routes modulaires', { metadata: {
       module: 'RoutesIndex',
       operation: 'registerModularRoutes',
       stage: 'initialization'
-    }
-  });
+        }
+            });
 
   // ========================================
   // SETUP AUTHENTICATION MIDDLEWARE
@@ -64,107 +63,98 @@ export async function registerModularRoutes(app: Express): Promise<void> {
   // Authentication Module
   const authRouter = createAuthRouter(storage as IStorage, eventBus);
   app.use(authRouter);
-  logger.info('Module Auth monté avec succès', {
-    metadata: {
+  logger.info('Module Auth monté avec succès', { metadata: {
       module: 'RoutesIndex',
       operation: 'mountRouter',
       moduleName: 'auth',
       routes: ['/api/login/basic', '/api/auth/health', '/api/auth/user', '/api/debug-auth-state']
-    }
-  });
+        }
+            });
 
   // Chiffrage Module
   const chiffrageRouter = createChiffrageRouter(storage as IStorage, eventBus);
   app.use(chiffrageRouter);
-  logger.info('Module Chiffrage monté avec succès', {
-    metadata: {
+  logger.info('Module Chiffrage monté avec succès', { metadata: {
       module: 'RoutesIndex',
       operation: 'mountRouter',
       moduleName: 'chiffrage',
       routes: ['/api/dpgf', '/api/chiffrage', '/api/validation/milestones', '/api/quotations']
-    }
-  });
+        }
+            });
 
   // Suppliers Module
   const suppliersRouter = createSuppliersRouter(storage as IStorage, eventBus);
   app.use(suppliersRouter);
-  logger.info('Module Suppliers monté avec succès', {
-    metadata: {
+  logger.info('Module Suppliers monté avec succès', { metadata: {
       module: 'RoutesIndex',
       operation: 'mountRouter',
       moduleName: 'suppliers',
       routes: ['/api/suppliers', '/api/supplier-sessions', '/api/supplier-quotes']
-    }
-  });
+        }
+            });
 
   // Projects Module
   const projectsRouter = createProjectsRouter(storage as IStorage, eventBus);
   app.use(projectsRouter);
-  logger.info('Module Projects monté avec succès', {
-    metadata: {
+  logger.info('Module Projects monté avec succès', { metadata: {
       module: 'RoutesIndex',
       operation: 'mountRouter',
       moduleName: 'projects',
       routes: ['/api/projects', '/api/sav', '/api/visa-architecte']
-    }
-  });
+        }
+            });
 
   // Analytics Module
   const analyticsRouter = createAnalyticsRouter(storage as IStorage, eventBus);
   app.use(analyticsRouter);
-  logger.info('Module Analytics monté avec succès', {
-    metadata: {
+  logger.info('Module Analytics monté avec succès', { metadata: {
       module: 'RoutesIndex',
       operation: 'mountRouter',
       moduleName: 'analytics',
       routes: ['/api/analytics', '/api/predictive', '/api/dashboard']
-    }
-  });
+        }
+            });
 
   // Documents Module
   const documentsRouter = createDocumentsRouter(storage as IStorage, eventBus);
   app.use(documentsRouter);
-  logger.info('Module Documents monté avec succès', {
-    metadata: {
+  logger.info('Module Documents monté avec succès', { metadata: {
       module: 'RoutesIndex',
       operation: 'mountRouter',
       moduleName: 'documents',
       routes: ['/api/ocr', '/api/pdf', '/api/documents', '/api/objects', '/api/templates']
-    }
-  });
+        }
+            });
 
   // Batigest Integration Module
   const batigestRouter = createBatigestRouter(storage as IStorage, eventBus);
   app.use(batigestRouter);
-  logger.info('Module Batigest monté avec succès', {
-    metadata: {
+  logger.info('Module Batigest monté avec succès', { metadata: {
       module: 'RoutesIndex',
       operation: 'mountRouter',
       moduleName: 'batigest',
       routes: ['/api/batigest/exports', '/api/batigest/status', '/api/documents/generate-purchase-order', '/api/documents/generate-client-quote']
-    }
-  });
+        }
+            });
 
   // Monitoring Module
   app.use('/api/monitoring', monitoringRouter);
-  logger.info('Module Monitoring monté avec succès', {
-    metadata: {
+  logger.info('Module Monitoring monté avec succès', { metadata: {
       module: 'RoutesIndex',
       operation: 'mountRouter',
       moduleName: 'monitoring',
       routes: ['/api/monitoring/health', '/api/monitoring/metrics', '/api/monitoring/errors', '/api/monitoring/alerts']
-    }
-  });
+        }
+            });
 
-  logger.info('Routes modulaires initialisées avec succès', {
-    metadata: {
+  logger.info('Routes modulaires initialisées avec succès', { metadata: {
       module: 'RoutesIndex',
       operation: 'registerModularRoutes',
       stage: 'complete',
       modulesLoaded: ['auth', 'chiffrage', 'suppliers', 'projects', 'analytics', 'documents', 'batigest'],
       modulesPending: []
-    }
-  });
+        }
+            });
 }
 
 // Helper function for progressive migration
@@ -181,15 +171,14 @@ export function mountModuleRouter(
     app.use(router);
   }
   
-  logger.info(`Module ${moduleName} monté`, {
-    metadata: {
+  logger.info(`Module ${moduleName} monté`, { metadata: {
       module: 'RoutesIndex',
       operation: 'mountModuleRouter',
       moduleName,
       mountPath: mountPath || '/',
       timestamp: new Date().toISOString()
-    }
-  });
+        }
+            });
 }
 
 /**

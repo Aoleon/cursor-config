@@ -1,4 +1,4 @@
-import { MondayService, mondayService } from './MondayService';
+import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
 import type { IStorage } from '../storage';
 import { storage } from '../storage';
 import { logger } from '../utils/logger';
@@ -24,8 +24,8 @@ export class MondayExportService {
         operation: 'exportProject',
         projectId,
         correlationId
-      }
-    });
+
+          });
 
     // Récupérer le projet
     const project = await this.storage.getProject(projectId);
@@ -38,8 +38,8 @@ export class MondayExportService {
           operation: 'exportProject',
           projectId,
           correlationId
-        }
-      });
+
+            });
       throw error;
     }
 
@@ -52,8 +52,8 @@ export class MondayExportService {
           projectId,
           mondayId: project.mondayId,
           correlationId
-        }
-      });
+
+            });
       return project.mondayId;
     }
     
@@ -99,8 +99,8 @@ export class MondayExportService {
             projectId,
             projectName: project.name,
             correlationId
-          }
-        });
+
+              });
 
         const result = await this.mondayService.executeQuery(mutation, {
           boardId: process.env.MONDAY_PROJECTS_BOARD_ID || '123456',
@@ -126,8 +126,8 @@ export class MondayExportService {
           projectId,
           correlationId,
           error: error.message
-        }
-      });
+
+            });
       throw error;
     }
 
@@ -141,8 +141,8 @@ export class MondayExportService {
         projectId,
         mondayId: mondayItem.id,
         correlationId
-      }
-    });
+
+          });
     
     return mondayItem.id;
   }
@@ -160,8 +160,8 @@ export class MondayExportService {
         operation: 'exportAO',
         aoId,
         correlationId
-      }
-    });
+
+          });
 
     // Récupérer l'AO
     const ao = await this.storage.getAo(aoId);
@@ -174,8 +174,8 @@ export class MondayExportService {
           operation: 'exportAO',
           aoId,
           correlationId
-        }
-      });
+
+            });
       throw error;
     }
 
@@ -188,8 +188,8 @@ export class MondayExportService {
           aoId,
           mondayId: ao.mondayId,
           correlationId
-        }
-      });
+
+            });
       return ao.mondayId;
     }
     
@@ -203,7 +203,7 @@ export class MondayExportService {
     `;
     
     // Préparer les valeurs des colonnes Monday.com
-    const columnValues: Record<st, unknown>unknown> = {};
+    const columnValues: Record<st, unknown> = {};
     
     if (ao.status) {
       columnValues.status = { label: ao.status };
@@ -239,8 +239,8 @@ export class MondayExportService {
             aoId,
             aoReference: ao.reference,
             correlationId
-          }
-        });
+
+              });
 
         const result = await this.mondayService.executeQuery(mutation, {
           boardId: process.env.MONDAY_AOS_BOARD_ID || '789012',
@@ -266,8 +266,8 @@ export class MondayExportService {
           aoId,
           correlationId,
           error: error.message
-        }
-      });
+
+            });
       throw error;
     }
 
@@ -281,8 +281,8 @@ export class MondayExportService {
         aoId,
         mondayId: mondayItem.id,
         correlationId
-      }
-    });
+
+          });
     
     return mondayItem.id;
   }
@@ -311,8 +311,8 @@ export class MondayExportService {
         itemId,
         columnsCount: Object.keys(columnValues).length,
         correlationId
-      }
-    });
+
+          });
 
     // Mutation GraphQL pour mettre à jour plusieurs colonnes
     const mutation = `
@@ -334,8 +334,8 @@ export class MondayExportService {
             itemId,
             columnValues,
             correlationId
-          }
-        });
+
+              });
 
         const response = await this.mondayService.executeQuery(mutation, {
           boardId,
@@ -362,8 +362,8 @@ export class MondayExportService {
           itemId,
           correlationId,
           error: error.message
-        }
-      });
+
+            });
       throw error;
     }
 
@@ -376,8 +376,8 @@ export class MondayExportService {
         mondayId: result.id,
         columnsUpdated: Object.keys(columnValues),
         correlationId
-      }
-    });
+
+          });
     
     return result.id;
   }
@@ -401,8 +401,8 @@ export class MondayExportService {
         operation: 'syncAONewFields',
         aoId,
         correlationId
-      }
-    });
+
+          });
 
     // Récupérer l'AO
     const ao = await this.storage.getAo(aoId);
@@ -414,8 +414,8 @@ export class MondayExportService {
           operation: 'syncAONewFields',
           aoId,
           correlationId
-        }
-      });
+
+            });
       return null;
     }
 
@@ -428,13 +428,13 @@ export class MondayExportService {
           aoId,
           reference: ao.reference,
           correlationId
-        }
-      });
+
+            });
       return null;
     }
 
     // Préparer les valeurs des 3 nouvelles colonnes Monday.com
-    const columnValues: R, unknown>unknown>unknown any> = {};
+    const columnValues: Record<string, unknown> = {};
     
     // dateLivraisonPrevue → date_mkpcfgja (Date Métrés)
     if (ao.dateLivraisonPrevue) {
@@ -445,8 +445,8 @@ export class MondayExportService {
           operation: 'syncAONewFields',
           aoId,
           value: columnValues.date_mkpcfgja
-        }
-      });
+
+            });
     }
     
     // dateOS → date__1 (Date Accord)
@@ -458,8 +458,8 @@ export class MondayExportService {
           operation: 'syncAONewFields',
           aoId,
           value: columnValues.date__1
-        }
-      });
+
+            });
     }
     
     // cctp → long_text_mkx4zgjd (Commentaire sélection)
@@ -471,8 +471,8 @@ export class MondayExportService {
           operation: 'syncAONewFields',
           aoId,
           length: ao.cctp.length
-        }
-      });
+
+            });
     }
 
     // Si aucun champ à synchroniser, skip
@@ -484,8 +484,8 @@ export class MondayExportService {
           aoId,
           mondayId: ao.mondayId,
           correlationId
-        }
-      });
+
+            });
       return ao.mondayId;
     }
 
@@ -500,12 +500,12 @@ export class MondayExportService {
         mondayId: ao.mondayId,
         syncedFields: Object.keys(columnValues),
         correlationId
-      }
-    });
+
+          });
     
     return ao.mondayId;
   }
 }
 
 // Export singleton instance
-export const mondayExportService = new MondayExportService(storage, mondayService);
+export const mondayExportService = mondaydataService(storage, mondayService);

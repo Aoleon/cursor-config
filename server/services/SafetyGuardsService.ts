@@ -109,14 +109,12 @@ export class SafetyGuardsService {
     // Configuration circuit breakers
     this.initializeCircuitBreakers();
     
-    logger.info('Service démarré avec protection système BTP', {
-      metadata: {
+    logger.info('Service démarré avec protection système BTP', { metadata: {
         service: 'SafetyGuardsService',
-        operation: 'constructor'
-      }
-    });
+        operation: 'constructor' 
+              }
+            });
   }
-
   // ========================================
   // CIRCUIT BREAKERS PROTECTION
   // ========================================
@@ -144,15 +142,13 @@ export class SafetyGuardsService {
       });
     });
 
-    logger.info('Circuit breakers initialisés', {
-      metadata: {
+    logger.info('Circuit breakers initialisés', { metadata: {
         service: 'SafetyGuardsService',
         operation: 'initializeCircuitBreakers',
-        breakers: breakers
-      }
-    });
+        breakers: breakers 
+              }
+            });
   }
-
   /**
    * Vérifie l'état d'un circuit breaker avant opération
    */
@@ -172,13 +168,12 @@ export class SafetyGuardsService {
         if (breaker.nextAttemptTime && now >= breaker.nextAttemptTime) {
           // Transition vers half-open
           breaker.state = 'half-open';
-          logger.info('Circuit breaker transition vers half-open', {
-            metadata: {
+          logger.info('Circuit breaker transition vers half-open', { metadata: {
               service: 'SafetyGuardsService',
               operation: 'checkCircuitBreaker',
-              componentName
-            }
-          });
+              componentName 
+              }
+            });
           return { allowed: true };
         }
         return { 
@@ -208,13 +203,12 @@ export class SafetyGuardsService {
         breaker.state = 'closed';
         breaker.lastFailureTime = null;
         breaker.nextAttemptTime = null;
-        logger.info('Circuit breaker fermé après succès', {
-          metadata: {
+        logger.info('Circuit breaker fermé après succès', { metadata: {
             service: 'SafetyGuardsService',
             operation: 'recordOperationSuccess',
-            componentName
-          }
-        });
+            componentName 
+              }
+            });
       }
     } else if (breaker.state === 'closed') {
       breaker.failureCount = Math.max(0, breaker.failureCount - 1);
@@ -236,14 +230,13 @@ export class SafetyGuardsService {
       breaker.nextAttemptTime = new Date(Date.now() + breaker.timeoutMinutes * 60 * 1000);
       this.safetyStats.circuitBreakerActivations++;
       
-      logger.warn('Circuit breaker OUVERT après échecs', {
-        metadata: {
+      logger.warn('Circuit breaker OUVERT après échecs', { metadata: {
           service: 'SafetyGuardsService',
           operation: 'recordOperationFailure',
           componentName,
-          failureCount: breaker.failureCount
-        }
-      });
+          failureCount: breaker.failureCount 
+              }
+            });
     }
   }
 
@@ -267,14 +260,12 @@ export class SafetyGuardsService {
       await this.comprehensiveSystemEvaluation();
     }, 60 * 1000);
 
-    logger.info('Monitoring système démarré (10s/60s intervals)', {
-      metadata: {
+    logger.info('Monitoring système démarré (10s/60s intervals)', { metadata: {
         service: 'SafetyGuardsService',
-        operation: 'startSystemMonitoring'
-      }
-    });
+        operation: 'startSystemMonitoring' 
+              }
+            });
   }
-
   /**
    * Met à jour les métriques système
    */
@@ -300,12 +291,10 @@ export class SafetyGuardsService {
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'SafetyGuardsService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 
@@ -343,12 +332,10 @@ export class SafetyGuardsService {
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'SafetyGuardsService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 
@@ -365,16 +352,14 @@ export class SafetyGuardsService {
     this.adaptiveConfig.backgroundTaskFrequency *= 1.5;  // +50% intervalle
     this.adaptiveConfig.predictionConfidenceThreshold += 10; // +10% seuil
 
-    logger.warn('THROTTLING ACTIVÉ', {
-      metadata: {
+    logger.warn('THROTTLING ACTIVÉ', { metadata: {
         service: 'SafetyGuardsService',
         operation: 'activateThrottling',
         reason,
-        aggressiveness: this.adaptiveConfig.preloadingAggressiveness
-      }
-    });
+        aggressiveness: this.adaptiveConfig.preloadingAggressiveness 
+              }
+            });
   }
-
   /**
    * Désactive le throttling système
    */
@@ -391,16 +376,14 @@ export class SafetyGuardsService {
     this.adaptiveConfig.backgroundTaskFrequency *= 0.9;
     this.adaptiveConfig.predictionConfidenceThreshold = Math.max(50, this.adaptiveConfig.predictionConfidenceThreshold - 5);
 
-    logger.info('THROTTLING DÉSACTIVÉ', {
-      metadata: {
+    logger.info('THROTTLING DÉSACTIVÉ', { metadata: {
         service: 'SafetyGuardsService',
         operation: 'deactivateThrottling',
         reason,
-        duration: Math.round(throttleDuration/1000)
-      }
-    });
+        duration: Math.round(throttleDuration/1000) 
+              }
+            });
   }
-
   /**
    * Gestion surcharge système critique
    */
@@ -408,36 +391,30 @@ export class SafetyGuardsService {
     this.safetyStats.systemOverloads++;
     this.safetyStats.lastOverloadTime = new Date();
 
-    logger.error('SURCHARGE CRITIQUE DÉTECTÉE', {
-      metadata: {
+    logger.error('SURCHARGE CRITIQUE DÉTECTÉE', { metadata: {
         service: 'SafetyGuardsService',
         operation: 'handleCriticalOverload',
         cpuUsage: this.systemMetrics.cpuUsage,
         memoryUsage: this.systemMetrics.memoryUsage,
-        stack: new Error().stack
-      }
-    });
-
+        stack: new Error().stack 
+              }
+            });
     // Actions d'urgence
     await this.emergencyResourceCleanup();
-    
     // Arrêt temporaire preloading
     this.adaptiveConfig.preloadingAggressiveness = 0;
-    
     // Ouverture circuit breakers préventive
     this.circuitBreakers.forEach((breaker, name) => {
       if (breaker.state === 'closed') {
         breaker.state = 'open';
         breaker.nextAttemptTime = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-        logger.warn('Circuit breaker ouvert préventivement', {
-          metadata: {
+        logger.warn('Circuit breaker ouvert préventivement', { metadata: {
             service: 'SafetyGuardsService',
             operation: 'handleCriticalOverload',
-            circuitBreaker: name
-          }
-        });
-      }
-    });
+            circuitBreaker: name 
+              }
+            });
+      });
   }
 
   // ========================================
@@ -462,12 +439,10 @@ export class SafetyGuardsService {
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'SafetyGuardsService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 
@@ -506,17 +481,15 @@ export class SafetyGuardsService {
     const frequencyMultiplier = 1 + (adjustment * 2); // Max +100% intervalle
     this.adaptiveConfig.backgroundTaskFrequency *= frequencyMultiplier;
 
-    logger.info('ADAPTATION AUTOMATIQUE', {
-      metadata: {
+    logger.info('ADAPTATION AUTOMATIQUE', { metadata: {
         service: 'SafetyGuardsService',
         operation: 'performAdaptiveAdjustments',
         adaptationScore: (adaptationScore*100).toFixed(1),
         aggressiveness: newAggressiveness.toFixed(1),
-        confidenceThreshold: this.adaptiveConfig.predictionConfidenceThreshold.toFixed(1)
-      }
-    });
+        confidenceThreshold: this.adaptiveConfig.predictionConfidenceThreshold.toFixed(1) 
+              }
+            });
   }
-
   // ========================================
   // MEMORY MANAGEMENT & CLEANUP
   // ========================================
@@ -528,43 +501,32 @@ export class SafetyGuardsService {
     return withErrorHandling(
     async () => {
 
-      logger.info('Nettoyage d\'urgence ressources', {
-        metadata: {
+      logger.info('Nettoyage d\'urgence ressources', { metadata: {
           service: 'SafetyGuardsService',
           operation: 'emergencyResourceCleanup'
-        }
       });
-
       // Arrêt background tasks non-critiques
       const tasksStopped = this.backgroundTasksRunning;
       this.backgroundTasksRunning = 0;
-
       // Limitation preloads concurrents
       this.concurrentPreloads = Math.min(2, this.concurrentPreloads);
-
       // Force garbage collection si disponible
       if (global.gc) {
         global.gc();
         this.safetyStats.memoryOptimizations++;
       }
-
-      logger.info('Nettoyage terminé', {
-        metadata: {
+      logger.info('Nettoyage terminé', { metadata: {
           service: 'SafetyGuardsService',
           operation: 'emergencyResourceCleanup',
-          tasksStopped
-        }
-      });
-
-    
+          tasksStopped 
+              }
+            });
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'SafetyGuardsService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 
@@ -584,25 +546,20 @@ export class SafetyGuardsService {
 
       // Log santé système si problème détecté
       if (report.systemHealth < 70) {
-        logger.warn('Santé système dégradée', {
-          metadata: {
+        logger.warn('Santé système dégradée', { metadata: {
             service: 'SafetyGuardsService',
             operation: 'comprehensiveSystemEvaluation',
             systemHealth: report.systemHealth,
-            recommendations: report.recommendations.slice(0, 3)
-          }
-        });
+            recommendations: report.recommendations.slice(0, 3) 
+              }
+            });
       }
-
-    
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'SafetyGuardsService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 

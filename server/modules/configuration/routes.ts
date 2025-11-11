@@ -90,22 +90,29 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
     isAuthenticated,
     isAdminOrResponsible,
     asyncHandler(async (req, res) => {
-      logger.info('Récupération configuration scoring', {
-        metadata: { endpoint: 'GET /api/scoring-config' }
-      });
+      logger.info('Récupération configuration scoring', { metadata: { endpoint: 'GET /api/scoring-config' 
+
+            })
+ 
+
+          );
       
       const config = await storage.getScoringConfig();
       
-      logger.info('Configuration scoring récupérée', {
-        metadata: { config }
-      });
+      logger.info('Configuration scoring récupérée', { metadata: { config 
+
+            })
+ 
+
+          );
       
       res.json({
         success: true,
         data: config
       });
-    })
-  );
+          }
+        })
+      );
 
   // PATCH /api/scoring-config - Update scoring configuration
   router.patch("/api/scoring-config",
@@ -113,9 +120,12 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
     isAdminOrResponsible,
     validateBody(technicalScoringConfigSchema),
     asyncHandler(async (req, res) => {
-      logger.info('Mise à jour configuration scoring', {
-        metadata: { endpoint: 'PATCH /api/scoring-config', data: req.body }
-      });
+      logger.info('Mise à jour configuration scoring', { metadata: { endpoint: 'PATCH /api/scoring-config', data: req.body 
+
+            })
+ 
+
+          );
       
       const config: TechnicalScoringConfig = req.body;
       
@@ -130,17 +140,21 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       
       await storage.updateScoringConfig(config);
       
-      logger.info('Configuration scoring mise à jour avec succès', {
-        metadata: { config }
-      });
+      logger.info('Configuration scoring mise à jour avec succès', { metadata: { config 
+
+            })
+ 
+
+          );
       
       res.json({
         success: true,
         message: "Configuration mise à jour avec succès",
         data: config
       });
-    })
-  );
+          }
+        })
+      );
 
   // POST /api/score-preview - Calculate score preview
   router.post("/api/score-preview",
@@ -148,18 +162,24 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
     isAdminOrResponsible,
     validateBody(scorePreviewSchema),
     asyncHandler(async (req, res) => {
-      logger.info('Calcul aperçu scoring', {
-        metadata: { endpoint: 'POST /api/score-preview', criteria: req.body }
-      });
+      logger.info('Calcul aperçu scoring', { metadata: { endpoint: 'POST /api/score-preview', criteria: req.body 
+
+            })
+ 
+
+          );
       
       const { specialCriteria, config } = req.body;
       
       const scoringConfig = config || await storage.getScoringConfig();
       const result = ScoringService.compute(specialCriteria, scoringConfig);
       
-      logger.info('Résultat aperçu scoring calculé', {
-        metadata: { result }
-        });
+      logger.info('Résultat aperçu scoring calculé', { metadata: { result 
+
+            })
+ 
+
+          );
       
       res.json({
         success: true,
@@ -167,10 +187,11 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
           result,
           usedConfig: scoringConfig,
           inputCriteria: specialCriteria
-        }
-      });
-    })
-  );
+
+            });
+          }
+        })
+      );
 
   // ========================================
   // MATERIAL-COLOR RULES ROUTES
@@ -181,22 +202,29 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
     isAuthenticated, 
     requireTechnicalValidationRole,
     asyncHandler(async (req, res) => {
-      logger.info('Récupération règles matériaux-couleurs', {
-        metadata: { endpoint: 'GET /api/settings/material-color-rules' }
-      });
+      logger.info('Récupération règles matériaux-couleurs', { metadata: { endpoint: 'GET /api/settings/material-color-rules' 
+
+            })
+ 
+
+          );
       
       const rules = await storage.getMaterialColorRules();
-      logger.info('Règles matériaux-couleurs récupérées', {
-        metadata: { count: rules.length }
-      });
+      logger.info('Règles matériaux-couleurs récupérées', { metadata: { count: rules.length 
+
+            })
+ 
+
+          );
       
       res.json({
         success: true,
         data: rules,
         total: rules.length
       });
-    })
-  );
+          }
+        })
+      );
 
   // PUT /api/settings/material-color-rules - Update material-color rules
   router.put('/api/settings/material-color-rules',
@@ -204,9 +232,12 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
     requireTechnicalValidationRole,
     validateBody(z.array(materialColorAlertRuleSchema)),
     asyncHandler(async (req, res) => {
-      logger.info('Mise à jour règles matériaux-couleurs', {
-        metadata: { endpoint: 'PUT /api/settings/material-color-rules', newRules: req.body }
-      });
+      logger.info('Mise à jour règles matériaux-couleurs', { metadata: { endpoint: 'PUT /api/settings/material-color-rules', newRules: req.body 
+
+            })
+ 
+
+          );
       
       const newRules: MaterialColorAlertRule[] = req.body;
       
@@ -222,17 +253,21 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       
       await storage.setMaterialColorRules(newRules);
       
-      logger.info('Règles matériaux-couleurs mises à jour avec succès', {
-        metadata: { count: newRules.length }
-      });
+      logger.info('Règles matériaux-couleurs mises à jour avec succès', { metadata: { count: newRules.length 
+
+            })
+ 
+
+          );
       
       res.json({
         success: true,
         message: `${newRules.length} règles matériaux-couleurs mises à jour avec succès`,
         data: newRules
       });
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // EQUIPMENT BATTERIES ROUTES
@@ -250,8 +285,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       const { projectId } = req.query;
       const batteries = await storage.getEquipmentBatteries(projectId as string | undefined);
       sendSuccess(res, batteries);
-    })
-  );
+          }
+        })
+      );
 
   router.get('/api/equipment-batteries/:id',
     isAuthenticated,
@@ -264,8 +300,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
         throw createError.notFound('Batterie', id);
       }
       sendSuccess(res, battery);
-    })
-  );
+          }
+        })
+      );
 
   router.post('/api/equipment-batteries',
     isAuthenticated,
@@ -285,8 +322,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
     asyncHandler(async (req, res) => {
       const battery = await storage.createEquipmentBattery(req.body);
       sendSuccess(res, battery);
-    })
-  );
+          }
+        })
+      );
 
   router.put('/api/equipment-batteries/:id',
     isAuthenticated,
@@ -307,8 +345,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       const { id } = req.params;
       const battery = await storage.updateEquipmentBattery(id, req.body);
       sendSuccess(res, battery);
-    })
-  );
+          }
+        })
+      );
 
   router.delete('/api/equipment-batteries/:id',
     isAuthenticated,
@@ -318,8 +357,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       const { id } = req.params;
       await storage.deleteEquipmentBattery(id);
       sendSuccess(res, null);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // MARGIN TARGETS ROUTES
@@ -339,8 +379,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       const { projectId } = req.query;
       const targets = await storage.getMarginTargets(projectId as string | undefined);
       sendSuccess(res, targets);
-    })
-  );
+          }
+        })
+      );
 
   router.get('/api/margin-targets/:id',
     isAuthenticated,
@@ -353,8 +394,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
         throw createError.notFound('Objectif de marge', id);
       }
       sendSuccess(res, target);
-    })
-  );
+          }
+        })
+      );
 
   router.post('/api/margin-targets',
     isAuthenticated,
@@ -378,8 +420,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
         targetPeriodEnd: new Date(req.body.targetPeriodEnd)
       });
       sendSuccess(res, target);
-    })
-  );
+          }
+        })
+      );
 
   router.put('/api/margin-targets/:id',
     isAuthenticated,
@@ -402,8 +445,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       
       const target = await storage.updateMarginTarget(id, updateData);
       sendSuccess(res, target);
-    })
-  );
+          }
+        })
+      );
 
   router.delete('/api/margin-targets/:id',
     isAuthenticated,
@@ -413,8 +457,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       const { id } = req.params;
       await storage.deleteMarginTarget(id);
       sendSuccess(res, null);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // CLASSIFICATION TAGS ROUTES
@@ -432,8 +477,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       const { category } = req.query;
       const tags = await storage.getClassificationTags(category as string | undefined);
       sendSuccess(res, tags);
-    })
-  );
+          }
+        })
+      );
 
   router.get('/api/tags/classification/:id',
     isAuthenticated,
@@ -446,8 +492,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
         throw createError.notFound('Tag de classification', id);
       }
       sendSuccess(res, tag);
-    })
-  );
+          }
+        })
+      );
 
   router.post('/api/tags/classification',
     isAuthenticated,
@@ -462,8 +509,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
     asyncHandler(async (req, res) => {
       const tag = await storage.createClassificationTag(req.body);
       sendSuccess(res, tag);
-    })
-  );
+          }
+        })
+      );
 
   router.put('/api/tags/classification/:id',
     isAuthenticated,
@@ -480,8 +528,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       const { id } = req.params;
       const tag = await storage.updateClassificationTag(id, req.body);
       sendSuccess(res, tag);
-    })
-  );
+          }
+        })
+      );
 
   router.delete('/api/tags/classification/:id',
     isAuthenticated,
@@ -491,8 +540,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       const { id } = req.params;
       await storage.deleteClassificationTag(id);
       sendSuccess(res, null);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // ENTITY TAGS ROUTES
@@ -511,8 +561,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       const { entityType, entityId } = req.query;
       const entityTags = await storage.getEntityTags(entityType as string | undefined, entityId as string | undefined);
       sendSuccess(res, entityTags);
-    })
-  );
+          }
+        })
+      );
 
   router.post('/api/tags/entity',
     isAuthenticated,
@@ -526,8 +577,9 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
     asyncHandler(async (req, res) => {
       const entityTag = await storage.createEntityTag(req.body);
       sendSuccess(res, entityTag);
-    })
-  );
+          }
+        })
+      );
 
   router.delete('/api/tags/entity/:id',
     isAuthenticated,
@@ -537,16 +589,19 @@ export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
       const { id } = req.params;
       await storage.deleteEntityTag(id);
       sendSuccess(res, null);
-    })
-  );
+          }
+        })
+      );
 
-  logger.info('✅ Configuration routes created', {
-    metadata: {
+  logger.info('✅ Configuration routes created', { metadata: {
       module: 'Configuration',
       operation: 'createRoutes',
       routeCount: 23
-    }
-  });
+    
+            })
+
+    
+          );
 
   return router;
 }

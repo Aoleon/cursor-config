@@ -236,26 +236,21 @@ export class DateAlertDetectionService {
         }
       }
       
-      logger.info('Détection risques de retard', {
-        metadata: {
+      logger.info('Détection risques de retard', { metadata: {
           service: 'DateAlertDetectionService',
           operation: 'detectDelayRisks',
-          alertsCount: alerts.length
-        }
-      });
+          alertsCount: alerts.length   
+              }
+            });
       return alerts;
-      
-    
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return [];
     }
+});
   }
 
   // ========================================
@@ -270,7 +265,7 @@ export class DateAlertDetectionService {
 
       // Récupérer toutes les timelines dans la période
       const allTimelines = await this.storage.getAllProjectTimelines();
-      const timelinesInRange = allTimelines.filter(tl => {
+      const timelinesInRange = allTimelines.filter(tl  => {
         // Skip timelines without dates
         if (!tl.plannedStartDate || !tl.plannedEndDate) {
           return false;
@@ -300,26 +295,22 @@ export class DateAlertDetectionService {
         if (alert) alerts.push(alert);
       }
       
-      logger.info('Détection conflits de planning', {
-        metadata: {
+      logger.info('Détection conflits de planning', { metadata: {
           service: 'DateAlertDetectionService',
           operation: 'detectPlanningConflicts',
           alertsCount: alerts.length
-        }
+       
+        
       });
       return alerts;
-      
-    
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return [];
     }
+});
   }
 
   // ========================================
@@ -384,26 +375,21 @@ export class DateAlertDetectionService {
         if (alert) alerts.push(alert);
       }
       
-      logger.info('Détection échéances critiques', {
-        metadata: {
+      logger.info('Détection échéances critiques', { metadata: {
           service: 'DateAlertDetectionService',
           operation: 'detectCriticalDeadlines',
-          alertsCount: alerts.length
-        }
-      });
+          alertsCount: alerts.length   
+              }
+            });
       return alerts;
-      
-    
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return [];
     }
+});
   }
 
   // ========================================
@@ -445,26 +431,21 @@ export class DateAlertDetectionService {
         }
       }
       
-      logger.info('Détection opportunités d\'optimisation', {
-        metadata: {
+      logger.info('Détection opportunités d\'optimisation', { metadata: {
           service: 'DateAlertDetectionService',
           operation: 'detectOptimizationOpportunities',
-          alertsCount: alerts.length
-        }
-      });
+          alertsCount: alerts.length   
+              }
+            });
       return alerts;
-      
-    
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return [];
     }
+});
   }
 
   // ========================================
@@ -487,95 +468,72 @@ export class DateAlertDetectionService {
     return withErrorHandling(
     async () => {
 
-      logger.info('Démarrage détection globale', {
-        metadata: {
+      logger.info('Démarrage détection globale', { metadata: {
           service: 'DateAlertDetectionService',
           operation: 'runPeriodicDetection',
-          context: { detectionType: 'periodic' }
-        }
+          context: { detectionType: 'periodic' 
+       
+        
       });
-      
       // 1. Détection retards
       const delayAlerts = await this.detectDelayRisks();
-      
       // 2. Détection conflits (sur 30 jours)
       const timeframe: TimeRange = {
         startDate: new Date(),
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       };
       const conflictAlerts = await this.detectPlanningConflicts(timeframe);
-      
       // 3. Échéances critiques (7 jours)
       const deadlineAlerts = await this.checkCriticalDeadlines(7);
-      
       // 4. Optimisations
       const optimizationAlerts = await this.detectOptimizationOpportunities();
-      
       // Consolidation des alertes
       const allAlerts = [...delayAlerts, ...conflictAlerts, ...deadlineAlerts, ...optimizationAlerts];
-      
       // Déduplication des alertes similaires
       const uniqueAlerts = await this.deduplicateAlerts(allAlerts);
-      
       // Sauvegarde en base
       for (const alert of uniqueAlerts) {
         const savedAlert = await this.storage.createDateAlert(alert);
-        
         // Notification temps réel
         await this.notifyNewAlert(savedAlert);
-        
         // Mise à jour statistiques
         summary.alertsByType[alert.alertType] = (summary.alertsByType[alert.alertType] || 0) + 1;
         summary.alertsBySeverity[alert.severity] = (summary.alertsBySeverity[alert.severity] || 0) + 1;
-        
         if (alert.severity === 'critical') {
           summary.criticalIssues++;
         }
-        
         if (alert.suggestedActions && Array.isArray(alert.suggestedActions) && alert.suggestedActions.length > 0) {
           summary.actionableItems++;
         }
       }
-      
       summary.totalAlertsGenerated = uniqueAlerts.length;
       summary.detectionRunTime = Date.now() - startTime;
-      
       // Génération recommandations
       summary.recommendations = this.generateRecommendations(summary);
-      
-      logger.info('Détection globale terminée', {
-        metadata: {
+      logger.info('Détection globale terminée', { metadata: {
           service: 'DateAlertDetectionService',
           operation: 'runPeriodicDetection',
           totalAlertsGenerated: summary.totalAlertsGenerated,
-          detectionRunTimeMs: summary.detectionRunTime
-        }
-      });
-      
+          detectionRunTimeMs: summary.detectionRunTime   
+              }
+            });
       return summary;
-      
-    
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       summary.detectionRunTime = Date.now() - startTime;
       return summary;
     }
+});
   }
-
   // ========================================
   // GESTION WORKFLOW ALERTES
   // ========================================
-  
   async acknowledgeAlert(alertId: string, userId: string, note?: string): Promise<DateAlert> {
     return withErrorHandling(
     async () => {
-
       const updatedAlert = await this.storage.updateDateAlert(alertId, {
         status: 'acknowledged',
         acknowledgedAt: new Date(),
@@ -596,30 +554,23 @@ export class DateAlertDetectionService {
           acknowledgedBy: userId,
           acknowledgedAt: new Date().toISOString(),
           note
-        }
-      });
-      
-      logger.info('Alerte accusée réception', {
-        metadata: {
+                });
+      logger.info('Alerte accusée réception', { metadata: {
           service: 'DateAlertDetectionService',
           operation: 'acknowledgeAlert',
           alertId,
-          userId
-        }
-      });
+          userId   
+              }
+            });
       return updatedAlert;
-      
-    
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       throw error;
     }
+});
   }
   
   async resolveAlert(alertId: string, userId: string, resolution: string): Promise<DateAlert> {
@@ -646,30 +597,23 @@ export class DateAlertDetectionService {
           resolvedBy: userId,
           resolvedAt: new Date().toISOString(),
           resolution
-        }
-      });
-      
-      logger.info('Alerte résolue', {
-        metadata: {
+                });
+      logger.info('Alerte résolue', { metadata: {
           service: 'DateAlertDetectionService',
           operation: 'resolveAlert',
           alertId,
-          userId
-        }
-      });
+          userId   
+              }
+            });
       return updatedAlert;
-      
-    
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       throw error;
     }
+});
   }
 
   // ========================================
@@ -1183,9 +1127,7 @@ export class DateAlertDetectionService {
           targetDate: alert.targetDate?.toISOString(),
           affectedUsers,
           actionRequired: !!(alert.suggestedActions && Array.isArray(alert.suggestedActions) && alert.suggestedActions.length > 0)
-        }
-      });
-      
+                });
       // Escalade automatique si critique
       if (alert.severity === 'critical') {
         this.eventBus.publishSystemAlert({
@@ -1198,8 +1140,7 @@ export class DateAlertDetectionService {
             originalAlert: alert.id,
             escalationLevel: 'manager',
             immediateAction: true
-          }
-        });
+                          });
       }
       
     
@@ -1207,10 +1148,7 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
     }
   }
 
@@ -1242,9 +1180,7 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
+      metadata: {  
       });
       return [];
     }
@@ -1285,10 +1221,7 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return null;
     }
   }
@@ -1312,7 +1245,7 @@ export class DateAlertDetectionService {
         phase: 'chantier',
         delayDays: weatherRisk.estimatedDelay,
         impactLevel: weatherRisk.estimatedDelay > 5 ? 'elevee' : 'normale',
-        suggestedActions: weatherRisk.mitigation.map(m => ({ action: m, priority: 'medium' as const, estimatedTime: 1, responsible: 'chef_equipe' })),
+        suggestedActions: weatherRisk.mitigation.map(m  => ({ action: m, priority: 'medium' as const, estimatedTime: 1, responsible: 'chef_equipe' })),
         status: 'pending'
       };
     
@@ -1320,10 +1253,7 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return null;
     }
   }
@@ -1353,10 +1283,7 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return null;
     }
   }
@@ -1376,7 +1303,7 @@ export class DateAlertDetectionService {
         targetDate: violation.conflictDate,
         delayDays: violation.estimatedImpact,
         impactLevel: violation.severity === 'critical' ? 'critique' : 'elevee',
-        suggestedActions: violation.resolution.map(r => ({
+        suggestedActions: violation.resolution.map(r  => ({
           action: r.strategy,
           priority: 'high' as const,
           estimatedTime: 2,
@@ -1389,10 +1316,7 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return null;
     }
   }
@@ -1412,7 +1336,7 @@ export class DateAlertDetectionService {
         targetDate: overlap.conflictDate,
         delayDays: overlap.estimatedImpact,
         impactLevel: overlap.severity === 'critical' ? 'critique' : 'elevee',
-        suggestedActions: overlap.resolution.map(r => ({
+        suggestedActions: overlap.resolution.map(r  => ({
           action: r.strategy,
           priority: 'high' as const,
           estimatedTime: r.effort === 'high' ? 4 : r.effort === 'medium' ? 2 : 1,
@@ -1425,10 +1349,7 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return null;
     }
   }
@@ -1452,7 +1373,7 @@ export class DateAlertDetectionService {
         targetDate: deadline.deadline,
         delayDays: deadline.daysRemaining < 0 ? Math.abs(deadline.daysRemaining) : 0,
         impactLevel: severity === 'critical' ? 'critique' : 'elevee',
-        suggestedActions: deadline.requiredActions.map(action => ({
+        suggestedActions: deadline.requiredActions.map(action  => ({
           action,
           priority: deadline.daysRemaining <= deadline.bufferDays ? 'high' as const : 'medium' as const,
           estimatedTime: 2,
@@ -1466,10 +1387,7 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return null;
     }
   }
@@ -1504,10 +1422,7 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return null;
     }
   }
@@ -1536,10 +1451,7 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return null;
     }
   }
@@ -1842,8 +1754,7 @@ export class MenuiserieDetectionRules {
               contextData: {
                 profitability_type: violation.profitability_type,
                 calculation_date: new Date().toISOString()
-              }
-            });
+              });
             
             alertsCreated.push(alertId);
             this.logger.info(`Alerte rentabilité créée: ${alertId}`, violation);
@@ -1858,9 +1769,7 @@ export class MenuiserieDetectionRules {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
     
     return alertsCreated;
   }
@@ -1973,9 +1882,8 @@ export class MenuiserieDetectionRules {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
+      metadata: {  
+      });
   }
 
   private async evaluateTeamUtilizationThresholds(thresholds: AlertThreshold[]): Promise<string[]> {
@@ -2017,8 +1925,7 @@ export class MenuiserieDetectionRules {
                 current_projects: violation.current_projects,
                 capacity: violation.capacity,
                 period: violation.period
-              }
-            });
+              });
             
             alertsCreated.push(alertId);
             this.logger.info(`Alerte surcharge équipe créée: ${alertId}`, violation);
@@ -2031,9 +1938,7 @@ export class MenuiserieDetectionRules {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
     
     return alertsCreated;
   }
@@ -2079,8 +1984,7 @@ export class MenuiserieDetectionRules {
                 risk_factors: violation.risk_factors,
                 predicted_delay_days: violation.predicted_delay_days,
                 predicted_budget_overrun: violation.predicted_budget_overrun
-              }
-            });
+              });
             
             alertsCreated.push(alertId);
             this.logger.info(`Alerte risque prédictif créée: ${alertId}`, violation);
@@ -2093,9 +1997,7 @@ export class MenuiserieDetectionRules {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
     
     return alertsCreated;
   }

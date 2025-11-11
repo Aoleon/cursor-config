@@ -37,7 +37,7 @@ export class LotExtractor extends BaseExtractor<unknown[]> {
           
           if (lotsFromCCTP.length > 0) {
             this.addDiagnostic(context, 'info', `Extracted ${lotsFromCCTP.length} lots from CCTP`, { lots: lotsFromCCTP });
-            lots.push(...lotsFromCCTP.map(lot => ({
+            lots.push(...lotsFromCCTP.map(lot  => ({
               ...lot,
               source: 'cctp'
             })));

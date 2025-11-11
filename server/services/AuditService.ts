@@ -152,9 +152,7 @@ export class AuditService {
         metadata: {
           ...event.metadata,
           source: 'audit_service',
-          version: '1.0'
-        }
-      };
+          version: '1.0' } });
 
       // Insérer l'événement d'audit
       await db.insert(auditLogs).values({
@@ -189,8 +187,7 @@ export class AuditService {
           result: event.result,
           severity: event.severity,
           action: 'event_logged'
-        }
-      });
+        });
 
       return eventId;
 
@@ -200,9 +197,7 @@ export class AuditService {
       operation: 'jours',
       service: 'AuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Échec du logging d\'audit', error as Error);
     }
   }
@@ -221,16 +216,12 @@ export class AuditService {
       const cooldownKey = `${alertData.type}_${alertData.userId || 'system'}`;
       const lastAlert = this.alertCooldowns.get(cooldownKey);
       if (lastAlert && (Date.now() - lastAlert) < this.config.alertCooldownMs) {
-        logger.info('Alerte en cooldown, ignorée', {
-          metadata: {
+        logger.info('Alerte en cooldown, ignorée', { metadata: {
             service: 'AuditService',
             operation: 'createSecurityAlert',
-            alertType: alertData.type
-          }
-        });
+            alertType: alertData.type } });
         return '';
       }
-
       // Préparer données d'alerte
       const securityAlertData: InsertSecurityAlert = {
         type: alertData.type,
@@ -247,9 +238,7 @@ export class AuditService {
         metadata: {
           ...alertData.metadata,
           createdBy: 'audit_service',
-          detectionTimestamp: timestamp.toISOString()
-        }
-      };
+          detectionTimestamp: timestamp.toISOString() } });
 
       // Insérer l'alerte
       await db.insert(securityAlerts).values({
@@ -286,28 +275,22 @@ export class AuditService {
           sourceComponent: alertData.sourceComponent,
           confidence: alertData.confidence,
           action: 'security_alert_created'
-        }
-      });
+        });
 
-      logger.info('Alerte sécurité créée', {
-        metadata: {
+      logger.info('Alerte sécurité créée', { metadata: {
           service: 'AuditService',
           operation: 'createSecurityAlert',
           alertType: alertData.type,
-          severity: alertData.severity
-        }
-      });
+          severity: alertData.severity 
+              }
+            });
       return alertId;
-
-    
     },
     {
       operation: 'jours',
       service: 'AuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Échec de création d\'alerte de sécurité', error as Error);
     }
   }
@@ -351,9 +334,7 @@ export class AuditService {
     {
       operation: 'jours',
       service: 'AuditService',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
     }
   }
@@ -392,8 +373,7 @@ export class AuditService {
           timeWindow,
           threshold,
           lastViolationResource: event.resource
-        }
-      });
+        });
     }
   }
 
@@ -433,8 +413,7 @@ export class AuditService {
           triggeredPatterns,
           queryPreview: payload.substring(0, 200),
           eventId: event.entityId
-        }
-      });
+        });
     }
   }
 
@@ -462,8 +441,7 @@ export class AuditService {
           threshold: this.config.performanceThresholdMs,
           eventType: event.eventType,
           resource: event.resource
-        }
-      });
+        });
     }
   }
 
@@ -500,8 +478,7 @@ export class AuditService {
           timeWindow,
           threshold: requestThreshold,
           lastAction: event.action
-        }
-      });
+        });
     }
   }
 
@@ -524,8 +501,8 @@ export class AuditService {
         blockedResource: event.resource,
         userRole: event.userRole,
         ipAddress: event.metadata?.ip
-      }
-    });
+        }
+            );
   }
 
   // ========================================
@@ -549,7 +526,7 @@ export class AuditService {
       if (query.userId) conditions.push(eq(auditLogs.userId, query.userId));
       if (query.userRole) conditions.push(eq(auditLogs.userRole, query.userRole));
       if (query.eventType) conditions.push(eq(auditLogs.eventType, query.eventType as unknown));
-      if (query.severity) conditions.push(eq(auditLogs.severity, query.severas unknown)unknown));
+      if (query.severity) conditions.push(eq(auditLogs.severity, query.severas unknown));
       if (query.result) conditions.push(eq(auditLogs.result, queryas unknown) as unknown));
       if (query.resource) conditions.push(eq(auditLogs.resource, query.resource));
       if (query.action) conditions.push(eq(auditLogs.action, query.action));
@@ -605,9 +582,7 @@ export class AuditService {
       operation: 'jours',
       service: 'AuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Échec de récupération des logs d\'audit', error as Error);
     }
   }
@@ -626,9 +601,9 @@ export class AuditService {
       // Construire les conditions de filtre
       const conditions = [];
       
-      if (query.type) conditions.push(eq(securityAlerts.type,as unknown)tas unknunknown)unknown));
-      if (query.severity) conditions.push(eq(securityAlerts.severity,as unknown)sas unknunknown)unknown any));
-      if (query.status) conditions.push(eq(securityAlerts.sas unknown)qas unknunknown)unknowns as any));
+      if (query.type) conditions.push(eq(securityAlerts.type,as unknown)tas unknown));
+      if (query.severity) conditions.push(eq(securityAlerts.severity,as unknown)sas unknown)unknown any));
+      if (query.status) conditions.push(eq(securityAlerts.sas unknown)qas unknown)unknowns as any));
       if (query.userId) conditions.push(eq(securityAlerts.userId, query.userId));
       if (query.assignedToUserId) conditions.push(eq(securityAlerts.assignedToUserId, query.assignedToUserId));
       if (query.correlationId) conditions.push(eq(securityAlerts.correlationId, query.correlationId));
@@ -690,9 +665,7 @@ export class AuditService {
       operation: 'jours',
       service: 'AuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Échec de récupération des alertes de sécurité', error as Error);
     }
   }
@@ -765,9 +738,7 @@ export class AuditService {
       operation: 'jours',
       service: 'AuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Échec de calcul des métriques de sécurité', error as Error);
     }
   }
@@ -861,9 +832,7 @@ export class AuditService {
       operation: 'jours',
       service: 'AuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Échec de calcul des analytics chatbot', error as Error);
     }
   }
@@ -928,7 +897,7 @@ export class AuditService {
         suspiciousActivity: riskScore > 30,
         riskScore: Math.min(riskScore, 100),
         recentPatterns: recentPatterns.map(p => 
-          `${p.eventType}${p.resource ? ' on ' + p.resource : ''} (${p.count}x)`
+          `${p.eventType}${p.resource ? ' on ' + p.resource : ''} ($) {p.count}x)`
         )
       };
 
@@ -938,9 +907,7 @@ export class AuditService {
       operation: 'jours',
       service: 'AuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Échec de génération du rapport d\'activité utilisateur', error as Error);
     }
   }
@@ -992,8 +959,7 @@ export class AuditService {
           alertId,
           resolutionAction,
           action: 'alert_resolved'
-        }
-      });
+        });
 
       return true;
 
@@ -1003,9 +969,7 @@ export class AuditService {
       operation: 'jours',
       service: 'AuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return false;
     }
   }
@@ -1044,29 +1008,23 @@ export class AuditService {
           eq(auditLogs.isArchived, true)
         ));
 
-      logger.info('Archivage logs', {
-        metadata: {
+      logger.info('Archivage logs', { metadata: {
           service: 'AuditService',
           operation: 'archiveOldLogs',
           archived: archivedResult.rowCount || 0,
-          deleted: deletedResult.rowCount || 0
-        }
-      });
-
+          deleted: deletedResult.rowCount || 0 
+              }
+            });
       return {
         archived: archivedResult.rowCount || 0,
         deleted: deletedResult.rowCount || 0
       };
-
-    
     },
     {
       operation: 'jours',
       service: 'AuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return { archived: 0, deleted: 0 };
     }
   }
@@ -1109,7 +1067,7 @@ export class AuditService {
 
       // Construire le CSV
       const csvContent = [headers, ...rows]
-        .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+        .map(row => row.map(field => `"$) {String(field).replace(/"/g, '""')}"`).join(','))
         .join('\n');
 
       return csvContent;
@@ -1120,9 +1078,7 @@ export class AuditService {
       operation: 'jours',
       service: 'AuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Échec d\'export CSV des logs d\'audit', error as Error);
     }
   }
@@ -1220,10 +1176,8 @@ export class AuditService {
     {
       operation: 'jours',
       service: 'AuditService',
-      metadata: {}
-    }
-  );
-          });
+      metadata: {
+      });
         }
 }, 60 * 60 * 1000); // 1 heure;
     }

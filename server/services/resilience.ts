@@ -113,15 +113,13 @@ function initializeCircuitBreakers() {
   // Register Microsoft OneDrive breaker
   circuitBreakerManager.getBreaker('onedrive', ONEDRIVE_CIRCUIT_CONFIG);
   
-  logger.info('Circuit breakers initialized', {
-    metadata: {
+  logger.info('Circuit breakers initialized', { metadata: {
       service: 'Resilience',
       operation: 'initializeCircuitBreakers',
-      providers: ['monday', 'gpt', 'claude', 'openai', 'sendgrid', 'onedrive']
-    }
-  });
+      providers: ['monday', 'gpt', 'claude', 'openai', 'sendgrid', 'onedrive'] 
+              }
+            });
 }
-
 // Initialize breakers at module load
 initializeCircuitBreakers();
 
@@ -178,9 +176,7 @@ export async function executeMonday<T>(
       operation: 'OpenAI',
       service: 'resilience',
       metadata: {}
-    }
-  );
-    });
+    } );
     throw error;
   }
 }
@@ -210,9 +206,7 @@ export async function executeOpenAI<T>(
       operation: 'OpenAI',
       service: 'resilience',
       metadata: {}
-    }
-  );
-    });
+    } );
     throw error;
   }
 }
@@ -238,9 +232,7 @@ export async function executeSendGrid<T>(
       operation: 'OpenAI',
       service: 'resilience',
       metadata: {}
-    }
-  );
-    });
+    } );
     throw error;
   }
 }
@@ -266,9 +258,7 @@ export async function executeOneDrive<T>(
       operation: 'OpenAI',
       service: 'resilience',
       metadata: {}
-    }
-  );
-    });
+    } );
     throw error;
   }
 }
@@ -296,10 +286,9 @@ export function getResilienceStats() {
  */
 export function resetAllBreakers() {
   circuitBreakerManager.resetAll();
-  logger.info('All circuit breakers reset', {
-    metadata: {
+  logger.info('All circuit breakers reset', { metadata: {
       service: 'Resilience',
-      operation: 'resetAllBreakers'
-    }
-  });
+      operation: 'resetAllBreakers' 
+              }
+            });
 }

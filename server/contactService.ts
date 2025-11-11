@@ -294,8 +294,8 @@ export class ContactService {
         nom: newMaitreOuvrage.nom,
         id: newMaitreOuvrage.id,
         siret: newMaitreOuvrage.siret
-      }
-    });
+                                                                              }
+                                                                            });
     
     return newMaitreOuvrage;
   }
@@ -332,8 +332,8 @@ export class ContactService {
         id: newMaitreOeuvre.id,
         siret: newMaitreOeuvre.siret,
         specialites: newMaitreOeuvre.specialites
-      }
-    });
+                                                                              }
+                                                                            });
     
     return newMaitreOeuvre;
   }
@@ -359,8 +359,8 @@ export class ContactService {
               id: existingMatch.contact.id,
               confidence: Math.round(existingMatch.confidence * 100),
               reason: existingMatch.reason
-            }
-          });
+                                                                                    }
+                                                                                  });
           
           return {
             found: true,
@@ -395,8 +395,8 @@ export class ContactService {
               id: existingMatch.contact.id,
               confidence: Math.round(existingMatch.confidence * 100),
               reason: existingMatch.reason
-            }
-          });
+                                                                                    }
+                                                                                  });
           
           return {
             found: true,
@@ -425,9 +425,9 @@ export class ContactService {
     {
       operation: 'principal',
       service: 'contactService',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
   
   /**
@@ -437,7 +437,7 @@ export class ContactService {
     const results: ContactLinkResult[] = [];
     
     for (const contactData of contactsData) {
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         const result = await this.findOrCreateContact(contactData, tx);
@@ -447,9 +447,9 @@ export class ContactService {
     {
       operation: 'principal',
       service: 'contactService',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
     }
     
     return results;
@@ -574,8 +574,8 @@ export class ContactService {
         lastName: newContact.lastName,
         email: newContact.email,
         company: newContact.company
-      }
-    });
+                                                                              }
+                                                                            });
     
     return newContact;
   }
@@ -602,8 +602,8 @@ export class ContactService {
             lastName: existingMatch.contact.lastName,
             confidence: existingMatch.confidence,
             reason: existingMatch.reason
-          }
-        });
+                                                                                  }
+                                                                                });
         
         return {
           found: true,
@@ -630,9 +630,9 @@ export class ContactService {
     {
       operation: 'principal',
       service: 'contactService',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 }
 

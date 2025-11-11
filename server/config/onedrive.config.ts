@@ -65,9 +65,9 @@ export function getOneDriveTaxonomy(): OneDriveTaxonomyConfig {
     {
       operation: 'GED',
       service: 'onedrive.config',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
   
   return DEFAULT_ONEDRIVE_TAXONOMY;

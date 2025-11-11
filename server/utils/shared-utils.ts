@@ -263,8 +263,7 @@ export class SimpleCache<T> {
     Array.from(this.cache.entries()).forEach(([key, entry]) => {
       if (now > entry.expiresAt) {
         this.cache.delete(key);
-      }
-    });
+      });
   }
 }
 
@@ -344,8 +343,7 @@ export function groupBy<T>(
       map.set(key, [item]);
     } else {
       collection.push(item);
-    }
-  });
+    });
   
   return map;
 }
@@ -370,7 +368,7 @@ export function unique<T>(array: T[], keyGetter?: (item: T) => any): T[] {
   }
   
   const seen = new Set();
-  return array.filter(item => {
+  return array.filter(item  => {
     const key = keyGetter(item);
     if (seen.has(key)) {
       return false;

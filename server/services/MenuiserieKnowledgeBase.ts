@@ -904,7 +904,7 @@ export function getSeasonalFactor(date: Date, phase: string): number {
 export function isBTPHoliday(date: Date): boolean {
   const dateStr = date.toISOString().split('T')[0];
   
-  return BTP_CALENDAR_2025.btp_holidays.some(holiday => {
+  return BTP_CALENDAR_2025.btp_holidays.some(holiday  => {
     return dateStr >= holiday.start && dateStr <= holiday.end;
   });
 }

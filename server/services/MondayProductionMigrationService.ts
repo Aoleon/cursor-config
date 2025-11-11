@@ -179,18 +179,16 @@ export class MondayProductionMigrationService {
   async migrateProductionData(): Promise<ProductionMigrationResult> {
     const startTime = Date.now();
     
-    logger.info('Début migration complète 1911 lignes JLM Menuiserie', {
-      metadata: {
+    logger.info('Début migration complète 1911 lignes JLM Menuiserie', { metadata: {
         service: 'MondayProductionMigrationService',
-        operation: 'migrateProductionData'
-      }
-    });
-    logger.info('Utilisation données analysées réelles (non synthétiques)', {
-      metadata: {
+        operation: 'migrateProductionData' 
+              }
+            });
+    logger.info('Utilisation données analysées réelles (non synthétiques)', { metadata: {
         service: 'MondayProductionMigrationService',
-        operation: 'migrateProductionData'
-      }
-    });
+        operation: 'migrateProductionData' 
+              }
+            });
     
     this.resetWarnings();
     
@@ -200,23 +198,18 @@ export class MondayProductionMigrationService {
       // Charger données basées analyses réelles JLM
       const jlmData = this.loadJLMAnalyzedData();
       
-      logger.info('Chargement données', {
-        metadata: {
+      logger.info('Chargement données', { metadata: {
           service: 'MondayProductionMigrationService',
           operation: 'migrateProductionData',
           aosCount: jlmData.aos.length,
           projectsCount: jlmData.projects.length
-        }
       });
-      
       // Migration par batch avec gestion erreurs
       const aosResult = await this.migrateAnalyzedAOs(jlmData.aos);
       const projectsResult = await this.migrateAnalyzedProjects(jlmData.projects);
-      
       const totalLines = jlmData.aos.length + jlmData.projects.length;
       const totalMigrated = aosResult.migrated + projectsResult.migrated;
       const totalErrors = aosResult.errors + projectsResult.errors;
-      
       const result: ProductionMigrationResult = {
         success: totalErrors === 0,
         source: 'production_analysis',
@@ -227,40 +220,31 @@ export class MondayProductionMigrationService {
         aos: aosResult,
         projects: projectsResult
       };
-      
-      logger.info('Migration TERMINÉE', {
-        metadata: {
+      logger.info('Migration TERMINÉE', { metadata: {
           service: 'MondayProductionMigrationService',
           operation: 'migrateProductionData',
           totalMigrated,
           totalLines,
           totalErrors,
-          duration: result.duration
-        }
-      });
-      
+          duration: result.duration 
+              }
+            });
       if (this.warnings.length > 0) {
-        logger.info('Warnings non bloquants', {
-          metadata: {
+        logger.info('Warnings non bloquants', { metadata: {
             service: 'MondayProductionMigrationService',
             operation: 'migrateProductionData',
             warningsCount: this.warnings.length,
-            warnings: this.warnings.slice(0, 5)
-          }
-        });
+            warnings: this.warnings.slice(0, 5) 
+              }
+            });
       }
-      
       return result;
-      
-    
     },
     {
       operation: 'com',
       service: 'MondayProductionMigrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new AppError(`Migration production échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
   }
@@ -270,19 +254,16 @@ export class MondayProductionMigrationService {
    * Remplace generateRealisticJLMData par données production
    */
   loadJLMAnalyzedData(): { aos: MondayAoData[], projects: MondayProjectData[] } {
-    logger.info('Génération données basées analyses JLM réelles', {
-      metadata: {
+    logger.info('Génération données basées analyses JLM réelles', { metadata: {
         service: 'MondayProductionMigrationService',
-        operation: 'loadJLMAnalyzedData'
-      }
-    });
-    
+        operation: 'loadJLMAnalyzedData' 
+              }
+            });
     return {
       aos: this.generateJLMRealisticAOs(911),      // Basé analyse AO_Planning  
       projects: this.generateJLMRealisticProjects(1000)  // Basé analyse CHANTIERS
     };
   }
-
   /**
    * GÉNÉRATION AO BASÉE PATTERNS RÉELS JLM (911 lignes analysées)
    */
@@ -312,16 +293,14 @@ export class MondayProductionMigrationService {
       aos.push(ao);
     }
     
-    logger.info('Générés AO avec patterns JLM réels', {
-      metadata: {
+    logger.info('Générés AO avec patterns JLM réels', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'generateJLMRealisticAOs',
-        count
-      }
-    });
+        count 
+              }
+            });
     return aos;
   }
-
   /**
    * GÉNÉRATION PROJETS BASÉE PATTERNS RÉELS JLM (1000 lignes analysées)
    */
@@ -350,16 +329,14 @@ export class MondayProductionMigrationService {
       projects.push(project);
     }
     
-    logger.info('Générés projets avec patterns JLM réels', {
-      metadata: {
+    logger.info('Générés projets avec patterns JLM réels', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'generateJLMRealisticProjects',
-        count
-      }
-    });
+        count 
+              }
+            });
     return projects;
   }
-
   /**
    * GÉNÉRATION NOM PROJET RÉALISTE JLM
    */
@@ -392,26 +369,20 @@ export class MondayProductionMigrationService {
    * MIGRATION AO AVEC VALIDATION PRODUCTION
    */
   private async migrateAnalyzedAOs(aoData: MondayAoData[]): Promise<MigrationBatchResult> {
-    logger.info('Début migration AO avec validation production', {
-      metadata: {
+    logger.info('Début migration AO avec validation production', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'migrateAnalyzedAOs',
-        count: aoData.length
-      }
-    });
-    
+        count: aoData.length 
+              }
+            });
     const results: BatchResult[] = [];
-    
     for (const [index, ao] of aoData.entries()) {
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
-
         // Validation avec parser dates français corrigé
         const validatedAo = this.validateAndTransformAoData(ao);
-        
         // Insertion BDD avec storage interface (Database Safety)
         const createdAo = await this.storage.createAo(validatedAo);
-        
         results.push({
           index,
           success: true,
@@ -421,25 +392,20 @@ export class MondayProductionMigrationService {
         
         // Log progression par batch de 100
         if ((index + 1) % 100 === 0) {
-          logger.info('Migration AO Progress', {
-            metadata: {
+          logger.info('Migration AO Progress', { metadata: {
               service: 'MondayProductionMigrationService',
               operation: 'migrateAnalyzedAOs',
               progress: index + 1,
               total: aoData.length,
-              percentage: Math.round(((index + 1) / aoData.length) * 100)
-            }
-          });
+              percentage: Math.round(((index + 1) / aoData.length) * 100) 
+              }
+            });
         }
-        
-      
     },
     {
       operation: 'com',
       service: 'MondayProductionMigrationService',
-      metadata: {}
-    }
-  ););
+      metadata: { } });
       }
     }
     
@@ -450,26 +416,20 @@ export class MondayProductionMigrationService {
    * MIGRATION PROJETS AVEC VALIDATION PRODUCTION
    */
   private async migrateAnalyzedProjects(projectData: MondayProjectData[]): Promise<MigrationBatchResult> {
-    logger.info('Début migration projets avec validation production', {
-      metadata: {
+    logger.info('Début migration projets avec validation production', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'migrateAnalyzedProjects',
-        count: projectData.length
-      }
-    });
-    
+        count: projectData.length 
+              }
+            });
     const results: BatchResult[] = [];
-    
     for (const [index, project] of projectData.entries()) {
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
-
         // Validation avec mapping workflow Saxium
         const validatedProject = this.validateAndTransformProjectData(project);
-        
         // Insertion BDD avec storage interface (Database Safety)
         const createdProject = await this.storage.createProject(validatedProject);
-        
         results.push({
           index,
           success: true,
@@ -479,25 +439,20 @@ export class MondayProductionMigrationService {
         
         // Log progression par batch de 100
         if ((index + 1) % 100 === 0) {
-          logger.info('Migration Projects Progress', {
-            metadata: {
+          logger.info('Migration Projects Progress', { metadata: {
               service: 'MondayProductionMigrationService',
               operation: 'migrateAnalyzedProjects',
               progress: index + 1,
               total: projectData.length,
-              percentage: Math.round(((index + 1) / projectData.length) * 100)
-            }
-          });
+              percentage: Math.round(((index + 1) / projectData.length) * 100) 
+              }
+            });
         }
-        
-      
     },
     {
       operation: 'com',
       service: 'MondayProductionMigrationService',
-      metadata: {}
-    }
-  ););
+      metadata: { } });
       }
     }
     
@@ -685,27 +640,23 @@ export class MondayProductionMigrationService {
       }
     };
     
-    logger.info('Résultats migration batch', {
-      metadata: {
+    logger.info('Résultats migration batch', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'analyzeBatchResults',
         entityType,
         migrated: successful.length,
         totalLines,
-        validationRate: Math.round(migrationResult.validationRate * 100)
-      }
-    });
-    
+        validationRate: Math.round(migrationResult.validationRate * 100) 
+              }
+            });
     if (failed.length > 0) {
-      logger.info('Erreurs migration batch', {
-        metadata: {
+      logger.info('Erreurs migration batch', { metadata: {
           service: 'MondayProductionMigrationService',
           operation: 'analyzeBatchResults',
           entityType,
           errorsCount: failed.length,
-          errors: failed.slice(0, 3).map(f => ({ mondayId: f.mondayId, error: f.error }))
-        }
-      });
+          errors: failed.slice(0, 3).map(f  => ({ mondayId: f.mondayId, error: f.error })
+        });
     }
     
     return migrationResult;
@@ -715,34 +666,28 @@ export class MondayProductionMigrationService {
    * VALIDATION COMPLÈTE SANS INSERTION (DRY-RUN)
    */
   async validateProductionData(jlmData: { aos: MondayAoData[], projects: MondayProjectData[] }): Promise<ProductionValidationResult> {
-    logger.info('Début validation dry-run sans insertion BDD', {
-      metadata: {
+    logger.info('Début validation dry-run sans insertion BDD', { metadata: {
         service: 'MondayProductionMigrationService',
-        operation: 'validateProductionData'
-      }
-    });
-    
+        operation: 'validateProductionData' 
+              }
+            });
     let totalWarnings = 0;
     let totalErrors = 0;
     let dateFormatIssues = 0;
-    
     // Validation AO
     const aoValidation = this.validateAoBatch(jlmData.aos);
     totalErrors += aoValidation.errors.length;
     totalWarnings += aoValidation.warnings.length;
-    
     // Validation projets
     const projectValidation = this.validateProjectBatch(jlmData.projects);
     totalErrors += projectValidation.errors.length;
     totalWarnings += projectValidation.warnings.length;
-    
     // Compter issues dates
     jlmData.aos.forEach(ao => {
       if (ao.estimatedDelay) {
         const result = validateAndParseMondayDate(ao.estimatedDelay);
         if (result.warning) dateFormatIssues++;
-      }
-    });
+      });
     
     const result: ProductionValidationResult = {
       totalLines: jlmData.aos.length + jlmData.projects.length,
@@ -756,21 +701,18 @@ export class MondayProductionMigrationService {
       }
     };
     
-    logger.info('Validation terminée', {
-      metadata: {
+    logger.info('Validation terminée', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'validateProductionData',
         validLines: result.validLines,
         totalLines: result.totalLines,
         errors: result.errors,
         warnings: result.warnings,
-        dateFormatIssues: result.dateFormatIssues
-      }
-    });
-    
+        dateFormatIssues: result.dateFormatIssues 
+              }
+            });
     return result;
   }
-
   /**
    * VALIDATION BATCH AO
    */
@@ -787,8 +729,7 @@ export class MondayProductionMigrationService {
       } catch (error) {
         invalid++;
         errors.push(`AO ${index + 1} (${ao.mondayItemId}): ${error instanceof Error ? error.message : String(error)}`);
-      }
-    });
+      });
     
     return {
       total: aoData.length,
@@ -815,8 +756,7 @@ export class MondayProductionMigrationService {
       } catch (error) {
         invalid++;
         errors.push(`Project ${index + 1} (${project.mondayProjectId}): ${error instanceof Error ? error.message : String(error)}`);
-      }
-    });
+      });
     
     return {
       total: projectData.length,

@@ -146,15 +146,14 @@ export class ErrorLogger {
 
   static logValidationError(error: ZodError, req?: Request) {
     const validationError = fromZodError(error);
-    logger.warn('ERREUR VALIDATION', {
-      metadata: {
+    logger.warn('ERREUR VALIDATION', { metadata: {
         message: validationError.message,
         url: req?.originalUrl,
         method: req?.method,
         type: 'VALIDATION',
         issues: error.issues
-      }
-    });
+        }
+            });
   }
 }
 

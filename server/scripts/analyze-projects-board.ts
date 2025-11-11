@@ -2,12 +2,12 @@
  * Script pour analyser le board Projects Monday.com
  */
 
-import { MondayService } from '../services/MondayService';
+import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
 import { withErrorHandling } from './utils/error-handler';
 import { logger } from './utils/logger';
 
 async function analyzeProjectsBoard() {
-  const service = new MondayService();
+  const service = mondayintegrationService();
   const boardId = '5296947311'; // Board Projects/Chantiers
   
   logger.info('🔍 Analyse board Projects (Chantiers) - 5296947311\n');
@@ -33,8 +33,7 @@ async function analyzeProjectsBoard() {
         if (cv.text || cv.value) {
           const value = service.extractColumnValue(cv);
           logger.info(`  ${cv.id.padEnd(25)} | ${(col?.title || 'Unknown').padEnd(35)} | ${JSON.stringify(value).substring(0, 60)}`);
-        }
-      });
+        });
     });
     
     logger.info('\n✅ Analyse terminée');
@@ -43,9 +42,11 @@ async function analyzeProjectsBoard() {
     {
       operation: 'analyzeProjectsBoard',
       service: 'analyze-projects-board',
-      metadata: {}
-    }
-  );
+      metadata: {
+
+              }
+
+            );
 }
 
 analyzeProjectsBoard();

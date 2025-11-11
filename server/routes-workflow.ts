@@ -95,12 +95,21 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       priority: Math.random() > 0.7 ? 'urgent' : 'normal'
     }));
     
-    logger.info('[Workflow] AOs en étude récupérés', { 
-      metadata: { count: enrichedAos.length }
-    });
+    logger.info('[Workflow] AOs en étude récupérés', { metadata: { count: enrichedAos.length 
+
+        }
+                });
     
     res.json(enrichedAos);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/aos/:id/validate-etude", 
     isAuthenticated,
@@ -115,17 +124,27 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     await storage.updateAo(aoId, { status: 'en_cours_chiffrage' });
     
-    logger.info('[Workflow] Étude technique validée', { 
-      metadata: { aoId, newStatus: 'en_cours_chiffrage' }
-    });
+    logger.info('[Workflow] Étude technique validée', { metadata: { aoId, newStatus: 'en_cours_chiffrage' 
+
+        }
+                });
     
     res.json({ 
       success: true, 
       message: "Étude technique validée, passage au chiffrage",
       aoId,
       newStatus: 'en_cours_chiffrage'
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // ========================================
   // ROUTES CHIFFRAGE
@@ -151,12 +170,20 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     const filtered = aosChiffrage.filter((ao: any) => ao.status !== 'draft');
     
-    logger.info('[Workflow] AOs en chiffrage récupérés', { 
-      metadata: { count: filtered.length }
-    });
+    logger.info('[Workflow] AOs en chiffrage récupérés', { metadata: { count: filtered.length 
+        }
+            });
     
     res.json(filtered);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/aos/:id/validate-chiffrage", 
     isAuthenticated,
@@ -164,17 +191,27 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     asyncHandler(async (req, res) => {
     const aoId = req.params.id;
     
-    logger.info('[Workflow] Chiffrage validé', { 
-      metadata: { aoId }
-    });
+    logger.info('[Workflow] Chiffrage validé', { metadata: { aoId 
+
+        }
+                });
     
     res.json({ 
       success: true, 
       message: "Chiffrage validé, devis prêt à envoyer",
       aoId,
       newStatus: 'devis_pret'
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // ========================================
   // ROUTES ENVOI DEVIS
@@ -195,20 +232,30 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       montantTotal: parseFloat(ao.montantEstime) || Math.floor(Math.random() * 100000) + 20000
     }));
     
-    logger.info('[Workflow] Devis prêts récupérés', { 
-      metadata: { count: devisReady.length }
-    });
+    logger.info('[Workflow] Devis prêts récupérés', { metadata: { count: devisReady.length 
+
+        }
+                });
     
     res.json(devisReady);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/aos/:id/send-devis", isAuthenticated, validateBody(sendDevisSchema), asyncHandler(async (req, res) => {
     const { method } = req.body;
     const aoId = req.params.id;
     
-    logger.info('[Workflow] Devis envoyé', { 
-      metadata: { aoId, method }
-    });
+    logger.info('[Workflow] Devis envoyé', { metadata: { aoId, method 
+
+        }
+                });
     
     res.json({ 
       success: true, 
@@ -216,7 +263,15 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       aoId,
       sentAt: new Date()
     });
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/aos/:id/relance", 
     isAuthenticated,
@@ -224,17 +279,27 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     asyncHandler(async (req, res) => {
     const aoId = req.params.id;
     
-    logger.info('[Workflow] Relance client effectuée', { 
-      metadata: { aoId }
-    });
+    logger.info('[Workflow] Relance client effectuée', { metadata: { aoId 
+
+        }
+                });
     
     res.json({ 
       success: true, 
       message: "Relance client effectuée",
       aoId,
       relanceDate: new Date()
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // ========================================
   // ROUTES PROJETS & PLANIFICATION
@@ -304,13 +369,14 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         ? enrichedProjects.filter((p: any) => p.status === status)
         : enrichedProjects;
       
-      logger.info('[Workflow] Projets récupérés', { 
-        metadata: { count: filteredProjects.length, status }
-      });
+      logger.info('[Workflow] Projets récupérés', { metadata: { count: filteredProjects.length, status 
+        }
+            });
       
       sendSuccess(res, filteredProjects);
-    })
-  );
+          }
+                                      }
+                                    });
 
   app.get("/api/projects/planning", isAuthenticated, asyncHandler(async (req, res) => {
     // OPTIMISATION: Use pagination instead of loading 375 projects
@@ -358,15 +424,30 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       workloadDistribution: {
         encadrement: Math.floor(Math.random() * 20) + 10,
         poseurs: Math.floor(Math.random() * 40) + 20
-      }
-    }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
     
-    logger.info('[Workflow] Planning projets récupéré', { 
-      metadata: { count: planningData.length }
-    });
+    logger.info('[Workflow] Planning projets récupéré', { metadata: { count: planningData.length 
+        }
+            });
     
     res.json(planningData);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/projects/:id/validate-planning", 
     isAuthenticated,
@@ -374,17 +455,27 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     asyncHandler(async (req, res) => {
     const projectId = req.params.id;
     
-    logger.info('[Workflow] Planification validée', { 
-      metadata: { projectId }
-    });
+    logger.info('[Workflow] Planification validée', { metadata: { projectId 
+
+        }
+                });
     
     res.json({ 
       success: true, 
       message: "Planification validée",
       projectId,
       newStatus: 'approvisionnement'
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/projects/:id/start-chantier", 
     isAuthenticated,
@@ -392,9 +483,10 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     asyncHandler(async (req, res) => {
     const projectId = req.params.id;
     
-    logger.info('[Workflow] Chantier démarré', { 
-      metadata: { projectId }
-    });
+    logger.info('[Workflow] Chantier démarré', { metadata: { projectId 
+
+        }
+                });
     
     res.json({ 
       success: true, 
@@ -402,8 +494,17 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       projectId,
       newStatus: 'chantier',
       startedAt: new Date()
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/projects/:id/finish", 
     isAuthenticated,
@@ -411,9 +512,10 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     asyncHandler(async (req, res) => {
     const projectId = req.params.id;
     
-    logger.info('[Workflow] Chantier terminé', { 
-      metadata: { projectId }
-    });
+    logger.info('[Workflow] Chantier terminé', { metadata: { projectId 
+
+        }
+                });
     
     res.json({ 
       success: true, 
@@ -421,16 +523,26 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       projectId,
       newStatus: 'sav',
       finishedAt: new Date()
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/projects/:id/issue", isAuthenticated, validateBody(projectIssueSchema), asyncHandler(async (req, res) => {
     const { issue } = req.body;
     const projectId = req.params.id;
     
-    logger.info('[Workflow] Problème signalé sur chantier', { 
-      metadata: { projectId, issue }
-    });
+    logger.info('[Workflow] Problème signalé sur chantier', { metadata: { projectId, issue 
+
+        }
+                });
     
     res.json({ 
       success: true, 
@@ -438,8 +550,17 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       projectId,
       issue,
       reportedAt: new Date()
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // ========================================
   // ROUTES PREVIEW/DOWNLOAD (migrées avec asyncHandler)
@@ -448,9 +569,10 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   app.get("/api/aos/:id/dpgf/preview", asyncHandler(async (req, res) => {
     const aoId = req.params.id;
     
-    logger.info('[Workflow] Aperçu DPGF demandé', { 
-      metadata: { aoId }
-    });
+    logger.info('[Workflow] Aperçu DPGF demandé', { metadata: { aoId 
+
+        }
+                });
     
     res.send(`
       <html>
@@ -462,26 +584,44 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         </body>
       </html>
     `);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.get("/api/aos/:id/dpgf/download", asyncHandler(async (req, res) => {
     const aoId = req.params.id;
     
-    logger.info('[Workflow] Téléchargement DPGF', { 
-      metadata: { aoId }
-    });
+    logger.info('[Workflow] Téléchargement DPGF', { metadata: { aoId 
+
+        }
+                });
     
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="dpgf-${aoId}.pdf"`);
     res.send("Contenu PDF simulé");
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.get("/api/aos/:id/devis/preview", asyncHandler(async (req, res) => {
     const aoId = req.params.id;
     
-    logger.info('[Workflow] Aperçu devis demandé', { 
-      metadata: { aoId }
-    });
+    logger.info('[Workflow] Aperçu devis demandé', { metadata: { aoId 
+
+        }
+                });
     
     res.send(`
       <html>
@@ -492,19 +632,36 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         </body>
       </html>
     `);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.get("/api/aos/:id/devis/download", asyncHandler(async (req, res) => {
     const aoId = req.params.id;
     
-    logger.info('[Workflow] Téléchargement devis', { 
-      metadata: { aoId }
-    });
+    logger.info('[Workflow] Téléchargement devis', { metadata: { aoId 
+
+        }
+                });
     
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="devis-${aoId}.pdf"`);
     res.send("Contenu Devis PDF simulé");
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // ========================================
   // ROUTES SYSTÈME DE PRIORISATION INTELLIGENTE
@@ -637,12 +794,20 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       })
     ];
 
-    logger.info('[Workflow] Priorités récupérées', { 
-      metadata: { count: priorities.length }
-    });
+    logger.info('[Workflow] Priorités récupérées', { metadata: { count: priorities.length 
+        }
+            });
 
     res.json(priorities);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/priorities/recalculate", isAuthenticated, validateBody(recalculatePrioritiesSchema), asyncHandler(async (req, res) => {
     const { 
@@ -679,15 +844,15 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         affectedQueryKeys: [commonQueryKeys.priorities(), commonQueryKeys.priorityConfig()],
         metadata: {
           updatedBy: 'admin',
-          newWeights: { montantWeight, delaiWeight, typeClientWeight, complexiteWeight, chargeBeWeight, risqueWeight, strategiqueWeight }
+          newWeights: { montantWeight, delaiWeight, typeClientWeight, complexiteWeight, chargeBeWeight, risqueWeight, strategiqueWeight 
         }
-      });
+              );
       eventBus.publish(configEvent);
     }
     
-    logger.info('[Workflow] Priorités recalculées', { 
-      metadata: { recalculatedCount, weights: { montantWeight, delaiWeight, typeClientWeight, complexiteWeight, chargeBeScore: chargeBeWeight, risqueWeight, strategiqueWeight } }
-    });
+    logger.info('[Workflow] Priorités recalculées', { metadata: { recalculatedCount, weights: { montantWeight, delaiWeight, typeClientWeight, complexiteWeight, chargeBeScore: chargeBeWeight, risqueWeight, strategiqueWeight 
+        }
+            });
     
     res.json({ 
       success: true, 
@@ -698,7 +863,15 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       },
       recalculatedAt: new Date()
     });
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/priorities/:itemId/override", isAuthenticated, validateBody(priorityOverrideSchema), asyncHandler(async (req, res) => {
     const { itemId } = req.params;
@@ -717,14 +890,13 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
           itemName: `Élément ${itemId}`,
           reason,
           overrideBy: 'user'
-        }
-      });
+        });
       eventBus.publish(overrideEvent);
     }
     
-    logger.info('[Workflow] Priorité forcée manuellement', { 
-      metadata: { itemId, newPriorityLevel: priorityLevel, reason }
-    });
+    logger.info('[Workflow] Priorité forcée manuellement', { metadata: { itemId, newPriorityLevel: priorityLevel, reason 
+        }
+            });
     
     res.json({ 
       success: true, 
@@ -734,8 +906,17 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       reason,
       overrideBy: "user",
       overrideAt: new Date()
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.get("/api/priorities/:itemId/history", asyncHandler(async (req, res) => {
     const { itemId } = req.params;
@@ -767,12 +948,20 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       }
     ];
     
-    logger.info('[Workflow] Historique priorité récupéré', { 
-      metadata: { itemId, count: history.length }
-    });
+    logger.info('[Workflow] Historique priorité récupéré', { metadata: { itemId, count: history.length 
+        }
+            });
     
     res.json(history);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.get("/api/priorities/alerts", asyncHandler(async (req, res) => {
     const alerts = [
@@ -802,12 +991,20 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       }
     ];
     
-    logger.info('[Workflow] Alertes priorité récupérées', { 
-      metadata: { count: alerts.length }
-    });
+    logger.info('[Workflow] Alertes priorité récupérées', { metadata: { count: alerts.length 
+        }
+            });
     
     res.json(alerts);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/priorities/alerts/:alertId/dismiss", asyncHandler(async (req, res) => {
     const { alertId } = req.params;
@@ -822,14 +1019,14 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         metadata: {
           action: 'dismissed',
           dismissedBy: 'user'
-        }
-      });
+        });
       eventBus.publish(alertDismissEvent);
     }
     
-    logger.info('[Workflow] Alerte priorité marquée comme vue', { 
-      metadata: { alertId }
-    });
+    logger.info('[Workflow] Alerte priorité marquée comme vue', { metadata: { alertId 
+
+        }
+                });
     
     res.json({ 
       success: true, 
@@ -837,8 +1034,17 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       alertId,
       dismissedAt: new Date(),
       dismissedBy: "user"
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.get("/api/priorities/stats", asyncHandler(async (req, res) => {
     // OPTIMISATION: Use pagination to get counts instead of loading 375 projects
@@ -869,12 +1075,20 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       }
     };
     
-    logger.info('[Workflow] Stats priorité récupérées', { 
-      metadata: { totalItems: stats.totalItems }
-    });
+    logger.info('[Workflow] Stats priorité récupérées', { metadata: { totalItems: stats.totalItems 
+        }
+            });
     
     res.json(stats);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.get("/api/priorities/config", asyncHandler(async (req, res) => {
     const config = {
@@ -900,12 +1114,20 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       configuredBy: "admin"
     };
     
-    logger.info('[Workflow] Configuration priorité récupérée', { 
-      metadata: { configuredBy: config.configuredBy }
-    });
+    logger.info('[Workflow] Configuration priorité récupérée', { metadata: { configuredBy: config.configuredBy 
+        }
+            });
     
     res.json(config);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   app.post("/api/priorities/config", isAuthenticated, validateBody(priorityConfigSchema), asyncHandler(async (req, res) => {
     const { weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels } = req.body;
@@ -926,15 +1148,15 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         affectedQueryKeys: [commonQueryKeys.priorityConfig(), commonQueryKeys.priorities()],
         metadata: {
           updatedBy: 'user',
-          newConfig: { weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels }
+          newConfig: { weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels 
         }
-      });
+              );
       eventBus.publish(configSaveEvent);
     }
     
-    logger.info('[Workflow] Configuration priorité sauvegardée', { 
-      metadata: { weights, thresholds, autoRecalculate, alertsEnabled }
-    });
+    logger.info('[Workflow] Configuration priorité sauvegardée', { metadata: { weights, thresholds, autoRecalculate, alertsEnabled 
+        }
+            });
     
     res.json({ 
       success: true, 
@@ -943,7 +1165,14 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels,
         lastConfigUpdate: new Date(),
         configuredBy: "user"
-      }
-    });
-  }));
+      });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 }

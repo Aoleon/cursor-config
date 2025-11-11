@@ -121,7 +121,7 @@ export interface BusinessAlertCreatedPayload {
   variance?: number;
   triggered_at: string;      // ISO timestamp
   threshold_id?: string;
-  context_data?: Record<string, any>;
+  context_data?: Record<string, unknown>;
 }
 
 // Événement acknowledgment alerte
@@ -182,7 +182,7 @@ export interface AlertThresholdUpdatedPayload {
   threshold_id: string;
   updated_by: string;        // User ID
   updated_at: string;        // ISO timestamp
-  changes: Record<string, any>; // Champs modifiés
+  changes: Record<string, unknown>; // Champs modifiés
   was_active: boolean;
   is_active: boolean;
 }
@@ -252,7 +252,7 @@ export const realtimeEventSchema = z.object({
   userId: z.string().optional(), // Pour filtrage futur
   
   // Données additionnelles contextuelles
-  metadata: z.record(z.string(), z.any()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type RealtimeEvent = z.infer<typeof realtimeEventSchema>;
@@ -654,7 +654,7 @@ export function createRealtimeEvent(params: {
   prevStatus?: string;
   newStatus?: string;
   userId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }): RealtimeEvent {
   const templates = eventMessageTemplates[params.type];
   const generatedMessage = templates ? templates({ ...params, id: '', timestamp: new Date().toISOString() } as RealtimeEvent) : null;

@@ -115,15 +115,13 @@ export class PDFTemplateEngine {
         return options.fn(this);
       } else if (options.inverse) {
         return options.inverse(this);
-      }
-    });
+      });
 
     // Loop helper with separator
     this.handlebars.registerHelper('each_with_separator', (context: any[], separator: string, options: any) => {
       return context.map((item, index) => {
         const result = options.fn(item, {
-          data: { index, first: index === 0, last: index === context.length - 1 }
-        });
+          data: { index, first: index === 0, last: index === context.length - 1 });
         return index < context.length - 1 ? result + separator : result;
       }).join('');
     });
@@ -209,9 +207,9 @@ export class PDFTemplateEngine {
     {
       operation: 'Logger',
       service: 'PDFTemplateEngine',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -352,9 +350,9 @@ export class PDFTemplateEngine {
     {
       operation: 'Logger',
       service: 'PDFTemplateEngine',
-      metadata: {}
-    }
-  ););
+      metadata: {
+                                                                                }
+                                                                              });
       }
 
       return {

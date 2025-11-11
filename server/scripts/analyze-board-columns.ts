@@ -2,12 +2,12 @@
  * Script temporaire pour analyser les colonnes d'un board Monday.com
  */
 
-import { MondayService } from '../services/MondayService';
+import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
 import { withErrorHandling } from './utils/error-handler';
 import { logger } from './utils/logger';
 
 async function analyzeBoardColumns() {
-  const service = new MondayService();
+  const service = mondayintegrationService();
   const boardId = '3946257560'; // Board AOs
   
   logger.info('🔍 Analyse des colonnes du board AO (3946257560)\n');
@@ -41,9 +41,11 @@ async function analyzeBoardColumns() {
     {
       operation: 'analyzeBoardColumns',
       service: 'analyze-board-columns',
-      metadata: {}
-    }
-  );
+      metadata: {
+
+              }
+
+            );
 }
 
 analyzeBoardColumns();

@@ -96,15 +96,18 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
     isAuthenticated,
     rateLimits.chatbot, // Rate limiting strict pour le chatbot (10 req/min)
     validateBody(chatbotQueryRequestSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const requestBody = req.body;
       const userId = req.session.user?.id || req.user?.id;
       const userRole = req.session.user?.role || req.user?.role || 'user';
       const sessionId = req.session.id;
 
-      logger.info('Requête principale reçue', {
-        metadata: { userId, userRole, query: requestBody.query }
-      });
+      logger.info('Requête principale reçue', { metadata: { userId, userRole, query: requestBody.query 
+
+            })
+ 
+
+          );
 
       // Construction de la requête chatbot complète
       const chatbotRequest: ChatbotQueryRequest = {
@@ -116,9 +119,12 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
 
       // Pipeline complet d'orchestration chatbot
       const result = await chatbotOrchestrationService.processChatbotQuery(chatbotRequest);
-      logger.info('Pipeline terminé', {
-        metadata: { userId, success: result.success }
-      });
+      logger.info('Pipeline terminé', { metadata: { userId, success: result.success 
+
+            })
+ 
+
+          );
 
       // JSON replacer pour gérer BigInt serialization de manière globale
       const safeJsonReplacer = (_: string, value: any) => {
@@ -135,14 +141,17 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
     async () => {
 
         if (result.success) {
-          logger.info('Préparation réponse success', {
-            metadata: { userId }
-          });
+          logger.info('Préparation réponse success', { metadata: { userId 
+
+      });
           res.setHeader('Content-Type', 'application/json');
           const jsonResponse = JSON.stringify(result, safeJsonReplacer);
-          logger.info('JSON stringifié', {
-            metadata: { bytes: jsonResponse.length, statusCode: 200 }
-          });
+          logger.info('JSON stringifié', { metadata: { bytes: jsonResponse.length, statusCode: 200 
+
+            })
+ 
+
+          );
           res.status(200).send(jsonResponse);
         } else {
           // Gestion d'erreur gracieuse selon le type
@@ -150,9 +159,12 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
                             result.error?.type === 'validation' ? 400 :
                             result.error?.type === 'timeout' ? 408 : 500;
           
-          logger.info('Préparation réponse error', {
-            metadata: { userId, statusCode, errorType: result.error?.type }
-          });
+          logger.info('Préparation réponse error', { metadata: { userId, statusCode, errorType: result.error?.type 
+
+            })
+ 
+
+          );
           
           // Enrichir la réponse avec le debug_info si demandé
           const shouldIncludeDebug = requestBody.options?.includeDebugInfo === true;
@@ -164,9 +176,12 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           
           res.setHeader('Content-Type', 'application/json');
           const jsonResponse = JSON.stringify(errorResponse, safeJsonReplacer);
-          logger.info('JSON stringifié', {
-            metadata: { bytes: jsonResponse.length, statusCode }
-          });
+          logger.info('JSON stringifié', { metadata: { bytes: jsonResponse.length, statusCode 
+
+            })
+ 
+
+          );
           res.status(statusCode).send(jsonResponse);
         }
       
@@ -175,33 +190,39 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
       operation: 'createChatbotRouter',
       service: 'routes',
       metadata: {}
-    }
-  );
-        });
+    } );
         res.status(500).json({
           success: false,
           error: {
             type: 'serialization',
             message: 'Erreur de sérialisation de la réponse'
-          }
-        });
-      }
-    })
-  );
+          });
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // GET /api/chatbot/suggestions - Suggestions intelligentes contextuelles
   router.get('/api/chatbot/suggestions',
     isAuthenticated,
     rateLimits.general,
     validateQuery(chatbotSuggestionsRequestSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const queryParams = req.query;
       const userId = req.session.user?.id || req.user?.id;
       const userRole = req.session.user?.role || req.user?.role || 'user';
 
-      logger.info('Suggestions demandées', {
-        metadata: { userId, userRole }
-      });
+      logger.info('Suggestions demandées', { metadata: { userId, userRole 
+
+            })
+ 
+
+          );
 
       // Construction de la requête suggestions
       const suggestionsRequest: ChatbotSuggestionsRequest = {
@@ -226,25 +247,33 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
             current_role: userRole,
             temporal_context: [],
             recent_patterns: []
-          }
-        });
-      }
-    })
-  );
+          });
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // POST /api/chatbot/validate - Validation de requête sans exécution
   router.post('/api/chatbot/validate',
     isAuthenticated,
     rateLimits.general,
     validateBody(chatbotValidateRequestSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const requestBody = req.body;
       const userId = req.session.user?.id || req.user?.id;
       const userRole = req.session.user?.role || req.user?.role || 'user';
 
-      logger.info('Validation demandée', {
-        metadata: { userId, userRole, query: requestBody.query }
-      });
+      logger.info('Validation demandée', { metadata: { userId, userRole, query: requestBody.query 
+
+            })
+ 
+
+          );
 
       // Construction de la requête de validation
       const validateRequest: ChatbotValidateRequest = {
@@ -260,22 +289,31 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         res.status(200).json(result);
       } else {
         res.status(400).json(result);
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // GET /api/chatbot/history - Historique des conversations utilisateur
   router.get('/api/chatbot/history',
     isAuthenticated,
     rateLimits.general,
     validateQuery(chatbotHistoryRequestSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const queryParams = req.query;
       const userId = req.session.user?.id || req.user?.id;
 
-      logger.info('Historique demandé', {
-        metadata: { userId }
-      });
+      logger.info('Historique demandé', { metadata: { userId 
+
+            })
+ 
+
+          );
 
       // Construction de la requête d'historique
       const historyRequest: ChatbotHistoryRequest = {
@@ -302,24 +340,32 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
             limit: queryParams.limit || 20,
             offset: queryParams.offset || 0,
             has_more: false
-          }
-        });
-      }
-    })
-  );
+          });
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // POST /api/chatbot/feedback - Feedback utilisateur pour apprentissage
   router.post('/api/chatbot/feedback',
     isAuthenticated,
     rateLimits.general,
     validateBody(chatbotFeedbackRequestSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const requestBody = req.body;
       const userId = req.session.user?.id || req.user?.id;
 
-      logger.info('Feedback reçu', {
-        metadata: { userId, conversationId: requestBody.conversationId }
-      });
+      logger.info('Feedback reçu', { metadata: { userId, conversationId: requestBody.conversationId 
+
+            })
+ 
+
+          );
 
       // Construction de la requête de feedback
       const feedbackRequest: ChatbotFeedbackRequest = {
@@ -334,16 +380,22 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         res.status(201).json(result);
       } else {
         res.status(400).json(result);
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // GET /api/chatbot/stats - Statistiques d'usage (admin uniquement)
   router.get('/api/chatbot/stats',
     isAuthenticated,
     rateLimits.general,
     validateQuery(chatbotStatsRequestSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const queryParams = req.query;
       const userRole = req.session.user?.role || req.user?.role || 'user';
 
@@ -371,13 +423,15 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
             avg_rating: 0,
             satisfaction_rate: 0,
             top_improvement_areas: []
-          }
-        });
+          });
       }
 
-      logger.info('Statistiques demandées par admin', {
-        metadata: { userRole }
-      });
+      logger.info('Statistiques demandées par admin', { metadata: { userRole 
+
+            })
+ 
+
+          );
 
       // Construction de la requête de statistiques
       const statsRequest: ChatbotStatsRequest = queryParams;
@@ -389,9 +443,15 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         sendSuccess(res, result);
       } else {
         res.status(500).json(result);
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // ========================================
   // HEALTH CHECK ROUTE
@@ -401,12 +461,15 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
   router.get('/api/chatbot/health',
     isAuthenticated,
     rateLimits.general,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const userRole = req.session.user?.role || req.user?.role || 'user';
       
-      logger.info('Health check demandé', {
-        metadata: { userRole }
-      });
+      logger.info('Health check demandé', { metadata: { userRole 
+
+            })
+ 
+
+          );
 
       return withErrorHandling(
     async () => {
@@ -449,9 +512,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
       operation: 'createChatbotRouter',
       service: 'routes',
       metadata: {}
-    }
-  );
-        });
+    } );
         res.status(503).json({
           success: false,
           chatbot_orchestration: "unhealthy",
@@ -459,9 +520,15 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           error: 'Un ou plusieurs services critiques sont indisponibles',
           timestamp: new Date().toISOString()
         });
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // ========================================
   // ACTION ROUTES
@@ -472,15 +539,18 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
     isAuthenticated,
     rateLimits.processing, // Rate limiting strict pour les actions
     validateBody(proposeActionSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const requestBody = req.body;
       const userId = req.session.user?.id || req.user?.id;
       const userRole = req.session.user?.role || req.user?.role || 'user';
       const sessionId = req.session.id;
 
-      logger.info('Proposition action', {
-        metadata: { operation: requestBody.operation, entity: requestBody.entity, userId, userRole }
-      });
+      logger.info('Proposition action', { metadata: { operation: requestBody.operation, entity: requestBody.entity, userId, userRole 
+
+            })
+ 
+
+          );
 
       // Construction de la requête de proposition d'action complète
       const proposeRequest: ProposeActionRequest = {
@@ -498,23 +568,32 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         const statusCode = result.error?.type === 'permission' ? 403 :
                           result.error?.type === 'validation' ? 400 : 500;
         res.status(statusCode).json(result);
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // POST /api/chatbot/execute-action - Exécute une action après confirmation utilisateur
   router.post('/api/chatbot/execute-action',
     isAuthenticated,
     rateLimits.processing, // Rate limiting strict pour les actions critiques
     validateBody(executeActionSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const requestBody = req.body;
       const userId = req.session.user?.id || req.user?.id;
       const userRole = req.session.user?.role || req.user?.role || 'user';
 
-      logger.info('Exécution action', {
-        metadata: { actionId: requestBody.actionId, userId, userRole }
-      });
+      logger.info('Exécution action', { metadata: { actionId: requestBody.actionId, userId, userRole 
+
+            })
+ 
+
+          );
 
       // Construction de la requête d'exécution d'action complète
       const executeRequest: ExecuteActionRequest = {
@@ -533,23 +612,32 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
                           errorType === 'validation' ? 400 :
                           errorType === 'business_rule' ? 422 : 500;
         res.status(statusCode).json(result);
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // GET /api/chatbot/action-history - Historique des actions utilisateur
   router.get('/api/chatbot/action-history',
     isAuthenticated,
     rateLimits.general,
     validateQuery(actionHistoryRequestSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const queryParams = req.query;
       const userId = req.session.user?.id || req.user?.id;
       const userRole = req.session.user?.role || req.user?.role || 'user';
 
-      logger.info('Historique des actions demandé', {
-        metadata: { userId, userRole }
-      });
+      logger.info('Historique des actions demandé', { metadata: { userId, userRole 
+
+            })
+ 
+
+          );
 
       // Construction de la requête d'historique d'actions
       const historyRequest: ActionHistoryRequest = {
@@ -564,9 +652,15 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         res.status(200).json(result);
       } else {
         res.status(500).json(result);
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // PUT /api/chatbot/action-confirmation/:confirmationId - Met à jour une confirmation d'action
   router.put('/api/chatbot/action-confirmation/:confirmationId',
@@ -574,15 +668,18 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
     rateLimits.general,
     validateParams(z.object({ confirmationId: z.string().uuid() })),
     validateBody(updateConfirmationSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { confirmationId } = req.params;
       const requestBody = req.body;
       const userId = req.session.user?.id || req.user?.id;
       const userRole = req.session.user?.role || req.user?.role || 'user';
 
-      logger.info('Mise à jour confirmation', {
-        metadata: { confirmationId, userId, userRole, status: requestBody.status }
-      });
+      logger.info('Mise à jour confirmation', { metadata: { confirmationId, userId, userRole, status: requestBody.status 
+
+            })
+ 
+
+          );
 
       // Construction de la requête de mise à jour de confirmation
       const updateRequest = {
@@ -598,9 +695,15 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         res.status(200).json(result);
       } else {
         res.status(500).json(result);
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // ========================================
   // BUSINESS CONTEXT ROUTES
@@ -617,7 +720,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
       requested_domains: z.array(z.string()).optional(),
       complexity_level: z.enum(['basic', 'intermediate', 'advanced']).optional()
     })),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const requestBody = req.body;
       
       // Construction de la requête avec métadonnées utilisateur
@@ -627,9 +730,12 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         sessionId: req.sessionID
       };
 
-      logger.info('Génération contexte pour utilisateur', {
-        metadata: { userId: contextRequest.userId, userRole: contextRequest.user_role }
-      });
+      logger.info('Génération contexte pour utilisateur', { metadata: { userId: contextRequest.userId, userRole: contextRequest.user_role 
+
+            })
+ 
+
+          );
 
       // Génération du contexte via BusinessContextService
       const result = await businessContextService.generateBusinessContext(contextRequest);
@@ -642,7 +748,8 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           generation_time_ms: result.performance_metrics.generation_time_ms,
           schemas_loaded: result.performance_metrics.schemas_loaded,
           examples_included: result.performance_metrics.examples_included
-        });
+
+              });
       } else {
         const statusCode = result.error?.type === 'rbac' ? 403 : 
                           result.error?.type === 'validation' ? 400 : 500;
@@ -653,9 +760,15 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           type: result.error?.type || 'internal',
           performance_metrics: result.performance_metrics
         });
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // POST /api/business-context/enrich - Enrichissement contexte existant
   router.post('/api/business-context/enrich',
@@ -667,7 +780,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
       user_role: z.string(),
       refinement_hints: z.array(z.string()).optional()
     })),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const requestBody = req.body;
       
       // Construction de la requête d'enrichissement
@@ -676,9 +789,12 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         userId: req.session.user?.id || req.user?.id
       };
 
-      logger.info('Enrichissement contexte pour utilisateur', {
-        metadata: { userId: enrichmentRequest.userId }
-      });
+      logger.info('Enrichissement contexte pour utilisateur', { metadata: { userId: enrichmentRequest.userId 
+
+            })
+ 
+
+          );
 
       // Enrichissement via BusinessContextService
       const result = await businessContextService.enrichContext(enrichmentRequest);
@@ -689,7 +805,8 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           suggested_refinements: result.suggested_refinements,
           confidence_score: result.confidence_score,
           performance_metrics: result.performance_metrics
-        });
+
+              });
       } else {
         const statusCode = result.error?.type === 'validation' ? 400 : 500;
         
@@ -699,9 +816,15 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           type: result.error?.type || 'internal',
           performance_metrics: result.performance_metrics
         });
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // POST /api/business-context/learning/update - Mise à jour apprentissage adaptatif
   router.post('/api/business-context/learning/update',
@@ -714,7 +837,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
       context_quality_score: z.number().min(0).max(1).optional(),
       improvement_suggestions: z.array(z.string()).optional()
     })),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const requestBody = req.body;
       
       // Construction de la mise à jour d'apprentissage
@@ -724,9 +847,12 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         timestamp: new Date()
       };
 
-      logger.info('Mise à jour apprentissage pour utilisateur', {
-        metadata: { userId: learningUpdate.userId, userRole: learningUpdate.user_role }
-      });
+      logger.info('Mise à jour apprentissage pour utilisateur', { metadata: { userId: learningUpdate.userId, userRole: learningUpdate.user_role 
+
+            })
+ 
+
+          );
 
       // Mise à jour via BusinessContextService
       const result = await businessContextService.updateAdaptiveLearning(learningUpdate);
@@ -736,7 +862,8 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           learning_applied: result.learning_applied,
           updated_patterns: result.updated_patterns,
           optimization_suggestions: result.optimization_suggestions
-        });
+
+              });
       } else {
         const statusCode = result.error?.type === 'validation' ? 400 : 500;
         
@@ -745,15 +872,21 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           error: result.error?.message || 'Erreur lors de la mise à jour de l\'apprentissage',
           type: result.error?.type || 'internal'
         });
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // GET /api/business-context/metrics - Métriques du service
   router.get('/api/business-context/metrics',
     isAuthenticated,
     rateLimits.general,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       // Vérification permission admin/manager pour métriques
       const userRole = req.session.user?.role || req.user?.role || 'user';
       if (!['admin', 'chef_projet'].includes(userRole)) {
@@ -763,9 +896,12 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         });
       }
 
-      logger.info('Récupération métriques demandée', {
-        metadata: { userRole }
-      });
+      logger.info('Récupération métriques demandée', { metadata: { userRole 
+
+            })
+ 
+
+          );
 
       return withErrorHandling(
     async () => {
@@ -777,7 +913,8 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           metrics,
           generated_at: new Date().toISOString(),
           user_role: userRole
-        });
+
+              });
 
       
     },
@@ -785,16 +922,20 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
       operation: 'createChatbotRouter',
       service: 'routes',
       metadata: {}
-    }
-  );
-        });
+    } );
         res.status(500).json({
           success: false,
           error: 'Erreur lors de la récupération des métriques'
         });
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // GET /api/business-context/knowledge/materials - Recherche matériaux menuiserie
   router.get('/api/business-context/knowledge/materials',
@@ -805,7 +946,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
       type: z.enum(['PVC', 'Aluminium', 'Bois', 'Composites', 'Acier']).optional(),
       category: z.enum(['economique', 'standard', 'premium']).optional()
     })),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { search, type, category } = req.query;
       
       return withErrorHandling(
@@ -835,8 +976,9 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
         sendSuccess(res, {
           materials: materials.slice(0, 20),
           total: materials.length,
-          filters_applied: { search, type, category }
-        });
+          filters_applied: { search, type, category 
+
+              });
         
       
     },
@@ -844,16 +986,20 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
       operation: 'createChatbotRouter',
       service: 'routes',
       metadata: {}
-    }
-  );
-        });
+    } );
         res.status(500).json({
           success: false,
           error: 'Erreur lors de la recherche de matériaux'
         });
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   return router;
 }

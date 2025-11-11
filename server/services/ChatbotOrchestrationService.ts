@@ -162,16 +162,14 @@ export class ChatbotOrchestrationService {
     const cachedResult = this.getCacheLRU(cacheKey);
     
     if (cachedResult) {
-      logger.info('Cache hit LRU', {
-        metadata: {
+      logger.info('Cache hit LRU', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'processQueryParallel',
           cacheKey,
           queryType: queryPattern.queryType,
-          complexity: queryComplexity
-        }
-      });
-      
+          complexity: queryComplexity   
+              }
+            });
       // Retourner le résultat caché avec enrichissement
       return {
         ...cachedResult,
@@ -181,8 +179,7 @@ export class ChatbotOrchestrationService {
           ...cachedResult.metadata,
           cache_source: 'lru',
           original_execution_time: cachedResult.execution_time_ms
-        }
-      };
+               });
     }
 
     // === INSTRUMENTATION PERFORMANCE : Démarrage tracing pipeline parallèle ===
@@ -197,81 +194,67 @@ export class ChatbotOrchestrationService {
     return withErrorHandling(
     async () => {
 
-      logger.info('PARALLEL Démarrage requête', {
-        metadata: {
+      logger.info('PARALLEL Démarrage requête', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'handleParallelQuery',
           conversationId,
           traceId,
           userId: request.userId,
           userRole: request.userRole
-        }
+       
+        
       });
-
       // ========================================
       // 1. VÉRIFICATION CIRCUIT BREAKER
       // ========================================
       this.performanceMetrics.startStep(traceId, 'circuit_breaker_check', { operation: 'parallel_availability_check' });
-      
       const circuitBreakerStartTime = Date.now();
       const circuitBreakerCheck = this.performanceMetrics.checkCircuitBreaker();
       const circuitBreakerTime = Date.now() - circuitBreakerStartTime;
-      
       if (!circuitBreakerCheck.allowed) {
-        logger.warn('Circuit breaker ouvert, fallback séquentiel', {
-          metadata: {
+        logger.warn('Circuit breaker ouvert, fallback séquentiel', { metadata: {
             service: 'ChatbotOrchestrationService',
             operation: 'handleParallelQuery',
             reason: circuitBreakerCheck.reason,
-            context: { fallback: 'sequential' }
-          }
-        });
-        
+            context: { fallback: 'sequential'   
+            }
+          });
         this.performanceMetrics.endStep(traceId, 'circuit_breaker_check', false, { 
           circuitBreakerTime,
           reason: circuitBreakerCheck.reason,
           fallbackTriggered: true
         });
-        
         // Fallback vers méthode séquentielle
         return await this.processChatbotQuerySequential(request, traceId, "circuit_breaker_open");
       }
-      
       this.performanceMetrics.endStep(traceId, 'circuit_breaker_check', true, { 
         circuitBreakerTime,
         status: 'circuit_closed'
       });
-
       // ========================================
       // 2. DÉTECTION D'INTENTIONS D'ACTIONS (CONSERVÉ)
       // ========================================
       this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'action_detection' });
-      
       const actionDetectionStartTime = Date.now();
       const actionIntention = this.actionExecutionService.detectActionIntention(request.query);
       const actionDetectionTime = Date.now() - actionDetectionStartTime;
-      
       if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
-        logger.info('Action détectée', {
-          metadata: {
+        logger.info('Action détectée', { metadata: {
             service: 'ChatbotOrchestrationService',
             operation: 'handleQuery',
             actionType: actionIntention.actionType,
             entity: actionIntention.entity,
-            context: { detectionStep: 'action_intention' }
-          }
-        });
-        
+            context: { detectionStep: 'action_intention'    
+        }
+          });
         this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
           step: 'action_detected',
           detectionTime: actionDetectionTime,
           actionType: actionIntention.actionType,
           confidence: actionIntention.confidence
         });
-        
         // Traitement actions (même logique que séquentiel)
         const actionDefinition = await this.actionExecutionService.analyzeActionWithAI(request.query, request.userRole);
-        
         if (actionDefinition) {
           const proposeActionRequest: ProposeActionRequest = {
             type: actionDefinition.type,
@@ -286,11 +269,8 @@ export class ChatbotOrchestrationService {
             userRole: request.userRole,
             sessionId: request.sessionId,
             conversationId,
-            metadata: { detectedViaQuery: true, confidence: actionIntention.confidence, parallelMode: true }
-          };
-
+            metadata: { detectedViaQuery: true, confidence: actionIntention.confidence, parallelMode: true  
           const actionProposal = await this.actionExecutionService.proposeAction(proposeActionRequest);
-
           await this.performanceMetrics.endPipelineTrace(
             traceId, request.userId, request.userRole, request.query, 
             this.detectQueryComplexity(request.query), true, false, { 
@@ -299,7 +279,6 @@ export class ChatbotOrchestrationService {
               parallelMode: true
             }
           );
-
           return this.createActionProposalResponse(
             conversationId,
             request.query,
@@ -309,34 +288,27 @@ export class ChatbotOrchestrationService {
           );
         }
       }
-      
       this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
         step: 'action_detection_complete', 
         detectionTime: actionDetectionTime,
         actionDetected: false 
       });
-
       // ========================================
       // 3. VALIDATION RBAC UTILISATEUR (CONSERVÉ MAIS OPTIMISÉ)
       // ========================================
       this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'rbac_validation' });
-      
       const rbacStartTime = Date.now();
-      
       const userPermissions = await this.rbacService.getUserPermissions(
         request.userId, 
         request.userRole
       );
-
       const rbacTime = Date.now() - rbacStartTime;
-
       if (!userPermissions || Object.keys(userPermissions.permissions).length === 0) {
         this.performanceMetrics.endStep(traceId, 'context_generation', false, { 
           step: 'rbac_failed', 
           rbacTime,
           reason: 'insufficient_permissions'
         });
-        
         await this.performanceMetrics.endPipelineTrace(
           traceId, request.userId, request.userRole, request.query, 
           this.detectQueryComplexity(request.query), false, false, { 
@@ -344,7 +316,6 @@ export class ChatbotOrchestrationService {
             parallelMode: true
           }
         );
-
         return this.createErrorResponse(
           conversationId,
           request.query,
@@ -353,30 +324,25 @@ export class ChatbotOrchestrationService {
           "Vous n'avez pas les permissions nécessaires pour poser cette question."
         );
       }
-
       securityChecksPassed.push("rbac_permissions_validated");
       this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
         step: 'rbac_validated', 
         rbacTime,
         permissionsCount: Object.keys(userPermissions.permissions).length
       });
-      
       if (request.options?.includeDebugInfo) {
         debugInfo.rbac_check_ms = rbacTime;
       }
-
       // === VALIDATION GARDE-FOUS MÉTIER ===
       const businessValidation = this.validateBusinessCoherence(request, queryPattern);
       if (!businessValidation.isValid) {
-        logger.warn('Requête bloquée par garde-fous métier', {
-          metadata: {
+        logger.warn('Requête bloquée par garde-fous métier', { metadata: {
             service: 'ChatbotOrchestrationService',
             operation: 'processQueryParallel',
             warnings: businessValidation.warnings,
-            suggestions: businessValidation.suggestions
-          }
-        });
-        
+            suggestions: businessValidation.suggestions   
+              }
+            });
         return this.createErrorResponse(
           conversationId,
           request.query,
@@ -385,10 +351,8 @@ export class ChatbotOrchestrationService {
           businessValidation.suggestions.join('. ')
         );
       }
-      
       // === ENRICHISSEMENT DU CONTEXTE AVEC TEMPLATES SQL ===
       const sqlTemplate = this.generateOptimizedSQLTemplate(queryPattern, queryPattern.entities);
-      
       debugInfo.queryAnalysis = {
         queryType: queryPattern.queryType,
         entities: queryPattern.entities,
@@ -399,14 +363,11 @@ export class ChatbotOrchestrationService {
         complexity: queryComplexity,
         sqlHints: sqlTemplate.hints
       };
-
       // ========================================
       // 4. DISPATCH PARALLÈLE PRINCIPAL - CONTEXTE + MODÈLE
       // ========================================
       this.performanceMetrics.startParallelTrace(traceId, 'context_and_model_parallel');
-      
       const parallelStartTime = Date.now();
-      
       logger.info('Démarrage dispatch parallèle contexte + modèle', {
         metadata: {
           service: 'ChatbotOrchestrationService',
@@ -414,9 +375,7 @@ export class ChatbotOrchestrationService {
           context: { parallelExecution: 'context_model_dispatch' },
           queryType: queryPattern.queryType,
           complexity: queryComplexity
-        }
-      });
-
+        });
       // Préparation des promesses parallèles avec contexte enrichi
       const businessContextRequest = {
         userId: request.userId,
@@ -433,7 +392,6 @@ export class ChatbotOrchestrationService {
         sql_template: sqlTemplate,
         business_validation: businessValidation
       };
-
       // EXÉCUTION PARALLÈLE avec Promise.allSettled et timeout
       const parallelPromises = [
         // Promise 1: Génération contexte business
@@ -445,52 +403,41 @@ export class ChatbotOrchestrationService {
           this.detectQueryComplexity(request.query)
         )
       ];
-
       // Timeout de protection 10s max (augmenté pour requêtes complexes)
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout parallèle 10s dépassé')), 10000)
       );
-
       const parallelResults = await Promise.race([
         Promise.allSettled(parallelPromises),
         timeoutPromise
       ]) as PromiseSettledResult<unknown>[];
-
       const parallelTime = Date.now() - parallelStartTime;
-
       // Analyse des résultats parallèles
       const [contextResult, modelResult] = parallelResults;
-      
       const contextSuccess = contextResult.status === 'fulfilled' && contextResult.value.success;
       const modelSuccess = modelResult.status === 'fulfilled' && modelResult.value.selectedModel;
-      
       const contextTime = contextSuccess ? 
         (contextResult.value.timings?.total || parallelTime) : parallelTime;
       const modelTime = modelSuccess ? 
         (modelResult.value.selectionTime || parallelTime) : parallelTime;
-
-      logger.info('Résultats parallèles', {
-        metadata: {
+      logger.info('Résultats parallèles', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'handleParallelQuery',
           contextSuccess,
           contextTimeMs: contextTime,
           modelSuccess,
           modelTimeMs: modelTime,
-          totalTimeMs: parallelTime
-        }
-      });
-
+          totalTimeMs: parallelTime   
+              }
+            });
       // Validation de réussite minimum
       if (!contextSuccess && !modelSuccess) {
-        logger.warn('Échec total parallélisme, fallback séquentiel', {
-          metadata: {
+        logger.warn('Échec total parallélisme, fallback séquentiel', { metadata: {
             service: 'ChatbotOrchestrationService',
             operation: 'handleParallelQuery',
-            context: { fallback: 'sequential_mode' }
-          }
-        });
-        
+            context: { fallback: 'sequential_mode'   
+            }
+          });
         this.performanceMetrics.endParallelTrace(traceId, 'context_and_model_parallel', false, {
           contextSuccess,
           modelSuccess,
@@ -498,11 +445,9 @@ export class ChatbotOrchestrationService {
           modelTime,
           totalParallelTime: parallelTime
         });
-        
         // Fallback vers méthode séquentielle
         return await this.processChatbotQuerySequential(request, traceId, "parallel_total_failure");
       }
-
       // Enregistrement succès parallèle
       this.performanceMetrics.endParallelTrace(traceId, 'context_and_model_parallel', true, {
         contextSuccess,
@@ -511,11 +456,9 @@ export class ChatbotOrchestrationService {
         modelTime,
         totalParallelTime: parallelTime
       });
-
       // Extraction des résultats utilisables
       const businessContextResponse = contextSuccess ? contextResult.value : null;
       const modelSelection = modelSuccess ? modelResult.value : null;
-      
       debugInfo.parallel_execution = {
         contextSuccess,
         modelSuccess,
@@ -524,30 +467,25 @@ export class ChatbotOrchestrationService {
         totalParallelTime: parallelTime,
         timeSaving: Math.max(0, (contextTime + modelTime) - parallelTime)
       };
-
       // Fallback partiel si nécessaire
       if (!contextSuccess) {
-        logger.warn('Contexte échoué, contexte minimal', {
-          metadata: {
+        logger.warn('Contexte échoué, contexte minimal', { metadata: {
             service: 'ChatbotOrchestrationService',
             operation: 'handleParallelQuery',
-            context: { fallback: 'minimal_context' }
-          }
-        });
+            context: { fallback: 'minimal_context'   
+            }
+          });
         // Continuer avec contexte minimal mais modèle OK
       }
-      
       if (!modelSuccess) {
-        logger.warn('Sélection modèle échouée, modèle par défaut', {
-          metadata: {
+        logger.warn('Sélection modèle échouée, modèle par défaut', { metadata: {
             service: 'ChatbotOrchestrationService',
             operation: 'handleParallelQuery',
-            context: { fallback: 'default_model' }
-          }
-        });
+            context: { fallback: 'default_model'   
+            }
+          });
         // Continuer avec modèle par défaut mais contexte OK
       }
-
       // ========================================
       // 5. GÉNÉRATION ET EXÉCUTION SQL (IDENTIQUE SÉQUENTIEL)
       // ========================================
@@ -557,9 +495,7 @@ export class ChatbotOrchestrationService {
         hasModelSelection: !!modelSelection,
         parallelMode: true
       });
-      
       const sqlStartTime = Date.now();
-
       // CONNEXION ANALYSE D'INTENTION - Transmission complète au SQLEngine
       const queryAnalysis = {
         complexity: queryComplexity,
@@ -571,7 +507,6 @@ export class ChatbotOrchestrationService {
         filters: queryPattern.filters,
         focusAreas: focusAreas
       };
-
       const sqlQueryRequest = {
         naturalLanguageQuery: request.query,
         context: request.context || businessContextResponse?.context ? 
@@ -585,10 +520,8 @@ export class ChatbotOrchestrationService {
         // Transmission sélection modèle si disponible
         forceModel: modelSelection?.selectedModel
       };
-
       const sqlResult = await this.sqlEngineService.executeNaturalLanguageQuery(sqlQueryRequest);
       const sqlGenerationTime = Date.now() - sqlStartTime;
-
       if (!sqlResult.success) {
         this.performanceMetrics.endStep(traceId, 'sql_execution', false, { 
           sqlGenerationTime,
@@ -596,7 +529,6 @@ export class ChatbotOrchestrationService {
           errorMessage: sqlResult.error?.message,
           parallelMode: true
         });
-        
         await this.performanceMetrics.endPipelineTrace(
           traceId, request.userId, request.userRole, request.query, 
           this.detectQueryComplexity(request.query), false, false, { 
@@ -605,7 +537,6 @@ export class ChatbotOrchestrationService {
             parallelMode: true
           }
         );
-
         await this.logConversation({
           id: conversationId,
           userId: request.userId,
@@ -624,7 +555,6 @@ export class ChatbotOrchestrationService {
           dryRun: request.options?.dryRun || false,
           createdAt: new Date()
         });
-
         return this.createErrorResponse(
           conversationId,
           request.query,
@@ -633,7 +563,6 @@ export class ChatbotOrchestrationService {
           this.generateUserFriendlyErrorMessage(sqlResult.error?.type || "unknown")
         );
       }
-
       this.performanceMetrics.endStep(traceId, 'sql_execution', true, { 
         sqlGenerationTime,
         resultCount: sqlResult.results?.length || 0,
@@ -642,7 +571,6 @@ export class ChatbotOrchestrationService {
         modelUsed: modelSelection?.selectedModel || sqlResult.metadata?.aiModelUsed,
         parallelMode: true
       });
-
       // ========================================
       // 6. GÉNÉRATION RÉPONSE CONVERSATIONNELLE ENRICHIE
       // ========================================
@@ -651,9 +579,7 @@ export class ChatbotOrchestrationService {
         parallelMode: true,
         queryType: queryPattern.queryType
       });
-
       const responseFormattingStartTime = Date.now();
-
       // === GÉNÉRATION D'EXPLICATION ENRICHIE ===
       const enrichedExplanation = this.generateEnrichedExplanation(
         request.query,
@@ -662,7 +588,6 @@ export class ChatbotOrchestrationService {
         queryPattern,
         sqlResult.metadata || {}
       );
-
       // === SUGGESTIONS INTELLIGENTES CONTEXTUELLES ===
       const enhancedSuggestions = await this.generateEnhancedSuggestions(
         request.userId,
@@ -671,7 +596,6 @@ export class ChatbotOrchestrationService {
         sqlResult.results || [],
         queryPattern
       );
-
       // === MÉTADONNÉES CONTEXTUELLES ===
       const contextualMetadata = this.generateContextualMetadata(
         sqlResult.results || [],
@@ -679,21 +603,17 @@ export class ChatbotOrchestrationService {
         sqlResult.sql || '',
         Date.now() - startTime
       );
-
       const responseFormattingTime = Date.now() - responseFormattingStartTime;
-
       this.performanceMetrics.endStep(traceId, 'response_formatting', true, { 
         responseFormattingTime,
         explanationLength: enrichedExplanation.length,
         suggestionsCount: enhancedSuggestions.length,
         parallelMode: true
       });
-
       // ========================================
       // 7. LOGGING ET MÉTRIQUES FINALES
       // ========================================
       const totalExecutionTime = Date.now() - startTime;
-
       // Finaliser le tracing complet avec succès parallèle
       const detailedTimings = await this.performanceMetrics.endPipelineTrace(
         traceId, request.userId, request.userRole, request.query, 
@@ -710,7 +630,6 @@ export class ChatbotOrchestrationService {
           timeSavingMs: debugInfo.parallel_execution?.timeSaving || 0
         }
       );
-
       await this.logConversation({
         id: conversationId,
         userId: request.userId,
@@ -739,16 +658,13 @@ export class ChatbotOrchestrationService {
         dryRun: request.options?.dryRun || false,
         createdAt: new Date()
       });
-
-      logger.info('PARALLEL Pipeline terminé', {
-        metadata: {
+      logger.info('PARALLEL Pipeline terminé', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'handleParallelQuery',
           totalExecutionTimeMs: totalExecutionTime,
-          timeSavingMs: debugInfo.parallel_execution?.timeSaving || 0
-        }
-      });
-
+          timeSavingMs: debugInfo.parallel_execution?.timeSaving || 0   
+              }
+            });
       // Construire réponse finale selon interface ChatbotQueryResponse
       return {
         success: true,
@@ -775,20 +691,13 @@ export class ChatbotOrchestrationService {
           }
         } : undefined
       };
-
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       // Enregistrer échec parallélisme
       this.performanceMetrics.recordParallelismFailure();
-      
       // Finaliser le tracing en erreur
       await this.performanceMetrics.endPipelineTrace(
         traceId, request.userId, request.userRole, request.query, 
@@ -798,23 +707,19 @@ export class ChatbotOrchestrationService {
           parallelMode: true
         }
       );
-      
       // Fallback vers méthode séquentielle en cas d'erreur critique
-      logger.info('Fallback séquentiel après erreur parallèle', {
-        metadata: {
+      logger.info('Fallback séquentiel après erreur parallèle', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'handleParallelQuery',
-          context: { fallback: 'sequential_after_error' }
+          context: { fallback: 'sequential_after_error'    
         }
-      });
+          });
       return await this.processChatbotQuerySequential(request, traceId, "parallel_exception");
     }
   }
-
   // ========================================
   // MÉTHODE SÉQUENTIELLE POUR FALLBACK
   // ========================================
-
   /**
    * Méthode séquentielle de fallback (renommée de la méthode originale)
    */
@@ -825,36 +730,28 @@ export class ChatbotOrchestrationService {
   ): Promise<ChatbotQueryResponse> {
     // Utiliser traceId existant ou en créer un nouveau
     const traceId = existingTraceId || crypto.randomUUID();
-    
     if (fallbackReason) {
       this.performanceMetrics.startStep(traceId, 'fallback_sequential_trigger', { 
         reason: fallbackReason,
         fallbackFrom: 'parallel'
       });
-      
       const fallbackStartTime = Date.now();
-      
       // Exécuter la logique séquentielle originale (copiée de processChatbotQuery)
       const result = await this.processChatbotQueryOriginal(request, traceId);
-      
       const fallbackTime = Date.now() - fallbackStartTime;
       this.performanceMetrics.recordSequentialFallback(fallbackTime);
-      
       this.performanceMetrics.endStep(traceId, 'fallback_sequential_trigger', true, { 
         fallbackTime,
         reason: fallbackReason
       });
-      
       return result;
     } else {
       return await this.processChatbotQueryOriginal(request, traceId);
     }
   }
-
   // ========================================
   // MÉTHODE PRINCIPALE - PIPELINE COMPLET CHATBOT (CONSERVÉE POUR FALLBACK)
   // ========================================
-
   /**
    * Pipeline complet d'orchestration chatbot : NL → BusinessContext → AI → SQL → RBAC → Execution
    * INSTRUMENTÉ pour tracing détaillé des performances
@@ -865,13 +762,11 @@ export class ChatbotOrchestrationService {
     const conversationId = crypto.randomUUID();
     const sessionId = request.sessionId || crypto.randomUUID();
     const finalTraceId = traceId || crypto.randomUUID();
-
     let debug: unknown =ny = {};
     let rbacFiltersApplied: string[] = [];
     let businessContextLoaded = false;
     let aiRoutingDecision = "";
     let securityChecksPassed: string[] = [];
-
     // === INSTRUMENTATION PERFORMANCE : Démarrage tracing pipeline orchestration ===
     this.performanceMetrics.startPipelineTrace(
       finalTraceId, 
@@ -880,51 +775,42 @@ export class ChatbotOrchestrationService {
       request.query,
       this.detectQueryComplexity(request.query)
     );
-
     return withErrorHandling(
     async () => {
-
-      logger.info('Démarrage requête', {
-        metadata: {
+      logger.info('Démarrage requête', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'handleQuery',
           conversationId,
           traceId: finalTraceId,
           userId: request.userId,
           userRole: request.userRole
-        }
+       
+        
       });
-
       // ========================================
       // 1. DÉTECTION D'INTENTIONS D'ACTIONS - NOUVEAU PIPELINE
       // ========================================
       this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'action_detection' });
-      
       const actionDetectionStartTime = Date.now();
       const actionIntention = this.actionExecutionService.detectActionIntention(request.query);
       const actionDetectionTime = Date.now() - actionDetectionStartTime;
-      
       if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
-        logger.info('Action détectée', {
-          metadata: {
+        logger.info('Action détectée', { metadata: {
             service: 'ChatbotOrchestrationService',
             operation: 'handleQuery',
             actionType: actionIntention.actionType,
             entity: actionIntention.entity,
-            context: { detectionStep: 'action_intention' }
-          }
-        });
-        
+            context: { detectionStep: 'action_intention'    
+        }
+          });
         this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
           step: 'action_detected',
           detectionTime: actionDetectionTime,
           actionType: actionIntention.actionType,
           confidence: actionIntention.confidence
         });
-        
         // Proposer l'action au lieu d'exécuter une requête SQL
         const actionDefinition = await this.actionExecutionService.analyzeActionWithAI(request.query, request.userRole);
-        
         if (actionDefinition) {
           const proposeActionRequest: ProposeActionRequest = {
             type: actionDefinition.type,
@@ -939,11 +825,8 @@ export class ChatbotOrchestrationService {
             userRole: request.userRole,
             sessionId: request.sessionId,
             conversationId,
-            metadata: { detectedViaQuery: true, confidence: actionIntention.confidence }
-          };
-
+            metadata: { detectedViaQuery: true, confidence: actionIntention.confidence  
           const actionProposal = await this.actionExecutionService.proposeAction(proposeActionRequest);
-
           // Finaliser le tracing pour action
           await this.performanceMetrics.endPipelineTrace(
             traceId, request.userId, request.userRole, request.query, 
@@ -952,7 +835,6 @@ export class ChatbotOrchestrationService {
               actionType: actionIntention.actionType 
             }
           );
-
           // Retourner une réponse spécialisée pour les actions
           return this.createActionProposalResponse(
             conversationId,
@@ -963,41 +845,33 @@ export class ChatbotOrchestrationService {
           );
         }
       }
-      
       this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
         step: 'action_detection_complete', 
         detectionTime: actionDetectionTime,
         actionDetected: false 
       });
-
       // ========================================
       // 2. VALIDATION RBAC UTILISATEUR (pipeline standard)
       // ========================================
       this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'rbac_validation' });
-      
       const rbacStartTime = Date.now();
-      
       const userPermissions = await this.rbacService.getUserPermissions(
         request.userId, 
         request.userRole
       );
-
       const rbacTime = Date.now() - rbacStartTime;
-
       if (!userPermissions || Object.keys(userPermissions.permissions).length === 0) {
         this.performanceMetrics.endStep(traceId, 'context_generation', false, { 
           step: 'rbac_failed', 
           rbacTime,
           reason: 'insufficient_permissions'
         });
-        
         await this.performanceMetrics.endPipelineTrace(
           traceId, request.userId, request.userRole, request.query, 
           this.detectQueryComplexity(request.query), false, false, { 
             rbacError: true 
           }
         );
-
         return this.createErrorResponse(
           conversationId,
           request.query,
@@ -1006,25 +880,20 @@ export class ChatbotOrchestrationService {
           "Vous n'avez pas les permissions nécessaires pour poser cette question."
         );
       }
-
       securityChecksPassed.push("rbac_permissions_validated");
       this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
         step: 'rbac_validated', 
         rbacTime,
         permissionsCount: Object.keys(userPermissions.permissions).length
       });
-      
       if (request.options?.includeDebugInfo) {
         debugInfo.rbac_check_ms = rbacTime;
       }
-
       // ========================================
       // 3. GÉNÉRATION CONTEXTE MÉTIER INTELLIGENT
       // ========================================
       this.performanceMetrics.startStep(traceId, 'context_generation', { step: 'business_context' });
-      
       const contextStartTime = Date.now();
-
       const businessContextRequest = {
         userId: request.userId,
         user_role: request.userRole,
@@ -1036,22 +905,17 @@ export class ChatbotOrchestrationService {
         personalization_level: "advanced" as const,
         generation_mode: "sql_minimal" as const
       };
-
       const businessContextResponse = await this.businessContextService.generateBusinessContext(
         businessContextRequest
       );
-
       const contextTime = Date.now() - contextStartTime;
-
       if (!businessContextResponse.success || !businessContextResponse.context) {
-        logger.warn('Échec génération contexte métier, continuation avec contexte minimal', {
-          metadata: {
+        logger.warn('Échec génération contexte métier, continuation avec contexte minimal', { metadata: {
             service: 'ChatbotOrchestrationService',
             operation: 'handleQuery',
-            context: { fallback: 'minimal_business_context' }
-          }
-        });
-        
+            context: { fallback: 'minimal_business_context'   
+            }
+          });
         this.performanceMetrics.endStep(traceId, 'context_generation', false, { 
           step: 'business_context_failed', 
           contextTime,
@@ -1059,18 +923,15 @@ export class ChatbotOrchestrationService {
         });
       } else {
         businessContextLoaded = true;
-        
         this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
           step: 'business_context_complete', 
           contextTime,
           contextSize: JSON.stringify(businessContextResponse.context).length
         });
-        
         if (request.options?.includeDebugInfo) {
           debugInfo.context_generation_ms = contextTime;
         }
       }
-
       // ========================================
       // 4. GÉNÉRATION ET EXÉCUTION SQL VIA MOTEUR SÉCURISÉ
       // ========================================
@@ -1078,9 +939,7 @@ export class ChatbotOrchestrationService {
         step: 'sql_generation_and_execution',
         hasContext: businessContextLoaded
       });
-      
       const sqlStartTime = Date.now();
-
       const sqlQueryRequest = {
         naturalLanguageQuery: request.query,
         context: request.context || businessContextResponse.context ? 
@@ -1091,17 +950,14 @@ export class ChatbotOrchestrationService {
         userId: request.userId,
         userRole: request.userRole
       };
-
       const sqlResult = await this.sqlEngineService.executeNaturalLanguageQuery(sqlQueryRequest);
       const sqlGenerationTime = Date.now() - sqlStartTime;
-
       if (!sqlResult.success) {
         this.performanceMetrics.endStep(traceId, 'sql_execution', false, { 
           sqlGenerationTime,
           errorType: sqlResult.error?.type,
           errorMessage: sqlResult.error?.message
         });
-        
         // Finaliser le tracing en erreur
         await this.performanceMetrics.endPipelineTrace(
           traceId, request.userId, request.userRole, request.query, 
@@ -1110,7 +966,6 @@ export class ChatbotOrchestrationService {
             errorType: sqlResult.error?.type 
           }
         );
-
         await this.logConversation({
           id: conversationId,
           userId: request.userId,
@@ -1129,7 +984,6 @@ export class ChatbotOrchestrationService {
           dryRun: request.options?.dryRun || false,
           createdAt: new Date()
         });
-
         return this.createErrorResponse(
           conversationId,
           request.query,
@@ -1138,49 +992,40 @@ export class ChatbotOrchestrationService {
           this.generateUserFriendlyErrorMessage(sqlResult.error?.type || "unknown")
         );
       }
-
       this.performanceMetrics.endStep(traceId, 'sql_execution', true, { 
         sqlGenerationTime,
         resultCount: sqlResult.results?.length || 0,
         sqlLength: sqlResult.sql?.length || 0,
         cacheHit: sqlResult.metadata?.cacheHit || false
       });
-
       // ========================================
       // 5. GÉNÉRATION RÉPONSE CONVERSATIONNELLE 
       // ========================================
       this.performanceMetrics.startStep(traceId, 'response_formatting', { 
         resultCount: sqlResult.results?.length || 0
       });
-
       const responseFormattingStartTime = Date.now();
-
       const explanation = this.generateExplanation(
         request.query,
         sqlResult.results || [],
         request.userRole
       );
-
       const suggestions = await this.generateContextualSuggestions(
         request.userId,
         request.userRole,
         request.query,
         sqlResult.results || []
       );
-
       const responseFormattingTime = Date.now() - responseFormattingStartTime;
-
       this.performanceMetrics.endStep(traceId, 'response_formatting', true, { 
         responseFormattingTime,
         explanationLength: explanation.length,
         suggestionsCount: suggestions.length
       });
-
       // ========================================
       // 6. LOGGING ET MÉTRIQUES ENRICHIES
       // ========================================
       const totalExecutionTime = Date.now() - startTime;
-
       // Finaliser le tracing complet avec succès
       const detailedTimings = await this.performanceMetrics.endPipelineTrace(
         traceId, request.userId, request.userRole, request.query, 
@@ -1192,7 +1037,6 @@ export class ChatbotOrchestrationService {
           rbacChecksPerformed: securityChecksPassed.length
         }
       );
-
       await this.logConversation({
         id: conversationId,
         userId: request.userId,
@@ -1215,7 +1059,6 @@ export class ChatbotOrchestrationService {
         dryRun: request.options?.dryRun || false,
         createdAt: new Date()
       });
-
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -1224,7 +1067,6 @@ export class ChatbotOrchestrationService {
         true,
         0 // Tokens non disponibles dans metadata, utiliser 0
       );
-
       // ========================================
       // 7. ÉVÉNEMENT POUR APPRENTISSAGE ADAPTATIF
       // ========================================
@@ -1243,9 +1085,10 @@ export class ChatbotOrchestrationService {
           executionTime: totalExecutionTime,
           confidence: sqlResult.confidence,
           resultCount: sqlResult.results?.length || 0
-        }
-      }));
-
+              }
+                        }
+                                  }
+                                }));
       // ========================================
       // 8. CONSTRUCTION RÉPONSE FINALE ENRICHIE
       // ========================================
@@ -1262,7 +1105,6 @@ export class ChatbotOrchestrationService {
         model_used: sqlResult.metadata?.aiModelUsed ?? undefined,
         cache_hit: sqlResult.metadata?.cacheHit || false
       };
-
       // Debug info si demandé - ENRICHI avec métriques détaillées
       if (request.options?.includeDebugInfo) {
         response.debug_info = {
@@ -1281,22 +1123,14 @@ export class ChatbotOrchestrationService {
           // detailed_timings et autres métriques supprimées car non définies dans interface debug_info
         };
       }
-
       // === ENRICHISSEMENT RÉPONSE SUPPRIMÉ ===
       // performance_trace supprimé car non défini dans interface ChatbotQueryResponse
-
       return response;
-
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       // === FINALISER LE TRACING EN ERREUR ===
       await this.performanceMetrics.endPipelineTrace(
         traceId, request.userId, request.userRole, request.query, 
@@ -1306,7 +1140,6 @@ export class ChatbotOrchestrationService {
           errorStack: error instanceof Error ? error.stack : undefined
         }
       );
-      
       // Logging d'erreur
       await this.logConversation({
         id: conversationId,
@@ -1326,7 +1159,6 @@ export class ChatbotOrchestrationService {
         dryRun: request.options?.dryRun || false,
         createdAt: new Date()
       });
-
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -1335,7 +1167,6 @@ export class ChatbotOrchestrationService {
         false,
         0
       );
-
       const errorResponse = this.createErrorResponse(
         conversationId,
         request.query,
@@ -1343,17 +1174,14 @@ export class ChatbotOrchestrationService {
         error instanceof Error ? error.message : String(error),
         "Une erreur inattendue s'est produite. Veuillez réessayer."
       );
-
       // Ajouter trace ID pour debug
       (errorResponse as unknown).trace_id = traceId;
       return errorResponse;
     }
   }
-
   // ========================================
   // MÉTHODES HELPERS SLO ET PERFORMANCE
   // ========================================
-
   /**
    * Retourne les seuils SLO par complexité de requête
    */
@@ -1363,10 +1191,8 @@ export class ChatbotOrchestrationService {
       'complex': 10000,  // 10 secondes  
       'expert': 15000    // 15 secondes (cas extrêmes)
     };
-    
     return SLO_TARGETS[complexity as keyof typeof SLO_TARGETS] || SLO_TARGETS.complex;
   }
-
   /**
    * Calcule les métriques de conformité SLO
    */
@@ -1378,7 +1204,6 @@ export class ChatbotOrchestrationService {
   } {
     const target = this.getSLOTargetForComplexity(complexity);
     const compliant = executionTime <= target;
-    
     return {
       target_ms: target,
       actual_ms: executionTime,
@@ -1386,23 +1211,18 @@ export class ChatbotOrchestrationService {
       violation_percentage: compliant ? undefined : ((executionTime - target) / target) * 100
     };
   }
-
   // ========================================
   // SUGGESTIONS INTELLIGENTES PAR RÔLE
   // ========================================
-
   /**
    * Génère des suggestions contextuelles basées sur le rôle et l'historique
    */
   async getIntelligentSuggestions(request: ChatbotSuggestionsRequest): Promise<ChatbotSuggestionsResponse> {
     return withErrorHandling(
     async () => {
-
       const startTime = Date.now();
-
       // 1. Récupérer suggestions prédéfinies pour le rôle
       const roleSuggestions = DEFAULT_SUGGESTIONS_BY_ROLE[request.userRole as keyof typeof DEFAULT_SUGGESTIONS_BY_ROLE] || [];
-
       // 2. Récupérer suggestions personnalisées de la base de données
       const dbSuggestions = await db
         .select()
@@ -1414,10 +1234,9 @@ export class ChatbotOrchestrationService {
         ))
         .orderBy(desc(chatbotSuggestions.priority), desc(chatbotSuggestions.successRate))
         .limit(request.limit || 10);
-
       // 3. Combiner et personnaliser les suggestions
       const suggestions = [
-        ...dbSuggestions.map(s => ({
+        ...dbSuggestions.map(s  => ({
           id: s.id,
           text: s.suggestionText,
           category: s.category,
@@ -1436,11 +1255,9 @@ export class ChatbotOrchestrationService {
           context_dependent: false
         }))
       ];
-
       // 4. Contexte temporel et patterns récents
       const temporalContext = this.getTemporalContext();
       const recentPatterns = await this.analyzeRecentPatterns(request.userId, request.userRole);
-
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -1449,7 +1266,6 @@ export class ChatbotOrchestrationService {
         true,
         0
       );
-
       return {
         success: true,
         suggestions: suggestions.slice(0, request.limit || 10),
@@ -1461,17 +1277,11 @@ export class ChatbotOrchestrationService {
           recent_patterns: recentPatterns
         }
       };
-
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -1480,7 +1290,6 @@ export class ChatbotOrchestrationService {
         false,
         0
       );
-
       return {
         success: false,
         suggestions: [],
@@ -1494,28 +1303,22 @@ export class ChatbotOrchestrationService {
       };
     }
   }
-
   // ========================================
   // VALIDATION DE REQUÊTE SANS EXÉCUTION
   // ========================================
-
   /**
    * Valide une requête chatbot sans l'exécuter
    */
   async validateChatbotQuery(request: ChatbotValidateRequest): Promise<ChatbotValidateResponse> {
     return withErrorHandling(
     async () => {
-
       const startTime = Date.now();
-
       // 1. Validation RBAC de base
       const userPermissions = await this.rbacService.getUserPermissions(
         request.userId,
         request.userRole
       );
-
       const rbacPassed = userPermissions && Object.keys(userPermissions.permissions).length > 0;
-
       // 2. Validation par le moteur SQL en mode validation
       const sqlValidationRequest = {
         sql: request.query, // Temporaire - sera remplacé par la génération SQL
@@ -1523,13 +1326,10 @@ export class ChatbotOrchestrationService {
         userId: request.userId,
         userRole: request.userRole
       };
-
       // TODO: Implémenter une méthode de validation pure dans SQLEngineService
       // Pour l'instant, on fait une validation basique
-
       const estimatedComplexity = this.detectQueryComplexity(request.query);
       const estimatedTime = this.estimateExecutionTime(request.query, estimatedComplexity);
-
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -1538,7 +1338,6 @@ export class ChatbotOrchestrationService {
         true,
         0
       );
-
       return {
         success: true,
         validation_results: {
@@ -1554,17 +1353,11 @@ export class ChatbotOrchestrationService {
         accessible_tables: Object.keys(userPermissions?.permissions || {}),
         restricted_columns: []
       };
-
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -1573,7 +1366,6 @@ export class ChatbotOrchestrationService {
         false,
         0
       );
-
       return {
         success: false,
         validation_results: {
@@ -1596,39 +1388,30 @@ export class ChatbotOrchestrationService {
       };
     }
   }
-
   // ========================================
   // HISTORIQUE DES CONVERSATIONS
   // ========================================
-
   /**
    * Récupère l'historique des conversations d'un utilisateur
    */
   async getChatbotHistory(request: ChatbotHistoryRequest): Promise<ChatbotHistoryResponse> {
     return withErrorHandling(
     async () => {
-
       const startTime = Date.now();
-
       // Construction des conditions WHERE
       const conditions = [eq(chatbotConversations.userId, request.userId)];
-      
       if (request.sessionId) {
         conditions.push(eq(chatbotConversations.sessionId, request.sessionId));
       }
-      
       if (request.startDate) {
         conditions.push(gte(chatbotConversations.createdAt, new Date(request.startDate)));
       }
-      
       if (request.endDate) {
         conditions.push(lte(chatbotConversations.createdAt, new Date(request.endDate)));
       }
-      
       if (!request.includeErrors) {
         conditions.push(eq(chatbotConversations.errorOccurred, false));
       }
-
       // Requête principale avec pagination
       const conversations = await db
         .select({
@@ -1646,30 +1429,25 @@ export class ChatbotOrchestrationService {
         .orderBy(desc(chatbotConversations.createdAt))
         .limit(Math.min(request.limit || DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT))
         .offset(request.offset || 0);
-
       // Compter le total pour la pagination
       const totalResult = await db
         .select({ count: sql`count(*)`.as('count') })
         .from(chatbotConversations)
         .where(and(...conditions));
-
       const total = Number(totalResult[0]?.count || 0);
-
       // Vérifier s'il y a du feedback pour chaque conversation
       const conversationIds = conversations.map(c => c.id);
       const feedbacks = conversationIds.length > 0 ? await db
         .select({ conversationId: chatbotFeedback.conversationId })
         .from(chatbotFeedback)
-        .where(sql`conversation_id IN (${sql.join(conversationIds.map(id => sql`${id}`), sql`, `)})`) : [];
-
+        .where(sql`conversation_id IN (${sql.join(conversationIds.map(id => sql`$) {id}`), sql`, `)})`) : [];
       const feedbackMap = new Set(feedbacks.map(f => f.conversationId));
-
-      const formattedConversations = conversations.map(c => ({
+      const formattedConversations = conversations.map(c  => ({
         id: c.id,
         query: c.query,
         summary: this.generateConversationSummary(
           c.query || '', 
-          c.response || {}, 
+          c.response || ) {}, 
           c.errorOccurred || false
         ),
         success: !c.errorOccurred,
@@ -1677,8 +1455,10 @@ export class ChatbotOrchestrationService {
         confidence: c.confidence ? parseFloat(c.confidence) : undefined,
         created_at: c.createdAt,
         has_feedback: feedbackMap.has(c.id)
-      }));
-
+            }
+                      }
+                                }
+                              }));
       await this.logUsageMetrics(
         request.userId,
         "system", // Les requêtes d'historique ne sont pas liées à un rôle spécifique
@@ -1687,7 +1467,6 @@ export class ChatbotOrchestrationService {
         true,
         0
       );
-
       return {
         success: true,
         conversations: formattedConversations,
@@ -1698,17 +1477,11 @@ export class ChatbotOrchestrationService {
           has_more: (request.offset || 0) + formattedConversations.length < total
         }
       };
-
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       await this.logUsageMetrics(
         request.userId,
         "system",
@@ -1717,7 +1490,6 @@ export class ChatbotOrchestrationService {
         false,
         0
       );
-
       return {
         success: false,
         conversations: [],
@@ -1730,20 +1502,16 @@ export class ChatbotOrchestrationService {
       };
     }
   }
-
   // ========================================
   // FEEDBACK UTILISATEUR
   // ========================================
-
   /**
    * Enregistre le feedback utilisateur et déclenche l'apprentissage adaptatif
    */
   async processChatbotFeedback(request: ChatbotFeedbackRequest): Promise<ChatbotFeedbackResponse> {
     return withErrorHandling(
     async () => {
-
       const feedbackId = crypto.randomUUID();
-
       // 1. Enregistrer le feedback
       await db.insert(chatbotFeedback).values({
         id: feedbackId,
@@ -1756,14 +1524,12 @@ export class ChatbotOrchestrationService {
           JSON.stringify(request.improvementSuggestions) : null,
         createdAt: new Date()
       });
-
       // 2. Récupérer la conversation pour l'apprentissage adaptatif
       const conversation = await db
         .select()
         .from(chatbotConversations)
         .where(eq(chatbotConversations.id, request.conversationId))
         .limit(1);
-
       if (conversation.length > 0) {
         // 3. Déclencher l'apprentissage adaptatif
         const conv = conversation[0];
@@ -1782,13 +1548,13 @@ export class ChatbotOrchestrationService {
             feedbackType: request.feedbackType,
             executionTime: conv.executionTimeMs,
             modelUsed: conv.modelUsed
-          }
-        }));
+                }
+                          }
+                                    }
+                                  }));
       }
-
       // 4. Générer des améliorations suggérées basées sur le feedback
       const improvements = this.generateImprovementSuggestions(request);
-
       return {
         success: true,
         feedback_id: feedbackId,
@@ -1796,17 +1562,11 @@ export class ChatbotOrchestrationService {
         improvements_suggested: improvements,
         thank_you_message: this.generateThankYouMessage(request.feedbackType, request.rating)
       };
-
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       return {
         success: false,
         feedback_id: "",
@@ -1816,29 +1576,23 @@ export class ChatbotOrchestrationService {
       };
     }
   }
-
   // ========================================
   // STATISTIQUES D'USAGE (ADMIN UNIQUEMENT)
   // ========================================
-
   /**
    * Génère des statistiques d'usage détaillées du chatbot
    */
   async getChatbotStats(request: ChatbotStatsRequest): Promise<ChatbotStatsResponse> {
     return withErrorHandling(
     async () => {
-
       // TODO: Implémenter les statistiques complètes
       // Pour l'instant, on retourne des données de base
-
       const periodStart = this.getPeriodStart(request.period);
-      
       // Requêtes de base pour les métriques
       const totalQueries = await db
         .select({ count: sql`count(*)`.as('count') })
         .from(chatbotConversations)
         .where(gte(chatbotConversations.createdAt, periodStart));
-
       const successfulQueries = await db
         .select({ count: sql`count(*)`.as('count') })
         .from(chatbotConversations)
@@ -1846,10 +1600,8 @@ export class ChatbotOrchestrationService {
           gte(chatbotConversations.createdAt, periodStart),
           eq(chatbotConversations.errorOccurred, false)
         ));
-
       const total = Number(totalQueries[0]?.count || 0);
       const successful = Number(successfulQueries[0]?.count || 0);
-
       return {
         success: true,
         period: request.period,
@@ -1873,17 +1625,11 @@ export class ChatbotOrchestrationService {
           top_improvement_areas: []
         }
       };
-
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       return {
         success: false,
         period: request.period,
@@ -1909,28 +1655,21 @@ export class ChatbotOrchestrationService {
       };
     }
   }
-
   // ========================================
   // MÉTHODES UTILITAIRES PRIVÉES
   // ========================================
-
   private async logConversation(conversation: InsertChatbotConversation): Promise<void> {
     return withErrorHandling(
     async () => {
-
       await db.insert(chatbotConversations).values(conversation);
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
+      metadata: {  
       });
     }
   }
-
   private async logUsageMetrics(
     userId: string,
     userRole: string,
@@ -1941,7 +1680,6 @@ export class ChatbotOrchestrationService {
   ): Promise<void> {
     return withErrorHandling(
     async () => {
-
       const metricsId = crypto.randomUUID();
       await db.insert(chatbotUsageMetrics).values({
         id: metricsId,
@@ -1956,18 +1694,13 @@ export class ChatbotOrchestrationService {
         totalTokensUsed: tokensUsed,
         estimatedCost: "0.0000" // TODO: calculer le coût réel - convertir en string
       });
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
     }
   }
-
   private createErrorResponse(
     conversationId: string,
     query: string,
@@ -1996,44 +1729,33 @@ export class ChatbotOrchestrationService {
       }
     };
   }
-
   private detectQueryComplexity(query: string): "simple" | "complex" | "expert" {
     const queryLower = query.toLowerCase();
-    
     // Mots-clés complexes
     const complexKeywords = ['jointure', 'join', 'agrégation', 'group by', 'having', 'sous-requête', 'corrélation'];
     const expertKeywords = ['window function', 'cte', 'récursif', 'pivot', 'analyse temporelle'];
-
     if (expertKeywords.some(keyword => queryLower.includes(keyword))) {
       return "expert";
     }
-    
     if (complexKeywords.some(keyword => queryLower.includes(keyword)) || query.length > 200) {
       return "complex";
     }
-    
     return "simple";
   }
-
   private shouldIncludeSQL(userRole: string): boolean {
     // Seuls les administrateurs et BE managers peuvent voir le SQL généré
     return userRole === "admin" || userRole === "be_manager";
   }
-
   private generateExplanation(query: string, results: unknown[], userRole: string): string {
     const resultCount = results.length;
-    
     if (resultCount === 0) {
       return "Aucun résultat trouvé pour votre recherche. Vous pouvez essayer de reformuler votre question ou d'élargir vos critères.";
     }
-    
     if (resultCount === 1) {
       return `J'ai trouvé 1 résultat correspondant à votre demande "${query}".`;
     }
-    
     return `J'ai trouvé ${resultCount} résultats correspondant à votre demande "${query}". Les données sont triées par pertinence.`;
   }
-
   private async generateContextualSuggestions(
     userId: string,
     userRole: string,
@@ -2048,16 +1770,13 @@ export class ChatbotOrchestrationService {
         "Consultez les données disponibles dans votre périmètre"
       ];
     }
-
     // Suggestions contextuelles selon le rôle
     const roleSuggestions = DEFAULT_SUGGESTIONS_BY_ROLE[userRole as keyof typeof DEFAULT_SUGGESTIONS_BY_ROLE] || [];
     return roleSuggestions.slice(0, 3);
   }
-
   private estimateComplexity(text: string): "simple" | "complex" | "expert" {
     return this.detectQueryComplexity(text);
   }
-
   private estimateExecutionTime(query: string, complexity: "simple" | "complex" | "expert"): number {
     switch (complexity) {
       case "simple": return 500;
@@ -2066,11 +1785,9 @@ export class ChatbotOrchestrationService {
       default: return 1000;
     }
   }
-
   private getTemporalContext(): string[] {
     const now = new Date();
     const context: string[] = [];
-    
     // Contexte saisonnier BTP
     const month = now.getMonth() + 1;
     if (month >= 7 && month <= 8) {
@@ -2082,14 +1799,11 @@ export class ChatbotOrchestrationService {
     if (month >= 11 || month <= 2) {
       context.push("Contraintes météorologiques");
     }
-    
     return context;
   }
-
   private async analyzeRecentPatterns(userId: string, userRole: string): Promise<string[]> {
     return withErrorHandling(
     async () => {
-
       // Analyser les requêtes récentes de l'utilisateur
       const recentQueries = await db
         .select({ query: chatbotConversations.query })
@@ -2100,11 +1814,9 @@ export class ChatbotOrchestrationService {
         ))
         .orderBy(desc(chatbotConversations.createdAt))
         .limit(10);
-
       // Extraction de patterns simples
       const patterns: string[] = [];
       const queries = recentQueries.map(q => q.query.toLowerCase());
-      
       if (queries.some(q => q.includes('projet'))) {
         patterns.push("Questions fréquentes sur les projets");
       }
@@ -2114,57 +1826,42 @@ export class ChatbotOrchestrationService {
       if (queries.some(q => q.includes('équipe'))) {
         patterns.push("Gestion d'équipe");
       }
-
       return patterns;
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
+      metadata: { } });
       return [];
     }
   }
-
   private generateConversationSummary(query: string, response: unknown, errorOccurred: boolean): string {
     if (errorOccurred) {
       return `Erreur lors du traitement de: "${query.substring(0, 100)}${query.length > 100 ? '...' : ''}"`;
     }
-    
     return `Question: "${query.substring(0, 100)}${query.length > 100 ? '...' : ''}"`;
   }
-
   private generateImprovementSuggestions(request: ChatbotFeedbackRequest): string[] {
     const suggestions: string[] = [];
-
     if (request.rating <= 2) {
       suggestions.push("Améliorer la précision des réponses");
       suggestions.push("Réduire le temps de réponse");
     }
-    
     if (request.feedbackType === "thumbs_down") {
       suggestions.push("Revoir la pertinence des suggestions");
       suggestions.push("Améliorer la compréhension du contexte");
     }
-
     if (request.categories?.includes("accuracy")) {
       suggestions.push("Enrichir la base de connaissances métier");
     }
-
     return suggestions;
   }
-
   private generateThankYouMessage(feedbackType: string, rating: number): string {
     if (rating >= 4) {
       return "Merci pour votre retour positif ! Nous continuons à améliorer le chatbot pour mieux vous servir.";
     }
-    
     return "Merci pour votre retour. Nous prenons en compte vos suggestions pour améliorer l'expérience.";
   }
-
   private generateUserFriendlyErrorMessage(errorType: string): string {
     switch (errorType) {
       case "rbac":
@@ -2179,7 +1876,6 @@ export class ChatbotOrchestrationService {
         return "Une erreur inattendue s'est produite. Veuillez réessayer ou contacter l'support.";
     }
   }
-
   private getPeriodStart(period: string): Date {
     const now = new Date();
     switch (period) {
@@ -2199,30 +1895,25 @@ export class ChatbotOrchestrationService {
         return new Date(now.getTime() - 24 * 60 * 60 * 1000);
     }
   }
-
   // ========================================
   // MÉTHODES D'ACTIONS SÉCURISÉES - NOUVEAU PIPELINE
   // ========================================
-
   /**
    * Propose une action sécurisée basée sur une intention détectée
    */
   async proposeAction(request: ProposeActionRequest): Promise<ProposeActionResponse> {
     return withErrorHandling(
     async () => {
-
-      logger.info('Proposition d\'action', {
-        metadata: {
+      logger.info('Proposition d\'action', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'proposeAction',
           actionOperation: request.operation,
           entity: request.entity,
           userId: request.userId
-        }
+       
+        
       });
-      
       const response = await this.actionExecutionService.proposeAction(request);
-      
       // Logging pour métriques chatbot
       await this.logUsageMetrics(
         request.userId,
@@ -2232,18 +1923,12 @@ export class ChatbotOrchestrationService {
         response.success,
         0
       );
-
       return response;
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -2252,7 +1937,6 @@ export class ChatbotOrchestrationService {
         false,
         0
       );
-
       return {
         success: false,
         confirmationRequired: false,
@@ -2261,28 +1945,25 @@ export class ChatbotOrchestrationService {
           type: 'business_rule',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
         }
+});
       };
     }
   }
-
   /**
    * Exécute une action après confirmation utilisateur
    */
   async executeAction(request: ExecuteActionRequest): Promise<ExecuteActionResponse> {
     return withErrorHandling(
     async () => {
-
-      logger.info('Exécution d\'action', {
-        metadata: {
+      logger.info('Exécution d\'action', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'executeAction',
           actionId: request.actionId,
           userId: request.userId
-        }
+       
+        
       });
-      
       const response = await this.actionExecutionService.executeAction(request);
-      
       // Logging pour métriques chatbot
       await this.logUsageMetrics(
         request.userId,
@@ -2292,18 +1973,12 @@ export class ChatbotOrchestrationService {
         response.success,
         0
       );
-
       return response;
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -2312,7 +1987,6 @@ export class ChatbotOrchestrationService {
         false,
         0
       );
-
       return {
         success: false,
         actionId: request.actionId,
@@ -2320,27 +1994,24 @@ export class ChatbotOrchestrationService {
           type: 'execution',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
         }
+});
       };
     }
   }
-
   /**
    * Récupère l'historique des actions d'un utilisateur
    */
   async getActionHistory(request: ActionHistoryRequest): Promise<ActionHistoryResponse> {
     return withErrorHandling(
     async () => {
-
-      logger.info('Récupération historique actions', {
-        metadata: {
+      logger.info('Récupération historique actions', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'getActionHistory',
           userId: request.userId || 'all'
-        }
+       
+        
       });
-      
       const response = await this.actionExecutionService.getActionHistory(request);
-      
       // Logging pour métriques chatbot
       await this.logUsageMetrics(
         request.userId || "system",
@@ -2350,18 +2021,12 @@ export class ChatbotOrchestrationService {
         response.success,
         0
       );
-
       return response;
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       return {
         success: false,
         actions: [],
@@ -2371,29 +2036,26 @@ export class ChatbotOrchestrationService {
           type: 'query',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
         }
+});
       };
     }
   }
-
   /**
    * Met à jour une confirmation d'action
    */
   async updateActionConfirmation(request: UpdateConfirmationRequest & { userId: string; userRole: string }): Promise<{ success: boolean; error?: unknown}> {
     return withErrorHandling(
     async () => {
-
-      logger.info('Mise à jour confirmation', {
-        metadata: {
+      logger.info('Mise à jour confirmation', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'updateConfirmation',
           confirmationId: request.confirmationId,
           userId: request.userId
-        }
+       
+        
       });
-      
       // TODO: Implémenter la méthode dans ActionExecutionService
       // const response = await this.actionExecutionService.updateConfirmation(request);
-      
       // Logging pour métriques chatbot
       await this.logUsageMetrics(
         request.userId,
@@ -2403,18 +2065,12 @@ export class ChatbotOrchestrationService {
         true,
         0
       );
-
       return { success: true };
-    
     },
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: {}
-    }
-  );
-      });
-      
+      metadata: { } });
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -2423,18 +2079,16 @@ export class ChatbotOrchestrationService {
         false,
         0
       );
-
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Erreur inconnue'
       };
     }
+});
   }
-
   // ========================================
   // MÉTHODES UTILITAIRES POUR ACTIONS
   // ========================================
-
   /**
    * Crée une réponse spécialisée pour les propositions d'actions
    */
@@ -2454,21 +2108,18 @@ export class ChatbotOrchestrationService {
         this.generateActionErrorMessage(actionProposal.error?.type || "unknown")
       );
     }
-
     // Générer une explication conversationnelle pour l'action proposée
     const explanation = this.generateActionExplanation(
       actionIntention,
       actionProposal,
       userRole
     );
-
     // Générer des suggestions liées aux actions
     const suggestions = this.generateActionSuggestions(
       actionIntention.actionType,
       actionIntention.entity,
       userRole
     );
-
     return {
       success: true,
       conversation_id: conversationId,
@@ -2491,7 +2142,6 @@ export class ChatbotOrchestrationService {
       }
     };
   }
-
   /**
    * Génère une explication conversationnelle pour une action proposée
    */
@@ -2501,35 +2151,27 @@ export class ChatbotOrchestrationService {
     userRole: string
   ): string {
     const { actionType, entity, operation } = actionIntention;
-    
     let explanation = `🚀 **Action détectée** : ${this.getActionDisplayName(actionType)} sur ${this.getEntityDisplayName(entity)}\n\n`;
-    
     explanation += `✅ **Opération** : ${this.getOperationDisplayName(operation)}\n`;
     explanation += `🔒 **Niveau de risque** : ${this.getRiskLevelDisplay(actionProposal.riskLevel)}\n`;
-    
     if (actionProposal.confirmationRequired) {
       explanation += `⚠️ **Confirmation requise** : Cette action nécessite votre validation avant exécution\n`;
     }
-    
     if (actionProposal.warnings && actionProposal.warnings.length > 0) {
       explanation += `\n📋 **Avertissements** :\n`;
       actionProposal.warnings.forEach(warning => {
         explanation += `• ${warning}\n`;
       });
     }
-    
     if (actionProposal.estimatedTime) {
       explanation += `\n⏱️ **Temps d'exécution estimé** : ${actionProposal.estimatedTime} seconde(s)\n`;
     }
-
     explanation += `\n${actionProposal.confirmationRequired ? 
       '💡 **Prochaines étapes** : Confirmez cette action pour procéder à son exécution.' : 
       '💡 **Prochaines étapes** : Action prête à être exécutée automatiquement.'
     }`;
-
     return explanation;
   }
-
   /**
    * Génère des suggestions contextuelles pour les actions
    */
@@ -2539,7 +2181,6 @@ export class ChatbotOrchestrationService {
     userRole: string
   ): string[] {
     const suggestions: string[] = [];
-    
     // Suggestions selon le type d'action
     switch (actionType) {
       case 'create':
@@ -2559,7 +2200,6 @@ export class ChatbotOrchestrationService {
         suggestions.push(`Voir l'état des workflows en cours`);
         break;
     }
-    
     // Suggestions selon le rôle
     if (userRole === 'chef_projet') {
       suggestions.push("Mes projets nécessitant une action");
@@ -2568,10 +2208,8 @@ export class ChatbotOrchestrationService {
       suggestions.push("Offres nécessitant un suivi");
       suggestions.push("Actions commerciales recommandées");
     }
-    
     return suggestions.slice(0, 4); // Limiter à 4 suggestions
   }
-
   /**
    * Génère un message d'erreur adapté pour les actions
    */
@@ -2589,11 +2227,9 @@ export class ChatbotOrchestrationService {
         return "Une erreur inattendue s'est produite lors du traitement de votre action.";
     }
   }
-
   // ========================================
   // UTILITAIRES D'AFFICHAGE POUR ACTIONS
   // ========================================
-
   private getActionDisplayName(actionType: string): string {
     const displayNames: Record<string, string> = {
       'create': 'Création',
@@ -2603,7 +2239,6 @@ export class ChatbotOrchestrationService {
     };
     return displayNames[actionType] || actionType;
   }
-
   private getEntityDisplayName(entity: string): string {
     const displayNames: Record<string, string> = {
       'offer': 'offre',
@@ -2616,7 +2251,6 @@ export class ChatbotOrchestrationService {
     };
     return displayNames[entity] || entity;
   }
-
   private getOperationDisplayName(operation: string): string {
     const displayNames: Record<string, string> = {
       'create_offer': 'Créer une nouvelle offre',
@@ -2629,7 +2263,6 @@ export class ChatbotOrchestrationService {
     };
     return displayNames[operation] || operation.replace(/_/g, ' ');
   }
-
   private getRiskLevelDisplay(riskLevel: string): string {
     const displays: Record<string, string> = {
       'low': '🟢 Faible',
@@ -2638,7 +2271,6 @@ export class ChatbotOrchestrationService {
     };
     return displays[riskLevel] || riskLevel;
   }
-
   /**
    * Détecte les zones de focus dans une requête
    * @param query La requête en langage naturel
@@ -2647,7 +2279,6 @@ export class ChatbotOrchestrationService {
   private detectFocusAreas(query: string): ("planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes")[] {
     const focusAreas: ("planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes")[] = [];
     const queryLower = query.toLowerCase();
-    
     // Mapping des patterns vers les focus areas
     const focusPatterns: Record<"planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes", RegExp[]> = {
       'finances': [
@@ -2680,7 +2311,6 @@ export class ChatbotOrchestrationService {
         /retard|dépassement|conflit|incident/
       ]
     };
-    
     // Détection des focus areas
     for (const [area, patterns] of Object.entries(focusPatterns) as Array<[typeof focusAreas[number], RegExp[]]>) {
       for (const pattern of patterns) {
@@ -2692,15 +2322,12 @@ export class ChatbotOrchestrationService {
         }
       }
     }
-    
     // Si aucun focus détecté, ajouter "performance"
     if (focusAreas.length === 0) {
       focusAreas.push('performance');
     }
-    
     return focusAreas;
   }
-
   /**
    * Analyse le pattern de requête pour identifier le type de question
    * @param query La requête en langage naturel
@@ -2714,10 +2341,8 @@ export class ChatbotOrchestrationService {
    : unknown[]s: unknown[];
   } {
     const queryLower = query.toLowerCase();
-    
     // Détection du type de requête
     let queryType: 'kpi' | 'detail' | 'list' | 'comparison' | 'aggregation' | 'action' = 'list';
-    
     if (/kpi|indicateur|métrique|taux|performance/.test(queryLower)) {
       queryType = 'kpi';
     } else if (/détail|information|spécifique|concernant/.test(queryLower)) {
@@ -2731,19 +2356,14 @@ export class ChatbotOrchestrationService {
     } else if (/liste|tous|affiche|montre/.test(queryLower)) {
       queryType = 'list';
     }
-    
     // Détection des entités métier
     const entities = this.detectBusinessEntities(query);
-    
     // Analyse temporelle
     const temporalContext = this.analyzeTemporalContext(query);
-    
     // Détection des agrégations
     const aggregations = this.detectAggregations(query);
-    
     // Détection des filtres
     const filters = this.detectQueryFilters(query);
-    
     return {
       queryType,
       entities,
@@ -2752,7 +2372,6 @@ export class ChatbotOrchestrationService {
       filters
     };
   }
-
   /**
    * Détecte les entités métier dans une requête
    * @param query La requête en langage naturel
@@ -2761,7 +2380,6 @@ export class ChatbotOrchestrationService {
   private detectBusinessEntities(query: string): string[] {
     const entities: string[] = [];
     const queryLower = query.toLowerCase();
-    
     // Mapping des patterns d'entités métier JLM
     const entityPatterns: Record<string, RegExp[]> = {
       'project': [/projet/],
@@ -2780,7 +2398,6 @@ export class ChatbotOrchestrationService {
       'payment': [/paiement/, /règlement/],
       'document': [/document/, /fichier/, /pdf/, /plan/, /cctp/]
     };
-    
     // Détection des entités
     for (const [entity, patterns] of Object.entries(entityPatterns)) {
       for (const pattern of patterns) {
@@ -2792,10 +2409,8 @@ export class ChatbotOrchestrationService {
         }
       }
     }
-    
     return entities;
   }
-
   /**
    * Analyse le contexte temporel d'une requête
    * @param query La requête en langage naturel
@@ -2810,13 +2425,11 @@ export class ChatbotOrchestrationService {
   } {
     const queryLower = query.toLowerCase();
     const now = new Date();
-    
     // Détection de dates absolues
     const absoluteDatePattern = /\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/;
     if (absoluteDatePattern.test(query)) {
       return { type: 'absolute', period: 'specific_date' };
     }
-    
     // Détection de périodes relatives
     const relativePatterns: Record<string, string> = {
       'aujourd\'hui': 'today',
@@ -2831,18 +2444,15 @@ export class ChatbotOrchestrationService {
       'ce trimestre': 'this_quarter',
       'trimestre dernier': 'last_quarter'
     };
-    
     for (const [pattern, period] of Object.entries(relativePatterns)) {
       if (queryLower.includes(pattern)) {
         return { type: 'relative', period };
       }
     }
-    
     // Détection de plages temporelles
     if (/entre.*et|du.*au|depuis.*jusqu/.test(queryLower)) {
       return { type: 'range', period: 'custom_range' };
     }
-    
     // Détection de comparaisons temporelles
     if (/vs|versus|comparé|par rapport/.test(queryLower)) {
       const comparisonPeriod = 
@@ -2851,15 +2461,12 @@ export class ChatbotOrchestrationService {
         queryLower.includes('semaine') ? 'week' : 'period';
       return { type: 'comparison', comparisonPeriod };
     }
-    
     // Détection de périodes glissantes
     if (/derniers?\s+\d+\s+(jours?|semaines?|mois|années?)/.test(queryLower)) {
       return { type: 'relative', period: 'rolling' };
     }
-    
     return { type: 'none' };
   }
-
   /**
    * Détecte les agrégations demandées dans une requête
    * @param query La requête en langage naturel
@@ -2868,7 +2475,6 @@ export class ChatbotOrchestrationService {
   private detectAggregations(query: string): string[] {
     const aggregations: string[] = [];
     const queryLower = query.toLowerCase();
-    
     const aggregationPatterns: Record<string, RegExp[]> = {
       'sum': [/somme/, /total/, /cumul/],
       'avg': [/moyenne/, /moy\b/],
@@ -2881,7 +2487,6 @@ export class ChatbotOrchestrationService {
       'median': [/médiane/],
       'stddev': [/écart[- ]type/, /variance/, /dispersion/]
     };
-    
     for (const [agg, patterns] of Object.entries(aggregationPatterns)) {
       for (const pattern of patterns) {
         if (pattern.test(queryLower)) {
@@ -2892,10 +2497,8 @@ export class ChatbotOrchestrationService {
         }
       }
     }
-    
     return aggregations;
   }
-
   /**
    * Détecte les filtres dans une requête
    * @param query La requête en langage naturel
@@ -2904,7 +2507,6 @@ export class ChatbotOrchestrationService {
   private detectQueryFilters(qu: unknown[]rinunknown[]ny[] {
  : unknown[]t funknown[unknown any[] = [];
     const queryLower = query.toLowerCase();
-    
     // Détection des filtres de statut
     const statusPatterns: Record<string, string[]> = {
       'en_cours': ['en cours', 'actif', 'active'],
@@ -2913,7 +2515,6 @@ export class ChatbotOrchestrationService {
       'brouillon': ['brouillon', 'draft', 'en préparation'],
       'en_attente': ['en attente', 'en suspens', 'pending']
     };
-    
     for (const [status, patterns] of Object.entries(statusPatterns)) {
       for (const pattern of patterns) {
         if (queryLower.includes(pattern)) {
@@ -2922,7 +2523,6 @@ export class ChatbotOrchestrationService {
         }
       }
     }
-    
     // Détection des filtres numériques
     const numericPatterns = [
       /supérieur\s+à\s+(\d+)/,
@@ -2931,7 +2531,6 @@ export class ChatbotOrchestrationService {
       /plus\s+de\s+(\d+)/,
       /moins\s+de\s+(\d+)/
     ];
-    
     for (const pattern of numericPatterns) {
       const match = queryLower.match(pattern);
       if (match) {
@@ -2945,7 +2544,6 @@ export class ChatbotOrchestrationService {
         });
       }
     }
-    
     // Détection des filtres géographiques
     const geoPatterns = /département\s+(\d{2})|région\s+(\w+)|ville\s+(\w+)/;
     const geoMatch = queryLower.match(geoPatterns);
@@ -2955,14 +2553,11 @@ export class ChatbotOrchestrationService {
         value: geoMatch[1] || geoMatch[2] || geoMatch[3]
       });
     }
-    
     return filters;
   }
-
   // ========================================
   // SYSTÈME DE CACHE LRU AMÉLIORÉ - VRAIE IMPLÉMENTATION
   // ========================================
-
   /**
    * Classe LRU Cache réelle avec TTL et gestion mémoire
    */
@@ -2977,70 +2572,59 @@ export class ChatbotOrchestrationService {
     }>;
     private maxSize: number;
     private readonly DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes par défaut
-
     constructor(maxSize = 1000) {
       this.cache = new Map();
       this.maxSize = maxSize;
     }
-
     /**
      * Récupère une valeur du cache avec gestion LRU
      */
     geunknowney: string): any {
       const entry = this.cache.get(key);
       if (!entry) {
-        logger.debug('Cache miss', {
-          metadata: {
+        logger.debug('Cache miss', { metadata: {
             service: 'LRUCache',
             operation: 'get',
             key,
-            cacheSize: this.cache.size
-          }
-        });
+            cacheSize: this.cache.size   
+              }
+            });
         return null;
       }
-
       // Vérification TTL
       if (Date.now() > entry.timestamp + entry.ttl) {
         this.cache.delete(key);
-        logger.debug('Cache entry expired', {
-          metadata: {
+        logger.debug('Cache entry expired', { metadata: {
             service: 'LRUCache',
             operation: 'get',
             key,
             ttl: entry.ttl,
-            age: Date.now() - entry.timestamp
-          }
-        });
+            age: Date.now() - entry.timestamp   
+              }
+            });
         return null;
       }
-
       // Déplacer en fin pour LRU (plus récent)
       this.cache.delete(key);
       entry.hits++;
       entry.timestamp = Date.now();
-      
       // Augmenter TTL si populaire
       if (entry.hits > 10) {
         entry.ttl = Math.min(entry.ttl * 1.5, 30 * 60 * 1000);
       }
-      
       this.cache.set(key, entry);
-      
-      logger.debug('Cache hit', {
-        metadata: {
+      logger.debug('Cache hit', { metadata: {
           service: 'LRUCache',
           operation: 'get',
           key,
           hits: entry.hits,
           ttl: entry.ttl,
-          cacheSize: this.cache.size
-        }
-      });
-      
+          cacheSize: this.cache.size   
+              }
+            });
       return entry.value;
     }
-
+});
     /**
      * Ajoute ou met à jour une entrée dans le cache
      */
@@ -3050,20 +2634,18 @@ export class ChatbotOrchestrationService {
         const firstKey = this.cache.keys().next().value;
         if (firstKey) {
           this.cache.delete(firstKey);
-          logger.debug('Cache eviction (LRU)', {
-            metadata: {
+          logger.debug('Cache eviction (LRU)', { metadata: {
               service: 'LRUCache',
               operation: 'set',
               evictedKey: firstKey,
               reason: 'max_size_reached',
-              maxSize: this.maxSize
-            }
-          });
+              maxSize: this.maxSize   
+              }
+            });
         }
+});
       }
-
       const effectiveTTL = ttl || this.calculateAdaptiveTTL(queryPattern);
-      
       this.cache.set(key, {
         value,
         timestamp: Date.now(),
@@ -3071,25 +2653,22 @@ export class ChatbotOrchestrationService {
         hits: 0,
         queryPattern
       });
-
-      logger.debug('Cache set', {
-        metadata: {
+      logger.debug('Cache set', { metadata: {
           service: 'LRUCache',
           operation: 'set',
           key,
           ttl: effectiveTTL,
           cacheSize: this.cache.size,
-          queryType: queryPattern?.queryType
-        }
-      });
+          queryType: queryPattern?.queryType   
+              }
+            });
     }
-
+});
     /**
      * Invalide des entrées basées sur un pattern
      */
     invalidateByPattern(entityType: string, event: string): number {
       const keysToDelete: string[] = [];
-      
       for (const [key, entry] of Array.from(this.cache.entries())) {
         if (entry.queryPattern?.entities?.includes(entityType)) {
           keysToDelete.push(key);
@@ -3097,86 +2676,72 @@ export class ChatbotOrchestrationService {
           keysToDelete.push(key);
         }
       }
-      
       for (const key of keysToDelete) {
         this.cache.delete(key);
       }
-      
       if (keysToDelete.length > 0) {
-        logger.info('Cache invalidation par pattern', {
-          metadata: {
+        logger.info('Cache invalidation par pattern', { metadata: {
             service: 'LRUCache',
             operation: 'invalidateByPattern',
             entityType,
             event,
             keysInvalidated: keysToDelete.length,
-            remainingSize: this.cache.size
-          }
-        });
+            remainingSize: this.cache.size   
+              }
+            });
       }
-      
+});
       return keysToDelete.length;
     }
-
     /**
      * Calcule un TTL adaptatif basé sur le pattern
      */
-    private calculateAdaptiveTTL(queryPatt: unknown)unknown): number {
+    private calculateAdaptiveTTL(queryPatt: unknown): number {
       if (!queryPattern) return this.DEFAULT_TTL_MS;
-      
       // KPIs : cache plus long
       if (queryPattern.queryType === 'kpi') {
         return 15 * 60 * 1000; // 15 minutes
       }
-      
       // Comparaisons temporelles : cache court
       if (queryPattern.queryType === 'comparison' || 
           queryPattern.temporalContext?.type === 'relative') {
         return 2 * 60 * 1000; // 2 minutes
       }
-      
       // Listes et détails : cache moyen
       if (queryPattern.queryType === 'list' || 
           queryPattern.queryType === 'detail') {
         return 5 * 60 * 1000; // 5 minutes
       }
-      
       // Actions : pas de cache
       if (queryPattern.queryType === 'action') {
         return 30 * 1000; // 30 secondes seulement
       }
-      
       return this.DEFAULT_TTL_MS;
     }
-
     /**
      * Nettoie les entrées expirées
      */
     cleanup(): number {
       const now = Date.now();
       let cleaned = 0;
-      
       for (const [key, entry] of Array.from(this.cache.entries())) {
         if (now > entry.timestamp + entry.ttl) {
           this.cache.delete(key);
           cleaned++;
         }
       }
-      
       if (cleaned > 0) {
-        logger.debug('Cache cleanup', {
-          metadata: {
+        logger.debug('Cache cleanup', { metadata: {
             service: 'LRUCache',
             operation: 'cleanup',
             entriesCleaned: cleaned,
-            remainingSize: this.cache.size
-          }
-        });
+            remainingSize: this.cache.size   
+              }
+            });
       }
-      
+});
       return cleaned;
     }
-
     /**
      * Obtient des statistiques du cache
      */
@@ -3189,7 +2754,6 @@ export class ChatbotOrchestrationService {
     } {
       let oldestTimestamp = Date.now();
       let newestTimestamp = 0;
-      
       for (const entry of Array.from(this.cache.values())) {
         if (entry.timestamp < oldestTimestamp) {
           oldestTimestamp = entry.timestamp;
@@ -3198,7 +2762,6 @@ export class ChatbotOrchestrationService {
           newestTimestamp = entry.timestamp;
         }
       }
-      
       return {
         size: this.cache.size,
         maxSize: this.maxSize,
@@ -3207,63 +2770,55 @@ export class ChatbotOrchestrationService {
         newestEntry: this.cache.size > 0 ? Date.now() - newestTimestamp : undefined
       };
     }
-
     /**
      * Vide complètement le cache
      */
     clear(): void {
       const previousSize = this.cache.size;
       this.cache.clear();
-      logger.info('Cache cleared', {
-        metadata: {
+      logger.info('Cache cleared', { metadata: {
           service: 'LRUCache',
           operation: 'clear',
-          previousSize
-        }
-      });
+          previousSize   
+              }
+            });
     }
+});
   }
-    
     return new LRUCache(1000);
   })();
-  
   /**
    * Méthodes wrapper pour compatibilité avec le code existant
    */
-  private setCacheLRU(k: unknownnown,unknown,, data:unknowny, quer: unknown)unknown)any): void {
+  private setCacheLRU(k: unknownnown,unknown,, data:unknowny, quer: unknown)any): void {
     this.lruCache.set(key, data, undefined, queryPattern);
   }
-  
   private getCacheLRU(key: string): unknown | null {
     return this.lruCache.get(key);
   }
-  
   /**
    * Invalide le cache basé sur les événements
    */
   private invalidateCacheByEvent(event: string, entityType: string): void {
     const invalidatedCount = this.lruCache.invalidateByPattern(entityType, event);
-    
     if (invalidatedCount > 0) {
-      logger.info('Cache invalidé par événement', {
-        metadata: {
+      logger.info('Cache invalidé par événement', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'invalidateCacheByEvent',
           event,
           entityType,
-          keysInvalidated: invalidatedCount
-        }
-      });
+          keysInvalidated: invalidatedCount   
+              }
+            });
     }
+});
   }
-  
   /**
    * Précharge le cache avec les KPIs principaux
    * @param userRole Rôle de l'utilisateur pour personnalisation
    */
   async warmupCache(userRole: string): Promise<void> {
     const warmupQueries = this.getWarmupQueries(userRole);
-    
     for (const query of warmupQueries) {
       try {
         const request: ChatbotQueryRequest = {
@@ -3276,24 +2831,21 @@ export class ChatbotOrchestrationService {
             includeDebugInfo: false
           }
         };
-        
         // Exécution en arrière-plan sans attendre
         this.processChatbotQuery(request).catch(error => {
-          logger.warn('Erreur warmup cache', {
-            metadata: {
+          logger.warn('Erreur warmup cache', { metadata: {
               service: 'ChatbotOrchestrationService',
               operation: 'warmupCache',
               query,
-              error: error instanceof Error ? error.message : String(error)
-            }
-          });
+              error: error instanceof Error ? error.message : String(error)   
+              }
+            });
         });
       } catch (error) {
         // Ignorer les erreurs de warmup
       }
     }
   }
-  
   /**
    * Retourne les requêtes de warmup selon le rôle
    * @param userRole Rôle de l'utilisateur
@@ -3305,7 +2857,6 @@ export class ChatbotOrchestrationService {
       "Projets en cours",
       "Alertes actives"
     ];
-    
     const roleSpecificQueries: Record<string, string[]> = {
       'admin': [
         "Performance globale ce mois",
@@ -3328,14 +2879,11 @@ export class ChatbotOrchestrationService {
         "Projets prioritaires"
       ]
     };
-    
     return [...baseQueries, ...(roleSpecificQueries[userRole] || [])];
   }
-
   // ========================================
   // TEMPLATES SQL OPTIMISÉS
   // ========================================
-
   /**
    * Génère un template SQL optimisé basé sur le pattern de requête
    * @param queryPattern Pattern analysé de la requête
@@ -3350,7 +2898,6 @@ export class ChatbotOrchestrationService {
     const hints: string[] = [];
     let template = '';
     let estimatedComplexity = 1;
-    
     // Templates pour KPIs
     if (queryPattern.queryType === 'kpi') {
       template = this.getKPITemplate(queryPattern, entities);
@@ -3358,7 +2905,6 @@ export class ChatbotOrchestrationService {
       hints.push('ENABLE_PARALLEL_EXECUTION');
       estimatedComplexity = 2;
     }
-    
     // Templates pour comparaisons
     else if (queryPattern.queryType === 'comparison') {
       template = this.getComparisonTemplate(queryPattern, entities);
@@ -3366,7 +2912,6 @@ export class ChatbotOrchestrationService {
       hints.push('OPTIMIZE_FOR_TEMPORAL_QUERIES');
       estimatedComplexity = 3;
     }
-    
     // Templates pour agrégations
     else if (queryPattern.queryType === 'aggregation') {
       template = this.getAggregationTemplate(queryPattern, entities);
@@ -3374,7 +2919,6 @@ export class ChatbotOrchestrationService {
       hints.push('ENABLE_HASH_AGGREGATION');
       estimatedComplexity = 2;
     }
-    
     // Templates pour listes simples
     else if (queryPattern.queryType === 'list') {
       template = this.getListTemplate(queryPattern, entities);
@@ -3382,14 +2926,12 @@ export class ChatbotOrchestrationService {
       hints.push('LIMIT_EARLY');
       estimatedComplexity = 1;
     }
-    
     // Détection des jointures nécessaires
     const requiredJoins = this.detectRequiredJoins(entities);
     if (requiredJoins.length > 0) {
       hints.push(`REQUIRED_JOINS: ${requiredJoins.join(', ')}`);
       estimatedComplexity += requiredJoins.length * 0.5;
     }
-    
     // Optimisations temporelles
     if (queryPattern.temporalContext?.type !== 'none') {
       hints.push('USE_DATE_INDEX');
@@ -3397,10 +2939,8 @@ export class ChatbotOrchestrationService {
         hints.push('PARTITION_PRUNING_ON_DATE');
       }
     }
-    
     return { template, hints, estimatedComplexity };
   }
-  
   /**
    * Détecte les jointures nécessaires basées sur les entités
    * @param entities Liste des entités métier
@@ -3417,14 +2957,11 @@ export class ChatbotOrchestrationService {
       'milestone': ['validation_milestones', 'projects'],
       'chantier': ['projects', 'project_tasks', 'date_alerts']
     };
-    
     const tablesNeeded = new Set<string>();
-    
     for (const entity of entities) {
       const relatedTables = entityRelations[entity] || [];
       relatedTables.forEach(table => tablesNeeded.add(table));
     }
-    
     // Déterminer les jointures basées sur les tables nécessaires
     if (tablesNeeded.has('offers') && tablesNeeded.has('projects')) {
       joins.push('offers_projects');
@@ -3435,10 +2972,8 @@ export class ChatbotOrchestrationService {
     if (tablesNeeded.has('offers') && tablesNeeded.has('suppliers')) {
       joins.push('offers_suppliers');
     }
-    
     return joins;
   }
-  
   /**
    * Template SQL pour les KPIs
    */
@@ -3457,7 +2992,6 @@ export class ChatbotOrchestrationService {
       SELECT * FROM kpi_data;
     `;
   }
-  
   /**
    * Template SQL pour les comparaisons
    */
@@ -3483,7 +3017,6 @@ export class ChatbotOrchestrationService {
       JOIN period_previous p ON c.metric = p.metric;
     `;
   }
-  
   /**
    * Template SQL pour les agrégations
    */
@@ -3504,7 +3037,6 @@ export class ChatbotOrchestrationService {
       LIMIT :limit;
     `;
   }
-  
   /**
    * Template SQL pour les listes
    */
@@ -3520,11 +3052,9 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
       LIMIT :limit OFFSET :offset;
     `;
   }
-
   // ========================================
   // GARDE-FOUS MÉTIER
   // ========================================
-
   /**
    * Valide la cohérence métier d'une requête
    * @param request Requête chatbot
@@ -3542,7 +3072,6 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
     const warnings: string[] = [];
     const suggestions: string[] = [];
     let isValid = true;
-    
     // Validation temporelle
     if (queryPattern.temporalContext?.type === 'range') {
       const dateValidation = this.validateTemporalCoherence(queryPattern.temporalContext);
@@ -3551,20 +3080,17 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
         suggestions.push(dateValidation.suggestion);
       }
     }
-    
     // Détection de requêtes potentiellement coûteuses
     const costAnalysis = this.analyzeQueryCost(queryPattern, request.userRole);
     if (costAnalysis.isExpensive) {
       warnings.push(`⚠️ Cette requête pourrait prendre du temps (${costAnalysis.estimatedTime}s)`);
       suggestions.push(costAnalysis.optimizationSuggestion);
-      
       // Bloquer si trop coûteuse pour le rôle
       if (costAnalysis.shouldBlock) {
         isValid = false;
         warnings.push("❌ Requête trop complexe pour votre niveau d'accès");
       }
     }
-    
     // Validation des limites par rôle
     const limitValidation = this.validateRoleLimits(request.userRole, queryPattern);
     if (!limitValidation.isValid) {
@@ -3572,17 +3098,14 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
       warnings.push(limitValidation.warning);
       suggestions.push(limitValidation.suggestion);
     }
-    
     // Validation de la cohérence métier JLM
     const businessValidation = this.validateJLMBusinessRules(queryPattern);
     if (!businessValidation.isValid) {
       warnings.push(businessValidation.warning);
       suggestions.push(businessValidation.suggestion);
     }
-    
     return { isValid, warnings, suggestions };
   }
-  
   /**
    * Valide la cohérence temporelle
    */
@@ -3601,10 +3124,8 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
         suggestion: ''
       };
     }
-    
     return { isValid: true, warning: '', suggestion: '' };
   }
-  
   /**
    * Analyse le coût estimé d'une requêteunknown */: unknown,unknown, analyzeQueryCost(queryPattern: any, userRole: string): {
     isExpensive: boolean;
@@ -3613,14 +3134,12 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
     optimizationSuggestion: string;
   } {
     let estimatedTime = 1; // secondes
-    
     // Facteurs de coût
     if (queryPattern.queryType === 'comparison') estimatedTime *= 2;
     if (queryPattern.queryType === 'aggregation') estimatedTime *= 1.5;
     if (queryPattern.entities.length > 2) estimatedTime *= queryPattern.entities.length * 0.7;
     if (queryPattern.aggregations.includes('group_by')) estimatedTime *= 1.5;
     if (queryPattern.temporalContext?.type === 'range') estimatedTime *= 1.2;
-    
     // Limites par rôle
     const roleLimits: Record<string, number> = {
       'admin': 30,
@@ -3629,9 +3148,7 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
       'be_manager': 15,
       'viewer': 5
     };
-    
     const maxTime = roleLimits[userRole] || 10;
-    
     return {
       isExpensive: estimatedTime > 5,
       estimatedTime: Math.round(estimatedTime),
@@ -3641,7 +3158,6 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
         ""
     };
   }
-  
   /**
    * Valide les limites selon le rôle utilisateur
    */
@@ -3678,9 +3194,7 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
         maxTimeRange: 9999
       }
     };
-    
     const userLimits = limits[userRole] || limits['viewer'];
-    
     // Validation du nombre d'entités
     if (queryPattern.entities.length > userLimits.maxEntities) {
       return {
@@ -3689,7 +3203,6 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
         suggestion: "Simplifiez votre requête en vous concentrant sur une entité principale"
       };
     }
-    
     // Validation du type de requête
     if (!userLimits.allowedQueryTypes.includes(queryPattern.queryType)) {
       return {
@@ -3698,10 +3211,8 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
         suggestion: "Contactez votre administrateur si vous avez besoin de cet accès"
       };
     }
-    
     return { isValid: true, warning: '', suggestion: '' };
   }
-  
   /**
    * Valide les règles métier spécifiques JLMunknown */
   private validateJLMBusin: unknown)eunknown)eryPattern: any): {
@@ -3710,7 +3221,6 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
     suggestion: string;
   } {
     // Règles métier JLM spécifiques
-    
     // Règle: Les comparaisons de chantiers nécessitent au moins 1 mois de données
     if (queryPattern.entities.includes('chantier') && 
         queryPattern.queryType === 'comparison') {
@@ -3722,7 +3232,6 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
         };
       }
     }
-    
     // Règle: Les KPIs financiers sont limités aux rôles autorisés
     if (queryPattern.queryType === 'kpi' && 
         queryPattern.focusAreas?.includes('financial')) {
@@ -3734,14 +3243,11 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
         suggestion: ""
       };
     }
-    
     return { isValid: true, warning: '', suggestion: '' };
   }
-
   // ========================================
   // MÉTHODES D'ENRICHISSEMENT DES RÉPONSES
   // ========================================
-
   /**
    * Génère une explication enrichie avec métadonnées contextuelles
    * @param query La requête originale
@@ -3757,7 +3263,6 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
     queryP: unknown)nyunknown)eta: unknown unknown
   ): string {
     let explanation = '';
-    
     // Introduction contextuelle selon le type de requête
     switch (queryPattern.queryType) {
       case 'kpi':
@@ -3778,11 +3283,9 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
       default:
         explanation = `📌 **Résultats de votre requête**\n\n`;
     }
-    
     // Résumé des résultats
     if (results.length === 0) {
       explanation += `❌ Aucun résultat trouvé pour votre requête.\n\n`;
-      
       // Suggestions spécifiques selon le contexte
       if (queryPattern.temporalContext?.type !== 'none') {
         explanation += `💡 **Conseil** : Essayez d'élargir la période temporelle.\n`;
@@ -3792,7 +3295,6 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
       }
     } else {
       explanation += `✅ **${results.length} résultat${results.length > 1 ? 's' : ''} trouvé${results.length > 1 ? 's' : ''}**\n\n`;
-      
       // Contexte temporel
       if (queryPattern.temporalContext?.type !== 'none') {
         explanation += `📅 **Période analysée** : `;
@@ -3810,17 +3312,14 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
             explanation += `Période spécifique\n`;
         }
       }
-      
       // Entités analysées
       if (queryPattern.entities.length > 0) {
         explanation += `🏢 **Entités concernées** : ${queryPattern.entities.join(', ')}\n`;
       }
-      
       // Agrégations appliquées
       if (queryPattern.aggregations.length > 0) {
         explanation += `📊 **Calculs appliqués** : ${queryPattern.aggregations.join(', ')}\n`;
       }
-      
       // Insights principaux selon le type de données
       if (queryPattern.queryType === 'kpi' && results.length > 0) {
         explanation += `\n**Points clés** :\n`;
@@ -3829,24 +3328,19 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
         Object.keys(firstResult).slice(0, 3).forEach(key => {
           if (typeof firstResult[key] === 'number') {
             explanation += `• ${key}: ${this.formatNumber(firstResult[key])}\n`;
-          }
-        });
+          });
       }
-      
       // Avertissements si données partielles
       if (results.length >= 1000) {
         explanation += `\n⚠️ **Note** : Résultats limités aux 1000 premiers enregistrements.\n`;
       }
     }
-    
     // Métadonnées de performance
     if (metadata?.executionTime) {
       explanation += `\n⏱️ **Temps d'exécution** : ${metadata.executionTime}ms\n`;
     }
-    
     return explanation;
   }
-
   /**
    * Génère des suggestions améliorées basées sur le contexte et les résultats
    * @param userId ID de l'utilisateur
@@ -3864,7 +3358,6 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
  unknown): unknowneunknown any
   ): Promise<string[]> {
     const suggestions: string[] = [];
-    
     // Suggestions basées sur le type de requête
     switch (queryPattern.queryType) {
 case 'kpi':;
@@ -3872,13 +3365,11 @@ case 'kpi':;
         suggestions.push('Comparer avec la même période l\'année dernière');
         suggestions.push('Détailler par équipe ou par projet');
         break;
-        
 case 'comparison':;
         suggestions.push('Analyser les facteurs de variation');
         suggestions.push('Voir le détail par semaine');
         suggestions.push('Exporter les données pour analyse approfondie');
         break;
-        
 case 'aggregation':;
         if (!queryPattern.aggregations.includes('group_by')) {
           suggestions.push('Grouper les résultats par catégorie');
@@ -3886,7 +3377,6 @@ case 'aggregation':;
         suggestions.push('Voir la distribution en pourcentages');
         suggestions.push('Afficher les valeurs extrêmes');
         break;
-        
 case 'list':;
         if (results.length > 20) {
           suggestions.push('Filtrer par statut ou par date');
@@ -3894,37 +3384,31 @@ case 'list':;
         suggestions.push('Voir les statistiques globales');
         suggestions.push('Exporter la liste complète');
         break;
-        
 case 'detail':;
         suggestions.push('Voir l\'historique des modifications');
         suggestions.push('Comparer avec des éléments similaires');
         suggestions.push('Voir les documents associés');
         break;
     }
-    
     // Suggestions basées sur les entités détectées
     if (queryPattern.entities.includes('project')) {
       suggestions.push('Voir le planning détaillé du projet');
       suggestions.push('Analyser la charge de travail associée');
     }
-    
     if (queryPattern.entities.includes('offer')) {
       suggestions.push('Comparer les taux de conversion des offres');
       suggestions.push('Voir les offres en attente de validation');
     }
-    
     if (queryPattern.entities.includes('supplier')) {
       suggestions.push('Analyser la performance des fournisseurs');
       suggestions.push('Voir les commandes en cours');
     }
-    
     // Suggestions temporelles
     if (queryPattern.temporalContext?.type === 'none') {
       suggestions.push('Ajouter un filtre temporel pour plus de précision');
     } else if (queryPattern.temporalContext?.type === 'relative') {
       suggestions.push('Comparer avec la période précédente');
     }
-    
     // Suggestions basées sur les résultats
     if (results.length === 0) {
       suggestions.push('Élargir les critères de recherche');
@@ -3934,16 +3418,13 @@ case 'detail':;
       suggestions.push('Voir les éléments similaires');
       suggestions.push('Afficher l\'historique complet');
     }
-    
     // Personnalisation par rôle
     const roleSuggestions = DEFAULT_SUGGESTIONS_BY_ROLE[userRole as keyof typeof DEFAULT_SUGGESTIONS_BY_ROLE] || [];
     suggestions.push(...roleSuggestions.slice(0, 2));
-    
     // Limiter et dédupliquer
     const uniqueSuggestions = Array.from(new Set(suggestions));
     return uniqueSuggestions.slice(0, 6);
   }
-
   /**
    * Génère des métadonnées contextuelles pour enrichir la réponse
    * @param results Résultats de la requête
@@ -3963,7 +3444,6 @@ case 'detail':;
       queryComplexity: this.detectQueryComplexity(queryPattern.query || ''),
       performanceRating: this.getPerformanceRating(executionTime)
     };
-    
     // Analyse temporelle
     if (queryPattern.temporalContext?.type !== 'none') {
       metadata.temporalAnalysis = {
@@ -3972,7 +3452,6 @@ case 'detail':;
         comparisonEnabled: queryPattern.temporalContext.type === 'comparison'
       };
     }
-    
     // Statistiques sur les résultats
     if (results.length > 0) {
       metadata.resultStatistics = {
@@ -3980,13 +3459,11 @@ case 'detail':;
         isComplete: results.length < 1000,
         dataQuality: this.assessDataQuality(results)
       };
-      
       // Détection de colonnes numériques pour stats
       const firstResult = results[0];
       const numericColumns = Object.keys(firstResult).filter(key => 
         typeof firstResult[key] === 'number'
       );
-      
       if (numericColumns.length > 0) {
         metadata.numericSummary = {};
         numericColumns.forEach(col => {
@@ -3998,11 +3475,9 @@ case 'detail':;
               avg: values.reduce((a, b) => a + b, 0) / values.length,
               count: values.length
             };
-          }
-        });
+          });
       }
     }
-    
     // Analyse de la requête SQL
     if (sql) {
       metadata.sqlAnalysis = {
@@ -4013,7 +3488,6 @@ case 'detail':;
         estimatedCost: this.estimateSQLCost(sql)
       };
     }
-    
     // Recommandations d'optimisation
     if (executionTime > 3000) {
       metadata.optimizationHints = [
@@ -4022,10 +3496,8 @@ case 'detail':;
         'Utiliser la pagination pour les grandes listes'
       ];
     }
-    
     return metadata;
   }
-
   /**
    * Formate un nombre pour l'affichage
    */
@@ -4040,7 +3512,6 @@ case 'detail':;
       return value.toFixed(2);
     }
   }
-
   /**
    * Évalue la performance d'une requête
    */
@@ -4050,53 +3521,43 @@ case 'detail':;
     if (executionTime < 5000) return 'acceptable';
     return 'needs_optimization';
   }
-
   /**
    * Évalue lunknownualité des données retournées
    */
   p: unknown[]assessDataQunknown[]y(results: any[]): string {
     if (results.length === 0) return 'no_data';
-    
     // Vérifier les valeurs nulles
     let nullCount = 0;
     const totalFields = results.length * Object.keys(results[0]).length;
-    
     results.forEach(row => {
       Object.values(row).forEach(value => {
         if (value === null || value === undefined) nullCount++;
       });
     });
-    
     const nullPercentage = (nullCount / totalFields) * 100;
-    
     if (nullPercentage < 5) return 'excellent';
     if (nullPercentage < 20) return 'good';
     if (nullPercentage < 40) return 'acceptable';
     return 'poor';
   }
-
   /**
    * Estime le coût d'une requête SQL
    */
   private estimateSQLCost(sql: string): number {
     let cost = 1;
-    
     // Facteurs de coût
     if (/JOIN/gi.test(sql)) {
       const joinCount = (sql.match(/JOIN/gi) || []).length;
       cost += joinCount * 2;
     }
-    
     if (/GROUP BY/i.test(sql)) cost += 1.5;
     if (/ORDER BY/i.test(sql)) cost += 0.5;
     if (/DISTINCT/i.test(sql)) cost += 1;
     if (/UNION/i.test(sql)) cost += 3;
     if (/HAVING/i.test(sql)) cost += 1;
-    
     // Sous-requêtes
     const subqueryCount = (sql.match(/SELECT.*FROM.*SELECT/gi) || []).length;
     cost += subqueryCount * 3;
-    
     return cost;
   }
 }

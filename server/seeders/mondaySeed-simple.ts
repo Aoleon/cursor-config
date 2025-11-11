@@ -179,9 +179,9 @@ export class MondaySimpleSeed {
     {
       operation: 'AOS',
       service: 'mondaySeed-simple',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
       };
     }
   }
@@ -239,9 +239,9 @@ export class MondaySimpleSeed {
     {
       operation: 'AOS',
       service: 'mondaySeed-simple',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
     }
 
     return seededCount;
@@ -285,9 +285,8 @@ export class MondaySimpleSeed {
     {
       operation: 'AOS',
       service: 'mondaySeed-simple',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
 
     return seededCount;
@@ -331,9 +330,8 @@ export class MondaySimpleSeed {
     {
       operation: 'AOS',
       service: 'mondaySeed-simple',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
 
     return seededCount;
@@ -381,9 +379,8 @@ export class MondaySimpleSeed {
     {
       operation: 'AOS',
       service: 'mondaySeed-simple',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
 
     return seededCount;
@@ -413,7 +410,7 @@ export class MondaySimpleSeed {
         endDate: new Date(Date.now() + this.generator.numberInRange(7, 60, `task-due-${i}`) * 24 * 60 * 60 * 1000)
       };
 
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         await storage.createProjectTask(taskData);
@@ -423,9 +420,8 @@ export class MondaySimpleSeed {
     {
       operation: 'AOS',
       service: 'mondaySeed-simple',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
 
     return seededCount;

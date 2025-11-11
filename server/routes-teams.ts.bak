@@ -1,0 +1,563 @@
+// Routes API pour la gestion des équipes JLM
+import type { Express } from "express";
+import { db } from "./db";
+import { teams, teamMembers, users, insertTeamSchema, insertTeamMemberSchema } from "../shared/schema";
+import { eq, and, desc, asc } from "drizzle-orm";
+import { z } from "zod";
+import { asyncHandler, ValidationError, NotFoundError } from "./utils/error-handler";
+import { logger } from "./utils/logger";
+
+export function registerTeamsRoutes(app: Express) {
+  // ========================================
+  // GESTION DES ÉQUIPES
+  // ========================================
+
+  /**
+   * Récupérer toutes les équipes avec leurs membres
+   */
+  app.get("/api/teams", asyncHandler(async (req, res) => {
+    logger.info('[Teams] Récupération de toutes les équipes', { 
+      userId: (req.user as unknown)?.id 
+    });
+
+    const allTeams = await db.query.teams.findMany({
+      with: {
+        teamLeader: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        members: {
+          columns: {
+            id: true,
+            role: true,
+            weeklyHours: true,
+            contractType: true,
+            experienceLevel: true,
+            isActive: true,
+            joinedAt: true,
+            externalMemberName: true,
+            externalMemberEmail: true,
+            hourlyRate: true,
+          },
+          with: {
+            user: {
+              columns: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+          where: eq(teamMembers.isActive, true),
+        },
+      },
+      orderBy: [asc(teams.name)],
+    });
+
+    // Calculer les statistiques pour chaque équipe
+    const teamsWithStats = allTeams.map((team: unknown) => ({
+      ...team,
+      memberCount: team.members ? team.members.length : 0,
+      internalMembers: team.members ? team.members.filte: unknown)unknown) => m.userId !== null).length : 0,
+      externalMembers: team.members ? team.members.f: unknown)unknown)unknown) => m.userId === null).length : 0,
+    }));
+
+    logger.info('[Teams] Équipes récupérées avec succès', { 
+      count: teamsWithStats.length 
+    });
+
+    res.json(teamsWithStats);
+  }));
+
+  /**
+   * Récupérer une équipe spécifique avec ses membres
+   */
+  app.get("/api/teams/:id", asyncHandler(async (req, res) => {
+    const teamId = req.params.id;
+    
+    logger.info('[Teams] Récupération équipe spécifique', { 
+      teamId,
+      userId: (req.uas unknown)unknown)unknown)?.id 
+    });
+
+    const team = await db.query.teams.findFirst({
+      where: eq(teams.id, teamId),
+      with: {
+        teamLeader: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
+        members: {
+          with: {
+            user: {
+              columns: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+          orderBy: [asc(teamMembers.role), asc(teamMembers.joinedAt)],
+        },
+      },
+    });
+
+    if (!team) {
+      throw new NotFoundError(`Équipe ${teamId} non trouvée`);
+    }
+
+    logger.info('[Teams] Équipe récupérée avec succès', { 
+      teamId,
+      memberCount: team.members?.length || 0 
+    });
+
+    res.json(team);
+  }));
+
+  /**
+   * Créer une nouvelle équipe
+   */
+  app.post("/api/teams", asyncHandler(async (req, res) => {
+    logger.info('[Teams] Création nouvelle équipe', { 
+      userId: (ras unknown) as unknown)?.id 
+    });
+
+    const validationResult = insertTeamSchema.safeParse(req.body);
+    
+    if (!validationResult.success) {
+      throw new ValidationError("Données d'équipe invalides");
+    }
+
+    const teamData = validationResult.data;
+
+    // Vérifier que le chef d'équipe existe s'il est spécifié
+    if (teamData.teamLeaderId) {
+      const leader = await db.query.users.findFirst({
+        where: eq(users.id, teamData.teamLeaderId),
+      });
+
+      if (!leader) {
+        throw new ValidationError(`Chef d'équipe ${teamData.teamLeaderId} non trouvé`);
+      }
+    }
+
+    const [newTeam] = await db.insert(teams).values(teamData).returning();
+
+    // Récupérer l'équipe complète avec ses relations
+    const createdTeam = await db.query.teams.findFirst({
+      where: eq(teams.id, newTeam.id),
+      with: {
+        teamLeader: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        members: true,
+      },
+    });
+
+    logger.info('[Teams] Équipe créée avec succès', { 
+      teamId: newTeam.id,
+      teamName: teamData.name 
+    });
+
+    res.status(201).json(createdTeam);
+  }));
+
+  /**
+   * Modifier une équipe
+   */
+  app.put("/api/teams/:id", asyncHandler(async (req, res) => {
+    const teamId = req.params.id;
+    
+    logger.info('[Teams] Modification équipe', { 
+      teamId,
+      userIdas unknown)unknown)unknownnunknown)unknown)?.id 
+    });
+
+    const validationResult = insertTeamSchema.partial().safeParse(req.body);
+    
+    if (!validationResult.success) {
+      throw new ValidationError("Données de modification invalides");
+    }
+
+    const teamData = validationResult.data;
+
+    // Vérifier que l'équipe existe
+    const existingTeam = await db.query.teams.findFirst({
+      where: eq(teams.id, teamId),
+    });
+
+    if (!existingTeam) {
+      throw new NotFoundError(`Équipe ${teamId} non trouvée`);
+    }
+
+    // Vérifier le chef d'équipe s'il est modifié
+    if (teamData.teamLeaderId) {
+      const leader = await db.query.users.findFirst({
+        where: eq(users.id, teamData.teamLeaderId),
+      });
+
+      if (!leader) {
+        throw new ValidationError(`Chef d'équipe ${teamData.teamLeaderId} non trouvé`);
+      }
+    }
+
+    const [updatedTeam] = await db
+      .update(teams)
+      .set({ 
+        ...teamData,
+        updatedAt: new Date(),
+      })
+      .where(eq(teams.id, teamId))
+      .returning();
+
+    // Récupérer l'équipe complète mise à jour
+    const team = await db.query.teams.findFirst({
+      where: eq(teams.id, updatedTeam.id),
+      with: {
+        teamLeader: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        members: {
+          with: {
+            user: {
+              columns: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    logger.info('[Teams] Équipe modifiée avec succès', { metadata: { teamId } });
+
+    res.json(team);
+  }));
+
+  /**
+   * Supprimer une équipe (désactivation)
+   */
+  app.delete("/api/teams/:id", asyncHandler(async (req, res) => {
+    const teamId = req.params.id;
+    
+    logger.info('[Teams] Suppression (désactivation) équipe', { 
+      teamId,
+      usas unknown)unknown)unknownnownr as unknown)?.id 
+    });
+
+    const existingTeam = await db.query.teams.findFirst({
+      where: eq(teams.id, teamId),
+    });
+
+    if (!existingTeam) {
+      throw new NotFoundError(`Équipe ${teamId} non trouvée`);
+    }
+
+    // Désactiver l'équipe plutôt que de la supprimer
+    await db
+      .update(teams)
+      .set({ 
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(teams.id, teamId));
+
+    // Désactiver tous les membres de l'équipe
+    await db
+      .update(teamMembers)
+      .set({ 
+        isActive: false,
+        leftAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(teamMembers.teamId, teamId));
+
+    logger.info('[Teams] Équipe désactivée avec succès', { 
+      teamId,
+      teamName: existingTeam.name 
+    });
+
+    res.json({ message: "Équipe désactivée avec succès" });
+  }));
+
+  // ========================================
+  // GESTION DES MEMBRES D'ÉQUIPE
+  // ========================================
+
+  /**
+   * Ajouter un membre à une équipe
+   */
+  app.post("/api/teams/:teamId/members", asyncHandler(async (req, res) => {
+    const teamId = req.params.teamId;
+    
+    logger.info('[Teams] Ajout membre équipe', { 
+      teamId,
+    as unknown)unknown)unknownnown.uas unknown)unknown)any)?.id 
+    });
+    
+    const validationResult = insertTeamMemberSchema.extend({
+      teamId: z.string(),
+    }).safeParse({
+      ...req.body,
+      teamId,
+    });
+    
+    if (!validationResult.success) {
+      throw new ValidationError("Données de membre invalides");
+    }
+
+    const memberData = validationResult.data;
+
+    // Vérifier que l'équipe existe
+    const team = await db.query.teams.findFirst({
+      where: eq(teams.id, teamId),
+      with: {
+        members: {
+          where: eq(teamMembers.isActive, true),
+        },
+      },
+    });
+
+    if (!team) {
+      throw new NotFoundError(`Équipe ${teamId} non trouvée`);
+    }
+
+    // Vérifier la limite de membres
+    if (team.members.length >= (team.maxMembers || 10)) {
+      throw new ValidationError(`Équipe complète (maximum ${team.maxMembers} membres)`);
+    }
+
+    // Vérifier que l'utilisateur interne existe s'il est spécifié
+    if (memberData.userId) {
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, memberData.userId),
+      });
+
+      if (!user) {
+        throw new ValidationError(`Utilisateur ${memberData.userId} non trouvé`);
+      }
+
+      // Vérifier que l'utilisateur n'est pas déjà dans l'équipe
+      const existingMembership = await db.query.teamMembers.findFirst({
+        where: and(
+          eq(teamMembers.teamId, teamId),
+          eq(teamMembers.userId, memberData.userId),
+          eq(teamMembers.isActive, true)
+        ),
+      });
+
+      if (existingMembership) {
+        throw new ValidationError("L'utilisateur fait déjà partie de cette équipe");
+      }
+    }
+
+    const [newMember] = await db.insert(teamMembers).values(memberData).returning();
+
+    // Récupérer le membre complet avec ses relations
+    const createdMember = await db.query.teamMembers.findFirst({
+      where: eq(teamMembers.id, newMember.id),
+      with: {
+        user: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
+        team: {
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    logger.info('[Teams] Membre ajouté avec succès', { 
+      teamId,
+      memberId: newMember.id 
+    });
+
+    res.status(201).json(createdMember);
+  }));
+
+  /**
+   * Modifier un membre d'équipe
+   */
+  app.put("/api/teams/:teamId/members/:memberId", asyncHandler(async (req, res) => {
+    const { teamId, memberId } = req.params;
+    
+    logger.info('[Teams] Modification membre équipe', { 
+      teamId,
+      memberId,
+as unknown)unknown)unknownnown(ras unknown) as unknown)?.id 
+    });
+    
+    const validationResult = insertTeamMemberSchema.partial().safeParse(req.body);
+    
+    if (!validationResult.success) {
+      throw new ValidationError("Données de modification invalides");
+    }
+
+    const memberData = validationResult.data;
+
+    // Vérifier que le membre existe
+    const existingMember = await db.query.teamMembers.findFirst({
+      where: and(
+        eq(teamMembers.id, memberId),
+        eq(teamMembers.teamId, teamId)
+      ),
+    });
+
+    if (!existingMember) {
+      throw new NotFoundError(`Membre ${memberId} dans équipe ${teamId} non trouvé`);
+    }
+
+    const [updatedMember] = await db
+      .update(teamMembers)
+      .set({ 
+        ...memberData,
+        updatedAt: new Date(),
+      })
+      .where(eq(teamMembers.id, memberId))
+      .returning();
+
+    // Récupérer le membre complet mis à jour
+    const member = await db.query.teamMembers.findFirst({
+      where: eq(teamMembers.id, updatedMember.id),
+      with: {
+        user: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        team: {
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    logger.info('[Teams] Membre modifié avec succès', { metadata: { teamId }, memberId });
+
+    res.json(member);
+  }));
+
+  /**
+   * Retirer un membre d'une équipe
+   */
+  app.delete("/api/teams/:teamId/members/:memberId", asyncHandler(async (req, res) => {
+    const { teamId, memberId } = req.params;
+    
+    logger.info('[Teams] Retrait membre équipe', { 
+      teamId,
+      memberas unknown)unknown)unknownnownIdas unknown)unknown)unknownnown any)?.id 
+    });
+
+    const existingMember = await db.query.teamMembers.findFirst({
+      where: and(
+        eq(teamMembers.id, memberId),
+        eq(teamMembers.teamId, teamId)
+      ),
+    });
+
+    if (!existingMember) {
+      throw new NotFoundError(`Membre ${memberId} dans équipe ${teamId} non trouvé`);
+    }
+
+    // Désactiver le membre plutôt que de le supprimer
+    await db
+      .update(teamMembers)
+      .set({ 
+        isActive: false,
+        leftAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(teamMembers.id, memberId));
+
+    logger.info('[Teams] Membre retiré avec succès', { metadata: { teamId }, memberId });
+
+    res.json({ message: "Membre retiré de l'équipe avec succès" });
+  }));
+
+  /**
+   * Récupérer les utilisateurs disponibles pour ajout à une équipe
+   */
+  app.get("/api/teams/:teamId/available-users", asyncHandler(async (req, res) => {
+    const teamId = req.params.teamId;
+    
+    logger.info('[Teams] Récupération utilisateurs disponibles', { 
+      as unknown)unknown)unknownnownusas unknown)unknown)unknownnownr as any)?.id 
+    });
+
+    // Récupérer tous les utilisateurs actifs
+    const allUsers = await db.query.users.findMany({
+      columns: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+      },
+      orderBy: [asc(users.firstName)],
+    });
+
+    // Récupérer les membres actuels de l'équipe
+    const currentMembers = await db.query.teamMembers.findMany({
+      where: and(
+        eq(teamMembers.teamId, teamId),
+        eq(teamMembers.isActive, true)
+      ),
+      columns: {
+        userId: true,
+      },
+    });
+
+    const currentMemberIds = new Set(
+      currentMembers.map(m => m.userId).filter(Boolean)
+    );
+
+    // Filtrer les utilisateurs disponibles
+    const availableUsers = allUsers.filter(user => !currentMemberIds.has(user.id));
+
+    logger.info('[Teams] Utilisateurs disponibles récupérés', { 
+      teamId,
+      availableCount: availableUsers.length 
+    });
+
+    res.json(availableUsers);
+  }));
+}

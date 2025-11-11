@@ -1,0 +1,722 @@
+import { z } from "zod";
+import { createInsertSchema } from "drizzle-zod";
+
+// ========================================
+// Types d'événements métier prioritaires
+// ========================================
+
+export enum EventType {
+  // AOs (Appels d'Offres)
+  AO_CREATED = 'ao.created',
+  AO_STATUS_CHANGED = 'ao.status_changed',
+  
+  // Offres
+  OFFER_STATUS_CHANGED = 'offer.status_changed',
+  OFFER_SIGNED = 'offer.signed',
+  OFFER_VALIDATED = 'offer.validated',
+  OFFER_CREATED = 'offer.created',
+  OFFER_UPDATED = 'offer.updated',
+  
+  // Projets  
+  PROJECT_CREATED = 'project.created',
+  PROJECT_UPDATED = 'project.updated',
+  PROJECT_STATUS_CHANGED = 'project.status_changed',
+  PROJECT_TASK_ASSIGNED = 'project.task_assigned',
+  
+  // Tâches
+  TASK_OVERDUE = 'task.overdue', 
+  TASK_STATUS_CHANGED = 'task.status_changed',
+  TASK_DEADLINE_APPROACHING = 'task.deadline_approaching',
+  
+  // Validations
+  VALIDATION_MILESTONE_VALIDATED = 'validation_milestone.validated',
+  VALIDATION_MILESTONE_REJECTED = 'validation_milestone.rejected',
+  
+  // Chiffrage
+  CHIFFRAGE_COMPLETED = 'chiffrage.completed',
+  SUPPLIER_QUOTE_RECEIVED = 'supplier_quote.received',
+  
+  // KPIs & Système
+  KPI_REFRESH_HINT = 'kpi.refresh_hint',
+  SYSTEM_MAINTENANCE = 'system.maintenance',
+  
+  // Fournisseurs
+  SUPPLIER_REQUEST_SENT = 'supplier_request.sent',
+  SUPPLIER_RESPONSE_RECEIVED = 'supplier_response.received',
+  
+  // Priorités intelligentes
+  PRIORITY_SCORE_UPDATED = 'priority.score_updated',
+  PRIORITY_LEVEL_CHANGED = 'priority.level_changed',
+  PRIORITY_OVERRIDE_APPLIED = 'priority.override_applied',
+  PRIORITY_ALERT_CREATED = 'priority.alert_created',
+  PRIORITY_CONFIG_UPDATED = 'priority.config_updated',
+  
+  // Métriques et performances
+  WORKLOAD_UPDATED = 'workload.updated',
+  PERFORMANCE_METRICS_UPDATED = 'performance.metrics_updated',
+  HOURS_VARIANCE_ALERT = 'hours.variance_alert',
+  ESTIMATION_ACCURACY_ALERT = 'estimation.accuracy_alert',
+  
+  // Gantt et planification
+  GANTT_TASK_MOVED = 'gantt.task_moved',
+  GANTT_TASK_RESIZED = 'gantt.task_resized',
+  GANTT_DEPENDENCY_CREATED = 'gantt.dependency_created',
+  GANTT_MILESTONE_CREATED = 'gantt.milestone_created',
+  
+  // Alertes techniques OCR
+  TECHNICAL_ALERT = 'technical.alert',
+  
+  // Intelligence temporelle et planification
+  DATE_INTELLIGENCE_TIMELINE_CALCULATED = 'date_intelligence.timeline_calculated',
+  DATE_INTELLIGENCE_CASCADE_RECALCULATED = 'date_intelligence.cascade_recalculated', 
+  DATE_INTELLIGENCE_RULE_APPLIED = 'date_intelligence.rule_applied',
+  DATE_INTELLIGENCE_ALERT_CREATED = 'date_intelligence.alert_created',
+  DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED = 'date_intelligence.alert_acknowledged',
+  DATE_INTELLIGENCE_ALERT_RESOLVED = 'date_intelligence.alert_resolved',
+  DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED = 'date_intelligence.planning_issue_detected',
+  
+  // Analytics et métriques consolidées
+  ANALYTICS_CALCULATED = 'analytics.calculated',
+  
+  // === NOUVEAUX TYPES ALERTES MÉTIER ===
+  BUSINESS_ALERT_CREATED = 'business_alert.created',
+  BUSINESS_ALERT_ACKNOWLEDGED = 'business_alert.acknowledged', 
+  BUSINESS_ALERT_RESOLVED = 'business_alert.resolved',
+  BUSINESS_ALERT_DISMISSED = 'business_alert.dismissed',
+  BUSINESS_ALERT_ASSIGNED = 'business_alert.assigned',
+  
+  ALERT_THRESHOLD_CREATED = 'alert_threshold.created',
+  ALERT_THRESHOLD_UPDATED = 'alert_threshold.updated',
+  ALERT_THRESHOLD_DEACTIVATED = 'alert_threshold.deactivated',
+  
+  // Événements déclencheurs évaluation seuils
+  PREDICTIVE_SNAPSHOT_SAVED = 'predictive.snapshot_saved',
+  
+  // Événements chatbot et apprentissage adaptatif
+  CHATBOT_QUERY_PROCESSED = 'chatbot.query_processed',
+  CHATBOT_FEEDBACK_RECEIVED = 'chatbot.feedback_received',
+  
+  // Batigest ERP Synchronization
+  BATIGEST_EXPORT_QUEUED = 'batigest.export_queued',
+  BATIGEST_EXPORT_SYNCED = 'batigest.export_synced',
+  BATIGEST_EXPORT_ERROR = 'batigest.export_error'
+}
+
+// ========================================
+// Interfaces Payloads Événements Alertes Métier
+// ========================================
+
+// Événement création alerte business
+export interface BusinessAlertCreatedPayload {
+  alert_id: string;
+  alert_type: string;        // 'profitability', 'team_overload', etc.
+  entity_type: string;       // 'project', 'team', etc.
+  entity_id: string;
+  entity_name: string;
+  severity: string;          // 'info', 'warning', 'error', 'critical'
+  title: string;
+  message: string;
+  threshold_value?: number;
+  actual_value?: number;
+  variance?: number;
+  triggered_at: string;      // ISO timestamp
+  threshold_id?: string;
+  context_data?: Record<string, unknown>;
+}
+
+// Événement acknowledgment alerte
+export interface BusinessAlertAcknowledgedPayload {
+  alert_id: string;
+  acknowledged_by: string;   // User ID
+  acknowledged_at: string;   // ISO timestamp
+  notes?: string;
+  previous_status: string;
+  new_status: 'acknowledged';
+}
+
+// Événement résolution alerte
+export interface BusinessAlertResolvedPayload {
+  alert_id: string;
+  resolved_by: string;       // User ID
+  resolved_at: string;       // ISO timestamp
+  resolution_notes: string;
+  previous_status: string;
+  new_status: 'resolved';
+  resolution_duration_minutes?: number; // Temps résolution
+}
+
+// Événement dismissal alerte
+export interface BusinessAlertDismissedPayload {
+  alert_id: string;
+  dismissed_by: string;      // User ID
+  dismissed_at: string;      // ISO timestamp
+  dismissal_reason?: string;
+  previous_status: string;
+  new_status: 'dismissed';
+}
+
+// Événement assignation alerte
+export interface BusinessAlertAssignedPayload {
+  alert_id: string;
+  assigned_to: string;       // User ID assigné
+  assigned_by: string;       // User ID qui assigne
+  assigned_at: string;       // ISO timestamp
+  previous_assigned_to?: string;
+}
+
+// Événement configuration seuil
+export interface AlertThresholdCreatedPayload {
+  threshold_id: string;
+  threshold_key: string;     // 'profitability_margin', etc.
+  operator: string;          // 'less_than', 'greater_than', etc.
+  threshold_value: number;
+  scope_type: string;        // 'global', 'project', etc.
+  scope_entity_id?: string;
+  severity: string;
+  created_by: string;        // User ID
+  is_active: boolean;
+  notification_channels: string[];
+}
+
+export interface AlertThresholdUpdatedPayload {
+  threshold_id: string;
+  updated_by: string;        // User ID
+  updated_at: string;        // ISO timestamp
+  changes: Record<st, unknown>unknown>; // Champs modifiés
+  was_active: boolean;
+  is_active: boolean;
+}
+
+export interface AlertThresholdDeactivatedPayload {
+  threshold_id: string;
+  deactivated_by: string;    // User ID
+  deactivated_at: string;    // ISO timestamp
+  reason?: string;
+}
+
+// Événement déclencheur évaluation prédictive
+export interface PredictiveSnapshotSavedPayload {
+  snapshot_id: string;
+  calculation_type: string;  // 'revenue_forecast', 'risk_analysis', etc.
+  calculated_at: string;
+  values: Record<string, number>;
+  triggers_evaluation: boolean;
+  confidence_score?: number;
+}
+
+// ========================================
+// Union Type EventPayload Extended
+// ========================================
+
+export type EventPayload = 
+  // Payloads alertes métier
+  | BusinessAlertCreatedPayload
+  | BusinessAlertAcknowledgedPayload
+  | BusinessAlertResolvedPayload
+  | BusinessAlertDismissedPayload
+  | BusinessAlertAssignedPayload
+  | AlertThresholdCreatedPayload
+  | AlertThresholdUpdatedPayload
+  | AlertThresholdDeactivatedPayload
+  | PredictiveSnapshotSavedPayload;
+
+// ========================================
+// Schema événement temps réel
+// ========================================
+
+export const realtimeEventSchema = z.object({
+  id: z.string().uuid(),
+  type: z.nativeEnum(EventType),
+  entity: z.enum(['ao', 'appel_offres', 'offer', 'project', 'task', 'validation', 'supplier', 'system', 'technical', 'date_intelligence', 'business_alert', 'alert_threshold', 'batigest', 'analytics']),
+  entityId: z.string(),
+  
+  // Relations pour navigation et contexte
+  projectId: z.string().optional(),
+  offerId: z.string().optional(),
+  taskId: z.string().optional(),
+  
+  // Informations de changement d'état
+  prevStatus: z.string().optional(),
+  newStatus: z.string().optional(),
+  
+  // Métadonnées de notification
+  severity: z.enum(['info', 'warning', 'success', 'error', 'critical']),
+  message: z.string(),
+  title: z.string().optional(),
+  
+  // Pour invalidation cache ciblée TanStack Query
+  affectedQueryKeys: z.array(z.array(z.string())),
+  
+  // Métadonnées système
+  timestamp: z.string().datetime(),
+  userId: z.string().optional(), // Pour filtrage futur
+  
+  // Données additionnelles contextuelles
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type RealtimeEvent = z.infer<typeof realtimeEventSchema>;
+
+// ========================================
+// Schema pour filtrage des événements
+// ========================================
+
+export const eventFilterSchema = z.object({
+  eventTypes: z.array(z.nativeEnum(EventType)).optional(),
+  entities: z.array(z.string()).optional(),
+  entityIds: z.array(z.string()).optional(),
+  projectIds: z.array(z.string()).optional(),
+  offerIds: z.array(z.string()).optional(),
+  severities: z.array(z.enum(['info', 'warning', 'success', 'error', 'critical'])).optional(),
+  userId: z.string().optional(),
+});
+
+export type EventFilter = z.infer<typeof eventFilterSchema>;
+
+// ========================================
+// Messages WebSocket
+// ========================================
+
+export const wsMessageSchema = z.discriminatedUnion('type', [
+  // Événement temps réel
+  z.object({
+    type: z.literal('event'),
+    data: realtimeEventSchema,
+  }),
+  
+  // Heartbeat
+  z.object({
+    type: z.literal('ping'),
+    timestamp: z.string().datetime(),
+  }),
+  
+  z.object({
+    type: z.literal('pong'),
+    timestamp: z.string().datetime(),
+  }),
+  
+  // Authentification
+  z.object({
+    type: z.literal('auth'),
+    token: z.string().optional(),
+  }),
+  
+  z.object({
+    type: z.literal('auth_success'),
+    userId: z.string(),
+  }),
+  
+  z.object({
+    type: z.literal('auth_error'),
+    message: z.string(),
+  }),
+  
+  // Souscription aux événements
+  z.object({
+    type: z.literal('subscribe'),
+    filter: eventFilterSchema.optional(),
+  }),
+  
+  z.object({
+    type: z.literal('unsubscribe'),
+  }),
+  
+  // Erreurs système
+  z.object({
+    type: z.literal('error'),
+    message: z.string(),
+    code: z.string().optional(),
+  }),
+]);
+
+export type WsMessage = z.infer<typeof wsMessageSchema>;
+
+// ========================================
+// Templates de messages métier
+// ========================================
+
+export const eventMessageTemplates: Record<EventType, (event: RealtimeEvent) => { title: string; message: string }> = {
+  [EventType.AO_CREATED]: (event) => ({
+    title: "Nouvel AO",
+    message: `📋 Nouvel appel d'offre créé : ${event.metadata?.reference || event.entityId}`
+  }),
+  
+  [EventType.AO_STATUS_CHANGED]: (event) => ({
+    title: "Statut AO modifié",
+    message: `📋 AO ${event.metadata?.reference || event.entityId} : ${event.prevStatus} → ${event.newStatus}`
+  }),
+  
+  [EventType.OFFER_SIGNED]: (event) => ({
+    title: "Offre signée",
+    message: `✅ L'offre ${event.metadata?.reference || event.entityId} a été signée par le client`
+  }),
+  
+  [EventType.OFFER_VALIDATED]: (event) => ({
+    title: "Validation terminée",
+    message: `🎯 Validation fin d'études terminée pour l'offre ${event.metadata?.reference || event.entityId}`
+  }),
+  
+  [EventType.OFFER_STATUS_CHANGED]: (event) => ({
+    title: "Statut offre modifié",
+    message: `📋 Offre ${event.metadata?.reference || event.entityId} : ${event.prevStatus} → ${event.newStatus}`
+  }),
+  
+  [EventType.PROJECT_CREATED]: (event) => ({
+    title: "Nouveau projet",
+    message: `🚀 Nouveau projet créé : ${event.metadata?.name || event.entityId}`
+  }),
+  
+  [EventType.PROJECT_UPDATED]: (event) => ({
+    title: "Projet mis à jour",
+    message: `📝 Projet ${event.metadata?.name || event.entityId} mis à jour depuis ${event.metadata?.source || 'l\'application'}`
+  }),
+  
+  [EventType.PROJECT_STATUS_CHANGED]: (event) => ({
+    title: "Statut projet modifié",
+    message: `📊 Projet ${event.metadata?.name || event.entityId} : ${event.prevStatus} → ${event.newStatus}`
+  }),
+  
+  [EventType.TASK_OVERDUE]: (event) => ({
+    title: "Tâche en retard",
+    message: `⚠️ Tâche en retard : ${event.metadata?.name || event.entityId} (${event.metadata?.delayDays || 'N/A'} jours)`
+  }),
+  
+  [EventType.TASK_STATUS_CHANGED]: (event) => ({
+    title: "Tâche mise à jour",
+    message: `✓ Tâche ${event.metadata?.name || event.entityId} : ${event.prevStatus} → ${event.newStatus}`
+  }),
+  
+  [EventType.TASK_DEADLINE_APPROACHING]: (event) => ({
+    title: "Échéance proche",
+    message: `📅 Tâche ${event.metadata?.name || event.entityId} due dans ${event.metadata?.daysUntilDue || 'N/A'} jours`
+  }),
+  
+  [EventType.VALIDATION_MILESTONE_VALIDATED]: (event) => ({
+    title: "Jalon validé",
+    message: `✅ Jalon ${event.metadata?.milestoneName || 'validation'} validé par ${event.metadata?.validatorName || 'l\'équipe'}`
+  }),
+  
+  [EventType.VALIDATION_MILESTONE_REJECTED]: (event) => ({
+    title: "Jalon rejeté",
+    message: `❌ Jalon ${event.metadata?.milestoneName || 'validation'} rejeté : ${event.metadata?.reason || 'voir détails'}`
+  }),
+  
+  [EventType.CHIFFRAGE_COMPLETED]: (event) => ({
+    title: "Chiffrage terminé",
+    message: `💰 Chiffrage terminé pour l'offre ${event.metadata?.reference || event.entityId}`
+  }),
+  
+  [EventType.SUPPLIER_QUOTE_RECEIVED]: (event) => ({
+    title: "Devis fournisseur reçu",
+    message: `📦 Nouveau devis reçu de ${event.metadata?.supplierName || 'fournisseur'}`
+  }),
+  
+  [EventType.SUPPLIER_REQUEST_SENT]: (event) => ({
+    title: "Demande fournisseur envoyée",
+    message: `📤 Demande de prix envoyée à ${event.metadata?.supplierName || 'fournisseur'}`
+  }),
+  
+  [EventType.SUPPLIER_RESPONSE_RECEIVED]: (event) => ({
+    title: "Réponse fournisseur",
+    message: `📥 Réponse reçue de ${event.metadata?.supplierName || 'fournisseur'}`
+  }),
+  
+  [EventType.KPI_REFRESH_HINT]: (event) => ({
+    title: "Données mises à jour",
+    message: `📊 Les indicateurs ont été actualisés`
+  }),
+  
+  [EventType.SYSTEM_MAINTENANCE]: (event) => ({
+    title: "Maintenance système",
+    message: `🔧 ${event.message}`
+  }),
+  
+  [EventType.OFFER_CREATED]: (event) => ({
+    title: "Nouvelle offre",
+    message: `📋 Nouvelle offre créée : ${event.metadata?.reference || event.entityId}`
+  }),
+  
+  [EventType.OFFER_UPDATED]: (event) => ({
+    title: "Offre mise à jour",
+    message: `📝 Offre ${event.metadata?.reference || event.entityId} mise à jour depuis ${event.metadata?.source || 'l\'application'}`
+  }),
+  
+  [EventType.PROJECT_TASK_ASSIGNED]: (event) => ({
+    title: "Tâche assignée",
+    message: `👤 Tâche ${event.metadata?.taskName || 'nouvelle'} assignée à ${event.metadata?.assigneeName || 'l\'équipe'}`
+  }),
+  
+  // Priorités intelligentes
+  [EventType.PRIORITY_SCORE_UPDATED]: (event) => ({
+    title: "Score de priorité mis à jour",
+    message: `🎯 Score: ${event.metadata?.oldScore || 'N/A'} → ${event.metadata?.newScore || 'N/A'} pour ${event.metadata?.itemName || event.entityId}`
+  }),
+  
+  [EventType.PRIORITY_LEVEL_CHANGED]: (event) => ({
+    title: "Niveau de priorité modifié",
+    message: `🔺 Priorité ${event.metadata?.itemName || event.entityId}: ${event.prevStatus} → ${event.newStatus}`
+  }),
+  
+  [EventType.PRIORITY_OVERRIDE_APPLIED]: (event) => ({
+    title: "Priorité forcée manuellement",
+    message: `⚡ Priorité forcée pour ${event.metadata?.itemName || event.entityId}: ${event.newStatus} (${event.metadata?.reason || 'Aucune raison'})`
+  }),
+  
+  [EventType.PRIORITY_ALERT_CREATED]: (event) => ({
+    title: "Alerte de priorité critique",
+    message: `🚨 Nouvelle alerte critique: ${event.metadata?.itemName || event.entityId} (Score: ${event.metadata?.score || 'N/A'})`
+  }),
+  
+  [EventType.PRIORITY_CONFIG_UPDATED]: (event) => ({
+    title: "Configuration priorité mise à jour",
+    message: `⚙️ Règles de priorisation mises à jour par ${event.metadata?.updatedBy || 'admin'}`
+  }),
+  
+  // Métriques et performances  
+  [EventType.WORKLOAD_UPDATED]: (event) => ({
+    title: "Charge de travail mise à jour",
+    message: `📊 Charge BE mise à jour: ${event.metadata?.memberName || 'équipe'} (${event.metadata?.newLoad || 'N/A'}%)`
+  }),
+  
+  [EventType.PERFORMANCE_METRICS_UPDATED]: (event) => ({
+    title: "Métriques de performance actualisées",
+    message: `📈 Précision: ${event.metadata?.accuracy || 'N/A'}% | Productivité: ${event.metadata?.productivity || 'N/A'}%`
+  }),
+  
+  [EventType.HOURS_VARIANCE_ALERT]: (event) => ({
+    title: "Écart important d'heures détecté",
+    message: `⚠️ Écart de ${event.metadata?.variancePercent || 'N/A'}% détecté pour ${event.metadata?.itemName || event.entityId}`
+  }),
+  
+  [EventType.ESTIMATION_ACCURACY_ALERT]: (event) => ({
+    title: "Précision d'estimation faible",
+    message: `📉 Précision d'estimation à ${event.metadata?.accuracy || 'N/A'}% (seuil: ${event.metadata?.threshold || '70'}%)`
+  }),
+  
+  // Gantt et planification
+  [EventType.GANTT_TASK_MOVED]: (event) => ({
+    title: "Tâche déplacée",
+    message: `📅 ${event.metadata?.taskName || 'Tâche'} déplacée: ${event.metadata?.oldDate || 'N/A'} → ${event.metadata?.newDate || 'N/A'}`
+  }),
+  
+  [EventType.GANTT_TASK_RESIZED]: (event) => ({
+    title: "Durée de tâche modifiée", 
+    message: `⏱️ ${event.metadata?.taskName || 'Tâche'} redimensionnée: ${event.metadata?.oldDuration || 'N/A'} → ${event.metadata?.newDuration || 'N/A'} jours`
+  }),
+  
+  [EventType.GANTT_DEPENDENCY_CREATED]: (event) => ({
+    title: "Dépendance créée",
+    message: `🔗 Dépendance créée entre ${event.metadata?.fromTask || 'tâche'} → ${event.metadata?.toTask || 'tâche'}`
+  }),
+  
+  [EventType.GANTT_MILESTONE_CREATED]: (event) => ({
+    title: "Nouveau jalon créé",
+    message: `🎯 Jalon "${event.metadata?.milestoneName || 'Nouveau jalon'}" créé le ${event.metadata?.date || 'N/A'}`
+  }),
+
+  // Analytics et métriques
+  [EventType.ANALYTICS_CALCULATED]: (event) => ({
+    title: "Métriques mises à jour",
+    message: `📊 ${event.message}`
+  }),
+
+  // Alertes techniques OCR
+  [EventType.TECHNICAL_ALERT]: (event) => ({
+    title: "Alerte technique",
+    message: `🔧 ${event.message}`
+  }),
+
+  // Intelligence temporelle et planification
+  [EventType.DATE_INTELLIGENCE_TIMELINE_CALCULATED]: (event) => ({
+    title: "Planning calculé",
+    message: `📅 Timeline calculée pour ${event.metadata?.projectName || event.entityId} (${event.metadata?.duration || 'N/A'} jours)`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_CASCADE_RECALCULATED]: (event) => ({
+    title: "Cascade planning recalculée",
+    message: `🔄 Recalcul en cascade effectué pour ${event.metadata?.projectName || event.entityId} suite à ${event.metadata?.trigger || 'modification'}`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_RULE_APPLIED]: (event) => ({
+    title: "Règle métier appliquée",
+    message: `📋 Règle "${event.metadata?.ruleName || 'métier'}" appliquée à ${event.metadata?.projectName || event.entityId}`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_ALERT_CREATED]: (event) => ({
+    title: "Alerte planning créée",
+    message: `⚠️ ${event.metadata?.alertType || 'Alerte'} détectée: ${event.message}`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED]: (event) => ({
+    title: "Alerte acquittée",
+    message: `✅ Alerte "${event.metadata?.alertType || 'planning'}" acquittée par ${event.metadata?.acknowledgedBy || 'utilisateur'}`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_ALERT_RESOLVED]: (event) => ({
+    title: "Alerte résolue",
+    message: `✅ Alerte "${event.metadata?.alertType || 'planning'}" résolue: ${event.metadata?.resolutionNote || 'problème corrigé'}`
+  }),
+
+  [EventType.DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED]: (event) => ({
+    title: "Problème de planification détecté",
+    message: `🚨 Conflit détecté: ${event.metadata?.issueDescription || event.message}`
+  }),
+
+  // === NOUVEAUX TEMPLATES ALERTES MÉTIER ===
+  [EventType.BUSINESS_ALERT_CREATED]: (event) => ({
+    title: "🚨 Nouvelle alerte métier",
+    message: `Alerte ${event.metadata?.alert_type || 'métier'} détectée: ${event.metadata?.title || event.message} (Sévérité: ${event.metadata?.severity || 'N/A'})`
+  }),
+
+  [EventType.BUSINESS_ALERT_ACKNOWLEDGED]: (event) => ({
+    title: "✅ Alerte acquittée",
+    message: `Alerte ${event.entityId} acquittée par ${event.metadata?.acknowledged_by || 'utilisateur'} ${event.metadata?.notes ? '- ' + event.metadata.notes : ''}`
+  }),
+
+  [EventType.BUSINESS_ALERT_RESOLVED]: (event) => ({
+    title: "✅ Alerte résolue",
+    message: `Alerte ${event.entityId} résolue par ${event.metadata?.resolved_by || 'utilisateur'} ${event.metadata?.resolution_duration_minutes ? 'en ' + event.metadata.resolution_duration_minutes + ' min' : ''}`
+  }),
+
+  [EventType.BUSINESS_ALERT_DISMISSED]: (event) => ({
+    title: "❌ Alerte ignorée",
+    message: `Alerte ${event.entityId} ignorée par ${event.metadata?.dismissed_by || 'utilisateur'} ${event.metadata?.dismissal_reason ? '- ' + event.metadata.dismissal_reason : ''}`
+  }),
+
+  [EventType.BUSINESS_ALERT_ASSIGNED]: (event) => ({
+    title: "👤 Alerte assignée",
+    message: `Alerte ${event.entityId} assignée à ${event.metadata?.assigned_to || 'utilisateur'} par ${event.metadata?.assigned_by || 'système'}`
+  }),
+
+  [EventType.ALERT_THRESHOLD_CREATED]: (event) => ({
+    title: "⚙️ Nouveau seuil d'alerte",
+    message: `Seuil ${event.metadata?.threshold_key || 'métier'} créé: ${event.metadata?.threshold_value || 'N/A'} (${event.metadata?.operator || 'condition'}) - Sévérité: ${event.metadata?.severity || 'N/A'}`
+  }),
+
+  [EventType.ALERT_THRESHOLD_UPDATED]: (event) => ({
+    title: "🔧 Seuil d'alerte modifié",
+    message: `Seuil ${event.entityId} mis à jour par ${event.metadata?.updated_by || 'admin'} ${event.metadata?.activation_changed ? '(activation modifiée)' : ''}`
+  }),
+
+  [EventType.ALERT_THRESHOLD_DEACTIVATED]: (event) => ({
+    title: "🔇 Seuil d'alerte désactivé",
+    message: `Seuil ${event.entityId} désactivé par ${event.metadata?.deactivated_by || 'admin'} ${event.metadata?.reason ? '- ' + event.metadata.reason : ''}`
+  }),
+
+  [EventType.PREDICTIVE_SNAPSHOT_SAVED]: (event) => ({
+    title: "📊 Prédiction calculée",
+    message: `Snapshot prédictif ${event.metadata?.calculation_type || 'général'} sauvegardé ${event.metadata?.triggers_evaluation ? '(déclenche évaluation seuils)' : ''}`
+  }),
+
+  // === TEMPLATES CHATBOT ===
+  [EventType.CHATBOT_QUERY_PROCESSED]: (event) => ({
+    title: "💬 Requête chatbot traitée",
+    message: `Requête traitée avec succès ${typeof event.metadata?.query_text === 'string' ? ': "' + event.metadata.query_text.substring(0, 50) + '..."' : ''}`
+  }),
+
+  [EventType.CHATBOT_FEEDBACK_RECEIVED]: (event) => ({
+    title: "⭐ Feedback chatbot reçu",
+    message: `Feedback ${event.metadata?.rating || 'reçu'} pour la requête ${event.metadata?.query_id || event.entityId}`
+  }),
+
+  // === TEMPLATES BATIGEST ERP ===
+  [EventType.BATIGEST_EXPORT_QUEUED]: (event) => ({
+    title: "📤 Export Batigest en attente",
+    message: `Export ${event.metadata?.documentType === 'client_quote' ? 'devis client' : 'bon de commande'} mis en queue pour synchronisation`
+  }),
+
+  [EventType.BATIGEST_EXPORT_SYNCED]: (event) => ({
+    title: "✅ Synchronisation Batigest réussie",
+    message: `${event.metadata?.documentType === 'client_quote' ? 'Devis client' : 'Bon de commande'} synchronisé avec Batigest avec succès`
+  }),
+
+  [EventType.BATIGEST_EXPORT_ERROR]: (event) => ({
+    title: "❌ Erreur synchronisation Batigest",
+    message: `Erreur lors de la synchronisation ${event.metadata?.documentType === 'client_quote' ? 'du devis' : 'du bon de commande'}: ${event.metadata?.error || 'erreur inconnue'}`
+  }),
+};
+
+// ========================================
+// Helpers pour création d'événements
+// ========================================
+
+export function createRealtimeEvent(params: {
+  type: EventType;
+  entity: RealtimeEvent['entity'];
+  entityId: string;
+  severity: RealtimeEvent['severity'];
+  message?: string;
+  title?: string;
+  affectedQueryKeys: string[][];
+  projectId?: string;
+  offerId?: string;
+  taskId?: string;
+  prevStatus?: string;
+  newStatus?: string;
+  userId?: string;
+  metadata?: Recor, unknown>unknunknown>any>;
+}): RealtimeEvent {
+  const templates = eventMessageTemplates[params.type];
+  const generatedMessage = templates ? templates({ ...params, id: '', timestamp: new Date().toISOString() } as RealtimeEvent) : null;
+  
+  return {
+    id: crypto.randomUUID(),
+    type: params.type,
+    entity: params.entity,
+    entityId: params.entityId,
+    projectId: params.projectId,
+    offerId: params.offerId,
+    taskId: params.taskId,
+    prevStatus: params.prevStatus,
+    newStatus: params.newStatus,
+    severity: params.severity,
+    message: params.message || generatedMessage?.message || `Événement ${params.type}`,
+    title: params.title || generatedMessage?.title,
+    affectedQueryKeys: params.affectedQueryKeys,
+    timestamp: new Date().toISOString(),
+    userId: params.userId,
+    metadata: params.metadata,
+  };
+}
+
+// Helpers pour query keys communes
+export const commonQueryKeys = {
+  offers: () => ['/api/offers'],
+  offer: (id: string) => ['/api/offers', id],
+  projects: () => ['/api/projects'],
+  project: (id: string) => ['/api/projects', id],
+  tasks: () => ['/api/tasks'],
+  task: (id: string) => ['/api/tasks', id],
+  dashboardKpis: (filter?: string) => filter ? ['/api/dashboard/kpis', filter] : ['/api/dashboard/kpis'],
+  dashboardStats: () => ['/api/dashboard/stats'],
+  beWorkload: () => ['/api/be-workload'],
+  validationMilestones: (entityType?: string, entityId?: string) => 
+    entityType && entityId ? ['/api/validation-milestones', entityType, entityId] : ['/api/validation-milestones'],
+  suppliers: () => ['/api/suppliers'],
+  supplierRequests: () => ['/api/supplier-requests'],
+  
+  // Nouvelles query keys pour priorités et métriques
+  priorities: () => ['/api/priorities'],
+  priority: (id: string) => ['/api/priorities', id],
+  priorityAlerts: () => ['/api/priorities/alerts'],
+  priorityHistory: (itemId: string) => ['/api/priorities', itemId, 'history'],
+  priorityStats: () => ['/api/priorities/stats'],
+  priorityConfig: () => ['/api/priorities/config'],
+  workloadMetrics: (period?: string) => period ? ['/api/workload/performance-history', period] : ['/api/workload/performance-history'],
+  projectMetrics: () => ['/api/projects/metrics'],
+  
+  // === NOUVELLES QUERY KEYS ALERTES MÉTIER ===
+  businessAlerts: () => ['/api/alerts', 'business'],
+  businessAlert: (id: string) => ['/api/alerts', id],
+  businessAlertsByStatus: (status: string) => ['/api/alerts', 'status', status],
+  businessAlertsByUser: (userId: string) => ['/api/alerts', 'assigned', userId],
+  alertThresholds: () => ['/api/alerts', 'thresholds'],
+  alertThreshold: (id: string) => ['/api/alerts', 'thresholds', id],
+  alertThresholdsByKey: (key: string) => ['/api/alerts', 'thresholds', key],
+  alertSettings: () => ['/api/alerts', 'settings'],
+  alertEvaluation: () => ['/api/alerts', 'evaluation', 'trigger'],
+  dashboardAlerts: () => ['/api/dashboard', 'alerts'],
+  dashboardSettings: () => ['/api/dashboard', 'settings'],
+  alertNotifications: (userId?: string) => userId ? ['/api/notifications', userId] : ['/api/notifications', 'alerts'],
+  analyticsAlerts: () => ['/api/analytics', 'alerts', 'resolution_metrics'],
+};

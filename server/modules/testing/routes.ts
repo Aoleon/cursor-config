@@ -49,10 +49,8 @@ async function collectServerInfo(): Promise<{
     {
       operation: 'collectServerInfo',
 service: 'routes',;
-      metadata: {}
-    }
-  );
-    });
+      metadata: {
+      });
     return {
       serverLogs: 'Erreur lors de la collecte',
       version: process.version,
@@ -151,15 +149,14 @@ ${serverInfo.serverLogs}
           errorText,
           repo: `${repoOwner}/${repoName}`,
           issueTitle: bugReport.title
-        }
-      });
+        });
       return null;
     }
 
     const issueData = await response.json();
-    logger.info('[Testing] Issue GitHub créée', {
-      metadata: { issueUrl: issueData.html_url }
-    });
+    logger.info('[Testing] Issue GitHub créée', { metadata: { issueUrl: issueData.html_url 
+        }
+            });
     return issueData.html_url;
 
   
@@ -168,9 +165,7 @@ ${serverInfo.serverLogs}
       operation: 'collectServerInfo',
       service: 'routes',
       metadata: {}
-    }
-  );
-    });
+    } );
     return null;
   }
 }
@@ -193,14 +188,14 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
   router.post('/api/test-data/planning',
     isAuthenticated,
     rateLimits.creation,
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Testing] Création données test planning Gantt', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Testing] Création données test planning Gantt', { metadata: {
           route: '/api/test-data/planning',
           method: 'POST',
           userId: req.user?.id
+
         }
-      });
+                });
 
       const testProjects = [
         {
@@ -348,20 +343,20 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
         createdTasks2.push(task);
       }
 
-      logger.info('[Testing] Données planning test créées', { 
-        metadata: { 
+      logger.info('[Testing] Données planning test créées', { metadata: { 
           projectsCreated: createdProjects.length, 
           tasksCreated: createdTasks.length + createdTasks2.length 
-        } 
-      });
+        }
+            });
 
       res.json({
         projects: createdProjects,
         tasks: [...createdTasks, ...createdTasks2],
         message: "Données de test complètes créées pour le planning Gantt"
       });
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // BUG REPORT ROUTES
@@ -375,14 +370,14 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
     isAuthenticated,
     rateLimits.creation,
     validateBody(insertBugReportSchema),
-    asyncHandler(async (req: any, res: Response) => {
-      logger.info('[Testing] Création nouveau rapport de bug', {
-        metadata: {
+    asyncHandler(async (req: Request, res: Response) => {
+      logger.info('[Testing] Création nouveau rapport de bug', { metadata: {
           route: '/api/bug-reports',
           method: 'POST',
           userId: req.user?.id
+
         }
-      });
+                });
       
       const serverInfo = await collectServerInfo();
       
@@ -399,18 +394,17 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
       return withErrorHandling(
     async () => {
 
-        logger.info('[Testing] Insertion rapport de bug en base', {
-          metadata: {
+        logger.info('[Testing] Insertion rapport de bug en base', { metadata: {
             type: bugReportData.type,
             priority: bugReportData.priority
-          }
-        });
+
+      });
         
         const [savedBugReport] = await db.insert(bugReports).values(bugReportData).returning();
         
-        logger.info('[Testing] Rapport sauvegardé en base', {
-          metadata: { bugReportId: savedBugReport.id }
-        });
+        logger.info('[Testing] Rapport sauvegardé en base', { metadata: { bugReportId: savedBugReport.id 
+        }
+            });
 
         let githubIssueUrl: string | null = null;
         try {
@@ -421,21 +415,18 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
       operation: 'collectServerInfo',
 service: 'routes',;
       metadata: {}
-    }
-  );
-          });
+    } );
         }
 
-        logger.info('[Testing] Rapport créé', {
-          metadata: {
+        logger.info('[Testing] Rapport créé', { metadata: {
             bugReportId: savedBugReport.id,
             type: savedBugReport.type,
             priority: savedBugReport.priority,
             userId: savedBugReport.userId,
             githubCreated: !!githubIssueUrl,
             serverInfoCollected: !!serverInfo.timestamp
-          }
-        });
+        }
+            });
 
         const responseMessage = githubIssueUrl 
           ? 'Rapport de bug créé et issue GitHub générée avec succès'
@@ -448,8 +439,7 @@ service: 'routes',;
         }, responseMessage);
 
       } catch (error) {
-        logger.error('[Testing] Erreur création rapport', {
-          metadata: { 
+        logger.error('[Testing] Erreur création rapport', { metadata: { 
             route: '/api/bug-reports',
             method: 'POST',
             bugReportType: req.body.type,
@@ -457,19 +447,27 @@ service: 'routes',;
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
             userId: req.user?.id
-          }
-        });
+        }
+            });
         throw createError.database('Erreur lors de la création du rapport de bug');
-      }
-    })
-  );
+            }
 
-  logger.info('[Testing] Routes Testing montées avec succès', {
-    metadata: {
+                      }
+
+
+                                }
+
+
+                              }));
+
+  logger.info('[Testing] Routes Testing montées avec succès', { metadata: {
       module: 'Testing',
       routes: 2
-    }
-  });
+    
+            })
+
+    
+          );
 
   return router;
 }

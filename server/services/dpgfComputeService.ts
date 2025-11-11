@@ -319,15 +319,15 @@ export class DpgfComputeService {
    */
   static serializeForStorage(data: DpgfGroupedData): Record<string, unknown> {
     return {
-      lots: data.lots.map(lot => ({
+      lots: data.lots.map(lot  => ({
         lotNumber: lot.lotNumber,
         lotName: lot.lotName,
         subtotalHT: this.formatCurrency(lot.subtotalHT),
-        categories: lot.categories.map(cat => ({
+        categories: lot.categories.map(cat  => ({
           category: cat.category,
           categoryLabel: cat.categoryLabel,
           subtotalHT: this.formatCurrency(cat.subtotalHT),
-          items: cat.items.map(item => ({
+          items: cat.items.map(item  => ({
             id: item.id,
             position: item.position,
             category: item.category,
@@ -359,8 +359,6 @@ export class DpgfComputeService {
       },
       metadata: {
         ...data.metadata,
-        generatedAt: data.metadata.generatedAt.toISOString()
-      }
-    };
+        generatedAt: data.metadata.generatedAt.toISOString() } });
   }
 }

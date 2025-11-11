@@ -77,8 +77,7 @@ class RateLimitMonitor {
           },
           alert: 'CRITICAL',
           action: 'Possible attack or abuse detected'
-        }
-      });
+        });
       
       // TODO: Send alert to administrators
       // TODO: Consider automatic temporary IP/user ban
@@ -95,8 +94,7 @@ class RateLimitMonitor {
             timestamp: violation.timestamp
           },
           alert: 'WARNING'
-        }
-      });
+        });
     }
   }
 
@@ -134,8 +132,7 @@ class RateLimitMonitor {
           stats.violationsByEndpoint[violation.endpoint] = 0;
         }
         stats.violationsByEndpoint[violation.endpoint] += violation.count;
-      }
-    });
+      });
 
     // Get top violators
     stats.topViolators = activeViolations
@@ -144,7 +141,15 @@ class RateLimitMonitor {
       .map(([key, violation]) => ({
         key,
         count: violation.count
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
     // Get recent violations (last 10)
     stats.recentViolations = activeViolations
@@ -184,16 +189,15 @@ export function monitorRateLimit(
   ip?: string
 ): void {
   // Log the rate limit event
-  logger.warn('[RateLimit] Rate limit exceeded', {
-    metadata: {
+  logger.warn('[RateLimit] Rate limit exceeded', { metadata: {
       endpoint,
       userId,
       userEmail,
       ip,
       timestamp: new Date().toISOString(),
       event: 'rate_limit_exceeded'
-    }
-  });
+        }
+            });
   
   // Record in monitor
   monitor.recordViolation(endpoint, userId, userEmail, ip);
@@ -231,13 +235,12 @@ export function exportRateLimitViolations() {
 function incrementRateLimitMetric(endpoint: string): void {
   // TODO: Integrate with metrics service when available
   // For now, just log it
-  logger.debug('[RateLimitMonitor] Metric incremented', {
-    metadata: {
+  logger.debug('[RateLimitMonitor] Metric incremented', { metadata: {
       metric: 'rate_limit_exceeded',
       endpoint,
       timestamp: new Date().toISOString()
-    }
-  });
+        }
+            });
 }
 
 /**
@@ -262,7 +265,7 @@ export function generateRateLimitReport(): string {
     '',
     'Recent Violations:',
     ...stats.recentViolations.map(v => 
-      `  ${v.timestamp.toISOString()} - ${v.endpoint} - ${v.userId || v.ip} (${v.count} total)`
+      `  $) {v.timestamp.toISOString()} - ${v.endpoint} - ${v.userId || v.ip} (${v.count} total)`
     )
   ].join('\n');
   
@@ -273,12 +276,11 @@ export function generateRateLimitReport(): string {
 setInterval(() => {
   const stats = monitor.getStatistics();
   if (stats.totalViolations > 0) {
-    logger.info('[RateLimitMonitor] Hourly stats', {
-      metadata: {
+    logger.info('[RateLimitMonitor] Hourly stats', { metadata: {
         totalViolations: stats.totalViolations,
         uniqueEndpoints: Object.keys(stats.violationsByEndpoint).length,
         topViolator: stats.topViolators[0]
-      }
-    });
+        }
+            });
   }
 }, 3600000); // 1 hour

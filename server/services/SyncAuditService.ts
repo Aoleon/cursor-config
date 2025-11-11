@@ -23,8 +23,8 @@ export class SyncAuditService {
       metadata: {
         operation: 'constructor',
         listeners: ['monday:sync:conflict', 'monday:sync:success', 'monday:export:success', 'monday:export:failed']
-      }
-    });
+
+          });
   }
   
   /**
@@ -72,17 +72,15 @@ export class SyncAuditService {
           projectsCount: projects.filter(p => p.mondaySyncStatus).length,
           aosCount: aos.filter(a => a.mondaySyncStatus).length,
           totalSyncStates: this.syncStates.size
-        }
-      });
+
+            });
     
     },
     {
       operation: 'constructor',
       service: 'SyncAuditService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
   
@@ -123,9 +121,7 @@ export class SyncAuditService {
       operation: 'constructor',
       service: 'SyncAuditService',
       metadata: {}
-    }
-  );
-        });
+    } );
       }
       
       logger.info('[SyncAudit] Export réussi', {
@@ -136,8 +132,8 @@ export class SyncAuditService {
           entityId: event.entityId,
           mondayId: event.mondayId,
           boardId: event.boardId
-        }
-      });
+
+            });
       
       // Broadcast WebSocket event via EventBus
       const realtimeEvent = createRealtimeEvent({
@@ -156,8 +152,7 @@ export class SyncAuditService {
           entityType: event.entityType,
           mondayId: event.mondayId,
           status: 'synced'
-        }
-      });
+        });
       
       eventBus.publish(realtimeEvent);
     });
@@ -201,9 +196,7 @@ export class SyncAuditService {
       operation: 'constructor',
       service: 'SyncAuditService',
       metadata: {}
-    }
-  );
-        });
+    } );
       }
       
       logger.warn('[SyncAudit] Conflict détecté', {
@@ -217,8 +210,8 @@ export class SyncAuditService {
           mondayUpdatedAt: event.mondayUpdatedAt,
           resolution: event.resolution,
           strategy: 'monday_wins'
-        }
-      });
+
+            });
       
       // Broadcast WebSocket event via EventBus
       const realtimeEvent = createRealtimeEvent({
@@ -237,8 +230,7 @@ export class SyncAuditService {
           entityType: event.entityType,
           conflictReason: event.resolution,
           status: 'conflict'
-        }
-      });
+        });
       
       eventBus.publish(realtimeEvent);
     });
@@ -281,9 +273,7 @@ export class SyncAuditService {
       operation: 'constructor',
       service: 'SyncAuditService',
       metadata: {}
-    }
-  );
-        });
+    } );
       }
       
       logger.error('[SyncAudit] Export échoué', {
@@ -294,8 +284,8 @@ export class SyncAuditService {
           entityId: event.entityId,
           mondayId: event.mondayId,
           error: event.error
-        }
-      });
+
+            });
       
       // Broadcast WebSocket event via EventBus
       const realtimeEvent = createRealtimeEvent({
@@ -314,14 +304,13 @@ export class SyncAuditService {
           entityType: event.entityType,
           status: 'error',
           error: event.error
-        }
-      });
+        });
       
       eventBus.publish(realtimeEvent);
     });
     
     // Sync success - Generic sync success event
-    eventBus.on('monday:sync:success', (e: unknown)unknown) => {
+    eventBus.on('monday:sync:success', (e: unknown) => {
       logger.info('[SyncAudit] Sync réussie', {
         service: 'SyncAuditService',
         metadata: {
@@ -331,8 +320,8 @@ export class SyncAuditService {
           mondayId: event.metadata?.mondayId,
           boardId: event.metadata?.boardId,
           changeType: event.metadata?.changeType
-        }
-      });
+
+            });
     });
   }
   

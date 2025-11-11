@@ -57,18 +57,16 @@ export class ScoringService {
     // Déterminer si une alerte doit être déclenchée
     const shouldAlert = totalScore >= config.threshold;
 
-    logger.info('Calcul scoring technique', {
-      metadata: {
+    logger.info('Calcul scoring technique', { metadata: {
         service: 'ScoringService',
         operation: 'compute',
         totalScore,
         threshold: config.threshold,
         triggeredCriteria: triggeredCriteria.join(', ') || 'aucun',
         shouldAlert,
-        details
-      }
-    });
-
+        details 
+              }
+            });
     return {
       totalScore,
       triggeredCriteria,
@@ -76,7 +74,6 @@ export class ScoringService {
       details
     };
   }
-
   /**
    * Retourne la configuration par défaut du scoring technique
    */
@@ -104,9 +101,7 @@ export class ScoringService {
     {
       operation: 'passif',
       service: 'scoringService',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
       return false;
     }

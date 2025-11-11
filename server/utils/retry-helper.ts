@@ -183,15 +183,14 @@ export async function withRetry<T>(
     try {
       // Log de la tentative
       if (attempt > 0) {
-        logger.info('Retry attempt', {
-          metadata: {
+        logger.info('Retry attempt', { metadata: {
             service: 'RetryHelper',
             operation: 'withRetry',
             attempt: attempt + 1,
             maxRetries: (opts.maxRetries ?? 3) + 1,
             delay: stats.delays[stats.delays.length - 1] || 0
-          }
-        });
+        }
+            });
       }
       
       // Exécuter la fonction avec timeout si spécifié
@@ -203,15 +202,14 @@ export async function withRetry<T>(
       stats.totalDuration = Date.now() - startTime;
       
       if (attempt > 0) {
-        logger.info('Retry succeeded', {
-          metadata: {
+        logger.info('Retry succeeded', { metadata: {
             service: 'RetryHelper',
             operation: 'withRetry',
             attempt: attempt + 1,
             totalDuration: stats.totalDuration,
             totalAttempts: stats.attempts
-          }
-        });
+        }
+            });
       }
       
       return result;
@@ -221,8 +219,7 @@ export async function withRetry<T>(
       stats.lastError = error;
       
       // Log de l'erreur
-      logger.warn('Retry attempt failed', {
-        metadata: {
+      logger.warn('Retry attempt failed', { metadata: {
           service: 'RetryHelper',
           operation: 'withRetry',
           attempt: attempt + 1,
@@ -230,22 +227,21 @@ export async function withRetry<T>(
           errorCode: (error as any)?.code,
           errorStatus: (error as any)?.status
         }
-      });
+            });
       
       // Vérifier si c'est la dernière tentative
       if (attempt >= (opts.maxRetries ?? 3)) {
         stats.totalDuration = Date.now() - startTime;
         
-        logger.error('All retry attempts exhausted', {
-          metadata: {
+        logger.error('All retry attempts exhausted', { metadata: {
             service: 'RetryHelper',
             operation: 'withRetry',
             totalAttempts: stats.attempts,
             totalDuration: stats.totalDuration,
             delays: stats.delays,
             lastError: error instanceof Error ? error.message : String(error)
-          }
-        });
+        }
+            });
         
         // Enrichir l'erreur avec les statistiques de retry
         if (error instanceof Error) {
@@ -257,14 +253,13 @@ export async function withRetry<T>(
       
       // Vérifier si l'erreur est retriable
       if (!(opts.retryCondition ?? isRetryableError)(error)) {
-        logger.warn('Error not retriable, stopping retry', {
-          metadata: {
+        logger.warn('Error not retriable, stopping retry', { metadata: {
             service: 'RetryHelper',
             operation: 'withRetry',
             attempt: attempt + 1,
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+                                }
+                              });
         
         stats.totalDuration = Date.now() - startTime;
         
@@ -282,15 +277,14 @@ export async function withRetry<T>(
       // Callback avant le retry
       (opts.onRetry ?? (() => {}))(attempt + 1, delay, error);
       
-      logger.info('Waiting before retry', {
-        metadata: {
+      logger.info('Waiting before retry', { metadata: {
           service: 'RetryHelper',
           operation: 'withRetry',
           nextAttempt: attempt + 2,
           delayMs: delay,
           jitterEnabled: opts.jitter ?? true
         }
-      });
+            });
       
       // Attendre avant le prochain retry
       await sleep(delay);

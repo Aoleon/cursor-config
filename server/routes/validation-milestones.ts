@@ -12,12 +12,10 @@ const router = Router()
 router.get('/:offerId', asyncHandler(async (req, res) => {
   const { offerId } = req.params
   
-  logger.info('Fetching validation milestones', {
-    metadata: {
+  logger.info('Fetching validation milestones', { metadata: {
       route: '/validation-milestones/:offerId',
       offerId
-    }
-  })
+    } }
   
   const milestones = await storage.getValidationMilestones(offerId)
   res.json(milestones)
@@ -31,12 +29,10 @@ router.post('/init', asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'offerId is required' })
   }
 
-  logger.info('Initializing validation milestones', {
-    metadata: {
+  logger.info('Initializing validation milestones', { metadata: {
       route: '/validation-milestones/init',
       offerId
-    }
-  })
+    } }
 
   // Vérifier si les jalons existent déjà
   const existing = await storage.getValidationMilestones(offerId)
@@ -57,13 +53,11 @@ router.post('/init', asyncHandler(async (req, res) => {
     createdMilestones.push(milestone)
   }
 
-  logger.info('Validation milestones created', {
-    metadata: {
+  logger.info('Validation milestones created', { metadata: {
       route: '/validation-milestones/init',
       offerId,
       count: createdMilestones.length
-    }
-  })
+    } }
 
   res.status(201).json(createdMilestones)
 }))
@@ -95,16 +89,14 @@ router.patch('/:milestoneId', asyncHandler(async (req, res) => {
     
     // Vérifier si c'est un milestone de bouclage
     if (requiredBouclageTypes.includes(updatedMilestone.milestoneType)) {
-      logger.info('Milestone bouclage complété', {
-        metadata: {
+      logger.info('Milestone bouclage complété', { metadata: {
           workflow: 'bouclage',
           route: '/validation-milestones/:milestoneId',
           milestoneType: updatedMilestone.milestoneType,
           offerId: updatedMilestone.offerId
-        }
-      })
+        } }
       
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         // Récupérer tous les milestones de cette offre
@@ -116,13 +108,11 @@ router.patch('/:milestoneId', asyncHandler(async (req, res) => {
         )
         
         if (bouclageComplete) {
-          logger.info('Bouclage complet détecté - Mise à jour automatique statut offre', {
-            metadata: {
+          logger.info('Bouclage complet détecté - Mise à jour automatique statut offre', { metadata: {
               workflow: 'bouclage',
               route: '/validation-milestones/:milestoneId',
               offerId: updatedMilestone.offerId
-            }
-          })
+            } }
           
           await storage.updateOffer(updatedMilestone.offerId, {
             status: 'fin_etudes_validee',
@@ -130,36 +120,33 @@ router.patch('/:milestoneId', asyncHandler(async (req, res) => {
             finEtudesValidatedBy: 'test-user-1'
           })
           
-          logger.info('Statut offre mis à jour', {
-            metadata: {
+          logger.info('Statut offre mis à jour', { metadata: {
               workflow: 'bouclage',
               route: '/validation-milestones/:milestoneId',
               offerId: updatedMilestone.offerId,
               newStatus: 'fin_etudes_validee'
-            }
-          })
+            } }
         } else {
           const completedTypes = allMilestones.filter(m => requiredBouclageTypes.includes(m.milestoneType) && m.isCompleted).map(m => m.milestoneType)
           const pendingTypes = requiredBouclageTypes.filter(type => !completedTypes.includes(type))
           
-          logger.info('Bouclage partiel', {
-            metadata: {
+          logger.info('Bouclage partiel', { metadata: {
               workflow: 'bouclage',
               route: '/validation-milestones/:milestoneId',
               offerId: updatedMilestone.offerId,
               completedTypes,
               pendingTypes
-            }
-          })
+            } }
         }
       
     },
     {
       operation: 'Router',
       service: 'validation-milestones',
-      metadata: {}
-    }
-  );
+      metadata: {
+            })
+
+          );
     }
   }
   
@@ -170,12 +157,10 @@ router.patch('/:milestoneId', asyncHandler(async (req, res) => {
 router.delete('/:milestoneId', asyncHandler(async (req, res) => {
   const { milestoneId } = req.params
   
-  logger.info('Deleting validation milestone', {
-    metadata: {
+  logger.info('Deleting validation milestone', { metadata: {
       route: '/validation-milestones/:milestoneId',
       milestoneId
-    }
-  })
+    } }
   
   await storage.deleteValidationMilestone(milestoneId)
   res.status(204).send()

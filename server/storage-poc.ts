@@ -8,6 +8,7 @@ import {
   projectTimelines, dateIntelligenceRules, dateAlerts, businessMetrics, kpiSnapshots, performanceBenchmarks,
   alertThresholds, businessAlerts,
   projectReserves, savInterventions, savWarrantyClaims,
+  projectFeedbackTerrain, savDemandes, beQualityChecklist, timeTracking,
   metricsBusiness, tempsPose, aoContacts, projectContacts, supplierSpecializations,
   supplierQuoteSessions, aoLotSuppliers, supplierDocuments, supplierQuoteAnalysis,
   equipmentBatteries, marginTargets, projectSubElements, classificationTags, entityTags, employeeLabels, employeeLabelAssignments,
@@ -50,6 +51,10 @@ import {
   type ProjectReserve, type InsertProjectReserve,
   type SavIntervention, type InsertSavIntervention,
   type SavWarrantyClaim, type InsertSavWarrantyClaim,
+  type ProjectFeedbackTerrain, type InsertProjectFeedbackTerrain,
+  type SavDemande, type InsertSavDemande,
+  type BeQualityChecklistItem, type InsertBeQualityChecklistItem,
+  type TimeTracking, type InsertTimeTracking,
   type MetricsBusiness, type InsertMetricsBusiness,
   type TempsPose, type InsertTempsPose,
   type AoContacts, type InsertAoContacts,
@@ -641,6 +646,33 @@ export interface IStorage {
   deleteSavWarrantyClaim(id: string): Promise<void>;
 
   // ========================================
+  // MÉTHODES FONCTIONNALITÉS 3-4-5-6-7-8
+  // ========================================
+  
+  // Project Feedback Terrain operations
+  getProjectFeedbackTerrain(projectId: string, filters?: { status?: string; feedbackType?: string; severity?: string }): Promise<ProjectFeedbackTerrain[]>;
+  getProjectFeedbackTerrainById(id: string): Promise<ProjectFeedbackTerrain | undefined>;
+  createProjectFeedbackTerrain(data: InsertProjectFeedbackTerrain): Promise<ProjectFeedbackTerrain>;
+  updateProjectFeedbackTerrain(id: string, data: Partial<InsertProjectFeedbackTerrain>): Promise<ProjectFeedbackTerrain>;
+  
+  // SAV Demandes operations
+  getSavDemandes(filters?: { projectId?: string; status?: string; demandeType?: string; dateFrom?: Date; dateTo?: Date }): Promise<SavDemande[]>;
+  getSavDemande(id: string): Promise<SavDemande | undefined>;
+  createSavDemande(data: InsertSavDemande): Promise<SavDemande>;
+  updateSavDemande(id: string, data: Partial<InsertSavDemande>): Promise<SavDemande>;
+  
+  // BE Quality Checklist operations
+  getBeQualityChecklist(offerId: string): Promise<BeQualityChecklistItem[]>;
+  createBeQualityChecklistItem(data: InsertBeQualityChecklistItem): Promise<BeQualityChecklistItem>;
+  updateBeQualityChecklistItem(id: string, data: Partial<InsertBeQualityChecklistItem>): Promise<BeQualityChecklistItem>;
+  validateBeQualityChecklist(offerId: string): Promise<{ isValid: boolean; missingItems: string[] }>;
+  
+  // Time Tracking operations
+  getTimeTracking(filters?: { projectId?: string; offerId?: string; userId?: string; taskType?: string; dateFrom?: Date; dateTo?: Date }): Promise<TimeTracking[]>;
+  getProjectTimeTracking(projectId: string): Promise<TimeTracking[]>;
+  createTimeTracking(data: InsertTimeTracking): Promise<TimeTracking>;
+
+  // ========================================
   // WORKFLOW FOURNISSEURS - NOUVELLES OPERATIONS
   // ========================================
 
@@ -984,13 +1016,12 @@ export class DatabaseStorage implements IStorage {
             .returning();
         return user;
       } catch (error) {
-        logger.error('Erreur upsertUser', {
-          metadata: {
+        logger.error('Erreur upsertUser', { metadata: {
             service: 'storage-poc',
             operation: 'upsertUser',
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+        }
+            });
         throw error;
       }
     }, {
@@ -1060,6 +1091,183 @@ export class DatabaseStorage implements IStorage {
       .where(eq(validationMilestones.id, id));
   }
 
+  // ========================================
+  // IMPLÉMENTATION MÉTHODES FONCTIONNALITÉS 3-4-5-6-7-8
+  // ========================================
+
+  // Project Feedback Terrain operations
+  async getProjectFeedbackTerrain(projectId: string, filters?: { status?: string; feedbackType?: string; severity?: string }): Promise<ProjectFeedbackTerrain[]> {
+    let query = db.select().from(projectFeedbackTerrain)
+      .where(eq(projectFeedbackTerrain.projectId, projectId));
+    
+    if (filters?.status) {
+      query = query.where(eq(projectFeedbackTerrain.status, filters.status as any));
+    }
+    if (filters?.feedbackType) {
+      query = query.where(eq(projectFeedbackTerrain.feedbackType, filters.feedbackType as any));
+    }
+    if (filters?.severity) {
+      query = query.where(eq(projectFeedbackTerrain.severity, filters.severity as any));
+    }
+    
+    return await query.orderBy(desc(projectFeedbackTerrain.createdAt));
+  }
+
+  async getProjectFeedbackTerrainById(id: string): Promise<ProjectFeedbackTerrain | undefined> {
+    const [feedback] = await db.select().from(projectFeedbackTerrain).where(eq(projectFeedbackTerrain.id, id));
+    return feedback;
+  }
+
+  async createProjectFeedbackTerrain(data: InsertProjectFeedbackTerrain): Promise<ProjectFeedbackTerrain> {
+    const [newFeedback] = await db.insert(projectFeedbackTerrain)
+      .values(data)
+      .returning();
+    return newFeedback;
+  }
+
+  async updateProjectFeedbackTerrain(id: string, data: Partial<InsertProjectFeedbackTerrain>): Promise<ProjectFeedbackTerrain> {
+    const [updatedFeedback] = await db.update(projectFeedbackTerrain)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(projectFeedbackTerrain.id, id))
+      .returning();
+    if (!updatedFeedback) {
+      throw new NotFoundError(`Project feedback terrain with id ${id} not found`);
+    }
+    return updatedFeedback;
+  }
+
+  // SAV Demandes operations
+  async getSavDemandes(filters?: { projectId?: string; status?: string; demandeType?: string; dateFrom?: Date; dateTo?: Date }): Promise<SavDemande[]> {
+    let query = db.select().from(savDemandes);
+    
+    const conditions = [];
+    if (filters?.projectId) {
+      conditions.push(eq(savDemandes.projectId, filters.projectId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(savDemandes.status, filters.status as any));
+    }
+    if (filters?.demandeType) {
+      conditions.push(eq(savDemandes.demandeType, filters.demandeType as any));
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(savDemandes.createdAt, filters.dateFrom));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(savDemandes.createdAt, filters.dateTo));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(desc(savDemandes.createdAt));
+  }
+
+  async getSavDemande(id: string): Promise<SavDemande | undefined> {
+    const [demande] = await db.select().from(savDemandes).where(eq(savDemandes.id, id));
+    return demande;
+  }
+
+  async createSavDemande(data: InsertSavDemande): Promise<SavDemande> {
+    const [newDemande] = await db.insert(savDemandes)
+      .values(data)
+      .returning();
+    return newDemande;
+  }
+
+  async updateSavDemande(id: string, data: Partial<InsertSavDemande>): Promise<SavDemande> {
+    const [updatedDemande] = await db.update(savDemandes)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(savDemandes.id, id))
+      .returning();
+    if (!updatedDemande) {
+      throw new NotFoundError(`SAV demande with id ${id} not found`);
+    }
+    return updatedDemande;
+  }
+
+  // BE Quality Checklist operations
+  async getBeQualityChecklist(offerId: string): Promise<BeQualityChecklistItem[]> {
+    return await db.select().from(beQualityChecklist)
+      .where(eq(beQualityChecklist.offerId, offerId))
+      .orderBy(beQualityChecklist.itemType);
+  }
+
+  async createBeQualityChecklistItem(data: InsertBeQualityChecklistItem): Promise<BeQualityChecklistItem> {
+    const [newItem] = await db.insert(beQualityChecklist)
+      .values(data)
+      .returning();
+    return newItem;
+  }
+
+  async updateBeQualityChecklistItem(id: string, data: Partial<InsertBeQualityChecklistItem>): Promise<BeQualityChecklistItem> {
+    const [updatedItem] = await db.update(beQualityChecklist)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(beQualityChecklist.id, id))
+      .returning();
+    if (!updatedItem) {
+      throw new NotFoundError(`BE quality checklist item with id ${id} not found`);
+    }
+    return updatedItem;
+  }
+
+  async validateBeQualityChecklist(offerId: string): Promise<{ isValid: boolean; missingItems: string[] }> {
+    const items = await this.getBeQualityChecklist(offerId);
+    const criticalItems = items.filter(item => item.isCritical);
+    const checkedCriticalItems = criticalItems.filter(item => item.status === 'conforme');
+    const missingItems = criticalItems
+      .filter(item => item.status !== 'conforme')
+      .map(item => item.itemType);
+    
+    return {
+      isValid: checkedCriticalItems.length === criticalItems.length,
+      missingItems
+    };
+  }
+
+  // Time Tracking operations
+  async getTimeTracking(filters?: { projectId?: string; offerId?: string; userId?: string; taskType?: string; dateFrom?: Date; dateTo?: Date }): Promise<TimeTracking[]> {
+    let query = db.select().from(timeTracking);
+    
+    const conditions = [];
+    if (filters?.projectId) {
+      conditions.push(eq(timeTracking.projectId, filters.projectId));
+    }
+    if (filters?.offerId) {
+      conditions.push(eq(timeTracking.offerId, filters.offerId));
+    }
+    if (filters?.userId) {
+      conditions.push(eq(timeTracking.userId, filters.userId));
+    }
+    if (filters?.taskType) {
+      conditions.push(eq(timeTracking.taskType, filters.taskType as any));
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(timeTracking.date, filters.dateFrom));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(timeTracking.date, filters.dateTo));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(desc(timeTracking.date));
+  }
+
+  async getProjectTimeTracking(projectId: string): Promise<TimeTracking[]> {
+    return await this.getTimeTracking({ projectId });
+  }
+
+  async createTimeTracking(data: InsertTimeTracking): Promise<TimeTracking> {
+    const [newTracking] = await db.insert(timeTracking)
+      .values(data)
+      .returning();
+    return newTracking;
+  }
+
   // VISA Architecte operations - Nouveau workflow entre Étude et Planification
   async getVisaArchitecte(projectId: string): Promise<VisaArchitecte[]> {
     return await db.select().from(visaArchitecte)
@@ -1126,12 +1334,11 @@ export class DatabaseStorage implements IStorage {
   async getScoringConfig(): Promise<TechnicalScoringConfig> {
     // Si pas de configuration en mémoire, retourner la configuration par défaut
     if (!DatabaseStorage.scoringConfig) {
-      logger.info('Aucune configuration scoring trouvée, utilisation valeurs par défaut', {
-        metadata: {
+      logger.info('Aucune configuration scoring trouvée, utilisation valeurs par défaut', { metadata: {
           service: 'StoragePOC',
           operation: 'getScoringConfig'
-        }
-      });
+                                }
+                              });
       DatabaseStorage.scoringConfig = {
         weights: {
           batimentPassif: 5,
@@ -1148,14 +1355,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateScoringConfig(config: TechnicalScoringConfig): Promise<void> {
-    logger.info('Mise à jour configuration scoring', {
-      metadata: {
+    logger.info('Mise à jour configuration scoring', { metadata: {
         service: 'StoragePOC',
         operation: 'updateScoringConfig',
         threshold: config.threshold,
         weightsCount: Object.keys(config.weights).length
-      }
-    });
+        }
+            });
     
     // Validation des valeurs (sécurité)
     if (config.threshold < 0 || config.threshold > 50) {
@@ -1170,12 +1376,11 @@ export class DatabaseStorage implements IStorage {
     
     // Sauvegarder en mémoire
     DatabaseStorage.scoringConfig = { ...config };
-    logger.info('Configuration scoring mise à jour avec succès', {
-      metadata: {
+    logger.info('Configuration scoring mise à jour avec succès', { metadata: {
         service: 'StoragePOC',
         operation: 'updateScoringConfig'
-      }
-    });
+        }
+            });
   }
 
   // ========================================
@@ -1212,15 +1417,14 @@ export class DatabaseStorage implements IStorage {
     // Ajouter entrée d'historique
     await this.addTechnicalAlertHistory(id, 'created', alert.assignedToUserId ?? null, 'Alerte technique créée');
     
-    logger.info('Alerte technique créée', {
-      metadata: {
+    logger.info('Alerte technique créée', { metadata: {
         service: 'StoragePOC',
         operation: 'enqueueTechnicalAlert',
         alertId: id,
         aoReference: alert.aoReference,
         score: alert.score
-      }
-    });
+        }
+            });
     return technicalAlert;
   }
 
@@ -1255,14 +1459,13 @@ export class DatabaseStorage implements IStorage {
     DatabaseStorage.technicalAlerts.set(id, alert);
     
     await this.addTechnicalAlertHistory(id, 'acknowledged', userId, 'Alerte acknowledged par l\'utilisateur');
-    logger.info('Alerte acknowledged', {
-      metadata: {
+    logger.info('Alerte acknowledged', { metadata: {
         service: 'StoragePOC',
         operation: 'acknowledgeTechnicalAlert',
         alertId: id,
         userId: userId
-      }
-    });
+        }
+            });
   }
 
   async validateTechnicalAlert(id: string, userId: string): Promise<void> {
@@ -1279,14 +1482,13 @@ export class DatabaseStorage implements IStorage {
     DatabaseStorage.technicalAlerts.set(id, alert);
     
     await this.addTechnicalAlertHistory(id, 'validated', userId, 'Alerte validée par l\'utilisateur');
-    logger.info('Alerte validée', {
-      metadata: {
+    logger.info('Alerte validée', { metadata: {
         service: 'StoragePOC',
         operation: 'validateTechnicalAlert',
         alertId: id,
         userId: userId
-      }
-    });
+        }
+            });
   }
 
   async bypassTechnicalAlert(id: string, userId: string, until: Date, reason: string): Promise<void> {
@@ -1310,16 +1512,15 @@ export class DatabaseStorage implements IStorage {
       { bypassUntil: until.toISOString(), bypassReason: reason }
     );
     
-    logger.info('Alerte bypassée', {
-      metadata: {
+    logger.info('Alerte bypassée', { metadata: {
         service: 'StoragePOC',
         operation: 'bypassTechnicalAlert',
         alertId: id,
         userId: userId,
         bypassUntil: until.toISOString(),
         reason: reason
-      }
-    });
+        }
+            });
   }
 
   async getActiveBypassForAo(aoId: string): Promise<{ until: Date; reason: string } | null> {
@@ -1365,14 +1566,13 @@ export class DatabaseStorage implements IStorage {
     existing.push(historyEntry);
     DatabaseStorage.technicalAlertHistory.set(alertHistoryKey, existing);
     
-    logger.info('Historique alerte ajouté', {
-      metadata: {
+    logger.info('Historique alerte ajouté', { metadata: {
         service: 'StoragePOC',
         operation: 'addTechnicalAlertHistory',
         alertId: alertId,
         action: action
-      }
-    });
+        }
+            });
     return historyEntry;
   }
 
@@ -1405,25 +1605,23 @@ export class DatabaseStorage implements IStorage {
   // ========================================
 
   async getMaterialColorRules(): Promise<MaterialColorAlertRule[]> {
-    logger.info('Récupération règles matériaux-couleurs', {
-      metadata: {
+    logger.info('Récupération règles matériaux-couleurs', { metadata: {
         service: 'StoragePOC',
         operation: 'getMaterialColorRules',
         rulesCount: DatabaseStorage.materialColorRules.length
-      }
-    });
+        }
+            });
     // Retourner une copie pour éviter les modifications directes
     return [...DatabaseStorage.materialColorRules];
   }
 
   async setMaterialColorRules(rules: MaterialColorAlertRule[]): Promise<void> {
-    logger.info('Mise à jour règles matériaux-couleurs', {
-      metadata: {
+    logger.info('Mise à jour règles matériaux-couleurs', { metadata: {
         service: 'StoragePOC',
         operation: 'setMaterialColorRules',
         rulesCount: rules.length
-      }
-    });
+        }
+            });
     
     // Validation basique des règles
     for (const rule of rules) {
@@ -1445,14 +1643,13 @@ export class DatabaseStorage implements IStorage {
     // Remplacer les règles existantes
     DatabaseStorage.materialColorRules = [...rules];
     
-    logger.info('Règles matériaux-couleurs mises à jour avec succès', {
-      metadata: {
+    logger.info('Règles matériaux-couleurs mises à jour avec succès', { metadata: {
         service: 'StoragePOC',
         operation: 'setMaterialColorRules',
         rulesCount: rules.length,
         ruleIds: rules.map(r => r.id)
-      }
-    });
+        }
+            });
   }
 
   // ========================================
@@ -1473,14 +1670,13 @@ export class DatabaseStorage implements IStorage {
       .filter(timeline => timeline.projectId === projectId)
       .sort((a, b) => (a.plannedStartDate?.getTime() || 0) - (b.plannedStartDate?.getTime() || 0));
     
-    logger.info('Récupération timelines projet', {
-      metadata: {
+    logger.info('Récupération timelines projet', { metadata: {
         service: 'StoragePOC',
         operation: 'getProjectTimelines',
         projectId: projectId,
         timelinesCount: timelines.length
-      }
-    });
+        }
+            });
     return timelines;
   }
 
@@ -1488,13 +1684,12 @@ export class DatabaseStorage implements IStorage {
     const timelines = Array.from(DatabaseStorage.projectTimelines.values())
       .sort((a, b) => (a.plannedStartDate?.getTime() || 0) - (b.plannedStartDate?.getTime() || 0));
     
-    logger.info('Récupération timelines totales', {
-      metadata: {
+    logger.info('Récupération timelines totales', { metadata: {
         service: 'StoragePOC',
         operation: 'getAllProjectTimelines',
         timelinesCount: timelines.length
-      }
-    });
+        }
+            });
     return timelines;
   }
 
@@ -1511,15 +1706,14 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.projectTimelines.set(id, timeline);
-    logger.info('Timeline créée', {
-      metadata: {
+    logger.info('Timeline créée', { metadata: {
         service: 'StoragePOC',
         operation: 'createProjectTimeline',
         timelineId: id,
         projectId: data.projectId,
         phase: data.phase
-      }
-    });
+        }
+            });
     
     return timeline;
   }
@@ -1538,13 +1732,12 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.projectTimelines.set(id, updated);
-    logger.info('Timeline mise à jour', {
-      metadata: {
+    logger.info('Timeline mise à jour', { metadata: {
         service: 'StoragePOC',
         operation: 'updateProjectTimeline',
         timelineId: id
-      }
-    });
+        }
+            });
     
     return updated;
   }
@@ -1556,13 +1749,12 @@ export class DatabaseStorage implements IStorage {
     }
 
     DatabaseStorage.projectTimelines.delete(id);
-    logger.info('Timeline supprimée', {
-      metadata: {
+    logger.info('Timeline supprimée', { metadata: {
         service: 'StoragePOC',
         operation: 'deleteProjectTimeline',
         timelineId: id
-      }
-    });
+        }
+            });
   }
 
   // ========================================
@@ -1596,14 +1788,13 @@ export class DatabaseStorage implements IStorage {
     // Trier par priorité (plus élevée en premier)
     rules.sort((a, b) => (b.priority || 0) - (a.priority || 0));
     
-    logger.info('Règles actives trouvées', {
-      metadata: {
+    logger.info('Règles actives trouvées', { metadata: {
         service: 'StoragePOC',
         operation: 'getActiveRules',
         rulesCount: rules.length,
         filters: filters
-      }
-    });
+        }
+            });
     return rules;
   }
 
@@ -1611,26 +1802,24 @@ export class DatabaseStorage implements IStorage {
     const rules = Array.from(DatabaseStorage.dateIntelligenceRules.values())
       .sort((a, b) => (b.priority || 0) - (a.priority || 0));
     
-    logger.info('Règles totales récupérées', {
-      metadata: {
+    logger.info('Règles totales récupérées', { metadata: {
         service: 'StoragePOC',
         operation: 'getAllRules',
         rulesCount: rules.length
-      }
-    });
+        }
+            });
     return rules;
   }
 
   async getRule(id: string): Promise<DateIntelligenceRule | undefined> {
     const rule = DatabaseStorage.dateIntelligenceRules.get(id);
-    logger.info('Règle récupérée', {
-      metadata: {
+    logger.info('Règle récupérée', { metadata: {
         service: 'StoragePOC',
         operation: 'getRule',
         ruleId: id,
         found: !!rule
-      }
-    });
+        }
+            });
     return rule;
   }
 
@@ -1648,14 +1837,13 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateIntelligenceRules.set(id, rule);
-    logger.info('Règle créée', {
-      metadata: {
+    logger.info('Règle créée', { metadata: {
         service: 'StoragePOC',
         operation: 'createRule',
         ruleId: id,
         ruleName: rule.name
-      }
-    });
+        }
+            });
     
     return rule;
   }
@@ -1673,13 +1861,12 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateIntelligenceRules.set(id, updated);
-    logger.info('Règle mise à jour', {
-      metadata: {
+    logger.info('Règle mise à jour', { metadata: {
         service: 'StoragePOC',
         operation: 'updateRule',
         ruleId: id
-      }
-    });
+        }
+            });
     
     return updated;
   }
@@ -1691,13 +1878,12 @@ export class DatabaseStorage implements IStorage {
     }
 
     DatabaseStorage.dateIntelligenceRules.delete(id);
-    logger.info('Règle supprimée', {
-      metadata: {
+    logger.info('Règle supprimée', { metadata: {
         service: 'StoragePOC',
         operation: 'deleteRule',
         ruleId: id
-      }
-    });
+        }
+            });
   }
 
   // ========================================
@@ -1723,27 +1909,25 @@ export class DatabaseStorage implements IStorage {
     // Trier par date de détection (plus récent en premier)
     alerts.sort((a, b) => b.detectedAt.getTime() - a.detectedAt.getTime());
     
-    logger.info('Alertes date trouvées', {
-      metadata: {
+    logger.info('Alertes date trouvées', { metadata: {
         service: 'StoragePOC',
         operation: 'getDateAlerts',
         alertsCount: alerts.length,
         filters: filters
-      }
-    });
+        }
+            });
     return alerts;
   }
 
   async getDateAlert(id: string): Promise<DateAlert | undefined> {
     const alert = DatabaseStorage.dateAlerts.get(id);
-    logger.info('Alerte date récupérée', {
-      metadata: {
+    logger.info('Alerte date récupérée', { metadata: {
         service: 'StoragePOC',
         operation: 'getDateAlert',
         alertId: id,
         found: !!alert
-      }
-    });
+        }
+            });
     return alert;
   }
 
@@ -1761,14 +1945,13 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateAlerts.set(id, alert);
-    logger.info('Alerte date créée', {
-      metadata: {
+    logger.info('Alerte date créée', { metadata: {
         service: 'StoragePOC',
         operation: 'createDateAlert',
         alertId: id,
         title: alert.title
-      }
-    });
+        }
+            });
     
     return alert;
   }
@@ -1786,13 +1969,12 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateAlerts.set(id, updated);
-    logger.info('Alerte date mise à jour', {
-      metadata: {
+    logger.info('Alerte date mise à jour', { metadata: {
         service: 'StoragePOC',
         operation: 'updateDateAlert',
         alertId: id
-      }
-    });
+        }
+            });
     
     return updated;
   }
@@ -1804,13 +1986,12 @@ export class DatabaseStorage implements IStorage {
     }
 
     DatabaseStorage.dateAlerts.delete(id);
-    logger.info('Alerte date supprimée', {
-      metadata: {
+    logger.info('Alerte date supprimée', { metadata: {
         service: 'StoragePOC',
         operation: 'deleteDateAlert',
         alertId: id
-      }
-    });
+        }
+            });
   }
 
   async acknowledgeAlert(id: string, userId: string): Promise<boolean> {
@@ -1828,14 +2009,13 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateAlerts.set(id, updated);
-    logger.info('Alerte date acquittée', {
-      metadata: {
+    logger.info('Alerte date acquittée', { metadata: {
         service: 'StoragePOC',
         operation: 'acknowledgeAlert',
         alertId: id,
         userId: userId
-      }
-    });
+        }
+            });
     
     return true;
   }
@@ -1856,14 +2036,13 @@ export class DatabaseStorage implements IStorage {
     };
 
     DatabaseStorage.dateAlerts.set(id, updated);
-    logger.info('Alerte date résolue', {
-      metadata: {
+    logger.info('Alerte date résolue', { metadata: {
         service: 'StoragePOC',
         operation: 'resolveAlert',
         alertId: id,
         userId: userId
-      }
-    });
+        }
+            });
     
     return true;
   }
@@ -1875,14 +2054,13 @@ export class DatabaseStorage implements IStorage {
   // KPI Snapshots operations
   async createKPISnapshot(data: InsertKpiSnapshot): Promise<KpiSnapshot> {
     const [snapshot] = await db.insert(kpiSnapshots).values(data).returning();
-    logger.info('KPI Snapshot créé', {
-      metadata: {
+    logger.info('KPI Snapshot créé', { metadata: {
         service: 'StoragePOC',
         operation: 'createKPISnapshot',
         periodFrom: data.periodFrom,
         periodTo: data.periodTo
-      }
-    });
+        }
+            });
     return snapshot;
   }
 
@@ -1902,15 +2080,14 @@ export class DatabaseStorage implements IStorage {
     }
 
     const snapshots = await query;
-    logger.info('KPI snapshots trouvés', {
-      metadata: {
+    logger.info('KPI snapshots trouvés', { metadata: {
         service: 'StoragePOC',
         operation: 'getKPISnapshots',
         snapshotsCount: snapshots.length,
         periodFrom: period.from,
         periodTo: period.to
-      }
-    });
+        }
+            });
     return snapshots;
   }
 
@@ -1920,28 +2097,26 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(kpiSnapshots.snapshotDate))
       .limit(1);
     
-    logger.info('Dernier KPI snapshot récupéré', {
-      metadata: {
+    logger.info('Dernier KPI snapshot récupéré', { metadata: {
         service: 'StoragePOC',
         operation: 'getLatestKPISnapshot',
         snapshotId: latest ? latest.id : null
-      }
-    });
+        }
+            });
     return latest || null;
   }
 
   // Business Metrics operations  
   async createBusinessMetric(data: InsertBusinessMetric): Promise<BusinessMetric> {
     const [metric] = await db.insert(businessMetrics).values(data).returning();
-    logger.info('Métrique business créée', {
-      metadata: {
+    logger.info('Métrique business créée', { metadata: {
         service: 'StoragePOC',
         operation: 'createBusinessMetric',
         metricType: data.metricType,
         periodStart: data.periodStart,
         periodEnd: data.periodEnd
-      }
-    });
+        }
+            });
     return metric;
   }
 
@@ -1979,14 +2154,13 @@ export class DatabaseStorage implements IStorage {
     }
 
     const metrics = await query.orderBy(desc(businessMetrics.calculatedAt));
-    logger.info('Métriques business trouvées', {
-      metadata: {
+    logger.info('Métriques business trouvées', { metadata: {
         service: 'StoragePOC',
         operation: 'getBusinessMetrics',
         metricsCount: metrics.length,
         filters: filters
-      }
-    });
+        }
+            });
     return metrics;
   }
 
@@ -2002,29 +2176,27 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(businessMetrics.periodStart);
 
-    logger.info('Métriques série temporelle trouvées', {
-      metadata: {
+    logger.info('Métriques série temporelle trouvées', { metadata: {
         service: 'StoragePOC',
         operation: 'getMetricTimeSeries',
         metricType: metricType,
         metricsCount: metrics.length
-      }
-    });
+        }
+            });
     return metrics;
   }
 
   // Performance Benchmarks operations
   async createPerformanceBenchmark(data: InsertPerformanceBenchmark): Promise<PerformanceBenchmark> {
     const [benchmark] = await db.insert(performanceBenchmarks).values(data).returning();
-    logger.info('Benchmark performance créé', {
-      metadata: {
+    logger.info('Benchmark performance créé', { metadata: {
         service: 'StoragePOC',
         operation: 'createPerformanceBenchmark',
         benchmarkType: data.benchmarkType,
         entityType: data.entityType,
         entityId: data.entityId
-      }
-    });
+        }
+            });
     return benchmark;
   }
 
@@ -2040,15 +2212,14 @@ export class DatabaseStorage implements IStorage {
       .where(and(...whereConditions))
       .orderBy(desc(performanceBenchmarks.createdAt));
       
-    logger.info('Benchmarks trouvés', {
-      metadata: {
+    logger.info('Benchmarks trouvés', { metadata: {
         service: 'StoragePOC',
         operation: 'getBenchmarks',
         benchmarksCount: benchmarks.length,
         entityType: entityType,
         entityId: entityId
-      }
-    });
+        }
+            });
     return benchmarks;
   }
 
@@ -2059,14 +2230,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(performanceBenchmarks.performanceScore))
       .limit(limit);
 
-    logger.info('Top performers trouvés', {
-      metadata: {
+    logger.info('Top performers trouvés', { metadata: {
         service: 'StoragePOC',
         operation: 'getTopPerformers',
         performersCount: performers.length,
         limit: limit
-      }
-    });
+        }
+            });
     return performers;
   }
 
@@ -2095,14 +2265,13 @@ export class DatabaseStorage implements IStorage {
     avg_project_value: number;
   }>> {
     try {
-      logger.info('Récupération historique revenus mensuel', {
-        metadata: {
+      logger.info('Récupération historique revenus mensuel', { metadata: {
           service: 'StoragePOC',
           operation: 'getMonthlyRevenueHistory',
           startDate: range.start_date,
           endDate: range.end_date
         }
-      });
+            });
       
       // Requête SQL pour agréger les projets par mois
       // Utilise les projets signés/terminés avec montant final
@@ -2133,21 +2302,19 @@ export class DatabaseStorage implements IStorage {
         avg_project_value: Number(row.avg_project_value)
       }));
 
-      logger.info('Historique revenus mensuel trouvé', {
-        metadata: {
+      logger.info('Historique revenus mensuel trouvé', { metadata: {
           service: 'StoragePOC',
           operation: 'getMonthlyRevenueHistory',
           monthsCount: formattedResults.length
         }
-      });
+            });
       return formattedResults;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2164,14 +2331,13 @@ export class DatabaseStorage implements IStorage {
     complexity: string;
   }>> {
     try {
-      logger.info('Récupération historique délais projets', {
-        metadata: {
+      logger.info('Récupération historique délais projets', { metadata: {
           service: 'StoragePOC',
           operation: 'getProjectDelayHistory',
           startDate: range.start_date,
           endDate: range.end_date
         }
-      });
+            });
       
       // Requête pour calculer les délais des projets terminés
       const results = await db
@@ -2212,21 +2378,19 @@ export class DatabaseStorage implements IStorage {
         complexity: row.complexity
       }));
 
-      logger.info('Historique délais projets trouvé', {
-        metadata: {
+      logger.info('Historique délais projets trouvé', { metadata: {
           service: 'StoragePOC',
           operation: 'getProjectDelayHistory',
           projectsCount: formattedResults.length
         }
-      });
+            });
       return formattedResults;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2242,14 +2406,13 @@ export class DatabaseStorage implements IStorage {
     avg_project_duration: number;
   }>> {
     try {
-      logger.info('Récupération historique charge équipes', {
-        metadata: {
+      logger.info('Récupération historique charge équipes', { metadata: {
           service: 'StoragePOC',
           operation: 'getTeamLoadHistory',
           startDate: range.start_date,
           endDate: range.end_date
         }
-      });
+            });
       
       // Requête pour agréger la charge équipes par mois
       const results = await db
@@ -2308,21 +2471,19 @@ export class DatabaseStorage implements IStorage {
         };
       });
 
-      logger.info('Historique charge équipes trouvé', {
-        metadata: {
+      logger.info('Historique charge équipes trouvé', { metadata: {
           service: 'StoragePOC',
           operation: 'getTeamLoadHistory',
           monthsCount: formattedResults.length
         }
-      });
+            });
       return formattedResults;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2352,22 +2513,20 @@ export class DatabaseStorage implements IStorage {
 
       DatabaseStorage.forecastSnapshots.set(id, snapshot);
       
-      logger.info('Snapshot forecast sauvegardé', {
-        metadata: {
+      logger.info('Snapshot forecast sauvegardé', { metadata: {
           service: 'StoragePOC',
           operation: 'saveForecastSnapshot',
           snapshotId: id,
           forecastPeriod: forecastPeriod
         }
-      });
+            });
       return id;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2391,43 +2550,39 @@ export class DatabaseStorage implements IStorage {
           method_used: snapshot.method_used
         }));
 
-      logger.info('Snapshots forecast trouvés', {
-        metadata: {
+      logger.info('Snapshots forecast trouvés', { metadata: {
           service: 'StoragePOC',
           operation: 'listForecastSnapshots',
           snapshotsCount: snapshots.length,
           limit: limit
         }
-      });
+            });
       return snapshots;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
 
   async getAnalyticsSnapshots(params?: Record<string, unknown>): Promise<Record<string, unknown>[]> {
     try {
-      logger.info('Récupération snapshots analytics', {
-        metadata: {
+      logger.info('Récupération snapshots analytics', { metadata: {
           service: 'DatabaseStorage',
           operation: 'getAnalyticsSnapshots',
           params
         }
-      });
+            });
       return [];
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2439,21 +2594,19 @@ export class DatabaseStorage implements IStorage {
         ...data,
         createdAt: new Date()
       };
-      logger.info('Snapshot analytics créé', {
-        metadata: {
+      logger.info('Snapshot analytics créé', { metadata: {
           service: 'DatabaseStorage',
           operation: 'createAnalyticsSnapshot',
           snapshotId: snapshot.id
         }
-      });
+            });
       return snapshot;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2478,11 +2631,10 @@ export class DatabaseStorage implements IStorage {
       return sessions;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2493,11 +2645,10 @@ export class DatabaseStorage implements IStorage {
       return session;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2508,11 +2659,10 @@ export class DatabaseStorage implements IStorage {
       return session;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2524,11 +2674,10 @@ export class DatabaseStorage implements IStorage {
       return newSession;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2543,11 +2692,10 @@ export class DatabaseStorage implements IStorage {
       return updatedSession;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2558,11 +2706,10 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Session fournisseur supprimée: ${id}`);
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2588,11 +2735,10 @@ export class DatabaseStorage implements IStorage {
       return lotSuppliers;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2603,11 +2749,10 @@ export class DatabaseStorage implements IStorage {
       return lotSupplier;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2619,11 +2764,10 @@ export class DatabaseStorage implements IStorage {
       return newLotSupplier;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2638,11 +2782,10 @@ export class DatabaseStorage implements IStorage {
       return updatedLotSupplier;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2653,11 +2796,10 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Association lot-fournisseur supprimée: ${id}`);
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2670,11 +2812,10 @@ export class DatabaseStorage implements IStorage {
       return associations;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2699,11 +2840,10 @@ export class DatabaseStorage implements IStorage {
       return documents;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2714,11 +2854,10 @@ export class DatabaseStorage implements IStorage {
       return document;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2730,11 +2869,10 @@ export class DatabaseStorage implements IStorage {
       return newDocument;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2749,11 +2887,10 @@ export class DatabaseStorage implements IStorage {
       return updatedDocument;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2764,11 +2901,10 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Document fournisseur supprimé: ${id}`);
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2780,11 +2916,10 @@ export class DatabaseStorage implements IStorage {
       return documents;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2796,23 +2931,21 @@ export class DatabaseStorage implements IStorage {
   async createDocument(document: InsertDocument): Promise<Document> {
     try {
       const [newDocument] = await db.insert(documents).values(document).returning();
-      logger.info('Document créé', {
-        metadata: {
+      logger.info('Document créé', { metadata: {
           service: 'StoragePOC',
           operation: 'createDocument',
           documentId: newDocument.id,
           fileName: document.name,
           oneDriveId: document.oneDriveId
         }
-      });
+            });
       return newDocument;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2823,11 +2956,10 @@ export class DatabaseStorage implements IStorage {
       return document;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2846,23 +2978,21 @@ export class DatabaseStorage implements IStorage {
       }
       
       const docs = await query;
-      logger.info('Documents récupérés par entité', {
-        metadata: {
+      logger.info('Documents récupérés par entité', { metadata: {
           service: 'StoragePOC',
           operation: 'getDocumentsByEntity',
           entityType,
           entityId,
           count: docs.length
         }
-      });
+            });
       return docs;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2878,22 +3008,20 @@ export class DatabaseStorage implements IStorage {
         throw new AppError(`Document ${id} non trouvé`, 500);
       }
       
-      logger.info('Document mis à jour', {
-        metadata: {
+      logger.info('Document mis à jour', { metadata: {
           service: 'StoragePOC',
           operation: 'updateDocument',
           documentId: id
         }
-      });
+            });
       
       return updatedDocument;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2901,20 +3029,18 @@ export class DatabaseStorage implements IStorage {
   async deleteDocument(id: string): Promise<void> {
     try {
       await db.delete(documents).where(eq(documents.id, id));
-      logger.info('Document supprimé', {
-        metadata: {
+      logger.info('Document supprimé', { metadata: {
           service: 'StoragePOC',
           operation: 'deleteDocument',
           documentId: id
         }
-      });
+            });
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2929,11 +3055,10 @@ export class DatabaseStorage implements IStorage {
       return config;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -2945,12 +3070,11 @@ export class DatabaseStorage implements IStorage {
       if (!existing) {
         // Créer une nouvelle config si elle n'existe pas
         const [newConfig] = await db.insert(syncConfig).values(config as InsertSyncConfig).returning();
-        logger.info('Sync config créée', {
-          metadata: {
+        logger.info('Sync config créée', { metadata: {
             service: 'StoragePOC',
             operation: 'updateSyncConfig'
-          }
-        });
+        }
+            });
         return newConfig;
       }
 
@@ -2960,22 +3084,20 @@ export class DatabaseStorage implements IStorage {
         .where(eq(syncConfig.id, existing.id))
         .returning();
 
-      logger.info('Sync config mise à jour', {
-        metadata: {
+      logger.info('Sync config mise à jour', { metadata: {
           service: 'StoragePOC',
           operation: 'updateSyncConfig',
           configId: existing.id
         }
-      });
+            });
 
       return updatedConfig;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -3000,11 +3122,10 @@ export class DatabaseStorage implements IStorage {
       return analyses;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -3015,11 +3136,10 @@ export class DatabaseStorage implements IStorage {
       return analysis;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -3031,11 +3151,10 @@ export class DatabaseStorage implements IStorage {
       return newAnalysis;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -3050,11 +3169,10 @@ export class DatabaseStorage implements IStorage {
       return updatedAnalysis;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -3065,11 +3183,10 @@ export class DatabaseStorage implements IStorage {
       logger.info(`Analyse OCR supprimée: ${id}`);
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -3080,11 +3197,10 @@ export class DatabaseStorage implements IStorage {
       return analysis;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -3106,9 +3222,9 @@ export class DatabaseStorage implements IStorage {
       order?: 'asc' | 'desc';
     }
   ): Promise<SupplierQuoteAnalysis[]> {
-    logger.warn('[Storage] getSupplierQuoteAnalysesBySession not yet fully implemented', {
-      metadata: { sessionId, filters }
-    });
+    logger.warn('[Storage] getSupplierQuoteAnalysesBySession not yet fully implemented', { metadata: { sessionId, filters 
+        }
+            });
     
     try {
       // Basic implementation - get analyses by session
@@ -3123,11 +3239,10 @@ export class DatabaseStorage implements IStorage {
       return analyses || [];
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -3177,11 +3292,10 @@ export class DatabaseStorage implements IStorage {
       return summary;
     
         } catch (error) {
-      logger.error('Erreur', {
-        metadata: {
+      logger.error('Erreur', { metadata: {
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       throw error;
     }
   }
@@ -3229,8 +3343,8 @@ if (!dbStorage.getProjectStats || !dbStorage.getOfferStats || !dbStorage.getConv
         getProjectDelayStats: !dbStorage.getProjectDelayStats,
         getTeamPerformanceStats: !dbStorage.getTeamPerformanceStats
       }
-    }
-  });
+                                                                            }
+                                                                          });
   
   // Bind all SQL aggregation methods from DatabaseStorage prototype
   const proto = DatabaseStorage.prototype as unknown as Record<string, unknown>;
@@ -3253,6 +3367,6 @@ if (!dbStorage.getProjectStats || !dbStorage.getOfferStats || !dbStorage.getConv
         getProjectDelayStats: !!dbStorage.getProjectDelayStats,
         getTeamPerformanceStats: !!dbStorage.getTeamPerformanceStats
       }
-    }
-  });
+                                                                            }
+                                                                          });
 }

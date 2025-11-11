@@ -41,7 +41,7 @@ export function setupMondayModule(app: Express): void {
         enabled: true,
         strategy: 'Monday-priority',
         events: ['monday:sync:conflict', 'monday:sync:success', 'monday:export:success']
-      }
-    }
-  });
+                        }
+
+                      }));
 }

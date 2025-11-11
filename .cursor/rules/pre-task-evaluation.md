@@ -42,30 +42,64 @@ interface TaskAnalysis {
 ### Étape 2: Identification des Approches Possibles
 
 **TOUJOURS:**
-- ✅ Identifier au moins 2-3 approches différentes
+- ✅ **ÉVALUER AUTOMATISATION PAR SCRIPT** - Détecter si tâche est automatisable par script
+- ✅ Identifier au moins 2-3 approches différentes (incluant script si applicable)
 - ✅ Chercher solutions existantes dans le codebase
+- ✅ Chercher scripts existants similaires dans `scripts/`
 - ✅ Consulter patterns établis
 - ✅ Consulter documentation externe si nécessaire
+
+**Référence:** `@.cursor/rules/script-automation.md` - Automatisation par script complète
 
 **Pattern:**
 ```typescript
 async function identifyApproaches(task: Task): Promise<Approach[]> {
-  // 1. Rechercher solutions existantes
+  // 1. ÉVALUER AUTOMATISATION PAR SCRIPT
+  const automationAnalysis = await analyzeTaskForAutomation(task);
+  const scriptComparison = await compareAutomationApproaches(task, automationAnalysis);
+  
+  // 2. Rechercher solutions existantes
   const existingSolutions = await codebase_search(
     `How is ${task.objective} implemented?`,
     []
   );
   
-  // 2. Rechercher patterns similaires
+  // 3. Rechercher scripts existants similaires
+  const existingScripts = await glob_file_search('scripts/**/*.ts');
+  const similarScripts = existingScripts.filter(s => 
+    isSimilarToTask(s, task)
+  );
+  
+  // 4. Rechercher patterns similaires
   const similarPatterns = await codebase_search(
     `What are the patterns for ${task.objective}?`,
     []
   );
   
-  // 3. Identifier approches possibles
+  // 5. Identifier approches possibles
   const approaches: Approach[] = [];
   
-  // Approche 1: Réutiliser solution existante
+  // Approche 0: Automatisation par script (si recommandée)
+  if (scriptComparison.find(c => c.approach === 'script')?.overallScore >= 7) {
+    approaches.push({
+      id: 'script-automation',
+      description: 'Automatisation par script',
+      type: 'script',
+      automationAnalysis,
+      scriptComparison: scriptComparison.find(c => c.approach === 'script')
+    });
+  }
+  
+  // Approche 1: Réutiliser script existant
+  if (similarScripts.length > 0) {
+    approaches.push({
+      id: 'reuse-existing-script',
+      description: 'Réutiliser script existant',
+      source: similarScripts[0]
+    });
+  }
+  
+  // Approche 2: Réutiliser solution existante
   if (existingSolutions.length > 0) {
     approaches.push({
       id: 'reuse-existing',
@@ -74,7 +108,7 @@ async function identifyApproaches(task: Task): Promise<Approach[]> {
     });
   }
   
-  // Approche 2: Appliquer pattern établi
+  // Approche 3: Appliquer pattern établi
   if (similarPatterns.length > 0) {
     approaches.push({
       id: 'apply-pattern',
@@ -83,7 +117,7 @@ async function identifyApproaches(task: Task): Promise<Approach[]> {
     });
   }
   
-  // Approche 3: Nouvelle implémentation optimisée
+  // Approche 4: Nouvelle implémentation optimisée
   approaches.push({
     id: 'new-optimized',
     description: 'Nouvelle implémentation optimisée',

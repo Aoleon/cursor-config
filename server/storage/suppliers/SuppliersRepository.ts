@@ -1247,8 +1247,15 @@ export class SuppliersRepository extends BaseRepository<
               documentCount: sessionDocs[0]?.count || 0,
               analysisCount: sessionAnalyses[0]?.count || 0
             };
-          })
-        );
+                }
+
+                          }
+
+
+                                    }
+
+
+                                  }));
 
         return {
           aoId: normalizedAoId,

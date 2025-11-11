@@ -177,9 +177,7 @@ class ConversionCalculator extends BaseCalculator {
     disableTrend: boolean = false
   ): Promise<ConversionMetric> {
     try {
-      logger.debug('[BusinessAnalyticsService] calculateAOToOfferConversion - Using SQL aggregation', {
-        metadata: { period, filters }
-      });
+      logger.debug('[BusinessAnalyticsService] calculateAOToOfferConversion - Using SQL aggregation', { metadata: { period, filters 
 
       const conversionStats = await this.analyticsStorage.getConversionStats(
         {
@@ -225,13 +223,12 @@ class ConversionCalculator extends BaseCalculator {
         byUser: Object.keys(byUser).length > 0 ? byUser : undefined
       };
     } catch (error) {
-      logger.error('[BusinessAnalyticsService] Erreur lors du calcul de la conversion AO->Offer', {
-        metadata: {
+      logger.error('[BusinessAnalyticsService] Erreur lors du calcul de la conversion AO->Offer', { metadata: {
           operation: 'calculateAOToOfferConversion',
           service: 'BusinessAnalyticsService',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
+          error: error instanceof Error ? error.message : String(error) 
+              }
+            });
       return {
         rate: 0,
         totalInput: 0,
@@ -247,9 +244,7 @@ class ConversionCalculator extends BaseCalculator {
     disableTrend: boolean = false
   ): Promise<ConversionMetric> {
     try {
-      logger.debug('[BusinessAnalyticsService] calculateOfferToProjectConversion - Using SQL aggregation', {
-        metadata: { period, filters }
-      });
+      logger.debug('[BusinessAnalyticsService] calculateOfferToProjectConversion - Using SQL aggregation', { metadata: { period, filters 
 
       const conversionStats = await this.analyticsStorage.getConversionStats(
         {
@@ -295,13 +290,12 @@ class ConversionCalculator extends BaseCalculator {
         byUser: Object.keys(byUser).length > 0 ? byUser : undefined
       };
     } catch (error) {
-      logger.error('[BusinessAnalyticsService] Erreur lors du calcul de la conversion Offer->Project', {
-        metadata: {
+      logger.error('[BusinessAnalyticsService] Erreur lors du calcul de la conversion Offer->Project', { metadata: {
           operation: 'calculateOfferToProjectConversion',
           service: 'BusinessAnalyticsService',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
+          error: error instanceof Error ? error.message : String(error) 
+              }
+            });
       return {
         rate: 0,
         totalInput: 0,
@@ -332,13 +326,12 @@ class ConversionCalculator extends BaseCalculator {
         }
       };
     } catch (error) {
-      logger.error('[BusinessAnalyticsService] Erreur lors du calcul de la conversion pipeline', {
-        metadata: {
+      logger.error('[BusinessAnalyticsService] Erreur lors du calcul de la conversion pipeline', { metadata: {
           operation: 'calculatePipelineConversion',
           service: 'BusinessAnalyticsService',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
+          error: error instanceof Error ? error.message : String(error) 
+              }
+            });
       return {
         aoToOffer: 0,
         offerToProject: 0,
@@ -371,8 +364,9 @@ export class BusinessAnalyticsService {
 
     logger.info('BusinessAnalyticsService initialized', {
       service: 'BusinessAnalyticsService',
-      metadata: { operation: 'constructor' }
-    });
+      metadata: { operation: 'constructor' 
+
+          });
   }
 
   // ========================================
@@ -423,9 +417,8 @@ export class BusinessAnalyticsService {
           period: period,
           kpis: {
             conversionRate: conversions.globalConversion
-          }
         }
-      });
+              );
 
       return savedSnapshot;
 
@@ -435,9 +428,7 @@ export class BusinessAnalyticsService {
       operation: 'metrics',
       service: 'BusinessAnalyticsService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new AppError(`Échec génération KPIs: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, 500);
     }
   }
@@ -486,9 +477,7 @@ export class BusinessAnalyticsService {
       operation: 'metrics',
       service: 'BusinessAnalyticsService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return {
         conversionRate: 0,
         forecastRevenue: 0,
@@ -572,9 +561,7 @@ export class BusinessAnalyticsService {
       operation: 'metrics',
       service: 'BusinessAnalyticsService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return {
         revenue: { total: 0, byMonth: {}, byClient: {}, growth: 0 },
         conversion: { rate: 0, aoToOffer: 0, offerToProject: 0, funnel: [] },
@@ -637,9 +624,7 @@ export class BusinessAnalyticsService {
       operation: 'metrics',
       service: 'BusinessAnalyticsService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return {
         totalAos: 0,
         totalOffers: 0,
@@ -724,9 +709,7 @@ export class BusinessAnalyticsService {
       operation: 'metrics',
       service: 'BusinessAnalyticsService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return {
         aoCount: 0,
         offerCount: 0,
@@ -744,8 +727,9 @@ export class BusinessAnalyticsService {
   async generateBenchmarks(entity: BenchmarkEntity, period: DateRange): Promise<PerformanceBenchmark> {
     logger.warn('generateBenchmarks() called - returning placeholder', {
       service: 'BusinessAnalyticsService',
-      metadata: { operation: 'generateBenchmarks', entity, period }
-    });
+      metadata: { operation: 'generateBenchmarks', entity, period 
+        }
+            );
 
     // Placeholder implementation - return basic benchmark
     const benchmark: InsertPerformanceBenchmark = {
@@ -766,8 +750,9 @@ export class BusinessAnalyticsService {
   async getBenchmarks(params: Record<string, unknown>): Promise<Record<string, unknown>> {
     logger.warn('getBenchmarks() called - returning placeholder', {
       service: 'BusinessAnalyticsService',
-      metadata: { operation: 'getBenchmarks', params }
-    });
+      metadata: { operation: 'getBenchmarks', params 
+        }
+            );
 
     return {
       benchmarks: [],
@@ -785,8 +770,9 @@ export class BusinessAnalyticsService {
     this.cache.clear();
     logger.info('Analytics cache cleared', {
       service: 'BusinessAnalyticsService',
-      metadata: { operation: 'clearCache' }
-    });
+      metadata: { operation: 'clearCache' 
+
+          });
   }
 
   // ========================================

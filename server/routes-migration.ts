@@ -16,7 +16,7 @@
 
 import express from 'express';
 import { z } from 'zod';
-import { MondayMigrationService } from './services/MondayMigrationService';
+import { MondayMigrationService } from './consolidated/MondayMigrationService';
 import { storage, type IStorage } from './storage-poc';
 import { validateBody } from './middleware/validation';
 import { asyncHandler } from './utils/error-handler';
@@ -26,7 +26,7 @@ import { logger } from './utils/logger';
 // INITIALISATION SERVICE MIGRATION
 // ========================================
 
-const mondayMigrationService = new MondayMigrationService(storage as IStorage);
+const mondayMigrationService = mondaymigrationService(storage as IStorage);
 
 export const migrationRoutes = express.Router();
 
@@ -61,9 +61,10 @@ migrationRoutes.post('/aos-planning',
   asyncHandler(async (req, res) => {
     const { count, dryRun } = req.body;
 
-    logger.info('Démarrage migration AO_Planning', {
-      metadata: { route: '/api/migration/aos-planning', count, dryRun }
-    });
+    logger.info('Démarrage migration AO_Planning', { metadata: { route: '/api/migration/aos-planning', count, dryRun 
+
+        }
+                });
 
     if (dryRun) {
       // Mode simulation - génère et valide sans insérer
@@ -80,24 +81,32 @@ migrationRoutes.post('/aos-planning',
           generated: sampleData.length,
           validation: validation.summary,
           sampleData: validation.valid.slice(0, 3) // 3 premiers pour aperçu
-        }
-      });
+        
+       
+       });
     }
 
     // Migration réelle
     const result = await mondayMigrationService.migrateAosFromAnalysis(count);
     
-    logger.info('Migration AO_Planning terminée', {
-      metadata: { route: '/api/migration/aos-planning', migrated: result.migrated, errors: result.errors }
-    });
+    logger.info('Migration AO_Planning terminée', { metadata: { route: '/api/migration/aos-planning', migrated: result.migrated, errors: result.errors 
+        }
+            });
 
     res.json({
       success: true,
       migration: result,
       message: `Migration AO_Planning terminée - ${result.migrated} migrés, ${result.errors} erreurs`
     });
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // ROUTES MIGRATION CHANTIERS
@@ -112,9 +121,10 @@ migrationRoutes.post('/chantiers',
   asyncHandler(async (req, res) => {
     const { count, dryRun } = req.body;
 
-    logger.info('Démarrage migration CHANTIERS', {
-      metadata: { route: '/api/migration/chantiers', count, dryRun }
-    });
+    logger.info('Démarrage migration CHANTIERS', { metadata: { route: '/api/migration/chantiers', count, dryRun 
+
+        }
+                });
 
     if (dryRun) {
       // Mode simulation - génère et valide sans insérer
@@ -131,24 +141,32 @@ migrationRoutes.post('/chantiers',
           generated: sampleData.length,
           validation: validation.summary,
           sampleData: validation.valid.slice(0, 3) // 3 premiers pour aperçu
-        }
-      });
+        
+       
+       });
     }
 
     // Migration réelle
     const result = await mondayMigrationService.migrateChantiersFromAnalysis(count);
     
-    logger.info('Migration CHANTIERS terminée', {
-      metadata: { route: '/api/migration/chantiers', migrated: result.migrated, errors: result.errors }
-    });
+    logger.info('Migration CHANTIERS terminée', { metadata: { route: '/api/migration/chantiers', migrated: result.migrated, errors: result.errors 
+        }
+            });
 
     res.json({
       success: true,
       migration: result,
       message: `Migration CHANTIERS terminée - ${result.migrated} migrés, ${result.errors} erreurs`
     });
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // ROUTES MIGRATION PRODUCTION - SYSTÈME BASÉ ANALYSES RÉELLES
@@ -161,15 +179,15 @@ migrationRoutes.post('/chantiers',
  */
 migrationRoutes.post('/production-final/full', 
   asyncHandler(async (req, res) => {
-    logger.info('Migration données authentiques Monday.com - démarrage', {
-      metadata: { route: '/api/migration/production-final/full', source: 'authentic_monday_exports' }
-    });
+    logger.info('Migration données authentiques Monday.com - démarrage', { metadata: { route: '/api/migration/production-final/full', source: 'authentic_monday_exports' 
+
+        }
+                });
     
     // Migration finale avec données authentiques Monday.com
     const result = await mondayMigrationService.migrateFromRealMondayData();
     
-    logger.info('Migration données authentiques Monday.com - terminée', {
-      metadata: {
+    logger.info('Migration données authentiques Monday.com - terminée', { metadata: {
         route: '/api/migration/production-final/full',
         source: result.source,
         filesProcessed: result.filesProcessed,
@@ -178,8 +196,8 @@ migrationRoutes.post('/production-final/full',
         aosMigrated: result.aos.migrated,
         projectsMigrated: result.projects.migrated,
         duration: result.duration
-      }
-    });
+        }
+                });
     
     res.json({
       success: result.success,
@@ -203,10 +221,16 @@ migrationRoutes.post('/production-final/full',
         },
         duration: result.duration,
         architect_problem_resolved: true
-      }
-    });
-  })
-);
+      });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 /**
  * POST /api/migration/production-final/dry-run
@@ -215,15 +239,15 @@ migrationRoutes.post('/production-final/full',
  */
 migrationRoutes.post('/production-final/dry-run',
   asyncHandler(async (req, res) => {
-    logger.info('Validation authentique Monday.com - démarrage', {
-      metadata: { route: '/api/migration/production-final/dry-run', source: 'authentic_monday_exports' }
-    });
+    logger.info('Validation authentique Monday.com - démarrage', { metadata: { route: '/api/migration/production-final/dry-run', source: 'authentic_monday_exports' 
+
+        }
+                });
     
     // Validation authentique Monday.com sans insertion
     const validationResult = await mondayMigrationService.validateAuthenticMondayDataIntegrity();
     
-    logger.info('Validation authentique Monday.com - terminée', {
-      metadata: {
+    logger.info('Validation authentique Monday.com - terminée', { metadata: {
         route: '/api/migration/production-final/dry-run',
         totalFiles: validationResult.totalFiles,
         filesProcessed: validationResult.filesProcessed,
@@ -233,8 +257,8 @@ migrationRoutes.post('/production-final/dry-run',
         warnings: validationResult.warnings,
         validationRate: validationResult.validLines / validationResult.totalLines,
         readyForProduction: validationResult.errors === 0
-      }
-    });
+        }
+            });
     
     res.json({
       success: validationResult.success,
@@ -250,10 +274,16 @@ migrationRoutes.post('/production-final/dry-run',
         validationRate: validationResult.validLines / validationResult.totalLines,
         readyForProduction: validationResult.errors === 0,
         architect_problem_resolved: true
-      }
-    });
-  })
-);
+      });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // ROUTES STATUT MIGRATION
@@ -267,20 +297,28 @@ migrationRoutes.get('/status',
   asyncHandler(async (req, res) => {
     const status = await mondayMigrationService.getMigrationStatus();
     
-    logger.info('Récupération statut migration', {
-      metadata: {
+    logger.info('Récupération statut migration', { metadata: {
         route: '/api/migration/status',
         isRunning: status.isRunning
-      }
-    });
+
+        }
+                });
     
     res.json({
       success: true,
       status,
       message: status.isRunning ? 'Migration en cours' : 'Aucune migration active'
-    });
-  })
-);
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // ROUTES VALIDATION POST-MIGRATION
@@ -295,21 +333,22 @@ migrationRoutes.post('/validate',
   asyncHandler(async (req, res) => {
     const { detailed } = req.body;
 
-    logger.info('Validation post-migration - démarrage', {
-      metadata: { route: '/api/migration/validate', detailed }
-    });
+    logger.info('Validation post-migration - démarrage', { metadata: { route: '/api/migration/validate', detailed 
+
+        }
+                });
 
     const validation = await mondayMigrationService.validateMigration();
     
-    logger.info('Validation post-migration - terminée', {
-      metadata: {
+    logger.info('Validation post-migration - terminée', { metadata: {
         route: '/api/migration/validate',
         aosCount: validation.aosCount,
         projectsCount: validation.projectsCount,
         errorsCount: validation.errors.length,
         warningsCount: validation.warnings.length
-      }
-    });
+
+        }
+                });
     
     const response: any = {
       success: true,
@@ -337,8 +376,15 @@ migrationRoutes.post('/validate',
     }
 
     res.json(response);
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // ROUTES MIGRATION COMPLÈTE
@@ -357,9 +403,10 @@ migrationRoutes.post('/full',
   asyncHandler(async (req, res) => {
     const { aosCount, projectsCount, dryRun } = req.body;
 
-    logger.info('Démarrage migration complète', {
-      metadata: { route: '/api/migration/full', aosCount, projectsCount, dryRun }
-    });
+    logger.info('Démarrage migration complète', { metadata: { route: '/api/migration/full', aosCount, projectsCount, dryRun 
+
+        }
+                });
 
     if (dryRun) {
       return res.json({
@@ -370,8 +417,9 @@ migrationRoutes.post('/full',
           projectsToMigrate: projectsCount,
           totalRecords: aosCount + projectsCount,
           estimatedDuration: '~5-10 minutes'
-        }
-      });
+        
+       
+       });
     }
 
     const results = [];
@@ -380,9 +428,9 @@ migrationRoutes.post('/full',
 
     // Migration séquentielle pour éviter surcharge
     if (aosCount > 0) {
-      logger.info('Phase 1/2 - Migration AO_Planning', {
-        metadata: { route: '/api/migration/full', aosCount }
-      });
+      logger.info('Phase 1/2 - Migration AO_Planning', { metadata: { route: '/api/migration/full', aosCount 
+        }
+            });
       const aosResult = await mondayMigrationService.migrateAosFromAnalysis(aosCount);
       results.push({ type: 'aos', result: aosResult });
       totalMigrated += aosResult.migrated;
@@ -390,9 +438,9 @@ migrationRoutes.post('/full',
     }
 
     if (projectsCount > 0) {
-      logger.info('Phase 2/2 - Migration CHANTIERS', {
-        metadata: { route: '/api/migration/full', projectsCount }
-      });
+      logger.info('Phase 2/2 - Migration CHANTIERS', { metadata: { route: '/api/migration/full', projectsCount 
+        }
+            });
       const projectsResult = await mondayMigrationService.migrateChantiersFromAnalysis(projectsCount);
       results.push({ type: 'projects', result: projectsResult });
       totalMigrated += projectsResult.migrated;
@@ -400,14 +448,14 @@ migrationRoutes.post('/full',
     }
 
     // Validation finale
-    logger.info('Validation finale migration complète', {
-      metadata: { route: '/api/migration/full', totalMigrated, totalErrors }
-    });
+    logger.info('Validation finale migration complète', { metadata: { route: '/api/migration/full', totalMigrated, totalErrors 
+        }
+            });
     const validation = await mondayMigrationService.validateMigration();
 
-    logger.info('Migration complète terminée', {
-      metadata: { route: '/api/migration/full', totalMigrated, totalErrors, validationPassed: validation.errors.length === 0 }
-    });
+    logger.info('Migration complète terminée', { metadata: { route: '/api/migration/full', totalMigrated, totalErrors, validationPassed: validation.errors.length === 0 
+        }
+            });
 
     res.json({
       success: true,
@@ -430,8 +478,15 @@ migrationRoutes.post('/full',
       },
       message: `Migration complète terminée - ${totalMigrated} migrés, ${totalErrors} erreurs`
     });
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // ROUTES UTILITAIRES
@@ -447,13 +502,13 @@ migrationRoutes.get('/sample-data',
     
     const sampleData = generateSampleDataForTesting();
     
-    logger.info('Génération données échantillon Monday.com', {
-      metadata: {
+    logger.info('Génération données échantillon Monday.com', { metadata: {
         route: '/api/migration/sample-data',
         aosCount: sampleData.aos.length,
         projectsCount: sampleData.projects.length
-      }
-    });
+
+        }
+                });
     
     res.json({
       success: true,
@@ -461,10 +516,16 @@ migrationRoutes.get('/sample-data',
       stats: {
         aos: getGenerationStats(sampleData.aos, 'aos'),
         projects: getGenerationStats(sampleData.projects, 'projects')
-      }
-    });
-  })
-);
+      });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 /**
  * DELETE /api/migration/reset
@@ -474,9 +535,10 @@ migrationRoutes.delete('/reset',
   asyncHandler(async (req, res) => {
     // Protection - seulement en développement
     if (process.env.NODE_ENV === 'production') {
-      logger.warn('Tentative reset migration en production bloquée', {
-        metadata: { route: '/api/migration/reset', environment: 'production' }
-      });
+      logger.warn('Tentative reset migration en production bloquée', { metadata: { route: '/api/migration/reset', environment: 'production' 
+
+        }
+                });
       
       return res.status(403).json({
         success: false,
@@ -484,9 +546,10 @@ migrationRoutes.delete('/reset',
       });
     }
 
-    logger.warn('Reset données migration demandé', {
-      metadata: { route: '/api/migration/reset', environment: process.env.NODE_ENV }
-    });
+    logger.warn('Reset données migration demandé', { metadata: { route: '/api/migration/reset', environment: process.env.NODE_ENV 
+
+        }
+                });
 
     // TODO: Implémenter reset si nécessaire
     // Nécessiterait méthodes deleteAo, deleteProject dans storage
@@ -495,9 +558,17 @@ migrationRoutes.delete('/reset',
       success: true,
       message: 'Reset non implémenté - protection données',
       note: 'Pour reset complet, utiliser npm run db:reset'
-    });
-  })
-);
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 logger.info('Routes migration Monday.com initialisées', {
   service: 'MigrationRoutes'

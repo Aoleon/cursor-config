@@ -31,12 +31,9 @@ export class MicrosoftAuthService {
         clientId,
         clientSecret,
         authority: `https://login.microsoftonline.com/${tenantId}`
-      }
-    });
+      });
 
-    logger.info('MicrosoftAuthService initialized', { 
-      metadata: { tenantId, clientId: clientId.substring(0, 8) + '...' }
-    });
+    logger.info('MicrosoftAuthService initialized', { metadata: { tenantId, clientId: clientId.substring(0, 8) + '...' 
   }
 
   async getAccessToken(): Promise<string> {
@@ -69,9 +66,7 @@ export class MicrosoftAuthService {
         expiresAt: Date.now() + expiresIn
       };
 
-      logger.info('Microsoft Graph access token acquired successfully', {
-        metadata: { expiresIn: Math.floor(expiresIn / 1000) + 's' }
-      });
+      logger.info('Microsoft Graph access token acquired successfully', { metadata: { expiresIn: Math.floor(expiresIn / 1000) + 's' 
 
       return result.accessToken;
     
@@ -79,9 +74,7 @@ export class MicrosoftAuthService {
     {
       operation: 'constructor',
       service: 'MicrosoftAuthService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
   }
 
   async refreshToken(): Promise<void> {

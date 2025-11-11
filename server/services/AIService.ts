@@ -128,24 +128,21 @@ export class AIService {
       threshold: claudeConfig.circuitBreaker?.threshold || 5,
       timeout: claudeConfig.circuitBreaker?.timeout || 60000,
       onOpen: (name) => {
-        logger.warn('Circuit breaker ouvert pour Claude', {
-          metadata: {
+        logger.warn('Circuit breaker ouvert pour Claude', { metadata: {
             service: 'AIService',
             operation: 'circuit_breaker',
-            provider: name
-          }
-        });
+            provider: name 
+              }
+            });
       },
       onClose: (name) => {
-        logger.info('Circuit breaker fermé pour Claude', {
-          metadata: {
+        logger.info('Circuit breaker fermé pour Claude', { metadata: {
             service: 'AIService',
             operation: 'circuit_breaker',
-            provider: name
-          }
-        });
-      }
-    });
+            provider: name 
+              }
+            });
+      });
     
     // Circuit breaker pour GPT
     const gptConfig = API_LIMITS.ai.openai;
@@ -153,24 +150,21 @@ export class AIService {
       threshold: gptConfig.circuitBreaker?.threshold || 5,
       timeout: gptConfig.circuitBreaker?.timeout || 60000,
       onOpen: (name) => {
-        logger.warn('Circuit breaker ouvert pour GPT', {
-          metadata: {
+        logger.warn('Circuit breaker ouvert pour GPT', { metadata: {
             service: 'AIService',
             operation: 'circuit_breaker',
-            provider: name
-          }
-        });
+            provider: name 
+              }
+            });
       },
       onClose: (name) => {
-        logger.info('Circuit breaker fermé pour GPT', {
-          metadata: {
+        logger.info('Circuit breaker fermé pour GPT', { metadata: {
             service: 'AIService',
             operation: 'circuit_breaker',
-            provider: name
-          }
-        });
-      }
-    });
+            provider: name 
+              }
+            });
+      });
   }
 
   // ========================================
@@ -201,17 +195,15 @@ export class AIService {
     const cached = this.degradedResponseCache.get(queryHash);
     
     if (cached && Date.now() - cached.timestamp < 3600000) { // 1h cache
-      logger.info('Cache de réponse dégradée trouvé', {
-        metadata: {
+      logger.info('Cache de réponse dégradée trouvé', { metadata: {
           service: 'AIService',
           operation: 'getDegradedResponse',
           age: Math.round((Date.now() - cached.timestamp) / 1000),
-          complexity: cached.complexity
-        }
-      });
+          complexity: cached.complexity 
+              }
+            });
       return cached.response;
     }
-    
     return null;
   }
   
@@ -401,8 +393,7 @@ export class AIService {
     metierKeywords.forEach(keyword => {
       if (queryLower.includes(keyword)) {
         metierScore += keyword.length > 5 ? 2 : 1; // Bonus pour mots techniques longs
-      }
-    });
+      });
     
     // === PATTERNS MÉTIER FRANÇAIS (bonus) ===
     const frenchBusinessPatterns = [
@@ -613,9 +604,7 @@ export class AIService {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-      });
+    } );
       
       // Finaliser le tracing en erreur
       await this.performanceMetrics.endPipelineTrace(
@@ -756,8 +745,7 @@ export class AIService {
     metierKeywords.forEach(keyword => {
       if (queryLower.includes(keyword) || contextLower.includes(keyword)) {
         metierScore += keyword.length > 5 ? 2 : 1; // Bonus pour mots techniques longs
-      }
-    });
+      });
     
     // === PATTERNS MÉTIER FRANÇAIS (bonus) ===
     const frenchBusinessPatterns = [
@@ -848,8 +836,7 @@ export class AIService {
     const startTime = Date.now();
     
     // Logs enrichis pour debugging
-    logger.info('Début requête IA avec retry robuste', {
-      metadata: {
+    logger.info('Début requête IA avec retry robuste', { metadata: {
         service: 'AIService',
         operation: 'executeModelQuery',
         model: modelSelection.selectedModel,
@@ -858,10 +845,9 @@ export class AIService {
         hasContext: !!request.context,
         contextLength: request.context?.length || 0,
         requestId,
-        userRole: request.userRole
-      }
-    });
-    
+        userRole: request.userRole 
+              }
+            });
     // Vérifier d'abord le cache de réponses dégradées
     const degradedResponse = this.getDegradedResponse(request.query);
     if (degradedResponse) {
@@ -900,17 +886,14 @@ export class AIService {
     return withErrorHandling(
     async () => {
 
-      logger.info('Tentative avec modèle principal et retry robuste', { 
-        metadata: {
+      logger.info('Tentative avec modèle principal et retry robuste', { metadata: {
           service: 'AIService',
           operation: 'executeModelQuery',
           model: modelSelection.selectedModel,
           maxRetries: modelConfig.maxRetries,
           timeout: modelConfig.timeout,
           backoffMultiplier: modelConfig.backoffMultiplier
-        }
       });
-      
       // Exécuter avec circuit breaker et retry
       const result = await circuitBreaker.execute(async () => {
         return await withRetry(
@@ -937,45 +920,34 @@ export class AIService {
               return isRetryableError(error);
             },
             onRetry: (attempt, delay, error) => {
-              logger.warn('Retry IA en cours', {
-                metadata: {
+              logger.warn('Retry IA en cours', { metadata: {
                   service: 'AIService',
                   operation: 'executeModelQuery',
                   model: modelSelection.selectedModel,
                   attempt,
                   delay,
-                  error: error instanceof Error ? error.message : String(error)
-                }
-              });
-            }
-          }
-        );
+                  error: error instanceof Error ? error.message : String(error) 
+              }
+            });
+            });
       });
-      
-      logger.info('Modèle principal réussi avec retry', { 
-        metadata: {
+      logger.info('Modèle principal réussi avec retry', { metadata: {
           service: 'AIService',
           operation: 'executeModelQuery',
           model: modelSelection.selectedModel,
           responseTime: result.data?.responseTimeMs,
-          totalTime: Date.now() - startTime
-        }
-      });
-      
+          totalTime: Date.now() - startTime 
+              }
+            });
       return result;
-      
-    
     },
     {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-      });
+    } );
       lastError = error;
     }
-
     // Tentative fallback avec retry si disponible
     if (modelSelection.fallbackAvailable && !fallbackAttempted) {
       const fallbackModel = modelSelection.selectedModel === "claude_sonnet_4" ? "gpt_5" : "claude_sonnet_4";
@@ -986,17 +958,15 @@ export class AIService {
       const fallbackCircuitBreaker = fallbackModel === "claude_sonnet_4"
         ? this.claudeBreaker
         : this.gptBreaker;
-      
-      logger.info('Tentative fallback avec retry robuste', {
-        metadata: {
+      logger.info('Tentative fallback avec retry robuste', { metadata: {
           service: 'AIService',
           operation: 'executeModelQuery',
           fallbackModel,
           originalModel: modelSelection.selectedModel,
           maxRetries: fallbackConfig.maxRetries,
-          timeout: fallbackConfig.timeout
-        }
-      });
+          timeout: fallbackConfig.timeout 
+              }
+            });
       
       fallbackAttempted = true;
       
@@ -1020,74 +990,61 @@ export class AIService {
               maxDelay: fallbackConfig.maxDelay || 10000,
               backoffMultiplier: fallbackConfig.backoffMultiplier,
               retryCondition: (error) => {
-                if ((eras unknown)unknown)?.circuitBreakerOpen) {
+                if ((eras unknown)?.circuitBreakerOpen) {
                   return false;
                 }
                 return isRetryableError(error);
               },
               onRetry: (attempt, delay, error) => {
-                logger.warn('Retry fallback IA en cours', {
-                  metadata: {
+                logger.warn('Retry fallback IA en cours', { metadata: {
                     service: 'AIService',
                     operation: 'executeModelQuery',
                     model: fallbackModel,
                     attempt,
                     delay,
-                    error: error instanceof Error ? error.message : String(error)
-                  }
-                });
+                    error: error instanceof Error ? error.message : String(error) 
               }
-            }
-          );
+            });
+              });
         });
         
-        logger.info('Fallback réussi avec retry', {
-          metadata: {
+        logger.info('Fallback réussi avec retry', { metadata: {
             service: 'AIService',
             operation: 'executeModelQuery',
             fallbackModel,
             responseTime: result.data?.responseTimeMs,
-            totalTime: Date.now() - startTime
-          }
-        });
-        
+            totalTime: Date.now() - startTime 
+              }
+            });
         return result;
-        
-      
     },
     {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-        });
+    } );
         lastError = fallbackError;
       }
     }
 
     // Retourner une réponse dégradée mais utile
-    logger.info('Retour réponse dégradée après tous les retries', {
-      metadata: {
+    logger.info('Retour réponse dégradée après tous les retries', { metadata: {
         service: 'AIService',
         operation: 'executeModelQuery',
         fallbackAttempted,
         complexity: request.complexity || 'high',
         totalTime: Date.now() - startTime,
-        retryStats: retryStats
-      }
-    });
-    
+        retryStats: retryStats 
+              }
+            });
     // Générer une réponse SQL simplifiée basique
     const simplifiedSQL = this.generateSimplifiedSQL(request);
-    
     // Sauvegarder dans le cache dégradé pour futures requêtes similaires
     this.saveDegradedResponse(
       request.query, 
       simplifiedSQL, 
       request.complexity || 'high'
     );
-    
     return {
       success: true,
       data: {
@@ -1248,16 +1205,14 @@ export class AIService {
     // Fallback 1: Essayer le cache in-memory d'abord (plus rapide)
     const memoryEntry = this.memoryCache.get(queryHash);
     if (memoryEntry && memoryEntry.expiresAt > new Date()) {
-      logger.info('Cache hit in-memory', {
-        metadata: {
+      logger.info('Cache hit in-memory', { metadata: {
           service: 'AIService',
           operation: 'getCachedResponse',
-          queryHash: queryHash.substring(0, 8)
-        }
-      });
+          queryHash: queryHash.substring(0, 8) 
+              }
+            });
       return memoryEntry.data;
     }
-    
     // Fallback 2: Essayer la base de données
     return withErrorHandling(
     async () => {
@@ -1290,16 +1245,14 @@ export class AIService {
           tokensUsed: cached[0].tokensUsed || 0
         });
         
-        logger.info('Cache hit DB', {
-          metadata: {
+        logger.info('Cache hit DB', { metadata: {
             service: 'AIService',
             operation: 'getCachedResponse',
-            queryHash: queryHash.substring(0, 8)
-          }
-        });
+            queryHash: queryHash.substring(0, 8) 
+              }
+            });
         return data;
       }
-
       return null;
     
     },
@@ -1307,21 +1260,17 @@ export class AIService {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-      });
+    } );
       
       // Fallback 3: Si DB échoue, vérifier encore le cache in-memory même expiré comme derniere chance
       if (memoryEntry) {
-        logger.info('Utilisation cache in-memory expiré comme fallback final', {
-          metadata: {
+        logger.info('Utilisation cache in-memory expiré comme fallback final', { metadata: {
             service: 'AIService',
-            operation: 'getCachedResponse'
-          }
-        });
+            operation: 'getCachedResponse' 
+              }
+            });
         return memoryEntry.data;
       }
-      
       return null;
     }
   }
@@ -1369,26 +1318,20 @@ export class AIService {
           responseTimeMs: cacheEntry.responseTimeMs,
           expiresAt: cacheEntry.expiresAt,
           lastAccessedAt: new Date()
-        }
-      });
+        });
       
-      logger.info('Cache sauvé DB+memory', {
-        metadata: {
+      logger.info('Cache sauvé DB+memory', { metadata: {
           service: 'AIService',
           operation: 'cacheResponse',
-          queryHash: queryHash.substring(0, 8)
-        }
-      });
-
-    
+          queryHash: queryHash.substring(0, 8) 
+              }
+            });
     },
     {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-      });
+    } );
       // Le cache in-memory est déjà sauvé, donc pas d'impact sur l'utilisateur
     }
   }
@@ -1407,15 +1350,13 @@ export class AIService {
       }
     }
     
-    logger.info('Cache in-memory nettoyé', {
-      metadata: {
+    logger.info('Cache in-memory nettoyé', { metadata: {
         service: 'AIService',
         operation: 'cleanMemoryCache',
-        entriesRemoved: cleaned
-      }
-    });
+        entriesRemoved: cleaned 
+              }
+            });
   }
-
   /**
    * Génère un hash unique pour la requête + contexte
    */
@@ -1490,9 +1431,7 @@ export class AIService {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 
@@ -1995,19 +1934,19 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     
     // Codes projets JLM (#2503, #21600, etc.)
     const projectCodes = queryUpper.match(/#\d{4,5}/g);
-    if (projectCodes) codes.push(...projectCodes.map(c => `Projet ${c}`));
+    if (projectCodes) codes.push(...projectCodes.map(c => `Projet $) {c}`));
     
     // Codes AO
     const aoCodes = queryUpper.match(/AO[-\s]?\d{4}/g);
-    if (aoCodes) codes.push(...aoCodes.map(c => `AO ${c.replace(/AO[-\s]?/, '')}`));
+    if (aoCodes) codes.push(...aoCodes.map(c => `AO $) {c.replace(/AO[-\s]?/, '')}`));
     
     // Références matériaux/couleurs
     const ralCodes = queryUpper.match(/RAL\s?\d{4}/g);
-    if (ralCodes) codes.push(...ralCodes.map(c => `Couleur ${c}`));
+    if (ralCodes) codes.push(...ralCodes.map(c => `Couleur $) {c}`));
     
     // Normes françaises
     const dtuCodes = queryUpper.match(/DTU\s?[\d.]+/g);
-    if (dtuCodes) codes.push(...dtuCodes.map(c => `Norme ${c}`));
+    if (dtuCodes) codes.push(...dtuCodes.map(c => `Norme $) {c}`));
     
     // Codes spéciaux JLM
     if (queryUpper.includes('MEXT')) codes.push('Menuiseries Extérieures');
@@ -2017,7 +1956,7 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     
     // Départements
     const deptCodes = queryUpper.match(/\b(59|62)\b/g);
-    if (deptCodes) codes.push(...deptCodes.map(c => `Département ${c}`));
+    if (deptCodes) codes.push(...deptCodes.map(c => `Département $) {c}`));
     
     return Array.from(new Set(codes)); // Dédoublonner
   }
@@ -2141,64 +2080,53 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       // Tentative de récupération depuis le cache
       const cachedContext = await this.contextCache.getContext(entityType, entityId, config);
       if (cachedContext) {
-        logger.info('Contexte enrichi récupéré depuis le cache', {
-          metadata: {
+        logger.info('Contexte enrichi récupéré depuis le cache', { metadata: {
             service: 'AIService',
             operation: 'buildEnrichedContext',
             entityType,
-            entityId
-          }
-        });
+            entityId 
+              }
+            });
         return cachedContext;
       }
-
       // Génération du contexte enrichi
-      logger.info('Génération contexte enrichi', {
-        metadata: {
+      logger.info('Génération contexte enrichi', { metadata: {
           service: 'AIService',
           operation: 'buildEnrichedContext',
           entityType,
-          entityId
-        }
-      });
+          entityId 
+              }
+            });
       const result = await this.contextBuilder.buildContextualData(config);
-      
       if (result.success && result.data) {
         // Mise en cache pour utilisation future
         await this.contextCache.setContext(entityType, entityId, config, result.data);
-        
-        logger.info('Contexte enrichi généré avec succès', {
-          metadata: {
+        logger.info('Contexte enrichi généré avec succès', { metadata: {
             service: 'AIService',
             operation: 'buildEnrichedContext',
             entityType,
             entityId,
-            tokenEstimate: result.data.tokenEstimate
-          }
-        });
+            tokenEstimate: result.data.tokenEstimate 
+              }
+            });
         return result.data;
       } else {
-        logger.warn('Échec génération contexte', {
-          metadata: {
+        logger.warn('Échec génération contexte', { metadata: {
             service: 'AIService',
             operation: 'buildEnrichedContext',
             entityType,
             entityId,
-            error: result.error?.message
-          }
-        });
+            error: result.error?.message 
+              }
+            });
         return null;
       }
-
-    
     },
     {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return null;
     }
   }
@@ -2238,20 +2166,16 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     // Si la réponse commence par SELECT/INSERT/UPDATE/DELETE, c'est du SQL pur
     const sqlKeywords = /^\s*(SELECT|INSERT|UPDATE|DELETE|WITH)/i;
     if (sqlKeywords.test(cleanedResponse)) {
-      logger.info('Réponse SQL pure détectée (mode optimisé)', {
-        metadata: {
+      logger.info('Réponse SQL pure détectée (mode optimisé)', { metadata: {
           service: 'AIService',
-          operation: 'parseAIResponse'
-        }
-      });
-      
+          operation: 'parseAIResponse' 
+              }
+            });
       // Extraire le SQL (avec ou sans point-virgule)
       const sqlMatch = cleanedResponse.match(/^(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*/i);
       let sql = sqlMatch ? sqlMatch[0].trim() : cleanedResponse.trim();
-      
       // Décoder les entités HTML qui pourraient être présentes
       sql = this.decodeHTMLEntities(sql);
-      
       return {
         sql,
         explanation: "Requête SQL générée en mode optimisé",
@@ -2259,7 +2183,6 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         warnings: []
       };
     }
-    
     // STRATÉGIE 2: Tenter parsing JSON (mode standard)
     return withErrorHandling(
     async () => {
@@ -2289,9 +2212,7 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-      });
+    } );
       
       // STRATÉGIE 3: Fallback - chercher du SQL n'importe où dans la réponse
       const sqlMatch = responseText.match(/SELECT[\s\S]*?(?:;|$)/i) ||
@@ -2442,9 +2363,7 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new AppError("Impossible de récupérer les statistiques d'usage", 500);
     }
   }
@@ -2460,23 +2379,18 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         .delete(aiQueryCache)
         .where(sql`expires_at < NOW()`);
       
-      logger.info('Cache nettoyé', {
-        metadata: {
+      logger.info('Cache nettoyé', { metadata: {
           service: 'AIService',
           operation: 'cleanExpiredCache',
           entriesRemoved: result.rowCount || 0
-        }
       });
       return result.rowCount || 0;
-    
     },
     {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return 0;
     }
   }
@@ -2513,9 +2427,7 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
 
     // Test GPT
@@ -2535,9 +2447,7 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    }
-  );
-        });
+    } );
       }
     }
 
@@ -2552,9 +2462,7 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     {
       operation: 'token',
       service: 'AIService',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
     }
 
@@ -2569,9 +2477,7 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     {
       operation: 'token',
       service: 'AIService',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
     }
 

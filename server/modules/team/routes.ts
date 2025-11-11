@@ -40,13 +40,17 @@ export function createTeamRouter(storage: IStorage, eventBus: EventBus): Router 
       const { projectId } = req.query;
       const resources = await storage.getTeamResources(projectId as string);
       
-      logger.info('[TeamResources] Ressources récupérées', { 
-        metadata: { projectId, count: resources.length } 
-      });
+      logger.info('[TeamResources] Ressources récupérées', { metadata: { projectId, count: resources.length 
+
+            })
+ 
+
+          );
       
       res.json(resources);
-    })
-  );
+          }
+                                  }
+                                });
 
   /**
    * POST /api/team-resources
@@ -60,13 +64,17 @@ export function createTeamRouter(storage: IStorage, eventBus: EventBus): Router 
     asyncHandler(async (req, res) => {
       const resource = await storage.createTeamResource(req.body);
       
-      logger.info('[TeamResources] Ressource créée', { 
-        metadata: { resourceId: resource.id } 
-      });
+      logger.info('[TeamResources] Ressource créée', { metadata: { resourceId: resource.id 
+
+            })
+ 
+
+          );
       
       res.status(201).json(resource);
-    })
-  );
+          }
+                                  }
+                                });
 
   /**
    * PATCH /api/team-resources/:id
@@ -81,13 +89,17 @@ export function createTeamRouter(storage: IStorage, eventBus: EventBus): Router 
     asyncHandler(async (req, res) => {
       const resource = await storage.updateTeamResource(req.params.id, req.body);
       
-      logger.info('[TeamResources] Ressource mise à jour', { 
-        metadata: { resourceId: req.params.id } 
-      });
+      logger.info('[TeamResources] Ressource mise à jour', { metadata: { resourceId: req.params.id 
+
+            })
+ 
+
+          );
       
       res.json(resource);
-    })
-  );
+          }
+                                  }
+                                });
 
   // ========================================
   // BE WORKLOAD ROUTES - Indicateurs charge BE
@@ -111,11 +123,17 @@ export function createTeamRouter(storage: IStorage, eventBus: EventBus): Router 
         year ? parseInt(year as string) : undefined
       );
       
-      logger.info('[BEWorkload] Charge BE récupérée', { metadata: { weekNumber, year, count: workload.length } });
+      logger.info('[BEWorkload] Charge BE récupérée', { metadata: { weekNumber, year, count: workload.length 
+
+            })
+ 
+
+          );
       
       res.json(workload);
-    })
-  );
+          }
+                                  }
+                                });
 
   /**
    * POST /api/be-workload
@@ -130,11 +148,17 @@ export function createTeamRouter(storage: IStorage, eventBus: EventBus): Router 
     asyncHandler(async (req, res) => {
       const workload = await storage.createOrUpdateBeWorkload(req.body);
       
-      logger.info('[BEWorkload] Charge BE créée/mise à jour', { metadata: { workloadId: workload.id, weekNumber: workload.weekNumber } });
+      logger.info('[BEWorkload] Charge BE créée/mise à jour', { metadata: { workloadId: workload.id, weekNumber: workload.weekNumber 
+
+            })
+ 
+
+          );
       
       res.status(201).json(workload);
-    })
-  );
+          }
+                                  }
+                                });
 
   return router;
 }

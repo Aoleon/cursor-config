@@ -23,9 +23,7 @@ export class SyncScheduler {
       let config = await this.storage.getSyncConfig();
       
       if (!config) {
-        logger.info('[SyncScheduler] Aucune configuration trouvée, création config par défaut', {
-          metadata: { service: 'SyncScheduler', operation: 'start' }
-        });
+        logger.info('[SyncScheduler] Aucune configuration trouvée, création config par défaut', { metadata: { service: 'SyncScheduler', operation: 'start' 
         
         config = await this.storage.updateSyncConfig({
           isEnabled: false,
@@ -35,9 +33,7 @@ export class SyncScheduler {
       }
 
       if (!config.isEnabled) {
-        logger.info('[SyncScheduler] Synchronisation automatique désactivée', {
-          metadata: { service: 'SyncScheduler', operation: 'start' }
-        });
+        logger.info('[SyncScheduler] Synchronisation automatique désactivée', { metadata: { service: 'SyncScheduler', operation: 'start' 
         return;
       }
 
@@ -49,15 +45,13 @@ export class SyncScheduler {
         await this.runSync();
       });
 
-      logger.info('[SyncScheduler] Synchronisation automatique démarrée', {
-        metadata: {
+      logger.info('[SyncScheduler] Synchronisation automatique démarrée', { metadata: {
           service: 'SyncScheduler',
           operation: 'start',
           cronExpression,
-          nextRun: this.getNextRun()
-        }
-      });
-
+          nextRun: this.getNextRun() 
+              }
+            });
       await this.storage.updateSyncConfig({
         nextSyncAt: this.getNextRun()
       });
@@ -67,9 +61,7 @@ export class SyncScheduler {
       operation: 'constructor',
       service: 'SyncScheduler',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -78,9 +70,7 @@ export class SyncScheduler {
     if (this.cronJob) {
       this.cronJob.stop();
       this.cronJob = null;
-      logger.info('[SyncScheduler] Synchronisation automatique arrêtée', {
-        metadata: { service: 'SyncScheduler', operation: 'stop' }
-      });
+      logger.info('[SyncScheduler] Synchronisation automatique arrêtée', { metadata: { service: 'SyncScheduler', operation: 'stop' 
     }
   }
 
@@ -101,9 +91,7 @@ export class SyncScheduler {
 
   private async runSync(): Promise<void> {
     if (this.isRunning) {
-      logger.warn('[SyncScheduler] Synchronisation déjà en cours, skip', {
-        metadata: { service: 'SyncScheduler', operation: 'runSync' }
-      });
+      logger.warn('[SyncScheduler] Synchronisation déjà en cours, skip', { metadata: { service: 'SyncScheduler', operation: 'runSync' 
       return;
     }
 
@@ -118,9 +106,7 @@ export class SyncScheduler {
         lastSyncAt: new Date()
       });
 
-      logger.info('[SyncScheduler] Début synchronisation automatique', {
-        metadata: { service: 'SyncScheduler', operation: 'runSync' }
-      });
+      logger.info('[SyncScheduler] Début synchronisation automatique', { metadata: { service: 'SyncScheduler', operation: 'runSync' 
 
       const aos = await this.storage.getAos();
       
@@ -130,9 +116,7 @@ export class SyncScheduler {
       const errors: SyncError[] = [];
       const AO_SYNC_TIMEOUT_MS = 120000;
 
-      logger.info('[SyncScheduler] Synchronisation de tous les AOs', {
-        metadata: { service: 'SyncScheduler', totalAOs: aos.length }
-      });
+      logger.info('[SyncScheduler] Synchronisation de tous les AOs', { metadata: { service: 'SyncScheduler', totalAOs: aos.length 
 
       for (const ao of aos) {
         try {
@@ -142,22 +126,18 @@ export class SyncScheduler {
           totalDocumentsDeleted += result.documentsDeleted;
           errors.push(...result.errors);
           
-          logger.debug('[SyncScheduler] AO synchronisé', {
-            metadata: {
+          logger.debug('[SyncScheduler] AO synchronisé', { metadata: {
               aoId: ao.id,
               aoReference: ao.reference,
               documentsAdded: result.documentsAdded,
-              documentsUpdated: result.documentsUpdated
-            }
-          });
-        
+              documentsUpdated: result.documentsUpdated 
+              }
+            });
     },
     {
       operation: 'constructor',
-service: 'SyncScheduler',;
-      metadata: {}
-    }
-  );
+service: 'SyncScheduler',
+      metadata: { } });
       }
 
       const duration = Date.now() - startTime;
@@ -174,11 +154,9 @@ service: 'SyncScheduler',;
           documentsDeleted: totalDocumentsDeleted,
           errors: errors.map(e => e.message), // Convert to string[] for storage
           duration
-        }
-      });
+        });
 
-      logger.info('[SyncScheduler] Synchronisation automatique terminée', {
-        metadata: {
+      logger.info('[SyncScheduler] Synchronisation automatique terminée', { metadata: {
           service: 'SyncScheduler',
           operation: 'runSync',
           totalAOs: aos.length,
@@ -186,12 +164,11 @@ service: 'SyncScheduler',;
           documentsUpdated: totalDocumentsUpdated,
           documentsDeleted: totalDocumentsDeleted,
           errors: errors.length,
-          duration
-        }
-      });
+          duration 
+              }
+            });
     } catch (error) {
       const duration = Date.now() - startTime;
-      
       await this.storage.updateSyncConfig({
         lastSyncStatus: 'error',
         lastSyncAt: new Date(),
@@ -199,16 +176,14 @@ service: 'SyncScheduler',;
         lastSyncResult: {
           errors: [error instanceof Error ? error.message : String(error)], // Already string format for storage
           duration
-        }
-      });
+        });
 
-      logger.error('[SyncScheduler] Erreur synchronisation automatique', {
-        metadata: {
+      logger.error('[SyncScheduler] Erreur synchronisation automatique', { metadata: {
           service: 'SyncScheduler',
           operation: 'runSync',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
+          error: error instanceof Error ? error.message : String(error) 
+              }
+            });
     } finally {
       this.isRunning = false;
     }
@@ -221,7 +196,7 @@ service: 'SyncScheduler',;
     async () => {
 
       const now = new Date();
-      const cronJobOptions = (this.cronJob as unknown as { options?: { scheduled?: boolean; expression?: string } })?.options;
+      const cronJobOptions = (this.cronJob as unknown as { options?: { scheduled?: boolean; expression?: string })?.options;
       const cronExpression = cronJobOptions?.scheduled ? cronJobOptions.expression : null;
       
       if (!cronExpression) return null;
@@ -233,9 +208,7 @@ service: 'SyncScheduler',;
     {
       operation: 'constructor',
       service: 'SyncScheduler',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
       return null;
     }

@@ -70,8 +70,9 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
           method: 'GET',
           offerId,
           userId: req.user?.id
-        }
-      });
+        
+            })
+          );
       
       const elements = await storage.getChiffrageElementsByOffer(offerId);
       

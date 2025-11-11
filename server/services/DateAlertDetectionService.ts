@@ -239,9 +239,9 @@ export class DateAlertDetectionService {
       logger.info('Détection risques de retard', { metadata: {
           service: 'DateAlertDetectionService',
           operation: 'detectDelayRisks',
-          alertsCount: alerts.length   
-              }
-            });
+          alertsCount: alerts.length
+        }
+      });
       return alerts;
     },
     {
@@ -250,7 +250,7 @@ export class DateAlertDetectionService {
       metadata: { } });
       return [];
     }
-});
+  );
   }
 
   // ========================================
@@ -299,8 +299,7 @@ export class DateAlertDetectionService {
           service: 'DateAlertDetectionService',
           operation: 'detectPlanningConflicts',
           alertsCount: alerts.length
-       
-        
+        }
       });
       return alerts;
     },
@@ -310,7 +309,7 @@ export class DateAlertDetectionService {
       metadata: { } });
       return [];
     }
-});
+  );
   }
 
   // ========================================
@@ -380,7 +379,7 @@ export class DateAlertDetectionService {
           operation: 'detectCriticalDeadlines',
           alertsCount: alerts.length   
               }
-            });
+             } });
       return alerts;
     },
     {
@@ -389,7 +388,7 @@ export class DateAlertDetectionService {
       metadata: { } });
       return [];
     }
-});
+  );
   }
 
   // ========================================
@@ -436,7 +435,7 @@ export class DateAlertDetectionService {
           operation: 'detectOptimizationOpportunities',
           alertsCount: alerts.length   
               }
-            });
+             } });
       return alerts;
     },
     {
@@ -445,7 +444,7 @@ export class DateAlertDetectionService {
       metadata: { } });
       return [];
     }
-});
+  );
   }
 
   // ========================================
@@ -472,9 +471,7 @@ export class DateAlertDetectionService {
           service: 'DateAlertDetectionService',
           operation: 'runPeriodicDetection',
           context: { detectionType: 'periodic' 
-       
-        
-      });
+        } });
       // 1. Détection retards
       const delayAlerts = await this.detectDelayRisks();
       // 2. Détection conflits (sur 30 jours)
@@ -525,8 +522,7 @@ export class DateAlertDetectionService {
       metadata: { } });
       summary.detectionRunTime = Date.now() - startTime;
       return summary;
-    }
-});
+    });
   }
   // ========================================
   // GESTION WORKFLOW ALERTES
@@ -561,7 +557,7 @@ export class DateAlertDetectionService {
           alertId,
           userId   
               }
-            });
+             } });
       return updatedAlert;
     },
     {
@@ -569,8 +565,7 @@ export class DateAlertDetectionService {
       service: 'DateAlertDetectionService',
       metadata: { } });
       throw error;
-    }
-});
+    });
   }
   
   async resolveAlert(alertId: string, userId: string, resolution: string): Promise<DateAlert> {
@@ -604,7 +599,7 @@ export class DateAlertDetectionService {
           alertId,
           userId   
               }
-            });
+             } });
       return updatedAlert;
     },
     {
@@ -612,8 +607,7 @@ export class DateAlertDetectionService {
       service: 'DateAlertDetectionService',
       metadata: { } });
       throw error;
-    }
-});
+    });
   }
 
   // ========================================

@@ -600,6 +600,30 @@ router.post('/api/users',
 
 **Référence:** `@.cursor/rules/senior-architect-oversight.md` - Workflow d'itération architecturale avec validation continue
 
+### 26. Décomposition des Tâches (IMPÉRATIF)
+
+**IMPÉRATIF:** Décomposer automatiquement les tâches complexes en sous-tâches gérables selon les recommandations officielles de Cursor, avec critères de taille optimale, pensée séquentielle, Background Agent et listes structurées.
+
+**TOUJOURS:**
+- ✅ Décomposer tâches complexes avec critères de taille optimale (max 50 lignes, max 3 fichiers)
+- ✅ Utiliser pensée séquentielle pour structurer les sous-tâches
+- ✅ Générer listes de tâches structurées avec dépendances explicites
+- ✅ Identifier opportunités Background Agent pour tâches différées
+- ✅ Valider taille de chaque sous-tâche créée
+- ✅ Re-décomposer si sous-tâche trop complexe
+- ✅ Gérer dépendances entre sous-tâches explicitement
+
+**NE JAMAIS:**
+- ❌ Créer sous-tâches > 50 lignes de code
+- ❌ Créer sous-tâches > 3 fichiers modifiés
+- ❌ Ignorer dépendances entre sous-tâches
+- ❌ Ne pas valider taille avant création
+- ❌ Ne pas utiliser pensée séquentielle
+- ❌ Ne pas générer listes structurées avec dépendances
+- ❌ Ignorer opportunités Background Agent
+
+**Référence:** `@.cursor/rules/task-decomposition.md` - Décomposition des tâches conforme documentation Cursor
+
 ## 🔗 Références Essentielles
 
 - **Documentation projet:** `projectbrief.md`, `productContext.md`, `systemPatterns.md`, `techContext.md`

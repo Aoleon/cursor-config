@@ -169,7 +169,7 @@ export class ChatbotOrchestrationService {
           queryType: queryPattern.queryType,
           complexity: queryComplexity   
               }
-            });
+             } });
       // Retourner le résultat caché avec enrichissement
       return {
         ...cachedResult,
@@ -201,9 +201,7 @@ export class ChatbotOrchestrationService {
           traceId,
           userId: request.userId,
           userRole: request.userRole
-       
-        
-      });
+        } });
       // ========================================
       // 1. VÉRIFICATION CIRCUIT BREAKER
       // ========================================
@@ -784,9 +782,7 @@ export class ChatbotOrchestrationService {
           traceId: finalTraceId,
           userId: request.userId,
           userRole: request.userRole
-       
-        
-      });
+        } });
       // ========================================
       // 1. DÉTECTION D'INTENTIONS D'ACTIONS - NOUVEAU PIPELINE
       // ========================================
@@ -1910,9 +1906,7 @@ export class ChatbotOrchestrationService {
           actionOperation: request.operation,
           entity: request.entity,
           userId: request.userId
-       
-        
-      });
+        } });
       const response = await this.actionExecutionService.proposeAction(request);
       // Logging pour métriques chatbot
       await this.logUsageMetrics(
@@ -1944,8 +1938,7 @@ export class ChatbotOrchestrationService {
         error: {
           type: 'business_rule',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
-        }
-});
+        });
       };
     }
   }
@@ -1960,9 +1953,7 @@ export class ChatbotOrchestrationService {
           operation: 'executeAction',
           actionId: request.actionId,
           userId: request.userId
-       
-        
-      });
+        } });
       const response = await this.actionExecutionService.executeAction(request);
       // Logging pour métriques chatbot
       await this.logUsageMetrics(
@@ -1993,8 +1984,7 @@ export class ChatbotOrchestrationService {
         error: {
           type: 'execution',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
-        }
-});
+        });
       };
     }
   }
@@ -2008,9 +1998,7 @@ export class ChatbotOrchestrationService {
           service: 'ChatbotOrchestrationService',
           operation: 'getActionHistory',
           userId: request.userId || 'all'
-       
-        
-      });
+        } });
       const response = await this.actionExecutionService.getActionHistory(request);
       // Logging pour métriques chatbot
       await this.logUsageMetrics(
@@ -2035,8 +2023,7 @@ export class ChatbotOrchestrationService {
         error: {
           type: 'query',
           message: error instanceof Error ? error.message : 'Erreur inconnue'
-        }
-});
+        });
       };
     }
   }
@@ -2051,9 +2038,7 @@ export class ChatbotOrchestrationService {
           operation: 'updateConfirmation',
           confirmationId: request.confirmationId,
           userId: request.userId
-       
-        
-      });
+        } });
       // TODO: Implémenter la méthode dans ActionExecutionService
       // const response = await this.actionExecutionService.updateConfirmation(request);
       // Logging pour métriques chatbot
@@ -2083,8 +2068,7 @@ export class ChatbotOrchestrationService {
         success: false,
         error: error instanceof Error ? error.message : 'Erreur inconnue'
       };
-    }
-});
+    });
   }
   // ========================================
   // MÉTHODES UTILITAIRES POUR ACTIONS
@@ -2588,7 +2572,7 @@ export class ChatbotOrchestrationService {
             key,
             cacheSize: this.cache.size   
               }
-            });
+             } });
         return null;
       }
       // Vérification TTL
@@ -2601,7 +2585,7 @@ export class ChatbotOrchestrationService {
             ttl: entry.ttl,
             age: Date.now() - entry.timestamp   
               }
-            });
+             } });
         return null;
       }
       // Déplacer en fin pour LRU (plus récent)
@@ -2621,10 +2605,9 @@ export class ChatbotOrchestrationService {
           ttl: entry.ttl,
           cacheSize: this.cache.size   
               }
-            });
+             } });
       return entry.value;
-    }
-});
+    });
     /**
      * Ajoute ou met à jour une entrée dans le cache
      */
@@ -2641,9 +2624,8 @@ export class ChatbotOrchestrationService {
               reason: 'max_size_reached',
               maxSize: this.maxSize   
               }
-            });
-        }
-});
+             } });
+        });
       }
       const effectiveTTL = ttl || this.calculateAdaptiveTTL(queryPattern);
       this.cache.set(key, {
@@ -2661,9 +2643,8 @@ export class ChatbotOrchestrationService {
           cacheSize: this.cache.size,
           queryType: queryPattern?.queryType   
               }
-            });
-    }
-});
+             } });
+    });
     /**
      * Invalide des entrées basées sur un pattern
      */
@@ -2688,9 +2669,8 @@ export class ChatbotOrchestrationService {
             keysInvalidated: keysToDelete.length,
             remainingSize: this.cache.size   
               }
-            });
-      }
-});
+             } });
+      });
       return keysToDelete.length;
     }
     /**
@@ -2737,9 +2717,8 @@ export class ChatbotOrchestrationService {
             entriesCleaned: cleaned,
             remainingSize: this.cache.size   
               }
-            });
-      }
-});
+             } });
+      });
       return cleaned;
     }
     /**
@@ -2781,9 +2760,8 @@ export class ChatbotOrchestrationService {
           operation: 'clear',
           previousSize   
               }
-            });
-    }
-});
+             } });
+    });
   }
     return new LRUCache(1000);
   })();
@@ -2809,9 +2787,8 @@ export class ChatbotOrchestrationService {
           entityType,
           keysInvalidated: invalidatedCount   
               }
-            });
-    }
-});
+             } });
+    });
   }
   /**
    * Précharge le cache avec les KPIs principaux
@@ -2839,7 +2816,7 @@ export class ChatbotOrchestrationService {
               query,
               error: error instanceof Error ? error.message : String(error)   
               }
-            });
+             } });
         });
       } catch (error) {
         // Ignorer les erreurs de warmup

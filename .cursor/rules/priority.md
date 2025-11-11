@@ -64,6 +64,7 @@ Ces règles sont importantes mais spécifiques à un domaine. Elles sont chargé
 - `iterative-perfection.md` - Itération automatique jusqu'à perfection (IMPÉRATIF - éviter arrêt prématuré)
 - `persistent-execution.md` - Exécution persistante (IMPÉRATIF - éviter arrêts prématurés, runs longs)
 - `advanced-iteration-and-role-coordination.md` - Itérations avancées et coordination des rôles (IMPÉRATIF - maximiser autonomie, durée, qualité)
+- `task-decomposition.md` - Décomposition des tâches conforme documentation Cursor (IMPÉRATIF - critères de taille optimale, pensée séquentielle, Background Agent, listes structurées)
 - `similar-code-detection.md` - Détection proactive de code similaire (éviter duplication)
 - `learning-memory.md` - Mémoire persistante des apprentissages (réutiliser solutions)
 - `preventive-validation.md` - Validation préventive (prévenir erreurs)
@@ -78,6 +79,20 @@ Ces règles sont importantes mais spécifiques à un domaine. Elles sont chargé
 - `error-recovery.md` - Récupération automatique après erreurs (améliorer robustesse)
 - `conflict-detection.md` - Détection proactive des conflits (éviter problèmes)
 - `bug-prevention.md` - Détection proactive des bugs (améliorer qualité)
+- `intelligent-task-detection.md` - Détection intelligente des tâches (détection automatique complexité)
+- `rule-cache.md` - Cache intelligent des règles (éviter rechargement)
+- `rule-feedback-loop.md` - Boucle de feedback pour règles (ajustement automatique)
+- `metadata-standard.md` - Standardisation des métadonnées (format standardisé)
+- `auto-documentation.md` - Auto-documentation intelligente du code (documentation automatique)
+- `cost-optimization.md` - Optimisation des coûts IA (sélection modèle, cache, batching)
+- `timeout-management.md` - Gestion intelligente des timeouts (décomposition, checkpoints, retry)
+- `intelligent-preloading.md` - Préchargement intelligent (prédiction fichiers, cache prédictif)
+- `context-compression.md` - Compression intelligente du contexte (résumé, compression sémantique)
+- `validation-pipeline.md` - Pipeline de validation en cascade (validation progressive, arrêt précoce)
+- `predictive-problem-detection.md` - Prédiction proactive des problèmes (analyse risques, alertes)
+- `auto-refactoring.md` - Auto-refactoring intelligent (élimination duplication, patterns)
+- `code-sentiment-analysis.md` - Analyse de sentiment du code (score qualité, code smells)
+- `auto-test-generation.md` - Génération automatique de tests (tests unitaires, régression, performance)
 
 **Quand charger:**
 - Automatiquement si modification dans le domaine correspondant
@@ -133,7 +148,7 @@ Ces règles optimisent le comportement de l'agent mais ne sont pas essentielles 
 
 **Tâche Complexe / Run Autonome:**
 - P0: `core.md`, `quality-principles.md`, `code-quality.md`
-- P1: Selon domaine (backend/frontend/IA) + `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `migration-refactoring-manager.md` (IMPÉRATIF si migration/refactoring) + `tech-debt-manager.md` (IMPÉRATIF si dette technique) + `hard-coding-specialist.md` (IMPÉRATIF si tâche complexe nécessitant hard coding) + `todo-completion.md` (IMPÉRATIF) + `iterative-perfection.md` (IMPÉRATIF) + `persistent-execution.md` (IMPÉRATIF - éviter arrêts prématurés, runs longs) + `advanced-iteration-and-role-coordination.md` (IMPÉRATIF - maximiser autonomie, durée, qualité) + `similar-code-detection.md` + `learning-memory.md` + `preventive-validation.md` + `auto-performance-detection.md` + `context-optimization.md` + `workflow-consolidation.md` + `dependency-intelligence.md` + `intelligent-model-selection.md` + `search-cache.md` + `parallel-execution.md` + `batch-processing.md` + `error-recovery.md` + `conflict-detection.md` + `bug-prevention.md`
+- P1: Selon domaine (backend/frontend/IA) + `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `migration-refactoring-manager.md` (IMPÉRATIF si migration/refactoring) + `tech-debt-manager.md` (IMPÉRATIF si dette technique) + `hard-coding-specialist.md` (IMPÉRATIF si tâche complexe nécessitant hard coding) + `todo-completion.md` (IMPÉRATIF) + `iterative-perfection.md` (IMPÉRATIF) + `persistent-execution.md` (IMPÉRATIF - éviter arrêts prématurés, runs longs) + `advanced-iteration-and-role-coordination.md` (IMPÉRATIF - maximiser autonomie, durée, qualité) + `task-decomposition.md` (IMPÉRATIF - décomposition avec critères de taille, pensée séquentielle, Background Agent, listes structurées) + `similar-code-detection.md` + `learning-memory.md` + `preventive-validation.md` + `auto-performance-detection.md` + `context-optimization.md` + `workflow-consolidation.md` + `dependency-intelligence.md` + `intelligent-model-selection.md` + `search-cache.md` + `parallel-execution.md` + `batch-processing.md` + `error-recovery.md` + `conflict-detection.md` + `bug-prevention.md`
 - P2: `pre-task-evaluation.md`, `autonomous-workflows.md`, `agent-optimization.md`
 
 ## 🔄 Stratégie de Chargement Optimisée
@@ -168,22 +183,30 @@ Ces règles optimisent le comportement de l'agent mais ne sont pas essentielles 
 - Fichiers dans `**/*.test.ts` ou `**/*.spec.ts` → Charger `testing.md`
 
 **Tâches Complexes / Runs Autonomes:**
-- Tâche complexe ou run autonome → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `hard-coding-specialist.md` (IMPÉRATIF si tâche complexe nécessitant hard coding)
+- Tâche complexe ou run autonome → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `hard-coding-specialist.md` (IMPÉRATIF si tâche complexe nécessitant hard coding) + `task-decomposition.md` (IMPÉRATIF - décomposition avec critères de taille, pensée séquentielle, Background Agent, listes structurées) + `intelligent-task-detection.md` (détection automatique complexité)
 - Tâche de migration/refactoring → Charger `migration-refactoring-manager.md` (IMPÉRATIF)
 - Tâche de consolidation/dette technique → Charger `tech-debt-manager.md` (IMPÉRATIF)
-- Tâche avec plusieurs todos → Charger `todo-completion.md` (IMPÉRATIF)
+- Tâche avec plusieurs todos → Charger `todo-completion.md` (IMPÉRATIF) + `task-decomposition.md` (IMPÉRATIF - génération listes structurées avec dépendances)
 - Tâche nécessitant itération → Charger `iterative-perfection.md` (IMPÉRATIF)
-- Tâche de création/modification → Charger `similar-code-detection.md` + `preventive-validation.md` + `dependency-intelligence.md`
+- Tâche de création/modification → Charger `similar-code-detection.md` + `preventive-validation.md` + `dependency-intelligence.md` + `auto-documentation.md` (si documentation nécessaire)
+- Tâche utilisant IA → Charger `cost-optimization.md` (optimisation coûts) + `intelligent-model-selection.md`
+- Tâche avec opérations longues → Charger `timeout-management.md` (gestion timeouts) + `task-decomposition.md`
+- Tâche avec contexte large → Charger `context-compression.md` (compression contexte) + `intelligent-preloading.md` (préchargement)
+- Tâche nécessitant validation stricte → Charger `validation-pipeline.md` (pipeline validation)
+- Tâche avec risques potentiels → Charger `predictive-problem-detection.md` (prédiction problèmes)
+- Tâche avec code dupliqué → Charger `auto-refactoring.md` (auto-refactoring)
+- Tâche nécessitant tests → Charger `auto-test-generation.md` (génération tests)
 - Tâche récurrente → Charger `learning-memory.md` + `workflow-consolidation.md`
 - Tâche avec problèmes de performance → Charger `auto-performance-detection.md`
 - Contexte saturé → Charger `context-optimization.md` (IMPÉRATIF)
 - Tâche nécessitant IA → Charger `intelligent-model-selection.md` (IMPÉRATIF)
-- Recherches répétitives → Charger `search-cache.md` (IMPÉRATIF)
-- Opérations indépendantes → Charger `parallel-execution.md` (IMPÉRATIF)
+- Recherches répétitives → Charger `search-cache.md` (IMPÉRATIF) + `rule-cache.md` (cache règles)
+- Opérations indépendantes → Charger `parallel-execution.md` (IMPÉRATIF) + `task-decomposition.md` (si décomposition nécessaire avec Background Agent)
 - Tâches similaires multiples → Charger `batch-processing.md` (IMPÉRATIF)
 - Erreur détectée → Charger `error-recovery.md` (IMPÉRATIF)
 - Conflit potentiel → Charger `conflict-detection.md` (IMPÉRATIF)
 - Bug potentiel → Charger `bug-prevention.md` (IMPÉRATIF)
+- Optimisation paramétrage → Charger `rule-feedback-loop.md` (ajustement automatique) + `rule-cache.md` (cache intelligent)
 
 ### Chargement Explicite avec @
 
